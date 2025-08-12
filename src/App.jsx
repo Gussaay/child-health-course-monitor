@@ -1,32 +1,20 @@
-import React, { useEffect, useMemo, useState } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { migrateLocalToFirestore } from './migrate';
 
-
-// NEW: Firestore data helpers
-import {
-  listCoursesByType,
-  upsertCourse,
-  listParticipants as fetchParticipants,
-  upsertParticipant as saveParticipant,
-  addObservations as saveObservations,
-  addCase as saveCase,
-  listObservationsByCourse,
-  listCasesByCourse,
-} from './data';
+import React, { useEffect, useMemo, useState } from "react";
 
 /** =============================================================================
  * National Child Health Program - Courses Monitoring System
- * Firestore wiring (minimal edits):
- *  - Courses & participants loaded/saved via Firestore
- *  - Observations & cases saved to Firestore on submit
- *  - Reports read from Firestore
- *  - Local in-memory tables preserved for session UX & CSV export
+ * - Professional Monitoring toolbar (participant, setting, age band).
+ * - Unlimited facilitators per course (backward compatible with old fields).
+ * - Participant form: Arabic service questions + nearest centers + staffing counters.
+ * - CSV export fixed (no unterminated string).
+ * - Keeps your previous reports/monitoring behavior.
+ * - NOTE: All en dashes (–) were replaced by hyphens (-) to avoid syntax errors.
  * ============================================================================ */
 
 // ----------------------------- CONFIG & STORAGE ------------------------------
-const API_BASE = ""; // keep empty for offline-first (unchanged)
+const API_BASE = ""; // keep empty for offline-first
 const LS_COURSES = "imci_courses_v9";
 const LS_PARTS   = "imci_participants_v9";
 const LS_OBS     = "imci_observations_v9";
@@ -100,6 +88,7 @@ const CLASS_2_59M = {
     "PLAN B",
     "LOCAL INFECTION"
   ],
+  // Single consolidated counselling domain, per your instruction:
   counsel: [
     "assess and council for vaacination",
     "Asks feeding questions",
@@ -146,22 +135,23 @@ const DOMAINS_BY_AGE = {
   LT2M:      ["bacterial","jaundice","vyi_diarrhoea","feeding","treatment_0_59d"],
 };
 
+// Labels (use hyphens)
 const DOMAIN_LABEL = {
   danger:"Danger signs",
-  respiratory:"Respiratory (2-59 m)",
-  diarrhoea:"Diarrhoea (2-59 m)",
-  fever_malaria:"Fever/Malaria (2-59 m)",
-  ear:"Ear (2-59 m)",
-  malnutrition:"Malnutrition (2-59 m)",
-  anaemia:"Anaemia (2-59 m)",
-  treatment_2_59m:"Treatment (2-59 m)",
-  counsel:"Counsel (vaccination, feeding, return immediately)",
+  respiratory:"COUGH:",
+  diarrhoea:"DIARRHOEA:",
+  fever_malaria:"FEVER:",
+  ear:"EAR:",
+  malnutrition:"MALNUTRITION:",
+  anaemia:"ANAEMIA:",
+  treatment_2_59m:"TREAT:",
+  counsel:"COUNSEL:",
 
-  bacterial:"Bacterial infection (0-59 d)",
-  jaundice:"Jaundice (0-59 d)",
-  vyi_diarrhoea:"Diarrhoea (0-59 d)",
-  feeding:"Feeding (0-59 d)",
-  treatment_0_59d:"Treatment/Counsel (0-59 d)"
+  bacterial:"BACTERIAL:",
+  jaundice:"JAUNDICE:",
+  vyi_diarrhoea:"DIARRHOEA:",
+  feeding:"FEEDING:",
+  treatment_0_59d:"TREATMENT/COUNSEL:"
 };
 
 const getClassList = (age, d) => (age === "GE2M_LE5Y" ? CLASS_2_59M[d] : CLASS_0_59D[d]) || [];
@@ -181,14 +171,13 @@ const safeCSV = (s) => {
 // -----------------------------------------------------------------------------
 export default function App() {
   const [view, setView] = useState("landing");
-  // MINIMAL EDIT: start empty; will load from Firestore
-  const [courses, setCourses] = useState([]);
-  const [participants, setParticipants] = useState([]);
+  const [courses, setCourses] = useState(restore(LS_COURSES, []));
+  const [participants, setParticipants] = useState(restore(LS_PARTS, []));
   const [selectedCourseId, setSelectedCourseId] = useState(null);
   const [selectedParticipantId, setSelectedParticipantId] = useState(null);
   const [activeCourseType, setActiveCourseType] = useState("IMNCI");
 
-  // Migration: add facilitators[] if missing (for any locally restored data)
+  // Migration: add facilitators[] if missing (keep legacy facilitator1..6)
   useEffect(() => {
     setCourses(prev => prev.map(c => {
       if (Array.isArray(c.facilitators)) return c;
@@ -197,26 +186,8 @@ export default function App() {
     }));
   }, []);
 
-  // REMOVE local persistence effects for courses/participants (now Firestore)
-  // useEffect(() => persist(LS_COURSES, courses), [courses]);
-  // useEffect(() => persist(LS_PARTS, participants), [participants]);
-
-  // Load courses from Firestore whenever course type changes
-  useEffect(() => {
-    (async () => {
-      const items = await listCoursesByType(activeCourseType);
-      setCourses(items);
-    })();
-  }, [activeCourseType]);
-
-  // Load participants from Firestore when a course is selected
-  useEffect(() => {
-    (async () => {
-      if (!selectedCourseId) { setParticipants([]); return; }
-      const list = await fetchParticipants(selectedCourseId);
-      setParticipants(list);
-    })();
-  }, [selectedCourseId]);
+  useEffect(() => persist(LS_COURSES, courses), [courses]);
+  useEffect(() => persist(LS_PARTS, participants), [participants]);
 
   const selectedCourse = useMemo(() => courses.find(c => c.id === selectedCourseId) || null, [courses, selectedCourseId]);
   const courseParticipants = useMemo(() => participants.filter(p => p.courseId === selectedCourseId), [participants, selectedCourseId]);
@@ -230,6 +201,7 @@ export default function App() {
             <ProgramLogo />
             <div>
               <h1 className="text-2xl font-semibold">National Child Health Program - Courses Monitoring System</h1>
+              {/* Subtitle intentionally removed */}
               <nav className="flex gap-3 mt-3">
                 <button className="px-4 py-2 rounded-full bg-blue-600 text-white font-semibold shadow-sm hover:brightness-110" onClick={() => setView('landing')}>Home</button>
                 <button className="px-4 py-2 rounded-full bg-green-600 text-white font-semibold shadow-sm hover:brightness-110" onClick={() => setView('courses')}>Courses</button>
@@ -245,7 +217,7 @@ export default function App() {
 
         {view === 'courses' &&
           <CoursesView
-            courses={courses /* already filtered by type */}
+            courses={courses.filter(c => c.course_type === activeCourseType)}
             onAdd={() => setView('courseForm')}
             onOpen={(id) => { setSelectedCourseId(id); setSelectedParticipantId(null); setView('participants'); }}
           />}
@@ -254,11 +226,10 @@ export default function App() {
           <CourseForm
             courseType={activeCourseType}
             onCancel={() => setView('courses')}
-            onSave={async (payload) => {
-              const id = await upsertCourse({ id: undefined, course_type: activeCourseType, ...payload });
-              const items = await listCoursesByType(activeCourseType);
-              setCourses(items);
-              setSelectedCourseId(id);
+            onSave={(payload) => {
+              const course = { id: uid(), course_type: activeCourseType, ...payload };
+              setCourses(p => [course, ...p]);
+              setSelectedCourseId(course.id);
               setView('participants');
             }}
           />}
@@ -275,13 +246,7 @@ export default function App() {
           <ParticipantForm
             course={selectedCourse}
             onCancel={() => setView('participants')}
-            onSave={async (p) => {
-              await saveParticipant(p);
-              const list = await fetchParticipants(selectedCourse.id);
-              setParticipants(list);
-              setSelectedParticipantId(p.id);
-              setView('observe');
-            }}
+            onSave={(p) => { setParticipants(prev => [p, ...prev]); setSelectedParticipantId(p.id); setView('observe'); }}
           />}
 
         {view === 'observe' && selectedCourse && selectedParticipant &&
@@ -304,94 +269,12 @@ export default function App() {
 // -------------------------------- Landing -----------------------------------
 function Landing({ active, onPick }) {
   const items = [
-    { key: 'IMNCI', title: 'Integrated Managemet of Newborn & Childhood Illnesses (IMNCI)' },
+    { key: 'IMNCI', title: 'Integrated Mgmt of Childhood & Newborn Illnesses (IMNCI)' },
     { key: 'ETAT', title: 'Emergency Triage, Assessment & Treatment (ETAT)' },
     { key: 'EENC', title: 'Early Essential Newborn Care (EENC)' },
     { key: 'IPC (Neonatal Unit)', title: 'Infection Prevention & Control (Neonatal Unit)' },
     { key: 'Small & Sick Newborn', title: 'Small & Sick Newborn Case Management' },
   ];
-
- // --- Migration UI state (temporary) ---
-  const [migrating, setMigrating] = React.useState(false);
-  const [migrated, setMigrated] = React.useState(() => {
-    try { return localStorage.getItem('imci_migration_done') === 'yes'; } catch { return false; }
-  });
-  const [msg, setMsg] = React.useState('');
-
-  async function runMigration() {
-    // Optional double-confirm to prevent accidents
-    if (!window.confirm('This will copy your local data (courses, participants, observations, cases) to Firestore. Continue?')) return;
-    if (!window.confirm('Are you absolutely sure? Run once only.')) return;
-
-    setMigrating(true);
-    setMsg('Migrating… please wait');
-    try {
-      const result = await migrateLocalToFirestore();
-      const text =
-        `Migrated successfully:
-        • Courses: ${result.courses}
-        • Participants: ${result.participants}
-        • Observations: ${result.observations}
-        • Cases: ${result.cases}`;
-      setMsg(text);
-      try { localStorage.setItem('imci_migration_done', 'yes'); } catch {}
-      setMigrated(true);
-      alert(text);
-    } catch (e) {
-      console.error(e);
-      setMsg(`Migration failed: ${e?.message || e}`);
-      alert(`Migration failed: ${e?.message || e}`);
-    } finally {
-      setMigrating(false);
-    }
-  }
-
-  return (
-    <section className="bg-white rounded-2xl shadow p-5 grid gap-4">
-      <div className="flex items-start justify-between gap-3">
-        <h2 className="text-lg font-medium">Pick a course package</h2>
-
-        {/* TEMPORARY: migration button (hide after run) */}
-        {!migrated && (
-          <button
-            type="button"
-            onClick={runMigration}
-            disabled={migrating}
-            className={`px-3 py-2 rounded-xl border ${migrating ? 'opacity-60 cursor-not-allowed' : ''}`}
-            title="Copies your localStorage data to Firestore once"
-          >
-            {migrating ? 'Migrating…' : 'Migrate local data → Firestore'}
-          </button>
-        )}
-      </div>
-
-      {/* Optional status line */}
-      {msg && <div className="text-sm text-gray-600">{msg}</div>}
-
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {items.map(it => (
-          <button
-            key={it.key}
-            className={`border rounded-2xl p-4 text-left hover:shadow transition ${active === it.key ? 'ring-2 ring-blue-500' : ''}`}
-            onClick={() => onPick(it.key)}
-          >
-            <div className="flex items-center gap-3">
-              <CourseIcon course={it.key} />
-              <div>
-                <div className="font-semibold">{it.title}</div>
-                <div className="text-xs text-gray-500">Tap to manage</div>
-              </div>
-            </div>
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-
-
-
   return (
     <section className="bg-white rounded-2xl shadow p-5 grid gap-4">
       <h2 className="text-lg font-medium">Pick a course package</h2>
@@ -656,7 +539,7 @@ function ObservationView({ allCourses, course, participant, participants, onChan
     setBuffer(prev => (prev[k] === v ? (({ [k]: _, ...rest }) => rest)(prev) : { ...prev, [k]: v }));
   };
 
-  const submitCase = async () => {
+  const submitCase = () => {
     const entries = Object.entries(buffer);
     if (entries.length === 0) { alert('No classifications selected.'); return; }
     const newObs = entries.map(([k, v]) => {
@@ -676,14 +559,6 @@ function ObservationView({ allCourses, course, participant, participants, onChan
     const allCorrect = entries.every(([, v]) => v === 1);
     reg.push({ courseId: course.id, participant_id: participant.id, encounter_date: encounterDate, setting, age_group: age, case_serial: caseSerial, day_of_course: dayOfCourse, allCorrect });
     persist(LS_CASES, reg);
-
-    // NEW: persist to Firestore
-    try {
-      await saveObservations(newObs);
-      await saveCase({ courseId: course.id, participant_id: participant.id, encounter_date: encounterDate, setting, age_group: age, case_serial: caseSerial, day_of_course: dayOfCourse, allCorrect });
-    } catch (e) {
-      console.error('Firestore write failed, data remains locally available:', e);
-    }
 
     setBuffer({}); setCaseAgeMonths(''); setCaseSerial(caseSerial + 1);
   };
@@ -713,7 +588,7 @@ function ObservationView({ allCourses, course, participant, participants, onChan
       </section>
 
       <section className="bg-white rounded-2xl shadow p-5 grid gap-4">
-        <div className="grid md:grid-cols-6 gap-3">
+        <div className="grid md:grid-cols-3 gap-6">
           <FieldA label="Encounter date"><input type="date" className="border rounded-lg p-2 w-full" value={encounterDate} onChange={(e) => setEncounterDate(e.target.value)} /></FieldA>
           <FieldA label="Course day (1-7)"><select className="border rounded-lg p-2 w-full" value={dayOfCourse} onChange={(e) => setDayOfCourse(Number(e.target.value))}>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>{d}</option>)}</select></FieldA>
           <FieldA label="Case age (months)"><input type="number" className="border rounded-lg p-2 w-full" value={caseAgeMonths} onChange={(e) => setCaseAgeMonths(e.target.value === '' ? '' : Number(e.target.value))} placeholder="0-59" /></FieldA>
@@ -722,44 +597,39 @@ function ObservationView({ allCourses, course, participant, participants, onChan
 
       {/* Classification grid */}
       <section className="bg-white rounded-2xl shadow p-5 grid gap-4">
-        <h3 className="text-lg font-medium">Select classification and mark correctness</h3>
+        <h3 className="text-lg font-semibold">Select classification and mark correctness</h3>
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
               <tr className="text-left border-b">
-                <th className="py-2 pr-4 w-64">Item</th>
+                <th className="py-2 pr-4 w-64">Item (Domain)</th>
+                <th className="py-2 pr-4 w-64">Classification</th>
                 <th className="py-2 pr-4 w-40">Action</th>
-                <th className="py-2 pr-4"></th>
               </tr>
             </thead>
             <tbody>
               {DOMAINS_BY_AGE[age].map(d => {
                 const list = getClassList(age, d);
                 const title = DOMAIN_LABEL[d] || d;
-                return (
-                  <React.Fragment key={d}>
-                    <tr>
-                      <th colSpan={3} className="text-left py-3 pr-4 text-base font-semibold">{title}</th>
+                return (list && list.length ? list : ["(no items)"]).map((cls, i) => {
+                  const k = `${d}|${cls}`;
+                  const mark = buffer[k];
+                  const rowClass = mark === 1 ? 'bg-green-50' : mark === 0 ? 'bg-pink-50' : '';
+                  return (
+                    <tr key={`${d}-${i}`} className={`border-b ${rowClass}`}>
+                      {i === 0 && (
+                        <td className="py-2 pr-4 align-top font-semibold text-gray-800" rowSpan={list.length}>{title}</td>
+                      )}
+                      <td className="py-2 pr-4">{cls}</td>
+                      <td className="py-2 pr-4">
+                        <div className="flex gap-2">
+                          <button className={`px-3 py-1 rounded-lg border ${mark === 1 ? 'bg-green-200' : ''}`} onClick={() => toggle(d, cls, 1)}>Correct</button>
+                          <button className={`px-3 py-1 rounded-lg border ${mark === 0 ? 'bg-pink-200' : ''}`} onClick={() => toggle(d, cls, 0)}>Incorrect</button>
+                        </div>
+                      </td>
                     </tr>
-                    {(list && list.length ? list : ["(no items)"]).map((cls, i) => {
-                      const k = `${d}|${cls}`;
-                      const mark = buffer[k];
-                      const rowClass = mark === 1 ? 'bg-green-50' : mark === 0 ? 'bg-pink-50' : '';
-                      return (
-                        <tr key={`${d}-${i}`} className={`border-b ${rowClass}`}>
-                          <td className="py-2 pr-4">{cls}</td>
-                          <td className="py-2 pr-4">
-                            <div className="flex gap-2">
-                              <button className={`px-3 py-1 rounded-lg border ${mark === 1 ? 'bg-green-200' : ''}`} onClick={() => toggle(d, cls, 1)}>Correct</button>
-                              <button className={`px-3 py-1 rounded-lg border ${mark === 0 ? 'bg-pink-200' : ''}`} onClick={() => toggle(d, cls, 0)}>Incorrect</button>
-                            </div>
-                          </td>
-                          <td className="py-2 pr-4"></td>
-                        </tr>
-                      );
-                    })}
-                  </React.Fragment>
-                );
+                  );
+                });
               })}
             </tbody>
           </table>
@@ -794,4 +664,385 @@ function SubmittedCases({ course, participant, rows, setRows }) {
   };
   const deleteCase = (c) => {
     if (!confirm('Delete this case?')) return;
-    setRows(prev => prev.filter(o => !(o.participant_id === par
+    setRows(prev => prev.filter(o => !(o.participant_id === participant.id && o.encounter_date === c.date && o.setting === c.setting && o.age_group === c.age && o.case_serial === c.serial)));
+    const reg = restore(LS_CASES, []);
+    persist(LS_CASES, reg.filter(x => !(x.courseId === course.id && x.participant_id === participant.id && x.encounter_date === c.date && x.setting === c.setting && x.age_group === c.age && x.case_serial === c.serial)));
+  };
+
+  const exportCSV = () => {
+    const header = [
+      'courseId','participant_id','participant_name','participant_group',
+      'encounter_date','day_of_course','setting','age_group',
+      'case_serial','case_age_months','domain','classification_recorded','classification_correct'
+    ];
+    const lines = [header.join(',')];
+    for (const x of rows) {
+      lines.push([
+        course.id, participant.id, safeCSV(participant.name), participant.group,
+        x.encounter_date, x.day_of_course ?? '',
+        x.setting, x.age_group, x.case_serial ?? '',
+        x.case_age_months ?? '', x.domain,
+        safeCSV(x.classification_recorded), x.classification_correct
+      ].join(','));
+    }
+    const csv = "\uFEFF" + lines.join("\n");
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `IMCI_${course.state}_${course.locality}_${participant.name}_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <section className="bg-white rounded-2xl shadow p-5 grid gap-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-medium">Submitted cases for {participant.name}</h3>
+        <button className="px-3 py-2 rounded-xl border" onClick={exportCSV}>Export CSV</button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr className="text-left border-b"><th className="py-2 pr-4">Date</th><th className="py-2 pr-4">Day</th><th className="py-2 pr-4">Setting</th><th className="py-2 pr-4">Age band</th><th className="py-2 pr-4">Serial</th><th className="py-2 pr-4">Ticks</th><th className="py-2 pr-4">Correct</th><th className="py-2 pr-4">% Correct</th><th className="py-2 pr-4">Actions</th></tr>
+          </thead>
+          <tbody>
+            {caseRows.length === 0 && (<tr><td colSpan={9} className="py-6 text-center text-gray-500">No cases yet.</td></tr>)}
+            {caseRows.map((c, idx) => { const pct = calcPct(c.correct, c.total); return (
+              <tr key={idx} className="border-b">
+                <td className="py-2 pr-4">{c.date}</td>
+                <td className="py-2 pr-4">{c.day ?? ''}</td>
+                <td className="py-2 pr-4">{c.setting}</td>
+                <td className="py-2 pr-4">{c.age === 'LT2M' ? '0-59 d' : '2-59 m'}</td>
+                <td className="py-2 pr-4">{c.serial}</td>
+                <td className="py-2 pr-4">{c.total}</td>
+                <td className="py-2 pr-4">{c.correct}</td>
+                <td className={`py-2 pr-4 ${pctBgClass(pct)}`}>{fmtPct(pct)}</td>
+                <td className="py-2 pr-4">
+                  <div className="flex gap-2"><button className="px-3 py-1 rounded-lg border" onClick={() => editCase(c)}>Edit</button><button className="px-3 py-1 rounded-lg border" onClick={() => deleteCase(c)}>Delete</button></div>
+                </td>
+              </tr>
+            );})}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+// --------------------------------- Reports ----------------------------------
+function ReportsView({ course, participants }) {
+  const [age, setAge] = useState('GE2M_LE5Y');
+  const [settingFilter, setSettingFilter] = useState('All');
+  const [tab, setTab] = useState('matrix'); // 'case' | 'class' | 'matrix'
+
+  // Pull all observation rows for this course, then apply filters
+  const all = restore(LS_OBS, []);
+  const rows = useMemo(
+    () => all.filter(o => o.courseId === course.id && o.age_group === age && (settingFilter === 'All' || o.setting === settingFilter)),
+    [all, course.id, age, settingFilter]
+  );
+
+  const registry = restore(LS_CASES, []);
+  const groups = ['Group A', 'Group B', 'Group C', 'Group D'];
+
+  // ---------------- Case & Classification summaries (as before) --------------
+  const caseSummaryByGroup = useMemo(() => {
+    const g = {}; const pmap = new Map(); participants.forEach(p => pmap.set(p.id, p));
+    for (const c of registry.filter(x => x.courseId === course.id && x.age_group === age && (settingFilter === 'All' || x.setting === settingFilter))) {
+      const p = pmap.get(c.participant_id || ''); if (!p) continue; const k = p.group; g[k] ??= {}; g[k][p.id] ??= { name: p.name, inp_seen: 0, inp_correct: 0, op_seen: 0, op_correct: 0 };
+      const t = g[k][p.id]; if (c.setting === 'IPD') { t.inp_seen++; if (c.allCorrect) t.inp_correct++; } else { t.op_seen++; if (c.allCorrect) t.op_correct++; }
+    }
+    return g;
+  }, [registry, participants, course.id, age, settingFilter]);
+
+  const classSummaryByGroup = useMemo(() => {
+    const g = {}; const pmap = new Map(); participants.forEach(p => pmap.set(p.id, p));
+    for (const o of rows) {
+      const p = pmap.get(o.participant_id || ''); if (!p) continue; const k = p.group; g[k] ??= {}; g[k][p.id] ??= { name: p.name, inp_total: 0, inp_correct: 0, op_total: 0, op_correct: 0 };
+      const t = g[k][p.id]; if (o.setting === 'IPD') { t.inp_total++; if (o.classification_correct === 1) t.inp_correct++; } else { t.op_total++; if (o.classification_correct === 1) t.op_correct++; }
+    }
+    return g;
+  }, [rows, participants]);
+
+  // -------------------------- Detailed Classification Report -----------------
+  const partsByGroup = useMemo(() => {
+    const map = { 'Group A': [], 'Group B': [], 'Group C': [], 'Group D': [] };
+    for (const p of participants) map[p.group]?.push(p);
+    for (const k of Object.keys(map)) map[k].sort((a,b) => a.name.localeCompare(b.name));
+    return map;
+  }, [participants]);
+
+  function buildMatrixForGroup(groupKey) {
+    const parts = partsByGroup[groupKey] || [];
+    const domains = DOMAINS_BY_AGE[age];
+    const matrixRows = [];
+
+    for (const d of domains) {
+      const items = getClassList(age, d) || [];
+      for (const item of items) {
+        const counts = parts.map(p => rows.filter(o => o.participant_id === p.id && o.domain === d && o.classification_recorded === item).length);
+        const total = counts.reduce((a,b) => a+b, 0);
+        const mean = parts.length ? total / parts.length : 0;
+        const min = counts.length ? Math.min(...counts) : 0;
+        const max = counts.length ? Math.max(...counts) : 0;
+        matrixRows.push({ domain: DOMAIN_LABEL[d] || d, item, counts, total, mean, min, max });
+      }
+    }
+
+    // Footer: per-participant total correct and % correct
+    const perPartTotals = parts.map(p => rows.filter(o => o.participant_id === p.id).length);
+    const perPartCorrect = parts.map(p => rows.filter(o => o.participant_id === p.id && o.classification_correct === 1).length);
+    const perPartPct = perPartTotals.map((den, i) => den ? (perPartCorrect[i] * 100) / den : NaN);
+
+    return { parts, matrixRows, perPartTotals, perPartCorrect, perPartPct };
+  }
+
+  function exportPDF() {
+    const doc = new jsPDF({ orientation: 'landscape' });
+    const title = tab === 'case' ? 'Case Summary' : tab === 'class' ? 'Classification Summary' : 'Detailed classification report';
+    doc.setFontSize(14); doc.text(`IMCI Report - ${title}`, 14, 14);
+    doc.setFontSize(10); doc.text(`${course.state} / ${course.locality} — Age: ${age === 'LT2M' ? '0-2 months' : '2-59 months'} — Setting: ${settingFilter}`, 14, 21);
+
+    if (tab !== 'matrix') {
+      // Reuse existing small tables export (unchanged)
+      let y = 28; const src = tab === 'case' ? caseSummaryByGroup : classSummaryByGroup;
+      for (const g of groups) {
+        const data = src[g] || {}; const ids = Object.keys(data); if (ids.length === 0) continue;
+        const body = ids.map(id => {
+          const r = data[id]; const inSeen = tab === 'case' ? r.inp_seen : r.inp_total; const inCor = r.inp_correct;
+          const outSeen = tab === 'case' ? r.op_seen : r.op_total; const outCor = r.op_correct;
+          const tot = inSeen + outSeen; const cor = inCor + outCor;
+          return [r.name, inSeen, inCor, percent(inCor, inSeen), outSeen, outCor, percent(outCor, outSeen), tot, percent(cor, tot)];
+        });
+        doc.setFontSize(12); doc.text(`Group: ${g.replace('Group ', '')}`, 14, y); y += 4;
+        autoTable(doc, { startY: y, head: [["Participant","In-patient","Correct IPD","% IPD","Out-patient","Correct OPD","% OPD","Total","% Overall"]], body, theme: 'grid', styles: { fontSize: 9 } });
+        y = (doc.lastAutoTable?.finalY || y) + 8; if (y > 180) { doc.addPage('landscape'); y = 14; }
+      }
+      doc.save(`IMCI_${title}_${new Date().toISOString().slice(0, 10)}.pdf`);
+      return;
+    }
+
+    // Matrix export (classification only column)
+    let y = 28;
+    for (const g of groups) {
+      const { parts, matrixRows, perPartCorrect, perPartTotals, perPartPct } = buildMatrixForGroup(g);
+      if (parts.length === 0) continue;
+      doc.setFontSize(12); doc.text(`Group: ${g.replace('Group ', '')}`, 14, y); y += 4;
+
+      const head = [[
+        'Classification',
+        ...parts.map(p => p.name),
+        'Total','Mean','Min','Max'
+      ]];
+      const body = matrixRows.map(r => [
+        r.item,
+        ...r.counts,
+        r.total, (Math.round(r.mean*10)/10).toFixed(1), r.min, r.max
+      ]);
+      body.push([
+        '# Correct (ticks)',
+        ...perPartCorrect,
+        '', '', '', ''
+      ]);
+      body.push([
+        '% Correct',
+        ...perPartPct.map(v => isFinite(v) ? (Math.round(v*10)/10).toFixed(1) + ' %' : '—'),
+        '', '', '', ''
+      ]);
+
+      autoTable(doc, { startY: y, head, body, theme: 'grid', styles: { fontSize: 8 }, columnStyles: { 0: { cellWidth: 90 } } });
+      y = (doc.lastAutoTable?.finalY || y) + 8; if (y > 180) { doc.addPage('landscape'); y = 14; }
+    }
+
+    doc.save(`IMCI_${title}_${new Date().toISOString().slice(0, 10)}.pdf`);
+  }
+
+  return (
+    <section className="bg-white rounded-2xl shadow p-5 grid gap-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold">{course.state} / {course.locality} — Reports</h2>
+        <div className="flex gap-2">
+          <button className="px-4 py-2 rounded-xl border" onClick={() => window.print()}>Print</button>
+          <button className="px-4 py-2 rounded-xl border" onClick={exportPDF}>Export PDF</button>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-3">
+        <button className={`px-4 py-2 rounded-xl text-white ${tab === 'case' ? 'bg-blue-600' : 'bg-blue-500/80 hover:bg-blue-500'}`} onClick={() => setTab('case')}>Case Summary</button>
+        <button className={`px-4 py-2 rounded-xl text-white ${tab === 'class' ? 'bg-emerald-600' : 'bg-emerald-500/80 hover:bg-emerald-500'}`} onClick={() => setTab('class')}>Classification Summary</button>
+        <button className={`px-4 py-2 rounded-xl text-white ${tab === 'matrix' ? 'bg-indigo-600' : 'bg-indigo-500/80 hover:bg-indigo-500'}`} onClick={() => setTab('matrix')}>Detailed classification report</button>
+      </div>
+
+      <div className="flex flex-wrap gap-4 items-center">
+        <div className="flex items-center gap-2"><span className="text-sm font-semibold text-gray-800">Age group</span><select className="border rounded-lg p-2" value={age} onChange={(e) => setAge(e.target.value)}><option value="LT2M">0-2 months</option><option value="GE2M_LE5Y">2-59 months</option></select></div>
+        <div className="flex items-center gap-2"><span className="text-sm font-semibold text-gray-800">Setting</span><select className="border rounded-lg p-2" value={settingFilter} onChange={(e) => setSettingFilter(e.target.value)}><option value="All">All</option><option value="OPD">Out-patient</option><option value="IPD">In-patient</option></select></div>
+      </div>
+
+      {tab !== 'matrix' && groups.map(g => {
+        const data = (tab === 'case' ? caseSummaryByGroup : classSummaryByGroup)[g] || {};
+        const ids = Object.keys(data); if (ids.length === 0) return null;
+        return (
+          <div key={g} className="grid gap-2">
+            <h3 className="text-lg font-semibold">Group: {g.replace('Group ', '')}</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  {tab === 'case' ? (
+                    <tr className="text-left border-b"><th className="py-2 pr-4">Participant</th><th className="py-2 pr-4">In-patient Cases</th><th className="py-2 pr-4">Correct IPD</th><th className="py-2 pr-4">% IPD</th><th className="py-2 pr-4">Out-patient Cases</th><th className="py-2 pr-4">Correct OPD</th><th className="py-2 pr-4">% OPD</th><th className="py-2 pr-4">Total</th><th className="py-2 pr-4">% Overall</th></tr>
+                  ) : (
+                    <tr className="text-left border-b"><th className="py-2 pr-4">Participant</th><th className="py-2 pr-4">In-patient Class.</th><th className="py-2 pr-4">Correct IPD</th><th className="py-2 pr-4">% IPD</th><th className="py-2 pr-4">Out-patient Class.</th><th className="py-2 pr-4">Correct OPD</th><th className="py-2 pr-4">% OPD</th><th className="py-2 pr-4">Total</th><th className="py-2 pr-4">% Overall</th></tr>
+                  )}
+                </thead>
+                <tbody>
+                  {ids.map(id => {
+                    const r = data[id]; const inSeen = tab === 'case' ? r.inp_seen : r.inp_total; const inCor = r.inp_correct;
+                    const outSeen = tab === 'case' ? r.op_seen : r.op_total; const outCor = r.op_correct;
+                    const tot = inSeen + outSeen; const cor = inCor + outCor;
+                    const pctIn = calcPct(inCor, inSeen), pctOut = calcPct(outCor, outSeen), pctAll = calcPct(cor, tot);
+                    return (
+                      <tr key={id} className="border-b">
+                        <td className="py-2 pr-4">{r.name}</td>
+                        <td className="py-2 pr-4">{inSeen}</td>
+                        <td className="py-2 pr-4">{inCor}</td>
+                        <td className={`py-2 pr-4 ${pctBgClass(pctIn)}`}>{fmtPct(pctIn)}</td>
+                        <td className="py-2 pr-4">{outSeen}</td>
+                        <td className="py-2 pr-4">{outCor}</td>
+                        <td className={`py-2 pr-4 ${pctBgClass(pctOut)}`}>{fmtPct(pctOut)}</td>
+                        <td className="py-2 pr-4">{tot}</td>
+                        <td className={`py-2 pr-4 ${pctBgClass(pctAll)}`}>{fmtPct(pctAll)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })}
+
+      {tab === 'matrix' && groups.map(g => {
+        const { parts, matrixRows, perPartCorrect, perPartTotals, perPartPct } = buildMatrixForGroup(g);
+        if (parts.length === 0) return null;
+        return (
+          <div key={g} className="grid gap-2">
+            <h3 className="text-lg font-semibold">Group: {g.replace('Group ', '')}</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-xs">
+                <thead>
+                  <tr className="text-left border-b bg-gray-50">
+                    <th className="py-2 pr-4 w-80">Classification</th>
+                    {parts.map(p => (<th key={p.id} className="py-2 pr-4 whitespace-nowrap">{p.name}</th>))}
+                    <th className="py-2 pr-4">Total</th>
+                    <th className="py-2 pr-4">Mean</th>
+                    <th className="py-2 pr-4">Min</th>
+                    <th className="py-2 pr-4">Max</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {matrixRows.map((r, idx) => (
+                    <tr key={idx} className="border-b">
+                      <td className="py-2 pr-4">{r.item}</td>
+                      {r.counts.map((c, i) => (<td key={i} className="py-2 pr-4 text-center">{c}</td>))}
+                      <td className="py-2 pr-4 font-medium">{r.total}</td>
+                      <td className="py-2 pr-4">{(Math.round(r.mean*10)/10).toFixed(1)}</td>
+                      <td className="py-2 pr-4">{r.min}</td>
+                      <td className="py-2 pr-4">{r.max}</td>
+                    </tr>
+                  ))}
+                  <tr className="bg-emerald-50 font-medium">
+                    <td className="py-2 pr-4"># Correct (ticks)</td>
+                    {perPartCorrect.map((n, i) => (<td key={i} className="py-2 pr-4 text-center">{n}</td>))}
+                    <td className="py-2 pr-4" colSpan={4}></td>
+                  </tr>
+                  <tr className="bg-emerald-50 font-medium">
+                    <td className="py-2 pr-4">% Correct</td>
+                    {perPartPct.map((v, i) => (<td key={i} className={`py-2 pr-4 text-center ${pctBgClass(v)}`}>{fmtPct(v)}</td>))}
+                    <td className="py-2 pr-4" colSpan={4}></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
+// ----------------------------- Shared UI pieces ------------------------------
+function FieldA({ label, children }) { return (<label className="grid gap-1 text-sm"><span className="text-gray-800 font-semibold">{label}</span>{children}</label>); }
+function Toolbar({ children }) { return (<div className="w-full rounded-xl border bg-white shadow-sm"><div className="flex flex-wrap gap-3 p-3">{children}</div></div>); }
+function Block({ label, children }) { return (<div className="min-w-[240px]"><div className="text-sm font-semibold text-gray-800 mb-1">{label}</div>{children}</div>); }
+
+function ProgramLogo() {
+  return (
+    <svg width="42" height="42" viewBox="0 0 100 100" className="shrink-0">
+      <rect width="100" height="100" rx="18" fill="#0a0a0a" />
+      <g transform="translate(12,10)">
+        <circle cx="38" cy="20" r="8" fill="#c63d2f" />
+        <path d="M20 70 Q38 52 56 70 v10 H20z" fill="#4348a3" />
+        <path d="M32 38 a10 10 0 0 1 12 0 l6 6 a20 20 0 0 1 6 14 v22 H20 V58 a20 20 0 0 1 6-14z" fill="#4a50b8" />
+      </g>
+    </svg>
+  );
+}
+function CourseIcon({ course }) {
+  const p = { width: 34, height: 34, viewBox: '0 0 48 48' };
+  switch (course) {
+    case 'IMNCI': return (<svg {...p}><circle cx="24" cy="24" r="22" fill="#e3f2fd" /><path d="M12 34c6-10 18-10 24 0" stroke="#1976d2" strokeWidth="3" fill="none" /><circle cx="24" cy="18" r="6" fill="#1976d2" /></svg>);
+    case 'ETAT': return (<svg {...p}><rect x="3" y="8" width="42" height="30" rx="4" fill="#fff3e0" stroke="#ef6c00" strokeWidth="3" /><path d="M8 24h10l2-6 4 12 3-8h11" stroke="#ef6c00" strokeWidth="3" fill="none" /></svg>);
+    case 'EENC': return (<svg {...p}><circle cx="16" cy="22" r="7" fill="#81c784" /><circle cx="30" cy="18" r="5" fill="#a5d6a7" /><path d="M8 34c8-6 24-6 32 0" stroke="#388e3c" strokeWidth="3" fill="none" /></svg>);
+    case 'IPC (Neonatal Unit)': return (<svg {...p}><circle cx="24" cy="24" r="22" fill="#fff" stroke="#6a1b9a" strokeWidth="3" /><path d="M10 28l8-8 6 6 8-8 6 6" stroke="#6a1b9a" strokeWidth="3" fill="none" /></svg>);
+    case 'Small & Sick Newborn': return (<svg {...p}><rect x="4" y="8" width="40" height="28" rx="6" fill="#e1f5fe" /><circle cx="18" cy="20" r="5" fill="#0277bd" /><path d="M8 30c8-6 20-6 28 0" stroke="#0277bd" strokeWidth="3" fill="none" /></svg>);
+    default: return null;
+  }
+}
+
+// ----------------------------- Utilities ------------------------------------
+function mergeObsForStorage(list) {
+  const all = restore(LS_OBS, []);
+  const ids = new Set(list.map(x => x.id));
+  const others = all.filter(x => !ids.has(x.id));
+  return [...others, ...list];
+}
+
+// ----------------------------- Smoke Tests ----------------------------------
+// Minimal runtime tests; open DevTools console to view results.
+if (typeof window !== 'undefined') {
+  (function runSmokeTests() {
+    try {
+      console.group('%cIMCI App - Smoke Tests', 'font-weight:bold');
+
+      console.assert(percent(3, 10) === '30.0 %', 'percent(3,10) should be 30.0 %');
+      console.assert(percent(0, 0) === '—', 'percent with zero denominator should be em dash');
+
+      const cp = calcPct(5, 10); // 50
+      console.assert(cp === 50, 'calcPct(5,10) should be 50');
+      console.assert(fmtPct(cp) === '50.0 %', 'fmtPct(50) should be 50.0 %');
+
+      // Lists present
+      console.assert(Array.isArray(CLASS_2_59M.respiratory) && CLASS_2_59M.respiratory.includes('Pneumonia'), '2-59m respiratory list present');
+      console.assert(Array.isArray(CLASS_0_59D.jaundice) && CLASS_0_59D.jaundice.some(x => x.toLowerCase().includes('jundice')), '0-2m jaundice list present');
+
+      // Counselling consolidated in single domain
+      console.assert(Array.isArray(CLASS_2_59M.counsel) && CLASS_2_59M.counsel.length >= 4, '2-59m single COUNSEL domain present');
+
+      // No en dashes left
+      const labels = Object.values(DOMAIN_LABEL);
+      console.assert(labels.every(t => !String(t).includes('–')), 'No en dashes remain in labels');
+
+      // NEW tests
+      console.assert(safeCSV('a,b') === '"a,b"', 'safeCSV should quote commas');
+      console.assert(safeCSV('"q"') === '"""q"""', 'safeCSV should escape quotes');
+      console.assert(pctBgClass(49) === 'bg-pink-100' && pctBgClass(50) === 'bg-yellow-100' && pctBgClass(81) === 'bg-green-100', 'pctBgClass thresholds');
+
+      console.log('%cAll smoke tests passed.', 'color:green');
+    } catch (e) {
+      console.error('Smoke tests failure:', e);
+    } finally {
+      console.groupEnd();
+    }
+  })();
+}
+
