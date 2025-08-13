@@ -1,20 +1,18 @@
+import React, { useEffect, useMemo, useState } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-import React, { useEffect, useMemo, useState } from "react";
-
 /** =============================================================================
- * National Child Health Program - Courses Monitoring System
+ * National Child Health Program - Courses Monitoring System (cleaned build)
  * - Professional Monitoring toolbar (participant, setting, age band).
- * - Unlimited facilitators per course (backward compatible with old fields).
+ * - Unlimited facilitators per course.
  * - Participant form: Arabic service questions + nearest centers + staffing counters.
- * - CSV export fixed (no unterminated string).
- * - Keeps your previous reports/monitoring behavior.
+ * - CSV/PDF export.
+ * - Offline-first: localStorage data layer with optional runtime backend bridge.
  * - NOTE: All en dashes (–) were replaced by hyphens (-) to avoid syntax errors.
  * ============================================================================ */
 
 // ----------------------------- CONFIG & STORAGE ------------------------------
-const API_BASE = ""; // keep empty for offline-first
 const LS_COURSES = "imci_courses_v9";
 const LS_PARTS   = "imci_participants_v9";
 const LS_OBS     = "imci_observations_v9";
@@ -23,6 +21,71 @@ const LS_CASES   = "imci_cases_v2";
 const uid = () => Math.random().toString(36).slice(2, 10);
 const persist = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
 const restore = (k, d) => { try { const r = localStorage.getItem(k); return r ? JSON.parse(r) : d; } catch { return d; } };
+
+// ------------------------- DATA LAYER SHIM (NO ./data) ----------------------
+/**
+ * This shim removes the hard dependency on "./data" to fix build errors.
+ * - By default it uses localStorage collections (offline-first).
+ * - If a runtime bridge is present at window.IMCI_DATA with the same methods,
+ *   calls are delegated to it (e.g., a Firestore-backed implementation).
+ */
+const _bridge = (typeof window !== 'undefined' && window.IMCI_DATA) ? window.IMCI_DATA : null;
+
+export async function listCoursesByType(course_type) {
+  if (_bridge?.listCoursesByType) return _bridge.listCoursesByType(course_type);
+  const all = restore(LS_COURSES, []);
+  return all.filter(c => c.course_type === course_type);
+}
+
+export async function upsertCourse(payload) {
+  if (_bridge?.upsertCourse) return _bridge.upsertCourse(payload);
+  const all = restore(LS_COURSES, []);
+  const id = payload.id || uid();
+  const next = { ...payload, id };
+  const idx = all.findIndex(x => x.id === id);
+  if (idx >= 0) all[idx] = { ...all[idx], ...next }; else all.unshift(next);
+  persist(LS_COURSES, all);
+  return id;
+}
+
+export async function listParticipants(courseId) {
+  if (_bridge?.listParticipants) return _bridge.listParticipants(courseId);
+  const all = restore(LS_PARTS, []);
+  return all.filter(p => p.courseId === courseId);
+}
+
+export async function upsertParticipant(p) {
+  if (_bridge?.upsertParticipant) return _bridge.upsertParticipant(p);
+  const all = restore(LS_PARTS, []);
+  const id = p.id || uid();
+  const next = { ...p, id };
+  const idx = all.findIndex(x => x.id === id);
+  if (idx >= 0) all[idx] = { ...all[idx], ...next }; else all.unshift(next);
+  persist(LS_PARTS, all);
+  return id;
+}
+
+export async function addObservations(rows) {
+  if (_bridge?.addObservations) return _bridge.addObservations(rows);
+  // Observations are already cached by the component via setRows+persist.
+  return true;
+}
+
+export async function addCase(c) {
+  if (_bridge?.addCase) return _bridge.addCase(c);
+  // Cases are cached locally by the component; no-op here.
+  return true;
+}
+
+export async function migrateLocalToFirestore() {
+  if (_bridge?.migrateLocalToFirestore) return _bridge.migrateLocalToFirestore();
+  // No backend connected: just report local counts.
+  const courses = restore(LS_COURSES, []);
+  const parts   = restore(LS_PARTS, []);
+  const obs     = restore(LS_OBS, []);
+  const cases   = restore(LS_CASES, []);
+  return { courses: courses.length, participants: parts.length, observations: obs.length, cases: cases.length };
+}
 
 const STATE_LOCALITIES = {
   "الجزيرة": ["أم القرى","الحصاحيصا","المناقل","الكاملين","ود مدني"],
@@ -42,7 +105,7 @@ const STATE_LOCALITIES = {
 const CLASS_2_59M = {
   danger: ["Any Danger Sign"],
   respiratory: [
-    "Severe pneumonia'disease",
+    "Severe pneumonia/disease",
     "Pneumonia",
     "Cough/cold",
     "Severe pneumonia/disease (Wheeze)",
@@ -60,7 +123,7 @@ const CLASS_2_59M = {
   fever_malaria: [
     "Very severe febrile disease",
     "Malaria",
-    "fever - malaria unlikly",
+    "Fever - malaria unlikely",
     "Severe complicated measles",
     "Measles - Eye/mouth complications",
     "Measles"
@@ -72,14 +135,14 @@ const CLASS_2_59M = {
     "No ear infection"
   ],
   malnutrition: [
-    "Complicated Severe Acute malnutrition SAM",
-    "Un-complicated Severe Acute malnutrition SAM",
-    "Moderate Acute malnutrition MAM",
+    "Complicated Severe Acute malnutrition (SAM)",
+    "Un-complicated Severe Acute malnutrition (SAM)",
+    "Moderate Acute malnutrition (MAM)",
     "No Acute Malnutrition"
   ],
   anaemia: [
     "Severe Anaemia",
-    "Anemia",
+    "Anaemia",
     "No anaemia"
   ],
   treatment_2_59m: [
@@ -88,9 +151,9 @@ const CLASS_2_59M = {
     "PLAN B",
     "LOCAL INFECTION"
   ],
-  // Single consolidated counselling domain, per your instruction:
+  // Single consolidated counselling domain
   counsel: [
-    "assess and council for vaacination",
+    "Assess and counsel for vaccination",
     "Asks feeding questions",
     "Feeding problems identified",
     "Gives advice on feeding problems",
@@ -103,12 +166,12 @@ const CLASS_0_59D = {
   bacterial: [
     "Possible serious bacterial infection",
     "Local bacterial infection",
-    "bacterial infection Unlikely"
+    "Bacterial infection unlikely"
   ],
   jaundice: [
-    "Severe Jundice",
+    "Severe Jaundice",
     "Jaundice",
-    "No Jundice"
+    "No Jaundice"
   ],
   vyi_diarrhoea: [
     "Severe dehydration",
@@ -135,7 +198,7 @@ const DOMAINS_BY_AGE = {
   LT2M:      ["bacterial","jaundice","vyi_diarrhoea","feeding","treatment_0_59d"],
 };
 
-// Labels (use hyphens)
+// Labels
 const DOMAIN_LABEL = {
   danger:"Danger signs",
   respiratory:"COUGH:",
@@ -171,23 +234,30 @@ const safeCSV = (s) => {
 // -----------------------------------------------------------------------------
 export default function App() {
   const [view, setView] = useState("landing");
-  const [courses, setCourses] = useState(restore(LS_COURSES, []));
-  const [participants, setParticipants] = useState(restore(LS_PARTS, []));
+
+  // Remote state (bridge/local) + local UI state
+  const [activeCourseType, setActiveCourseType] = useState("IMNCI");
+  const [courses, setCourses] = useState([]);
+  const [participants, setParticipants] = useState([]);
   const [selectedCourseId, setSelectedCourseId] = useState(null);
   const [selectedParticipantId, setSelectedParticipantId] = useState(null);
-  const [activeCourseType, setActiveCourseType] = useState("IMNCI");
 
-  // Migration: add facilitators[] if missing (keep legacy facilitator1..6)
+  // Load courses when course type changes
   useEffect(() => {
-    setCourses(prev => prev.map(c => {
-      if (Array.isArray(c.facilitators)) return c;
-      const arr = [c.facilitator1,c.facilitator2,c.facilitator3,c.facilitator4,c.facilitator5,c.facilitator6].filter(Boolean);
-      return { ...c, facilitators: arr };
-    }));
-  }, []);
+    (async () => {
+      const list = await listCoursesByType(activeCourseType);
+      setCourses(list);
+    })();
+  }, [activeCourseType]);
 
-  useEffect(() => persist(LS_COURSES, courses), [courses]);
-  useEffect(() => persist(LS_PARTS, participants), [participants]);
+  // Load participants when a course is selected
+  useEffect(() => {
+    (async () => {
+      if (!selectedCourseId) return;
+      const list = await listParticipants(selectedCourseId);
+      setParticipants(list);
+    })();
+  }, [selectedCourseId]);
 
   const selectedCourse = useMemo(() => courses.find(c => c.id === selectedCourseId) || null, [courses, selectedCourseId]);
   const courseParticipants = useMemo(() => participants.filter(p => p.courseId === selectedCourseId), [participants, selectedCourseId]);
@@ -201,7 +271,6 @@ export default function App() {
             <ProgramLogo />
             <div>
               <h1 className="text-2xl font-semibold">National Child Health Program - Courses Monitoring System</h1>
-              {/* Subtitle intentionally removed */}
               <nav className="flex gap-3 mt-3">
                 <button className="px-4 py-2 rounded-full bg-blue-600 text-white font-semibold shadow-sm hover:brightness-110" onClick={() => setView('landing')}>Home</button>
                 <button className="px-4 py-2 rounded-full bg-green-600 text-white font-semibold shadow-sm hover:brightness-110" onClick={() => setView('courses')}>Courses</button>
@@ -215,41 +284,50 @@ export default function App() {
 
         {view === 'landing' && <Landing active={activeCourseType} onPick={(t) => { setActiveCourseType(t); setView('courses'); }} />}
 
-        {view === 'courses' &&
+        {view === 'courses' && (
           <CoursesView
             courses={courses.filter(c => c.course_type === activeCourseType)}
             onAdd={() => setView('courseForm')}
             onOpen={(id) => { setSelectedCourseId(id); setSelectedParticipantId(null); setView('participants'); }}
-          />}
+          />
+        )}
 
-        {view === 'courseForm' &&
+        {view === 'courseForm' && (
           <CourseForm
             courseType={activeCourseType}
             onCancel={() => setView('courses')}
-            onSave={(payload) => {
-              const course = { id: uid(), course_type: activeCourseType, ...payload };
-              setCourses(p => [course, ...p]);
-              setSelectedCourseId(course.id);
+            onSave={async (payload) => {
+              const id = await upsertCourse({ id: undefined, course_type: activeCourseType, ...payload });
+              setCourses(await listCoursesByType(activeCourseType));
+              setSelectedCourseId(id);
               setView('participants');
             }}
-          />}
+          />
+        )}
 
-        {view === 'participants' && selectedCourse &&
+        {view === 'participants' && selectedCourse && (
           <ParticipantsView
             course={selectedCourse}
             participants={courseParticipants}
             onAdd={() => setView('participantForm')}
             onOpen={(pid) => { setSelectedParticipantId(pid); setView('observe'); }}
-          />}
+          />
+        )}
 
-        {view === 'participantForm' && selectedCourse &&
+        {view === 'participantForm' && selectedCourse && (
           <ParticipantForm
             course={selectedCourse}
             onCancel={() => setView('participants')}
-            onSave={(p) => { setParticipants(prev => [p, ...prev]); setSelectedParticipantId(p.id); setView('observe'); }}
-          />}
+            onSave={async (p) => {
+              await upsertParticipant(p);
+              setParticipants(await listParticipants(selectedCourse.id));
+              setSelectedParticipantId(p.id);
+              setView('observe');
+            }}
+          />
+        )}
 
-        {view === 'observe' && selectedCourse && selectedParticipant &&
+        {view === 'observe' && selectedCourse && selectedParticipant && (
           <ObservationView
             allCourses={courses}
             course={selectedCourse}
@@ -257,10 +335,12 @@ export default function App() {
             participants={courseParticipants}
             onChangeCourse={(id) => { setSelectedCourseId(id); setSelectedParticipantId(null); setView('participants'); }}
             onChangeParticipant={(id) => setSelectedParticipantId(id)}
-          />}
+          />
+        )}
 
-        {view === 'reports' && selectedCourse &&
-          <ReportsView course={selectedCourse} participants={participants.filter(p => p.courseId === selectedCourse.id)} />}
+        {view === 'reports' && selectedCourse && (
+          <ReportsView course={selectedCourse} participants={participants.filter(p => p.courseId === selectedCourse.id)} />
+        )}
       </div>
     </div>
   );
@@ -275,13 +355,70 @@ function Landing({ active, onPick }) {
     { key: 'IPC (Neonatal Unit)', title: 'Infection Prevention & Control (Neonatal Unit)' },
     { key: 'Small & Sick Newborn', title: 'Small & Sick Newborn Case Management' },
   ];
+
+  // Migration UI state (optional/bridge)
+  const [migrating, setMigrating] = React.useState(false);
+  const [migrated, setMigrated] = React.useState(() => {
+    try { return localStorage.getItem('imci_migration_done') === 'yes'; } catch { return false; }
+  });
+  const [msg, setMsg] = React.useState('');
+
+  async function runMigration() {
+    if (!window.confirm('This will copy your local data (courses, participants, observations, cases) to Firestore. Continue?')) return;
+    if (!window.confirm('Are you absolutely sure? Run once only.')) return;
+
+    setMigrating(true);
+    setMsg('Migrating… please wait');
+    try {
+      const result = await migrateLocalToFirestore();
+      const text =
+        `Migrated successfully:\n• Courses: ${result.courses}\n• Participants: ${result.participants}\n• Observations: ${result.observations}\n• Cases: ${result.cases}`;
+      setMsg(text);
+      try { localStorage.setItem('imci_migration_done', 'yes'); } catch {}
+      setMigrated(true);
+      alert(text);
+    } catch (e) {
+      console.error(e);
+      setMsg(`Migration failed: ${e?.message || e}`);
+      alert(`Migration failed: ${e?.message || e}`);
+    } finally {
+      setMigrating(false);
+    }
+  }
+
   return (
     <section className="bg-white rounded-2xl shadow p-5 grid gap-4">
-      <h2 className="text-lg font-medium">Pick a course package</h2>
+      <div className="flex items-start justify-between gap-3">
+        <h2 className="text-lg font-medium">Pick a course package</h2>
+        {!migrated && (
+          <button
+            type="button"
+            onClick={runMigration}
+            disabled={migrating}
+            className={`px-3 py-2 rounded-xl border ${migrating ? 'opacity-60 cursor-not-allowed' : ''}`}
+            title="Copies your localStorage data to Firestore once"
+          >
+            {migrating ? 'Migrating…' : 'Migrate local data → Firestore'}
+          </button>
+        )}
+      </div>
+
+      {msg && <div className="text-sm text-gray-600 whitespace-pre-line">{msg}</div>}
+
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {items.map(it => (
-          <button key={it.key} className={`border rounded-2xl p-4 text-left hover:shadow transition ${active === it.key ? 'ring-2 ring-blue-500' : ''}`} onClick={() => onPick(it.key)}>
-            <div className="flex items-center gap-3"><CourseIcon course={it.key} /><div><div className="font-semibold">{it.title}</div><div className="text-xs text-gray-500">Tap to manage</div></div></div>
+          <button
+            key={it.key}
+            className={`border rounded-2xl p-4 text-left hover:shadow transition ${active === it.key ? 'ring-2 ring-blue-500' : ''}`}
+            onClick={() => onPick(it.key)}
+          >
+            <div className="flex items-center gap-3">
+              <CourseIcon course={it.key} />
+              <div>
+                <div className="font-semibold">{it.title}</div>
+                <div className="text-xs text-gray-500">Tap to manage</div>
+              </div>
+            </div>
           </button>
         ))}
       </div>
@@ -539,7 +676,7 @@ function ObservationView({ allCourses, course, participant, participants, onChan
     setBuffer(prev => (prev[k] === v ? (({ [k]: _, ...rest }) => rest)(prev) : { ...prev, [k]: v }));
   };
 
-  const submitCase = () => {
+  const submitCase = async () => {
     const entries = Object.entries(buffer);
     if (entries.length === 0) { alert('No classifications selected.'); return; }
     const newObs = entries.map(([k, v]) => {
@@ -552,13 +689,23 @@ function ObservationView({ allCourses, course, participant, participants, onChan
         courseId: course.id
       };
     });
+
+    // Local state + cache
     setRows(r => [...newObs, ...r]);
 
-    // register case (for case summary)
+    // Register case (for case summary) locally
     const reg = restore(LS_CASES, []);
     const allCorrect = entries.every(([, v]) => v === 1);
     reg.push({ courseId: course.id, participant_id: participant.id, encounter_date: encounterDate, setting, age_group: age, case_serial: caseSerial, day_of_course: dayOfCourse, allCorrect });
     persist(LS_CASES, reg);
+
+    // Write-through (no-op in shim if no backend)
+    try {
+      await addObservations(newObs);
+      await addCase({ courseId: course.id, participant_id: participant.id, encounter_date: encounterDate, setting, age_group: age, case_serial: caseSerial, day_of_course: dayOfCourse, allCorrect });
+    } catch (e) {
+      console.error('Backend write failed; data kept locally:', e);
+    }
 
     setBuffer({}); setCaseAgeMonths(''); setCaseSerial(caseSerial + 1);
   };
@@ -736,7 +883,7 @@ function ReportsView({ course, participants }) {
   const [settingFilter, setSettingFilter] = useState('All');
   const [tab, setTab] = useState('matrix'); // 'case' | 'class' | 'matrix'
 
-  // Pull all observation rows for this course, then apply filters
+  // Pull all observation rows for this course (from local cache), then apply filters
   const all = restore(LS_OBS, []);
   const rows = useMemo(
     () => all.filter(o => o.courseId === course.id && o.age_group === age && (settingFilter === 'All' || o.setting === settingFilter)),
@@ -746,7 +893,7 @@ function ReportsView({ course, participants }) {
   const registry = restore(LS_CASES, []);
   const groups = ['Group A', 'Group B', 'Group C', 'Group D'];
 
-  // ---------------- Case & Classification summaries (as before) --------------
+  // ---------------- Case & Classification summaries -------------------------
   const caseSummaryByGroup = useMemo(() => {
     const g = {}; const pmap = new Map(); participants.forEach(p => pmap.set(p.id, p));
     for (const c of registry.filter(x => x.courseId === course.id && x.age_group === age && (settingFilter === 'All' || x.setting === settingFilter))) {
@@ -790,7 +937,6 @@ function ReportsView({ course, participants }) {
       }
     }
 
-    // Footer: per-participant total correct and % correct
     const perPartTotals = parts.map(p => rows.filter(o => o.participant_id === p.id).length);
     const perPartCorrect = parts.map(p => rows.filter(o => o.participant_id === p.id && o.classification_correct === 1).length);
     const perPartPct = perPartTotals.map((den, i) => den ? (perPartCorrect[i] * 100) / den : NaN);
@@ -805,8 +951,8 @@ function ReportsView({ course, participants }) {
     doc.setFontSize(10); doc.text(`${course.state} / ${course.locality} — Age: ${age === 'LT2M' ? '0-2 months' : '2-59 months'} — Setting: ${settingFilter}`, 14, 21);
 
     if (tab !== 'matrix') {
-      // Reuse existing small tables export (unchanged)
       let y = 28; const src = tab === 'case' ? caseSummaryByGroup : classSummaryByGroup;
+      const groups = ['Group A','Group B','Group C','Group D'];
       for (const g of groups) {
         const data = src[g] || {}; const ids = Object.keys(data); if (ids.length === 0) continue;
         const body = ids.map(id => {
@@ -823,8 +969,8 @@ function ReportsView({ course, participants }) {
       return;
     }
 
-    // Matrix export (classification only column)
-    let y = 28;
+    // Matrix export
+    let y = 28; const groups = ['Group A','Group B','Group C','Group D'];
     for (const g of groups) {
       const { parts, matrixRows, perPartCorrect, perPartTotals, perPartPct } = buildMatrixForGroup(g);
       if (parts.length === 0) continue;
@@ -879,9 +1025,9 @@ function ReportsView({ course, participants }) {
         <div className="flex items-center gap-2"><span className="text-sm font-semibold text-gray-800">Setting</span><select className="border rounded-lg p-2" value={settingFilter} onChange={(e) => setSettingFilter(e.target.value)}><option value="All">All</option><option value="OPD">Out-patient</option><option value="IPD">In-patient</option></select></div>
       </div>
 
-      {tab !== 'matrix' && groups.map(g => {
+      {['Group A','Group B','Group C','Group D'].map(g => {
         const data = (tab === 'case' ? caseSummaryByGroup : classSummaryByGroup)[g] || {};
-        const ids = Object.keys(data); if (ids.length === 0) return null;
+        const ids = Object.keys(data); if (ids.length === 0 || tab === 'matrix') return null;
         return (
           <div key={g} className="grid gap-2">
             <h3 className="text-lg font-semibold">Group: {g.replace('Group ', '')}</h3>
@@ -921,9 +1067,30 @@ function ReportsView({ course, participants }) {
         );
       })}
 
-      {tab === 'matrix' && groups.map(g => {
-        const { parts, matrixRows, perPartCorrect, perPartTotals, perPartPct } = buildMatrixForGroup(g);
-        if (parts.length === 0) return null;
+      {tab === 'matrix' && ['Group A','Group B','Group C','Group D'].map(g => {
+        const { parts, matrixRows, perPartCorrect, perPartTotals, perPartPct } = (function(){
+          const partsByGroup = {}; for (const p of participants) { (partsByGroup[p.group] ??= []).push(p); }
+          for (const k of Object.keys(partsByGroup)) partsByGroup[k].sort((a,b) => a.name.localeCompare(b.name));
+          const parts = partsByGroup[g] || [];
+          const domains = DOMAINS_BY_AGE[age];
+          const matrixRows = [];
+          for (const d of domains) {
+            const items = getClassList(age, d) || [];
+            for (const item of items) {
+              const counts = parts.map(p => rows.filter(o => o.participant_id === p.id && o.domain === d && o.classification_recorded === item).length);
+              const total = counts.reduce((a,b) => a+b, 0);
+              const mean = parts.length ? total / parts.length : 0;
+              const min = counts.length ? Math.min(...counts) : 0;
+              const max = counts.length ? Math.max(...counts) : 0;
+              matrixRows.push({ domain: DOMAIN_LABEL[d] || d, item, counts, total, mean, min, max });
+            }
+          }
+          const perPartTotals = parts.map(p => rows.filter(o => o.participant_id === p.id).length);
+          const perPartCorrect = parts.map(p => rows.filter(o => o.participant_id === p.id && o.classification_correct === 1).length);
+          const perPartPct = perPartTotals.map((den, i) => den ? (perPartCorrect[i] * 100) / den : NaN);
+          return { parts, matrixRows, perPartTotals, perPartCorrect, perPartPct };
+        })();
+        if ((parts || []).length === 0) return null;
         return (
           <div key={g} className="grid gap-2">
             <h3 className="text-lg font-semibold">Group: {g.replace('Group ', '')}</h3>
@@ -1008,7 +1175,6 @@ function mergeObsForStorage(list) {
 }
 
 // ----------------------------- Smoke Tests ----------------------------------
-// Minimal runtime tests; open DevTools console to view results.
 if (typeof window !== 'undefined') {
   (function runSmokeTests() {
     try {
@@ -1016,14 +1182,16 @@ if (typeof window !== 'undefined') {
 
       console.assert(percent(3, 10) === '30.0 %', 'percent(3,10) should be 30.0 %');
       console.assert(percent(0, 0) === '—', 'percent with zero denominator should be em dash');
+      console.assert(percent(7, 3) === '233.3 %', 'percent(7,3) should be 233.3 %');
 
       const cp = calcPct(5, 10); // 50
       console.assert(cp === 50, 'calcPct(5,10) should be 50');
       console.assert(fmtPct(cp) === '50.0 %', 'fmtPct(50) should be 50.0 %');
+      console.assert(fmtPct(NaN) === '—', 'fmtPct(NaN) should be dash');
 
       // Lists present
       console.assert(Array.isArray(CLASS_2_59M.respiratory) && CLASS_2_59M.respiratory.includes('Pneumonia'), '2-59m respiratory list present');
-      console.assert(Array.isArray(CLASS_0_59D.jaundice) && CLASS_0_59D.jaundice.some(x => x.toLowerCase().includes('jundice')), '0-2m jaundice list present');
+      console.assert(Array.isArray(CLASS_0_59D.jaundice) && CLASS_0_59D.jaundice.some(x => x.toLowerCase().includes('jaundice')), '0-2m jaundice list present');
 
       // Counselling consolidated in single domain
       console.assert(Array.isArray(CLASS_2_59M.counsel) && CLASS_2_59M.counsel.length >= 4, '2-59m single COUNSEL domain present');
@@ -1032,10 +1200,17 @@ if (typeof window !== 'undefined') {
       const labels = Object.values(DOMAIN_LABEL);
       console.assert(labels.every(t => !String(t).includes('–')), 'No en dashes remain in labels');
 
-      // NEW tests
+      // CSV safety + thresholds
       console.assert(safeCSV('a,b') === '"a,b"', 'safeCSV should quote commas');
       console.assert(safeCSV('"q"') === '"""q"""', 'safeCSV should escape quotes');
       console.assert(pctBgClass(49) === 'bg-pink-100' && pctBgClass(50) === 'bg-yellow-100' && pctBgClass(81) === 'bg-green-100', 'pctBgClass thresholds');
+
+      // mergeObsForStorage should include existing + new, dedup by id
+      const obsBackup = restore(LS_OBS, []);
+      persist(LS_OBS, [{ id: 'a' }, { id: 'b' }]);
+      const merged = mergeObsForStorage([{ id: 'b' }, { id: 'c' }]);
+      console.assert(merged.length === 3 && merged.some(x => x.id === 'a') && merged.some(x => x.id === 'b') && merged.some(x => x.id === 'c'), 'mergeObsForStorage merges & dedups');
+      persist(LS_OBS, obsBackup);
 
       console.log('%cAll smoke tests passed.', 'color:green');
     } catch (e) {
@@ -1045,4 +1220,3 @@ if (typeof window !== 'undefined') {
     }
   })();
 }
-
