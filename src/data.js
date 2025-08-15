@@ -6,15 +6,17 @@ import {
     getDocs, 
     doc, 
     setDoc, 
-    addDoc, 
     deleteDoc,
     writeBatch
 } from "firebase/firestore";
 
-// Helper to generate unique IDs if needed (though Firestore does this automatically)
+// Helper to generate unique IDs for new documents
 const uid = () => doc(collection(db, 'temp')).id;
 
-// --- Courses ---
+// =============================================================================
+// COURSES
+// =============================================================================
+
 export async function listCoursesByType(course_type) {
     const coursesCol = collection(db, "courses");
     const q = query(coursesCol, where("course_type", "==", course_type));
@@ -30,24 +32,32 @@ export async function upsertCourse(payload) {
 }
 
 export async function deleteCourse(courseId) {
-    // Note: This is a simple delete. For production, you'd want a Cloud Function 
-    // to recursively delete subcollections (participants, observations).
-    await deleteDoc(doc(db, "courses", courseId));
-    
-    // Simple deletion of related participants (less efficient but works)
-    const participantsCol = collection(db, "participants");
-    const q = query(participantsCol, where("courseId", "==", courseId));
-    const snapshot = await getDocs(q);
-    
     const batch = writeBatch(db);
-    snapshot.docs.forEach(d => batch.delete(d.ref));
-    await batch.commit();
+    batch.delete(doc(db, "courses", courseId));
 
+    const pq = query(collection(db, "participants"), where("courseId", "==", courseId));
+    const pSnap = await getDocs(pq);
+    pSnap.docs.forEach(d => batch.delete(d.ref));
+
+    const oq = query(collection(db, "observations"), where("courseId", "==", courseId));
+    const oSnap = await getDocs(oq);
+    oSnap.docs.forEach(d => batch.delete(d.ref));
+
+    const cq = query(collection(db, "cases"), where("courseId", "==", courseId));
+    const cSnap = await getDocs(cq);
+    cSnap.docs.forEach(d => batch.delete(d.ref));
+
+    await batch.commit();
     return true;
 }
 
-// --- Participants ---
+
+// =============================================================================
+// PARTICIPANTS
+// =============================================================================
+
 export async function listParticipants(courseId) {
+    if (!courseId) return [];
     const participantsCol = collection(db, "participants");
     const q = query(participantsCol, where("courseId", "==", courseId));
     const querySnapshot = await getDocs(q);
@@ -62,19 +72,103 @@ export async function upsertParticipant(p) {
 }
 
 export async function deleteParticipant(participantId) {
-    await deleteDoc(doc(db, "participants", participantId));
+    const batch = writeBatch(db);
+    batch.delete(doc(db, "participants", participantId));
+    
+    const oq = query(collection(db, "observations"), where("participant_id", "==", participantId));
+    const oSnap = await getDocs(oq);
+    oSnap.docs.forEach(d => batch.delete(d.ref));
+
+    const cq = query(collection(db, "cases"), where("participant_id", "==", participantId));
+    const cSnap = await getDocs(cq);
+    cSnap.docs.forEach(d => batch.delete(d.ref));
+
+    await batch.commit();
     return true;
 }
 
-// --- Observations & Cases ---
-// These functions need to be implemented if you want to save this data to Firestore.
-// For now, they can remain stubs.
-export async function addObservations(rows) {
-  console.log("addObservations to Firestore not implemented yet.", rows);
-  return true; 
+
+// =============================================================================
+// OBSERVATIONS & CASES (IMPLEMENTED)
+// =============================================================================
+
+export async function listObservationsForParticipant(courseId, participantId) {
+    const q = query(
+        collection(db, "observations"),
+        where("courseId", "==", courseId),
+        where("participant_id", "==", participantId)
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(d => d.data());
 }
 
-export async function addCase(c) {
-  console.log("addCase to Firestore not implemented yet.", c);
-  return true;
+export async function listCasesForParticipant(courseId, participantId) {
+    const q = query(
+        collection(db, "cases"),
+        where("courseId", "==", courseId),
+        where("participant_id", "==", participantId)
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(d => d.data());
+}
+
+export async function upsertCaseAndObservations(caseData, observations, editingCaseId = null) {
+    const batch = writeBatch(db);
+
+    if (editingCaseId) {
+        await deleteCaseAndObservations(editingCaseId);
+    }
+    
+    const caseId = editingCaseId || uid();
+    const caseRef = doc(db, "cases", caseId);
+    batch.set(caseRef, { ...caseData, id: caseId });
+
+    observations.forEach(obs => {
+        const obsId = uid();
+        const obsRef = doc(db, "observations", obsId);
+        batch.set(obsRef, { ...obs, id: obsId, caseId: caseId });
+    });
+
+    await batch.commit();
+}
+
+export async function deleteCaseAndObservations(caseId) {
+    const batch = writeBatch(db);
+
+    batch.delete(doc(db, "cases", caseId));
+    
+    const q = query(collection(db, "observations"), where("caseId", "==", caseId));
+    const snapshot = await getDocs(q);
+    snapshot.docs.forEach(d => batch.delete(d.ref));
+
+    await batch.commit();
+}
+
+// =============================================================================
+// REPORTING
+// =============================================================================
+
+export async function listAllDataForCourse(courseId) {
+    const obsQuery = query(collection(db, "observations"), where("courseId", "==", courseId));
+    const casesQuery = query(collection(db, "cases"), where("courseId", "==", courseId));
+
+    const [obsSnap, casesSnap] = await Promise.all([
+        getDocs(obsQuery),
+        getDocs(casesQuery)
+    ]);
+
+    const allObs = obsSnap.docs.map(d => d.data());
+    const allCases = casesSnap.docs.map(d => d.data());
+
+    return { allObs, allCases };
+}
+
+// =============================================================================
+// MIGRATION (PLACEHOLDER)
+// =============================================================================
+
+export async function migrateLocalToFirestore() {
+    console.warn("Migration from localStorage is a complex, one-time operation that has been disabled.");
+    alert("This migration feature is disabled.");
+    return { courses: 0, participants: 0, observations: 0, cases: 0 };
 }
