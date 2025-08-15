@@ -15,7 +15,7 @@ import {
     upsertCaseAndObservations,
     deleteCaseAndObservations,
     listAllDataForCourse,
-    migrateLocalToFirestore
+  
 } from './data.js';
 
 /** =============================================================================
@@ -260,64 +260,7 @@ function Landing({ active, onPick }) {
       { key: 'Small & Sick Newborn', title: 'Small & Sick Newborn Case Management', enabled: false },
     ];
   
-    const [migrating, setMigrating] = React.useState(false);
-    const [migrated, setMigrated] = React.useState(() => {
-      try { return localStorage.getItem('imci_migration_done') === 'yes'; } catch { return false; }
-    });
-    const [msg, setMsg] = React.useState('');
-  
-    async function runMigration() {
-      if (!window.confirm('This will copy your local data (courses, participants, observations, cases) to Firestore. Continue?')) return;
-      if (!window.confirm('Are you absolutely sure? Run once only.')) return;
-  
-      setMigrating(true);
-      setMsg('Migrating… please wait');
-      try {
-        const result = await migrateLocalToFirestore();
-        const text = `Migrated successfully:\n• Courses: ${result.courses}\n• Participants: ${result.participants}\n• Observations: ${result.observations}\n• Cases: ${result.cases}`;
-        setMsg(text);
-        try { localStorage.setItem('imci_migration_done', 'yes'); } catch {}
-        setMigrated(true);
-        alert(text);
-      } catch (e) {
-        console.error(e);
-        setMsg(`Migration failed: ${e?.message || e}`);
-        alert(`Migration failed: ${e?.message || e}`);
-      } finally {
-        setMigrating(false);
-      }
-    }
-  
-    return (
-      <section className="bg-white rounded-2xl shadow p-5 grid gap-4">
-        <div className="flex items-start justify-between gap-3">
-          <h2 className="text-lg font-medium">Pick a course package</h2>
-          {!migrated && (
-            <button type="button" onClick={runMigration} disabled={migrating} className={`px-3 py-2 rounded-xl border ${migrating ? 'opacity-60 cursor-not-allowed' : ''}`} title="Copies your localStorage data to Firestore once">
-              {migrating ? 'Migrating…' : 'Migrate local data → Firestore'}
-            </button>
-          )}
-        </div>
-  
-        {msg && <div className="text-sm text-gray-600 whitespace-pre-line">{msg}</div>}
-  
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {items.map(it => (
-            <button key={it.key} disabled={!it.enabled} className={`border rounded-2xl p-4 text-left transition ${active === it.key ? 'ring-2 ring-blue-500' : ''} ${it.enabled ? 'hover:shadow' : 'opacity-50 cursor-not-allowed'}`} onClick={() => it.enabled && onPick(it.key)}>
-              <div className="flex items-center gap-3">
-                <CourseIcon course={it.key} />
-                <div>
-                  <div className="font-semibold">{it.title}</div>
-                  <div className="text-xs text-gray-500">{it.enabled ? 'Tap to manage' : 'Coming Soon'}</div>
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
-      </section>
-    );
-  }
-  
+      
   function CoursesView({ courses, onAdd, onOpen, onEdit, onDelete }) {
     return (
       <section className="bg-white rounded-2xl shadow p-5 grid gap-4">
