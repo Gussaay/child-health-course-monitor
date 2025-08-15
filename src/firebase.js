@@ -6,7 +6,7 @@ import { getAnalytics } from "firebase/analytics";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDRZoNR9e1AnE9RyqPZ-eXYbHkWOUJmoyI", // Use your actual config
+  apiKey: "AIzaSyAbIZPGWOb7s0DyJFaXcV_0hQsMwTZZRKU",
   authDomain: "imnci-courses-monitor.firebaseapp.com",
   projectId: "imnci-courses-monitor",
   storageBucket: "imnci-courses-monitor.firebaseapp.com",
