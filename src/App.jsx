@@ -4,7 +4,6 @@ import autoTable from "jspdf-autotable";
 // +++ Import Chart.js for graphing +++
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
-import ReloadPrompt from './ReloadPrompt'; // ++ ADD THIS IMPORT ++
 
 // +++ Register Chart.js components +++
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
@@ -29,8 +28,8 @@ import {
  * National Child Health Program - Courses Monitoring System (Firebase Version)
  * ============================================================================ */
 
-// ... (all your constants and helper functions remain the same)
 // ----------------------------- CONSTANTS ------------------------------
+// +++ UPDATED STATES AND LOCALITIES BASED ON PROVIDED JSON +++
 const STATE_LOCALITIES = {
     "Khartoum": ["Khartoum", "Omdurman", "Khartoum North (Bahri)", "Jebel Awliya", "Sharq an-Nil", "Karari", "Um Badda"],
     "Gezira": ["Wad Madani Al Kubra", "South Al Gazira", "North Al Gazira", "East Al Gazira", "Um Al Gura", "Al Hasahisa", "Al Kamlin", "Al Managil", "24 Al-Qurashi"],
@@ -397,7 +396,7 @@ const generateFullCourseReportPdf = async (course, groupPerformance, chartRef) =
         doc.text("Performance Chart", 14, finalY + 15);
         doc.addImage(chartImg, 'PNG', 14, finalY + 20, 260, 120);
     }
-    
+
     doc.save(fileName);
 };
 
@@ -482,7 +481,7 @@ function CoursesView({ courses, onAdd, onOpen, onEdit, onDelete, onOpenReport })
     return (
         <Card>
             <PageHeader title="Available Courses" />
-             <div className="mb-4">
+            <div className="mb-4">
                 <Button onClick={onAdd}>Add New Course</Button>
             </div>
             <Table headers={["State", "Locality", "Hall", "#", "Actions"]}>
@@ -532,7 +531,7 @@ function CourseReportView({ course, onBack }) {
 
     const { groupPerformance, overall } = useMemo(() => {
         const groupPerformance = { 'Group A': { pids: [], totalObs: 0, correctObs: 0, totalCases: 0 }, 'Group B': { pids: [], totalObs: 0, correctObs: 0, totalCases: 0 }, 'Group C': { pids: [], totalObs: 0, correctObs: 0, totalCases: 0 }, 'Group D': { pids: [], totalObs: 0, correctObs: 0, totalCases: 0 } };
-        
+
         participants.forEach(p => {
             if (groupPerformance[p.group]) {
                 groupPerformance[p.group].pids.push(p.id);
@@ -546,10 +545,10 @@ function CourseReportView({ course, onBack }) {
                 if (o.item_correct > 0) groupPerformance[p.group].correctObs++;
             }
         });
-        
+
         allCases.forEach(c => {
-             const p = participants.find(p => p.id === c.participant_id);
-             if (p && groupPerformance[p.group]) {
+            const p = participants.find(p => p.id === c.participant_id);
+            if (p && groupPerformance[p.group]) {
                 groupPerformance[p.group].totalCases++;
             }
         });
@@ -572,7 +571,7 @@ function CourseReportView({ course, onBack }) {
             avgCases: (totalCases / participants.length) || 0,
             avgSkills: (totalObs / participants.length) || 0,
         };
-        
+
         return { groupPerformance, overall };
     }, [participants, allObs, allCases]);
 
@@ -586,7 +585,7 @@ function CourseReportView({ course, onBack }) {
             backgroundColor: ['#3b82f6', '#10b981', '#f97316', '#ef4444'],
         }],
     };
-    
+
     const chartOptions = {
         responsive: true,
         plugins: { legend: { display: false }, title: { display: true, text: 'Overall Performance by Group' } },
@@ -617,17 +616,17 @@ function CourseReportView({ course, onBack }) {
             </Card>
 
             <Card>
-                 <h3 className="text-xl font-bold mb-4">Key Performance Indicators (KPIs)</h3>
-                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <h3 className="text-xl font-bold mb-4">Key Performance Indicators (KPIs)</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                     <div className="p-4 bg-gray-100 rounded-lg">
                         <div className="text-sm text-gray-600">Total Cases</div>
                         <div className="text-3xl font-bold text-sky-700">{overall.totalCases}</div>
                     </div>
-                     <div className="p-4 bg-gray-100 rounded-lg">
+                    <div className="p-4 bg-gray-100 rounded-lg">
                         <div className="text-sm text-gray-600">Avg. Cases / Participant</div>
                         <div className="text-3xl font-bold text-sky-700">{overall.avgCases.toFixed(1)}</div>
                     </div>
-                     <div className="p-4 bg-gray-100 rounded-lg">
+                    <div className="p-4 bg-gray-100 rounded-lg">
                         <div className="text-sm text-gray-600">Avg. Skills / Participant</div>
                         <div className="text-3xl font-bold text-sky-700">{overall.avgSkills.toFixed(1)}</div>
                     </div>
@@ -639,7 +638,7 @@ function CourseReportView({ course, onBack }) {
             </Card>
 
             <div className="grid md:grid-cols-2 gap-6">
-                 <Card>
+                <Card>
                     <h3 className="text-xl font-bold mb-4">Performance by Group</h3>
                     <Table headers={['Group', '# Participants', 'Cases Seen', 'Skills Recorded', '% Correct']}>
                         {Object.entries(groupPerformance).map(([group, data]) => (
@@ -654,7 +653,7 @@ function CourseReportView({ course, onBack }) {
                     </Table>
                 </Card>
                 <Card>
-                     <Bar ref={chartRef} options={chartOptions} data={chartData} />
+                    <Bar ref={chartRef} options={chartOptions} data={chartData} />
                 </Card>
             </div>
         </div>
@@ -673,21 +672,21 @@ function CourseForm({ courseType, initialData, onCancel, onSave }) {
     const [supporter, setSupporter] = useState(initialData?.funded_by || '');
     const [facilitators, setFacilitators] = useState(initialData?.facilitators || ['', '']);
     const [error, setError] = useState('');
-    
+
     const addFac = () => setFacilitators(f => [...f, '']);
     const removeFac = (i) => setFacilitators(f => f.length <= 2 ? f : f.filter((_, idx) => idx !== i));
     const setFac = (i, v) => setFacilitators(f => f.map((x, idx) => idx === i ? v : x));
-    
+
     const submit = () => {
         const facArr = facilitators.map(s => s.trim()).filter(Boolean);
         if (!state || !locality || !hall || !coordinator || !participantsCount || !director || facArr.length < 2 || !supporter || !startDate) {
             setError('Please complete all required fields (minimum two facilitators).'); return;
         }
-        
-        const payload = { 
+
+        const payload = {
             state, locality, hall, coordinator, start_date: startDate,
-            participants_count: participantsCount, director, 
-            funded_by: supporter, facilitators: facArr 
+            participants_count: participantsCount, director,
+            funded_by: supporter, facilitators: facArr
         };
 
         if (courseType === 'IMNCI') {
@@ -709,7 +708,7 @@ function CourseForm({ courseType, initialData, onCancel, onSave }) {
                 <FormGroup label="Course Coordinator"><Input value={coordinator} onChange={(e) => setCoordinator(e.target.value)} /></FormGroup>
                 <FormGroup label="# of Participants"><Input type="number" value={participantsCount} onChange={(e) => setParticipantsCount(Number(e.target.value))} /></FormGroup>
                 <FormGroup label="Course Director"><Input value={director} onChange={(e) => setDirector(e.target.value)} /></FormGroup>
-                {courseType === 'IMNCI' && 
+                {courseType === 'IMNCI' &&
                     <FormGroup label="Clinical Instructor (Optional)"><Input value={clinical} onChange={(e) => setClinical(e.target.value)} /></FormGroup>
                 }
                 <FormGroup label="Funded by:"><Input value={supporter} onChange={(e) => setSupporter(e.target.value)} /></FormGroup>
@@ -727,12 +726,12 @@ function ParticipantsView({ course, participants, onAdd, onOpen, onEdit, onDelet
     return (
         <Card>
             <PageHeader title="Course Participants" subtitle={`${course.state} / ${course.locality}`} />
-            
+
             <div className="flex justify-between items-center mb-4">
                 <Button onClick={onAdd}>Add Participant</Button>
                 <div className="flex items-center gap-2">
-                     <label className="font-semibold text-gray-700 text-sm">Filter by Group:</label>
-                     <Select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}>
+                    <label className="font-semibold text-gray-700 text-sm">Filter by Group:</label>
+                    <Select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}>
                         <option value="All">All Groups</option>
                         <option>Group A</option>
                         <option>Group B</option>
@@ -888,7 +887,7 @@ function ParticipantReportView({ course, participant, participants, onChangePart
                 subtitle={participant.name}
                 actions={<>
                     <div className="w-64">
-                         <FormGroup label="Switch Participant">
+                        <FormGroup label="Switch Participant">
                             <Select value={participant.id} onChange={(e) => onChangeParticipant(e.target.value)}>
                                 {participants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                             </Select>
@@ -929,7 +928,7 @@ function ParticipantReportView({ course, participant, participants, onChangePart
                     </div>
                     {course.course_type === 'IMNCI' && (
                         <div>
-                             <Bar ref={chartBySettingRef} options={{ ...chartOptions, plugins: { ...chartOptions.plugins, title: { ...chartOptions.plugins.title, text: 'Performance by Setting' } } }} data={{ labels: performanceBySetting.map(d => d.setting), datasets: [{ data: performanceBySetting.map(d => d.pct), backgroundColor: ['#f97316', '#10b981'] }] }} />
+                            <Bar ref={chartBySettingRef} options={{ ...chartOptions, plugins: { ...chartOptions.plugins, title: { ...chartOptions.plugins.title, text: 'Performance by Setting' } } }} data={{ labels: performanceBySetting.map(d => d.setting), datasets: [{ data: performanceBySetting.map(d => d.pct), backgroundColor: ['#f97316', '#10b981'] }] }} />
                         </div>
                     )}
                 </div>
@@ -953,7 +952,7 @@ function ParticipantReportView({ course, participant, participants, onChangePart
                                         return (
                                             <tr key={skill}>
                                                 <td className="p-2 border">{skill}</td>
-                                                <td className="p-2 border">{course.course_type === 'EENC' ? `${data.score}/${data.maxScore}`: `${data.correct}/${data.total}`}</td>
+                                                <td className="p-2 border">{course.course_type === 'EENC' ? `${data.score}/${data.maxScore}` : `${data.correct}/${data.total}`}</td>
                                                 <td className={`p-2 border font-mono ${pctBgClass(pct)}`}>{fmtPct(pct)}</td>
                                             </tr>
                                         );
@@ -1046,7 +1045,7 @@ function ParticipantForm({ course, initialData, onCancel, onSave }) {
         if (!name || !state || !locality || !center || !finalJobTitle || !phone) { setError('Please complete all required fields'); return; }
 
         let p = { name, group, state, locality, center_name: center, job_title: finalJobTitle, phone };
-        
+
         if (isImnci) {
             if (!facilityType) { setError('Please complete all required fields'); return; }
             if (numProv <= 0) { setError('Number of providers at health center must be more than zero.'); return; }
@@ -1058,7 +1057,7 @@ function ParticipantForm({ course, initialData, onCancel, onSave }) {
             if (!hospitalTypeEenc) { setError('Please complete all required fields'); return; }
             p = { ...p, hospital_type: hospitalTypeEenc === 'other' ? otherHospitalTypeEenc : hospitalTypeEenc, trained_eenc_before: trainedEENC === 'yes', last_eenc_training: trainedEENC === 'yes' ? lastTrainEENC : '', has_sncu: hasSncu, has_iycf_center: hasIycfCenter, num_staff_in_delivery: numStaffInDelivery, num_staff_trained_in_eenc: numStaffTrainedInEenc, has_kangaroo_room: hasKangaroo };
         }
-        
+
         onSave(p);
     };
 
@@ -1073,7 +1072,7 @@ function ParticipantForm({ course, initialData, onCancel, onSave }) {
                 <FormGroup label="State"><Select value={state} onChange={(e) => { setState(e.target.value); setLocality(''); }}><option value="">— Select State —</option>{Object.keys(STATE_LOCALITIES).sort().map(s => <option key={s} value={s}>{s}</option>)}</Select></FormGroup>
                 <FormGroup label="Locality"><Select value={locality} onChange={(e) => setLocality(e.target.value)} disabled={!state}><option value="">— Select Locality —</option>{(STATE_LOCALITIES[state] || []).sort().map(l => <option key={l} value={l}>{l}</option>)}</Select></FormGroup>
                 <FormGroup label={isEtat ? "Hospital Name" : "Health Facility Name"}><Input value={center} onChange={(e) => setCenter(e.target.value)} /></FormGroup>
-                
+
                 <FormGroup label="Job Title">
                     <Select value={job} onChange={(e) => setJob(e.target.value)}>
                         <option value="">— Select Job —</option>
@@ -1086,9 +1085,9 @@ function ParticipantForm({ course, initialData, onCancel, onSave }) {
                         <Input value={otherJobTitle} onChange={(e) => setOtherJobTitle(e.target.value)} placeholder="Please specify" />
                     </FormGroup>
                 )}
-                
+
                 <FormGroup label="Phone Number"><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></FormGroup>
-                
+
                 {/* --- IMCI SPECIFIC FIELDS --- */}
                 {isImnci && (<>
                     <FormGroup label="Facility Type"><Select value={facilityType} onChange={(e) => setFacilityType(e.target.value)}><option value="">— Select Type —</option><option value="Health Unit">Health Unit</option><option value="Health Center">Health Center</option><option value="Rural Hospital">Rural Hospital</option><option value="Teaching Hospital">Teaching Hospital</option><option value="other">Other</option></Select></FormGroup>
@@ -1188,7 +1187,7 @@ function ObservationView({ course, participant, participants, onChangeParticipan
                 return;
             }
         }
-        
+
         if (entries.length === 0) { alert('No skills/classifications selected.'); return; }
 
         const currentCaseSerial = editingCase ? editingCase.case_serial : caseSerial;
@@ -1456,13 +1455,13 @@ function ImnciReports({ course, participants, allObs, allCases }) {
 
     const filteredObs = useMemo(() => allObs.filter(o => o.courseId === course.id && o.age_group === age && (settingFilter === 'All' || o.setting === settingFilter) && (dayFilter === 'All' || o.day_of_course === Number(dayFilter))), [allObs, course.id, age, settingFilter, dayFilter]);
     const filteredCases = useMemo(() => allCases.filter(c => c.courseId === course.id && c.age_group === age && (settingFilter === 'All' || c.setting === settingFilter) && (dayFilter === 'All' || c.day_of_course === Number(dayFilter))), [allCases, course.id, age, settingFilter, dayFilter]);
-    
+
     const caseSummaryByGroup = useMemo(() => {
         const g = {}; const pmap = new Map(); participants.forEach(p => pmap.set(p.id, p));
         for (const c of filteredCases) { const p = pmap.get(c.participant_id || ''); if (!p) continue; const k = p.group; g[k] ??= {}; g[k][p.id] ??= { name: p.name, inp_seen: 0, inp_correct: 0, op_seen: 0, op_correct: 0 }; const t = g[k][p.id]; if (c.setting === 'IPD') { t.inp_seen++; if (c.allCorrect) t.inp_correct++; } else { t.op_seen++; if (c.allCorrect) t.op_correct++; } }
         return g;
     }, [filteredCases, participants]);
-    
+
     const classSummaryByGroup = useMemo(() => {
         const g = {}; const pmap = new Map(); participants.forEach(p => pmap.set(p.id, p));
         for (const o of filteredObs) { const p = pmap.get(o.participant_id || ''); if (!p) continue; const k = p.group; g[k] ??= {}; g[k][p.id] ??= { name: p.name, inp_total: 0, inp_correct: 0, op_total: 0, op_correct: 0 }; const t = g[k][p.id]; if (o.setting === 'IPD') { t.inp_total++; if (o.item_correct === 1) t.inp_correct++; } else { t.op_total++; if (o.item_correct === 1) t.op_correct++; } }
@@ -1525,11 +1524,11 @@ function ImnciReports({ course, participants, allObs, allCases }) {
                 <div className="flex gap-4 items-center">
                     <FormGroup label="Age group"><Select value={age} onChange={(e) => setAge(e.target.value)}><option value="LT2M">0-2 months</option><option value="GE2M_LE5Y">2-59 months</option></Select></FormGroup>
                     <FormGroup label="Setting"><Select value={settingFilter} onChange={(e) => setSettingFilter(e.target.value)}><option value="All">All</option><option value="OPD">Out-patient</option><option value="IPD">In-patient</option></Select></FormGroup>
-                    <FormGroup label="Day of Training"><Select value={dayFilter} onChange={(e) => setDayFilter(e.target.value)}><option value="All">All Days</option>{[1,2,3,4,5,6,7].map(d=><option key={d} value={d}>Day {d}</option>)}</Select></FormGroup>
+                    <FormGroup label="Day of Training"><Select value={dayFilter} onChange={(e) => setDayFilter(e.target.value)}><option value="All">All Days</option>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>Day {d}</option>)}</Select></FormGroup>
                 </div>
-                <Button onClick={handleExportFullReportPdf}><PdfIcon/> Save Full Report as PDF</Button>
+                <Button onClick={handleExportFullReportPdf}><PdfIcon /> Save Full Report as PDF</Button>
             </div>
-            
+
             {tab !== 'matrix' && ['Group A', 'Group B', 'Group C', 'Group D'].map(g => {
                 const data = (tab === 'case' ? caseSummaryByGroup : classSummaryByGroup)[g] || {};
                 const ids = Object.keys(data); if (ids.length === 0) return null;
@@ -1596,7 +1595,7 @@ function EtatReports({ course, participants, allObs, allCases }) {
         for (const c of filteredCases) { const p = pmap.get(c.participant_id || ''); if (!p) continue; const k = p.group; g[k] ??= {}; g[k][p.id] ??= { name: p.name, total_cases: 0, correct_cases: 0 }; const t = g[k][p.id]; t.total_cases++; if (c.allCorrect) t.correct_cases++; }
         return g;
     }, [filteredCases, participants]);
-    
+
     const handleExportFullReportPdf = () => {
         const doc = new jsPDF();
         const reportTitle = `ETAT Report - ${tab === 'case' ? 'Case Summary' : 'Detailed Skills'}`;
@@ -1641,10 +1640,10 @@ function EtatReports({ course, participants, allObs, allCases }) {
     return (
         <div className="mt-6">
             <div className="flex flex-wrap gap-3 mb-4"><Button variant={tab === 'case' ? 'primary' : 'secondary'} onClick={() => setTab('case')}>Case Summary</Button><Button variant={tab === 'matrix' ? 'primary' : 'secondary'} onClick={() => setTab('matrix')}>Detailed Skill Report</Button></div>
-            
+
             <div className="flex flex-wrap gap-4 items-center justify-between p-4 bg-gray-50 rounded-md mb-6">
-                 <FormGroup label="Day of Training"><Select value={dayFilter} onChange={(e) => setDayFilter(e.target.value)}><option value="All">All Days</option>{[1,2,3,4,5,6,7].map(d=><option key={d} value={d}>Day {d}</option>)}</Select></FormGroup>
-                <Button onClick={handleExportFullReportPdf}><PdfIcon/> Save Full Report as PDF</Button>
+                <FormGroup label="Day of Training"><Select value={dayFilter} onChange={(e) => setDayFilter(e.target.value)}><option value="All">All Days</option>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>Day {d}</option>)}</Select></FormGroup>
+                <Button onClick={handleExportFullReportPdf}><PdfIcon /> Save Full Report as PDF</Button>
             </div>
 
             {tab === 'case' && ['Group A', 'Group B', 'Group C', 'Group D'].map(g => {
@@ -1656,7 +1655,7 @@ function EtatReports({ course, participants, allObs, allCases }) {
                     </div>
                 );
             })}
-            
+
             {tab === 'matrix' && ['Group A', 'Group B', 'Group C', 'Group D'].map(g => {
                 const parts = participants.filter(p => p.group === g).sort((a, b) => a.name.localeCompare(b.name));
                 if (parts.length === 0) return null;
@@ -1713,18 +1712,18 @@ function EencReports({ course, participants, allObs, allCases }) {
         participants.forEach(p => {
             const groupKey = p.group;
             g[groupKey] ??= {};
-            g[groupKey][p.id] = { 
-                name: p.name, 
+            g[groupKey][p.id] = {
+                name: p.name,
                 total_cases: 0, total_score: 0, total_max_score: 0,
                 breathing_cases: 0, breathing_score: 0, breathing_max_score: 0,
                 not_breathing_cases: 0, not_breathing_score: 0, not_breathing_max_score: 0
             };
         });
-        
+
         for (const c of filteredCases) {
             const p = pmap.get(c.participant_id || '');
             if (!p) continue;
-            
+
             const t = g[p.group][p.id];
             const caseObs = filteredObs.filter(o => o.caseId === c.id);
             const isBreathing = c.age_group === 'EENC_breathing';
@@ -1747,7 +1746,7 @@ function EencReports({ course, participants, allObs, allCases }) {
         }
         return g;
     }, [filteredCases, filteredObs, participants]);
-    
+
     const handleExportFullReportPdf = () => {
         const doc = new jsPDF('landscape');
         const reportTitle = `EENC Report - ${tab === 'summary' ? 'Score Summary' : 'Detailed Skills'}`;
@@ -1768,7 +1767,7 @@ function EencReports({ course, participants, allObs, allCases }) {
                     { content: 'Total', colSpan: 3, styles: { halign: 'center' } },
                     { content: 'Breathing', colSpan: 3, styles: { halign: 'center' } },
                     { content: 'Not Breathing', colSpan: 3, styles: { halign: 'center' } }
-                ],['Cases', 'Score', '%', 'Cases', 'Score', '%', 'Cases', 'Score', '%']];
+                ], ['Cases', 'Score', '%', 'Cases', 'Score', '%', 'Cases', 'Score', '%']];
                 const body = Object.values(groupData).map(r => [
                     r.name, r.total_cases, r.total_score, fmtPct(calcPct(r.total_score, r.total_max_score)),
                     r.breathing_cases, r.breathing_score, fmtPct(calcPct(r.breathing_score, r.breathing_max_score)),
@@ -1857,18 +1856,18 @@ function EencReports({ course, participants, allObs, allCases }) {
             </div>
         );
     }
-    
+
     return (
         <div className="mt-6">
             <div className="flex flex-wrap gap-3 mb-4"><Button variant={tab === 'summary' ? 'primary' : 'secondary'} onClick={() => setTab('summary')}>Score Summary</Button><Button variant={tab === 'matrix' ? 'primary' : 'secondary'} onClick={() => setTab('matrix')}>Detailed Skill Report</Button></div>
             <div className="flex flex-wrap gap-4 items-center justify-between p-4 bg-gray-50 rounded-md mb-6">
                 <div className="flex gap-4 items-center">
                     {tab === 'matrix' && <FormGroup label="Scenario"><Select value={scenarioFilter} onChange={(e) => setScenarioFilter(e.target.value)}><option value="All">All (Combined)</option><option value="breathing">Breathing Baby</option><option value="not_breathing">Not Breathing Baby</option></Select></FormGroup>}
-                    <FormGroup label="Day of Training"><Select value={dayFilter} onChange={(e) => setDayFilter(e.target.value)}><option value="All">All Days</option>{[1,2,3,4,5,6,7].map(d=><option key={d} value={d}>Day {d}</option>)}</Select></FormGroup>
+                    <FormGroup label="Day of Training"><Select value={dayFilter} onChange={(e) => setDayFilter(e.target.value)}><option value="All">All Days</option>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>Day {d}</option>)}</Select></FormGroup>
                 </div>
-                <Button onClick={handleExportFullReportPdf}><PdfIcon/> Save Full Report as PDF</Button>
+                <Button onClick={handleExportFullReportPdf}><PdfIcon /> Save Full Report as PDF</Button>
             </div>
-            
+
             {tab === 'summary' && ['Group A', 'Group B', 'Group C', 'Group D'].map(g => {
                 const data = scoreSummaryByGroup[g];
                 if (!data) return null;
@@ -1914,7 +1913,7 @@ function EencReports({ course, participants, allObs, allCases }) {
                     </div>
                 );
             })}
-            
+
             {tab === 'matrix' && ['Group A', 'Group B', 'Group C', 'Group D'].map(g => (
                 <React.Fragment key={g}>
                     {(scenarioFilter === 'All' || scenarioFilter === 'breathing') && <EencDetailedMatrix group={g} scenario="breathing" />}
@@ -1933,6 +1932,28 @@ function CourseIcon({ course }) {
         case 'EENC': return (<svg {...p}><circle cx="16" cy="22" r="7" fill="#dcfce7" /><circle cx="30" cy="18" r="5" fill="#a7f3d0" /><path d="M8 34c8-6 24-6 32 0" stroke="#10b981" strokeWidth="3" fill="none" /></svg>);
         default: return null;
     }
+}
+
+
+// =============================================================================
+// --- New Splash Screen Component ---
+// =============================================================================
+
+function SplashScreen() {
+    return (
+        <div className="fixed inset-0 bg-sky-50 flex flex-col items-center justify-center gap-6 text-center p-4">
+            <div className="h-24 w-24 bg-white rounded-full flex items-center justify-center p-2 shadow-xl animate-pulse">
+                <img src="/child.png" alt="NCHP Logo" className="h-20 w-20 object-contain" />
+            </div>
+            <div>
+                <h1 className="text-3xl font-bold text-slate-800">National Child Health Program</h1>
+                <p className="text-lg text-slate-500 mt-1">Course Monitoring System</p>
+            </div>
+            {/* Re-using your existing Spinner component's styles */}
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600 mt-4"></div>
+            <p className="text-slate-600 mt-4">Loading application, please wait...</p>
+        </div>
+    );
 }
 
 // =============================================================================
@@ -2004,10 +2025,10 @@ export default function App() {
         }
         if (view === 'observe' || view === 'participantReport') {
             if (newView !== 'observe' && newView !== 'participantReport') {
-                 setSelectedParticipantId(null);
+                setSelectedParticipantId(null);
             }
         }
-        if(newView === 'courses' || newView === 'landing'){
+        if (newView === 'courses' || newView === 'landing') {
             setSelectedCourseId(null);
         }
 
@@ -2038,6 +2059,12 @@ export default function App() {
         { label: 'Monitoring', view: 'observe', disabled: !selectedCourse || !selectedParticipantId, active: view === 'observe' },
         { label: 'Reports', view: 'reports', disabled: !selectedCourse, active: view === 'reports' }
     ];
+
+    // On initial load, the view is 'landing' and loading is 'true'.
+    // In this specific case, show the splash screen to prevent white flash.
+    if (view === 'landing' && loading) {
+        return <SplashScreen />;
+    }
 
     return (
         <div className="min-h-screen bg-sky-50 flex flex-col">
