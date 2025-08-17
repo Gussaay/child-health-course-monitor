@@ -1,6 +1,5 @@
 // data.js
-
-import { db } from './firebase'; // Import the initialized db from firebase.js
+import { db } from './firebase';
 import {
     collection,
     query,
@@ -14,55 +13,62 @@ import {
     getDoc
 } from "firebase/firestore";
 
-// =============================================================================
-// COURSES
-// =============================================================================
-
-export async function listCoursesByType(course_type) {
-    const coursesCol = collection(db, "courses");
-    const q = query(coursesCol, where("course_type", "==", course_type));
-    const querySnapshot = await getDocs(q);
-    // Return the full document including its ID, as expected by App.jsx
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-}
-
+// --- COURSES ---
 export async function upsertCourse(payload) {
     if (payload.id) {
-        // Update existing course
+        // This is an UPDATE of an existing course
         const courseRef = doc(db, "courses", payload.id);
         await setDoc(courseRef, payload, { merge: true });
         return payload.id;
     } else {
-        // Add new course
-        const newCourseRef = await addDoc(collection(db, "courses"), payload);
+        // This is a NEW course
+        // ** THE FIX IS HERE: ** We remove the 'id: undefined' field before saving.
+        const { id, ...dataToSave } = payload;
+        const newCourseRef = await addDoc(collection(db, "courses"), dataToSave);
         return newCourseRef.id;
     }
+}
+
+// --- PARTICIPANTS ---
+export async function upsertParticipant(payload) {
+    if (payload.id) {
+        // This is an UPDATE of an existing participant
+        const participantRef = doc(db, "participants", payload.id);
+        await setDoc(participantRef, payload, { merge: true });
+        return payload.id;
+    } else {
+        // This is a NEW participant
+        // ** THE FIX IS HERE: ** We remove the 'id: undefined' field before saving.
+        const { id, ...dataToSave } = payload;
+        const newParticipantRef = await addDoc(collection(db, "participants"), dataToSave);
+        return newParticipantRef.id;
+    }
+}
+
+
+// --- OTHER FUNCTIONS (No changes needed below this line) ---
+
+export async function listCoursesByType(course_type) {
+    const q = query(collection(db, "courses"), where("course_type", "==", course_type));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
 export async function deleteCourse(courseId) {
     const batch = writeBatch(db);
     batch.delete(doc(db, "courses", courseId));
-
-    // Delete all related data in a single batch
     const participantsQuery = query(collection(db, "participants"), where("courseId", "==", courseId));
     const participantsSnap = await getDocs(participantsQuery);
     participantsSnap.forEach(d => batch.delete(d.ref));
-
     const observationsQuery = query(collection(db, "observations"), where("courseId", "==", courseId));
     const observationsSnap = await getDocs(observationsQuery);
     observationsSnap.forEach(d => batch.delete(d.ref));
-
     const casesQuery = query(collection(db, "cases"), where("courseId", "==", courseId));
     const casesSnap = await getDocs(casesQuery);
     casesSnap.forEach(d => batch.delete(d.ref));
-
     await batch.commit();
     return true;
 }
-
-// =============================================================================
-// PARTICIPANTS
-// =============================================================================
 
 export async function listParticipants(courseId) {
     if (!courseId) return [];
@@ -71,37 +77,18 @@ export async function listParticipants(courseId) {
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
-export async function upsertParticipant(payload) {
-    if (payload.id) {
-        const participantRef = doc(db, "participants", payload.id);
-        await setDoc(participantRef, payload, { merge: true });
-        return payload.id;
-    } else {
-        const newParticipantRef = await addDoc(collection(db, "participants"), payload);
-        return newParticipantRef.id;
-    }
-}
-
 export async function deleteParticipant(participantId) {
     const batch = writeBatch(db);
     batch.delete(doc(db, "participants", participantId));
-    
-    // Delete related observations and cases
     const oq = query(collection(db, "observations"), where("participant_id", "==", participantId));
     const oSnap = await getDocs(oq);
     oSnap.forEach(d => batch.delete(d.ref));
-
     const cq = query(collection(db, "cases"), where("participant_id", "==", participantId));
     const cSnap = await getDocs(cq);
     cSnap.forEach(d => batch.delete(d.ref));
-
     await batch.commit();
     return true;
 }
-
-// =============================================================================
-// OBSERVATIONS & CASES
-// =============================================================================
 
 export async function listObservationsForParticipant(courseId, participantId) {
     const q = query(collection(db, "observations"), where("courseId", "==", courseId), where("participant_id", "==", participantId));
@@ -120,7 +107,6 @@ export async function upsertCaseAndObservations(caseData, observations, editingC
     const caseId = editingCaseId || doc(collection(db, 'temp')).id;
     const caseRef = doc(db, "cases", caseId);
 
-    // If editing, first delete the old observations associated with that case
     if (editingCaseId) {
         const oldObsQuery = query(collection(db, "observations"), where("caseId", "==", editingCaseId));
         const oldObsSnapshot = await getDocs(oldObsQuery);
@@ -147,10 +133,6 @@ export async function deleteCaseAndObservations(caseId) {
 
     await batch.commit();
 }
-
-// =============================================================================
-// REPORTING
-// =============================================================================
 
 export async function listAllDataForCourse(courseId) {
     const obsQuery = query(collection(db, "observations"), where("courseId", "==", courseId));
