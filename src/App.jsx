@@ -4,6 +4,7 @@ import autoTable from "jspdf-autotable";
 // +++ Import Chart.js for graphing +++
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+import ReloadPrompt from './ReloadPrompt'; // ++ ADD THIS IMPORT ++
 
 // +++ Register Chart.js components +++
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
@@ -28,8 +29,8 @@ import {
  * National Child Health Program - Courses Monitoring System (Firebase Version)
  * ============================================================================ */
 
+// ... (all your constants and helper functions remain the same)
 // ----------------------------- CONSTANTS ------------------------------
-// +++ UPDATED STATES AND LOCALITIES BASED ON PROVIDED JSON +++
 const STATE_LOCALITIES = {
     "Khartoum": ["Khartoum", "Omdurman", "Khartoum North (Bahri)", "Jebel Awliya", "Sharq an-Nil", "Karari", "Um Badda"],
     "Gezira": ["Wad Madani Al Kubra", "South Al Gazira", "North Al Gazira", "East Al Gazira", "Um Al Gura", "Al Hasahisa", "Al Kamlin", "Al Managil", "24 Al-Qurashi"],
