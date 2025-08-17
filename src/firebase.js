@@ -8,7 +8,7 @@ import { getAnalytics } from "firebase/analytics";
 // Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyAbIZPGWOb7s0DyJFaXcV_0hQsMwTZZRKU",
-  authDomain: "https://child-health-course-monitor--imnci-courses-monitor.europe-west4.hosted.app",
+  authDomain: "child-health-course-monitor--imnci-courses-monitor.europe-west4.hosted.app",
   projectId: "imnci-courses-monitor",
   storageBucket: "imnci-courses-monitor.appspot.com",
   messagingSenderId: "928082473485",
