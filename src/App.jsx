@@ -1334,7 +1334,7 @@ function ObservationView({ course, participant, participants, onChangeParticipan
             </Card>
             <Card>
                 <h3 className="text-lg font-semibold mb-4">{editingCase ? `Editing Case #${editingCase.case_serial}` : 'Select skills and mark correctness'}</h3>
-                <div className="flex justify-center overflow-x-auto">
+                <div className="overflow-x-auto">
                     {isImnci && <ImnciMonitoringGrid age={age} buffer={buffer} toggle={toggle} />}
                     {isEenc && <EencMonitoringGrid scenario={eencScenario} buffer={buffer} toggle={toggle} />}
                     {isEtat && <EtatMonitoringGrid buffer={buffer} toggle={toggle} />}
@@ -1351,12 +1351,12 @@ function ObservationView({ course, participant, participants, onChangeParticipan
 
 function ImnciMonitoringGrid({ age, buffer, toggle }) {
     return (
-        <table className="text-xs border-collapse">
+        <table className="text-sm border-collapse w-full table-fixed">
             <thead>
                 <tr>
-                    <th className="p-1 text-left border border-slate-300">Domain</th>
-                    <th className="p-1 text-left border border-slate-300">Classification</th>
-                    <th className="p-1 text-left border border-slate-300">Action</th>
+                    <th className="p-2 text-left border border-slate-300 w-[30%]">Domain</th>
+                    <th className="p-2 text-left border border-slate-300 w-[50%]">Classification</th>
+                    <th className="p-2 text-left border border-slate-300 w-[20%]">Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -1369,12 +1369,12 @@ function ImnciMonitoringGrid({ age, buffer, toggle }) {
                         const rowClass = mark === 1 ? 'bg-green-50' : mark === 0 ? 'bg-red-50' : '';
                         return (
                             <tr key={`${d}-${i}`} className={rowClass}>
-                                {i === 0 && <td className="p-1 align-top font-semibold text-gray-800 border border-slate-300" rowSpan={list.length}>{title}</td>}
-                                <td className="p-1 border border-slate-300">{cls}</td>
-                                <td className="p-1 border border-slate-300">
-                                    <div className="flex gap-1">
-                                        <button onClick={() => toggle(d, cls, 1)} className={`px-2 py-0.5 text-xs rounded-md border border-gray-300 transition ${mark === 1 ? 'bg-green-200 border-green-300' : 'bg-white hover:bg-gray-100'}`}>Correct</button>
-                                        <button onClick={() => toggle(d, cls, 0)} className={`px-2 py-0.5 text-xs rounded-md border border-gray-300 transition ${mark === 0 ? 'bg-red-200 border-red-300' : 'bg-white hover:bg-gray-100'}`}>Incorrect</button>
+                                {i === 0 && <td className="p-2 align-top font-semibold text-gray-800 border border-slate-300" rowSpan={list.length}>{title}</td>}
+                                <td className="p-2 border border-slate-300 break-words">{cls}</td>
+                                <td className="p-2 border border-slate-300">
+                                    <div className="flex flex-col xl:flex-row gap-1">
+                                        <button onClick={() => toggle(d, cls, 1)} className={`px-3 py-1 text-sm rounded-md border border-gray-300 transition ${mark === 1 ? 'bg-green-200 border-green-300' : 'bg-white hover:bg-gray-100'}`}>Correct</button>
+                                        <button onClick={() => toggle(d, cls, 0)} className={`px-3 py-1 text-sm rounded-md border border-gray-300 transition ${mark === 0 ? 'bg-red-200 border-red-300' : 'bg-white hover:bg-gray-100'}`}>Incorrect</button>
                                     </div>
                                 </td>
                             </tr>
@@ -1388,12 +1388,12 @@ function ImnciMonitoringGrid({ age, buffer, toggle }) {
 
 function EtatMonitoringGrid({ buffer, toggle }) {
     return (
-        <table className="text-xs border-collapse">
+        <table className="text-sm border-collapse w-full table-fixed">
             <thead>
                 <tr>
-                    <th className="p-1 text-left border border-slate-300">Domain</th>
-                    <th className="p-1 text-left border border-slate-300">Skill</th>
-                    <th className="p-1 text-left border border-slate-300">Action</th>
+                    <th className="p-2 text-left border border-slate-300 w-[30%]">Domain</th>
+                    <th className="p-2 text-left border border-slate-300 w-[50%]">Skill</th>
+                    <th className="p-2 text-left border border-slate-300 w-[20%]">Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -1406,12 +1406,12 @@ function EtatMonitoringGrid({ buffer, toggle }) {
                         const rowClass = mark === 1 ? 'bg-green-50' : mark === 0 ? 'bg-red-50' : '';
                         return (
                             <tr key={`${d}-${i}`} className={rowClass}>
-                                {i === 0 && <td className="p-1 align-top font-semibold text-gray-800 border border-slate-300" rowSpan={skills.length}>{title}</td>}
-                                <td className="p-1 border border-slate-300">{skill}</td>
-                                <td className="p-1 border border-slate-300">
-                                    <div className="flex gap-1">
-                                        <button onClick={() => toggle(d, skill, 1)} className={`px-2 py-0.5 text-xs rounded-md border border-gray-300 transition ${mark === 1 ? 'bg-green-200 border-green-300' : 'bg-white hover:bg-gray-100'}`}>Correct</button>
-                                        <button onClick={() => toggle(d, skill, 0)} className={`px-2 py-0.5 text-xs rounded-md border border-gray-300 transition ${mark === 0 ? 'bg-red-200 border-red-300' : 'bg-white hover:bg-gray-100'}`}>Incorrect</button>
+                                {i === 0 && <td className="p-2 align-top font-semibold text-gray-800 border border-slate-300" rowSpan={skills.length}>{title}</td>}
+                                <td className="p-2 border border-slate-300 break-words">{skill}</td>
+                                <td className="p-2 border border-slate-300">
+                                    <div className="flex flex-col xl:flex-row gap-1">
+                                        <button onClick={() => toggle(d, skill, 1)} className={`px-3 py-1 text-sm rounded-md border border-gray-300 transition ${mark === 1 ? 'bg-green-200 border-green-300' : 'bg-white hover:bg-gray-100'}`}>Correct</button>
+                                        <button onClick={() => toggle(d, skill, 0)} className={`px-3 py-1 text-sm rounded-md border border-gray-300 transition ${mark === 0 ? 'bg-red-200 border-red-300' : 'bg-white hover:bg-gray-100'}`}>Incorrect</button>
                                     </div>
                                 </td>
                             </tr>
@@ -1437,12 +1437,12 @@ function EencMonitoringGrid({ scenario, buffer, toggle }) {
     };
 
     return (
-        <table className="text-xs border-collapse">
+        <table className="text-sm border-collapse w-full table-fixed">
             <thead>
                 <tr>
-                    <th className="p-1 text-left border border-slate-300">Domain</th>
-                    <th className="p-1 text-left border border-slate-300">Skill</th>
-                    <th className="p-1 text-left border border-slate-300">Action</th>
+                    <th className="p-2 w-1/3 text-left border border-slate-300">Domain</th>
+                    <th className="p-2 w-1/3 text-left border border-slate-300">Skill</th>
+                    <th className="p-2 w-1/3 text-left border border-slate-300">Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -1455,20 +1455,20 @@ function EencMonitoringGrid({ scenario, buffer, toggle }) {
                         const rowClass = getRowClass(mark);
                         return (
                             <tr key={`${d}-${i}`} className={rowClass}>
-                                {i === 0 && <td className="p-1 align-top font-semibold text-gray-800 border border-slate-300" rowSpan={skills.length}>{title}</td>}
-                                <td className="p-1 border border-slate-300">{skill.text}</td>
-                                <td className="p-1 border border-slate-300">
-                                    <div className="flex gap-1 flex-wrap">
+                                {i === 0 && <td className="p-2 align-top font-semibold text-gray-800 border border-slate-300" rowSpan={skills.length}>{title}</td>}
+                                <td className="p-2 border border-slate-300 break-words">{skill.text}</td>
+                                <td className="p-2 border border-slate-300">
+                                    <div className="flex flex-wrap gap-1">
                                         <button onClick={() => toggle(d, skill.text, 2)}
-                                            className={`px-2 py-0.5 text-xs rounded-md border border-gray-300 transition ${mark === 2 ? 'bg-green-200 border-green-300' : 'bg-white hover:bg-gray-100'}`}>
+                                            className={`px-3 py-1 text-sm rounded-md border border-gray-300 transition ${mark === 2 ? 'bg-green-200 border-green-300' : 'bg-white hover:bg-gray-100'}`}>
                                             Yes
                                         </button>
                                         <button onClick={() => toggle(d, skill.text, 1)}
-                                            className={`px-2 py-0.5 text-xs rounded-md border border-gray-300 transition ${mark === 1 ? 'bg-yellow-200 border-yellow-300' : 'bg-white hover:bg-gray-100'}`}>
+                                            className={`px-3 py-1 text-sm rounded-md border border-gray-300 transition ${mark === 1 ? 'bg-yellow-200 border-yellow-300' : 'bg-white hover:bg-gray-100'}`}>
                                             Partial
                                         </button>
                                         <button onClick={() => toggle(d, skill.text, 0)}
-                                            className={`px-2 py-0.5 text-xs rounded-md border border-gray-300 transition ${mark === 0 ? 'bg-red-200 border-red-300' : 'bg-white hover:bg-gray-100'}`}>
+                                            className={`px-3 py-1 text-sm rounded-md border border-gray-300 transition ${mark === 0 ? 'bg-red-200 border-red-300' : 'bg-white hover:bg-gray-100'}`}>
                                             No
                                         </button>
                                     </div>
