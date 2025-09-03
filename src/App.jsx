@@ -147,10 +147,10 @@ const EENC_DOMAINS_NOT_BREATHING = Object.keys(SKILLS_EENC_NOT_BREATHING);
 const SKILLS_ETAT = { triage: ["Triage Assessment", "Assigns Triage Category"], airway_breathing: ["Positions Airway", "Suctions", "Gives Oxygen", "Bag-Mask Ventilation"], circulation: ["Inserts IV/IO", "Gives IV fluids", "Checks blood sugar"], coma: ["Positions unresponsive child", "Gives IV fluids"], convulsion: ["Positions convulsing child", "Gives Diazepam"], dehydration: ["Assesses dehydration", "Gives IV fluids", "Reassesses"] };
 const ETAT_DOMAIN_LABEL = { triage: "Triage", airway_breathing: "Airway and Breathing", circulation: "Circulation", coma: "Coma", convulsion: "Convulsion", dehydration: "Dehydration (Severe)" };
 const ETAT_DOMAINS = Object.keys(SKILLS_ETAT);
-const CLASS_2_59M = { danger: ["Any Danger Sign"], respiratory: ["Severe pneumonia/disease", "Pneumonia", "Cough/cold", "Severe pneumonia/disease (Wheeze)", "Pneumonia (Wheeze)", "Cough/cold (Wheeze)"], diarrhoea: ["Severe dehydration", "Some dehydration", "No dehydration", "Severe persistent", "Persistent", "Dysentery"], fever_malaria: ["Very severe febrile disease", "Malaria", "Fever - malaria unlikely", "Severe complicated measles", "Measles - Eye/mouth complications", "Measles"], ear: ["Mastoiditis", "Acute ear infection", "Chronic ear infection", "No ear infection"], malnutrition: ["Complicated Severe Acute malnutrition (SAM)", "Un-complicated Severe Acute malnutrition (SAM)", "Moderate Acute malnutrition (MAM)", "No Acute Malnutrition"], anaemia: ["Severe Anaemia", "Anaemia", "No anaemia"], treatment_2_59m: ["ORAL DRUGS", "PLAN A", "PLAN B", "LOCAL INFECTION"], counsel: ["Assess and counsel for vaccination", "Asks feeding questions", "Feeding problems identified", "Gives advice on feeding problems", "COUNSEL WHEN TO RETURN"], };
-const CLASS_0_59D = { bacterial: ["Possible serious bacterial infection", "Local bacterial infection", "Bacterial infection unlikely"], jaundice: ["Severe Jaundice", "Jaundice", "No Jaundice"], vyi_diarrhoea: ["Severe dehydration", "Some dehydration", "No dehydration", "Persistent diarrhea", "Blood in Stool"], feeding: ["Breastfeeding attachment and suckling assessed", "Feeding problem or low weight", "No feeding problem"], treatment_0_59d: ["Teach correct positioning and attachment", "Advise on home care"], };
-const DOMAINS_BY_AGE_IMNCI = { GE2M_LE5Y: ["danger", "respiratory", "diarrhoea", "fever_malaria", "ear", "malnutrition", "anaemia", "treatment_2_59m", "counsel"], LT2M: ["bacterial", "jaundice", "vyi_diarrhoea", "feeding", "treatment_0_59d"], };
-const DOMAIN_LABEL_IMNCI = { danger: "Danger signs", respiratory: "COUGH:", diarrhoea: "DIARRHOEA:", fever_malaria: "FEVER:", ear: "EAR:", malnutrition: "MALNUTRITION:", anaemia: "ANAEMIA:", treatment_2_59m: "TREAT:", counsel: "COUNSEL:", bacterial: "BACTERIAL:", jaundice: "JAUNDICE:", vyi_diarrhoea: "DIARRHOEA:", feeding: "FEEDING:", treatment_0_59d: "TREATMENT/COUNSEL:" };
+const CLASS_2_59M = { danger: ["Any Danger Sign"], respiratory: ["Severe pneumonia/disease", "Pneumonia", "Cough/cold", "Severe pneumonia/disease (Wheeze)", "Pneumonia (Wheeze)", "Cough/cold (Wheeze)"], diarrhoea: ["Severe dehydration", "Some dehydration", "No dehydration", "Severe persistent", "Persistent", "Dysentery"], fever_malaria: ["Very severe febrile disease", "Malaria", "Fever - malaria unlikely", "Severe complicated measles", "Measles - Eye/mouth complications", "Measles"], ear: ["Mastoiditis", "Acute ear infection", "Chronic ear infection", "No ear infection"], malnutrition: ["Complicated Severe Acute malnutrition (SAM)", "Un-complicated Severe Acute malnutrition (SAM)", "Moderate Acute malnutrition (MAM)", "No Acute Malnutrition"], anaemia: ["Severe Anaemia", "Anaemia", "No anaemia"], identify_treatment: ["IDENTIFY TREATMENTS NEEDED"], treatment_2_59m: ["ORAL DRUGS", "PLAN A", "PLAN B", "LOCAL INFECTION"], counsel: ["Assess and counsel for vaccination", "Asks feeding questions", "Feeding problems identified", "Gives advice on feeding problems", "COUNSEL WHEN TO RETURN"], };
+const CLASS_0_59D = { bacterial: ["Possible serious bacterial infection", "Local bacterial infection", "Bacterial infection unlikely"], jaundice: ["Severe Jaundice", "Jaundice", "No Jaundice"], vyi_diarrhoea: ["Severe dehydration", "Some dehydration", "No dehydration", "Persistent diarrhea", "Blood in Stool"], feeding: ["Breastfeeding attachment and suckling assessed", "Feeding problem or low weight", "No feeding problem"], identify_treatment: ["IDENTIFY TREATMENTS NEEDED"], treatment_0_59d: ["Teach correct positioning and attachment", "Advise on home care"], };
+const DOMAINS_BY_AGE_IMNCI = { GE2M_LE5Y: ["danger", "respiratory", "diarrhoea", "fever_malaria", "ear", "malnutrition", "anaemia", "identify_treatment", "treatment_2_59m", "counsel"], LT2M: ["bacterial", "jaundice", "vyi_diarrhoea", "feeding", "identify_treatment", "treatment_0_59d"], };
+const DOMAIN_LABEL_IMNCI = { danger: "Danger signs", respiratory: "COUGH:", diarrhoea: "DIARRHOEA:", fever_malaria: "FEVER:", ear: "EAR:", malnutrition: "MALNUTRITION:", anaemia: "ANAEMIA:", identify_treatment: "IDENTIFY TREATMENT:", treatment_2_59m: "TREAT:", counsel: "COUNSEL:", bacterial: "BACTERIAL:", jaundice: "JAUNDICE:", vyi_diarrhoea: "DIARRHOEA:", feeding: "FEEDING:", treatment_0_59d: "TREATMENT/COUNSEL:" };
 const getClassListImnci = (age, d) => (age === "GE2M_LE5Y" ? CLASS_2_59M[d] : CLASS_0_59D[d]) || [];
 
 const JOB_TITLES_IMNCI = ["Pediatric Doctor", "Family Medicine Doctor", "General Practioner", "Medical Assistance", "Treating Nurse", "Other"];
@@ -160,7 +160,7 @@ const JOB_TITLES_EENC = ["Pediatric doctor", "Obstetric Doctor", "Emergency doct
 
 // ----------------------------- HELPER FUNCTIONS & COMPONENTS --------------------------------
 const calcPct = (c, s) => (!s ? NaN : (c * 100) / s);
-const fmtPct = v => (!isFinite(v) ? "—" : (Math.round(v * 10) / 10).toFixed(1) + " %");
+const fmtPct = v => (!isFinite(v) ? "—" : Math.round(v).toFixed(0) + " %");
 const pctBgClass = v => (!isFinite(v) ? "" : v < 50 ? "bg-red-100 text-red-800" : v <= 80 ? "bg-yellow-100 text-yellow-800" : "bg-green-100 text-green-800");
 
 // --- PDF Export Helper ---
@@ -402,14 +402,14 @@ const generateFullCourseReportPdf = async (course, groupPerformance, chartRef) =
 
 
 // --- Reusable UI Components for a consistent and improved design ---
-const Card = ({ children, className = '' }) => <section className={`bg-white rounded-lg shadow-md p-6 ${className}`}>{children}</section>;
+const Card = ({ children, className = '' }) => <section className={`bg-white rounded-lg shadow-md p-4 md:p-6 ${className}`}>{children}</section>;
 const PageHeader = ({ title, subtitle, actions }) => (
     <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div>
             <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
             {subtitle && <p className="text-gray-500 mt-1">{subtitle}</p>}
         </div>
-        {actions && <div className="flex items-center gap-2">{actions}</div>}
+        {actions && <div className="flex items-center gap-2 flex-wrap">{actions}</div>}
     </div>
 );
 const Button = ({ onClick, children, variant = 'primary', disabled = false, className = '' }) => {
@@ -484,24 +484,53 @@ function CoursesView({ courses, onAdd, onOpen, onEdit, onDelete, onOpenReport })
             <div className="mb-4">
                 <Button onClick={onAdd}>Add New Course</Button>
             </div>
-            <Table headers={["State", "Locality", "Hall", "#", "Actions"]}>
-                {courses.length === 0 ? <EmptyState message="No courses found for this package." /> : courses.map(c => (
-                    <tr key={c.id} className="hover:bg-gray-50">
-                        <td className="p-4 border border-gray-200">{c.state}</td>
-                        <td className="p-4 border border-gray-200">{c.locality}</td>
-                        <td className="p-4 border border-gray-200">{c.hall}</td>
-                        <td className="p-4 border border-gray-200 text-center">{c.participants_count}</td>
-                        <td className="p-4 border border-gray-200">
-                            <div className="flex gap-2 flex-wrap justify-end">
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block">
+                <Table headers={["State", "Locality", "Hall", "#", "Actions"]}>
+                    {courses.length === 0 ? <EmptyState message="No courses found for this package." /> : courses.map(c => (
+                        <tr key={c.id} className="hover:bg-gray-50">
+                            <td className="p-4 border border-gray-200">{c.state}</td>
+                            <td className="p-4 border border-gray-200">{c.locality}</td>
+                            <td className="p-4 border border-gray-200">{c.hall}</td>
+                            <td className="p-4 border border-gray-200 text-center">{c.participants_count}</td>
+                            <td className="p-4 border border-gray-200">
+                                <div className="flex gap-2 flex-wrap justify-end">
+                                    <Button variant="primary" onClick={() => onOpen(c.id)}>Open</Button>
+                                    <Button variant="secondary" onClick={() => onOpenReport(c.id)}>Course Report</Button>
+                                    <Button variant="secondary" onClick={() => onEdit(c)}>Edit</Button>
+                                    <Button variant="danger" onClick={() => onDelete(c.id)}>Delete</Button>
+                                </div>
+                            </td>
+                        </tr>
+                    ))}
+                </Table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden grid gap-4">
+                {courses.length === 0 ? (
+                    <p className="py-12 text-center text-gray-500">No courses found for this package.</p>
+                ) : (
+                    courses.map(c => (
+                        <div key={c.id} className="bg-white rounded-lg shadow-md p-4 border border-gray-200">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <h3 className="font-bold text-lg text-gray-800">{c.state}</h3>
+                                    <p className="text-gray-600">{c.locality} - {c.hall}</p>
+                                    <p className="text-sm text-gray-500 mt-1">Participants: {c.participants_count}</p>
+                                </div>
+                            </div>
+                            <div className="mt-4 pt-4 border-t border-gray-200 flex flex-wrap gap-2 justify-end">
                                 <Button variant="primary" onClick={() => onOpen(c.id)}>Open</Button>
-                                <Button variant="secondary" onClick={() => onOpenReport(c.id)}>Course Report</Button>
+                                <Button variant="secondary" onClick={() => onOpenReport(c.id)}>Report</Button>
                                 <Button variant="secondary" onClick={() => onEdit(c)}>Edit</Button>
                                 <Button variant="danger" onClick={() => onDelete(c.id)}>Delete</Button>
                             </div>
-                        </td>
-                    </tr>
-                ))}
-            </Table>
+                        </div>
+                    ))
+                )}
+            </div>
         </Card>
     );
 }
@@ -727,7 +756,7 @@ function ParticipantsView({ course, participants, onAdd, onOpen, onEdit, onDelet
         <Card>
             <PageHeader title="Course Participants" subtitle={`${course.state} / ${course.locality}`} />
 
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
                 <Button onClick={onAdd}>Add Participant</Button>
                 <div className="flex items-center gap-2">
                     <label className="font-semibold text-gray-700 text-sm">Filter by Group:</label>
@@ -740,26 +769,46 @@ function ParticipantsView({ course, participants, onAdd, onOpen, onEdit, onDelet
                     </Select>
                 </div>
             </div>
-
-            <Table headers={["Name", "Group", "Job Title", "Center", "Phone", "Actions"]}>
-                {filtered.length === 0 ? <EmptyState message="No participants found for this group." /> : filtered.map(p => (
-                    <tr key={p.id} className="hover:bg-gray-50">
-                        <td className="p-4 border border-gray-200 font-medium text-gray-800">{p.name}</td>
-                        <td className="p-4 border border-gray-200">{p.group}</td>
-                        <td className="p-4 border border-gray-200">{p.job_title}</td>
-                        <td className="p-4 border border-gray-200">{p.center_name}</td>
-                        <td className="p-4 border border-gray-200">{p.phone}</td>
-                        <td className="p-4 border border-gray-200 text-right">
-                            <div className="flex gap-2 flex-wrap justify-end">
+            {/* Desktop Table View */}
+            <div className="hidden md:block">
+                <Table headers={["Name", "Group", "Job Title", "Actions"]}>
+                    {filtered.length === 0 ? <EmptyState message="No participants found for this group." /> : filtered.map(p => (
+                        <tr key={p.id} className="hover:bg-gray-50">
+                            <td className="p-4 border border-gray-200 font-medium text-gray-800">{p.name}</td>
+                            <td className="p-4 border border-gray-200">{p.group}</td>
+                            <td className="p-4 border border-gray-200">{p.job_title}</td>
+                            <td className="p-4 border border-gray-200 text-right">
+                                <div className="flex gap-2 flex-wrap justify-end">
+                                    <Button variant="secondary" onClick={() => onOpen(p.id)}>Monitor</Button>
+                                    <Button variant="secondary" onClick={() => onOpenReport(p.id)}>Report</Button>
+                                    <Button variant="secondary" onClick={() => onEdit(p)}>Edit</Button>
+                                    <Button variant="danger" onClick={() => onDelete(p.id)}>Delete</Button>
+                                </div>
+                            </td>
+                        </tr>
+                    ))}
+                </Table>
+            </div>
+            {/* Mobile Card View */}
+            <div className="md:hidden grid gap-4">
+                {filtered.length === 0 ? (
+                    <p className="py-12 text-center text-gray-500">No participants found for this group.</p>
+                ) : (
+                    filtered.map(p => (
+                        <div key={p.id} className="bg-white rounded-lg shadow-md p-4 border border-gray-200">
+                            <h3 className="font-bold text-lg text-gray-800">{p.name}</h3>
+                            <p className="text-gray-600">{p.job_title}</p>
+                            <p className="text-sm text-gray-500 mt-1">Group: <span className="font-medium text-gray-700">{p.group}</span></p>
+                            <div className="mt-4 pt-4 border-t border-gray-200 flex flex-wrap gap-2 justify-end">
                                 <Button variant="secondary" onClick={() => onOpen(p.id)}>Monitor</Button>
                                 <Button variant="secondary" onClick={() => onOpenReport(p.id)}>Report</Button>
                                 <Button variant="secondary" onClick={() => onEdit(p)}>Edit</Button>
                                 <Button variant="danger" onClick={() => onDelete(p.id)}>Delete</Button>
                             </div>
-                        </td>
-                    </tr>
-                ))}
-            </Table>
+                        </div>
+                    ))
+                )}
+            </div>
         </Card>
     );
 }
@@ -967,9 +1016,6 @@ function ParticipantReportView({ course, participant, participants, onChangePart
     );
 }
 
-// =============================================================================
-// START OF MODIFIED COMPONENT
-// =============================================================================
 function ParticipantForm({ course, initialData, onCancel, onSave }) {
     // --- Course Type Flags ---
     const isImnci = course.course_type === 'IMNCI';
@@ -999,6 +1045,7 @@ function ParticipantForm({ course, initialData, onCancel, onSave }) {
     const [otherJobTitle, setOtherJobTitle] = useState(isInitialJobOther ? initialJobTitle : '');
 
     // --- IMCI States ---
+    const [imciSubType, setImciSubType] = useState(initialData?.imci_sub_type || 'Standard 7 days course');
     const [facilityType, setFacilityType] = useState(initialData?.facility_type || '');
     const [trainedIMNCI, setTrainedIMNCI] = useState(initialData?.trained_before ? 'yes' : 'no');
     const [lastTrainIMNCI, setLastTrainIMNCI] = useState(initialData?.last_imci_training || '');
@@ -1047,9 +1094,9 @@ function ParticipantForm({ course, initialData, onCancel, onSave }) {
         let p = { name, group, state, locality, center_name: center, job_title: finalJobTitle, phone };
 
         if (isImnci) {
-            if (!facilityType) { setError('Please complete all required fields'); return; }
+            if (!facilityType || !imciSubType) { setError('Please complete all required fields'); return; }
             if (numProv <= 0) { setError('Number of providers at health center must be more than zero.'); return; }
-            p = { ...p, facility_type: facilityType, trained_before: trainedIMNCI === 'yes', last_imci_training: trainedIMNCI === 'yes' ? lastTrainIMNCI : '', num_other_providers: numProv, num_other_providers_imci: numProvIMCI, has_nutrition_service: hasNutri, has_immunization_service: hasImm, has_ors_room: hasORS, nearest_nutrition_center: !hasNutri ? nearestNutri : '', nearest_immunization_center: !hasImm ? nearestImm : '' };
+            p = { ...p, imci_sub_type: imciSubType, facility_type: facilityType, trained_before: trainedIMNCI === 'yes', last_imci_training: trainedIMNCI === 'yes' ? lastTrainIMNCI : '', num_other_providers: numProv, num_other_providers_imci: numProvIMCI, has_nutrition_service: hasNutri, has_immunization_service: hasImm, has_ors_room: hasORS, nearest_nutrition_center: !hasNutri ? nearestNutri : '', nearest_immunization_center: !hasImm ? nearestImm : '' };
         } else if (isEtat) {
             if (!hospitalTypeEtat) { setError('Please complete all required fields'); return; }
             p = { ...p, hospital_type: hospitalTypeEtat, trained_etat_before: trainedEtat === 'yes', last_etat_training: trainedEtat === 'yes' ? lastTrainEtat : '', has_triage_system: hasTriageSystem, has_stabilization_center: hasStabilizationCenter, has_hdu: hasHdu, num_staff_in_er: numStaffInEr, num_staff_trained_in_etat: numStaffTrainedInEtat };
@@ -1090,6 +1137,15 @@ function ParticipantForm({ course, initialData, onCancel, onSave }) {
 
                 {/* --- IMCI SPECIFIC FIELDS --- */}
                 {isImnci && (<>
+                    <FormGroup label="IMCI Course Sub-type">
+                        <Select value={imciSubType} onChange={(e) => setImciSubType(e.target.value)}>
+                            <option>Standard 7 days course</option>
+                            <option>Refreshment course</option>
+                            <option>IMNCI in humanitarian setting</option>
+                            <option>online IMCI course</option>
+                            <option>preservice Course</option>
+                        </Select>
+                    </FormGroup>
                     <FormGroup label="Facility Type"><Select value={facilityType} onChange={(e) => setFacilityType(e.target.value)}><option value="">— Select Type —</option><option value="Health Unit">Health Unit</option><option value="Health Center">Health Center</option><option value="Rural Hospital">Rural Hospital</option><option value="Teaching Hospital">Teaching Hospital</option><option value="other">Other</option></Select></FormGroup>
                     <FormGroup label="Previously trained in IMCI?"><Select value={trainedIMNCI} onChange={(e) => setTrainedIMNCI(e.target.value)}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
                     {trainedIMNCI === 'yes' && <FormGroup label="Date of last training"><Input type="date" value={lastTrainIMNCI} onChange={(e) => setLastTrainIMNCI(e.target.value)} /></FormGroup>}
@@ -1131,9 +1187,6 @@ function ParticipantForm({ course, initialData, onCancel, onSave }) {
         </Card>
     );
 }
-// =============================================================================
-// END OF MODIFIED COMPONENT
-// =============================================================================
 
 function ObservationView({ course, participant, participants, onChangeParticipant }) {
     const [observations, setObservations] = useState([]);
@@ -1258,15 +1311,25 @@ function ObservationView({ course, participant, participants, onChangeParticipan
             <PageHeader title="Clinical Monitoring" subtitle={`Observing: ${participant.name}`} />
             <Card className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <FormGroup label="Select participant"><Select value={participant.id} onChange={(e) => onChangeParticipant(e.target.value)}>{participants.map(p => <option key={p.id} value={p.id}>{p.name} — {p.group}</option>)}</Select></FormGroup>
-                {isImnci && <FormGroup label="Setting"><Select value={setting} onChange={(e) => setSetting(e.target.value)} disabled={!!editingCase}><option value="OPD">Out-patient</option><option value="IPD">In-patient</option></Select></FormGroup>}
-                {isImnci && <FormGroup label="Age band"><Select value={age} onChange={(e) => setAge(e.target.value)} disabled={!!editingCase}><option value="GE2M_LE5Y">Sick child (2-59 months)</option><option value="LT2M">Sick young infant (0-59 days)</option></Select></FormGroup>}
+                {isImnci && <FormGroup label="Setting"><Select value={setting} onChange={(e) => setSetting(e.target.value)}><option value="OPD">Out-patient</option><option value="IPD">In-patient</option></Select></FormGroup>}
+                {isImnci && <FormGroup label="Age band">
+                    <Select value={age} onChange={(e) => {
+                        setAge(e.target.value);
+                        if (editingCase) { setBuffer({}); }
+                    }}>
+                        <option value="GE2M_LE5Y">Sick child (2-59 months)</option>
+                        <option value="LT2M">Sick young infant (0-59 days)</option>
+                    </Select>
+                </FormGroup>}
                 {isEenc && <FormGroup label="EENC Scenario"><Select value={eencScenario} onChange={(e) => setEencScenario(e.target.value)} disabled={!!editingCase}><option value="breathing">Breathing Baby</option><option value="not_breathing">Not Breathing Baby</option></Select></FormGroup>}
             </Card>
             <Card>
                 <div className="grid md:grid-cols-3 gap-6">
-                    <FormGroup label="Encounter date"><Input type="date" value={encounterDate} onChange={(e) => setEncounterDate(e.target.value)} disabled={!!editingCase} /></FormGroup>
+                    <FormGroup label="Encounter date"><Input type="date" value={encounterDate} onChange={(e) => setEncounterDate(e.target.value)} /></FormGroup>
                     <FormGroup label="Course day (1-7)"><Select value={dayOfCourse} onChange={(e) => setDayOfCourse(Number(e.target.value))}>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>{d}</option>)}</Select></FormGroup>
-                    <FormGroup label="Case age (months)"><Input type="number" value={caseAgeMonths} onChange={(e) => setCaseAgeMonths(e.target.value === '' ? '' : Number(e.target.value))} placeholder="Optional" /></FormGroup>
+                    <FormGroup label={isImnci && age === 'LT2M' ? "Case Age (weeks)" : "Case Age (months)"}>
+                        <Input type="number" value={caseAgeMonths} onChange={(e) => setCaseAgeMonths(e.target.value === '' ? '' : Number(e.target.value))} placeholder="Optional" />
+                    </FormGroup>
                 </div>
             </Card>
             <Card>
@@ -1287,11 +1350,77 @@ function ObservationView({ course, participant, participants, onChangeParticipan
 }
 
 function ImnciMonitoringGrid({ age, buffer, toggle }) {
-    return (<table className="text-sm"><thead><tr className="text-left border-b"><th className="px-2 py-1 w-1/4">Domain</th><th className="px-2 py-1 w-1/2">Classification</th><th className="px-2 py-1">Action</th></tr></thead><tbody>{DOMAINS_BY_AGE_IMNCI[age].map(d => { const list = getClassListImnci(age, d); const title = DOMAIN_LABEL_IMNCI[d] || d; return (list && list.length ? list : ["(no items)"]).map((cls, i) => { const k = `${d}|${cls}`; const mark = buffer[k]; const rowClass = mark === 1 ? 'bg-green-50' : mark === 0 ? 'bg-red-50' : ''; return (<tr key={`${d}-${i}`} className={`border-b ${rowClass}`}>{i === 0 && <td className="px-2 py-1 align-top font-semibold text-gray-800" rowSpan={list.length}>{title}</td>}<td className="px-2 py-1">{cls}</td><td className="px-2 py-1"><div className="flex gap-2"><button onClick={() => toggle(d, cls, 1)} className={`px-3 py-1 text-sm rounded-md border border-gray-300 transition ${mark === 1 ? 'bg-green-200 border-green-300' : 'bg-white hover:bg-gray-100'}`}>Correct</button><button onClick={() => toggle(d, cls, 0)} className={`px-3 py-1 text-sm rounded-md border border-gray-300 transition ${mark === 0 ? 'bg-red-200 border-red-300' : 'bg-white hover:bg-gray-100'}`}>Incorrect</button></div></td></tr>); }); })}</tbody></table>);
+    return (
+        <table className="text-xs border-collapse">
+            <thead>
+                <tr>
+                    <th className="p-1 text-left border border-slate-300">Domain</th>
+                    <th className="p-1 text-left border border-slate-300">Classification</th>
+                    <th className="p-1 text-left border border-slate-300">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {DOMAINS_BY_AGE_IMNCI[age].map(d => {
+                    const list = getClassListImnci(age, d) || [];
+                    const title = DOMAIN_LABEL_IMNCI[d] || d;
+                    return (list.length > 0 ? list : ["(no items)"]).map((cls, i) => {
+                        const k = `${d}|${cls}`;
+                        const mark = buffer[k];
+                        const rowClass = mark === 1 ? 'bg-green-50' : mark === 0 ? 'bg-red-50' : '';
+                        return (
+                            <tr key={`${d}-${i}`} className={rowClass}>
+                                {i === 0 && <td className="p-1 align-top font-semibold text-gray-800 border border-slate-300" rowSpan={list.length}>{title}</td>}
+                                <td className="p-1 border border-slate-300">{cls}</td>
+                                <td className="p-1 border border-slate-300">
+                                    <div className="flex gap-1">
+                                        <button onClick={() => toggle(d, cls, 1)} className={`px-2 py-0.5 text-xs rounded-md border border-gray-300 transition ${mark === 1 ? 'bg-green-200 border-green-300' : 'bg-white hover:bg-gray-100'}`}>Correct</button>
+                                        <button onClick={() => toggle(d, cls, 0)} className={`px-2 py-0.5 text-xs rounded-md border border-gray-300 transition ${mark === 0 ? 'bg-red-200 border-red-300' : 'bg-white hover:bg-gray-100'}`}>Incorrect</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        );
+                    });
+                })}
+            </tbody>
+        </table>
+    );
 }
 
 function EtatMonitoringGrid({ buffer, toggle }) {
-    return (<table className="text-sm"><thead><tr className="text-left border-b"><th className="px-2 py-1 w-1/4">Domain</th><th className="px-2 py-1 w-1/2">Skill</th><th className="px-2 py-1">Action</th></tr></thead><tbody>{ETAT_DOMAINS.map(d => { const skills = SKILLS_ETAT[d]; const title = ETAT_DOMAIN_LABEL[d] || d; return skills.map((skill, i) => { const k = `${d}|${skill}`; const mark = buffer[k]; const rowClass = mark === 1 ? 'bg-green-50' : mark === 0 ? 'bg-red-50' : ''; return (<tr key={`${d}-${i}`} className={`border-b ${rowClass}`}>{i === 0 && <td className="px-2 py-1 align-top font-semibold text-gray-800" rowSpan={skills.length}>{title}</td>}<td className="px-2 py-1">{skill}</td><td className="px-2 py-1"><div className="flex gap-2"><button onClick={() => toggle(d, skill, 1)} className={`px-3 py-1 text-sm rounded-md border border-gray-300 transition ${mark === 1 ? 'bg-green-200 border-green-300' : 'bg-white hover:bg-gray-100'}`}>Correct</button><button onClick={() => toggle(d, skill, 0)} className={`px-3 py-1 text-sm rounded-md border border-gray-300 transition ${mark === 0 ? 'bg-red-200 border-red-300' : 'bg-white hover:bg-gray-100'}`}>Incorrect</button></div></td></tr>); }); })}</tbody></table>);
+    return (
+        <table className="text-xs border-collapse">
+            <thead>
+                <tr>
+                    <th className="p-1 text-left border border-slate-300">Domain</th>
+                    <th className="p-1 text-left border border-slate-300">Skill</th>
+                    <th className="p-1 text-left border border-slate-300">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {ETAT_DOMAINS.map(d => {
+                    const skills = SKILLS_ETAT[d];
+                    const title = ETAT_DOMAIN_LABEL[d] || d;
+                    return skills.map((skill, i) => {
+                        const k = `${d}|${skill}`;
+                        const mark = buffer[k];
+                        const rowClass = mark === 1 ? 'bg-green-50' : mark === 0 ? 'bg-red-50' : '';
+                        return (
+                            <tr key={`${d}-${i}`} className={rowClass}>
+                                {i === 0 && <td className="p-1 align-top font-semibold text-gray-800 border border-slate-300" rowSpan={skills.length}>{title}</td>}
+                                <td className="p-1 border border-slate-300">{skill}</td>
+                                <td className="p-1 border border-slate-300">
+                                    <div className="flex gap-1">
+                                        <button onClick={() => toggle(d, skill, 1)} className={`px-2 py-0.5 text-xs rounded-md border border-gray-300 transition ${mark === 1 ? 'bg-green-200 border-green-300' : 'bg-white hover:bg-gray-100'}`}>Correct</button>
+                                        <button onClick={() => toggle(d, skill, 0)} className={`px-2 py-0.5 text-xs rounded-md border border-gray-300 transition ${mark === 0 ? 'bg-red-200 border-red-300' : 'bg-white hover:bg-gray-100'}`}>Incorrect</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        );
+                    });
+                })}
+            </tbody>
+        </table>
+    );
 }
 
 function EencMonitoringGrid({ scenario, buffer, toggle }) {
@@ -1308,8 +1437,14 @@ function EencMonitoringGrid({ scenario, buffer, toggle }) {
     };
 
     return (
-        <table className="text-sm">
-            <thead><tr className="text-left border-b"><th className="px-2 py-1 w-1/3">Domain</th><th className="px-2 py-1 w-1/3">Skill</th><th className="px-2 py-1 w-1/3">Action</th></tr></thead>
+        <table className="text-xs border-collapse">
+            <thead>
+                <tr>
+                    <th className="p-1 text-left border border-slate-300">Domain</th>
+                    <th className="p-1 text-left border border-slate-300">Skill</th>
+                    <th className="p-1 text-left border border-slate-300">Action</th>
+                </tr>
+            </thead>
             <tbody>
                 {domains.map(d => {
                     const skills = skillsMap[d];
@@ -1319,21 +1454,21 @@ function EencMonitoringGrid({ scenario, buffer, toggle }) {
                         const mark = buffer[k];
                         const rowClass = getRowClass(mark);
                         return (
-                            <tr key={`${d}-${i}`} className={`border-b ${rowClass}`}>
-                                {i === 0 && <td className="px-2 py-1 align-top font-semibold text-gray-800" rowSpan={skills.length}>{title}</td>}
-                                <td className="px-2 py-1">{skill.text}</td>
-                                <td className="px-2 py-1">
-                                    <div className="flex gap-2 flex-wrap">
+                            <tr key={`${d}-${i}`} className={rowClass}>
+                                {i === 0 && <td className="p-1 align-top font-semibold text-gray-800 border border-slate-300" rowSpan={skills.length}>{title}</td>}
+                                <td className="p-1 border border-slate-300">{skill.text}</td>
+                                <td className="p-1 border border-slate-300">
+                                    <div className="flex gap-1 flex-wrap">
                                         <button onClick={() => toggle(d, skill.text, 2)}
-                                            className={`px-3 py-1 text-sm rounded-md border border-gray-300 transition ${mark === 2 ? 'bg-green-200 border-green-300' : 'bg-white hover:bg-gray-100'}`}>
+                                            className={`px-2 py-0.5 text-xs rounded-md border border-gray-300 transition ${mark === 2 ? 'bg-green-200 border-green-300' : 'bg-white hover:bg-gray-100'}`}>
                                             Yes
                                         </button>
                                         <button onClick={() => toggle(d, skill.text, 1)}
-                                            className={`px-3 py-1 text-sm rounded-md border border-gray-300 transition ${mark === 1 ? 'bg-yellow-200 border-yellow-300' : 'bg-white hover:bg-gray-100'}`}>
+                                            className={`px-2 py-0.5 text-xs rounded-md border border-gray-300 transition ${mark === 1 ? 'bg-yellow-200 border-yellow-300' : 'bg-white hover:bg-gray-100'}`}>
                                             Partial
                                         </button>
                                         <button onClick={() => toggle(d, skill.text, 0)}
-                                            className={`px-3 py-1 text-sm rounded-md border border-gray-300 transition ${mark === 0 ? 'bg-red-200 border-red-300' : 'bg-white hover:bg-gray-100'}`}>
+                                            className={`px-2 py-0.5 text-xs rounded-md border border-gray-300 transition ${mark === 0 ? 'bg-red-200 border-red-300' : 'bg-white hover:bg-gray-100'}`}>
                                             No
                                         </button>
                                     </div>
@@ -1358,7 +1493,8 @@ function SubmittedCases({ course, participant, observations, cases, onEditCase, 
 
             if (isEenc) {
                 const isBreathing = c.age_group === 'EENC_breathing';
-                const maxScore = isBreathing ? 48 : 72;
+                // EENC Max scores can vary based on skills recorded, so we calculate it dynamically
+                const maxScore = relatedObs.length * 2;
                 const score = relatedObs.reduce((sum, obs) => sum + obs.item_correct, 0);
                 const percentage = calcPct(score, maxScore);
                 rowData = { ...rowData, score, percentage };
@@ -1369,7 +1505,7 @@ function SubmittedCases({ course, participant, observations, cases, onEditCase, 
                 rowData = { ...rowData, total, correct, percentage: pct };
             }
             return rowData;
-        }).sort((a, b) => (a.date < b.date ? 1 : -1) || b.serial - a.serial);
+        }).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0) || b.serial - a.serial);
     }, [cases, observations, isEenc]);
 
     const getAgeLabel = (age) => {
@@ -1390,8 +1526,8 @@ function SubmittedCases({ course, participant, observations, cases, onEditCase, 
                     <tr key={idx} className="hover:bg-gray-50">
                         <td className="p-4 border border-gray-200">{c.date}</td>
                         <td className="p-4 border border-gray-200">{c.day ?? ''}</td>
-                        <td className="p-4 border border-gray-200">{getAgeLabel(c.age)}</td>
                         {isImnci && <td className="p-4 border border-gray-200">{c.setting}</td>}
+                        <td className="p-4 border border-gray-200">{getAgeLabel(c.age)}</td>
                         <td className="p-4 border border-gray-200">{c.serial}</td>
                         {isEenc ? (
                             <>
@@ -1451,10 +1587,21 @@ function ImnciReports({ course, participants, allObs, allCases }) {
     const [age, setAge] = useState('GE2M_LE5Y');
     const [settingFilter, setSettingFilter] = useState('All');
     const [dayFilter, setDayFilter] = useState('All');
+    const [groupFilter, setGroupFilter] = useState('All');
     const [tab, setTab] = useState('matrix');
 
-    const filteredObs = useMemo(() => allObs.filter(o => o.courseId === course.id && o.age_group === age && (settingFilter === 'All' || o.setting === settingFilter) && (dayFilter === 'All' || o.day_of_course === Number(dayFilter))), [allObs, course.id, age, settingFilter, dayFilter]);
-    const filteredCases = useMemo(() => allCases.filter(c => c.courseId === course.id && c.age_group === age && (settingFilter === 'All' || c.setting === settingFilter) && (dayFilter === 'All' || c.day_of_course === Number(dayFilter))), [allCases, course.id, age, settingFilter, dayFilter]);
+    const filteredParticipants = useMemo(() => participants.filter(p => groupFilter === 'All' || p.group === groupFilter), [participants, groupFilter]);
+
+    const filteredObs = useMemo(() => allObs.filter(o => {
+        const participant = filteredParticipants.find(p => p.id === o.participant_id);
+        return participant && o.courseId === course.id && o.age_group === age && (settingFilter === 'All' || o.setting === settingFilter) && (dayFilter === 'All' || o.day_of_course === Number(dayFilter));
+    }), [allObs, course.id, age, settingFilter, dayFilter, filteredParticipants]);
+
+    const filteredCases = useMemo(() => allCases.filter(c => {
+        const participant = filteredParticipants.find(p => p.id === c.participant_id);
+        return participant && c.courseId === course.id && c.age_group === age && (settingFilter === 'All' || c.setting === settingFilter) && (dayFilter === 'All' || c.day_of_course === Number(dayFilter));
+    }), [allCases, course.id, age, settingFilter, dayFilter, filteredParticipants]);
+
 
     const caseSummaryByGroup = useMemo(() => {
         const g = {}; const pmap = new Map(); participants.forEach(p => pmap.set(p.id, p));
@@ -1517,19 +1664,23 @@ function ImnciReports({ course, participants, allObs, allCases }) {
         doc.save(`IMCI_${tab}_Report_All_Groups.pdf`);
     };
 
+    const groupsToRender = groupFilter === 'All' ? ['Group A', 'Group B', 'Group C', 'Group D'] : [groupFilter];
+
+
     return (
         <div className="mt-6">
             <div className="flex flex-wrap gap-3 mb-4"><Button variant={tab === 'case' ? 'primary' : 'secondary'} onClick={() => setTab('case')}>Case Summary</Button><Button variant={tab === 'class' ? 'primary' : 'secondary'} onClick={() => setTab('class')}>Classification Summary</Button><Button variant={tab === 'matrix' ? 'primary' : 'secondary'} onClick={() => setTab('matrix')}>Detailed Report</Button></div>
             <div className="flex flex-wrap gap-4 items-center justify-between p-4 bg-gray-50 rounded-md mb-6">
-                <div className="flex gap-4 items-center">
+                <div className="flex flex-wrap gap-4 items-center">
                     <FormGroup label="Age group"><Select value={age} onChange={(e) => setAge(e.target.value)}><option value="LT2M">0-2 months</option><option value="GE2M_LE5Y">2-59 months</option></Select></FormGroup>
                     <FormGroup label="Setting"><Select value={settingFilter} onChange={(e) => setSettingFilter(e.target.value)}><option value="All">All</option><option value="OPD">Out-patient</option><option value="IPD">In-patient</option></Select></FormGroup>
                     <FormGroup label="Day of Training"><Select value={dayFilter} onChange={(e) => setDayFilter(e.target.value)}><option value="All">All Days</option>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>Day {d}</option>)}</Select></FormGroup>
+                    <FormGroup label="Group"><Select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}><option value="All">All Groups</option><option>Group A</option><option>Group B</option><option>Group C</option><option>Group D</option></Select></FormGroup>
                 </div>
                 <Button onClick={handleExportFullReportPdf}><PdfIcon /> Save Full Report as PDF</Button>
             </div>
 
-            {tab !== 'matrix' && ['Group A', 'Group B', 'Group C', 'Group D'].map(g => {
+            {tab !== 'matrix' && groupsToRender.map(g => {
                 const data = (tab === 'case' ? caseSummaryByGroup : classSummaryByGroup)[g] || {};
                 const ids = Object.keys(data); if (ids.length === 0) return null;
                 return (
@@ -1540,18 +1691,18 @@ function ImnciReports({ course, participants, allObs, allCases }) {
                 );
             })}
 
-            {tab === 'matrix' && ['Group A', 'Group B', 'Group C', 'Group D'].map(g => {
+            {tab === 'matrix' && groupsToRender.map(g => {
                 const parts = participants.filter(p => p.group === g).sort((a, b) => a.name.localeCompare(b.name));
                 if (parts.length === 0) return null;
                 return (
                     <div key={g} className="grid gap-2 mb-8">
                         <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full text-xs">
+                        <div className="max-h-[70vh] overflow-y-auto">
+                            <table className="w-full text-xs table-fixed">
                                 <thead>
-                                    <tr className="text-left border-b bg-gray-50">
-                                        <th className="py-2 pr-4 w-80">Classification</th>
-                                        {parts.map(p => <th key={p.id} className="py-2 pr-4 whitespace-nowrap text-center">{p.name}</th>)}
+                                    <tr className="text-left border-b bg-gray-50 sticky top-0">
+                                        <th className="py-2 pr-4 w-1/3">Classification</th>
+                                        {parts.map(p => <th key={p.id} className="py-2 px-1 text-center w-32">{p.name}</th>)}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1567,7 +1718,7 @@ function ImnciReports({ course, participants, allObs, allCases }) {
                                                     const correctCount = allObsForSkill.filter(o => o.item_correct === 1).length;
                                                     const totalCount = allObsForSkill.length;
                                                     const percentage = calcPct(correctCount, totalCount);
-                                                    return <td key={p.id} className={`py-2 pr-4 text-center ${pctBgClass(percentage)}`}>{`${correctCount}/${totalCount} (${fmtPct(percentage)})`}</td>;
+                                                    return <td key={p.id} className={`py-2 pr-4 text-center ${pctBgClass(percentage)}`}>{`${totalCount} (${fmtPct(percentage)})`}</td>;
                                                 });
                                                 return <tr key={item} className="border-b"><td className="py-2 pl-4">{item}</td>{participantCells}</tr>;
                                             })}
@@ -1586,9 +1737,19 @@ function ImnciReports({ course, participants, allObs, allCases }) {
 function EtatReports({ course, participants, allObs, allCases }) {
     const [tab, setTab] = useState('matrix');
     const [dayFilter, setDayFilter] = useState('All');
+    const [groupFilter, setGroupFilter] = useState('All');
 
-    const filteredCases = useMemo(() => allCases.filter(c => dayFilter === 'All' || c.day_of_course === Number(dayFilter)), [allCases, dayFilter]);
-    const filteredObs = useMemo(() => allObs.filter(o => dayFilter === 'All' || o.day_of_course === Number(dayFilter)), [allObs, dayFilter]);
+    const filteredParticipants = useMemo(() => participants.filter(p => groupFilter === 'All' || p.group === groupFilter), [participants, groupFilter]);
+
+    const filteredCases = useMemo(() => allCases.filter(c => {
+        const participant = filteredParticipants.find(p => p.id === c.participant_id);
+        return participant && (dayFilter === 'All' || c.day_of_course === Number(dayFilter));
+    }), [allCases, dayFilter, filteredParticipants]);
+
+    const filteredObs = useMemo(() => allObs.filter(o => {
+        const participant = filteredParticipants.find(p => p.id === o.participant_id);
+        return participant && (dayFilter === 'All' || o.day_of_course === Number(dayFilter));
+    }), [allObs, dayFilter, filteredParticipants]);
 
     const caseSummaryByGroup = useMemo(() => {
         const g = {}; const pmap = new Map(); participants.forEach(p => pmap.set(p.id, p));
@@ -1637,16 +1798,21 @@ function EtatReports({ course, participants, allObs, allCases }) {
         doc.save(`ETAT_${tab}_Report_All_Groups.pdf`);
     };
 
+    const groupsToRender = groupFilter === 'All' ? ['Group A', 'Group B', 'Group C', 'Group D'] : [groupFilter];
+
     return (
         <div className="mt-6">
             <div className="flex flex-wrap gap-3 mb-4"><Button variant={tab === 'case' ? 'primary' : 'secondary'} onClick={() => setTab('case')}>Case Summary</Button><Button variant={tab === 'matrix' ? 'primary' : 'secondary'} onClick={() => setTab('matrix')}>Detailed Skill Report</Button></div>
 
             <div className="flex flex-wrap gap-4 items-center justify-between p-4 bg-gray-50 rounded-md mb-6">
-                <FormGroup label="Day of Training"><Select value={dayFilter} onChange={(e) => setDayFilter(e.target.value)}><option value="All">All Days</option>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>Day {d}</option>)}</Select></FormGroup>
+                <div className="flex gap-4 items-center">
+                    <FormGroup label="Day of Training"><Select value={dayFilter} onChange={(e) => setDayFilter(e.target.value)}><option value="All">All Days</option>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>Day {d}</option>)}</Select></FormGroup>
+                    <FormGroup label="Group"><Select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}><option value="All">All Groups</option><option>Group A</option><option>Group B</option><option>Group C</option><option>Group D</option></Select></FormGroup>
+                </div>
                 <Button onClick={handleExportFullReportPdf}><PdfIcon /> Save Full Report as PDF</Button>
             </div>
 
-            {tab === 'case' && ['Group A', 'Group B', 'Group C', 'Group D'].map(g => {
+            {tab === 'case' && groupsToRender.map(g => {
                 const data = caseSummaryByGroup[g] || {}; const ids = Object.keys(data); if (ids.length === 0) return null;
                 return (
                     <div key={g} className="grid gap-2 mb-8">
@@ -1656,7 +1822,7 @@ function EtatReports({ course, participants, allObs, allCases }) {
                 );
             })}
 
-            {tab === 'matrix' && ['Group A', 'Group B', 'Group C', 'Group D'].map(g => {
+            {tab === 'matrix' && groupsToRender.map(g => {
                 const parts = participants.filter(p => p.group === g).sort((a, b) => a.name.localeCompare(b.name));
                 if (parts.length === 0) return null;
                 return (
@@ -1664,7 +1830,7 @@ function EtatReports({ course, participants, allObs, allCases }) {
                         <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
                         <div className="overflow-x-auto"><table className="min-w-full text-xs">
                             <thead>
-                                <tr className="text-left border-b bg-gray-50">
+                                <tr className="text-left border-b bg-gray-50 sticky top-0">
                                     <th className="py-2 pr-4 w-80">Skill</th>
                                     {parts.map(p => <th key={p.id} className="py-2 pr-4 whitespace-nowrap text-center">{p.name}</th>)}
                                 </tr>
@@ -1701,9 +1867,19 @@ function EencReports({ course, participants, allObs, allCases }) {
     const [tab, setTab] = useState('summary');
     const [scenarioFilter, setScenarioFilter] = useState('All');
     const [dayFilter, setDayFilter] = useState('All');
+    const [groupFilter, setGroupFilter] = useState('All');
 
-    const filteredCases = useMemo(() => allCases.filter(c => c.courseId === course.id && c.age_group.startsWith('EENC_') && (dayFilter === 'All' || c.day_of_course === Number(dayFilter))), [allCases, course.id, dayFilter]);
-    const filteredObs = useMemo(() => allObs.filter(o => dayFilter === 'All' || o.day_of_course === Number(dayFilter)), [allObs, dayFilter]);
+    const filteredParticipants = useMemo(() => participants.filter(p => groupFilter === 'All' || p.group === groupFilter), [participants, groupFilter]);
+
+    const filteredCases = useMemo(() => allCases.filter(c => {
+        const participant = filteredParticipants.find(p => p.id === c.participant_id);
+        return participant && c.courseId === course.id && c.age_group.startsWith('EENC_') && (dayFilter === 'All' || c.day_of_course === Number(dayFilter));
+    }), [allCases, course.id, dayFilter, filteredParticipants]);
+
+    const filteredObs = useMemo(() => allObs.filter(o => {
+        const participant = filteredParticipants.find(p => p.id === o.participant_id);
+        return participant && (dayFilter === 'All' || o.day_of_course === Number(dayFilter));
+    }), [allObs, dayFilter, filteredParticipants]);
 
     const scoreSummaryByGroup = useMemo(() => {
         const g = {};
@@ -1727,7 +1903,7 @@ function EencReports({ course, participants, allObs, allCases }) {
             const t = g[p.group][p.id];
             const caseObs = filteredObs.filter(o => o.caseId === c.id);
             const isBreathing = c.age_group === 'EENC_breathing';
-            const maxScore = isBreathing ? 48 : 72;
+            const maxScore = caseObs.length * 2; // Dynamic max score
             const currentScore = caseObs.reduce((sum, obs) => sum + obs.item_correct, 0);
 
             t.total_cases++;
@@ -1827,7 +2003,7 @@ function EencReports({ course, participants, allObs, allCases }) {
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-xs">
                         <thead>
-                            <tr className="text-left border-b bg-gray-50">
+                            <tr className="text-left border-b bg-gray-50 sticky top-0">
                                 <th className="py-2 pr-4 w-80">Skill</th>
                                 {parts.map(p => <th key={p.id} className="py-2 pr-4 whitespace-nowrap text-center">{p.name}</th>)}
                             </tr>
@@ -1857,6 +2033,8 @@ function EencReports({ course, participants, allObs, allCases }) {
         );
     }
 
+    const groupsToRender = groupFilter === 'All' ? ['Group A', 'Group B', 'Group C', 'Group D'] : [groupFilter];
+
     return (
         <div className="mt-6">
             <div className="flex flex-wrap gap-3 mb-4"><Button variant={tab === 'summary' ? 'primary' : 'secondary'} onClick={() => setTab('summary')}>Score Summary</Button><Button variant={tab === 'matrix' ? 'primary' : 'secondary'} onClick={() => setTab('matrix')}>Detailed Skill Report</Button></div>
@@ -1864,11 +2042,12 @@ function EencReports({ course, participants, allObs, allCases }) {
                 <div className="flex gap-4 items-center">
                     {tab === 'matrix' && <FormGroup label="Scenario"><Select value={scenarioFilter} onChange={(e) => setScenarioFilter(e.target.value)}><option value="All">All (Combined)</option><option value="breathing">Breathing Baby</option><option value="not_breathing">Not Breathing Baby</option></Select></FormGroup>}
                     <FormGroup label="Day of Training"><Select value={dayFilter} onChange={(e) => setDayFilter(e.target.value)}><option value="All">All Days</option>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>Day {d}</option>)}</Select></FormGroup>
+                    <FormGroup label="Group"><Select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}><option value="All">All Groups</option><option>Group A</option><option>Group B</option><option>Group C</option><option>Group D</option></Select></FormGroup>
                 </div>
                 <Button onClick={handleExportFullReportPdf}><PdfIcon /> Save Full Report as PDF</Button>
             </div>
 
-            {tab === 'summary' && ['Group A', 'Group B', 'Group C', 'Group D'].map(g => {
+            {tab === 'summary' && groupsToRender.map(g => {
                 const data = scoreSummaryByGroup[g];
                 if (!data) return null;
                 const ids = Object.keys(data);
@@ -1914,7 +2093,7 @@ function EencReports({ course, participants, allObs, allCases }) {
                 );
             })}
 
-            {tab === 'matrix' && ['Group A', 'Group B', 'Group C', 'Group D'].map(g => (
+            {tab === 'matrix' && groupsToRender.map(g => (
                 <React.Fragment key={g}>
                     {(scenarioFilter === 'All' || scenarioFilter === 'breathing') && <EencDetailedMatrix group={g} scenario="breathing" />}
                     {(scenarioFilter === 'All' || scenarioFilter === 'not_breathing') && <EencDetailedMatrix group={g} scenario="not_breathing" />}
@@ -1955,6 +2134,44 @@ function SplashScreen() {
         </div>
     );
 }
+
+// =============================================================================
+// --- Mobile Navigation Icons & Components ---
+// =============================================================================
+const HomeIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+const CoursesIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+const UsersIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+const MonitorIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+const ReportIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 6h13"></path><path d="M8 12h13"></path><path d="M8 18h13"></path><path d="M3 6h.01"></path><path d="M3 12h.01"></path><path d="M3 18h.01"></path></svg>
+
+function BottomNav({ navItems, navigate }) {
+    const icons = {
+        Home: HomeIcon,
+        Courses: CoursesIcon,
+        Participants: UsersIcon,
+        Monitoring: MonitorIcon,
+        Reports: ReportIcon
+    };
+    return (
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-800 border-t border-slate-700 flex justify-around items-center z-20">
+            {navItems.map(item => {
+                const Icon = icons[item.label];
+                return (
+                    <button
+                        key={item.label}
+                        onClick={() => !item.disabled && navigate(item.view)}
+                        disabled={item.disabled}
+                        className={`flex flex-col items-center justify-center p-2 w-full h-16 text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${item.active ? 'text-sky-400' : 'text-slate-400 hover:text-white'}`}
+                    >
+                        {Icon && <Icon className="w-6 h-6 mb-1" />}
+                        <span>{item.label}</span>
+                    </button>
+                )
+            })}
+        </nav>
+    );
+}
+
 
 // =============================================================================
 // Root App Component
@@ -2076,11 +2293,11 @@ export default function App() {
                                 <img src="/child.png" alt="NCHP Logo" className="h-12 w-12 object-contain" />
                             </div>
                             <div>
-                                <h1 className="text-2xl font-bold text-white hidden sm:block">National Child Health Program</h1>
+                                <h1 className="text-xl sm:text-2xl font-bold text-white">NCHP</h1>
                                 <p className="text-sm text-slate-300 hidden sm:block">Course Monitoring System</p>
                             </div>
                         </div>
-                        <nav className="flex items-center gap-1">
+                        <nav className="hidden md:flex items-center gap-1">
                             {navItems.map(item => (
                                 <button key={item.label} onClick={() => !item.disabled && navigate(item.view)} disabled={item.disabled}
                                     className={`px-3 py-2 text-sm font-semibold rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${item.active
@@ -2094,10 +2311,11 @@ export default function App() {
                     </div>
                 </div>
             </header>
-            <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 w-full flex-grow">
+            <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 w-full flex-grow mb-16 md:mb-0">
                 {renderView()}
             </main>
             <Footer />
+            <BottomNav navItems={navItems} navigate={navigate} />
         </div>
     );
 }
