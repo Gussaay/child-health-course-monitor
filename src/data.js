@@ -13,6 +13,53 @@ import {
     getDoc
 } from "firebase/firestore";
 
+import { storage } from './firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+
+// --- FILE UPLOAD ---
+export async function uploadFile(file) {
+    if (!file) return null;
+
+    const storageRef = ref(storage, `uploads/${Date.now()}_${file.name}`);
+
+    try {
+        const snapshot = await uploadBytes(storageRef, file);
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        console.log("File uploaded successfully:", downloadURL);
+        return downloadURL;
+    } catch (error) {
+        console.error("Error uploading file:", error);
+        throw error;
+    }
+}
+
+
+// --- FACILITATORS ---
+export async function upsertFacilitator(payload) {
+    if (payload.id) {
+        // Update
+        const facRef = doc(db, "facilitators", payload.id);
+        await setDoc(facRef, payload, { merge: true });
+        return payload.id;
+    } else {
+        // Create
+        const { id, ...dataToSave } = payload;
+        const newFacRef = await addDoc(collection(db, "facilitators"), dataToSave);
+        return newFacRef.id;
+    }
+}
+
+export async function listFacilitators() {
+    const querySnapshot = await getDocs(collection(db, "facilitators"));
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+export async function deleteFacilitator(facilitatorId) {
+    await deleteDoc(doc(db, "facilitators", facilitatorId));
+    return true;
+}
+
+
 // --- COURSES ---
 export async function upsertCourse(payload) {
     if (payload.id) {
@@ -22,7 +69,6 @@ export async function upsertCourse(payload) {
         return payload.id;
     } else {
         // This is a NEW course
-        // ** THE FIX IS HERE: ** We remove the 'id: undefined' field before saving.
         const { id, ...dataToSave } = payload;
         const newCourseRef = await addDoc(collection(db, "courses"), dataToSave);
         return newCourseRef.id;
@@ -38,7 +84,6 @@ export async function upsertParticipant(payload) {
         return payload.id;
     } else {
         // This is a NEW participant
-        // ** THE FIX IS HERE: ** We remove the 'id: undefined' field before saving.
         const { id, ...dataToSave } = payload;
         const newParticipantRef = await addDoc(collection(db, "participants"), dataToSave);
         return newParticipantRef.id;
@@ -46,13 +91,20 @@ export async function upsertParticipant(payload) {
 }
 
 
-// --- OTHER FUNCTIONS (No changes needed below this line) ---
+// --- OTHER FUNCTIONS ---
 
 export async function listCoursesByType(course_type) {
     const q = query(collection(db, "courses"), where("course_type", "==", course_type));
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
+
+// +++ NEW: Function to get ALL courses for facilitator reports +++
+export async function listAllCourses() {
+    const querySnapshot = await getDocs(collection(db, "courses"));
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
 
 export async function deleteCourse(courseId) {
     const batch = writeBatch(db);
@@ -126,7 +178,7 @@ export async function upsertCaseAndObservations(caseData, observations, editingC
 export async function deleteCaseAndObservations(caseId) {
     const batch = writeBatch(db);
     batch.delete(doc(db, "cases", caseId));
-    
+
     const q = query(collection(db, "observations"), where("caseId", "==", caseId));
     const snapshot = await getDocs(q);
     snapshot.forEach(d => batch.delete(d.ref));
