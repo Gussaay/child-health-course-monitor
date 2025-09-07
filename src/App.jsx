@@ -5,6 +5,7 @@ import { Bar, Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
+import DashboardView from './DashboardView';
 
 // Import all data functions
 import {
@@ -22,7 +23,8 @@ import {
     upsertFacilitator,
     listFacilitators,
     deleteFacilitator,
-    listAllCourses
+    listAllCourses,
+    listAllParticipants 
 } from './data.js';
 
 
@@ -3000,31 +3002,40 @@ export default function App() {
     const [editingFacilitator, setEditingFacilitator] = useState(null);
     const [loading, setLoading] = useState(true);
     const [previousView, setPreviousView] = useState("landing");
+    const [allParticipants, setAllParticipants] = useState([]);
 
     async function refreshAllData() {
-        setLoading(true);
-        const coursesData = await listAllCourses();
-        const facilitatorsData = await listFacilitators();
-        setAllCourses(coursesData);
-        setFacilitators(facilitatorsData);
-        setCourses(coursesData.filter(c => c.course_type === activeCourseType));
-        setLoading(false);
-    }
-    async function refreshCourses() {
-        const list = await listCoursesByType(activeCourseType);
-        setCourses(list);
-    }
-    async function refreshParticipants() {
-        if (!selectedCourseId) { setParticipants([]); return; }
-        setLoading(true);
-        const list = await listParticipants(selectedCourseId);
-        setParticipants(list);
-        setLoading(false);
-    }
-    async function refreshFacilitators() {
-        const list = await listFacilitators();
-        setFacilitators(list);
-    }
+    setLoading(true);
+    // Use Promise.all to fetch data concurrently for better performance
+    const [coursesData, facilitatorsData, allParticipantsData] = await Promise.all([
+        listAllCourses(),
+        listFacilitators(),
+        listAllParticipants(), // Corrected function call
+    ]);
+    
+    setAllCourses(coursesData);
+    setFacilitators(facilitatorsData);
+    setAllParticipants(allParticipantsData); // Corrected variable name
+    setCourses(coursesData.filter(c => c.course_type === activeCourseType));
+    setLoading(false);
+}
+
+// These functions were already correct and require no changes
+async function refreshCourses() {
+    const list = await listCoursesByType(activeCourseType);
+    setCourses(list);
+}
+async function refreshParticipants() {
+    if (!selectedCourseId) { setParticipants([]); return; }
+    setLoading(true);
+    const list = await listParticipants(selectedCourseId);
+    setParticipants(list);
+    setLoading(false);
+}
+async function refreshFacilitators() {
+    const list = await listFacilitators();
+    setFacilitators(list);
+}
 
     useEffect(() => { refreshAllData(); }, []); // Run once on mount
     useEffect(() => {
@@ -3105,12 +3116,20 @@ export default function App() {
             case 'facilitatorForm': return <FacilitatorForm initialData={editingFacilitator} onCancel={() => navigate(previousView === 'facilitatorForm' ? 'courseForm' : 'facilitators')} onSave={async (payload) => { await upsertFacilitator({ ...payload, id: editingFacilitator?.id }); await refreshFacilitators(); navigate(previousView === 'courseForm' ? 'courseForm' : 'facilitators'); }} />;
             case 'facilitatorReport': return selectedFacilitator && <FacilitatorReportView facilitator={selectedFacilitator} allCourses={allCourses} onBack={() => navigate('facilitators')} />;
             case 'facilitatorComparison': return <FacilitatorComparisonView facilitators={facilitators} allCourses={allCourses} onBack={() => navigate('facilitators')} />;
-
-            default: return <Landing active={activeCourseType} onPick={(t) => { setActiveCourseType(t); navigate('courses'); }} />;
+case 'dashboard': 
+     return <DashboardView 
+                allCourses={allCourses} 
+                allFacilitators={facilitators} 
+                allParticipants={allParticipants} 
+                STATE_LOCALITIES={STATE_LOCALITIES}
+                onOpenCourseReport={(id) => { setSelectedCourseId(id); navigate('courseReport'); }}
+                onOpenParticipantReport={(id) => { setSelectedParticipantId(id); navigate('participantReport'); }}
+            />;
         }
     };
 
     const navItems = [
+        { label: 'Dashboard', view: 'dashboard', active: view === 'dashboard' },
         { label: 'Home', view: 'landing', active: view === 'landing' },
         { label: 'Facilitators', view: 'facilitators', active: ['facilitators', 'facilitatorForm', 'facilitatorReport', 'facilitatorComparison'].includes(view) },
         { label: 'Courses', view: 'courses', active: ['courses', 'courseForm', 'courseReport'].includes(view) },
@@ -3133,7 +3152,7 @@ export default function App() {
                                 <img src="/child.png" alt="NCHP Logo" className="h-12 w-12 object-contain" />
                             </div>
                             <div>
-                                <h1 className="text-xl sm:text-2xl font-bold text-white">NCHP</h1>
+                                <h1 className="text-xl sm:text-2xl font-bold text-white">National Child Health Program</h1>
                                 <p className="text-sm text-slate-300 hidden sm:block">Course Monitoring System</p>
                             </div>
                         </div>
