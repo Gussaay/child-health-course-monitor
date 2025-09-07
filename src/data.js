@@ -59,6 +59,24 @@ export async function deleteFacilitator(facilitatorId) {
     return true;
 }
 
+export async function listAllParticipants() {
+    const allCourses = await listAllCourses();
+    const allParticipants = [];
+
+    for (const course of allCourses) {
+        const participants = await listParticipants(course.id);
+        // Enrich participants with course details before pushing
+        participants.forEach(p => {
+            allParticipants.push({
+                ...p,
+                course_type: course.course_type,
+                state: course.state,
+                locality: course.locality
+            });
+        });
+    }
+    return allParticipants;
+}
 
 // --- COURSES ---
 export async function upsertCourse(payload) {
