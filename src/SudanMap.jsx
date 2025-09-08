@@ -5,7 +5,6 @@ import {
   Geography,
   Marker
 } from "react-simple-maps";
-import { scaleLinear } from "d3-scale";
 
 const geoUrl = "/sudan.json";
 
@@ -26,15 +25,10 @@ const SudanMap = ({ data }) => {
       .catch(error => console.error("Error fetching map data:", error));
   }, []);
 
-  // Optimized projection settings for Sudan
   const mapCenter = [30, 15.5];
   const mapScale = 2000;
 
-  // Create a linear color scale for a lighter blue saturation
   const maxCount = data.reduce((max, item) => Math.max(max, item.count), 0) || 1;
-  const colorScale = scaleLinear()
-    .domain([0, maxCount])
-    .range(["#deebf7", "#2171b5"]);
 
   return (
     <ComposableMap
@@ -43,22 +37,35 @@ const SudanMap = ({ data }) => {
         scale: mapScale,
         center: mapCenter,
       }}
-      style={{ width: "100%", height: "600px" }}
+      style={{ width: "100%", height: "100%" }}
     >
       <Geographies geography={geographies}>
         {({ geographies }) =>
           geographies.map(geo => {
             const stateNameFromGeoJSON = geo.properties.name ? geo.properties.name.toLowerCase() : '';
-            const stateData = data.find(item => item.state.toLowerCase() === stateNameFromGeoJSON);
             
-            const fill = stateData ? colorScale(stateData.count) : "#EAEAEC";
-
             return (
               <Geography
                 key={geo.rsmKey}
                 geography={geo}
-                fill={fill}
                 stroke="#D6D6DA"
+                style={{
+                  default: {
+                    fill: "#EAEAEC",
+                    stroke: "#D6D6DA",
+                    outline: "none"
+                  },
+                  hover: {
+                    fill: "#a2d2ff",
+                    stroke: "#D6D6DA",
+                    outline: "none"
+                  },
+                  pressed: {
+                    fill: "#a2d2ff",
+                    stroke: "#D6D6DA",
+                    outline: "none"
+                  }
+                }}
               />
             );
           })
@@ -66,32 +73,27 @@ const SudanMap = ({ data }) => {
       </Geographies>
       {data.map(({ state, coordinates, count }) => (
         <Marker key={state} coordinates={coordinates}>
-          <g transform="translate(0, 0)">
-            <text
+          <circle
+              r={Math.max(5, (count / maxCount) * 20)}
+              fill="#0ea5e9"
+              stroke="#fff"
+              strokeWidth={2}
+              opacity={0.8}
+          />
+          <text
               textAnchor="middle"
-              y="-10"
+              // Adjusted y position to match the facilitator map
+              y={-Math.max(5, (count / maxCount) * 20) - 5}
               style={{
-                fontFamily: "system-ui",
-                fill: "white",
-                fontSize: "12px",
-                fontWeight: "normal"
+                  fontFamily: "system-ui",
+                  fill: "#5D5A6D",
+                  fontSize: "10px",
+                  fontWeight: "bold",
+                  pointerEvents: "none"
               }}
-            >
-              {count}
-            </text>
-            <text
-              textAnchor="middle"
-              y="5"
-              style={{
-                fontFamily: "system-ui",
-                fill: "black", // Changed color to black
-                fontSize: "10px",
-                pointerEvents: "none"
-              }}
-            >
-              {state}
-            </text>
-          </g>
+          >
+              {state} ({count})
+          </text>
         </Marker>
       ))}
     </ComposableMap>
