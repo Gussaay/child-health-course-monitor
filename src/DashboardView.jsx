@@ -4,6 +4,7 @@ import SudanMap from './SudanMap';
 import autoTable from "jspdf-autotable";
 import { Bar, Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
+import { ComposableMap, Geographies, Geography, Marker } from "react-simple-maps";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
 
@@ -33,10 +34,13 @@ const Table = ({ headers, children }) => (
         </table>
     </div>
 );
+const Input = (props) => <input {...props} className={`border border-gray-300 rounded-md p-2 w-full focus:ring-2 focus:ring-sky-500 focus:border-sky-500 ${props.className || ''}`} />;
+const EmptyState = ({ message, colSpan = 100 }) => (<tr><td colSpan={colSpan} className="py-12 text-center text-gray-500 border border-gray-200">{message}</td></tr>);
+
 
 // Helper function to export table data to CSV/Excel
 const exportToExcel = (tableData, headers, fileName) => {
-    const csvContent = "data:text/csv;charset=utf-8," 
+    const csvContent = "data:text/csv;charset=utf-8,"
         + headers.join(',') + '\n'
         + tableData.map(row => row.join(',')).join('\n');
     const encodedUri = encodeURI(csvContent);
@@ -52,7 +56,7 @@ const exportToExcel = (tableData, headers, fileName) => {
 const exportTableToPdf = (title, tableHeaders, tableBody, fileName, filters) => {
     const doc = new jsPDF();
     let y = 15;
-    
+
     doc.setFontSize(16);
     doc.text(title, 14, y);
     y += 7;
@@ -65,7 +69,7 @@ const exportTableToPdf = (title, tableHeaders, tableBody, fileName, filters) => 
       .join(' | ');
     doc.text(`Filters applied: ${filterText || 'None'}`, 14, y);
     y += 10;
-    
+
     autoTable(doc, {
         startY: y,
         head: [tableHeaders],
@@ -76,8 +80,8 @@ const exportTableToPdf = (title, tableHeaders, tableBody, fileName, filters) => 
     doc.save(`${fileName}.pdf`);
 };
 
-function DashboardView({ allCourses, allParticipants, onOpenCourseReport, onOpenParticipantReport, STATE_LOCALITIES }) {
-    if (!allCourses || !allParticipants) {
+function DashboardView({ allCourses, allParticipants, allFacilitators, onOpenCourseReport, onOpenParticipantReport, onOpenFacilitatorReport, STATE_LOCALITIES }) {
+    if (!allCourses || !allParticipants || !allFacilitators) {
         return <div>Loading dashboard data...</div>;
     }
 
@@ -100,6 +104,7 @@ function DashboardView({ allCourses, allParticipants, onOpenCourseReport, onOpen
         const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         return ['All', ...months];
     }, []);
+    const facilitatorRoles = ['All', 'directorCourse', 'isClinicalInstructor', 'teamLeaderCourse', 'followUpCourse'];
 
     // Main filtered data based on all filters
     const filteredCourses = useMemo(() => {
@@ -110,7 +115,7 @@ function DashboardView({ allCourses, allParticipants, onOpenCourseReport, onOpen
             const matchesLocality = localityFilter === 'All' || course.locality === localityFilter;
             const matchesYear = yearFilter === 'All' || courseDate.getFullYear() === Number(yearFilter);
             const matchesMonth = monthFilter === 'All' || (courseDate.getMonth()) === allMonths.indexOf(monthFilter);
-            
+
             return matchesCourseType && matchesState && matchesLocality && matchesYear && matchesMonth;
         });
     }, [allCourses, courseTypeFilter, stateFilter, localityFilter, yearFilter, monthFilter, allMonths]);
@@ -119,18 +124,18 @@ function DashboardView({ allCourses, allParticipants, onOpenCourseReport, onOpen
         const matchingCourseIds = filteredCourses.map(c => c.id);
         return allParticipants.filter(p => matchingCourseIds.includes(p.courseId));
     }, [filteredCourses, allParticipants]);
-    
+
     // Course Dashboard Logic
     const courseKPIs = useMemo(() => {
         const totalCourses = filteredCourses.length;
         const totalImnciCourses = filteredCourses.filter(c => c.course_type === 'IMNCI').length;
         const totalEtatCourses = filteredCourses.filter(c => c.course_type === 'ETAT').length;
         const totalEencCourses = filteredCourses.filter(c => c.course_type === 'EENC').length;
-        
-        return { 
-            totalCourses, 
-            totalImnciCourses, 
-            totalEtatCourses, 
+
+        return {
+            totalCourses,
+            totalImnciCourses,
+            totalEtatCourses,
             totalEencCourses
         };
     }, [filteredCourses]);
@@ -148,7 +153,7 @@ function DashboardView({ allCourses, allParticipants, onOpenCourseReport, onOpen
             data[state][type] = (data[state][type] || 0) + 1;
             totalCounts[state] = (totalCounts[state] || 0) + 1;
         });
-        
+
         const tableBody = allStatesInFilter.map(state => {
             const row = [state];
             allCourseTypesInFilter.forEach(type => {
@@ -167,8 +172,8 @@ function DashboardView({ allCourses, allParticipants, onOpenCourseReport, onOpen
         const grandTotal = columnTotals.slice(1).reduce((acc, sum) => acc + sum, 0);
         columnTotals.push(grandTotal);
 
-        return { 
-            headers: ["State", ...allCourseTypesInFilter, "Total"], 
+        return {
+            headers: ["State", ...allCourseTypesInFilter, "Total"],
             body: tableBody,
             totals: columnTotals
         };
@@ -210,7 +215,7 @@ function DashboardView({ allCourses, allParticipants, onOpenCourseReport, onOpen
             if (!data[cadre]) data[cadre] = {};
             data[cadre][courseType] = (data[cadre][courseType] || 0) + 1;
         });
-        
+
         const tableBody = allCadres.map(cadre => {
             const row = [cadre];
             allCourseTypesInFilter.forEach(courseType => {
@@ -218,15 +223,15 @@ function DashboardView({ allCourses, allParticipants, onOpenCourseReport, onOpen
             });
             return row;
         });
-        
+
         const columnTotals = ["Total"];
         allCourseTypesInFilter.forEach(type => {
             const sum = Object.values(data).reduce((acc, cadreData) => acc + (cadreData[type] || 0), 0);
             columnTotals.push(sum);
         });
 
-        return { 
-            headers: ["Health Cadre", ...allCourseTypesInFilter], 
+        return {
+            headers: ["Health Cadre", ...allCourseTypesInFilter],
             body: tableBody,
             totals: columnTotals
         };
@@ -255,7 +260,7 @@ function DashboardView({ allCourses, allParticipants, onOpenCourseReport, onOpen
       'Year': yearFilter,
       'Month': monthFilter
     };
-    
+
     // Map of Sudan logic
     // Using cities coordinates as a proxy for states and localities
     const mapCoordinates = {
@@ -301,43 +306,289 @@ function DashboardView({ allCourses, allParticipants, onOpenCourseReport, onOpen
     }, [filteredCourses]);
 
 
+    // =========================================================================
+    // NEW: FACILITATOR DASHBOARD LOGIC
+    // =========================================================================
+    const [facSearchQuery, setFacSearchQuery] = useState('');
+    const [facStateFilter, setFacStateFilter] = useState('All');
+    const [facLocalityFilter, setFacLocalityFilter] = useState('All');
+    const [facRoleFilter, setFacRoleFilter] = useState('All');
+    const [facCourseFilter, setFacCourseFilter] = useState('All');
+
+    // This is now a top-level hook, ensuring it's not called conditionally
+    const filteredFacilitators = useMemo(() => {
+        return allFacilitators.filter(f => {
+            const matchesSearch = facSearchQuery === '' || f.name.toLowerCase().includes(facSearchQuery.toLowerCase());
+            const matchesCourse = facCourseFilter === 'All' || (f.courses && f.courses.includes(facCourseFilter));
+            const matchesState = facStateFilter === 'All' || f.currentState === facStateFilter;
+            const matchesLocality = facLocalityFilter === 'All' || f.currentLocality === facLocalityFilter;
+            const matchesRole = facRoleFilter === 'All' || f[facRoleFilter] === 'Yes';
+            return matchesSearch && matchesCourse && matchesState && matchesLocality && matchesRole;
+        });
+    }, [allFacilitators, facSearchQuery, facCourseFilter, facStateFilter, facLocalityFilter, facRoleFilter]);
+
+
+    const facilitatorMapData = useMemo(() => {
+        const facilitatorCounts = {};
+        filteredFacilitators.forEach(f => {
+            const { currentState } = f;
+            if (currentState && currentState !== "Out of Sudan") {
+                facilitatorCounts[currentState] = (facilitatorCounts[currentState] || 0) + 1;
+            }
+        });
+
+        return Object.entries(facilitatorCounts).map(([state, count]) => {
+            const coords = mapCoordinates[state];
+            if (coords) {
+                return {
+                    state,
+                    count,
+                    coordinates: [coords.lng, coords.lat]
+                };
+            }
+            return null;
+        }).filter(Boolean);
+    }, [filteredFacilitators]);
+
+    const facilitatorDashboardData = useMemo(() => {
+        const kpiData = {
+            totalFacilitators: filteredFacilitators.length,
+            directors: filteredFacilitators.filter(f => f.directorCourse === 'Yes').length,
+            clinicalInstructors: filteredFacilitators.filter(f => f.isClinicalInstructor === 'Yes').length,
+            teamLeaders: filteredFacilitators.filter(f => f.teamLeaderCourse === 'Yes').length,
+            followUpSupervisors: filteredFacilitators.filter(f => f.followUpCourse === 'Yes').length,
+        };
+
+        const facilitatorAvailabilityByState = (() => {
+            const data = {};
+            const allStatesInFilter = [...new Set(filteredFacilitators.map(f => f.currentState))].filter(Boolean).sort();
+            const allCourseTypes = [...new Set(filteredFacilitators.flatMap(f => f.courses || []))].sort();
+
+            filteredFacilitators.forEach(f => {
+                const state = f.currentState;
+                f.courses?.forEach(courseType => {
+                    if (state) {
+                        data[state] = data[state] || {};
+                        data[state][courseType] = (data[state][courseType] || 0) + 1;
+                    }
+                });
+            });
+
+            // Prepare table body with rows for each state
+            const tableBody = allStatesInFilter.map(state => {
+                const row = [state];
+                let rowTotal = 0;
+                allCourseTypes.forEach(courseType => {
+                    const count = data[state]?.[courseType] || 0;
+                    row.push(count);
+                    rowTotal += count;
+                });
+                row.push(rowTotal);
+                return row;
+            });
+
+            // Calculate column totals (for each course type) and grand total
+            const totalRow = ["Total"];
+            let grandTotal = 0;
+            allCourseTypes.forEach(courseType => {
+                const columnTotal = allStatesInFilter.reduce((sum, state) => sum + (data[state]?.[courseType] || 0), 0);
+                totalRow.push(columnTotal);
+                grandTotal += columnTotal;
+            });
+            totalRow.push(grandTotal);
+
+            const tableHeaders = ["State", ...allCourseTypes, "Total"];
+
+            const chartDatasets = allCourseTypes.map((courseType, index) => {
+                const colors = ['#3b82f6', '#10b981', '#f97316', '#ef4444', '#6b7280'];
+                return {
+                    label: courseType,
+                    data: allStatesInFilter.map(state => data[state]?.[courseType] || 0),
+                    backgroundColor: colors[index % colors.length],
+                };
+            });
+
+            const chartData = {
+                labels: allStatesInFilter,
+                datasets: chartDatasets
+            };
+
+            return {
+                tableHeaders,
+                tableBody,
+                tableTotals: totalRow,
+                chartData,
+            };
+        })();
+
+
+        const facilitatorTableHeaders = ["Name", "Phone", "Email", "IMNCI Director?", "Clinical Instructor?", "Team Leader?", "Follow-up?", "Courses Instructed", "Courses Directed", "Actions"];
+        const facilitatorTableData = filteredFacilitators.map(f => {
+            const instructed = allCourses.filter(c => Array.isArray(c.facilitators) && c.facilitators.includes(f.name)).length;
+            const directed = allCourses.filter(c => c.director === f.name).length;
+            const hasFollowUp = f.followUpCourse === 'Yes' || f.followUpCourse === 'yes' ? 'Yes' : 'No';
+            const hasTeamLeader = f.teamLeaderCourse === 'Yes' || f.teamLeaderCourse === 'yes' ? 'Yes' : 'No';
+            const isDirector = f.directorCourse === 'Yes' || f.directorCourse === 'yes' ? 'Yes' : 'No';
+            const isClinical = f.isClinicalInstructor === 'Yes' || f.isClinicalInstructor === 'yes' ? 'Yes' : 'No';
+            return {
+                id: f.id,
+                row: [f.name, f.phone, f.email || 'N/A', isDirector, isClinical, hasTeamLeader, hasFollowUp, instructed, directed]
+            };
+        });
+
+        const localitiesInSelectedState = facStateFilter === 'All' ? [] : STATE_LOCALITIES[facStateFilter] || [];
+
+        return {
+            filteredFacilitators,
+            kpiData,
+            facilitatorAvailabilityByState,
+            facilitatorTableHeaders,
+            facilitatorTableData,
+            localitiesInSelectedState,
+        };
+    }, [filteredFacilitators, allCourses, facStateFilter, facLocalityFilter, facRoleFilter, STATE_LOCALITIES]);
+
+    const FacilitatorMap = ({ data, mapCoordinates }) => {
+        // Corrected geoUrl to point to the local file
+        const geoUrl = "/sudan.json";
+        const maxFacilitators = Math.max(...data.map(d => d.count), 1);
+
+        return (
+            <div className="w-full h-96 bg-gray-100 rounded-lg">
+                 <ComposableMap
+                    projection="geoMercator"
+                    projectionConfig={{ center: [30, 15], scale: 2000 }}
+                    style={{ width: "100%", height: "100%" }}
+                >
+                    <Geographies geography={geoUrl}>
+                        {({ geographies }) =>
+                            geographies.map(geo => (
+                                <Geography
+                                    key={geo.rsmKey}
+                                    geography={geo}
+                                    style={{
+                                        default: {
+                                            fill: "#EAEAEC",
+                                            stroke: "#D6D6DA",
+                                            outline: "none"
+                                        },
+                                        hover: {
+                                            fill: "#D6D6DA",
+                                            stroke: "#D6D6DA",
+                                            outline: "none"
+                                        },
+                                        pressed: {
+                                            fill: "#D6D6DA",
+                                            stroke: "#D6D6DA",
+                                            outline: "none"
+                                        }
+                                    }}
+                                />
+                            ))
+                        }
+                    </Geographies>
+                    {data.map(({ state, coordinates, count }) => (
+                        <Marker key={state} coordinates={coordinates}>
+                            <circle
+                                r={Math.max(5, (count / maxFacilitators) * 20)}
+                                fill="#0ea5e9"
+                                stroke="#fff"
+                                strokeWidth={2}
+                                opacity={0.8}
+                            />
+                            <text
+                                textAnchor="middle"
+                                y={-Math.max(5, (count / maxFacilitators) * 20) - 5}
+                                style={{ fontFamily: "system-ui", fill: "#5D5A6D", fontSize: "10px", fontWeight: "bold" }}
+                            >
+                                {state} ({count})
+                            </text>
+                        </Marker>
+                    ))}
+                </ComposableMap>
+            </div>
+        );
+    };
+
+
+    // =========================================================================
+    // MAIN COMPONENT RENDER
+    // =========================================================================
     return (
         <Card className="p-0">
-            <PageHeader title="National Program Dashboard" subtitle="Overview of all courses and participants." />
-            
+            <PageHeader title="National Program Dashboard" subtitle="Overview of all courses, participants, and facilitators." />
+
             <div className="mb-6 flex flex-wrap items-center gap-4 px-4 md:px-6">
                 <Button variant={viewType === 'courses' ? 'primary' : 'secondary'} onClick={() => setViewType('courses')}>Course Dashboard</Button>
                 <Button variant={viewType === 'participants' ? 'primary' : 'secondary'} onClick={() => setViewType('participants')}>Participant Dashboard</Button>
+                <Button variant={viewType === 'facilitators' ? 'primary' : 'secondary'} onClick={() => setViewType('facilitators')}>Facilitator Dashboard</Button>
             </div>
-            
+
+            {/* Filter section, visible for all views */}
             <div className="p-4 bg-gray-50 rounded-md mb-6 mx-4 md:mx-6">
                 <h3 className="text-lg font-semibold mb-2">Filters</h3>
                 <div className="grid md:grid-cols-4 lg:grid-cols-5 gap-4">
-                    <FormGroup label="Course Type">
-                        <Select value={courseTypeFilter} onChange={e => setCourseTypeFilter(e.target.value)}>
-                            {allCourseTypes.map(c => <option key={c} value={c}>{c}</option>)}
-                        </Select>
-                    </FormGroup>
-                    <FormGroup label="State">
-                        <Select value={stateFilter} onChange={e => setStateFilter(e.target.value)}>
-                            {allStates.map(s => <option key={s} value={s}>{s}</option>)}
-                        </Select>
-                    </FormGroup>
-                    <FormGroup label="Locality">
-                        <Select value={localityFilter} onChange={e => setLocalityFilter(e.target.value)} disabled={stateFilter === 'All'}>
-                            {allLocalities.map(l => <option key={l} value={l}>{l}</option>)}
-                        </Select>
-                    </FormGroup>
-                    <FormGroup label="Year">
-                        <Select value={yearFilter} onChange={e => setYearFilter(e.target.value)}>
-                            {allYears.map(y => <option key={y} value={y}>{y}</option>)}
-                        </Select>
-                    </FormGroup>
-                    <FormGroup label="Month">
-                        <Select value={monthFilter} onChange={e => setMonthFilter(e.target.value)}>
-                            {allMonths.map(m => <option key={m} value={m}>{m}</option>)}
-                        </Select>
-                    </FormGroup>
+                    {viewType === 'facilitators' ? (
+                        <>
+                            <FormGroup label="Search by Name"><Input type="text" value={facSearchQuery} onChange={(e) => setFacSearchQuery(e.target.value)} placeholder="Search name..." /></FormGroup>
+                            <FormGroup label="Filter by Course">
+                                <Select value={facCourseFilter} onChange={(e) => setFacCourseFilter(e.target.value)}>
+                                    <option value="All">All Courses</option>
+                                    {COURSE_TYPES_FACILITATOR.map(c => <option key={c} value={c}>{c}</option>)}
+                                </Select>
+                            </FormGroup>
+                            <FormGroup label="Filter by State">
+                                <Select value={facStateFilter} onChange={(e) => { setFacStateFilter(e.target.value); setFacLocalityFilter('All'); }}>
+                                    <option value="All">All States</option>
+                                    {Object.keys(STATE_LOCALITIES).sort().map(s => <option key={s} value={s}>{s}</option>)}
+                                    <option value="Out of Sudan">Out of Sudan</option>
+                                </Select>
+                            </FormGroup>
+                            <FormGroup label="Filter by Locality">
+                                <Select value={facLocalityFilter} onChange={(e) => setFacLocalityFilter(e.target.value)} disabled={facStateFilter === 'All' || facStateFilter === 'Out of Sudan'}>
+                                    <option value="All">All Localities</option>
+                                    {facilitatorDashboardData.localitiesInSelectedState.map(l => <option key={l} value={l}>{l}</option>)}
+                                </Select>
+                            </FormGroup>
+                            <FormGroup label="Filter by Role">
+                                <Select value={facRoleFilter} onChange={(e) => setFacRoleFilter(e.target.value)}>
+                                    <option value="All">All Roles</option>
+                                    <option value="directorCourse">IMNCI Director</option>
+                                    <option value="isClinicalInstructor">Clinical Instructor</option>
+                                    <option value="teamLeaderCourse">Team Leader</option>
+                                    <option value="followUpCourse">Follow-up Supervisor</option>
+                                </Select>
+                            </FormGroup>
+                        </>
+                    ) : (
+                        <>
+                            <FormGroup label="Course Type">
+                                <Select value={courseTypeFilter} onChange={e => setCourseTypeFilter(e.target.value)}>
+                                    {allCourseTypes.map(c => <option key={c} value={c}>{c}</option>)}
+                                </Select>
+                            </FormGroup>
+                            <FormGroup label="State">
+                                <Select value={stateFilter} onChange={e => setStateFilter(e.target.value)}>
+                                    {allStates.map(s => <option key={s} value={s}>{s}</option>)}
+                                </Select>
+                            </FormGroup>
+                            <FormGroup label="Locality">
+                                <Select value={localityFilter} onChange={e => setLocalityFilter(e.target.value)} disabled={stateFilter === 'All'}>
+                                    {allLocalities.map(l => <option key={l} value={l}>{l}</option>)}
+                                </Select>
+                            </FormGroup>
+                            <FormGroup label="Year">
+                                <Select value={yearFilter} onChange={e => setYearFilter(e.target.value)}>
+                                    {allYears.map(y => <option key={y} value={y}>{y}</option>)}
+                                </Select>
+                            </FormGroup>
+                            <FormGroup label="Month">
+                                <Select value={monthFilter} onChange={e => setMonthFilter(e.target.value)}>
+                                    {allMonths.map(m => <option key={m} value={m}>{m}</option>)}
+                                </Select>
+                            </FormGroup>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -362,7 +613,7 @@ function DashboardView({ allCourses, allParticipants, onOpenCourseReport, onOpen
                             <div className="text-3xl font-bold">{courseKPIs.totalEencCourses}</div>
                         </div>
                     </div>
-                    
+
                     <div className="grid md:grid-cols-2 gap-6">
                         <Card className="p-0">
                             <h4 className="font-semibold text-xl pl-4 pt-4 mb-0">Number of Courses by State</h4>
@@ -433,7 +684,7 @@ function DashboardView({ allCourses, allParticipants, onOpenCourseReport, onOpen
                             </div>
                         ))}
                     </div>
-                    
+
                     <Card className="mb-6">
                         <div className="flex justify-between items-center mb-4">
                             <h4 className="font-semibold text-xl">Trained by Health Cadre (Disaggregated by Course Type)</h4>
@@ -475,6 +726,86 @@ function DashboardView({ allCourses, allParticipants, onOpenCourseReport, onOpen
                                     </td>
                                 </tr>
                             ))}
+                        </Table>
+                    </Card>
+                </div>
+            )}
+
+            {/* ==================================================================== */}
+            {/* NEW: FACILITATOR DASHBOARD RENDER */}
+            {/* ==================================================================== */}
+            {viewType === 'facilitators' && (
+                <div className="px-4 md:px-6">
+                    <h3 className="text-xl font-bold mb-4">Facilitator KPIs</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 text-center mb-6">
+                        <div className="p-4 bg-gray-100 rounded-lg">
+                            <div className="text-sm text-gray-600">Total Facilitators</div>
+                            <div className="text-3xl font-bold text-sky-700">{facilitatorDashboardData.kpiData.totalFacilitators}</div>
+                        </div>
+                        <div className="p-4 bg-gray-100 rounded-lg">
+                            <div className="text-sm text-gray-600">Course Directors</div>
+                            <div className="text-3xl font-bold text-sky-700">{facilitatorDashboardData.kpiData.directors}</div>
+                        </div>
+                        <div className="p-4 bg-gray-100 rounded-lg">
+                            <div className="text-sm text-gray-600">Clinical Instructors</div>
+                            <div className="text-3xl font-bold text-sky-700">{facilitatorDashboardData.kpiData.clinicalInstructors}</div>
+                        </div>
+                        <div className="p-4 bg-gray-100 rounded-lg">
+                            <div className="text-sm text-gray-600">Team Leaders</div>
+                            <div className="text-3xl font-bold text-sky-700">{facilitatorDashboardData.kpiData.teamLeaders}</div>
+                        </div>
+                        <div className="p-4 bg-gray-100 rounded-lg">
+                            <div className="text-sm text-gray-600">Follow-up Supervisors</div>
+                            <div className="text-3xl font-bold text-sky-700">{facilitatorDashboardData.kpiData.followUpSupervisors}</div>
+                        </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-6 mb-6">
+                        <Card>
+                            <h3 className="text-xl font-bold mb-4">Facilitator Availability by State</h3>
+                            <Table headers={facilitatorDashboardData.facilitatorAvailabilityByState.tableHeaders}>
+                                {facilitatorDashboardData.facilitatorAvailabilityByState.tableBody.length === 0 ? <EmptyState message="No data to display." colSpan={facilitatorDashboardData.facilitatorAvailabilityByState.tableHeaders.length} /> :
+                                    <>
+                                        {facilitatorDashboardData.facilitatorAvailabilityByState.tableBody.map((row, index) => (
+                                            <tr key={index}>
+                                                {row.map((cell, cellIndex) => (
+                                                    <td key={cellIndex} className="p-2 border">{cell}</td>
+                                                ))}
+                                            </tr>
+                                        ))}
+                                        <tr className="font-bold bg-gray-100">
+                                            {facilitatorDashboardData.facilitatorAvailabilityByState.tableTotals.map((cell, index) => (
+                                                <td key={index} className="p-2 border">{cell}</td>
+                                            ))}
+                                        </tr>
+                                    </>
+                                }
+                            </Table>
+                        </Card>
+                        <Card>
+                            <h3 className="text-xl font-bold mb-4">Facilitator Geographical Distribution</h3>
+                            {/* Corrected: Pass the mapCoordinates prop to the FacilitatorMap component */}
+                            <FacilitatorMap data={facilitatorMapData} mapCoordinates={mapCoordinates} />
+                        </Card>
+                    </div>
+
+                    <Card className="mt-6">
+                        <div className="flex justify-between items-center mb-4">
+                            <h4 className="font-semibold text-xl">Facilitator Information Table</h4>
+                        </div>
+                        <Table headers={facilitatorDashboardData.facilitatorTableHeaders}>
+                            {facilitatorDashboardData.facilitatorTableData.length === 0 ? <EmptyState message="No data to display." colSpan={facilitatorDashboardData.facilitatorTableHeaders.length} /> :
+                                facilitatorDashboardData.facilitatorTableData.map(f => (
+                                    <tr key={f.id} className="hover:bg-gray-50 text-center">
+                                        {f.row.map((cell, i) => (
+                                            <td key={i} className="p-2 border text-left">{cell}</td>
+                                        ))}
+                                        <td className="p-2 border text-left">
+                                            <Button onClick={() => onOpenFacilitatorReport(f.id)}>View Report</Button>
+                                        </td>
+                                    </tr>
+                                ))
+                            }
                         </Table>
                     </Card>
                 </div>
