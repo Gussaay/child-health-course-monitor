@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import jsPDF from "jspdf";
-import SudanMap from './SudanMap';
+import SudanMap from '../SudanMap';
 import autoTable from "jspdf-autotable";
 import { Bar, Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
@@ -722,7 +722,9 @@ function DashboardView({ allCourses, allParticipants, allFacilitators, onOpenCou
                                     <td className="p-2 border">{p.job_title}</td>
                                     <td className="p-2 border">{p.phone}</td>
                                     <td className="p-2 border">
-                                        <Button onClick={() => onOpenParticipantReport(p.id)}>View Report</Button>
+                                        <Button onClick={() => onOpenParticipantReport(p.id, p.courseId)}>
+    View Report
+</Button>
                                     </td>
                                 </tr>
                             ))}
