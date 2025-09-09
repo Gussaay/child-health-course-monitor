@@ -1,31 +1,94 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
-import { Bar } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
-import { Card, PageHeader, Button, FormGroup, Input, Select, Table, EmptyState, Spinner, CourseIcon, PdfIcon } from './UIComponents.jsx';
-import { STATE_LOCALITIES, calcPct, fmtPct, pctBgClass, generateCoursePdf, generateFullCourseReportPdf } from './ConstantsAndHelpers.js';
-import { listParticipants, listAllDataForCourse, upsertCourse, deleteCourse } from './data.js';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { Bar, Pie } from 'react-chartjs-2';
+import { Button, Card, EmptyState, FormGroup, Input, PageHeader, PdfIcon, Select, Spinner, Table, Textarea } from './CommonComponents';
+import { listAllDataForCourse, listParticipants } from '../data.js';
+import {
+    STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES,
+    pctBgClass, fmtPct, calcPct,
+} from './constants.js';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+// --- PDF Export Helper ---
+const generateFullCourseReportPdf = async (course, groupPerformance, chartRef) => {
+    const doc = new jsPDF('landscape');
+    const fileName = `Course_Report_${course.course_type}_${course.state}.pdf`;
+
+    // --- Title Page ---
+    doc.setFontSize(22);
+    doc.text("Full Course Performance Report", 148, 20, { align: 'center' });
+    doc.setFontSize(16);
+    doc.text(`${course.course_type} Course`, 148, 30, { align: 'center' });
+    doc.text(`${course.state} / ${course.locality}`, 148, 38, { align: 'center' });
+
+    // --- Course Details ---
+    const courseDetailsBody = [
+        ['Coordinator', course.coordinator],
+        ['Director', course.director],
+        ['Clinical Instructor', course.clinical_instructor],
+        ['Funded by', course.funded_by],
+        ['Facilitators', (course.facilitators || []).join(', ')],
+        ['# Participants', course.participants_count],
+    ];
+    autoTable(doc, {
+        startY: 50,
+        head: [['Course Information', '']],
+        body: courseDetailsBody,
+        theme: 'striped'
+    });
+
+    // --- Performance Table ---
+    let finalY = doc.lastAutoTable.finalY;
+    doc.setFontSize(14);
+    doc.text("Performance by Group", 14, finalY + 15);
+    const tableHead = [['Group', '# Participants', 'Cases Seen', 'Skills Recorded', '% Correct']];
+    const tableBody = Object.entries(groupPerformance).map(([group, data]) => [
+        group,
+        data.participantCount,
+        data.totalCases,
+        data.totalObs,
+        fmtPct(data.percentage)
+    ]);
+    autoTable(doc, {
+        startY: finalY + 20,
+        head: tableHead,
+        body: tableBody,
+        theme: 'grid'
+    });
+    finalY = doc.lastAutoTable.finalY;
+
+    // --- Chart ---
+    if (chartRef.current) {
+        const chartImg = chartRef.current.canvas.toDataURL('image/png');
+        if (finalY > 100) { doc.addPage(); finalY = 20; }
+        doc.setFontSize(14);
+        doc.text("Performance Chart", 14, finalY + 15);
+        doc.addImage(chartImg, 'PNG', 14, finalY + 20, 260, 120);
+    }
+
+    doc.save(fileName);
+};
+
 
 export function CoursesView({ courses, onAdd, onOpen, onEdit, onDelete, onOpenReport }) {
     return (
         <Card>
-            <PageHeader title="Available Courses" />
-            <div className="mb-4">
-                <Button onClick={onAdd}>Add New Course</Button>
-            </div>
-            <div className="hidden md:block">
-                <Table headers={["State", "Locality", "Hall", "#", "Actions"]}>
-                    {courses.length === 0 ? <EmptyState message="No courses found for this package." /> : courses.map(c => (
+            <PageHeader
+                title="Courses"
+                subtitle="Manage training courses."
+                actions={<Button onClick={onAdd}>Add New Course</Button>}
+            />
+            {courses.length === 0 ? <EmptyState message="No courses have been added yet." /> : (
+                <Table headers={["Course Name", "State", "# Participants", "Actions"]}>
+                    {courses.map(c => (
                         <tr key={c.id} className="hover:bg-gray-50">
+                            <td className="p-4 border border-gray-200 font-medium text-gray-800">{c.course_type}</td>
                             <td className="p-4 border border-gray-200">{c.state}</td>
-                            <td className="p-4 border border-gray-200">{c.locality}</td>
-                            <td className="p-4 border border-gray-200">{c.hall}</td>
-                            <td className="p-4 border border-gray-200 text-center">{c.participants_count}</td>
-                            <td className="p-4 border border-gray-200">
+                            <td className="p-4 border border-gray-200">{c.participants_count}</td>
+                            <td className="p-4 border border-gray-200 text-right">
                                 <div className="flex gap-2 flex-wrap justify-end">
-                                    <Button variant="primary" onClick={() => onOpen(c.id)}>Open</Button>
-                                    <Button variant="secondary" onClick={() => onOpenReport(c.id)}>Course Report</Button>
+                                   <Button variant="primary" onClick={() => onOpen(c.id)}>Open Course</Button>
+                                    <Button variant="secondary" onClick={() => onOpenReport(c.id)}>course Reports</Button>
                                     <Button variant="secondary" onClick={() => onEdit(c)}>Edit</Button>
                                     <Button variant="danger" onClick={() => onDelete(c.id)}>Delete</Button>
                                 </div>
@@ -33,30 +96,7 @@ export function CoursesView({ courses, onAdd, onOpen, onEdit, onDelete, onOpenRe
                         </tr>
                     ))}
                 </Table>
-            </div>
-            <div className="md:hidden grid gap-4">
-                {courses.length === 0 ? (
-                    <p className="py-12 text-center text-gray-500">No courses found for this package.</p>
-                ) : (
-                    courses.map(c => (
-                        <div key={c.id} className="bg-white rounded-lg shadow-md p-4 border border-gray-200">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <h3 className="font-bold text-lg text-gray-800">{c.state}</h3>
-                                    <p className="text-gray-600">{c.locality} - {c.hall}</p>
-                                    <p className="text-sm text-gray-500 mt-1">Participants: {c.participants_count}</p>
-                                </div>
-                            </div>
-                            <div className="mt-4 pt-4 border-t border-gray-200 flex flex-wrap gap-2 justify-end">
-                                <Button variant="primary" onClick={() => onOpen(c.id)}>Open</Button>
-                                <Button variant="secondary" onClick={() => onOpenReport(c.id)}>Report</Button>
-                                <Button variant="secondary" onClick={() => onEdit(c)}>Edit</Button>
-                                <Button variant="danger" onClick={() => onDelete(c.id)}>Delete</Button>
-                            </div>
-                        </div>
-                    ))
-                )}
-            </div>
+            )}
         </Card>
     );
 }
@@ -72,11 +112,29 @@ export function CourseForm({ courseType, initialData, facilitatorsList, onCancel
     const [director, setDirector] = useState(initialData?.director || '');
     const [clinical, setClinical] = useState(initialData?.clinical_instructor || '');
     const [supporter, setSupporter] = useState(initialData?.funded_by || '');
-    const [facilitators, setFacilitators] = useState(initialData?.facilitators || ['', '']);
+
+    const initialFacilitators = useMemo(() => {
+        if (initialData?.facilitators?.length > 0) {
+            return initialData.facilitators.map(name => {
+                const assignment = initialData.facilitatorAssignments?.find(a => a.name === name);
+                return {
+                    name,
+                    group: assignment?.group || 'Group A',
+                    imci_sub_type: assignment?.imci_sub_type || 'Standard 7 days course',
+                };
+            });
+        }
+        return [{ name: '', group: 'Group A', imci_sub_type: 'Standard 7 days course' }];
+    }, [initialData]);
+
+    const [facilitators, setFacilitators] = useState(initialFacilitators);
     const [error, setError] = useState('');
 
     const [directorSearch, setDirectorSearch] = useState('');
     const [facilitatorSearch, setFacilitatorSearch] = useState('');
+    const [clinicalInstructorSearch, setClinicalInstructorSearch] = useState('');
+
+    const isImnci = courseType === 'IMNCI';
 
     const directorOptions = useMemo(() => {
         return facilitatorsList
@@ -84,34 +142,55 @@ export function CourseForm({ courseType, initialData, facilitatorsList, onCancel
             .filter(f => !directorSearch || f.name.toLowerCase().includes(directorSearch.toLowerCase()))
             .sort((a, b) => a.name.localeCompare(b.name));
     }, [facilitatorsList, directorSearch]);
+    
+    const clinicalInstructorOptions = useMemo(() => {
+        return facilitatorsList
+            .filter(f => f.isClinicalInstructor === 'Yes' || f.directorCourse === 'Yes')
+            .filter(f => !clinicalInstructorSearch || f.name.toLowerCase().includes(clinicalInstructorSearch.toLowerCase()))
+            .sort((a, b) => a.name.localeCompare(b.name));
+    }, [facilitatorsList, clinicalInstructorSearch]);
 
     const facilitatorOptions = useMemo(() => {
         return facilitatorsList
-            .filter(f => (f.courses || []).includes(courseType))
+            .filter(f => (Array.isArray(f.courses) ? f.courses : []).includes(courseType))
             .filter(f => !facilitatorSearch || f.name.toLowerCase().includes(facilitatorSearch.toLowerCase()))
             .sort((a, b) => a.name.localeCompare(b.name));
     }, [facilitatorsList, courseType, facilitatorSearch]);
 
-    const addFac = () => setFacilitators(f => [...f, '']);
-    const removeFac = (i) => setFacilitators(f => f.length <= 2 ? f : f.filter((_, idx) => idx !== i));
-    const setFac = (i, v) => setFacilitators(f => f.map((x, idx) => idx === i ? v : x));
+    const addFacilitator = () => {
+        setFacilitators(f => [...f, { name: '', group: 'Group A', imci_sub_type: 'Standard 7 days course' }]);
+    };
+
+    const removeFacilitator = (index) => {
+        setFacilitators(f => f.filter((_, i) => i !== index));
+    };
+    
+    const updateFacilitator = (index, field, value) => {
+        setFacilitators(f => f.map((item, i) => (i === index ? { ...item, [field]: value } : item)));
+    };
 
     const submit = () => {
-        const facArr = facilitators.map(s => s.trim()).filter(Boolean);
-        if (!state || !locality || !hall || !coordinator || !participantsCount || !director || facArr.length < 2 || !supporter || !startDate) {
-            setError('Please complete all required fields (minimum two facilitators).'); return;
+        const selectedFacilitatorNames = facilitators.map(f => f.name).filter(Boolean);
+        if (!state || !locality || !hall || !coordinator || !participantsCount || !director || selectedFacilitatorNames.length < 2 || !supporter || !startDate) {
+            setError('Please complete all required fields (minimum two facilitators).');
+            return;
         }
 
         const payload = {
             state, locality, hall, coordinator, start_date: startDate,
             course_duration: courseDuration,
             participants_count: participantsCount, director,
-            funded_by: supporter, facilitators: facArr
+            funded_by: supporter,
+            // Only store the names in the main course object
+            facilitators: selectedFacilitatorNames,
+            // Store detailed facilitator assignments in a new field
+            facilitatorAssignments: facilitators.filter(f => f.name).map(f => ({ name: f.name, group: f.group, imci_sub_type: f.imci_sub_type })),
         };
 
-        if (courseType === 'IMNCI') {
+        if (isImnci) {
             payload.clinical_instructor = clinical;
         }
+
         onSave(payload);
     };
 
@@ -128,36 +207,65 @@ export function CourseForm({ courseType, initialData, facilitatorsList, onCancel
                 <FormGroup label="Course Coordinator"><Input value={coordinator} onChange={(e) => setCoordinator(e.target.value)} /></FormGroup>
                 <FormGroup label="# of Participants"><Input type="number" value={participantsCount} onChange={(e) => setParticipantsCount(Number(e.target.value))} /></FormGroup>
                 <FormGroup label="Course Director">
-                    <Input type="search" placeholder="Search for a director..." value={directorSearch} onChange={e => setDirectorSearch(e.target.value)} className="mb-1" />
                     <Select value={director} onChange={(e) => setDirector(e.target.value)}>
                         <option value="">— Select Director —</option>
                         {directorOptions.map(f => <option key={f.id} value={f.name}>{f.name}</option>)}
                     </Select>
                 </FormGroup>
-                {courseType === 'IMNCI' && <FormGroup label="Clinical Instructor (Optional)"><Input value={clinical} onChange={(e) => setClinical(e.target.value)} /></FormGroup>}
+                {isImnci &&
+                    <FormGroup label="Clinical Instructor (Optional)">
+                        <Select value={clinical} onChange={(e) => setClinical(e.target.value)}>
+                            <option value="">— Select Clinical Instructor —</option>
+                            {clinicalInstructorOptions.map(f => <option key={f.id} value={f.name}>{f.name}</option>)}
+                        </Select>
+                    </FormGroup>
+                }
                 <FormGroup label="Funded by:"><Input value={supporter} onChange={(e) => setSupporter(e.target.value)} /></FormGroup>
-                <div className="md:col-span-2 lg:col-span-1">
-                    <FormGroup label="Facilitators">
-                        <Input type="search" placeholder="Search for a facilitator..." value={facilitatorSearch} onChange={e => setFacilitatorSearch(e.target.value)} className="mb-2" />
-                        <div className="grid gap-2">
-                            {facilitators.map((v, i) => (
-                                <div key={i} className="flex gap-2">
-                                    <Select value={v} onChange={(e) => setFac(i, e.target.value)} className="flex-grow">
-                                        <option value="">— Select Facilitator {i + 1} —</option>
-                                        {facilitatorOptions.map(f => <option key={f.id} value={f.name}>{f.name}</option>)}
-                                    </Select>
-                                    <Button type="button" variant="secondary" onClick={() => removeFac(i)} disabled={facilitators.length <= 2}>−</Button>
+                
+                {/* Updated Facilitator Section */}
+                <div className="md:col-span-2 lg:col-span-3">
+                    <FormGroup label="Facilitators and Assignments">
+                        <div className="grid gap-4">
+                            {(Array.isArray(facilitators) ? facilitators : []).map((fac, index) => (
+                                <div key={index} className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-center p-3 border rounded-md bg-gray-50">
+                                    <div className="col-span-1">
+                                        <Select value={fac.name} onChange={(e) => updateFacilitator(index, 'name', e.target.value)} className="w-full">
+                                            <option value="">— Select Facilitator {index + 1} —</option>
+                                            {facilitatorOptions.map(f => <option key={f.id} value={f.name}>{f.name}</option>)}
+                                        </Select>
+                                    </div>
+                                    <div className="col-span-1">
+                                        <Select value={fac.group} onChange={(e) => updateFacilitator(index, 'group', e.target.value)} className="w-full">
+                                            <option>Group A</option>
+                                            <option>Group B</option>
+                                            <option>Group C</option>
+                                            <option>Group D</option>
+                                        </Select>
+                                    </div>
+                                    {isImnci && (
+                                        <div className="col-span-1">
+                                            <Select value={fac.imci_sub_type} onChange={(e) => updateFacilitator(index, 'imci_sub_type', e.target.value)} className="w-full">
+                                                {IMNCI_SUBCOURSE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
+                                            </Select>
+                                        </div>
+                                    )}
+                                    <div className="col-span-1 sm:col-span-3 flex justify-end">
+                                        <Button type="button" variant="danger" onClick={() => removeFacilitator(index)} disabled={facilitators.length <= 2}>Remove</Button>
+                                    </div>
                                 </div>
                             ))}
                             <div className="flex gap-2 mt-2">
-                                <Button type="button" variant="secondary" onClick={addFac} className="flex-grow">+ Add Facilitator</Button>
+                                <Button type="button" variant="secondary" onClick={addFacilitator} className="flex-grow">+ Add Facilitator</Button>
                                 <Button type="button" variant="ghost" onClick={onAddNewFacilitator} className="flex-grow">Add New to List</Button>
                             </div>
                         </div>
                     </FormGroup>
                 </div>
             </div>
-            <div className="flex gap-2 justify-end mt-6 border-t pt-6"><Button variant="secondary" onClick={onCancel}>Cancel</Button><Button onClick={submit}>Save Course</Button></div>
+            <div className="flex gap-2 justify-end mt-6 border-t pt-6">
+                <Button variant="secondary" onClick={onCancel}>Cancel</Button>
+                <Button onClick={submit}>Save Course</Button>
+            </div>
         </Card>
     );
 }

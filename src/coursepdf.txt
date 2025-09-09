@@ -1,0 +1,54 @@
+const generateCoursePdf = (course, participants, allCases, allObs) => {
+    const doc = new jsPDF();
+    const courseName = `${course.course_type} Course`;
+    const courseLocation = `${course.state} / ${course.locality}`;
+    const fileName = `Full_Report_${course.course_type}_${course.state}`.replace(/ /g, '_');
+
+    doc.setFontSize(22);
+    doc.text("Full Course Report", 105, 80, { align: 'center' });
+    doc.setFontSize(16);
+    doc.text(courseName, 105, 90, { align: 'center' });
+    doc.text(courseLocation, 105, 100, { align: 'center' });
+    doc.setFontSize(12);
+    doc.setTextColor(100);
+    doc.text(`Report Generated: ${new Date().toLocaleDateString()}`, 105, 110, { align: 'center' });
+
+    doc.addPage();
+    autoTable(doc, {
+        head: [['Course Details']],
+        body: [
+            ['Type', course.course_type], ['State', course.state], ['Locality', course.locality],
+            ['Hall', course.hall], ['Coordinator', course.coordinator], ['Director', course.director],
+            ['Clinical Instructor', course.clinical_instructor], ['Funded by', course.funded_by],
+            ['Facilitators', (course.facilitators || []).join(', ')], ['# Participants', course.participants_count],
+        ],
+        theme: 'striped',
+        headStyles: { fillColor: [41, 128, 185] },
+        didDrawPage: (data) => { doc.text("Course Information", 14, data.settings.margin.top - 10); }
+    });
+
+    const participantHead = [['Name', 'Group', 'Center', 'Job Title', 'Phone']];
+    const participantBody = participants.map(p => [p.name, p.group, p.center_name, p.job_title, p.phone]);
+    autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 15, head: participantHead, body: participantBody, theme: 'striped',
+        headStyles: { fillColor: [41, 128, 185] },
+        didDrawPage: (data) => { doc.text("Participant Roster", 14, data.settings.margin.top - 10); }
+    });
+
+    const performanceSummary = participants.map(p => {
+        const pCases = allCases.filter(c => c.participant_id === p.id);
+        const pObs = allObs.filter(o => o.participant_id === p.id);
+        const correctObs = pObs.filter(o => o.item_correct > 0).length; // EENC partial counts as correct here
+        return { name: p.name, group: p.group, cases: pCases.length, skills: pObs.length, correct: fmtPct(calcPct(correctObs, pObs.length)) };
+    });
+    const performanceHead = [['Name', 'Group', 'Cases Seen', 'Skills Recorded', '% Correct']];
+    const performanceBody = performanceSummary.map(p => [p.name, p.group, p.cases, p.skills, p.correct]);
+    autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 15, head: performanceHead, body: performanceBody, theme: 'striped',
+        headStyles: { fillColor: [8, 145, 178] },
+        didDrawPage: (data) => { doc.text("Participant Performance Summary", 14, data.settings.margin.top - 10); }
+    });
+
+    doc.save(`${fileName}.pdf`);
+};
+

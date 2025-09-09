@@ -1,11 +1,28 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
-import { Bar } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
-import { Card, PageHeader, Button, FormGroup, Input, Select, Textarea, Table, EmptyState, Spinner, PdfIcon } from './UIComponents.jsx';
-import { STATE_LOCALITIES, COURSE_TYPES_FACILITATOR, calcPct, fmtPct, generateFacilitatorPdf, generateFacilitatorComparisonPdf } from './ConstantsAndHelpers.js';
-import { upsertFacilitator, deleteFacilitator } from './data.js';
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { Bar, Pie } from 'react-chartjs-2';
+import { Button, Card, EmptyState, Footer, FormGroup, Input, PageHeader, PdfIcon, Select, Spinner, Table, Textarea } from './CommonComponents';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+// Import necessary data functions and constants
+import {
+    listFacilitators,
+    listAllCourses,
+    upsertFacilitator,
+    deleteFacilitator,
+} from '../data';
+
+// Import all constants from App.jsx
+import { COURSE_TYPES_FACILITATOR, STATE_LOCALITIES } from './constants.js';
+
+// Helper function from App.jsx
+const calcPct = (c, s) => (!s ? NaN : (c * 100) / s);
+const fmtPct = v => (!isFinite(v) ? "—" : Math.round(v).toFixed(0) + " %");
+
+
+// =============================================================================
+// --- Facilitator Management Components ---
+// =============================================================================
 
 export function FacilitatorsView({ facilitators, onAdd, onEdit, onDelete, onOpenReport, onOpenComparison }) {
     return (
@@ -15,12 +32,12 @@ export function FacilitatorsView({ facilitators, onAdd, onEdit, onDelete, onOpen
                 <Button onClick={onAdd}>Add New Facilitator</Button>
             </div>
             <Table headers={["Name", "Phone", "Courses", "Actions"]}>
-                {facilitators.length === 0 ? <EmptyState message="No facilitators have been added yet." /> :
-                    facilitators.map(f => (
+                {(Array.isArray(facilitators) && facilitators.length === 0) ? <EmptyState message="No facilitators have been added yet." /> :
+                    (Array.isArray(facilitators) ? facilitators : []).map(f => (
                         <tr key={f.id} className="hover:bg-gray-50">
                             <td className="p-4 border">{f.name}</td>
                             <td className="p-4 border">{f.phone}</td>
-                            <td className="p-4 border">{(f.courses || []).join(', ')}</td>
+                            <td className="p-4 border">{(Array.isArray(f.courses) ? f.courses : []).join(', ')}</td>
                             <td className="p-4 border">
                                 <div className="flex gap-2 flex-wrap justify-end">
                                     <Button variant="primary" onClick={() => onOpenReport(f.id)}>Report</Button>
@@ -40,7 +57,7 @@ export function FacilitatorForm({ initialData, onCancel, onSave }) {
     const [name, setName] = useState(initialData?.name || '');
     const [phone, setPhone] = useState(initialData?.phone || '');
     const [email, setEmail] = useState(initialData?.email || '');
-    const [courses, setCourses] = useState(initialData?.courses || []);
+    const [courses, setCourses] = useState(Array.isArray(initialData?.courses) ? initialData.courses : []);
     const [totDates, setTotDates] = useState(initialData?.totDates || {});
     const [currentState, setCurrentState] = useState(initialData?.currentState || '');
     const [currentLocality, setCurrentLocality] = useState(initialData?.currentLocality || '');
@@ -58,7 +75,7 @@ export function FacilitatorForm({ initialData, onCancel, onSave }) {
         setCourses(prev => prev.includes(course) ? prev.filter(c => c !== course) : [...prev, course]);
     };
 
-    const handleSubmit = async () => {
+    const handleSubmit = () => {
         if (!name || !phone) {
             setError('Facilitator Name and Phone Number are required.');
             return;
@@ -70,8 +87,7 @@ export function FacilitatorForm({ initialData, onCancel, onSave }) {
             teamLeaderCourse, teamLeaderCourseDate: teamLeaderCourse === 'Yes' ? teamLeaderCourseDate : '',
             isClinicalInstructor, comments
         };
-        await upsertFacilitator({ ...payload, id: initialData?.id });
-        onSave();
+        onSave(payload);
     };
 
     return (
@@ -146,64 +162,192 @@ export function FacilitatorForm({ initialData, onCancel, onSave }) {
 }
 
 export function FacilitatorReportView({ facilitator, allCourses, onBack }) {
-    const [loading, setLoading] = useState(true);
-    const [courseTypeFilter, setCourseTypeFilter] = useState('All');
-    const directedChartRef = useRef(null);
-    const facilitatedChartRef = useRef(null);
+    const combinedChartRef = useRef(null);
+    const imciSubcoursePieRef = useRef(null);
 
-    useEffect(() => {
-        if (allCourses.length > 0) {
-            setLoading(false);
+    const { directedCourses, facilitatedCourses, totalDays, combinedChartData, imciSubcourseData } = useMemo(() => {
+        if (!facilitator) {
+            return {
+                directedCourses: [],
+                facilitatedCourses: [],
+                totalDays: 0,
+                combinedChartData: { labels: [], datasets: [] },
+                imciSubcourseData: null
+            };
         }
-    }, [allCourses]);
 
-    const { directedCourses, facilitatedCourses, totalDays, directedChartData, facilitatedChartData } = useMemo(() => {
-        if (!facilitator) return { directedCourses: [], facilitatedCourses: [], totalDays: 0, directedChartData: {}, facilitatedChartData: {} };
-
-        const filtered = allCourses.filter(c => courseTypeFilter === 'All' || c.course_type === courseTypeFilter);
-
-        const directed = filtered.filter(c => c.director === facilitator.name);
-        const facilitated = filtered.filter(c => (c.facilitators || []).includes(facilitator.name));
+        const directed = allCourses.filter(c => c.director === facilitator.name);
+        const facilitated = allCourses.filter(c => Array.isArray(c.facilitators) && c.facilitators.includes(facilitator.name));
 
         const allInvolvedCourses = [...new Set([...directed, ...facilitated])];
         const days = allInvolvedCourses.reduce((sum, course) => sum + (course.course_duration || 0), 0);
+        
+        const courseCounts = {};
+        const subcourseCounts = {};
+        COURSE_TYPES_FACILITATOR.forEach(type => { courseCounts[type] = 0; });
+        
+        allInvolvedCourses.forEach(c => {
+            if (courseCounts[c.course_type] !== undefined) {
+                courseCounts[c.course_type]++;
+            }
+        });
+        
+        allCourses.forEach(c => {
+            if (c.course_type === 'IMNCI' && Array.isArray(c.facilitatorAssignments)) {
+                c.facilitatorAssignments.forEach(fa => {
+                    if (fa.name === facilitator.name) {
+                        subcourseCounts[fa.imci_sub_type] = (subcourseCounts[fa.imci_sub_type] || 0) + 1;
+                    }
+                });
+            }
+        });
 
-        const buildChartData = (courses) => {
-            const counts = {};
-            COURSE_TYPES_FACILITATOR.forEach(type => { counts[type] = 0; });
-            courses.forEach(c => {
-                if (counts[c.course_type] !== undefined) {
-                    counts[c.course_type]++;
-                }
-            });
-            return {
-                labels: Object.keys(counts),
-                datasets: [{ label: '# of Courses', data: Object.values(counts), backgroundColor: '#3b82f6' }]
-            };
+        const combinedChartData = {
+            labels: Object.keys(courseCounts),
+            datasets: [{ 
+                label: '# of Courses', 
+                data: Object.values(courseCounts), 
+                backgroundColor: '#3b82f6' 
+            }]
         };
+
+        const hasSubcourseData = Object.values(subcourseCounts).some(count => count > 0);
+        const imciSubcourseData = hasSubcourseData ? {
+            labels: Object.keys(subcourseCounts),
+            datasets: [{
+                data: Object.values(subcourseCounts),
+                backgroundColor: ['#f97316', '#ef4444', '#f59e0b', '#84cc16', '#06b6d4'],
+            }]
+        } : null;
 
         return {
             directedCourses: directed,
             facilitatedCourses: facilitated,
             totalDays: days,
-            directedChartData: buildChartData(directed),
-            facilitatedChartData: buildChartData(facilitated)
+            combinedChartData,
+            imciSubcourseData
         };
-    }, [facilitator, allCourses, courseTypeFilter]);
+    }, [facilitator, allCourses]);
 
-    if (loading) return <Card><Spinner /></Card>;
-    if (!facilitator) return <Card><EmptyState message="Facilitator not found." /></Card>;
+    const courseSummary = useMemo(() => {
+        const summary = {};
+        allCourses.forEach(course => {
+            const courseType = course.course_type;
+            summary[courseType] = summary[courseType] || {
+                directed: 0,
+                instructed: 0,
+                daysDirected: 0,
+                daysInstructed: 0,
+            };
+            if (course.director === facilitator.name) {
+                summary[courseType].directed++;
+                summary[courseType].daysDirected += (course.course_duration || 0);
+            }
+            if (Array.isArray(course.facilitators) && course.facilitators.includes(facilitator.name)) {
+                summary[courseType].instructed++;
+                summary[courseType].daysInstructed += (course.course_duration || 0);
+            }
+        });
+        return Object.entries(summary);
+    }, [allCourses, facilitator]);
 
-    const chartOptions = (title) => ({
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false }, title: { display: true, text: title } },
-        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-    });
+    const generateFacilitatorPdf = () => {
+        const doc = new jsPDF();
+        const fileName = `Facilitator_Report_${facilitator.name.replace(/ /g, '_')}.pdf`;
 
+        // Title
+        doc.setFontSize(22);
+        doc.text("Facilitator Report", 105, 20, { align: 'center' });
+        doc.setFontSize(18);
+        doc.text(facilitator.name, 105, 30, { align: 'center' });
+
+        let finalY = 40;
+
+        // Information Table
+        doc.setFontSize(14);
+        doc.text("Facilitator Information", 14, finalY);
+        const infoBody = [
+            ['Name', facilitator.name], ['Phone', facilitator.phone], ['Email', facilitator.email || 'N/A'],
+            ['Current Location', `${facilitator.currentState || ''} / ${facilitator.currentLocality || ''}`],
+            ...COURSE_TYPES_FACILITATOR.map(c => [
+                `${c} Facilitator`,
+                Array.isArray(facilitator.courses) && facilitator.courses.includes(c) ? `Yes (ToT: ${facilitator.totDates?.[c] || 'N/A'})` : 'No'
+            ]),
+            ['IMNCI Course Director', `${facilitator.directorCourse} ${facilitator.directorCourse === 'Yes' ? '(' + (facilitator.directorCourseDate || 'N/A') + ')' : ''}`],
+            ['IMNCI Follow-up Course', `${facilitator.followUpCourse} ${facilitator.followUpCourse === 'Yes' ? '(' + (facilitator.followUpCourseDate || 'N/A') + ')' : ''}`],
+            ['IMNCI Team Leader Course', `${facilitator.teamLeaderCourse} ${facilitator.teamLeaderCourse === 'Yes' ? '(' + (facilitator.teamLeaderCourseDate || 'N/A') + ')' : ''}`],
+            ['Clinical Instructor', facilitator.isClinicalInstructor || 'No'],
+            ['Comments', facilitator.comments || 'None']
+        ];
+        autoTable(doc, {
+            startY: finalY + 5,
+            head: [['Field', 'Details']],
+            body: infoBody,
+            theme: 'striped',
+            headStyles: { fillColor: [8, 145, 178] },
+        });
+        finalY = doc.lastAutoTable.finalY;
+
+        // Charts
+        doc.addPage();
+        finalY = 20;
+
+        const combinedChartImg = combinedChartRef.current?.canvas.toDataURL('image/png');
+        const imciSubcoursePieImg = imciSubcoursePieRef.current?.canvas.toDataURL('image/png');
+        
+        if (combinedChartImg && imciSubcoursePieImg) {
+            doc.setFontSize(14);
+            doc.text("Combined Courses Directed & Facilitated", 14, finalY);
+            doc.addImage(combinedChartImg, 'PNG', 14, finalY + 5, 80, 60);
+            doc.text("IMNCI Sub-course Distribution", 110, finalY);
+            doc.addImage(imciSubcoursePieImg, 'PNG', 110, finalY + 5, 80, 60);
+            finalY += 70;
+        } else if (combinedChartImg) {
+            doc.setFontSize(14);
+            doc.text("Combined Courses Directed & Facilitated", 14, finalY);
+            doc.addImage(combinedChartImg, 'PNG', 14, finalY + 5, 180, 90);
+            finalY += 100;
+        } else if (imciSubcoursePieImg) {
+            doc.setFontSize(14);
+            doc.text("IMNCI Sub-course Distribution", 14, finalY);
+            doc.addImage(imciSubcoursePieImg, 'PNG', 14, finalY + 5, 180, 90);
+            finalY += 100;
+        }
+
+        // Course Tables
+        if (directedCourses.length > 0) {
+            if (finalY + 30 > doc.internal.pageSize.height) { doc.addPage(); finalY = 20; }
+            autoTable(doc, {
+                startY: finalY,
+                head: [['Directed Courses', 'Date', 'Location']],
+                body: directedCourses.map(c => [c.course_type, c.start_date, c.state]),
+                didDrawPage: (data) => { doc.text("Directed Courses", 14, data.settings.margin.top - 10); }
+            });
+            finalY = doc.lastAutoTable.finalY + 10;
+        }
+
+        if (facilitatedCourses.length > 0) {
+            if (finalY + 30 > doc.internal.pageSize.height) { doc.addPage(); finalY = 20; }
+            autoTable(doc, {
+                startY: finalY,
+                head: [['Facilitated Courses', 'Date', 'Location']],
+                body: facilitatedCourses.map(c => [c.course_type, c.start_date, c.state]),
+                didDrawPage: (data) => { doc.text("Facilitated Courses", 14, data.settings.margin.top - 10); }
+            });
+        }
+
+        doc.save(fileName);
+    };
+    
+    // Check if facilitator exists before rendering content
+    if (!facilitator) {
+        return <Card><EmptyState message="Facilitator not found." /></Card>;
+    }
+    
     return (
         <div className="grid gap-6">
             <PageHeader title="Facilitator Report" subtitle={facilitator.name} actions={<>
-                <Button onClick={() => generateFacilitatorPdf(facilitator, allCourses, directedChartRef, facilitatedChartRef)} variant="secondary"><PdfIcon /> Export as PDF</Button>
+                <Button onClick={generateFacilitatorPdf} variant="secondary"><PdfIcon /> Export as PDF</Button>
                 <Button onClick={onBack}>Back to List</Button>
             </>} />
 
@@ -215,96 +359,42 @@ export function FacilitatorReportView({ facilitator, allCourses, onBack }) {
                         <tr className="border-b"><td className="font-semibold p-2 bg-gray-50">Phone</td><td className="p-2">{facilitator.phone}</td></tr>
                         <tr className="border-b"><td className="font-semibold p-2 bg-gray-50">Email</td><td className="p-2">{facilitator.email || 'N/A'}</td></tr>
                         <tr className="border-b"><td className="font-semibold p-2 bg-gray-50">Location</td><td className="p-2">{facilitator.currentState || 'N/A'}</td></tr>
-                        <tr className="border-b"><td className="font-semibold p-2 bg-gray-50">Courses</td><td className="p-2">{(facilitator.courses || []).join(', ')}</td></tr>
+                        <tr className="border-b"><td className="font-semibold p-2 bg-gray-50">Courses</td><td className="p-2">{(Array.isArray(facilitator.courses) ? facilitator.courses : []).join(', ')}</td></tr>
                         <tr className="border-b"><td className="font-semibold p-2 bg-gray-50">Course Director</td><td className="p-2">{facilitator.directorCourse === 'Yes' ? `Yes (${facilitator.directorCourseDate || 'N/A'})` : 'No'}</td></tr>
                         <tr className="border-b"><td className="font-semibold p-2 bg-gray-50">Clinical Instructor</td><td className="p-2">{facilitator.isClinicalInstructor || 'No'}</td></tr>
+                        <tr className="border-b"><td className="font-semibold p-2 bg-gray-50">Team Leader</td><td className="p-2">{facilitator.teamLeaderCourse === 'Yes' ? `Yes (${facilitator.teamLeaderCourseDate || 'N/A'})` : 'No'}</td></tr>
+                        <tr className="border-b"><td className="font-semibold p-2 bg-gray-50">Follow-up Supervisor</td><td className="p-2">{facilitator.followUpCourse === 'Yes' ? `Yes (${facilitator.followUpCourseDate || 'N/A'})` : 'No'}</td></tr>
                     </tbody></table>
                 </div>
             </Card>
 
             <Card>
-                <div className="flex justify-end mb-4">
-                    <FormGroup label="Filter by Course Type">
-                        <Select value={courseTypeFilter} onChange={e => setCourseTypeFilter(e.target.value)}>
-                            <option value="All">All Course Types</option>
-                            {COURSE_TYPES_FACILITATOR.map(type => <option key={type} value={type}>{type}</option>)}
-                        </Select>
-                    </FormGroup>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center mb-6">
-                    <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Courses Directed</div><div className="text-3xl font-bold text-sky-700">{directedCourses.length}</div></div>
-                    <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Courses Facilitated</div><div className="text-3xl font-bold text-sky-700">{facilitatedCourses.length}</div></div>
-                    <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Total Days of Training</div><div className="text-3xl font-bold text-sky-700">{totalDays}</div></div>
-                </div>
-                <div className="grid md:grid-cols-2 gap-6 h-64">
-                    <Bar ref={directedChartRef} options={chartOptions('Courses Directed by Type')} data={directedChartData} />
-                    <Bar ref={facilitatedChartRef} options={chartOptions('Courses Facilitated by Type')} data={facilitatedChartData} />
-                </div>
+                <h3 className="text-xl font-bold mb-4">Course Involvement Summary</h3>
+                <Table headers={["Course Type", "Instructed", "Directed", "Total Days"]}>
+                    {courseSummary.map(([type, data]) => (
+                        <tr key={type}>
+                            <td className="p-2 border">{type}</td>
+                            <td className="p-2 border text-center">{data.instructed}</td>
+                            <td className="p-2 border text-center">{data.directed}</td>
+                            <td className="p-2 border text-center">{data.daysInstructed + data.daysDirected}</td>
+                        </tr>
+                    ))}
+                </Table>
             </Card>
+
+            {imciSubcourseData && (
+                <Card>
+                    <h3 className="text-xl font-bold mb-4">IMNCI Sub-course Distribution</h3>
+                    <div className="h-64 flex justify-center">
+                        <Pie data={imciSubcourseData} options={{ responsive: true, maintainAspectRatio: false }} ref={imciSubcoursePieRef} />
+                    </div>
+                </Card>
+            )}
 
             <div className="grid md:grid-cols-2 gap-6">
                 <Card><h3 className="text-xl font-bold mb-4">Directed Courses</h3><Table headers={["Course", "Date", "Location"]}>{directedCourses.length === 0 ? <EmptyState message="No courses directed." /> : directedCourses.map(c => (<tr key={c.id}><td className="p-2 border">{c.course_type}</td><td className="p-2 border">{c.start_date}</td><td className="p-2 border">{c.state}</td></tr>))}</Table></Card>
                 <Card><h3 className="text-xl font-bold mb-4">Facilitated Courses</h3><Table headers={["Course", "Date", "Location"]}>{facilitatedCourses.length === 0 ? <EmptyState message="No courses facilitated." /> : facilitatedCourses.map(c => (<tr key={c.id}><td className="p-2 border">{c.course_type}</td><td className="p-2 border">{c.start_date}</td><td className="p-2 border">{c.state}</td></tr>))}</Table></Card>
             </div>
         </div>
-    );
-}
-
-export function FacilitatorComparisonView({ facilitators, allCourses, onBack }) {
-    const [courseFilter, setCourseFilter] = useState('All');
-
-    const comparisonData = useMemo(() => {
-        return facilitators.map(f => {
-            const directed = allCourses.filter(c => c.director === f.name && (courseFilter === 'All' || c.course_type === courseFilter));
-            const facilitated = allCourses.filter(c => (c.facilitators || []).includes(f.name) && (courseFilter === 'All' || c.course_type === courseFilter));
-            const totalDays = [...new Set([...directed, ...facilitated])].reduce((sum, c) => sum + (c.course_duration || 0), 0);
-
-            return {
-                id: f.id, name: f.name,
-                directedCount: directed.length,
-                facilitatedCount: facilitated.length,
-                totalDays: totalDays,
-                isDirector: f.directorCourse === 'Yes',
-                isClinicalInstructor: f.isClinicalInstructor === 'Yes'
-            };
-        }).sort((a, b) => b.totalDays - a.totalDays);
-    }, [facilitators, allCourses, courseFilter]);
-
-    const handleExportPdf = () => {
-        generateFacilitatorComparisonPdf(facilitators, allCourses, courseFilter);
-    };
-
-    return (
-        <Card>
-            <PageHeader
-                title="Facilitator Comparison"
-                actions={<>
-                    <Button onClick={handleExportPdf} variant="secondary"><PdfIcon /> Export as PDF</Button>
-                    <Button onClick={onBack}>Back to List</Button>
-                </>}
-            />
-            <div className="flex justify-end mb-4">
-                <FormGroup label="Filter by Course">
-                    <Select value={courseFilter} onChange={e => setCourseFilter(e.target.value)}>
-                        <option value="All">All Courses</option>
-                        {COURSE_TYPES_FACILITATOR.map(c => <option key={c} value={c}>{c}</option>)}
-                    </Select>
-                </FormGroup>
-            </div>
-            <Table headers={['Facilitator', 'Courses Directed', 'Courses Facilitated', 'Total Training Days', 'Director', 'Clinical Instructor']}>
-                {comparisonData.length === 0 ? <EmptyState message="No data to display." /> :
-                    comparisonData.map(f => (
-                        <tr key={f.id} className="hover:bg-gray-50 text-center">
-                            <td className="p-2 border text-left">{f.name}</td>
-                            <td className="p-2 border">{f.directedCount}</td>
-                            <td className="p-2 border">{f.facilitatedCount}</td>
-                            <td className="p-2 border font-bold">{f.totalDays}</td>
-                            <td className="p-2 border">{f.isDirector ? '✔️' : '❌'}</td>
-                            <td className="p-2 border">{f.isClinicalInstructor ? '✔️' : '❌'}</td>
-                        </tr>
-                    ))
-                }
-            </Table>
-        </Card>
     );
 }
