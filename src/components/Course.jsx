@@ -69,8 +69,59 @@ const generateFullCourseReportPdf = async (course, groupPerformance, chartRef) =
     doc.save(fileName);
 };
 
-
 export function CoursesView({ courses, onAdd, onOpen, onEdit, onDelete, onOpenReport }) {
+    // Function to check if a course is active
+    const isCourseActive = (course) => {
+        if (!course.start_date) return false;
+        
+        const today = new Date();
+        const startDate = new Date(course.start_date);
+        const diffTime = Math.abs(today - startDate);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+        
+        if (course.course_type === 'IMNCI') {
+            return diffDays <= 7;
+        } else if (course.course_type === 'ETAT') {
+            return diffDays <= 4;
+        } else if (course.course_type === 'EENC') {
+            return diffDays <= 2;
+        }
+        return false;
+    };
+
+    // Function to check if a course can be modified
+    const isCourseEditable = (course) => {
+        if (!course.start_date) return true;
+        
+        const today = new Date();
+        const startDate = new Date(course.start_date);
+        
+        // Determine course duration based on course type
+        let courseDuration = 0;
+        if (course.course_type === 'IMNCI') courseDuration = 7;
+        else if (course.course_type === 'ETAT') courseDuration = 4;
+        else if (course.course_type === 'EENC') courseDuration = 2;
+        
+        // Calculate end date (start date + course duration)
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + courseDuration);
+        
+        // Calculate days since course ended
+        const daysSinceEnd = Math.floor((today - endDate) / (1000 * 60 * 60 * 24));
+        
+        // Course can be edited if it ended less than 5 days ago
+        return daysSinceEnd <= 5;
+    };
+
+    // Sort courses: active first, then others
+    const sortedCourses = [...courses].sort((a, b) => {
+        const aActive = isCourseActive(a);
+        const bActive = isCourseActive(b);
+        if (aActive && !bActive) return -1;
+        if (!aActive && bActive) return 1;
+        return 0;
+    });
+
     return (
         <Card>
             <PageHeader
@@ -78,23 +129,55 @@ export function CoursesView({ courses, onAdd, onOpen, onEdit, onDelete, onOpenRe
                 subtitle="Manage training courses."
                 actions={<Button onClick={onAdd}>Add New Course</Button>}
             />
-            {courses.length === 0 ? <EmptyState message="No courses have been added yet." /> : (
-                <Table headers={["Course Name", "State", "# Participants", "Actions"]}>
-                    {courses.map(c => (
-                        <tr key={c.id} className="hover:bg-gray-50">
-                            <td className="p-4 border border-gray-200 font-medium text-gray-800">{c.course_type}</td>
-                            <td className="p-4 border border-gray-200">{c.state}</td>
-                            <td className="p-4 border border-gray-200">{c.participants_count}</td>
-                            <td className="p-4 border border-gray-200 text-right">
-                                <div className="flex gap-2 flex-wrap justify-end">
-                                   <Button variant="primary" onClick={() => onOpen(c.id)}>Open Course</Button>
-                                    <Button variant="secondary" onClick={() => onOpenReport(c.id)}>course Reports</Button>
-                                    <Button variant="secondary" onClick={() => onEdit(c)}>Edit</Button>
-                                    <Button variant="danger" onClick={() => onDelete(c.id)}>Delete</Button>
-                                </div>
-                            </td>
-                        </tr>
-                    ))}
+            {sortedCourses.length === 0 ? <EmptyState message="No courses have been added yet." /> : (
+                <Table headers={["Course Name", "State", "# Participants", "Status", "Actions"]}>
+                    {sortedCourses.map(c => {
+                        const active = isCourseActive(c);
+                        const editable = isCourseEditable(c);
+                        return (
+                            <tr key={c.id} className={`hover:bg-gray-50 ${active ? 'bg-green-50' : ''}`}>
+                                <td className="p-4 border border-gray-200 font-medium text-gray-800">
+                                    {c.course_type}
+                                    {active && <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Active</span>}
+                                </td>
+                                <td className="p-4 border border-gray-200">{c.state}</td>
+                                <td className="p-4 border border-gray-200">{c.participants_count}</td>
+                                <td className="p-4 border border-gray-200">
+                                    {active ? (
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            Active
+                                        </span>
+                                    ) : (
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                            Inactive
+                                        </span>
+                                    )}
+                                </td>
+                                <td className="p-4 border border-gray-200 text-right">
+                                    <div className="flex gap-2 flex-wrap justify-end">
+                                        <Button variant="primary" onClick={() => onOpen(c.id)}>Open Course</Button>
+                                        <Button variant="secondary" onClick={() => onOpenReport(c.id)}>Course Reports</Button>
+                                        <Button 
+                                            variant="secondary" 
+                                            onClick={() => onEdit(c)}
+                                            disabled={!editable}
+                                            title={!editable ? "Course cannot be modified after 5 days from end date" : ""}
+                                        >
+                                            Edit
+                                        </Button>
+                                        <Button 
+                                            variant="danger" 
+                                            onClick={() => onDelete(c.id)}
+                                            disabled={!editable}
+                                            title={!editable ? "Course cannot be deleted after 5 days from end date" : ""}
+                                        >
+                                            Delete
+                                        </Button>
+                                    </div>
+                                </td>
+                            </tr>
+                        );
+                    })}
                 </Table>
             )}
         </Card>
