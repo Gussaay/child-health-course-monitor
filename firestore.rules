@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow admins to read/write all documents
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Users collection - only admins can read/write
+    match /users/{userId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Other collections - allow authenticated users to read/write
+    match /courses/{courseId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /participants/{participantId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /facilitators/{facilitatorId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /observations/{observationId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /cases/{caseId} {
+      allow read, write: if isAuthenticated();
+    }
+  }
+}

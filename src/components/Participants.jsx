@@ -1,144 +1,265 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-import { Bar, Pie } from 'react-chartjs-2';
+import React, { useState, useMemo, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import {
-    Card, PageHeader, Button, FormGroup, Input, Select, Textarea, Table, EmptyState, Spinner, PdfIcon
+    Card, PageHeader, Button, FormGroup, Input, Select, Textarea, Table, EmptyState, Modal
 } from "./CommonComponents";
 import {
-    STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_ETAT, JOB_TITLES_EENC, JOB_TITLES_IMNCI,
-    calcPct, fmtPct, pctBgClass, formatAsPercentageAndCount, formatAsPercentageAndScore,
-    DOMAIN_LABEL_IMNCI, ETAT_DOMAIN_LABEL, EENC_DOMAIN_LABEL_BREATHING, EENC_DOMAIN_LABEL_NOT_BREATHING,
-    SKILLS_ETAT, ETAT_DOMAINS, SKILLS_EENC_BREATHING, SKILLS_EENC_NOT_BREATHING, DOMAINS_BY_AGE_IMNCI, getClassListImnci
+    STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_ETAT, JOB_TITLES_EENC, JOB_TITLES_IMNCI
 } from './constants.js';
-import {
-    listObservationsForParticipant,
-    listCasesForParticipant
-} from "../data.js";
 
+// --- Excel Import Modal Component ---
+const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) => {
+    const [excelData, setExcelData] = useState([]);
+    const [headers, setHeaders] = useState([]);
+    const [fieldMappings, setFieldMappings] = useState({});
+    const [currentPage, setCurrentPage] = useState(0);
+    const [error, setError] = useState('');
+    const fileInputRef = useRef(null);
 
-// --- PDF Export Helper ---
-const generateParticipantPdf = async (participant, course, cases, observations, chartRefs) => {
-    const doc = new jsPDF();
-    const fileName = `Participant_Report_${participant.name.replace(/ /g, '_')}.pdf`;
+    const allFields = [
+        { key: 'id', label: 'ID', required: false, hidden: true },
+        { key: 'name', label: 'Name' },
+        { key: 'group', label: 'Group' },
+        { key: 'email', label: 'Email' },
+        { key: 'state', label: 'State' },
+        { key: 'locality', label: 'Locality' },
+        { key: 'center_name', label: 'Health Facility Name' },
+        { key: 'job_title', label: 'Job Title' },
+        { key: 'phone', label: 'Phone Number' },
+        { key: 'pre_test_score', label: 'Pre-Test Score' },
+        { key: 'post_test_score', label: 'Post-Test Score' },
+        ...(course.course_type === 'IMNCI' ? [
+            { key: 'imci_sub_type', label: 'IMCI Course Sub-type' },
+            { key: 'facility_type', label: 'Facility Type' },
+            { key: 'trained_before', label: 'Previously trained in IMCI?' },
+            { key: 'last_imci_training', label: 'Date of last training' },
+            { key: 'num_other_providers', label: 'Number of other providers' },
+            { key: 'num_other_providers_imci', label: 'Number of providers trained in IMCI' },
+            { key: 'has_nutrition_service', label: 'Has therapeutic nutrition service?' },
+            { key: 'nearest_nutrition_center', label: 'Nearest therapeutic nutrition center?' },
+            { key: 'has_immunization_service', label: 'Has immunization service?' },
+            { key: 'nearest_immunization_center', label: 'Nearest immunization center?' },
+            { key: 'has_ors_room', label: 'Has ORS corner service?' }
+        ] : []),
+        ...(course.course_type === 'ETAT' ? [
+            { key: 'hospital_type', label: 'Hospital Type' },
+            { key: 'trained_etat_before', label: 'Previously trained on ETAT?' },
+            { key: 'last_etat_training', label: 'Date of last ETAT training' },
+            { key: 'has_triage_system', label: 'Does hospital have a current triaging system?' },
+            { key: 'has_stabilization_center', label: 'Does hospital have a stabilization center for malnutrition?' },
+            { key: 'has_hdu', label: 'Does hospital have a high dependency unit?' },
+            { key: 'num_staff_in_er', label: 'Number of staff in ER' },
+            { key: 'num_staff_trained_in_etat', label: 'Number of staff trained in ETAT' }
+        ] : []),
+        ...(course.course_type === 'EENC' ? [
+            { key: 'hospital_type', label: 'Hospital Type' },
+            { key: 'other_hospital_type', label: 'Specify Hospital Type' },
+            { key: 'trained_eenc_before', label: 'Previously trained on EENC?' },
+            { key: 'last_eenc_training', label: 'Date of last EENC training' },
+            { key: 'has_sncu', label: 'Does hospital have a Special Newborn Care Unit (SNCU)?' },
+            { key: 'has_iycf_center', label: 'Does hospital have an IYCF center?' },
+            { key: 'has_kangaroo_room', label: 'Does hospital have a Kangaroo care room?' },
+            { key: 'num_staff_in_delivery', label: 'Number of staff in delivery room' },
+            { key: 'num_staff_trained_in_eenc', label: 'Number of staff trained in EENC' }
+        ] : [])
+    ];
 
-    // --- Title Page ---
-    doc.setFontSize(22);
-    doc.text("Participant Performance Report", 105, 80, { align: 'center' });
-    doc.setFontSize(18);
-    doc.text(participant.name, 105, 90, { align: 'center' });
-    doc.setFontSize(14);
-    doc.text(`${course.course_type} Course`, 105, 100, { align: 'center' });
-    doc.text(`${course.state} / ${course.locality}`, 105, 108, { align: 'center' });
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`Report Generated: ${new Date().toLocaleDateString()}`, 105, 116, { align: 'center' });
+    const handleDownloadTemplate = () => {
+        const templateData = participants.map(p => {
+            const row = {};
+            allFields.forEach(field => {
+                row[field.label] = p[field.key] || '';
+            });
+            return row;
+        });
 
-    // --- Summary Page ---
-    doc.addPage();
-    doc.setFontSize(16);
-    doc.text("Performance Summary", 14, 20);
+        const headerLabels = allFields.map(f => f.label);
+        const worksheet = XLSX.utils.json_to_sheet(templateData, { header: headerLabels });
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Participants");
+        XLSX.writeFile(workbook, `Participant_Template_${course.course_type}.xlsx`);
+    };
 
-    const totalObs = observations.length;
-    const correctObs = observations.filter(o => o.item_correct > 0).length;
-    const overallPct = calcPct(correctObs, totalObs);
+    const handleFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
 
-    autoTable(doc, {
-        startY: 25,
-        body: [
-            ['Participant Name', participant.name],
-            ['Job Title', participant.job_title],
-            ['Center', participant.center_name],
-            ['Total Cases Monitored', cases.length],
-            ['Total Skills/Classifications Observed', totalObs],
-            ['Overall Correctness', fmtPct(overallPct)],
-        ],
-        theme: 'striped',
-    });
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-    let finalY = doc.lastAutoTable.finalY;
+                if (jsonData.length < 2) {
+                    setError('Excel file must contain at least a header row and one data row');
+                    return;
+                }
 
-    // --- Add Charts ---
-    if (chartRefs.byDay.current) {
-        const dayChartImg = chartRefs.byDay.current.canvas.toDataURL('image/png');
-        if (finalY > 150) { doc.addPage(); finalY = 20; }
-        doc.setFontSize(14);
-        doc.text("Performance by Course Day", 14, finalY + 15);
-        doc.addImage(dayChartImg, 'PNG', 14, finalY + 20, 180, 90);
-        finalY += 110;
-    }
+                setHeaders(jsonData[0]);
+                setExcelData(jsonData.slice(1));
+                setCurrentPage(1);
+                setError('');
+            } catch (err) {
+                setError('Error reading Excel file: ' + err.message);
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    };
 
-    if (chartRefs.bySetting && chartRefs.bySetting.current) {
-        const settingChartImg = chartRefs.bySetting.current.canvas.toDataURL('image/png');
-        if (finalY > 150) { doc.addPage(); finalY = 20; }
-        doc.setFontSize(14);
-        doc.text("Performance by Setting", 14, finalY + 15);
-        doc.addImage(settingChartImg, 'PNG', 14, finalY + 20, 180, 90);
-    }
+    const handleMappingChange = (appField, excelHeader) => {
+        setFieldMappings(prev => ({
+            ...prev,
+            [appField]: excelHeader
+        }));
+    };
 
-    // --- Detailed Performance Page ---
-    doc.addPage();
-    doc.setFontSize(16);
-    doc.text("Detailed Performance by Domain", 14, 20);
+    const handleImport = () => {
+        if (!fieldMappings['name']) {
+            setError('The "Name" field must be mapped to an Excel column.');
+            return;
+        }
 
-    let detailedBody = [];
-    if (course.course_type === 'IMNCI') {
-        ['LT2M', 'GE2M_LE5Y'].forEach(ageGroup => {
-            const ageObs = observations.filter(o => o.age_group === ageGroup);
-            if (ageObs.length === 0) return;
-
-            detailedBody.push([{ content: `Age Group: ${ageGroup === 'LT2M' ? '0-59 days' : '2-59 months'}`, colSpan: 3, styles: { fontStyle: 'bold', fillColor: '#cccccc' } }]);
-            const domains = DOMAINS_BY_AGE_IMNCI[ageGroup];
-            domains.forEach(d => {
-                const domainObs = ageObs.filter(o => o.domain === d);
-                if (domainObs.length > 0) {
-                    const correct = domainObs.filter(o => o.item_correct > 0).length;
-                    detailedBody.push([DOMAIN_LABEL_IMNCI[d], `${correct}/${domainObs.length}`, fmtPct(calcPct(correct, domainObs.length))]);
+        const importedParticipants = excelData.map(row => {
+            const participant = {};
+            Object.entries(fieldMappings).forEach(([appField, excelHeader]) => {
+                const headerIndex = headers.indexOf(excelHeader);
+                if (headerIndex !== -1 && row[headerIndex] !== undefined) {
+                    participant[appField] = row[headerIndex];
                 }
             });
-        });
-    } else if (course.course_type === 'ETAT') {
-        ETAT_DOMAINS.forEach(d => {
-            const domainObs = observations.filter(o => o.domain === d);
-            if (domainObs.length > 0) {
-                const correct = domainObs.filter(o => o.item_correct > 0).length;
-                detailedBody.push([ETAT_DOMAIN_LABEL[d], `${correct}/${domainObs.length}`, fmtPct(calcPct(correct, domainObs.length))]);
-            }
-        });
-    } else if (course.course_type === 'EENC') {
-        const domains = { ...EENC_DOMAIN_LABEL_BREATHING, ...EENC_DOMAIN_LABEL_NOT_BREATHING };
-        Object.entries(domains).forEach(([domainKey, domainLabel]) => {
-            const domainObs = observations.filter(o => o.domain === domainKey);
-            if (domainObs.length > 0) {
-                const totalScore = domainObs.reduce((sum, o) => sum + o.item_correct, 0);
-                const maxScore = domainObs.length * 2;
-                detailedBody.push([domainLabel, `${totalScore}/${maxScore}`, fmtPct(calcPct(totalScore, maxScore))]);
-            }
-        });
-    }
+            return participant;
+        }).filter(p => p.name);
 
-    autoTable(doc, {
-        startY: 25,
-        head: [['Domain', 'Correct/Total', 'Percentage']],
-        body: detailedBody,
-        theme: 'grid',
-        headStyles: { fillColor: [8, 145, 178] },
-    });
+        if (importedParticipants.length === 0) {
+            setError('No valid participants were found with a name after mapping.');
+            return;
+        }
+        
+        onImport(importedParticipants);
+        onClose();
+    };
 
-    doc.save(fileName);
+    const renderPreview = () => {
+        if (excelData.length === 0) return null;
+
+        return (
+            <div className="mt-4 overflow-auto max-h-60">
+                <h4 className="font-medium mb-2">Data Preview (first 5 rows)</h4>
+                <table className="min-w-full border border-gray-200">
+                    <thead>
+                        <tr className="bg-gray-100">
+                            {headers.map((header, idx) => (
+                                <th key={idx} className="border border-gray-300 p-2 text-left text-xs">{header}</th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {excelData.slice(0, 5).map((row, rowIdx) => (
+                            <tr key={rowIdx}>
+                                {row.map((cell, cellIdx) => (
+                                    <td key={cellIdx} className="border border-gray-300 p-2 text-xs">{cell}</td>
+                                ))}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        );
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Import Participants from Excel">
+            <div className="p-4">
+                {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
+
+                {currentPage === 0 && (
+                    <div>
+                        <p className="mb-4">
+                            You can download an Excel template to get started. Fill it out and then upload it here. The template will include existing participant data for easy editing.
+                        </p>
+                        <Button variant="secondary" onClick={handleDownloadTemplate} className="mb-4">
+                            Download Template
+                        </Button>
+                        <p className="mb-2">
+                            Or, upload your own Excel file (first row must be headers).
+                        </p>
+                        <input
+                            type="file"
+                            accept=".xlsx,.xls"
+                            onChange={handleFileUpload}
+                            ref={fileInputRef}
+                            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                        />
+                    </div>
+                )}
+
+                {currentPage === 1 && (
+                    <div>
+                        <h4 className="font-medium mb-4">Map Excel columns to application fields</h4>
+                        <p className="text-sm text-gray-600 mb-4">
+                            Map the columns from your Excel file to the corresponding fields in the application. Only the 'Name' field is required for import. To update an existing record, the 'ID' field must be mapped.
+                        </p>
+                        <div className="grid gap-3 mb-4">
+                            {allFields.map(field => (
+                                <div key={field.key} className="flex items-center" style={{ display: field.hidden ? 'none' : 'flex' }}>
+                                    <label className="w-40 font-medium">{field.label}{field.key === 'name' && '*'}</label>
+                                    <Select
+                                        value={fieldMappings[field.key] || ''}
+                                        onChange={(e) => handleMappingChange(field.key, e.target.value)}
+                                        className="flex-1"
+                                    >
+                                        <option value="">-- Select Excel Column --</option>
+                                        {headers.map(header => (
+                                            <option key={header} value={header}>{header}</option>
+                                        ))}
+                                    </Select>
+                                </div>
+                            ))}
+                        </div>
+
+                        {renderPreview()}
+
+                        <div className="flex justify-end mt-6 space-x-2">
+                            <Button variant="secondary" onClick={() => setCurrentPage(0)}>Back</Button>
+                            <Button onClick={handleImport}>Import Participants</Button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </Modal>
+    );
 };
 
-
-export function ParticipantsView({ course, participants, onAdd, onOpen, onEdit, onDelete, onOpenReport }) {
+export function ParticipantsView({ course, participants, onAdd, onOpen, onEdit, onDelete, onOpenReport, onImport, canAddParticipant, canBulkUploadParticipant }) {
     const [groupFilter, setGroupFilter] = useState('All');
+    const [importModalOpen, setImportModalOpen] = useState(false);
     const filtered = groupFilter === 'All' ? participants : participants.filter(p => p.group === groupFilter);
 
     return (
         <Card>
             <PageHeader title="Course Participants" subtitle={`${course.state} / ${course.locality}`} />
 
+            <ExcelImportModal
+                isOpen={importModalOpen}
+                onClose={() => setImportModalOpen(false)}
+                onImport={onImport}
+                course={course}
+                participants={participants}
+            />
+
             <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
-                <Button onClick={onAdd}>Add Participant</Button>
+                <div className="flex gap-2">
+                    {canAddParticipant && (
+                        <Button onClick={onAdd}>Add Participant</Button>
+                    )}
+                    {canBulkUploadParticipant && (
+                        <Button variant="secondary" onClick={() => setImportModalOpen(true)}>
+                            Import from Excel
+                        </Button>
+                    )}
+                </div>
                 <div className="flex items-center gap-2">
                     <label className="font-semibold text-gray-700 text-sm">Filter by Group:</label>
                     <Select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}>
@@ -150,6 +271,7 @@ export function ParticipantsView({ course, participants, onAdd, onOpen, onEdit, 
                     </Select>
                 </div>
             </div>
+
             {/* Desktop Table View */}
             <div className="hidden md:block">
                 <Table headers={["Name", "Group", "Job Title", "Actions"]}>
@@ -206,6 +328,10 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
     const isEtat = course.course_type === 'ETAT';
     const isEenc = course.course_type === 'EENC';
 
+    const excludedImnciSubtypes = ["Standard 7 days course for Medical Doctors", "Standard 7 days course for Medical Assistance", "Refreshment IMNCI Course"];
+    const showTestScores = !isImnci || (isImnci && !excludedImnciSubtypes.includes(initialData?.imci_sub_type));
+
+
     // --- Dynamic Job Options ---
     const jobTitleOptions = useMemo(() => {
         if (isEtat) return JOB_TITLES_ETAT;
@@ -215,12 +341,15 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
 
     // --- Common States ---
     const [name, setName] = useState(initialData?.name || '');
+    const [email, setEmail] = useState(initialData?.email || '');
     const [state, setState] = useState(initialData?.state || '');
     const [locality, setLocality] = useState(initialData?.locality || '');
     const [center, setCenter] = useState(initialData?.center_name || '');
     const [phone, setPhone] = useState(initialData?.phone || '');
     const [group, setGroup] = useState(initialData?.group || 'Group A');
     const [error, setError] = useState('');
+    const [preTestScore, setPreTestScore] = useState(initialData?.pre_test_score || '');
+    const [postTestScore, setPostTestScore] = useState(initialData?.post_test_score || '');
 
     // --- Job Title State ---
     const initialJobTitle = initialData?.job_title || '';
@@ -275,7 +404,12 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
         const finalJobTitle = job === 'Other' ? otherJobTitle : job;
         if (!name || !state || !locality || !center || !finalJobTitle || !phone) { setError('Please complete all required fields'); return; }
 
-        let p = { name, group, state, locality, center_name: center, job_title: finalJobTitle, phone };
+        let p = { name, group, state, locality, center_name: center, job_title: finalJobTitle, phone, email };
+
+        // Add pre and post test scores
+        if (showTestScores) {
+            p = { ...p, pre_test_score: preTestScore, post_test_score: postTestScore };
+        }
 
         if (isImnci) {
             if (!facilityType || !imciSubType) { setError('Please complete all required fields'); return; }
@@ -303,6 +437,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                 <FormGroup label="State"><Select value={state} onChange={(e) => { setState(e.target.value); setLocality(''); }}><option value="">— Select State —</option>{Object.keys(STATE_LOCALITIES).sort().map(s => <option key={s} value={s}>{s}</option>)}</Select></FormGroup>
                 <FormGroup label="Locality"><Select value={locality} onChange={(e) => setLocality(e.target.value)} disabled={!state}><option value="">— Select Locality —</option>{(STATE_LOCALITIES[state] || []).sort().map(l => <option key={l} value={l}>{l}</option>)}</Select></FormGroup>
                 <FormGroup label={isEtat ? "Hospital Name" : "Health Facility Name"}><Input value={center} onChange={(e) => setCenter(e.target.value)} /></FormGroup>
+                <FormGroup label="Email (Optional)"><Input value={email} onChange={(e) => setEmail(e.target.value)} /></FormGroup>
 
                 <FormGroup label="Job Title">
                     <Select value={job} onChange={(e) => setJob(e.target.value)}>
@@ -318,6 +453,29 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                 )}
 
                 <FormGroup label="Phone Number"><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></FormGroup>
+
+                {showTestScores && (
+                    <>
+                        <FormGroup label="Pre-Test Score (%)">
+                            <Input
+                                type="number"
+                                min="0"
+                                max="100"
+                                value={preTestScore}
+                                onChange={(e) => setPreTestScore(e.target.value)}
+                            />
+                        </FormGroup>
+                        <FormGroup label="Post-Test Score (%)">
+                            <Input
+                                type="number"
+                                min="0"
+                                max="100"
+                                value={postTestScore}
+                                onChange={(e) => setPostTestScore(e.target.value)}
+                            />
+                        </FormGroup>
+                    </>
+                )}
 
                 {/* --- IMCI SPECIFIC FIELDS --- */}
                 {isImnci && (<>
@@ -335,7 +493,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                     {!hasImm && <FormGroup label="Nearest immunization center?"><Input value={nearestImm} onChange={e => setNearestImm(e.target.value)} /></FormGroup>}
                     <FormGroup label="Has ORS corner service?"><Select value={hasORS ? 'yes' : 'no'} onChange={e => setHasORS(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
                     <FormGroup label="Number of provider at health center including the current participant"><Input type="number" min="1" value={numProv} onChange={(e) => setNumProv(Number(e.target.value || 1))} /></FormGroup>
-                    <FormGroup label="Number of providers trained in IMCI (not including current COURSE)"><Input type="number" min="0" value={numProvIMCI} onChange={(e) => setNumProvIMNCI(Number(e.target.value || 0))} /></FormGroup>
+                    <FormGroup label="Number of providers trained in IMCI (not including current COURSE)"><Input type="number" min="0" value={numProvIMCI} onChange={(e) => setNumProvIMCI(Number(e.target.value || 0))} /></FormGroup>
                 </>)}
 
                 {/* --- ETAT SPECIFIC FIELDS --- */}
@@ -365,208 +523,5 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
             </div>
             <div className="flex gap-2 justify-end mt-6 border-t pt-6"><Button variant="secondary" onClick={onCancel}>Cancel</Button><Button onClick={submit}>Save Participant</Button></div>
         </Card>
-    );
-}
-
-export function ParticipantReportView({ course, participant, participants, onChangeParticipant, onBack }) {
-    const [observations, setObservations] = useState([]);
-    const [cases, setCases] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    const chartByDayRef = useRef(null);
-    const chartBySettingRef = useRef(null);
-
-    useEffect(() => {
-        const fetchData = async () => {
-            if (!participant?.id || !course?.id) return;
-            setLoading(true);
-            const [obsData, casesData] = await Promise.all([
-                listObservationsForParticipant(course.id, participant.id),
-                listCasesForParticipant(course.id, participant.id)
-            ]);
-            setObservations(obsData);
-            setCases(casesData);
-            setLoading(false);
-        };
-        fetchData();
-    }, [participant?.id, course?.id]);
-
-    const summaryStats = useMemo(() => {
-        if (observations.length === 0) return { total: 0, correct: 0, score: 0, maxScore: 0, pct: NaN };
-        if (course.course_type === 'EENC') {
-            const score = observations.reduce((sum, o) => sum + o.item_correct, 0);
-            const maxScore = observations.length * 2;
-            return { score, maxScore, pct: calcPct(score, maxScore) };
-        } else {
-            const total = observations.length;
-            const correct = observations.filter(o => o.item_correct > 0).length;
-            return { total, correct, pct: calcPct(correct, total) };
-        }
-    }, [observations, course.course_type]);
-
-    const performanceByDay = useMemo(() => {
-        const dataByDay = {};
-        observations.forEach(o => {
-            const day = o.day_of_course || 1;
-            dataByDay[day] = dataByDay[day] || { total: 0, correct: 0, score: 0, maxScore: 0 };
-            dataByDay[day].total++;
-            dataByDay[day].maxScore += (course.course_type === 'EENC' ? 2 : 1);
-            if (o.item_correct > 0) dataByDay[day].correct++;
-            if (course.course_type === 'EENC') dataByDay[day].score += o.item_correct;
-        });
-
-        return Object.entries(dataByDay).map(([day, data]) => ({
-            day: `Day ${day}`,
-            pct: course.course_type === 'EENC' ? calcPct(data.score, data.maxScore) : calcPct(data.correct, data.total)
-        })).sort((a, b) => a.day.localeCompare(b.day, undefined, { numeric: true }));
-
-    }, [observations, course.course_type]);
-
-    const performanceBySetting = useMemo(() => {
-        if (course.course_type !== 'IMNCI') return [];
-        const dataBySetting = { OPD: { total: 0, correct: 0 }, IPD: { total: 0, correct: 0 } };
-        observations.forEach(o => {
-            const setting = o.setting || 'OPD';
-            if (dataBySetting[setting]) {
-                dataBySetting[setting].total++;
-                if (o.item_correct > 0) dataBySetting[setting].correct++;
-            }
-        });
-        return Object.entries(dataBySetting).map(([setting, data]) => ({
-            setting,
-            pct: calcPct(data.correct, data.total)
-        }));
-    }, [observations, course.course_type]);
-
-
-    const detailedPerformance = useMemo(() => {
-        const domains = {};
-        let labelMap;
-
-        if (course.course_type === 'IMNCI') {
-            labelMap = DOMAIN_LABEL_IMNCI;
-        } else if (course.course_type === 'ETAT') {
-            labelMap = ETAT_DOMAIN_LABEL;
-        } else if (course.course_type === 'EENC') {
-            labelMap = { ...EENC_DOMAIN_LABEL_BREATHING, ...EENC_DOMAIN_LABEL_NOT_BREATHING };
-        }
-
-        observations.forEach(o => {
-            if (!domains[o.domain]) {
-                domains[o.domain] = {
-                    label: labelMap[o.domain] || o.domain,
-                    total: 0, correct: 0, score: 0, maxScore: 0, skills: {}
-                };
-            }
-            const d = domains[o.domain];
-            d.total++;
-            d.maxScore += (course.course_type === 'EENC' ? 2 : 1);
-            if (o.item_correct > 0) d.correct++;
-            if (course.course_type === 'EENC') d.score += o.item_correct;
-
-            if (!d.skills[o.item_recorded]) d.skills[o.item_recorded] = { total: 0, correct: 0, score: 0, maxScore: 0 };
-            const s = d.skills[o.item_recorded];
-            s.total++;
-            s.maxScore += (course.course_type === 'EENC' ? 2 : 1);
-            if (o.item_correct > 0) s.correct++;
-            if (course.course_type === 'EENC') s.score += o.item_correct;
-        });
-        return Object.values(domains);
-
-    }, [observations, course.course_type]);
-
-
-    if (loading) return <Card><Spinner /></Card>;
-
-    const chartOptions = {
-        responsive: true,
-        plugins: { legend: { display: false }, title: { display: true, text: '' } },
-        scales: { y: { beginAtZero: true, max: 100, ticks: { callback: (value) => `${value}%` } } }
-    };
-
-    return (
-        <div className="grid gap-6">
-            <PageHeader
-                title="Participant Performance Report"
-                subtitle={participant.name}
-                actions={<>
-                    <div className="w-64">
-                        <FormGroup label="Switch Participant">
-                            <Select value={participant.id} onChange={(e) => onChangeParticipant(e.target.value)}>
-                                {participants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                            </Select>
-                        </FormGroup>
-                    </div>
-                    <Button onClick={() => generateParticipantPdf(participant, course, cases, observations, { byDay: chartByDayRef, bySetting: chartBySettingRef })} variant="secondary"><PdfIcon /> Export PDF</Button>
-                    <Button onClick={onBack}>Back to List</Button>
-                </>}
-            />
-
-            <Card>
-                <h3 className="text-xl font-bold mb-4">Summary</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                    <div className="p-4 bg-gray-100 rounded-lg">
-                        <div className="text-sm text-gray-600">Cases Monitored</div>
-                        <div className="text-3xl font-bold text-sky-700">{cases.length}</div>
-                    </div>
-                    <div className="p-4 bg-gray-100 rounded-lg">
-                        <div className="text-sm text-gray-600">Skills Observed</div>
-                        <div className="text-3xl font-bold text-sky-700">{observations.length}</div>
-                    </div>
-                    <div className="p-4 bg-gray-100 rounded-lg">
-                        <div className="text-sm text-gray-600">{course.course_type === 'EENC' ? 'Avg. Score' : '# Correct'}</div>
-                        <div className="text-3xl font-bold text-sky-700">{course.course_type === 'EENC' ? `${summaryStats.score}/${summaryStats.maxScore}` : `${summaryStats.correct}/${summaryStats.total}`}</div>
-                    </div>
-                    <div className={`p-4 rounded-lg ${pctBgClass(summaryStats.pct)}`}>
-                        <div className="text-sm font-semibold">Overall Score</div>
-                        <div className="text-3xl font-bold">{fmtPct(summaryStats.pct)}</div>
-                    </div>
-                </div>
-            </Card>
-
-            <Card>
-                <h3 className="text-xl font-bold mb-4">Performance Analysis</h3>
-                <div className="grid md:grid-cols-2 gap-8">
-                    <div>
-                        <Bar ref={chartByDayRef} options={{ ...chartOptions, plugins: { ...chartOptions.plugins, title: { ...chartOptions.plugins.title, text: 'Performance by Day' } } }} data={{ labels: performanceByDay.map(d => d.day), datasets: [{ data: performanceByDay.map(d => d.pct), backgroundColor: '#0ea5e9' }] }} />
-                    </div>
-                    {course.course_type === 'IMNCI' && (
-                        <div>
-                            <Bar ref={chartBySettingRef} options={{ ...chartOptions, plugins: { ...chartOptions.plugins, title: { ...chartOptions.plugins.title, text: 'Performance by Setting' } } }} data={{ labels: performanceBySetting.map(d => d.setting), datasets: [{ data: performanceBySetting.map(d => d.pct), backgroundColor: ['#f97316', '#10b981'] }] }} />
-                        </div>
-                    )}
-                </div>
-            </Card>
-
-            <Card>
-                <h3 className="text-xl font-bold mb-4">Detailed Performance by Domain</h3>
-                <div className="space-y-4">
-                    {detailedPerformance.map(domain => (
-                        <details key={domain.label} className="bg-gray-50 p-3 rounded-lg">
-                            <summary className="font-semibold cursor-pointer flex justify-between items-center">
-                                <span>{domain.label}</span>
-                                <span className={`font-mono text-sm px-2 py-1 rounded ${pctBgClass(course.course_type === 'EENC' ? calcPct(domain.score, domain.maxScore) : calcPct(domain.correct, domain.total))}`}>
-                                    {fmtPct(course.course_type === 'EENC' ? calcPct(domain.score, domain.maxScore) : calcPct(domain.correct, domain.total))}
-                                </span>
-                            </summary>
-                            <div className="mt-2 pl-4 border-l-2 border-gray-200">
-                                <Table headers={["Skill/Classification", "Performance", "%"]}>
-                                    {Object.entries(domain.skills).map(([skill, data]) => {
-                                        const pct = course.course_type === 'EENC' ? calcPct(data.score, data.maxScore) : calcPct(data.correct, data.total);
-                                        return (
-                                            <tr key={skill}>
-                                                <td className="p-2 border">{skill}</td>
-                                                <td className="p-2 border">{course.course_type === 'EENC' ? `${data.score}/${data.maxScore}` : `${data.correct}/${data.total}`}</td>
-                                                <td className={`p-2 border font-mono ${pctBgClass(pct)}`}>{fmtPct(pct)}</td>
-                                            </tr>
-                                        );
-                                    })}
-                                </Table>
-                            </div>
-                        </details>
-                    ))}
-                </div>
-            </Card>
-        </div>
     );
 }

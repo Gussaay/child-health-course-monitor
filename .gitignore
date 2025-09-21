@@ -13,6 +13,9 @@ dist
 dist-ssr
 *.local
 
+# Add the filename to .gitignore
+echo "service-account-key.json" >> .gitignore
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
