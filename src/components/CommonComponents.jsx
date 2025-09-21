@@ -1,6 +1,12 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
 
-// --- Reusable UI Components for a consistent and improved design ---
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
+
+// =============================================================================
+// Common UI Components
+// =============================================================================
+
 export const Card = ({ children, className = '' }) => <section className={`bg-white rounded-lg shadow-md p-4 md:p-6 ${className}`}>{children}</section>;
 export const PageHeader = ({ title, subtitle, actions }) => (
     <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -11,32 +17,75 @@ export const PageHeader = ({ title, subtitle, actions }) => (
         {actions && <div className="flex items-center gap-2 flex-wrap">{actions}</div>}
     </div>
 );
-export const Button = ({ onClick, children, variant = 'primary', disabled = false, className = '' }) => {
+export const Button = ({ onClick, children, variant = 'primary', disabled = false, className = '', isActive = false }) => {
     const baseClasses = "px-4 py-2 rounded-md font-semibold text-sm transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 flex items-center gap-2 justify-center";
     const variantClasses = {
         primary: 'bg-sky-600 text-white hover:bg-sky-700 focus:ring-sky-500',
         secondary: 'bg-slate-200 text-slate-800 hover:bg-slate-300 focus:ring-slate-400',
         danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
         ghost: 'bg-transparent text-slate-700 hover:bg-sky-100 hover:text-sky-700 focus:ring-sky-500 border border-slate-300',
+        tab: 'text-gray-600 hover:bg-slate-100' // Default tab style
     };
+    const activeTabClasses = isActive && variant === 'tab' ? 'bg-sky-600 text-white hover:bg-sky-700' : '';
+
     const disabledClasses = "disabled:opacity-50 disabled:cursor-not-allowed";
-    return <button onClick={onClick} disabled={disabled} className={`${baseClasses} ${variantClasses[variant]} ${disabledClasses} ${className}`}>{children}</button>;
+    return <button onClick={onClick} disabled={disabled} className={`${baseClasses} ${variantClasses[variant]} ${disabledClasses} ${className} ${activeTabClasses}`}>{children}</button>;
 };
 export const FormGroup = ({ label, children, hint }) => (<div className="flex flex-col gap-1"><label className="font-semibold text-gray-700 text-sm">{label}</label>{children}{hint && <p className="text-xs text-gray-500">{hint}</p>}</div>);
 export const Input = (props) => <input {...props} className={`border border-gray-300 rounded-md p-2 w-full focus:ring-2 focus:ring-sky-500 focus:border-sky-500 ${props.className || ''}`} />;
 export const Select = (props) => <select {...props} className={`border border-gray-300 rounded-md p-2 w-full focus:ring-2 focus:ring-sky-500 focus:border-sky-500 ${props.className || ''}`}>{props.children}</select>;
 export const Textarea = (props) => <textarea {...props} className={`border border-gray-300 rounded-md p-2 w-full focus:ring-2 focus:ring-sky-500 focus:border-sky-500 ${props.className || ''}`} />;
-export const Table = ({ headers, children }) => (
-    <div className="overflow-x-auto border border-gray-200 rounded-lg">
-        <table className="min-w-full text-sm border-collapse">
-            <thead className="bg-gray-100"><tr className="text-left text-gray-700">{headers.map((h, i) => <th key={i} className="py-3 px-4 font-semibold tracking-wider border border-gray-200">{h}</th>)}</tr></thead>
-            <tbody className="bg-white">{children}</tbody>
-        </table>
-    </div>
-);
+export const Table = ({ headers, children }) => {
+    // Add null/undefined checks for headers to prevent the 'map' error
+    const tableHeaders = Array.isArray(headers) ? headers : [];
+    
+    return (
+        <div className="overflow-x-auto border border-gray-200 rounded-lg">
+            <table className="min-w-full text-sm border-collapse">
+                <thead className="bg-gray-100">
+                    <tr className="text-left text-gray-700">
+                        {tableHeaders.map((h, i) => (
+                            <th key={i} className="py-3 px-4 font-semibold tracking-wider border border-gray-200">
+                                {h}
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
+                {/* Use a simple check to ensure children exist */}
+                {children && <tbody className="bg-white">{children}</tbody>}
+            </table>
+        </div>
+    );
+};
 export const EmptyState = ({ message, colSpan = 100 }) => (<tr><td colSpan={colSpan} className="py-12 text-center text-gray-500 border border-gray-200">{message}</td></tr>);
 export const Spinner = () => <div className="flex justify-center items-center p-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600"></div></div>;
 export const PdfIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+
+
+
+
+// Add Modal component
+export function Modal({ isOpen, onClose, title, children }) {
+  if (!isOpen) return null;
+  
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-4 border-b">
+          <h3 className="text-lg font-semibold">{title}</h3>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="p-4">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // New CourseIcon component
 export const CourseIcon = ({ course }) => {
@@ -49,8 +98,114 @@ export const CourseIcon = ({ course }) => {
     }
 }
 
+export function FileUpload({ accept, onChange, ...props }) {
+    return (
+        <div className="flex items-center">
+            <label className="block">
+                <span className="sr-only">Choose file</span>
+                <input
+                    type="file"
+                    accept={accept}
+                    onChange={onChange}
+                    className="block w-full text-sm text-gray-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-full file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-sky-50 file:text-sky-700
+                    hover:file:bg-sky-100"
+                    {...props}
+                />
+            </label>
+        </div>
+    );
+}
+
+
 export const Footer = () => (
     <footer className="bg-slate-800 text-slate-400 text-center p-4 mt-8">
         <p>App developed by Dr Qusay Mohamed - <a href="mailto:Gussaay@gmail.com" className="text-sky-400 hover:underline">Gussaay@gmail.com</a></p>
     </footer>
 );
+
+
+// New Checkbox component
+export function Checkbox(props) {
+    return (
+        <input
+            type="checkbox"
+            {...props}
+            className="h-4 w-4 text-sky-600 focus:ring-sky-500 border-gray-300 rounded"
+        />
+    );
+}
+
+// New Toast component for notifications
+export function Toast({ message, type, onClose }) {
+    const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
+    const borderColor = type === 'success' ? 'border-green-600' : 'border-red-600';
+    const icon = type === 'success' ? (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+    ) : (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+    );
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            onClose();
+        }, 5000); // Auto-close after 5 seconds
+        return () => clearTimeout(timer);
+    }, [onClose]);
+
+    return (
+        <div className={`fixed bottom-4 left-1/2 -translate-x-1/2 flex items-center p-4 rounded-lg shadow-lg text-white border-t-4 ${bgColor} ${borderColor} z-50`}>
+            {icon}
+            <div className="ml-3 text-sm font-medium">{message}</div>
+            <button onClick={onClose} className="ml-auto -mx-1.5 -my-1.5 bg-transparent rounded-lg p-1.5 inline-flex h-8 w-8 text-white hover:bg-white hover:bg-opacity-20 focus:outline-none focus:ring-2 focus:ring-white">
+                <span className="sr-only">Dismiss</span>
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+            </button>
+        </div>
+    );
+}
+
+export const FileInput = ({ label, ...props }) => {
+    return (
+        <label className="block">
+            {label && <span className="text-gray-700">{label}</span>}
+            <input
+                type="file"
+                className="mt-1 block w-full text-sm text-gray-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-full file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-sky-50 file:text-sky-700
+                    hover:file:bg-sky-100"
+                {...props}
+            />
+        </label>
+    );
+};
+
+// New Tabs component
+export function Tabs({ tabs, activeTab, onTabChange }) {
+    return (
+        <div className="flex gap-2 border-b border-gray-200 pb-2">
+            {tabs.map((tab) => (
+                <Button
+                    key={tab.id}
+                    variant="tab"
+                    isActive={activeTab === tab.id}
+                    onClick={() => onTabChange(tab.id)}
+                >
+                    {tab.label}
+                </Button>
+            ))}
+        </div>
+    );
+}

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 
-// --- NEW: Import email/password auth methods ---
 import { 
   GoogleAuthProvider, 
   signInWithPopup,
@@ -8,20 +7,17 @@ import {
   signInWithEmailAndPassword
 } from 'firebase/auth';
 
-// Continue importing your initialized 'auth' object from your firebase.js file
 import { auth } from './firebase.js';
 
 // --- Sign-In and Sign-Up Component ---
 export function SignInBox() {
-  // --- NEW: State for form inputs and errors ---
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  // --- NEW: Handler for Email/Password Sign-Up ---
   const handleSignUp = async (e) => {
     e.preventDefault();
-    setError(''); // Clear previous errors
+    setError('');
     if (password.length < 6) {
       setError("Password must be at least 6 characters long.");
       return;
@@ -34,10 +30,9 @@ export function SignInBox() {
     }
   };
   
-  // --- NEW: Handler for Email/Password Sign-In ---
   const handleSignIn = async (e) => {
     e.preventDefault();
-    setError(''); // Clear previous errors
+    setError('');
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (err) {
@@ -46,7 +41,6 @@ export function SignInBox() {
     }
   };
 
-  // Handler for Google Sign-In (unchanged)
   const signInWithGoogle = () => {
     const provider = new GoogleAuthProvider();
     signInWithPopup(auth, provider)
@@ -64,7 +58,6 @@ export function SignInBox() {
           <p className="mt-2 text-gray-600">Sign in or create an account</p>
         </div>
 
-        {/* --- NEW: Email and Password Form --- */}
         <form className="space-y-4">
           <input 
             type="email" 
@@ -83,7 +76,6 @@ export function SignInBox() {
             required
           />
 
-          {/* Display any authentication errors */}
           {error && <p className="text-sm text-red-600">{error}</p>}
           
           <div className="flex flex-col sm:flex-row gap-2">
@@ -92,14 +84,12 @@ export function SignInBox() {
           </div>
         </form>
 
-        {/* Divider */}
         <div className="flex items-center justify-center">
           <div className="flex-grow border-t border-gray-300"></div>
           <span className="mx-4 text-xs font-bold text-gray-500">OR</span>
           <div className="flex-grow border-t border-gray-300"></div>
         </div>
 
-        {/* Google Sign-In Button */}
         <button 
           onClick={signInWithGoogle}
           className="flex items-center justify-center w-full gap-3 bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-300 shadow-md"
@@ -108,36 +98,6 @@ export function SignInBox() {
           Sign in with Google
         </button>
       </div>
-    </div>
-  );
-}
-
-// --- User Display & Sign-Out Button (Unchanged) ---
-export function UserBadge({ user }) {
-  const signOut = () => {
-    auth.signOut();
-  };
-  
-  // Handles users who signed up with email and don't have a display name or photo
-  const displayName = user.displayName || user.email;
-  const photoURL = user.photoURL;
-
-  return (
-    <div className="flex items-center gap-4 bg-white p-2 rounded-full shadow">
-      {photoURL ? (
-        <img src={photoURL} alt="User" className="w-8 h-8 rounded-full" />
-      ) : (
-        <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-bold">
-          {displayName?.charAt(0).toUpperCase()}
-        </div>
-      )}
-      <span className="text-sm font-semibold text-gray-800 hidden md:block">{displayName}</span>
-      <button 
-        onClick={signOut}
-        className="bg-red-500 text-white text-xs font-semibold py-1 px-3 rounded-full hover:bg-red-600 transition"
-      >
-        Sign Out
-      </button>
     </div>
   );
 }

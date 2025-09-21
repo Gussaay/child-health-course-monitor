@@ -1,10 +1,12 @@
-import React, { useState, useMemo } from 'react';
+// DashboardView.jsx
+import React, { useState, useMemo, useEffect } from 'react';
 import jsPDF from "jspdf";
 import SudanMap from '../SudanMap';
 import autoTable from "jspdf-autotable";
 import { Bar, Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
 import { ComposableMap, Geographies, Geography, Marker } from "react-simple-maps";
+import { listAllCourses, listAllParticipants, listFacilitators } from '../data.js';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
 
@@ -36,6 +38,7 @@ const Table = ({ headers, children }) => (
 );
 const Input = (props) => <input {...props} className={`border border-gray-300 rounded-md p-2 w-full focus:ring-2 focus:ring-sky-500 focus:border-sky-500 ${props.className || ''}`} />;
 const EmptyState = ({ message, colSpan = 100 }) => (<tr><td colSpan={colSpan} className="py-12 text-center text-gray-500 border border-gray-200">{message}</td></tr>);
+const Spinner = () => <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-600 mx-auto"></div>;
 
 
 // Helper function to export table data to CSV/Excel
@@ -80,10 +83,17 @@ const exportTableToPdf = (title, tableHeaders, tableBody, fileName, filters) => 
     doc.save(`${fileName}.pdf`);
 };
 
-function DashboardView({ allCourses, allParticipants, allFacilitators, onOpenCourseReport, onOpenParticipantReport, onOpenFacilitatorReport, STATE_LOCALITIES }) {
-    if (!allCourses || !allParticipants || !allFacilitators) {
-        return <div>Loading dashboard data...</div>;
-    }
+function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFacilitatorReport, STATE_LOCALITIES, permissions, userStates }) {
+    const [allCourses, setAllCourses] = useState([]);
+    const [allParticipants, setAllParticipants] = useState([]);
+    const [allFacilitators, setAllFacilitators] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    // New states for detailed tables
+    const [fetchedCourses, setFetchedCourses] = useState([]);
+    const [fetchedParticipants, setFetchedParticipants] = useState([]);
+    const [fetchedFacilitators, setFetchedFacilitators] = useState([]);
+    const [fetchingDetailed, setFetchingDetailed] = useState(false);
 
     const [viewType, setViewType] = useState('courses');
     const [courseTypeFilter, setCourseTypeFilter] = useState('All');
@@ -92,6 +102,63 @@ function DashboardView({ allCourses, allParticipants, allFacilitators, onOpenCou
     const [yearFilter, setYearFilter] = useState('All');
     const [monthFilter, setMonthFilter] = useState('All');
 
+    const [facSearchQuery, setFacSearchQuery] = useState('');
+    const [facStateFilter, setFacStateFilter] = useState('All');
+    const [facLocalityFilter, setFacLocalityFilter] = useState('All');
+    const [facRoleFilter, setFacRoleFilter] = useState('All');
+    const [facCourseFilter, setFacCourseFilter] = useState('All');
+
+    // Fetch initial summary data on component mount
+    useEffect(() => {
+        const fetchSummaryData = async () => {
+            setLoading(true);
+            try {
+                // Pass an empty array to fetch all data for summary view
+                const coursesData = await listAllCourses([]);
+                const participantsData = await listAllParticipants([]);
+                const facilitatorsData = await listFacilitators([]);
+                setAllCourses(coursesData);
+                setAllParticipants(participantsData);
+                setAllFacilitators(facilitatorsData);
+            } catch (error) {
+                console.error("Failed to fetch summary data:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchSummaryData();
+    }, []); // Empty dependency array means this runs only once on mount.
+
+    const fetchDetailedData = async () => {
+        setFetchingDetailed(true);
+        try {
+            // Updated to pass userStates to the data fetching functions for filtering
+            const coursesData = await listAllCourses(userStates);
+            const participantsData = await listAllParticipants(userStates);
+            const facilitatorsData = await listFacilitators(userStates);
+
+            const courseMap = new Map(coursesData.map(c => [c.id, c]));
+            const participantsWithCourseInfo = participantsData.map(p => {
+                const course = courseMap.get(p.courseId);
+                return {
+                    ...p,
+                    course_type: course?.course_type,
+                    state: course?.state,
+                    locality: course?.locality,
+                };
+            });
+
+            setFetchedCourses(coursesData);
+            setFetchedParticipants(participantsWithCourseInfo);
+            setFetchedFacilitators(facilitatorsData);
+
+        } catch (error) {
+            console.error("Failed to fetch detailed data:", error);
+        } finally {
+            setFetchingDetailed(false);
+        }
+    };
+    
     // Memos for filter options
     const allStates = useMemo(() => ['All', ...Object.keys(STATE_LOCALITIES).sort()], [STATE_LOCALITIES]);
     const allLocalities = useMemo(() => stateFilter === 'All' ? [] : ['All', ...STATE_LOCALITIES[stateFilter].sort()], [stateFilter, STATE_LOCALITIES]);
@@ -105,7 +172,7 @@ function DashboardView({ allCourses, allParticipants, allFacilitators, onOpenCou
         return ['All', ...months];
     }, []);
     const facilitatorRoles = ['All', 'directorCourse', 'isClinicalInstructor', 'teamLeaderCourse', 'followUpCourse'];
-
+    
     // Main filtered data based on all filters
     const filteredCourses = useMemo(() => {
         return allCourses.filter(course => {
@@ -180,7 +247,7 @@ function DashboardView({ allCourses, allParticipants, allFacilitators, onOpenCou
     }, [filteredCourses]);
 
     const allCoursesList = useMemo(() => {
-        return filteredCourses.map(c => ({
+        return fetchedCourses.map(c => ({
             id: c.id,
             course_type: c.course_type,
             state: c.state,
@@ -189,7 +256,7 @@ function DashboardView({ allCourses, allParticipants, allFacilitators, onOpenCou
             start_date: c.start_date,
             participants_count: c.participants_count
         }));
-    }, [filteredCourses]);
+    }, [fetchedCourses]);
 
     const allCoursesListHeaders = ["Course Type", "State", "Locality", "Course Director", "Start Date", "# Participants", "Actions"];
 
@@ -238,9 +305,10 @@ function DashboardView({ allCourses, allParticipants, allFacilitators, onOpenCou
     }, [filteredParticipants, filteredCourses]);
 
     const allParticipantsList = useMemo(() => {
-        return filteredParticipants.map(p => {
+        return fetchedParticipants.map(p => {
             return {
                 id: p.id,
+                courseId: p.courseId,
                 name: p.name,
                 course: p.course_type || 'N/A',
                 state: p.state,
@@ -249,7 +317,7 @@ function DashboardView({ allCourses, allParticipants, allFacilitators, onOpenCou
                 phone: p.phone,
             };
         });
-    }, [filteredParticipants]);
+    }, [fetchedParticipants]);
 
     const participantsListHeaders = ["Name", "Course", "State", "Locality", "Job Title", "Phone", "Actions"];
 
@@ -309,12 +377,7 @@ function DashboardView({ allCourses, allParticipants, allFacilitators, onOpenCou
     // =========================================================================
     // NEW: FACILITATOR DASHBOARD LOGIC
     // =========================================================================
-    const [facSearchQuery, setFacSearchQuery] = useState('');
-    const [facStateFilter, setFacStateFilter] = useState('All');
-    const [facLocalityFilter, setFacLocalityFilter] = useState('All');
-    const [facRoleFilter, setFacRoleFilter] = useState('All');
-    const [facCourseFilter, setFacCourseFilter] = useState('All');
-
+    
     // This is now a top-level hook, ensuring it's not called conditionally
     const filteredFacilitators = useMemo(() => {
         return allFacilitators.filter(f => {
@@ -423,9 +486,9 @@ function DashboardView({ allCourses, allParticipants, allFacilitators, onOpenCou
 
 
         const facilitatorTableHeaders = ["Name", "Phone", "Email", "IMNCI Director?", "Clinical Instructor?", "Team Leader?", "Follow-up?", "Courses Instructed", "Courses Directed", "Actions"];
-        const facilitatorTableData = filteredFacilitators.map(f => {
-            const instructed = allCourses.filter(c => Array.isArray(c.facilitators) && c.facilitators.includes(f.name)).length;
-            const directed = allCourses.filter(c => c.director === f.name).length;
+        const facilitatorTableData = fetchedFacilitators.map(f => {
+            const instructed = fetchedCourses.filter(c => Array.isArray(c.facilitators) && c.facilitators.includes(f.name)).length;
+            const directed = fetchedCourses.filter(c => c.director === f.name).length;
             const hasFollowUp = f.followUpCourse === 'Yes' || f.followUpCourse === 'yes' ? 'Yes' : 'No';
             const hasTeamLeader = f.teamLeaderCourse === 'Yes' || f.teamLeaderCourse === 'yes' ? 'Yes' : 'No';
             const isDirector = f.directorCourse === 'Yes' || f.directorCourse === 'yes' ? 'Yes' : 'No';
@@ -446,7 +509,7 @@ function DashboardView({ allCourses, allParticipants, allFacilitators, onOpenCou
             facilitatorTableData,
             localitiesInSelectedState,
         };
-    }, [filteredFacilitators, allCourses, facStateFilter, facLocalityFilter, facRoleFilter, STATE_LOCALITIES]);
+    }, [filteredFacilitators, fetchedCourses, fetchedFacilitators, facStateFilter, facLocalityFilter, facRoleFilter, STATE_LOCALITIES]);
 
     const FacilitatorMap = ({ data, mapCoordinates }) => {
         // Corrected geoUrl to point to the local file
@@ -592,183 +655,44 @@ function DashboardView({ allCourses, allParticipants, allFacilitators, onOpenCou
                 </div>
             </div>
 
-            {viewType === 'courses' && (
-                <div className="px-4 md:px-6">
-                    <h3 className="text-xl font-bold mb-4">Course KPIs</h3>
-                    <div className="grid md:grid-cols-4 gap-4 mb-8">
-                        <div className="p-4 bg-sky-100 rounded-lg text-center">
-                            <div className="text-sm font-semibold text-sky-700">Total Courses</div>
-                            <div className="text-3xl font-bold">{courseKPIs.totalCourses}</div>
-                        </div>
-                        <div className="p-4 bg-sky-100 rounded-lg text-center">
-                            <div className="text-sm font-semibold text-sky-700">Total IMNCI Courses</div>
-                            <div className="text-3xl font-bold">{courseKPIs.totalImnciCourses}</div>
-                        </div>
-                        <div className="p-4 bg-sky-100 rounded-lg text-center">
-                            <div className="text-sm font-semibold text-sky-700">Total ETAT Courses</div>
-                            <div className="text-3xl font-bold">{courseKPIs.totalEtatCourses}</div>
-                        </div>
-                        <div className="p-4 bg-sky-100 rounded-lg text-center">
-                            <div className="text-sm font-semibold text-sky-700">Total EENC Courses</div>
-                            <div className="text-3xl font-bold">{courseKPIs.totalEencCourses}</div>
-                        </div>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-6">
-                        <Card className="p-0">
-                            <h4 className="font-semibold text-xl pl-4 pt-4 mb-0">Number of Courses by State</h4>
-                            <div className="flex justify-end gap-2 p-4">
-                                <Button variant="secondary" onClick={() => exportToExcel(coursesByState.body.concat([coursesByState.totals]), coursesByState.headers, "Course_Dashboard_by_State")}>Download Excel</Button>
-                                <Button variant="secondary" onClick={() => exportTableToPdf("Courses by State", coursesByState.headers, coursesByState.body.concat([coursesByState.totals]), "Course_Dashboard_by_State", currentFilters)}>Save PDF</Button>
-                            </div>
-                            <Table headers={coursesByState.headers}>
-                                {coursesByState.body.map((row, index) => (
-                                    <tr key={index}>
-                                        {row.map((cell, cellIndex) => (
-                                            <td key={cellIndex} className="p-2 border">{cell}</td>
-                                        ))}
-                                    </tr>
-                                ))}
-                                <tr className="font-bold bg-gray-100">
-                                    {coursesByState.totals.map((cell, index) => (
-                                        <td key={index} className="p-2 border">{cell}</td>
-                                    ))}
-                                </tr>
-                            </Table>
-                        </Card>
-                        <Card className="p-0">
-                            <h4 className="font-semibold text-xl pl-4 pt-4 mb-0">Course Locations on Map</h4>
-                           <SudanMap data={mapData} />
-                        </Card>
-                    </div>
-
-                    <Card className="mt-6">
-                        <div className="flex justify-between items-center mb-4">
-                            <h4 className="font-semibold text-xl">All Courses List</h4>
-                            <div className="flex gap-2">
-                                <Button variant="secondary" onClick={() => exportToExcel(allCoursesList.map(row => [row.course_type, row.state, row.locality, row.director, row.start_date, row.participants_count]), allCoursesListHeaders.slice(0, 6), "All_Courses")}>Download Excel</Button>
-                                <Button variant="secondary" onClick={() => exportTableToPdf("All Courses List", allCoursesListHeaders.slice(0, 6), allCoursesList.map(row => [row.course_type, row.state, row.locality, row.director, row.start_date, row.participants_count]), "All_Courses", currentFilters)}>Save PDF</Button>
-                            </div>
-                        </div>
-                        <Table headers={allCoursesListHeaders}>
-                            {allCoursesList.map((course) => (
-                                <tr key={course.id}>
-                                    <td className="p-2 border">{course.course_type}</td>
-                                    <td className="p-2 border">{course.state}</td>
-                                    <td className="p-2 border">{course.locality}</td>
-                                    <td className="p-2 border">{course.director}</td>
-                                    <td className="p-2 border">{course.start_date}</td>
-                                    <td className="p-2 border">{course.participants_count}</td>
-                                    <td className="p-2 border">
-                                        <Button onClick={() => onOpenCourseReport(course.id)}>View Report</Button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </Table>
-                    </Card>
+            {loading ? (
+                <div className="text-center py-12">
+                    <Spinner />
+                    <p className="mt-4 text-gray-500">Loading summary data...</p>
                 </div>
-            )}
-
-            {viewType === 'participants' && (
-                <div className="px-4 md:px-6">
-                    <h3 className="text-xl font-bold mb-4">Participant KPIs</h3>
-                    <div className="grid md:grid-cols-4 gap-4 mb-8">
-                        <div className="p-4 bg-sky-100 rounded-lg text-center">
-                            <div className="text-sm font-semibold text-sky-700">Total Participants Trained</div>
-                            <div className="text-3xl font-bold">{participantKPIs.totalParticipants}</div>
-                        </div>
-                        {Object.entries(participantKPIs.participantsByCourse).map(([course, count]) => (
-                            <div key={course} className="p-4 bg-sky-100 rounded-lg text-center">
-                                <div className="text-sm font-semibold text-sky-700">Participants in {course}</div>
-                                <div className="text-3xl font-bold">{count}</div>
+            ) : (
+                allCourses.length > 0 ? (
+                    viewType === 'courses' ? (
+                        <div className="px-4 md:px-6">
+                            <h3 className="text-xl font-bold mb-4">Course KPIs</h3>
+                            <div className="grid md:grid-cols-4 gap-4 mb-8">
+                                <div className="p-4 bg-sky-100 rounded-lg text-center">
+                                    <div className="text-sm font-semibold text-sky-700">Total Courses</div>
+                                    <div className="text-3xl font-bold">{courseKPIs.totalCourses}</div>
+                                </div>
+                                <div className="p-4 bg-sky-100 rounded-lg text-center">
+                                    <div className="text-sm font-semibold text-sky-700">Total IMNCI Courses</div>
+                                    <div className="text-3xl font-bold">{courseKPIs.totalImnciCourses}</div>
+                                </div>
+                                <div className="p-4 bg-sky-100 rounded-lg text-center">
+                                    <div className="text-sm font-semibold text-sky-700">Total ETAT Courses</div>
+                                    <div className="text-3xl font-bold">{courseKPIs.totalEtatCourses}</div>
+                                </div>
+                                <div className="p-4 bg-sky-100 rounded-lg text-center">
+                                    <div className="text-sm font-semibold text-sky-700">Total EENC Courses</div>
+                                    <div className="text-3xl font-bold">{courseKPIs.totalEencCourses}</div>
+                                </div>
                             </div>
-                        ))}
-                    </div>
 
-                    <Card className="mb-6">
-                        <div className="flex justify-between items-center mb-4">
-                            <h4 className="font-semibold text-xl">Trained by Health Cadre (Disaggregated by Course Type)</h4>
-                            <div className="flex gap-2">
-                                <Button variant="secondary" onClick={() => exportToExcel(trainedByCadreAndCourse.body.concat([trainedByCadreAndCourse.totals]), trainedByCadreAndCourse.headers, "Participant_Dashboard_by_Cadre")}>Download Excel</Button>
-                                <Button variant="secondary" onClick={() => exportTableToPdf("Trained by Health Cadre", trainedByCadreAndCourse.headers, trainedByCadreAndCourse.body.concat([trainedByCadreAndCourse.totals]), "Participant_Dashboard_by_Cadre", currentFilters)}>Save PDF</Button>
-                            </div>
-                        </div>
-                        <Table headers={trainedByCadreAndCourse.headers}>
-                            {trainedByCadreAndCourse.body.map((row, index) => (
-                                <tr key={index}>
-                                    {row.map((cell, cellIndex) => (
-                                        <td key={cellIndex} className="p-2 border">{cell}</td>
-                                    ))}
-                                </tr>
-                            ))}
-                        </Table>
-                    </Card>
-
-                    <Card>
-                        <div className="flex justify-between items-center mb-4">
-                            <h4 className="font-semibold text-xl">All Participants List</h4>
-                            <div className="flex gap-2">
-                                <Button variant="secondary" onClick={() => exportToExcel(allParticipantsList.map(row => [row.name, row.course, row.state, row.locality, row.job_title, row.phone]), participantsListHeaders.slice(0, -1), "All_Participants")}>Download Excel</Button>
-                                <Button variant="secondary" onClick={() => exportTableToPdf("All Participants List", participantsListHeaders.slice(0, -1), allParticipantsList.map(row => [row.name, row.course, row.state, row.locality, row.job_title, row.phone]), "All_Participants", currentFilters)}>Save PDF</Button>
-                            </div>
-                        </div>
-                        <Table headers={participantsListHeaders}>
-                            {allParticipantsList.map((p, index) => (
-                                <tr key={index}>
-                                    <td className="p-2 border">{p.name}</td>
-                                    <td className="p-2 border">{p.course}</td>
-                                    <td className="p-2 border">{p.state}</td>
-                                    <td className="p-2 border">{p.locality}</td>
-                                    <td className="p-2 border">{p.job_title}</td>
-                                    <td className="p-2 border">{p.phone}</td>
-                                    <td className="p-2 border">
-                                        <Button onClick={() => onOpenParticipantReport(p.id, p.courseId)}>
-    View Report
-</Button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </Table>
-                    </Card>
-                </div>
-            )}
-
-            {/* ==================================================================== */}
-            {/* NEW: FACILITATOR DASHBOARD RENDER */}
-            {/* ==================================================================== */}
-            {viewType === 'facilitators' && (
-                <div className="px-4 md:px-6">
-                    <h3 className="text-xl font-bold mb-4">Facilitator KPIs</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 text-center mb-6">
-                        <div className="p-4 bg-gray-100 rounded-lg">
-                            <div className="text-sm text-gray-600">Total Facilitators</div>
-                            <div className="text-3xl font-bold text-sky-700">{facilitatorDashboardData.kpiData.totalFacilitators}</div>
-                        </div>
-                        <div className="p-4 bg-gray-100 rounded-lg">
-                            <div className="text-sm text-gray-600">Course Directors</div>
-                            <div className="text-3xl font-bold text-sky-700">{facilitatorDashboardData.kpiData.directors}</div>
-                        </div>
-                        <div className="p-4 bg-gray-100 rounded-lg">
-                            <div className="text-sm text-gray-600">Clinical Instructors</div>
-                            <div className="text-3xl font-bold text-sky-700">{facilitatorDashboardData.kpiData.clinicalInstructors}</div>
-                        </div>
-                        <div className="p-4 bg-gray-100 rounded-lg">
-                            <div className="text-sm text-gray-600">Team Leaders</div>
-                            <div className="text-3xl font-bold text-sky-700">{facilitatorDashboardData.kpiData.teamLeaders}</div>
-                        </div>
-                        <div className="p-4 bg-gray-100 rounded-lg">
-                            <div className="text-sm text-gray-600">Follow-up Supervisors</div>
-                            <div className="text-3xl font-bold text-sky-700">{facilitatorDashboardData.kpiData.followUpSupervisors}</div>
-                        </div>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-6 mb-6">
-                        <Card>
-                            <h3 className="text-xl font-bold mb-4">Facilitator Availability by State</h3>
-                            <Table headers={facilitatorDashboardData.facilitatorAvailabilityByState.tableHeaders}>
-                                {facilitatorDashboardData.facilitatorAvailabilityByState.tableBody.length === 0 ? <EmptyState message="No data to display." colSpan={facilitatorDashboardData.facilitatorAvailabilityByState.tableHeaders.length} /> :
-                                    <>
-                                        {facilitatorDashboardData.facilitatorAvailabilityByState.tableBody.map((row, index) => (
+                            <div className="grid md:grid-cols-2 gap-6">
+                                <Card className="p-0">
+                                    <h4 className="font-semibold text-xl pl-4 pt-4 mb-0">Number of Courses by State</h4>
+                                    <div className="flex justify-end gap-2 p-4">
+                                        <Button variant="secondary" onClick={() => exportToExcel(coursesByState.body.concat([coursesByState.totals]), coursesByState.headers, "Course_Dashboard_by_State")}>Download Excel</Button>
+                                        <Button variant="secondary" onClick={() => exportTableToPdf("Courses by State", coursesByState.headers, coursesByState.body.concat([coursesByState.totals]), "Course_Dashboard_by_State", currentFilters)}>Save PDF</Button>
+                                    </div>
+                                    <Table headers={coursesByState.headers}>
+                                        {coursesByState.body.map((row, index) => (
                                             <tr key={index}>
                                                 {row.map((cell, cellIndex) => (
                                                     <td key={cellIndex} className="p-2 border">{cell}</td>
@@ -776,41 +700,216 @@ function DashboardView({ allCourses, allParticipants, allFacilitators, onOpenCou
                                             </tr>
                                         ))}
                                         <tr className="font-bold bg-gray-100">
-                                            {facilitatorDashboardData.facilitatorAvailabilityByState.tableTotals.map((cell, index) => (
+                                            {coursesByState.totals.map((cell, index) => (
                                                 <td key={index} className="p-2 border">{cell}</td>
                                             ))}
                                         </tr>
-                                    </>
-                                }
-                            </Table>
-                        </Card>
-                        <Card>
-                            <h3 className="text-xl font-bold mb-4">Facilitator Geographical Distribution</h3>
-                            {/* Corrected: Pass the mapCoordinates prop to the FacilitatorMap component */}
-                            <FacilitatorMap data={facilitatorMapData} mapCoordinates={mapCoordinates} />
-                        </Card>
-                    </div>
+                                    </Table>
+                                </Card>
+                                <Card className="p-0">
+                                    <h4 className="font-semibold text-xl pl-4 pt-4 mb-0">Course Locations on Map</h4>
+                                   <SudanMap data={mapData} />
+                                </Card>
+                            </div>
 
-                    <Card className="mt-6">
-                        <div className="flex justify-between items-center mb-4">
-                            <h4 className="font-semibold text-xl">Facilitator Information Table</h4>
-                        </div>
-                        <Table headers={facilitatorDashboardData.facilitatorTableHeaders}>
-                            {facilitatorDashboardData.facilitatorTableData.length === 0 ? <EmptyState message="No data to display." colSpan={facilitatorDashboardData.facilitatorTableHeaders.length} /> :
-                                facilitatorDashboardData.facilitatorTableData.map(f => (
-                                    <tr key={f.id} className="hover:bg-gray-50 text-center">
-                                        {f.row.map((cell, i) => (
-                                            <td key={i} className="p-2 border text-left">{cell}</td>
+                            {permissions.canViewDetailedData && (
+                                <div className="mt-6 flex justify-end">
+                                    <Button onClick={fetchDetailedData} disabled={fetchingDetailed}>
+                                        {fetchingDetailed ? <Spinner /> : "Fetch Detailed Data"}
+                                    </Button>
+                                </div>
+                            )}
+
+                            {fetchedCourses.length > 0 && (
+                                <Card className="mt-6">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h4 className="font-semibold text-xl">All Courses List</h4>
+                                        <div className="flex gap-2">
+                                            <Button variant="secondary" onClick={() => exportToExcel(allCoursesList.map(row => [row.course_type, row.state, row.locality, row.director, row.start_date, row.participants_count]), allCoursesListHeaders.slice(0, 6), "All_Courses")}>Download Excel</Button>
+                                            <Button variant="secondary" onClick={() => exportTableToPdf("All Courses List", allCoursesListHeaders.slice(0, 6), allCoursesList.map(row => [row.course_type, row.state, row.locality, row.director, row.start_date, row.participants_count]), "All_Courses", currentFilters)}>Save PDF</Button>
+                                        </div>
+                                    </div>
+                                    <Table headers={allCoursesListHeaders}>
+                                        {allCoursesList.map((course) => (
+                                            <tr key={course.id}>
+                                                <td className="p-2 border">{course.course_type}</td>
+                                                <td className="p-2 border">{course.state}</td>
+                                                <td className="p-2 border">{course.locality}</td>
+                                                <td className="p-2 border">{course.director}</td>
+                                                <td className="p-2 border">{course.start_date}</td>
+                                                <td className="p-2 border">{course.participants_count}</td>
+                                                <td className="p-2 border">
+                                                    <Button onClick={() => onOpenCourseReport(course.id)}>View Report</Button>
+                                                </td>
+                                            </tr>
                                         ))}
-                                        <td className="p-2 border text-left">
-                                            <Button onClick={() => onOpenFacilitatorReport(f.id)}>View Report</Button>
-                                        </td>
-                                    </tr>
-                                ))
-                            }
-                        </Table>
-                    </Card>
-                </div>
+                                    </Table>
+                                </Card>
+                            )}
+                        </div>
+                    ) : viewType === 'participants' ? (
+                        <div className="px-4 md:px-6">
+                            <h3 className="text-xl font-bold mb-4">Participant KPIs</h3>
+                            <div className="grid md:grid-cols-4 gap-4 mb-8">
+                                <div className="p-4 bg-sky-100 rounded-lg text-center">
+                                    <div className="text-sm font-semibold text-sky-700">Total Participants Trained</div>
+                                    <div className="text-3xl font-bold">{participantKPIs.totalParticipants}</div>
+                                </div>
+                                {Object.entries(participantKPIs.participantsByCourse).map(([course, count]) => (
+                                    <div key={course} className="p-4 bg-sky-100 rounded-lg text-center">
+                                        <div className="text-sm font-semibold text-sky-700">Participants in {course}</div>
+                                        <div className="text-3xl font-bold">{count}</div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <Card className="mb-6">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h4 className="font-semibold text-xl">Trained by Health Cadre (Disaggregated by Course Type)</h4>
+                                    <div className="flex gap-2">
+                                        <Button variant="secondary" onClick={() => exportToExcel(trainedByCadreAndCourse.body.concat([trainedByCadreAndCourse.totals]), trainedByCadreAndCourse.headers, "Participant_Dashboard_by_Cadre")}>Download Excel</Button>
+                                        <Button variant="secondary" onClick={() => exportTableToPdf("Trained by Health Cadre", trainedByCadreAndCourse.headers, trainedByCadreAndCourse.body.concat([trainedByCadreAndCourse.totals]), "Participant_Dashboard_by_Cadre", currentFilters)}>Save PDF</Button>
+                                    </div>
+                                </div>
+                                <Table headers={trainedByCadreAndCourse.headers}>
+                                    {trainedByCadreAndCourse.body.map((row, index) => (
+                                        <tr key={index}>
+                                            {row.map((cell, cellIndex) => (
+                                                <td key={cellIndex} className="p-2 border">{cell}</td>
+                                            ))}
+                                        </tr>
+                                    ))}
+                                </Table>
+                            </Card>
+
+                            {permissions.canViewDetailedData && (
+                                <div className="mt-6 flex justify-end">
+                                    <Button onClick={fetchDetailedData} disabled={fetchingDetailed}>
+                                        {fetchingDetailed ? <Spinner /> : "Fetch Detailed Data"}
+                                    </Button>
+                                </div>
+                            )}
+
+                            {fetchedParticipants.length > 0 && (
+                                <Card>
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h4 className="font-semibold text-xl">All Participants List</h4>
+                                        <div className="flex gap-2">
+                                            <Button variant="secondary" onClick={() => exportToExcel(allParticipantsList.map(row => [row.name, row.course, row.state, row.locality, row.job_title, row.phone]), participantsListHeaders.slice(0, -1), "All_Participants")}>Download Excel</Button>
+                                            <Button variant="secondary" onClick={() => exportTableToPdf("All Participants List", participantsListHeaders.slice(0, -1), allParticipantsList.map(row => [row.name, row.course, row.state, row.locality, row.job_title, row.phone]), "All_Participants", currentFilters)}>Save PDF</Button>
+                                        </div>
+                                    </div>
+                                    <Table headers={participantsListHeaders}>
+                                        {allParticipantsList.map((p, index) => (
+                                            <tr key={index}>
+                                                <td className="p-2 border">{p.name}</td>
+                                                <td className="p-2 border">{p.course}</td>
+                                                <td className="p-2 border">{p.state}</td>
+                                                <td className="p-2 border">{p.locality}</td>
+                                                <td className="p-2 border">{p.job_title}</td>
+                                                <td className="p-2 border">{p.phone}</td>
+                                                <td className="p-2 border">
+                                                    <Button onClick={() => onOpenParticipantReport(p.id, p.courseId)}>
+                                                        View Report
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </Table>
+                                </Card>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="px-4 md:px-6">
+                            <h3 className="text-xl font-bold mb-4">Facilitator KPIs</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 text-center mb-6">
+                                <div className="p-4 bg-gray-100 rounded-lg">
+                                    <div className="text-sm text-gray-600">Total Facilitators</div>
+                                    <div className="text-3xl font-bold text-sky-700">{facilitatorDashboardData.kpiData.totalFacilitators}</div>
+                                </div>
+                                <div className="p-4 bg-gray-100 rounded-lg">
+                                    <div className="text-sm text-gray-600">Course Directors</div>
+                                    <div className="text-3xl font-bold text-sky-700">{facilitatorDashboardData.kpiData.directors}</div>
+                                </div>
+                                <div className="p-4 bg-gray-100 rounded-lg">
+                                    <div className="text-sm text-gray-600">Clinical Instructors</div>
+                                    <div className="text-3xl font-bold text-sky-700">{facilitatorDashboardData.kpiData.clinicalInstructors}</div>
+                                </div>
+                                <div className="p-4 bg-gray-100 rounded-lg">
+                                    <div className="text-sm text-gray-600">Team Leaders</div>
+                                    <div className="text-3xl font-bold text-sky-700">{facilitatorDashboardData.kpiData.teamLeaders}</div>
+                                </div>
+                                <div className="p-4 bg-gray-100 rounded-lg">
+                                    <div className="text-sm text-gray-600">Follow-up Supervisors</div>
+                                    <div className="text-3xl font-bold text-sky-700">{facilitatorDashboardData.kpiData.followUpSupervisors}</div>
+                                </div>
+                            </div>
+
+                            <div className="grid md:grid-cols-2 gap-6 mb-6">
+                                <Card>
+                                    <h3 className="text-xl font-bold mb-4">Facilitator Availability by State</h3>
+                                    <Table headers={facilitatorDashboardData.facilitatorAvailabilityByState.tableHeaders}>
+                                        {facilitatorDashboardData.facilitatorAvailabilityByState.tableBody.length === 0 ? <EmptyState message="No data to display." colSpan={facilitatorDashboardData.facilitatorAvailabilityByState.tableHeaders.length} /> :
+                                            <>
+                                                {facilitatorDashboardData.facilitatorAvailabilityByState.tableBody.map((row, index) => (
+                                                    <tr key={index}>
+                                                        {row.map((cell, cellIndex) => (
+                                                            <td key={cellIndex} className="p-2 border">{cell}</td>
+                                                        ))}
+                                                    </tr>
+                                                ))}
+                                                <tr className="font-bold bg-gray-100">
+                                                    {facilitatorDashboardData.facilitatorAvailabilityByState.tableTotals.map((cell, index) => (
+                                                        <td key={index} className="p-2 border">{cell}</td>
+                                                    ))}
+                                                </tr>
+                                            </>
+                                        }
+                                    </Table>
+                                </Card>
+                                <Card>
+                                    <h3 className="text-xl font-bold mb-4">Facilitator Geographical Distribution</h3>
+                                    {/* Corrected: Pass the mapCoordinates prop to the FacilitatorMap component */}
+                                    <FacilitatorMap data={facilitatorMapData} mapCoordinates={mapCoordinates} />
+                                </Card>
+                            </div>
+
+                            {permissions.canViewDetailedData && (
+                                <div className="mt-6 flex justify-end">
+                                    <Button onClick={fetchDetailedData} disabled={fetchingDetailed}>
+                                        {fetchingDetailed ? <Spinner /> : "Fetch Detailed Data"}
+                                    </Button>
+                                </div>
+                            )}
+
+                            {fetchedFacilitators.length > 0 && (
+                                <Card className="mt-6">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h4 className="font-semibold text-xl">Facilitator Information Table</h4>
+                                    </div>
+                                    <Table headers={facilitatorDashboardData.facilitatorTableHeaders}>
+                                        {facilitatorDashboardData.facilitatorTableData.length === 0 ? <EmptyState message="No data to display." colSpan={facilitatorDashboardData.facilitatorTableHeaders.length} /> :
+                                            facilitatorDashboardData.facilitatorTableData.map(f => (
+                                                <tr key={f.id} className="hover:bg-gray-50 text-center">
+                                                    {f.row.map((cell, i) => (
+                                                        <td key={i} className="p-2 border text-left">{cell}</td>
+                                                    ))}
+                                                    <td className="p-2 border text-left">
+                                                        <Button onClick={() => onOpenFacilitatorReport(f.id)}>View Report</Button>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        }
+                                    </Table>
+                                </Card>
+                            )}
+                        </div>
+                    )
+                ) : (
+                    <div className="text-center py-12 text-gray-500">
+                        {permissions.canViewDetailedData ? "Click 'Fetch Detailed Data' to load and view the dashboard." : "You do not have permission to view detailed data."}
+                    </div>
+                )
             )}
         </Card>
     );

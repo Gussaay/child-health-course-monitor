@@ -1,39 +1,241 @@
+// Facilitator.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Bar, Pie } from 'react-chartjs-2';
-import { Button, Card, EmptyState, Footer, FormGroup, Input, PageHeader, PdfIcon, Select, Spinner, Table, Textarea } from './CommonComponents';
-
-// Import necessary data functions and constants
+import * as XLSX from 'xlsx';
+import { Button, Card, EmptyState, Footer, FormGroup, Input, PageHeader, PdfIcon, Select, Spinner, Table, Textarea, Modal } from './CommonComponents';
 import {
     listFacilitators,
     listAllCourses,
     upsertFacilitator,
     deleteFacilitator,
+    importFacilitators
 } from '../data';
-
-// Import all constants from App.jsx
 import { COURSE_TYPES_FACILITATOR, STATE_LOCALITIES } from './constants.js';
 
-// Helper function from App.jsx
 const calcPct = (c, s) => (!s ? NaN : (c * 100) / s);
 const fmtPct = v => (!isFinite(v) ? "—" : Math.round(v).toFixed(0) + " %");
 
 
-// =============================================================================
-// --- Facilitator Management Components ---
-// =============================================================================
+const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators, allCourses }) => {
+    const [excelData, setExcelData] = useState([]);
+    const [headers, setHeaders] = useState([]);
+    const [fieldMappings, setFieldMappings] = useState({});
+    const [currentPage, setCurrentPage] = useState(0);
+    const [error, setError] = useState('');
+    const fileInputRef = useRef(null);
 
-export function FacilitatorsView({ facilitators, onAdd, onEdit, onDelete, onOpenReport, onOpenComparison }) {
+    const allFields = [
+        { key: 'id', label: 'ID', required: false, hidden: true },
+        { key: 'name', label: 'Name' },
+        { key: 'phone', label: 'Phone Number' },
+        { key: 'email', label: 'Email' },
+        { key: 'currentState', label: 'Current State' },
+        { key: 'currentLocality', label: 'Current Locality' },
+        { key: 'directorCourse', label: 'IMNCI Course Director' },
+        { key: 'directorCourseDate', label: 'Director Course Date' },
+        { key: 'followUpCourse', label: 'IMNCI Follow-up Course' },
+        { key: 'followUpCourseDate', label: 'Follow-up Course Date' },
+        { key: 'teamLeaderCourse', label: 'IMNCI Team Leader Course' },
+        { key: 'teamLeaderCourseDate', label: 'Team Leader Course Date' },
+        { key: 'isClinicalInstructor', label: 'Clinical Instructor' },
+        { key: 'comments', label: 'Comments' },
+    ];
+    
+    const handleDownloadTemplate = () => {
+        const templateData = facilitators.map(f => {
+            const row = {};
+            allFields.forEach(field => {
+                row[field.label] = f[field.key] || '';
+            });
+            row['Courses'] = (Array.isArray(f.courses) ? f.courses : []).join(',');
+            row['IMNCI ToT Date'] = f.totDates?.IMNCI || '';
+            row['ETAT ToT Date'] = f.totDates?.ETAT || '';
+            row['EENC ToT Date'] = f.totDates?.EENC || '';
+            row['IPC ToT Date'] = f.totDates?.IPC || '';
+            return row;
+        });
+        const dynamicHeaders = [...allFields.map(f => f.label), 'Courses', 'IMNCI ToT Date', 'ETAT ToT Date', 'EENC ToT Date', 'IPC ToT Date'];
+        const worksheet = XLSX.utils.json_to_sheet(templateData, { header: dynamicHeaders });
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Facilitators");
+        XLSX.writeFile(workbook, `Facilitator_Template.xlsx`);
+    };
+
+    const handleFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                
+                if (jsonData.length < 2) {
+                    setError('Excel file must contain at least a header row and one data row');
+                    return;
+                }
+                setHeaders(jsonData[0]);
+                setExcelData(jsonData.slice(1));
+                setCurrentPage(1);
+                setError('');
+            } catch (err) {
+                setError('Error reading Excel file: ' + err.message);
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    };
+    
+    const handleMappingChange = (appField, excelHeader) => {
+        setFieldMappings(prev => ({
+            ...prev,
+            [appField]: excelHeader
+        }));
+    };
+
+    const handleImport = () => {
+        if (!fieldMappings['name']) {
+            setError('The "Name" field must be mapped to an Excel column.');
+            return;
+        }
+
+        const importedFacilitators = excelData.map(row => {
+            const facilitator = {};
+            Object.entries(fieldMappings).forEach(([appField, excelHeader]) => {
+                const headerIndex = headers.indexOf(excelHeader);
+                if (headerIndex !== -1 && row[headerIndex] !== undefined) {
+                    facilitator[appField] = row[headerIndex];
+                }
+            });
+            if (facilitator.courses) {
+                facilitator.courses = facilitator.courses.split(',').map(c => c.trim());
+            }
+            if (facilitator['IMNCI ToT Date']) {
+                facilitator.totDates = { ...facilitator.totDates, IMNCI: facilitator['IMNCI ToT Date'] };
+                delete facilitator['IMNCI ToT Date'];
+            }
+            return facilitator;
+        }).filter(f => f.name);
+
+        if (importedFacilitators.length === 0) {
+            setError('No valid facilitators found with a name after mapping.');
+            return;
+        }
+        onImport(importedFacilitators);
+        onClose();
+    };
+
+    const renderPreview = () => {
+        if (excelData.length === 0) return null;
+        return (
+            <div className="mt-4 overflow-auto max-h-60">
+                <h4 className="font-medium mb-2">Data Preview (first 5 rows)</h4>
+                <Table headers={headers}>
+                    {excelData.slice(0, 5).map((row, rowIdx) => (
+                        <tr key={rowIdx}>
+                            {row.map((cell, cellIdx) => (
+                                <td key={cellIdx} className="border p-2 text-xs">{cell}</td>
+                            ))}
+                        </tr>
+                    ))}
+                </Table>
+            </div>
+        );
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Import Facilitators from Excel">
+            <div className="p-4">
+                {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
+                
+                {currentPage === 0 && (
+                    <div>
+                        <p className="mb-4">
+                            You can download an Excel template with existing data to update records, or upload your own file.
+                        </p>
+                        <Button variant="secondary" onClick={handleDownloadTemplate} className="mb-4">
+                            Download Template
+                        </Button>
+                        <p className="mb-2">
+                            Or, upload your own Excel file (first row must be headers).
+                        </p>
+                        <input
+                            type="file"
+                            accept=".xlsx,.xls"
+                            onChange={handleFileUpload}
+                            ref={fileInputRef}
+                            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                        />
+                    </div>
+                )}
+                
+                {currentPage === 1 && (
+                    <div>
+                        <h4 className="font-medium mb-4">Map Excel columns to application fields</h4>
+                        <p className="text-sm text-gray-600 mb-4">
+                            Map columns to fields. To update, ensure the 'ID' field is mapped.
+                        </p>
+                        <div className="grid gap-3 mb-4">
+                            {allFields.map(field => (
+                                <div key={field.key} className="flex items-center" style={{ display: field.hidden ? 'none' : 'flex' }}>
+                                    <label className="w-40 font-medium">{field.label}{field.required && '*'}</label>
+                                    <Select
+                                        value={fieldMappings[field.key] || ''}
+                                        onChange={(e) => handleMappingChange(field.key, e.target.value)}
+                                        className="flex-1"
+                                    >
+                                        <option value="">-- Select Excel Column --</option>
+                                        {headers.map(header => (
+                                            <option key={header} value={header}>{header}</option>
+                                        ))}
+                                    </Select>
+                                </div>
+                            ))}
+                        </div>
+                        {renderPreview()}
+                        <div className="flex justify-end mt-6 space-x-2">
+                            <Button variant="secondary" onClick={() => setCurrentPage(0)}>Back</Button>
+                            <Button onClick={handleImport}>Import Facilitators</Button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </Modal>
+    );
+};
+
+export function FacilitatorsView({ facilitators, onAdd, onEdit, onDelete, onOpenReport, onOpenComparison, onImport, userStates }) {
+    const [importModalOpen, setImportModalOpen] = useState(false);
+
+    const filteredFacilitators = useMemo(() => {
+        if (!userStates || userStates.length === 0) {
+            return facilitators;
+        }
+        return facilitators.filter(f => f.currentState && userStates.includes(f.currentState));
+    }, [facilitators, userStates]);
+
     return (
         <Card>
             <PageHeader title="Manage Facilitators" actions={<Button onClick={onOpenComparison}>Compare Facilitators</Button>} />
-            <div className="mb-4">
+            <div className="mb-4 flex gap-2">
                 <Button onClick={onAdd}>Add New Facilitator</Button>
+                <Button variant="secondary" onClick={() => setImportModalOpen(true)}>Import from Excel</Button>
             </div>
-            <Table headers={["Name", "Phone", "Courses", "Actions"]}>
-                {(Array.isArray(facilitators) && facilitators.length === 0) ? <EmptyState message="No facilitators have been added yet." /> :
-                    (Array.isArray(facilitators) ? facilitators : []).map(f => (
+            
+            <ExcelImportModal
+                isOpen={importModalOpen}
+                onClose={() => setImportModalOpen(false)}
+                onImport={onImport}
+                facilitators={facilitators}
+            />
+
+            {Array.isArray(filteredFacilitators) && filteredFacilitators.length > 0 ? (
+                <Table headers={["Name", "Phone", "Courses", "Actions"]}>
+                    {filteredFacilitators.map(f => (
                         <tr key={f.id} className="hover:bg-gray-50">
                             <td className="p-4 border">{f.name}</td>
                             <td className="p-4 border">{f.phone}</td>
@@ -46,9 +248,11 @@ export function FacilitatorsView({ facilitators, onAdd, onEdit, onDelete, onOpen
                                 </div>
                             </td>
                         </tr>
-                    ))
-                }
-            </Table>
+                    ))}
+                </Table>
+            ) : (
+                <EmptyState key="empty-facilitators" message="No facilitators found for your assigned state(s)." />
+            )}
         </Card>
     );
 }
@@ -255,7 +459,6 @@ export function FacilitatorReportView({ facilitator, allCourses, onBack }) {
         const doc = new jsPDF();
         const fileName = `Facilitator_Report_${facilitator.name.replace(/ /g, '_')}.pdf`;
 
-        // Title
         doc.setFontSize(22);
         doc.text("Facilitator Report", 105, 20, { align: 'center' });
         doc.setFontSize(18);
@@ -263,7 +466,6 @@ export function FacilitatorReportView({ facilitator, allCourses, onBack }) {
 
         let finalY = 40;
 
-        // Information Table
         doc.setFontSize(14);
         doc.text("Facilitator Information", 14, finalY);
         const infoBody = [
@@ -288,7 +490,6 @@ export function FacilitatorReportView({ facilitator, allCourses, onBack }) {
         });
         finalY = doc.lastAutoTable.finalY;
 
-        // Charts
         doc.addPage();
         finalY = 20;
 
@@ -314,7 +515,6 @@ export function FacilitatorReportView({ facilitator, allCourses, onBack }) {
             finalY += 100;
         }
 
-        // Course Tables
         if (directedCourses.length > 0) {
             if (finalY + 30 > doc.internal.pageSize.height) { doc.addPage(); finalY = 20; }
             autoTable(doc, {
@@ -339,7 +539,6 @@ export function FacilitatorReportView({ facilitator, allCourses, onBack }) {
         doc.save(fileName);
     };
     
-    // Check if facilitator exists before rendering content
     if (!facilitator) {
         return <Card><EmptyState message="Facilitator not found." /></Card>;
     }
@@ -372,7 +571,7 @@ export function FacilitatorReportView({ facilitator, allCourses, onBack }) {
                 <h3 className="text-xl font-bold mb-4">Course Involvement Summary</h3>
                 <Table headers={["Course Type", "Instructed", "Directed", "Total Days"]}>
                     {courseSummary.map(([type, data]) => (
-                        <tr key={type}>
+                        <tr key={type} className="hover:bg-gray-50">
                             <td className="p-2 border">{type}</td>
                             <td className="p-2 border text-center">{data.instructed}</td>
                             <td className="p-2 border text-center">{data.directed}</td>
@@ -392,8 +591,8 @@ export function FacilitatorReportView({ facilitator, allCourses, onBack }) {
             )}
 
             <div className="grid md:grid-cols-2 gap-6">
-                <Card><h3 className="text-xl font-bold mb-4">Directed Courses</h3><Table headers={["Course", "Date", "Location"]}>{directedCourses.length === 0 ? <EmptyState message="No courses directed." /> : directedCourses.map(c => (<tr key={c.id}><td className="p-2 border">{c.course_type}</td><td className="p-2 border">{c.start_date}</td><td className="p-2 border">{c.state}</td></tr>))}</Table></Card>
-                <Card><h3 className="text-xl font-bold mb-4">Facilitated Courses</h3><Table headers={["Course", "Date", "Location"]}>{facilitatedCourses.length === 0 ? <EmptyState message="No courses facilitated." /> : facilitatedCourses.map(c => (<tr key={c.id}><td className="p-2 border">{c.course_type}</td><td className="p-2 border">{c.start_date}</td><td className="p-2 border">{c.state}</td></tr>))}</Table></Card>
+                <Card><h3 className="text-xl font-bold mb-4">Directed Courses</h3><Table headers={["Course", "Date", "Location"]}>{directedCourses.length === 0 ? <EmptyState message="No courses directed." /> : directedCourses.map(c => (<tr key={c.id} className="hover:bg-gray-50"><td className="p-2 border">{c.course_type}</td><td className="p-2 border">{c.start_date}</td><td className="p-2 border">{c.state}</td></tr>))}</Table></Card>
+                <Card><h3 className="text-xl font-xl mb-4">Facilitated Courses</h3><Table headers={["Course", "Date", "Location"]}>{facilitatedCourses.length === 0 ? <EmptyState message="No courses facilitated." /> : facilitatedCourses.map(c => (<tr key={c.id} className="hover:bg-gray-50"><td className="p-2 border">{c.course_type}</td><td className="p-2 border">{c.start_date}</td><td className="p-2 border">{c.state}</td></tr>))}</Table></Card>
             </div>
         </div>
     );

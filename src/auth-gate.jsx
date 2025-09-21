@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase';
-import { SignInBox, UserBadge } from './auth-ui.jsx';
+import { SignInBox } from './auth-ui.jsx';
 
 export default function AuthGate({ children }) {
   const [user, setUser] = useState(null);
@@ -16,7 +16,7 @@ export default function AuthGate({ children }) {
 
     // Cleanup subscription on unmount
     return () => unsubscribe();
-  }, []); // Empty dependency array ensures this runs only once on mount
+  }, []);
 
   if (!ready) {
     return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-600">Loading...</p></div>;
@@ -26,11 +26,9 @@ export default function AuthGate({ children }) {
     return <SignInBox />;
   }
 
+  // If the user is logged in, simply render the child components (your main application)
   return (
     <div>
-      <header className="p-4 flex justify-end">
-        <UserBadge user={user} />
-      </header>
       <main>
         {children}
       </main>

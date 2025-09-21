@@ -12,7 +12,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyAbIZPGWOb7s0DyJFaXcV_0hQsMwTZZRKU",
   authDomain: "imnci-courses-monitor.firebaseapp.com",
   projectId: "imnci-courses-monitor",
-  storageBucket: "imnci-courses-monitor.appspot.com",
+  storageBucket: "gs://imnci-courses-monitor.firebasestorage.app",
   messagingSenderId: "928082473485",
   appId: "1:928082473485:web:cbbde89d57c657f52a9b44",
   measurementId: "G-MX7PF4VTLC"
