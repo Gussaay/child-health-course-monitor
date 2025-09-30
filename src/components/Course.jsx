@@ -6,7 +6,7 @@ import { Bar, Line } from 'react-chartjs-2';
 import { Button, Card, EmptyState, FormGroup, Input, PageHeader, PdfIcon, Select, Spinner, Table, Textarea } from './CommonComponents';
 import { listAllDataForCourse, listParticipants, listCoordinators, upsertCoordinator, deleteCoordinator, listFunders, upsertFunder, deleteFunder, listFinalReport, upsertFinalReport, deleteFinalReport } from '../data.js';
 // Updated imports for participant components
-import { ParticipantsView, ParticipantForm } from './Participants'; 
+import { ParticipantsView, ParticipantForm } from './Participants';
 import { ParticipantReportView } from './ParticipantReport';
 import { ObservationView } from './MonitoringView';
 import { ReportsView } from './ReportsView';
@@ -125,25 +125,32 @@ const generateFullCourseReportPdf = async (course, overallChartRef, dailyChartRe
 };
 
 export function CoursesTable({ courses, onOpen, onEdit, onDelete, onOpenReport, canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates, onAddFinalReport }) {
+    // ==================================================================
+    // == THIS IS THE UPDATED isCourseActive FUNCTION
+    // ==================================================================
     const isCourseActive = (course) => {
-        if (!course.start_date) return false;
-
-        const today = new Date();
-        const startDate = new Date(course.start_date);
-        const diffTime = Math.abs(today - startDate);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        if (course.course_type === 'IMNCI') {
-            return diffDays <= 7;
-        } else if (course.course_type === 'ETAT') {
-            return diffDays <= 4;
-        } else if (course.course_type === 'EENC') {
-            return diffDays <= 2;
-        } else if (course.course_type === 'IPC') {
-            return diffDays <= 3;
+        // A course needs a valid start date and a positive duration to be active.
+        if (!course.start_date || !course.course_duration || course.course_duration <= 0) {
+            return false;
         }
-        return false;
+
+        // Normalize 'today' to the beginning of the day for an accurate date comparison.
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Normalize 'startDate' to the beginning of its day.
+        const startDate = new Date(course.start_date);
+        startDate.setHours(0, 0, 0, 0);
+
+        // Calculate the end date by adding the specified duration to the start date.
+        const endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + course.course_duration);
+
+        // The course is active if today's date is on or after the start date
+        // AND before the calculated end date.
+        return today >= startDate && today < endDate;
     };
+
 
     const filteredCourses = useMemo(() => {
         if (!userStates || userStates.length === 0) {
@@ -218,16 +225,16 @@ export function CoursesTable({ courses, onOpen, onEdit, onDelete, onOpenReport, 
     );
 }
 
-export function CourseManagementView({ 
-    courses, facilitators, onAdd, onOpen, onEdit, onDelete, onOpenReport, 
-    canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates, 
-    activeCoursesTab, setActiveCoursesTab, selectedCourse, participants, 
-    onAddParticipant, onEditParticipant, onDeleteParticipant, 
-    onOpenParticipantReport, onImportParticipants, onAddFacilitator, onEditFacilitator, 
-    onDeleteFacilitator, onOpenFacilitatorReport, onOpenFacilitatorComparison, 
+export function CourseManagementView({
+    courses, facilitators, onAdd, onOpen, onEdit, onDelete, onOpenReport,
+    canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates,
+    activeCoursesTab, setActiveCoursesTab, selectedCourse, participants,
+    onAddParticipant, onEditParticipant, onDeleteParticipant,
+    onOpenParticipantReport, onImportParticipants, onAddFacilitator, onEditFacilitator,
+    onDeleteFacilitator, onOpenFacilitatorReport, onOpenFacilitatorComparison,
     onImportFacilitators, onAddFinalReport, onEditFinalReport,
-    selectedParticipantId, 
-    onSetSelectedParticipantId 
+    selectedParticipantId,
+    onSetSelectedParticipantId
 }) {
     const currentParticipant = participants.find(p => p.id === selectedParticipantId);
 
@@ -244,9 +251,9 @@ export function CourseManagementView({
                         <Button
                             variant="tab"
                             isActive={activeCoursesTab === 'participants'}
-                            onClick={() => { 
-                                setActiveCoursesTab('participants'); 
-                                onSetSelectedParticipantId(null); 
+                            onClick={() => {
+                                setActiveCoursesTab('participants');
+                                onSetSelectedParticipantId(null);
                             }}
                         >
                             Participants
@@ -309,9 +316,9 @@ export function CourseManagementView({
                         course={selectedCourse}
                         participants={participants}
                         onAdd={onAddParticipant}
-                        onOpen={(id) => { 
-                            onSetSelectedParticipantId(id); 
-                            setActiveCoursesTab('monitoring'); 
+                        onOpen={(id) => {
+                            onSetSelectedParticipantId(id);
+                            setActiveCoursesTab('monitoring');
                         }}
                         onEdit={onEditParticipant}
                         onDelete={onDeleteParticipant}
@@ -408,6 +415,90 @@ const NewFunderForm = ({ initialOrgName, onCancel, onSave }) => {
     );
 };
 
+const SearchableSelect = ({ label, options, value, onChange, onOpenNewForm, placeholder }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    // Internal state for the input's value. Initialize with the parent's value.
+    const [inputValue, setInputValue] = useState(value || '');
+    const ref = useRef(null);
+
+    // This effect syncs the internal state if the external `value` prop changes.
+    useEffect(() => {
+        setInputValue(value || '');
+    }, [value]);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (ref.current && !ref.current.contains(event.target)) {
+                setIsOpen(false);
+                // Optional: Reset input to the actual selected value when clicking away
+                setInputValue(value || '');
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [ref, value]);
+
+    const filteredOptions = useMemo(() => {
+        if (!inputValue) return options;
+        return options.filter(opt => opt.name.toLowerCase().includes(inputValue.toLowerCase()));
+    }, [options, inputValue]);
+
+    const isNewEntry = inputValue && !options.some(opt => opt.name.toLowerCase() === inputValue.toLowerCase());
+
+    const handleSelect = (option) => {
+        onChange(option.name);      // Notify parent of the change
+        setInputValue(option.name); // Update internal display value
+        setIsOpen(false);
+    };
+
+    const handleAddNew = () => {
+        onOpenNewForm(inputValue); // Use the current input text to create a new entry
+        setIsOpen(false);
+    };
+
+    return (
+        <div className="relative" ref={ref}>
+            <Input
+                type="text"
+                value={inputValue} // Use the internal state
+                onChange={(e) => {
+                    setInputValue(e.target.value); // Update the internal state on type
+                    setIsOpen(true);
+                    if (e.target.value === '') {
+                        onChange(''); // Also update parent state if the field is cleared
+                    }
+                }}
+                onFocus={() => setIsOpen(true)}
+                placeholder={placeholder}
+            />
+            {isOpen && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                    <div
+                        className={`p-2 cursor-pointer font-medium text-indigo-600 hover:bg-gray-100 ${isNewEntry ? 'border-b' : ''}`}
+                        onClick={handleAddNew}
+                    >
+                       {`+ Add "${isNewEntry ? inputValue : `New ${label ? label.replace(':', '') : ''}`}"`}
+                    </div>
+                    {filteredOptions.length > 0 ? (
+                        filteredOptions.map(opt => (
+                            <div
+                                key={opt.id}
+                                className="p-2 cursor-pointer hover:bg-gray-100"
+                                onClick={() => handleSelect(opt)}
+                            >
+                                {opt.name}
+                            </div>
+                        ))
+                    ) : (
+                        <div className="p-2 text-gray-500">No results found.</div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+
 export function CourseForm({ courseType, initialData, facilitatorsList, coordinatorsList, fundersList, onCancel, onSave, onAddNewFacilitator, onAddNewCoordinator, onAddNewFunder }) {
     const [state, setState] = useState(initialData?.state || '');
     const [locality, setLocality] = useState(initialData?.locality || '');
@@ -431,9 +522,9 @@ export function CourseForm({ courseType, initialData, facilitatorsList, coordina
     ];
 
     const COURSE_GROUPS = ['Group A', 'Group B', 'Group C', 'Group D'];
-    
+
     const [groups, setGroups] = useState(initialData?.facilitatorAssignments ? [...new Set(initialData.facilitatorAssignments.map(a => a.group))] : ['Group A']);
-    
+
     const [facilitatorGroups, setFacilitatorGroups] = useState(() => {
         if (initialData?.facilitatorAssignments?.length > 0) {
             const groups = {};
@@ -459,28 +550,20 @@ export function CourseForm({ courseType, initialData, facilitatorsList, coordina
 
     const [error, setError] = useState('');
 
-    const [directorSearch, setDirectorSearch] = useState('');
-    const [facilitatorSearch, setFacilitatorSearch] = useState('');
-    const [clinicalInstructorSearch, setClinicalInstructorSearch] = useState('');
-    const [coordinatorSearch, setCoordinatorSearch] = useState('');
-    const [supporterSearch, setSupporterSearch] = useState('');
-
     const isImnci = courseType === 'IMNCI';
     const isInfectionControl = courseType === 'IPC';
 
     const directorOptions = useMemo(() => {
         return facilitatorsList
             .filter(f => f.directorCourse === 'Yes')
-            .filter(f => !directorSearch || f.name.toLowerCase().includes(directorSearch.toLowerCase()))
             .sort((a, b) => a.name.localeCompare(b.name));
-    }, [facilitatorsList, directorSearch]);
+    }, [facilitatorsList]);
 
     const clinicalInstructorOptions = useMemo(() => {
         return facilitatorsList
             .filter(f => f.isClinicalInstructor === 'Yes' || f.directorCourse === 'Yes')
-            .filter(f => !clinicalInstructorSearch || f.name.toLowerCase().includes(clinicalInstructorSearch.toLowerCase()))
             .sort((a, b) => a.name.localeCompare(b.name));
-    }, [facilitatorsList, clinicalInstructorSearch]);
+    }, [facilitatorsList]);
 
   const facilitatorOptions = useMemo(() => {
         return facilitatorsList
@@ -488,9 +571,8 @@ export function CourseForm({ courseType, initialData, facilitatorsList, coordina
                 const fCourses = Array.isArray(f.courses) ? f.courses : [];
                 return fCourses.includes(isInfectionControl ? 'IPC' : courseType);
             })
-            .filter(f => !facilitatorSearch || f.name.toLowerCase().includes(facilitatorSearch.toLowerCase()))
             .sort((a, b) => a.name.localeCompare(b.name));
-    }, [facilitatorsList, courseType, facilitatorSearch, isInfectionControl]);
+    }, [facilitatorsList, courseType, isInfectionControl]);
 
     const coordinatorOptions = useMemo(() => {
         return coordinatorsList.map(c => ({ id: c.id, name: c.name }));
@@ -500,82 +582,6 @@ export function CourseForm({ courseType, initialData, facilitatorsList, coordina
         return fundersList.map(f => ({ id: f.id, name: f.orgName }));
     }, [fundersList]);
 
-    const SearchableSelect = ({ label, options, value, onChange, onOpenNewForm, search, onSearchChange, placeholder }) => {
-        const [isOpen, setIsOpen] = useState(false);
-        const ref = useRef(null);
-
-        useEffect(() => {
-            const handleClickOutside = (event) => {
-                if (ref.current && !ref.current.contains(event.target)) {
-                    setIsOpen(false);
-                }
-            };
-            document.addEventListener("mousedown", handleClickOutside);
-            return () => document.removeEventListener("mousedown", handleClickOutside);
-        }, [ref]);
-
-        const filteredOptions = useMemo(() => {
-            if (!search) return options;
-            return options.filter(opt => opt.name.toLowerCase().includes(search.toLowerCase()));
-        }, [options, search]);
-
-        const isNewEntry = search && !options.some(opt => opt.name.toLowerCase() === search.toLowerCase());
-
-        const handleSelect = (option) => {
-            onChange(option.name);
-            onSearchChange(option.name);
-            setIsOpen(false);
-        };
-
-        const handleAddNew = () => {
-            onOpenNewForm(search);
-            setIsOpen(false);
-        };
-
-        const inputValue = search || value;
-
-        return (
-            <div className="relative" ref={ref}>
-                <Input
-                    type="text"
-                    value={inputValue}
-                    onChange={(e) => {
-                        onSearchChange(e.target.value);
-                        setIsOpen(true);
-                        if (e.target.value === '') {
-                            onChange('');
-                        }
-                    }}
-                    onFocus={() => setIsOpen(true)}
-                    placeholder={placeholder}
-                />
-                {isOpen && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                        <div
-                            className={`p-2 cursor-pointer font-medium text-indigo-600 hover:bg-gray-100 ${isNewEntry ? 'border-b' : ''}`}
-                            onClick={handleAddNew}
-                        >
-                           {`+ Add "${isNewEntry ? search : `New ${label ? label.replace(':', '') : ''}`}"`}
-                        </div>
-                        {filteredOptions.length > 0 ? (
-                            filteredOptions.map(opt => (
-                                <div
-                                    key={opt.id}
-                                    className="p-2 cursor-pointer hover:bg-gray-100"
-                                    onClick={() => handleSelect(opt)}
-                                >
-                                    {opt.name}
-                                </div>
-                            ))
-                        ) : (
-                            <div className="p-2 text-gray-500">No results found.</div>
-                        )}
-                    </div>
-                )}
-            </div>
-        );
-    };
-    
     const addFacilitatorToGroup = (groupName) => {
         setFacilitatorGroups(prev => ({
             ...prev,
@@ -589,14 +595,14 @@ export function CourseForm({ courseType, initialData, facilitatorsList, coordina
             [groupName]: prev[groupName].filter((_, i) => i !== index)
         }));
     };
-    
+
     const updateFacilitatorAssignment = (groupName, index, field, value) => {
         setFacilitatorGroups(prev => ({
             ...prev,
             [groupName]: prev[groupName].map((item, i) => (i === index ? { ...item, [field]: value } : item))
         }));
     };
-    
+
     const addGroup = () => {
         const nextGroupIndex = groups.length;
         if (nextGroupIndex < COURSE_GROUPS.length) {
@@ -608,7 +614,7 @@ export function CourseForm({ courseType, initialData, facilitatorsList, coordina
             }));
         }
     };
-    
+
     const removeGroup = (groupName) => {
         setGroups(prev => prev.filter(g => g !== groupName));
         setFacilitatorGroups(prev => {
@@ -725,8 +731,6 @@ export function CourseForm({ courseType, initialData, facilitatorsList, coordina
                         value={coordinator}
                         onChange={setCoordinator}
                         options={coordinatorOptions}
-                        search={coordinatorSearch}
-                        onSearchChange={setCoordinatorSearch}
                         onOpenNewForm={handleOpenNewCoordinatorForm}
                         placeholder="Type to search or add a coordinator"
                         label="Course Coordinator"
@@ -739,8 +743,6 @@ export function CourseForm({ courseType, initialData, facilitatorsList, coordina
                         value={supporter}
                         onChange={setSupporter}
                         options={funderOptions}
-                        search={supporterSearch}
-                        onSearchChange={setSupporterSearch}
                         onOpenNewForm={handleOpenNewFunderForm}
                         placeholder="Type to search or add a funder"
                         label="Funded by"
@@ -758,8 +760,6 @@ export function CourseForm({ courseType, initialData, facilitatorsList, coordina
                                         value={director}
                                         onChange={setDirector}
                                         options={directorOptions}
-                                        search={directorSearch}
-                                        onSearchChange={setDirectorSearch}
                                         onOpenNewForm={handleOpenNewFacilitatorForm}
                                         placeholder="Select Director"
                                         label="Course Director"
@@ -781,7 +781,6 @@ export function CourseForm({ courseType, initialData, facilitatorsList, coordina
                                             value={clinical}
                                             onChange={setClinical}
                                             options={clinicalInstructorOptions}
-                                            search={clinicalInstructorSearch}
                                             onOpenNewForm={handleOpenNewFacilitatorForm}
                                             placeholder="Select Instructor"
                                             label="Clinical Instructor"
@@ -823,8 +822,6 @@ export function CourseForm({ courseType, initialData, facilitatorsList, coordina
                                                 value={assignment.name}
                                                 onChange={(value) => updateFacilitatorAssignment(groupName, index, 'name', value)}
                                                 options={facilitatorOptions}
-                                                search={facilitatorSearch}
-                                                onSearchChange={setFacilitatorSearch}
                                                 onOpenNewForm={handleOpenNewFacilitatorForm}
                                                 placeholder="Select Facilitator"
                                                 label="Facilitator"
