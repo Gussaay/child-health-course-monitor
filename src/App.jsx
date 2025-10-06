@@ -8,7 +8,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Toolti
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, LineElement, PointElement);
 
 import DashboardView from './components/DashboardView';
-import { FacilitatorsView, FacilitatorReportView, FacilitatorForm } from './components/Facilitator';
+import { FacilitatorsView, FacilitatorReportView, FacilitatorForm, FacilitatorApplicationForm } from './components/Facilitator';
 import { CourseManagementView, CourseForm } from './components/Course.jsx';
 import { CourseReportView } from './components/CourseReportView.jsx';
 import { ShareModal } from './components/ShareModal';
@@ -16,7 +16,10 @@ import { FinalReportForm } from './components/FinalReportForm.jsx';
 import { ObservationView } from './components/MonitoringView';
 import { ReportsView } from './components/ReportsView';
 import { AdminDashboard } from './components/AdminDashboard';
-import { CoordinatorsPage } from './components/CoordinatorsPage';
+// FIX: Imported the new HumanResourcesPage component
+import { HumanResourcesPage } from './components/HumanResources';
+// FIX: Imported the renamed ProgramTeamView and TeamMemberApplicationForm components
+import { ProgramTeamView, TeamMemberApplicationForm } from './components/ProgramTeamView';
 import { PartnersPage } from './components/PartnersPage';
 import { ParticipantsView, ParticipantForm } from './components/Participants';
 import { ParticipantReportView } from './components/ParticipantReport';
@@ -40,6 +43,9 @@ import {
     importParticipants,
     upsertCoordinator,
     listCoordinators,
+    upsertStateCoordinator,
+    listStateCoordinators,
+    deleteStateCoordinator,
     upsertFunder,
     listFunders,
     upsertFinalReport,
@@ -51,7 +57,10 @@ import {
     getCourseById,
     updateCoursePublicStatus,
     getParticipantById,
-    updateParticipantSharingSettings
+    updateParticipantSharingSettings,
+    listPendingFacilitatorSubmissions,
+    approveFacilitatorSubmission,
+    rejectFacilitatorSubmission
 } from './data.js';
 import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_ETAT, JOB_TITLES_EENC, JOB_TITLES_IMNCI,
@@ -111,8 +120,8 @@ function BottomNav({ navItems, navigate }) {
     const icons = {
         Dashboard: HomeIcon,
         Home: HomeIcon,
-        Facilitators: FacilitatorIcon,
         Courses: CoursesIcon,
+        'Human Resources': UsersIcon,
         Participants: UsersIcon,
         Monitoring: MonitorIcon,
         Reports: ReportIcon,
@@ -166,7 +175,7 @@ export default function App() {
     const [allCourses, setAllCourses] = useState([]);
     const [participants, setParticipants] = useState([]);
     const [facilitators, setFacilitators] = useState([]);
-    const [coordinators, setCoordinators] = useState([]);
+    const [coordinators, setCoordinators] = useState([]); // This holds COURSE coordinators for the CourseForm
     const [funders, setFunders] = useState([]);
     const [selectedCourseId, setSelectedCourseId] = useState(null);
     const [selectedParticipantId, setSelectedParticipantId] = useState(null);
@@ -184,13 +193,18 @@ export default function App() {
     const [userStates, setUserStates] = useState([]);
     const [toast, setToast] = useState({ show: false, message: '', type: '' });
     const [activeCoursesTab, setActiveCoursesTab] = useState('courses');
+    const [activeHRTab, setActiveHRTab] = useState('facilitators');
     const [courseDataForReport, setCourseDataForReport] = useState({ participants: [], allObs: [], allCases: [] });
     const [finalReportCourse, setFinalReportCourse] = useState(null);
     const [finalReportData, setFinalReportData] = useState(null);
     const [authLoading, setAuthLoading] = useState(true);
+    const [pendingSubmissions, setPendingSubmissions] = useState([]);
+    const [isSubmissionsLoading, setIsSubmissionsLoading] = useState(true);
 
     // --- State for Shared View ---
     const [isSharedView, setIsSharedView] = useState(false);
+    const [isPublicSubmissionView, setIsPublicSubmissionView] = useState(false);
+    const [submissionType, setSubmissionType] = useState(null);
     const [sharedReportData, setSharedReportData] = useState(null);
     const [sharedViewError, setSharedViewError] = useState(null);
     const [sharedViewRequiresLogin, setSharedViewRequiresLogin] = useState(false);
@@ -207,7 +221,19 @@ export default function App() {
     // --- Check for Shared URL on Initial Load ---
     useEffect(() => {
         const path = window.location.pathname;
-        const match = path.match(/^\/shared\/(course-report|participant-report)\/([a-zA-Z0-9]+)\/?$/);
+        const sharedMatch = path.match(/^\/shared\/(course-report|participant-report)\/([a-zA-Z0-9]+)\/?$/);
+        // FIX: Updated regex to capture facilitator and the new team member application URLs.
+        const submissionMatch = path.match(/^\/public\/(facilitator-application|team-member-application)\/?$/);
+        // FIX: Check for the new unified public team member application link
+        const unifiedTeamMemberSubmissionMatch = path === '/public/team-member-application';
+
+        if (submissionMatch || unifiedTeamMemberSubmissionMatch) {
+            setIsPublicSubmissionView(true);
+            setSubmissionType(submissionMatch ? submissionMatch[1] : 'team-member-application'); // Use the unified type
+            setLoading(false);
+            setAuthLoading(false);
+            return;
+        }
 
         const handleSharedRoute = async (reportType, reportId) => {
             setIsSharedView(true);
@@ -238,7 +264,7 @@ export default function App() {
                     const participant = await getParticipantById(reportId);
                     if (!participant) throw new Error("Participant report not found.");
                     
-                    const course = await getCourseById(participant.courseId);
+                    const course = await getParticipantById(participant.courseId);
                     if (!course) throw new Error("Associated course data not found.");
 
                     setSharedReportData({ type: 'participant', participant, course });
@@ -265,8 +291,8 @@ export default function App() {
             }
         };
 
-        if (match) {
-            handleSharedRoute(match[1], match[2]);
+        if (sharedMatch) {
+            handleSharedRoute(sharedMatch[1], sharedMatch[2]);
         }
     }, []);
 
@@ -288,6 +314,7 @@ export default function App() {
         canViewFacilitators: false,
         canViewAdmin: false,
         canViewDetailedData: false,
+        canApproveSubmissions: false,
     }), []);
 
     const DEFAULT_ROLE_PERMISSIONS = useMemo(() => ({
@@ -309,6 +336,7 @@ export default function App() {
             canEditDeleteMonitoring: true,
             canAddFinalReport: true,
             canEditDeleteFinalReport: true,
+            canApproveSubmissions: true,
         },
         'federal_manager': {
             ...ALL_PERMISSIONS,
@@ -326,6 +354,7 @@ export default function App() {
             canEditDeleteMonitoring: true,
             canAddFinalReport: true,
             canEditDeleteFinalReport: true,
+            canApproveSubmissions: true,
         },
         'states_manager': {
             ...ALL_PERMISSIONS,
@@ -526,7 +555,7 @@ export default function App() {
         try {
             const coursesData = await listAllCourses(userStates);
             const facilitatorsData = await listFacilitators(userStates);
-            const coordinatorsData = await listCoordinators();
+            const coordinatorsData = await listCoordinators(); // These are COURSE coordinators
             const fundersData = await listFunders();
             const allParticipantsData = await listAllParticipants(userStates);
             
@@ -619,6 +648,45 @@ export default function App() {
         }
     };
 
+    const fetchPendingSubmissions = async () => {
+        if (!permissions.canApproveSubmissions) return;
+        setIsSubmissionsLoading(true);
+        try {
+            const submissions = await listPendingFacilitatorSubmissions();
+            setPendingSubmissions(submissions);
+        } catch (error) {
+            console.error("Error fetching submissions:", error);
+            setToast({ show: true, message: 'Failed to load submissions.', type: 'error' });
+        } finally {
+            setIsSubmissionsLoading(false);
+        }
+    };
+
+    const handleApproveSubmission = async (submission) => {
+        if (window.confirm(`Approve ${submission.name}? This will add them to the main facilitator list.`)) {
+            try {
+                await approveFacilitatorSubmission(submission, user.email);
+                setToast({ show: true, message: 'Facilitator approved and added.', type: 'success' });
+                await fetchPendingSubmissions();
+                await refreshAllData(userStates);
+            } catch (error) {
+                setToast({ show: true, message: 'Approval failed: ' + error.message, type: 'error' });
+            }
+        }
+    };
+
+    const handleRejectSubmission = async (submissionId) => {
+        if (window.confirm('Are you sure you want to reject this submission? This cannot be undone.')) {
+            try {
+                await rejectFacilitatorSubmission(submissionId, user.email);
+                setToast({ show: true, message: 'Submission rejected.', type: 'success' });
+                await fetchPendingSubmissions();
+            } catch (error) {
+                setToast({ show: true, message: 'Rejection failed: ' + error.message, type: 'error' });
+            }
+        }
+    };
+
     useEffect(() => {
         if (user && !isSharedView) {
             refreshAllData(userStates);
@@ -636,6 +704,12 @@ export default function App() {
             fetchCourseReportData(selectedCourseId);
         }
     }, [selectedCourseId, view]);
+
+    useEffect(() => {
+        if (view === 'humanResources' && activeHRTab === 'facilitators' && permissions.canApproveSubmissions) {
+            fetchPendingSubmissions();
+        }
+    }, [view, activeHRTab, permissions.canApproveSubmissions]);
 
     // --- Memoized Selectors and Handlers ---
     const selectedCourse = useMemo(() => {
@@ -702,7 +776,7 @@ export default function App() {
         if (window.confirm('Are you sure you want to delete this facilitator?')) {
             await deleteFacilitator(facilitatorId);
             await refreshAllData();
-            navigate('facilitators');
+            navigate('humanResources');
         }
     };
 
@@ -877,7 +951,7 @@ export default function App() {
             'dashboard': permissions.canViewDashboard,
             'admin': permissions.canViewAdmin,
             'landing': permissions.canViewLanding,
-            'facilitators': permissions.canViewFacilitators,
+            'humanResources': permissions.canViewFacilitators,
             'courses': permissions.canViewCourse,
             'participants': permissions.canViewCourse,
             'observe': permissions.canAddMonitoring,
@@ -889,26 +963,24 @@ export default function App() {
             'courseReport': permissions.canViewCourse,
             'participantReport': permissions.canViewCourse,
             'facilitatorReport': permissions.canViewFacilitators,
-            'coordinatorsPage': permissions.canViewCourse,
-            'partnersPage': permissions.canViewCourse,
             'finalReportForm': permissions.canAddFinalReport || permissions.canEditDeleteFinalReport,
             'finalReportView': permissions.canViewCourse,
         };
     
-        if (user && !viewPermissions[newView]) {
+        if (user && !viewPermissions[newView] && !['facilitators', 'programTeams', 'partnersPage'].includes(newView)) {
             console.log(`Access denied to view: ${newView} for role: ${userRole}`);
             setToast({ show: true, message: `Access denied to view: ${newView}`, type: 'error' });
             return;
         }
-    
-        const courseSubTabs = ['coordinatorsPage', 'partnersPage', 'facilitators', 'participants', 'reports'];
-        if (courseSubTabs.includes(newView) && user && !viewPermissions['courses']) {
-            console.log(`Access denied to container view: courses for role: ${userRole}`);
-            setToast({ show: true, message: 'Access denied to the main courses page.', type: 'error' });
-            return;
-        }
         
-        if (['courses', ...courseSubTabs].includes(newView)) {
+        const courseSubTabs = ['participants', 'reports'];
+        // FIX: Updated hrSubTabs to reflect changes
+        const hrSubTabs = ['facilitators', 'programTeams', 'partnersPage'];
+
+        if (hrSubTabs.includes(newView)) {
+            setActiveHRTab(newView);
+            setView('humanResources');
+        } else if (['courses', ...courseSubTabs].includes(newView)) {
             setActiveCoursesTab(newView);
             setView('courses');
         } else {
@@ -927,7 +999,7 @@ export default function App() {
         }
         if (state.caseToEdit) setEditingCaseFromReport(state.caseToEdit);
     
-        if (['landing', 'courses', 'facilitators', 'dashboard', 'admin', 'coordinatorsPage', 'partnersPage'].includes(newView)) {
+        if (['landing', 'courses', 'humanResources', 'dashboard', 'admin'].includes(newView)) {
             setSelectedCourseId(null);
             setSelectedParticipantId(null);
             setFinalReportCourse(null);
@@ -971,7 +1043,8 @@ export default function App() {
             'dashboard': permissions.canViewDashboard,
             'admin': permissions.canViewAdmin,
             'landing': permissions.canViewLanding,
-            'facilitators': permissions.canViewFacilitators,
+            // FIX: Updated the permission check to be more inclusive for the entire HR section.
+            'humanResources': permissions.canViewFacilitators || userRole === 'states_manager' || userRole === 'federal_manager' || userRole === 'super_user',
             'courses': permissions.canViewCourse,
             'participants': permissions.canViewCourse,
             'observe': permissions.canAddMonitoring,
@@ -983,8 +1056,6 @@ export default function App() {
             'courseReport': permissions.canViewCourse,
             'participantReport': permissions.canViewCourse,
             'facilitatorReport': permissions.canViewFacilitators,
-            'coordinatorsPage': permissions.canViewCourse,
-            'partnersPage': permissions.canViewCourse,
             'finalReportForm': permissions.canAddFinalReport || permissions.canEditDeleteFinalReport,
             'finalReportView': permissions.canViewCourse,
         };
@@ -1010,6 +1081,23 @@ export default function App() {
         
         switch (view) {
             case 'landing': return <Landing active={activeCourseType} onPick={(t) => { setActiveCourseType(t); navigate('courses'); }} />;
+            case 'humanResources': return <HumanResourcesPage 
+                    activeTab={activeHRTab}
+                    setActiveTab={setActiveHRTab}
+                    facilitators={facilitators}
+                    onAddFacilitator={() => navigate('facilitatorForm')}
+                    onEditFacilitator={(f) => navigate('facilitatorForm', { editFacilitator: f })}
+                    onDeleteFacilitator={handleDeleteFacilitator}
+                    onOpenFacilitatorReport={(fid) => navigate('facilitatorReport', { openFacilitatorReport: fid })}
+                    onOpenFacilitatorComparison={() => navigate('dashboard')}
+                    onImportFacilitators={async (data) => { await importFacilitators(data); await refreshAllData(); }}
+                    userStates={userStates}
+                    pendingSubmissions={pendingSubmissions}
+                    isSubmissionsLoading={isSubmissionsLoading}
+                    onApproveSubmission={handleApproveSubmission}
+                    onRejectSubmission={handleRejectSubmission}
+                    permissions={permissions}
+                />;
             case 'courses': 
                 return <CourseManagementView 
                     courses={courses} 
@@ -1031,14 +1119,6 @@ export default function App() {
                     onDeleteParticipant={handleDeleteParticipant}
                     onOpenParticipantReport={(pid) => { setSelectedCourseId(selectedCourse.id); setSelectedParticipantId(pid); navigate('participantReport'); }}
                     onImportParticipants={handleImportParticipants}
-                    canAddParticipant={permissions.canAddParticipant}
-                    canBulkUploadParticipant={permissions.canBulkUploadParticipant}
-                    facilitators={facilitators}
-                    onAddFacilitator={() => navigate('facilitatorForm')}
-                    onEditFacilitator={(f) => navigate('facilitatorForm', { editFacilitator: f })}
-                    onDeleteFacilitator={handleDeleteFacilitator}
-                    onOpenFacilitatorReport={(fid) => navigate('facilitatorReport', { openFacilitatorReport: fid })}
-                    onOpenFacilitatorComparison={() => navigate('dashboard')}
                     onAddFinalReport={handleAddFinalReport}
                     onEditFinalReport={handleEditFinalReport}
                     selectedParticipantId={selectedParticipantId}
@@ -1082,7 +1162,45 @@ export default function App() {
             case 'courseReport': return permissions.canViewCourse ? (
                 selectedCourse && <CourseReportView course={selectedCourse} participants={courseDataForReport.participants} allObs={courseDataForReport.allObs} allCases={courseDataForReport.allCases} finalReportData={finalReportData} onBack={() => navigate(previousView)} onEditFinalReport={handleEditFinalReport} onDeletePdf={handleDeletePdf} onViewParticipantReport={(pid) => { setSelectedParticipantId(pid); navigate('participantReport'); }} onShare={(course) => handleShare(course, 'course')} />
             ) : null;
-            case 'facilitatorForm': return <FacilitatorForm initialData={editingFacilitator} onCancel={() => navigate(previousView)} onSave={async (payload) => { await upsertFacilitator({ ...payload, id: editingFacilitator?.id }); await refreshAllData(); navigate(previousView === 'facilitatorForm' ? 'courseForm' : 'facilitators'); }} />;
+            case 'facilitatorForm': return <FacilitatorForm initialData={editingFacilitator} onCancel={() => navigate(previousView)} onSave={async (payload) => {
+                try {
+                    setLoading(true);
+                    const { certificateFiles, ...facilitatorData } = payload;
+                    const oldCertificateUrls = editingFacilitator?.certificateUrls || {};
+                    let newCertificateUrls = facilitatorData.certificateUrls || {};
+
+                    if (certificateFiles) {
+                        for (const course in certificateFiles) {
+                            const file = certificateFiles[course];
+                            if (file) {
+                                if (oldCertificateUrls[course]) {
+                                    await deleteFile(oldCertificateUrls[course]);
+                                }
+                                const url = await uploadFile(file);
+                                newCertificateUrls[course] = url;
+                            }
+                        }
+                    }
+
+                    const finalPayload = {
+                        ...facilitatorData,
+                        id: editingFacilitator?.id,
+                        certificateUrls: newCertificateUrls,
+                    };
+                    delete finalPayload.certificateFiles;
+
+                    await upsertFacilitator(finalPayload);
+                    await refreshAllData();
+                    setToast({ show: true, message: 'Facilitator saved successfully.', type: 'success' });
+                    navigate(previousView === 'facilitatorForm' ? 'courseForm' : 'humanResources');
+
+                } catch (error) {
+                    console.error("Error saving facilitator:", error);
+                    setToast({ show: true, message: `Error saving facilitator: ${error.message}`, type: 'error' });
+                } finally {
+                    setLoading(false);
+                }
+            }} />;
             case 'facilitatorReport': return selectedFacilitator && <FacilitatorReportView facilitator={selectedFacilitator} allCourses={allCourses} onBack={() => navigate(previousView)} />;
             case 'admin': return <AdminDashboard />;
             case 'dashboard':
@@ -1181,12 +1299,22 @@ export default function App() {
     const navItems = [
         { label: 'Dashboard', view: 'dashboard', active: view === 'dashboard', disabled: !permissions.canViewDashboard },
         { label: 'Home', view: 'landing', active: view === 'landing', disabled: !permissions.canViewLanding },
-        { label: 'Courses', view: 'courses', active: ['courses', 'courseForm', 'courseReport', 'participants', 'participantForm', 'participantReport', 'observe', 'monitoring', 'coordinatorsPage', 'partnersPage', 'reports', 'facilitators', 'facilitatorForm', 'facilitatorReport'].includes(view), disabled: !permissions.canViewCourse },
+        { label: 'Courses', view: 'courses', active: ['courses', 'courseForm', 'courseReport', 'participants', 'participantForm', 'participantReport', 'observe', 'monitoring', 'reports', 'finalReportForm', 'finalReportView'].includes(view), disabled: !permissions.canViewCourse },
+        { label: 'Human Resources', view: 'humanResources', active: ['humanResources', 'facilitatorForm', 'facilitatorReport'].includes(view), disabled: !permissions.canViewFacilitators },
     ];
 
     let mainContent;
 
-    if (isSharedView) {
+    if (isPublicSubmissionView) {
+        // FIX: Added logic to render the TeamMemberApplicationForm for the correct submission type.
+        if (submissionType === 'facilitator-application') {
+            mainContent = <FacilitatorApplicationForm />;
+        } else if (submissionType === 'team-member-application') {
+            mainContent = <TeamMemberApplicationForm />;
+        } else {
+            mainContent = <div className="p-8 text-center">Invalid form link.</div>;
+        }
+    } else if (isSharedView) {
         if (loading || authLoading) {
             mainContent = <SplashScreen />;
         } else if (sharedViewError) {
@@ -1243,6 +1371,8 @@ export default function App() {
         } else {
             mainContent = <SplashScreen />;
         }
+    } else if (!user && !authLoading) {
+        mainContent = <Landing active={activeCourseType} onPick={(t) => { setActiveCourseType(t); navigate('courses'); }} />;
     } else {
         mainContent = renderView();
     }
@@ -1262,7 +1392,7 @@ export default function App() {
                                 <p className="text-sm text-slate-300 hidden sm:block">Course Monitoring System</p>
                             </div>
                         </div>
-                        {!isSharedView && (
+                        {!isSharedView && !isPublicSubmissionView && (
                             <nav className="hidden md:flex items-center gap-1">
                                 {navItems.map(item => (
                                     <button key={item.label} onClick={() => !item.disabled && navigate(item.view)} disabled={item.disabled}
@@ -1279,7 +1409,7 @@ export default function App() {
                 </div>
             </header>
             
-            {user && !isSharedView && (
+            {user && !isSharedView && !isPublicSubmissionView && (
                 <div className="bg-slate-700 text-slate-200 p-2 md:p-3 text-center flex items-center justify-center gap-4">
                     <div className="flex items-center gap-2">
                         <span>Welcome, {user.email}</span>
@@ -1301,8 +1431,10 @@ export default function App() {
             <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 w-full flex-grow mb-16 md:mb-0">
                 {mainContent}
             </main>
+
             <Footer />
-            {!isSharedView && <BottomNav navItems={navItems} navigate={navigate} />}
+            {!isSharedView && !isPublicSubmissionView && <BottomNav navItems={navItems} navigate={navigate} />}
+            
             <ShareModal
                 isOpen={isShareModalOpen}
                 onClose={() => setIsShareModalOpen(false)}

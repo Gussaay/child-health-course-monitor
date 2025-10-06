@@ -125,29 +125,20 @@ const generateFullCourseReportPdf = async (course, overallChartRef, dailyChartRe
 };
 
 export function CoursesTable({ courses, onOpen, onEdit, onDelete, onOpenReport, canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates, onAddFinalReport }) {
-    // ==================================================================
-    // == THIS IS THE UPDATED isCourseActive FUNCTION
-    // ==================================================================
     const isCourseActive = (course) => {
-        // A course needs a valid start date and a positive duration to be active.
         if (!course.start_date || !course.course_duration || course.course_duration <= 0) {
             return false;
         }
 
-        // Normalize 'today' to the beginning of the day for an accurate date comparison.
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        // Normalize 'startDate' to the beginning of its day.
         const startDate = new Date(course.start_date);
         startDate.setHours(0, 0, 0, 0);
 
-        // Calculate the end date by adding the specified duration to the start date.
         const endDate = new Date(startDate);
         endDate.setDate(startDate.getDate() + course.course_duration);
 
-        // The course is active if today's date is on or after the start date
-        // AND before the calculated end date.
         return today >= startDate && today < endDate;
     };
 
@@ -226,120 +217,114 @@ export function CoursesTable({ courses, onOpen, onEdit, onDelete, onOpenReport, 
 }
 
 export function CourseManagementView({
-    courses, facilitators, onAdd, onOpen, onEdit, onDelete, onOpenReport,
-    canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates,
+    courses, onAdd, onOpen, onEdit, onDelete, onOpenReport,
+    canAddCourse, canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates,
     activeCoursesTab, setActiveCoursesTab, selectedCourse, participants,
     onAddParticipant, onEditParticipant, onDeleteParticipant,
-    onOpenParticipantReport, onImportParticipants, onAddFacilitator, onEditFacilitator,
-    onDeleteFacilitator, onOpenFacilitatorReport, onOpenFacilitatorComparison,
-    onImportFacilitators, onAddFinalReport, onEditFinalReport,
-    selectedParticipantId,
-    onSetSelectedParticipantId
+    onOpenParticipantReport, onImportParticipants, onAddFinalReport, onEditFinalReport,
+    selectedParticipantId, onSetSelectedParticipantId,
 }) {
     const currentParticipant = participants.find(p => p.id === selectedParticipantId);
 
     return (
         <Card>
-            <div className="flex gap-2 mb-4 border-b border-gray-200 pb-4">
-                <Button variant="tab" isActive={activeCoursesTab === 'courses'} onClick={() => setActiveCoursesTab('courses')}>Courses</Button>
-                <Button variant="tab" isActive={activeCoursesTab === 'coordinatorsPage'} onClick={() => setActiveCoursesTab('coordinatorsPage')}>Coordinators</Button>
-                <Button variant="tab" isActive={activeCoursesTab === 'partnersPage'} onClick={() => setActiveCoursesTab('partnersPage')}>Partners</Button>
-                <Button variant="tab" isActive={activeCoursesTab === 'facilitators'} onClick={() => setActiveCoursesTab('facilitators')}>Facilitators</Button>
-
-                {selectedCourse && (
-                    <>
-                        <Button
-                            variant="tab"
-                            isActive={activeCoursesTab === 'participants'}
-                            onClick={() => {
-                                setActiveCoursesTab('participants');
-                                onSetSelectedParticipantId(null);
-                            }}
-                        >
-                            Participants
-                        </Button>
-                        <Button
-                            variant="tab"
-                            isActive={activeCoursesTab === 'monitoring'}
-                            onClick={() => setActiveCoursesTab('monitoring')}
-                            disabled={!currentParticipant}
-                        >
-                            Monitoring
-                        </Button>
-                        <Button
-                            variant="tab"
-                            isActive={activeCoursesTab === 'reports'}
-                            onClick={() => setActiveCoursesTab('reports')}
-                        >
-                            Reports
-                        </Button>
-                    </>
-                )}
-            </div>
-
-            {activeCoursesTab === 'courses' && (
-                <div className="mb-4">
-                    <Button onClick={onAdd} className="bg-sky-600 text-white hover:bg-sky-700">Add New Course</Button>
+            {selectedCourse && (
+                <div className="mb-4 p-3 bg-sky-100 border border-sky-200 rounded-lg">
+                    <h3 className="text-lg font-bold text-sky-800">
+                        Selected Course: {selectedCourse.course_type} - {selectedCourse.state} ({selectedCourse.start_date})
+                    </h3>
                 </div>
             )}
+            
+            <div className="border-b border-gray-200">
+                <nav className="-mb-px flex gap-6" aria-label="Tabs">
+                    <Button variant="tab" isActive={activeCoursesTab === 'courses'} onClick={() => setActiveCoursesTab('courses')}>Courses</Button>
+                    
+                    {selectedCourse && (
+                        <>
+                            <Button
+                                variant="tab"
+                                isActive={activeCoursesTab === 'participants'}
+                                onClick={() => {
+                                    setActiveCoursesTab('participants');
+                                    onSetSelectedParticipantId(null);
+                                }}
+                            >
+                                Participants
+                            </Button>
+                            <Button
+                                variant="tab"
+                                isActive={activeCoursesTab === 'monitoring'}
+                                onClick={() => setActiveCoursesTab('monitoring')}
+                                disabled={!currentParticipant}
+                            >
+                                Monitoring
+                            </Button>
+                            <Button
+                                variant="tab"
+                                isActive={activeCoursesTab === 'reports'}
+                                onClick={() => setActiveCoursesTab('reports')}
+                            >
+                                Reports
+                            </Button>
+                        </>
+                    )}
+                </nav>
+            </div>
 
-            <div>
+            <div className="mt-4">
                 {activeCoursesTab === 'courses' && (
-                    <CoursesTable
-                        courses={courses}
-                        onOpen={onOpen}
-                        onEdit={onEdit}
-                        onDelete={onDelete}
-                        onOpenReport={onOpenReport}
-                        canEditDeleteActiveCourse={canEditDeleteActiveCourse}
-                        canEditDeleteInactiveCourse={canEditDeleteInactiveCourse}
-                        userStates={userStates}
-                        onAddFinalReport={onAddFinalReport}
-                    />
+                    <div className="mb-4">
+                        {canAddCourse && <Button onClick={onAdd}>Add New Course</Button>}
+                    </div>
                 )}
-                {activeCoursesTab === 'coordinatorsPage' && <CoordinatorsPage />}
-                {activeCoursesTab === 'partnersPage' && <PartnersPage />}
-                {activeCoursesTab === 'facilitators' && (
-                    <FacilitatorsView
-                        facilitators={facilitators}
-                        onAdd={onAddFacilitator}
-                        onEdit={onEditFacilitator}
-                        onDelete={onDeleteFacilitator}
-                        onOpenReport={onOpenFacilitatorReport}
-                        onOpenComparison={onOpenFacilitatorComparison}
-                        onImport={onImportFacilitators}
-                        userStates={userStates}
-                    />
-                )}
-                {activeCoursesTab === 'participants' && selectedCourse && (
-                    <ParticipantsView
-                        course={selectedCourse}
-                        participants={participants}
-                        onAdd={onAddParticipant}
-                        onOpen={(id) => {
-                            onSetSelectedParticipantId(id);
-                            setActiveCoursesTab('monitoring');
-                        }}
-                        onEdit={onEditParticipant}
-                        onDelete={onDeleteParticipant}
-                        onOpenReport={onOpenParticipantReport}
-                        onImport={onImportParticipants}
-                        canAddParticipant={true}
-                        canBulkUploadParticipant={true}
-                    />
-                )}
-                {activeCoursesTab === 'participants' && !selectedCourse && (
-                    <EmptyState message="Please select a course from the 'Courses' tab to view participants." />
-                )}
-                {activeCoursesTab === 'monitoring' && selectedCourse && currentParticipant && (
-                    <ObservationView course={selectedCourse} participant={currentParticipant} participants={participants} onChangeParticipant={(id) => onSetSelectedParticipantId(id)} />
-                )}
-                {activeCoursesTab === 'monitoring' && selectedCourse && !currentParticipant && (
-                    <EmptyState message="Please select a participant from the 'Participants' tab to begin monitoring." />
-                )}
-                {activeCoursesTab === 'reports' && selectedCourse && (
-                    <ReportsView course={selectedCourse} participants={participants} />
-                )}
+
+                <div>
+                    {activeCoursesTab === 'courses' && (
+                        <CoursesTable
+                            courses={courses}
+                            onOpen={onOpen}
+                            onEdit={onEdit}
+                            onDelete={onDelete}
+                            onOpenReport={onOpenReport}
+                            canEditDeleteActiveCourse={canEditDeleteActiveCourse}
+                            canEditDeleteInactiveCourse={canEditDeleteInactiveCourse}
+                            userStates={userStates}
+                            onAddFinalReport={onAddFinalReport}
+                        />
+                    )}
+                    {activeCoursesTab === 'participants' && selectedCourse && (
+                        <ParticipantsView
+                            course={selectedCourse}
+                            participants={participants}
+                            onAdd={onAddParticipant}
+                            onOpen={(id) => {
+                                onSetSelectedParticipantId(id);
+                                setActiveCoursesTab('monitoring');
+                            }}
+                            onEdit={onEditParticipant}
+                            onDelete={onDeleteParticipant}
+                            onOpenReport={onOpenParticipantReport}
+                            onImport={onImportParticipants}
+                            canAdd={canAddParticipant}
+                            canBulkUpload={canBulkUploadParticipant}
+                            selectedParticipantId={selectedParticipantId}
+                            onSetSelectedParticipantId={onSetSelectedParticipantId}
+                        />
+                    )}
+                    {activeCoursesTab === 'participants' && !selectedCourse && (
+                        <EmptyState message="Please select a course from the 'Courses' tab to view participants." />
+                    )}
+                    {activeCoursesTab === 'monitoring' && selectedCourse && currentParticipant && (
+                        <ObservationView course={selectedCourse} participant={currentParticipant} participants={participants} onChangeParticipant={(id) => onSetSelectedParticipantId(id)} />
+                    )}
+                    {activeCoursesTab === 'monitoring' && selectedCourse && !currentParticipant && (
+                        <EmptyState message="Please select a participant from the 'Participants' tab to begin monitoring." />
+                    )}
+                    {activeCoursesTab === 'reports' && selectedCourse && (
+                        <ReportsView course={selectedCourse} participants={participants} onOpenReport={onOpenReport} onAddFinalReport={onAddFinalReport}/>
+                    )}
+                </div>
             </div>
         </Card>
     );
@@ -417,11 +402,9 @@ const NewFunderForm = ({ initialOrgName, onCancel, onSave }) => {
 
 const SearchableSelect = ({ label, options, value, onChange, onOpenNewForm, placeholder }) => {
     const [isOpen, setIsOpen] = useState(false);
-    // Internal state for the input's value. Initialize with the parent's value.
     const [inputValue, setInputValue] = useState(value || '');
     const ref = useRef(null);
 
-    // This effect syncs the internal state if the external `value` prop changes.
     useEffect(() => {
         setInputValue(value || '');
     }, [value]);
@@ -430,7 +413,6 @@ const SearchableSelect = ({ label, options, value, onChange, onOpenNewForm, plac
         const handleClickOutside = (event) => {
             if (ref.current && !ref.current.contains(event.target)) {
                 setIsOpen(false);
-                // Optional: Reset input to the actual selected value when clicking away
                 setInputValue(value || '');
             }
         };
@@ -446,13 +428,13 @@ const SearchableSelect = ({ label, options, value, onChange, onOpenNewForm, plac
     const isNewEntry = inputValue && !options.some(opt => opt.name.toLowerCase() === inputValue.toLowerCase());
 
     const handleSelect = (option) => {
-        onChange(option.name);      // Notify parent of the change
-        setInputValue(option.name); // Update internal display value
+        onChange(option.name);
+        setInputValue(option.name);
         setIsOpen(false);
     };
 
     const handleAddNew = () => {
-        onOpenNewForm(inputValue); // Use the current input text to create a new entry
+        onOpenNewForm(inputValue);
         setIsOpen(false);
     };
 
@@ -460,12 +442,12 @@ const SearchableSelect = ({ label, options, value, onChange, onOpenNewForm, plac
         <div className="relative" ref={ref}>
             <Input
                 type="text"
-                value={inputValue} // Use the internal state
+                value={inputValue}
                 onChange={(e) => {
-                    setInputValue(e.target.value); // Update the internal state on type
+                    setInputValue(e.target.value);
                     setIsOpen(true);
                     if (e.target.value === '') {
-                        onChange(''); // Also update parent state if the field is cleared
+                        onChange('');
                     }
                 }}
                 onFocus={() => setIsOpen(true)}
