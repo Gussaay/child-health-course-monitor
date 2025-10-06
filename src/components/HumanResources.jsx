@@ -2,11 +2,9 @@
 import React from 'react';
 import { Button, Card, PageHeader } from './CommonComponents';
 import { FacilitatorsView } from './Facilitator';
-// FIX: Renamed StateCoordinatorPage to ProgramTeamView
 import { ProgramTeamView } from './ProgramTeamView';
 import { PartnersPage } from './PartnersPage';
 
-// FIX: Updated component signature to accept all props passed from App.jsx
 export function HumanResourcesPage({
     activeTab,
     setActiveTab,
@@ -31,7 +29,6 @@ export function HumanResourcesPage({
             <div className="border-b border-gray-200">
                 <nav className="-mb-px flex flex-wrap gap-6" aria-label="Tabs">
                     <Button variant="tab" isActive={activeTab === 'facilitators'} onClick={() => setActiveTab('facilitators')}>Facilitators</Button>
-                    {/* FIX: Renamed tab from 'State Coordinators' to 'Program Teams' and updated activeTab key */}
                     <Button variant="tab" isActive={activeTab === 'programTeams'} onClick={() => setActiveTab('programTeams')}>Program Teams</Button>
                     <Button variant="tab" isActive={activeTab === 'partnersPage'} onClick={() => setActiveTab('partnersPage')}>Partners</Button>
                 </nav>
@@ -55,7 +52,6 @@ export function HumanResourcesPage({
                         permissions={permissions}
                     />
                 )}
-                {/* FIX: Updated component and activeTab key for the new Program Teams view */}
                 {activeTab === 'programTeams' && <ProgramTeamView permissions={permissions} />}
                 {activeTab === 'partnersPage' && <PartnersPage />}
             </div>

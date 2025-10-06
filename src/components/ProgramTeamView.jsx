@@ -205,17 +205,16 @@ function PendingSubmissions({ submissions, isLoading, onApprove, onReject, onVie
 }
 
 
-function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleStatus, level }) {
+function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleStatus }) {
     const [showLinkCopied, setShowLinkCopied] = useState(false);
-    // FIX: Renamed coordinator-application to team-member-application
-    const link = `${window.location.origin}/public/team-member-application?level=${level}`;
+    const link = `${window.location.origin}/public/team-member-application`;
     const handleCopyLink = () => navigator.clipboard.writeText(link).then(() => {
         setShowLinkCopied(true);
         setTimeout(() => setShowLinkCopied(false), 2500);
     });
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`Manage ${level.charAt(0).toUpperCase() + level.slice(1)} Submission Link`}>
+        <Modal isOpen={isOpen} onClose={onClose} title={`Manage Team Member Submission Link`}>
             <div className="p-6 space-y-6">
                 {isLoading ? <Spinner /> : ( <> <FormGroup label="Public URL"><div className="relative"><Input type="text" value={link} readOnly className="pr-24" /><Button onClick={handleCopyLink} className="absolute right-1 top-1/2 -translate-y-1/2" variant="secondary">{showLinkCopied ? 'Copied!' : 'Copy'}</Button></div></FormGroup><div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-gray-50 rounded-lg"><div className="flex items-center gap-4"><div>Status: <span className={`font-bold px-2 py-1 rounded-full text-xs ml-2 ${settings.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{settings.isActive ? 'Active' : 'Inactive'}</span></div><div><span className="font-medium">Link Opened:</span> {settings.openCount || 0} times</div></div><Button variant={settings.isActive ? 'danger' : 'success'} onClick={onToggleStatus}>{settings.isActive ? 'Deactivate Link' : 'Activate Link'}</Button></div></> )}
             </div>
@@ -224,7 +223,6 @@ function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleSta
 }
 
 
-// FIX: Renamed component from StateCoordinatorPage to ProgramTeamView
 export function ProgramTeamView({ permissions }) {
     const [teamLevel, setTeamLevel] = useState(null);
     const [members, setMembers] = useState([]);
@@ -257,9 +255,9 @@ export function ProgramTeamView({ permissions }) {
             } catch (error) { console.error(`Error fetching ${teamLevel} data:`, error); } finally { setLoading(false); setIsSubmissionsLoading(false); }
         };
         const fetchLinkSettings = async () => {
-            if (teamLevel && permissions?.canApproveSubmissions) {
+            if (permissions?.canApproveSubmissions) {
                 setIsLoadingSettings(true);
-                try { const settings = await getCoordinatorApplicationSettings(teamLevel); setLinkSettings(settings); } 
+                try { const settings = await getCoordinatorApplicationSettings(); setLinkSettings(settings); } 
                 catch (error) { console.error("Error fetching link settings:", error); } 
                 finally { setIsLoadingSettings(false); }
             }
@@ -274,12 +272,11 @@ export function ProgramTeamView({ permissions }) {
     const handleView = (member) => { setViewingMember(member); setView('view'); };
 
     const handleToggleLinkStatus = async () => {
-        if (!teamLevel) return;
         setIsLoadingSettings(true);
         try {
             const newStatus = !linkSettings.isActive;
-            await updateCoordinatorApplicationStatus(teamLevel, newStatus);
-            const updatedSettings = await getCoordinatorApplicationSettings(teamLevel);
+            await updateCoordinatorApplicationStatus(newStatus);
+            const updatedSettings = await getCoordinatorApplicationSettings();
             setLinkSettings(updatedSettings);
         } catch (error) { console.error("Error toggling link status:", error); } 
         finally { setIsLoadingSettings(false); }
@@ -312,23 +309,22 @@ export function ProgramTeamView({ permissions }) {
         <div>
             <div className="flex justify-between items-center mb-4">
                 <PageHeader title="Manage Child Health Program Teams" subtitle="Select a team level to begin management." />
-                {teamLevel && permissions?.canApproveSubmissions && ( <Button variant="info" onClick={() => setIsLinkModalOpen(true)}>Manage Submission Link</Button> )}
+                {permissions?.canApproveSubmissions && ( <Button variant="info" onClick={() => setIsLinkModalOpen(true)}>Manage Submission Link</Button> )}
             </div>
             <div className="flex justify-center gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
-                <Button onClick={() => setTeamLevel('state')} variant={teamLevel === 'state' ? 'primary' : 'secondary'}>معلومات فريق صحة الطفل في الولاية</Button>
+                <Button onClick={() => setTeamLevel('state')} variant={teamLevel === 'state' ? 'primary' : 'secondary'}>معلومات فريق صحة الطفل بالولاية</Button>
                 <Button onClick={() => setTeamLevel('federal')} variant={teamLevel === 'federal' ? 'primary' : 'secondary'}>معلومات فريق صحة الطفل بالاتحادية</Button>
                 <Button onClick={() => setTeamLevel('locality')} variant={teamLevel === 'locality' ? 'primary' : 'secondary'}>معلومات فريق صحة الطفل بالمحلية</Button>
             </div>
 
             {!teamLevel ? ( <Card><div className="text-center py-12 text-gray-500"><p>Please select a team level above to continue.</p></div></Card> ) : ( <div><div className="border-b border-gray-200 mb-6 flex justify-between items-center"><nav className="-mb-px flex gap-6" aria-label="Tabs"><Button variant="tab" isActive={activeTab === 'members'} onClick={() => setActiveTab('members')}>Team Members</Button>{permissions?.canApproveSubmissions && <Button variant="tab" isActive={activeTab === 'pending'} onClick={() => setActiveTab('pending')}>Pending Approvals {pendingSubmissions.length > 0 && <span className="ml-2 bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">{pendingSubmissions.length}</span>}</Button>}</nav></div>{loading ? <Spinner /> : ( activeTab === 'members' ? ( <div><div className="flex justify-start mb-4"><Button onClick={handleAdd}>Add New Member</Button></div><Card><Table headers={tableHeaders[teamLevel]}>{members.length > 0 ? members.map(c => (<tr key={c.id}><td>{c.name}</td><td>{c.email}</td>{teamLevel !== 'federal' && <td>{c.state}</td>}{teamLevel === 'locality' && <td>{c.locality}</td>}<td>{c.jobTitle === 'اخرى' ? c.jobTitleOther : c.jobTitle}</td>{teamLevel !== 'locality' && <td>{c.role}</td>}<td><div className="flex gap-2"><Button size="sm" variant="info" onClick={() => handleView(c)}>View</Button><Button size="sm" onClick={() => handleEdit(c)}>Edit</Button><Button size="sm" variant="danger" onClick={() => handleDelete(c.id)}>Delete</Button></div></td></tr>)) : <EmptyState message="No team members found for this level." colSpan={tableHeaders[teamLevel]?.length} />}</Table></Card></div>) : (<PendingSubmissions submissions={pendingSubmissions} isLoading={isSubmissionsLoading} onApprove={handleApprove} onReject={handleReject} onView={handleView} />) )}</div> )}
             
-            {teamLevel && <LinkManagementModal isOpen={isLinkModalOpen} onClose={() => setIsLinkModalOpen(false)} settings={linkSettings} isLoading={isLoadingSettings} onToggleStatus={handleToggleLinkStatus} level={teamLevel} />}
+            {permissions?.canApproveSubmissions && <LinkManagementModal isOpen={isLinkModalOpen} onClose={() => setIsLinkModalOpen(false)} settings={linkSettings} isLoading={isLoadingSettings} onToggleStatus={handleToggleLinkStatus} />}
         </div>
     );
 }
 
 // Public application form
-// FIX: Renamed component from CoordinatorApplicationForm to TeamMemberApplicationForm
 export function TeamMemberApplicationForm() {
     const [selectedLevel, setSelectedLevel] = useState('');
     const [formData, setFormData] = useState({ name: '', phone: '', email: '', isUserEmail: false, state: '', locality: '', jobTitle: '', jobTitleOther: '', role: '', directorDate: '', unit: '', joinDate: '', comments: '', previousRoles: [{ role: '', duration: '' }] });
@@ -339,21 +335,24 @@ export function TeamMemberApplicationForm() {
     const [isLoadingStatus, setIsLoadingStatus] = useState(true);
 
     useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const levelFromUrl = urlParams.get('level');
-        if (['state', 'federal', 'locality'].includes(levelFromUrl)) {
-            setSelectedLevel(levelFromUrl);
-            const checkStatus = async () => {
-                setIsLoadingStatus(true);
-                try {
-                    const settings = await getCoordinatorApplicationSettings(levelFromUrl);
-                    if (settings.isActive) { await incrementCoordinatorApplicationOpenCount(levelFromUrl); setIsLinkActive(true); } 
-                    else { setIsLinkActive(false); }
-                } catch (e) { setIsLinkActive(false); }
-                finally { setIsLoadingStatus(false); }
-            };
-            checkStatus();
-        } else { setIsLoadingStatus(false); }
+        const checkStatus = async () => {
+            setIsLoadingStatus(true);
+            try {
+                const settings = await getCoordinatorApplicationSettings();
+                if (settings.isActive) {
+                    await incrementCoordinatorApplicationOpenCount();
+                    setIsLinkActive(true);
+                } else {
+                    setIsLinkActive(false);
+                }
+            } catch (e) {
+                setIsLinkActive(false);
+            } finally {
+                setIsLoadingStatus(false);
+            }
+        };
+
+        checkStatus();
         const unsubscribe = onAuthStateChanged(auth, (user) => { if (user && user.email) { setFormData(prev => ({ ...prev, email: user.email, isUserEmail: true })); } });
         return () => unsubscribe();
     }, []);
@@ -363,7 +362,10 @@ export function TeamMemberApplicationForm() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!selectedLevel || !formData.name || !formData.email) { setError('Please fill in all required fields.'); return; }
+        if (!selectedLevel || !formData.name || !formData.email) {
+            setError('Please select a team level and fill in all required fields.');
+            return;
+        }
         setError(''); setSubmitting(true);
         try {
             let payload = { ...formData };
@@ -387,18 +389,21 @@ export function TeamMemberApplicationForm() {
     };
 
     if (isLoadingStatus) return <Card><Spinner /></Card>;
-    if (!selectedLevel) return <Card><div className="text-center"><PageHeader title="Invalid Link" /></div><EmptyState message="The application link is incomplete. Please use a valid link provided by the administrator." /></Card>;
-    if (!isLinkActive) return <Card><div className="text-center"><PageHeader title="Application Closed" /></div><EmptyState message="Submissions for this application type are currently closed." /></Card>;
-    if (submitted) return <Card><div className="text-center"><PageHeader title="Submission Received" /></div><div className="p-8 text-center"><h3 className="text-2xl font-bold text-green-600 mb-4">Thank You!</h3><p className="text-gray-700">Your information has been submitted successfully.</p></div></Card>;
+    if (!isLinkActive) return <Card><PageHeader title="Application Closed" /><EmptyState message="Submissions for team members are currently closed." /></Card>;
+    if (submitted) return <Card><PageHeader title="Submission Received" /><div className="p-8 text-center"><h3 className="text-2xl font-bold text-green-600 mb-4">Thank You!</h3><p className="text-gray-700">Your information has been submitted successfully.</p></div></Card>;
     
     return (
         <Card>
-            <div className="text-center">
-                <PageHeader title={formTitles[selectedLevel]} />
-            </div>
+            <PageHeader title={selectedLevel ? formTitles[selectedLevel] : "نموذج تقديم فريق برنامج صحة الطفل"} subtitle="اختر مستواك الوظيفي وقم بتقديم التفاصيل الخاصة بك." />
             {error && <div className="p-3 mb-4 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
              <form onSubmit={handleSubmit} className="space-y-4" dir="rtl">
-                <MemberFormFieldset level={selectedLevel} formData={formData} onFormChange={handleChange} onDynamicFieldChange={handlePreviousRolesChange} />
+                <Select label="اختر المستوى" value={selectedLevel} onChange={(e) => { setSelectedLevel(e.target.value); setFormData(prev => ({ ...prev, state: '', locality: '' })); }} required>
+                    <option value="">-- اختر المستوى --</option>
+                    <option value="federal">فريق صحة الطفل بالاتحادية</option>
+                    <option value="state">فريق صحة الطفل بالولاية</option>
+                    <option value="locality">فريق صحة الطفل بالمحلية</option>
+                </Select>
+                {selectedLevel && <MemberFormFieldset level={selectedLevel} formData={formData} onFormChange={handleChange} onDynamicFieldChange={handlePreviousRolesChange} />}
                 <div className="flex justify-end pt-4"><Button type="submit" disabled={submitting}>{submitting ? 'Submitting...' : 'Submit Application'}</Button></div>
              </form>
         </Card>

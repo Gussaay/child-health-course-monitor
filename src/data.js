@@ -248,8 +248,9 @@ export async function incrementFacilitatorApplicationOpenCount() {
 
 
 // --- COORDINATOR PUBLIC APPLICATION & SUBMISSIONS (ALL LEVELS) ---
-export async function getCoordinatorApplicationSettings(level = 'state') {
-    const docRef = doc(db, 'appSettings', `${level}CoordinatorApplication`);
+// These functions now manage a single settings document for all levels.
+export async function getCoordinatorApplicationSettings() {
+    const docRef = doc(db, 'appSettings', 'coordinatorApplication');
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
         return docSnap.data();
@@ -257,13 +258,13 @@ export async function getCoordinatorApplicationSettings(level = 'state') {
     return { isActive: false, openCount: 0 };
 }
 
-export async function updateCoordinatorApplicationStatus(level = 'state', isActive) {
-    const docRef = doc(db, 'appSettings', `${level}CoordinatorApplication`);
+export async function updateCoordinatorApplicationStatus(isActive) {
+    const docRef = doc(db, 'appSettings', 'coordinatorApplication');
     await setDoc(docRef, { isActive }, { merge: true });
 }
 
-export async function incrementCoordinatorApplicationOpenCount(level = 'state') {
-    const docRef = doc(db, 'appSettings', `${level}CoordinatorApplication`);
+export async function incrementCoordinatorApplicationOpenCount() {
+    const docRef = doc(db, 'appSettings', 'coordinatorApplication');
     await setDoc(docRef, { openCount: increment(1) }, { merge: true });
 }
 

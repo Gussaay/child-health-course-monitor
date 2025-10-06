@@ -16,9 +16,7 @@ import { FinalReportForm } from './components/FinalReportForm.jsx';
 import { ObservationView } from './components/MonitoringView';
 import { ReportsView } from './components/ReportsView';
 import { AdminDashboard } from './components/AdminDashboard';
-// FIX: Imported the new HumanResourcesPage component
 import { HumanResourcesPage } from './components/HumanResources';
-// FIX: Imported the renamed ProgramTeamView and TeamMemberApplicationForm components
 import { ProgramTeamView, TeamMemberApplicationForm } from './components/ProgramTeamView';
 import { PartnersPage } from './components/PartnersPage';
 import { ParticipantsView, ParticipantForm } from './components/Participants';
@@ -222,14 +220,12 @@ export default function App() {
     useEffect(() => {
         const path = window.location.pathname;
         const sharedMatch = path.match(/^\/shared\/(course-report|participant-report)\/([a-zA-Z0-9]+)\/?$/);
-        // FIX: Updated regex to capture facilitator and the new team member application URLs.
         const submissionMatch = path.match(/^\/public\/(facilitator-application|team-member-application)\/?$/);
-        // FIX: Check for the new unified public team member application link
         const unifiedTeamMemberSubmissionMatch = path === '/public/team-member-application';
 
         if (submissionMatch || unifiedTeamMemberSubmissionMatch) {
             setIsPublicSubmissionView(true);
-            setSubmissionType(submissionMatch ? submissionMatch[1] : 'team-member-application'); // Use the unified type
+            setSubmissionType(submissionMatch ? submissionMatch[1] : 'team-member-application');
             setLoading(false);
             setAuthLoading(false);
             return;
@@ -951,7 +947,7 @@ export default function App() {
             'dashboard': permissions.canViewDashboard,
             'admin': permissions.canViewAdmin,
             'landing': permissions.canViewLanding,
-            'humanResources': permissions.canViewFacilitators,
+            'humanResources': permissions.canViewFacilitators || userRole === 'states_manager' || userRole === 'federal_manager' || userRole === 'super_user',
             'courses': permissions.canViewCourse,
             'participants': permissions.canViewCourse,
             'observe': permissions.canAddMonitoring,
@@ -974,7 +970,6 @@ export default function App() {
         }
         
         const courseSubTabs = ['participants', 'reports'];
-        // FIX: Updated hrSubTabs to reflect changes
         const hrSubTabs = ['facilitators', 'programTeams', 'partnersPage'];
 
         if (hrSubTabs.includes(newView)) {
@@ -1043,7 +1038,6 @@ export default function App() {
             'dashboard': permissions.canViewDashboard,
             'admin': permissions.canViewAdmin,
             'landing': permissions.canViewLanding,
-            // FIX: Updated the permission check to be more inclusive for the entire HR section.
             'humanResources': permissions.canViewFacilitators || userRole === 'states_manager' || userRole === 'federal_manager' || userRole === 'super_user',
             'courses': permissions.canViewCourse,
             'participants': permissions.canViewCourse,
@@ -1306,7 +1300,6 @@ export default function App() {
     let mainContent;
 
     if (isPublicSubmissionView) {
-        // FIX: Added logic to render the TeamMemberApplicationForm for the correct submission type.
         if (submissionType === 'facilitator-application') {
             mainContent = <FacilitatorApplicationForm />;
         } else if (submissionType === 'team-member-application') {
