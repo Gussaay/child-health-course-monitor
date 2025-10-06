@@ -1,5 +1,5 @@
 // Facilitator.jsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Bar, Pie } from 'react-chartjs-2';
@@ -10,15 +10,121 @@ import {
     listAllCourses,
     upsertFacilitator,
     deleteFacilitator,
-    importFacilitators
+    importFacilitators,
+    submitFacilitatorApplication,
+    getFacilitatorApplicationSettings,
+    updateFacilitatorApplicationStatus,
+    incrementFacilitatorApplicationOpenCount,
+    uploadFile
 } from '../data';
 import { COURSE_TYPES_FACILITATOR, STATE_LOCALITIES } from './constants.js';
+import { auth } from '../firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const calcPct = (c, s) => (!s ? NaN : (c * 100) / s);
 const fmtPct = v => (!isFinite(v) ? "—" : Math.round(v).toFixed(0) + " %");
 
+// --- NEW HELPER & MODAL FOR VIEWING CERTIFICATES ---
+const getCertificateName = (key) => {
+    const names = {
+        IMNCI: 'IMNCI ToT Certificate',
+        ETAT: 'ETAT ToT Certificate',
+        EENC: 'EENC ToT Certificate',
+        IPC: 'IPC ToT Certificate',
+        'Small & Sick Newborn': 'Small & Sick Newborn ToT Certificate',
+        directorCourseCert: 'IMNCI Course Director Certificate',
+        followUpCourseCert: 'IMNCI Follow-up Course Certificate',
+        teamLeaderCourseCert: 'IMNCI Team Leader Certificate',
+    };
+    return names[key] || key;
+};
 
-const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators, allCourses }) => {
+function ViewCertificatesModal({ isOpen, onClose, facilitator }) {
+    if (!facilitator) return null;
+
+    const certs = facilitator.certificateUrls ? Object.entries(facilitator.certificateUrls) : [];
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={`Certificates for ${facilitator.name}`}>
+            <div className="p-6">
+                {certs.length > 0 ? (
+                    <ul className="space-y-3">
+                        {certs.map(([key, url]) => (
+                            <li key={key} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50 hover:bg-gray-100">
+                                <span className="font-medium text-gray-700">{getCertificateName(key)}</span>
+                                <a href={url} target="_blank" rel="noopener noreferrer">
+                                    <Button variant="secondary">View Certificate</Button>
+                                </a>
+                            </li>
+                        ))}
+                    </ul>
+                ) : (
+                    <EmptyState message="No certificates have been uploaded for this facilitator." />
+                )}
+            </div>
+        </Modal>
+    );
+}
+
+
+// --- MODAL COMPONENT FOR LINK MANAGEMENT ---
+function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleStatus }) {
+    const [showLinkCopied, setShowLinkCopied] = useState(false);
+    const link = `${window.location.origin}/public/facilitator-application`;
+
+    const handleCopyLink = () => {
+        navigator.clipboard.writeText(link).then(() => {
+            setShowLinkCopied(true);
+            setTimeout(() => setShowLinkCopied(false), 2500);
+        });
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Manage Public Submission Link">
+            <div className="p-6 space-y-6">
+                {isLoading ? <Spinner /> : (
+                    <>
+                        <div>
+                            <FormGroup label="Public URL">
+                                <div className="relative">
+                                    <Input type="text" value={link} readOnly className="pr-24" />
+                                    <Button
+                                        onClick={handleCopyLink}
+                                        className="absolute right-1 top-1/2 -translate-y-1/2"
+                                        variant="secondary"
+                                    >
+                                        {showLinkCopied ? 'Copied!' : 'Copy'}
+                                    </Button>
+                                </div>
+                            </FormGroup>
+                        </div>
+                        <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-gray-50 rounded-lg">
+                            <div className="flex items-center gap-4">
+                                <div>Status: 
+                                    <span className={`font-bold px-2 py-1 rounded-full text-xs ml-2 ${settings.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                        {settings.isActive ? 'Active' : 'Inactive'}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="font-medium">Link Opened:</span> {settings.openCount || 0} times
+                                </div>
+                            </div>
+                            <Button 
+                                variant={settings.isActive ? 'danger' : 'success'}
+                                onClick={onToggleStatus}
+                            >
+                                {settings.isActive ? 'Deactivate Link' : 'Activate Link'}
+                            </Button>
+                        </div>
+                    </>
+                )}
+            </div>
+        </Modal>
+    );
+}
+
+
+const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
     const [excelData, setExcelData] = useState([]);
     const [headers, setHeaders] = useState([]);
     const [fieldMappings, setFieldMappings] = useState({});
@@ -208,8 +314,97 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators, allCourses 
     );
 };
 
-export function FacilitatorsView({ facilitators, onAdd, onEdit, onDelete, onOpenReport, onOpenComparison, onImport, userStates }) {
+function SubmissionDetails({ submission }) {
+    const fieldsToShow = {
+        name: "Name",
+        phone: "Phone",
+        email: "Email",
+        currentState: "State",
+        currentLocality: "Locality",
+        courses: "Courses Taught",
+        totDates: "ToT Dates",
+        directorCourse: "Attended Director Course",
+        directorCourseDate: "Director Course Date",
+        followUpCourse: "Attended Follow-up Course",
+        followUpCourseDate: "Follow-up Course Date",
+        teamLeaderCourse: "Attended Team Leader Course",
+        teamLeaderCourseDate: "Team Leader Course Date",
+        isClinicalInstructor: "Is Clinical Instructor",
+        comments: "Comments",
+    };
+
+    return (
+        <div className="p-4">
+            <dl className="divide-y divide-gray-200">
+                {Object.entries(fieldsToShow).map(([key, label]) => {
+                    let value = submission[key];
+                    if (!value || (Array.isArray(value) && value.length === 0) || (typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0)) return null;
+
+                    if (key === 'courses' && Array.isArray(value)) {
+                        value = value.join(', ');
+                    }
+                    if (key === 'totDates' && typeof value === 'object') {
+                        value = Object.entries(value).map(([course, date]) => `${course}: ${date}`).join('; ');
+                    }
+                    if (typeof value === 'boolean') {
+                        value = value ? 'Yes' : 'No';
+                    }
+                    
+                    return (
+                        <div key={key} className="py-3 sm:grid sm:grid-cols-3 sm:gap-4">
+                            <dt className="text-sm font-medium text-gray-500">{label}</dt>
+                            <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{String(value)}</dd>
+                        </div>
+                    );
+                })}
+            </dl>
+        </div>
+    );
+}
+
+export function FacilitatorsView({ 
+    facilitators, 
+    onAdd, 
+    onEdit, 
+    onDelete, 
+    onOpenReport, 
+    onOpenComparison, 
+    onImport, 
+    userStates,
+    pendingSubmissions,
+    isSubmissionsLoading,
+    onApproveSubmission,
+    onRejectSubmission,
+    permissions
+}) {
     const [importModalOpen, setImportModalOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState('current');
+    const [viewingSubmission, setViewingSubmission] = useState(null);
+    const [linkSettings, setLinkSettings] = useState({ isActive: false, openCount: 0 });
+    const [isLoadingSettings, setIsLoadingSettings] = useState(true);
+    const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+    const [viewingCertsFor, setViewingCertsFor] = useState(null);
+
+    useEffect(() => {
+        const fetchSettings = async () => {
+            if (permissions.canApproveSubmissions) {
+                setIsLoadingSettings(true);
+                const settings = await getFacilitatorApplicationSettings();
+                setLinkSettings(settings);
+                setIsLoadingSettings(false);
+            }
+        };
+        fetchSettings();
+    }, [permissions.canApproveSubmissions]);
+
+    const handleToggleLinkStatus = async () => {
+        setIsLoadingSettings(true);
+        const newStatus = !linkSettings.isActive;
+        await updateFacilitatorApplicationStatus(newStatus);
+        const updatedSettings = await getFacilitatorApplicationSettings();
+        setLinkSettings(updatedSettings);
+        setIsLoadingSettings(false);
+    };
 
     const filteredFacilitators = useMemo(() => {
         if (!userStates || userStates.length === 0) {
@@ -218,12 +413,26 @@ export function FacilitatorsView({ facilitators, onAdd, onEdit, onDelete, onOpen
         return facilitators.filter(f => f.currentState && userStates.includes(f.currentState));
     }, [facilitators, userStates]);
 
+    const TabButton = ({ isActive, onClick, children }) => (
+        <button
+            onClick={onClick}
+            className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors duration-200 ${isActive ? 'border-sky-500 text-sky-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'}`}
+        >
+            {children}
+        </button>
+    );
+
     return (
         <Card>
             <PageHeader title="Manage Facilitators" actions={<Button onClick={onOpenComparison}>Compare Facilitators</Button>} />
-            <div className="mb-4 flex gap-2">
+            <div className="mb-6 flex gap-2 flex-wrap items-start">
                 <Button onClick={onAdd}>Add New Facilitator</Button>
                 <Button variant="secondary" onClick={() => setImportModalOpen(true)}>Import from Excel</Button>
+                {permissions.canApproveSubmissions && (
+                    <Button variant="info" onClick={() => setIsLinkModalOpen(true)}>
+                        Manage Submission Link
+                    </Button>
+                )}
             </div>
             
             <ExcelImportModal
@@ -233,25 +442,97 @@ export function FacilitatorsView({ facilitators, onAdd, onEdit, onDelete, onOpen
                 facilitators={facilitators}
             />
 
-            {Array.isArray(filteredFacilitators) && filteredFacilitators.length > 0 ? (
-                <Table headers={["Name", "Phone", "Courses", "Actions"]}>
-                    {filteredFacilitators.map(f => (
-                        <tr key={f.id} className="hover:bg-gray-50">
-                            <td className="p-4 border">{f.name}</td>
-                            <td className="p-4 border">{f.phone}</td>
-                            <td className="p-4 border">{(Array.isArray(f.courses) ? f.courses : []).join(', ')}</td>
-                            <td className="p-4 border">
-                                <div className="flex gap-2 flex-wrap justify-end">
-                                    <Button variant="primary" onClick={() => onOpenReport(f.id)}>Report</Button>
-                                    <Button variant="secondary" onClick={() => onEdit(f)}>Edit</Button>
-                                    <Button variant="danger" onClick={() => onDelete(f.id)}>Delete</Button>
-                                </div>
-                            </td>
-                        </tr>
-                    ))}
-                </Table>
-            ) : (
-                <EmptyState key="empty-facilitators" message="No facilitators found for your assigned state(s)." />
+            <LinkManagementModal 
+                isOpen={isLinkModalOpen}
+                onClose={() => setIsLinkModalOpen(false)}
+                settings={linkSettings}
+                isLoading={isLoadingSettings}
+                onToggleStatus={handleToggleLinkStatus}
+            />
+            
+            <ViewCertificatesModal
+                isOpen={!!viewingCertsFor}
+                onClose={() => setViewingCertsFor(null)}
+                facilitator={viewingCertsFor}
+            />
+
+            <div className="mt-6">
+                <div className="border-b border-gray-200">
+                    <nav className="-mb-px flex gap-6" aria-label="Tabs">
+                        <TabButton isActive={activeTab === 'current'} onClick={() => setActiveTab('current')}>
+                            Current Facilitators
+                        </TabButton>
+                        {permissions.canApproveSubmissions && (
+                             <TabButton isActive={activeTab === 'pending'} onClick={() => setActiveTab('pending')}>
+                                Pending Submissions 
+                                <span className={`ml-2 text-xs font-bold px-2 py-1 rounded-full ${activeTab === 'pending' ? 'bg-sky-500 text-white' : 'bg-gray-200 text-gray-600'}`}>
+                                    {pendingSubmissions.length}
+                                </span>
+                            </TabButton>
+                        )}
+                    </nav>
+                </div>
+
+                <div className="mt-4">
+                    {activeTab === 'current' && (
+                        Array.isArray(filteredFacilitators) && filteredFacilitators.length > 0 ? (
+                            <Table headers={["Name", "Phone", "Courses", "Actions"]}>
+                                {filteredFacilitators.map(f => {
+                                    const hasCerts = f.certificateUrls && Object.keys(f.certificateUrls).length > 0;
+                                    return (
+                                        <tr key={f.id} className="hover:bg-gray-50">
+                                            <td className="p-4 border">{f.name}</td>
+                                            <td className="p-4 border">{f.phone}</td>
+                                            <td className="p-4 border">{(Array.isArray(f.courses) ? f.courses : []).join(', ')}</td>
+                                            <td className="p-4 border">
+                                                <div className="flex gap-2 flex-wrap justify-end">
+                                                    <Button variant="primary" onClick={() => onOpenReport(f.id)}>Report</Button>
+                                                    <Button variant="info" onClick={() => setViewingCertsFor(f)} disabled={!hasCerts} title={hasCerts ? "View Certificates" : "No certificates available"}>Certificates</Button>
+                                                    <Button variant="secondary" onClick={() => onEdit(f)}>Edit</Button>
+                                                    <Button variant="danger" onClick={() => onDelete(f.id)}>Delete</Button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </Table>
+                        ) : (
+                            <EmptyState key="empty-facilitators" message="No facilitators found for your assigned state(s)." />
+                        )
+                    )}
+
+                    {activeTab === 'pending' && permissions.canApproveSubmissions && (
+                        isSubmissionsLoading ? <Spinner /> : (
+                            pendingSubmissions.length > 0 ? (
+                                <Table headers={["Name", "Phone", "State", "Submitted At", "Actions"]}>
+                                    {pendingSubmissions.map(sub => (
+                                        <tr key={sub.id}>
+                                            <td className="p-2 border">{sub.name}</td>
+                                            <td className="p-2 border">{sub.phone}</td>
+                                            <td className="p-2 border">{sub.currentState}</td>
+                                            <td className="p-2 border">{sub.submittedAt?.toDate ? sub.submittedAt.toDate().toLocaleDateString() : 'N/A'}</td>
+                                            <td className="p-2 border">
+                                                <div className="flex gap-2">
+                                                    <Button variant="info" onClick={() => setViewingSubmission(sub)}>View</Button>
+                                                    <Button variant="success" onClick={() => onApproveSubmission(sub)}>Approve</Button>
+                                                    <Button variant="danger" onClick={() => onRejectSubmission(sub.id)}>Reject</Button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </Table>
+                            ) : (
+                                <EmptyState message="No pending facilitator submissions." />
+                            )
+                        )
+                    )}
+                </div>
+            </div>
+
+            {viewingSubmission && (
+                <Modal isOpen={!!viewingSubmission} onClose={() => setViewingSubmission(null)} title="Submission Details">
+                    <SubmissionDetails submission={viewingSubmission} />
+                </Modal>
             )}
         </Card>
     );
@@ -263,6 +544,8 @@ export function FacilitatorForm({ initialData, onCancel, onSave }) {
     const [email, setEmail] = useState(initialData?.email || '');
     const [courses, setCourses] = useState(Array.isArray(initialData?.courses) ? initialData.courses : []);
     const [totDates, setTotDates] = useState(initialData?.totDates || {});
+    const [certificateUrls, setCertificateUrls] = useState(initialData?.certificateUrls || {});
+    const [certificateFiles, setCertificateFiles] = useState({});
     const [currentState, setCurrentState] = useState(initialData?.currentState || '');
     const [currentLocality, setCurrentLocality] = useState(initialData?.currentLocality || '');
     const [directorCourse, setDirectorCourse] = useState(initialData?.directorCourse || 'No');
@@ -274,9 +557,17 @@ export function FacilitatorForm({ initialData, onCancel, onSave }) {
     const [isClinicalInstructor, setIsClinicalInstructor] = useState(initialData?.isClinicalInstructor || 'No');
     const [comments, setComments] = useState(initialData?.comments || '');
     const [error, setError] = useState('');
+    const [isCertsModalOpen, setIsCertsModalOpen] = useState(false);
+    const hasCerts = initialData?.certificateUrls && Object.keys(initialData.certificateUrls).length > 0;
 
     const handleCourseToggle = (course) => {
         setCourses(prev => prev.includes(course) ? prev.filter(c => c !== course) : [...prev, course]);
+    };
+
+    const handleFileChange = (certKey, file) => {
+        if (file) {
+            setCertificateFiles(prev => ({ ...prev, [certKey]: file }));
+        }
     };
 
     const handleSubmit = () => {
@@ -289,73 +580,155 @@ export function FacilitatorForm({ initialData, onCancel, onSave }) {
             directorCourse, directorCourseDate: directorCourse === 'Yes' ? directorCourseDate : '',
             followUpCourse, followUpCourseDate: followUpCourse === 'Yes' ? followUpCourseDate : '',
             teamLeaderCourse, teamLeaderCourseDate: teamLeaderCourse === 'Yes' ? teamLeaderCourseDate : '',
-            isClinicalInstructor, comments
+            isClinicalInstructor: courses.includes('IMNCI') ? isClinicalInstructor : 'No',
+            comments,
+            certificateUrls,
+            certificateFiles
         };
         onSave(payload);
     };
 
     return (
         <Card>
-            <PageHeader title={initialData ? 'Edit Facilitator' : 'Add New Facilitator'} />
+            <PageHeader 
+                title={initialData ? 'Edit Facilitator' : 'Add New Facilitator'} 
+                actions={initialData && (
+                    <Button variant="info" onClick={() => setIsCertsModalOpen(true)} disabled={!hasCerts}>
+                        View All Certificates
+                    </Button>
+                )}
+            />
             {error && <div className="p-3 mb-4 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <FormGroup label="Facilitator Name"><Input value={name} onChange={e => setName(e.target.value)} /></FormGroup>
-                <FormGroup label="Phone Number"><Input value={phone} onChange={e => setPhone(e.target.value)} /></FormGroup>
-                <FormGroup label="Email"><Input type="email" value={email} onChange={e => setEmail(e.target.value)} /></FormGroup>
-                <FormGroup label="Current State">
-                    <Select value={currentState} onChange={e => { setCurrentState(e.target.value); setCurrentLocality(''); }}>
-                        <option value="">— Select State —</option>
-                        {Object.keys(STATE_LOCALITIES).sort().map(s => <option key={s} value={s}>{s}</option>)}
-                        <option value="Out of Sudan">Out of Sudan</option>
-                    </Select>
-                </FormGroup>
-                <FormGroup label="Current Locality">
-                    <Select value={currentLocality} onChange={e => setCurrentLocality(e.target.value)} disabled={!currentState || currentState === 'Out of Sudan'}>
-                        <option value="">— Select Locality —</option>
-                        {(STATE_LOCALITIES[currentState] || []).sort().map(l => <option key={l} value={l}>{l}</option>)}
-                    </Select>
-                </FormGroup>
+            
+            <ViewCertificatesModal
+                isOpen={isCertsModalOpen}
+                onClose={() => setIsCertsModalOpen(false)}
+                facilitator={initialData}
+            />
 
-                <div className="lg:col-span-3 grid md:grid-cols-2 gap-6 border-t pt-6">
-                    <FormGroup label="Applicable Courses & ToT Dates">
-                        <div className="space-y-2">
-                            {COURSE_TYPES_FACILITATOR.map(course => (
-                                <div key={course} className="flex flex-wrap items-center gap-4 p-3 border rounded-md">
-                                    <div className="flex items-center gap-2">
-                                        <input type="checkbox" id={`course_${course}`} checked={courses.includes(course)} onChange={() => handleCourseToggle(course)} className="h-4 w-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500" />
-                                        <label htmlFor={`course_${course}`} className="font-medium w-16">{course}</label>
-                                    </div>
-                                    {courses.includes(course) && (
-                                        <div className="flex items-center gap-2 flex-grow">
-                                            <label className="text-sm">ToT Date:</label>
-                                            <Input type="date" value={totDates[course] || ''} onChange={e => setTotDates(d => ({ ...d, [course]: e.target.value }))} className="flex-grow" />
+            <div className="space-y-6">
+                
+                <div className="p-4 border rounded-md bg-gray-50">
+                    <h3 className="text-lg font-semibold mb-4 text-gray-700">Personal Information</h3>
+                    <div className="grid md:grid-cols-3 gap-4">
+                        <FormGroup label="Facilitator Name"><Input value={name} onChange={e => setName(e.target.value)} /></FormGroup>
+                        <FormGroup label="Phone Number"><Input value={phone} onChange={e => setPhone(e.target.value)} /></FormGroup>
+                        <FormGroup label="Email"><Input type="email" value={email} onChange={e => setEmail(e.target.value)} /></FormGroup>
+                    </div>
+                </div>
+
+                <div className="p-4 border rounded-md bg-gray-50">
+                    <h3 className="text-lg font-semibold mb-4 text-gray-700">Location</h3>
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <FormGroup label="Current State">
+                            <Select value={currentState} onChange={e => { setCurrentState(e.target.value); setCurrentLocality(''); }}>
+                                <option value="">— Select State —</option>
+                                {Object.keys(STATE_LOCALITIES).sort().map(s => <option key={s} value={s}>{s}</option>)}
+                                <option value="Out of Sudan">Out of Sudan</option>
+                            </Select>
+                        </FormGroup>
+                        <FormGroup label="Current Locality">
+                            <Select value={currentLocality} onChange={e => setCurrentLocality(e.target.value)} disabled={!currentState || currentState === 'Out of Sudan'}>
+                                <option value="">— Select Locality —</option>
+                                {(STATE_LOCALITIES[currentState] || []).sort().map(l => <option key={l} value={l}>{l}</option>)}
+                            </Select>
+                        </FormGroup>
+                    </div>
+                </div>
+
+                <div className="p-4 border rounded-md bg-gray-50">
+                    <h3 className="text-lg font-semibold mb-4 text-gray-700">Course Qualifications & Certificates</h3>
+                    <div className="space-y-4">
+                        {COURSE_TYPES_FACILITATOR.map(course => (
+                            <Fragment key={course}>
+                                <div className="p-4 border rounded-lg bg-white">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                                        <div className="flex items-center gap-3">
+                                            <input type="checkbox" id={`course_${course}`} checked={courses.includes(course)} onChange={() => handleCourseToggle(course)} className="h-5 w-5 rounded border-gray-300 text-sky-600 focus:ring-sky-500" />
+                                            <label htmlFor={`course_${course}`} className="font-medium text-md text-gray-800">{course}</label>
                                         </div>
-                                    )}
+                                        
+                                        <div className="min-w-0">
+                                            {courses.includes(course) && <Input type="date" value={totDates[course] || ''} onChange={e => setTotDates(d => ({ ...d, [course]: e.target.value }))} />}
+                                        </div>
+                                        
+                                        <div className="min-w-0">
+                                            {courses.includes(course) && (
+                                                <div>
+                                                    {certificateUrls[course] && (
+                                                        <a href={certificateUrls[course]} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mb-1 block">
+                                                            View Current Certificate
+                                                        </a>
+                                                    )}
+                                                    <Input type="file" accept="image/*" onChange={e => handleFileChange(course, e.target.files[0])}
+                                                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
-                            ))}
+                                {course === 'IMNCI' && courses.includes('IMNCI') && (
+                                     <div className="p-4 border-t border-sky-200 bg-sky-50 rounded-b-lg -mt-4">
+                                        <FormGroup label="Selected as Clinical Instructor?">
+                                            <Select value={isClinicalInstructor} onChange={e => setIsClinicalInstructor(e.target.value)}><option>No</option><option>Yes</option></Select>
+                                        </FormGroup>
+                                     </div>
+                                )}
+                            </Fragment>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="p-4 border rounded-md bg-gray-50">
+                    <h3 className="text-lg font-semibold mb-4 text-gray-700">IMNCI Specific Qualifications</h3>
+                    <div className="space-y-4">
+                         <div className="grid md:grid-cols-3 gap-4 items-end">
+                            <FormGroup label="Attended IMNCI Course Director Course?">
+                                <Select value={directorCourse} onChange={e => setDirectorCourse(e.target.value)}><option>No</option><option>Yes</option></Select>
+                            </FormGroup>
+                            {directorCourse === 'Yes' && <>
+                                <FormGroup label="Date of Course"><Input type="date" value={directorCourseDate} onChange={e => setDirectorCourseDate(e.target.value)} /></FormGroup>
+                                <FormGroup label="Certificate (Image)">
+                                    {certificateUrls['directorCourseCert'] && ( <a href={certificateUrls['directorCourseCert']} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mb-1 block">View Current</a> )}
+                                    <Input type="file" accept="image/*" onChange={e => handleFileChange('directorCourseCert', e.target.files[0])} />
+                                </FormGroup>
+                            </>}
                         </div>
-                    </FormGroup>
+
+                         <div className="grid md:grid-cols-3 gap-4 items-end">
+                            <FormGroup label="Attended IMNCI Follow-up Course?">
+                                <Select value={followUpCourse} onChange={e => setFollowUpCourse(e.target.value)}><option>No</option><option>Yes</option></Select>
+                            </FormGroup>
+                            {followUpCourse === 'Yes' && <>
+                                <FormGroup label="Date of Course"><Input type="date" value={followUpCourseDate} onChange={e => setFollowUpCourseDate(e.target.value)} /></FormGroup>
+                                <FormGroup label="Certificate (Image)">
+                                     {certificateUrls['followUpCourseCert'] && ( <a href={certificateUrls['followUpCourseCert']} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mb-1 block">View Current</a> )}
+                                    <Input type="file" accept="image/*" onChange={e => handleFileChange('followUpCourseCert', e.target.files[0])} />
+                                </FormGroup>
+                            </>}
+                        </div>
+                        
+                        <div className="grid md:grid-cols-3 gap-4 items-end">
+                            <FormGroup label="Attended IMNCI Team Leader Course?">
+                                <Select value={teamLeaderCourse} onChange={e => setTeamLeaderCourse(e.target.value)}><option>No</option><option>Yes</option></Select>
+                            </FormGroup>
+                            {teamLeaderCourse === 'Yes' && <>
+                                <FormGroup label="Date of Course"><Input type="date" value={teamLeaderCourseDate} onChange={e => setTeamLeaderCourseDate(e.target.value)} /></FormGroup>
+                                 <FormGroup label="Certificate (Image)">
+                                     {certificateUrls['teamLeaderCourseCert'] && ( <a href={certificateUrls['teamLeaderCourseCert']} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mb-1 block">View Current</a> )}
+                                    <Input type="file" accept="image/*" onChange={e => handleFileChange('teamLeaderCourseCert', e.target.files[0])} />
+                                </FormGroup>
+                            </>}
+                        </div>
+                    </div>
                 </div>
 
-                <div className="lg:col-span-3 grid md:grid-cols-2 lg:grid-cols-3 gap-6 border-t pt-6">
-                    <FormGroup label="Attended IMNCI Course Director Course?"><Select value={directorCourse} onChange={e => setDirectorCourse(e.target.value)}><option>No</option><option>Yes</option></Select></FormGroup>
-                    {directorCourse === 'Yes' && <FormGroup label="Date of Course"><Input type="date" value={directorCourseDate} onChange={e => setDirectorCourseDate(e.target.value)} /></FormGroup>}
-                    <div />
-
-                    <FormGroup label="Attended IMNCI Follow-up Course?"><Select value={followUpCourse} onChange={e => setFollowUpCourse(e.target.value)}><option>No</option><option>Yes</option></Select></FormGroup>
-                    {followUpCourse === 'Yes' && <FormGroup label="Date of Course"><Input type="date" value={followUpCourseDate} onChange={e => setFollowUpCourseDate(e.target.value)} /></FormGroup>}
-                    <div />
-
-                    <FormGroup label="Attended IMNCI Team Leader Course?"><Select value={teamLeaderCourse} onChange={e => setTeamLeaderCourse(e.target.value)}><option>No</option><option>Yes</option></Select></FormGroup>
-                    {teamLeaderCourse === 'Yes' && <FormGroup label="Date of Course"><Input type="date" value={teamLeaderCourseDate} onChange={e => setTeamLeaderCourseDate(e.target.value)} /></FormGroup>}
-                    <div />
-
-                    <FormGroup label="Selected as Clinical Instructor?"><Select value={isClinicalInstructor} onChange={e => setIsClinicalInstructor(e.target.value)}><option>No</option><option>Yes</option></Select></FormGroup>
-                </div>
-
-                <div className="lg:col-span-3 border-t pt-6">
+                <div className="p-4 border rounded-md bg-gray-50">
+                    <h3 className="text-lg font-semibold mb-4 text-gray-700">Additional Information</h3>
                     <FormGroup label="Other comments from Program Manager"><Textarea rows={4} value={comments} onChange={e => setComments(e.target.value)} /></FormGroup>
                 </div>
+
             </div>
             <div className="flex gap-2 justify-end mt-6 border-t pt-6">
                 <Button variant="secondary" onClick={onCancel}>Cancel</Button>
@@ -365,9 +738,249 @@ export function FacilitatorForm({ initialData, onCancel, onSave }) {
     );
 }
 
+export function FacilitatorApplicationForm() {
+    // Form State
+    const [name, setName] = useState('');
+    const [phone, setPhone] = useState('');
+    const [email, setEmail] = useState('');
+    const [courses, setCourses] = useState([]);
+    const [totDates, setTotDates] = useState({});
+    const [certificateFiles, setCertificateFiles] = useState({});
+    const [currentState, setCurrentState] = useState('');
+    const [currentLocality, setCurrentLocality] = useState('');
+    const [directorCourse, setDirectorCourse] = useState('No');
+    const [directorCourseDate, setDirectorCourseDate] = useState('');
+    const [followUpCourse, setFollowUpCourse] = useState('No');
+    const [followUpCourseDate, setFollowUpCourseDate] = useState('');
+    const [teamLeaderCourse, setTeamLeaderCourse] = useState('No');
+    const [teamLeaderCourseDate, setTeamLeaderCourseDate] = useState('');
+    const [isClinicalInstructor, setIsClinicalInstructor] = useState('No');
+    const [comments, setComments] = useState('');
+
+    // Control State
+    const [isUserEmail, setIsUserEmail] = useState(false);
+    const [error, setError] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const [submitted, setSubmitted] = useState(false);
+    const [isLinkActive, setIsLinkActive] = useState(false);
+    const [isLoadingStatus, setIsLoadingStatus] = useState(true);
+
+    useEffect(() => {
+        // Check if user is logged in to pre-fill email
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (user && user.email) {
+                setEmail(user.email);
+                setIsUserEmail(true);
+            }
+        });
+
+        // Check if the submission link is active and increment count
+        const checkStatusAndIncrement = async () => {
+            try {
+                const settings = await getFacilitatorApplicationSettings();
+                if (settings.isActive) {
+                    await incrementFacilitatorApplicationOpenCount();
+                    setIsLinkActive(true);
+                } else {
+                    setIsLinkActive(false);
+                }
+            } catch (error) {
+                console.error("Error checking application status:", error);
+                setIsLinkActive(false);
+            } finally {
+                setIsLoadingStatus(false);
+            }
+        };
+
+        checkStatusAndIncrement();
+        return () => unsubscribe();
+    }, []);
+
+    const handleCourseToggle = (course) => {
+        setCourses(prev => prev.includes(course) ? prev.filter(c => c !== course) : [...prev, course]);
+    };
+    
+    const handleFileChange = (certKey, file) => {
+        if (file) {
+            setCertificateFiles(prev => ({ ...prev, [certKey]: file }));
+        }
+    };
+
+    const handleSubmit = async () => {
+        if (!name || !phone) {
+            setError('Facilitator Name and Phone Number are required.');
+            return;
+        }
+        setError('');
+        setSubmitting(true);
+        try {
+            let certificateUrls = {};
+            for (const key in certificateFiles) {
+                const file = certificateFiles[key];
+                if (file) {
+                    const url = await uploadFile(file);
+                    certificateUrls[key] = url;
+                }
+            }
+
+            const payload = {
+                name, phone, email, courses, totDates, currentState, currentLocality,
+                directorCourse, directorCourseDate: directorCourse === 'Yes' ? directorCourseDate : '',
+                followUpCourse, followUpCourseDate: followUpCourse === 'Yes' ? followUpCourseDate : '',
+                teamLeaderCourse, teamLeaderCourseDate: teamLeaderCourse === 'Yes' ? teamLeaderCourseDate : '',
+                isClinicalInstructor: courses.includes('IMNCI') ? isClinicalInstructor : 'No',
+                comments,
+                certificateUrls
+            };
+            
+            await submitFacilitatorApplication(payload);
+            setSubmitted(true);
+        } catch (err) {
+            console.error("Submission failed:", err);
+            setError("There was an error submitting your information. Please try again later.");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    if (isLoadingStatus) {
+        return <Card><Spinner /></Card>;
+    }
+    
+    if (!isLinkActive) {
+        return (
+            <Card>
+                <PageHeader title="Facilitator Application" />
+                <EmptyState message="Submissions for new facilitators are currently closed. Please check back later." />
+            </Card>
+        );
+    }
+
+    if (submitted) {
+        return (
+            <Card>
+                <PageHeader title="Submission Received" />
+                <div className="p-8 text-center">
+                    <h3 className="text-2xl font-bold text-green-600 mb-4">Thank You!</h3>
+                    <p className="text-gray-700">Your information has been submitted successfully and will be reviewed by an administrator.</p>
+                </div>
+            </Card>
+        );
+    }
+
+    // The JSX from FacilitatorForm is replicated here for the public form
+    return (
+        <Card>
+            <PageHeader title="Facilitator Application Form" subtitle="Submit your details to be considered as a facilitator for the National Child Health Program." />
+            {error && <div className="p-3 mb-4 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
+             <div className="space-y-6">
+                <div className="p-4 border rounded-md bg-gray-50">
+                    <h3 className="text-lg font-semibold mb-4 text-gray-700">Personal Information</h3>
+                    <div className="grid md:grid-cols-3 gap-4">
+                        <FormGroup label="Facilitator Name"><Input value={name} onChange={e => setName(e.target.value)} /></FormGroup>
+                        <FormGroup label="Phone Number"><Input value={phone} onChange={e => setPhone(e.target.value)} /></FormGroup>
+                        <FormGroup label="Email"><Input type="email" value={email} onChange={e => setEmail(e.target.value)} disabled={isUserEmail} /></FormGroup>
+                    </div>
+                </div>
+                <div className="p-4 border rounded-md bg-gray-50">
+                    <h3 className="text-lg font-semibold mb-4 text-gray-700">Location</h3>
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <FormGroup label="Current State">
+                            <Select value={currentState} onChange={e => { setCurrentState(e.target.value); setCurrentLocality(''); }}>
+                                <option value="">— Select State —</option>
+                                {Object.keys(STATE_LOCALITIES).sort().map(s => <option key={s} value={s}>{s}</option>)}
+                                <option value="Out of Sudan">Out of Sudan</option>
+                            </Select>
+                        </FormGroup>
+                        <FormGroup label="Current Locality">
+                            <Select value={currentLocality} onChange={e => setCurrentLocality(e.target.value)} disabled={!currentState || currentState === 'Out of Sudan'}>
+                                <option value="">— Select Locality —</option>
+                                {(STATE_LOCALITIES[currentState] || []).sort().map(l => <option key={l} value={l}>{l}</option>)}
+                            </Select>
+                        </FormGroup>
+                    </div>
+                </div>
+                <div className="p-4 border rounded-md bg-gray-50">
+                    <h3 className="text-lg font-semibold mb-4 text-gray-700">Course Qualifications & Certificates</h3>
+                    <div className="space-y-4">
+                        {COURSE_TYPES_FACILITATOR.map(course => (
+                            <Fragment key={course}>
+                                <div className="p-4 border rounded-lg bg-white">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                                        <div className="flex items-center gap-3">
+                                            <input type="checkbox" id={`course_${course}`} checked={courses.includes(course)} onChange={() => handleCourseToggle(course)} className="h-5 w-5 rounded border-gray-300 text-sky-600 focus:ring-sky-500" />
+                                            <label htmlFor={`course_${course}`} className="font-medium text-md text-gray-800">{course}</label>
+                                        </div>
+                                        <div className="min-w-0">
+                                            {courses.includes(course) && <Input type="date" value={totDates[course] || ''} onChange={e => setTotDates(d => ({ ...d, [course]: e.target.value }))} />}
+                                        </div>
+                                        <div className="min-w-0">
+                                            {courses.includes(course) && <Input type="file" accept="image/*" onChange={e => handleFileChange(course, e.target.files[0])} />}
+                                        </div>
+                                    </div>
+                                </div>
+                                {course === 'IMNCI' && courses.includes('IMNCI') && (
+                                     <div className="p-4 border-t border-sky-200 bg-sky-50 rounded-b-lg -mt-4">
+                                        <FormGroup label="Selected as Clinical Instructor?">
+                                            <Select value={isClinicalInstructor} onChange={e => setIsClinicalInstructor(e.target.value)}><option>No</option><option>Yes</option></Select>
+                                        </FormGroup>
+                                     </div>
+                                )}
+                            </Fragment>
+                        ))}
+                    </div>
+                </div>
+                <div className="p-4 border rounded-md bg-gray-50">
+                    <h3 className="text-lg font-semibold mb-4 text-gray-700">IMNCI Specific Qualifications</h3>
+                    <div className="space-y-4">
+                         <div className="grid md:grid-cols-3 gap-4 items-end">
+                            <FormGroup label="Attended IMNCI Course Director Course?">
+                                <Select value={directorCourse} onChange={e => setDirectorCourse(e.target.value)}><option>No</option><option>Yes</option></Select>
+                            </FormGroup>
+                            {directorCourse === 'Yes' && <>
+                                <FormGroup label="Date of Course"><Input type="date" value={directorCourseDate} onChange={e => setDirectorCourseDate(e.target.value)} /></FormGroup>
+                                <FormGroup label="Certificate (Image)"><Input type="file" accept="image/*" onChange={e => handleFileChange('directorCourseCert', e.target.files[0])} /></FormGroup>
+                            </>}
+                        </div>
+                         <div className="grid md:grid-cols-3 gap-4 items-end">
+                            <FormGroup label="Attended IMNCI Follow-up Course?">
+                                <Select value={followUpCourse} onChange={e => setFollowUpCourse(e.target.value)}><option>No</option><option>Yes</option></Select>
+                            </FormGroup>
+                            {followUpCourse === 'Yes' && <>
+                                <FormGroup label="Date of Course"><Input type="date" value={followUpCourseDate} onChange={e => setFollowUpCourseDate(e.target.value)} /></FormGroup>
+                                <FormGroup label="Certificate (Image)"><Input type="file" accept="image/*" onChange={e => handleFileChange('followUpCourseCert', e.target.files[0])} /></FormGroup>
+                            </>}
+                        </div>
+                        <div className="grid md:grid-cols-3 gap-4 items-end">
+                            <FormGroup label="Attended IMNCI Team Leader Course?">
+                                <Select value={teamLeaderCourse} onChange={e => setTeamLeaderCourse(e.target.value)}><option>No</option><option>Yes</option></Select>
+                            </FormGroup>
+                            {teamLeaderCourse === 'Yes' && <>
+                                <FormGroup label="Date of Course"><Input type="date" value={teamLeaderCourseDate} onChange={e => setTeamLeaderCourseDate(e.target.value)} /></FormGroup>
+                                <FormGroup label="Certificate (Image)"><Input type="file" accept="image/*" onChange={e => handleFileChange('teamLeaderCourseCert', e.target.files[0])} /></FormGroup>
+                            </>}
+                        </div>
+                    </div>
+                </div>
+                <div className="p-4 border rounded-md bg-gray-50">
+                    <h3 className="text-lg font-semibold mb-4 text-gray-700">Additional Information</h3>
+                    <FormGroup label="Other comments or qualifications"><Textarea rows={4} value={comments} onChange={e => setComments(e.target.value)} /></FormGroup>
+                </div>
+            </div>
+            <div className="flex gap-2 justify-end mt-6 border-t pt-6">
+                <Button onClick={handleSubmit} disabled={submitting}>
+                    {submitting ? 'Submitting...' : 'Submit Application'}
+                </Button>
+            </div>
+        </Card>
+    );
+}
+
 export function FacilitatorReportView({ facilitator, allCourses, onBack }) {
     const combinedChartRef = useRef(null);
     const imciSubcoursePieRef = useRef(null);
+    const [isCertsModalOpen, setIsCertsModalOpen] = useState(false);
+    const hasCerts = facilitator?.certificateUrls && Object.keys(facilitator.certificateUrls).length > 0;
 
     const { directedCourses, facilitatedCourses, totalDays, combinedChartData, imciSubcourseData } = useMemo(() => {
         if (!facilitator) {
@@ -545,8 +1158,14 @@ export function FacilitatorReportView({ facilitator, allCourses, onBack }) {
     
     return (
         <div className="grid gap-6">
+            <ViewCertificatesModal
+                isOpen={isCertsModalOpen}
+                onClose={() => setIsCertsModalOpen(false)}
+                facilitator={facilitator}
+            />
             <PageHeader title="Facilitator Report" subtitle={facilitator.name} actions={<>
                 <Button onClick={generateFacilitatorPdf} variant="secondary"><PdfIcon /> Export as PDF</Button>
+                <Button variant="info" onClick={() => setIsCertsModalOpen(true)} disabled={!hasCerts}>View Certificates</Button>
                 <Button onClick={onBack}>Back to List</Button>
             </>} />
 

@@ -31,12 +31,66 @@ export const Button = ({ onClick, children, variant = 'primary', disabled = fals
     const disabledClasses = "disabled:opacity-50 disabled:cursor-not-allowed";
     return <button onClick={onClick} disabled={disabled} className={`${baseClasses} ${variantClasses[variant]} ${disabledClasses} ${className} ${activeTabClasses}`}>{children}</button>;
 };
-export const FormGroup = ({ label, children, hint }) => (<div className="flex flex-col gap-1"><label className="font-semibold text-gray-700 text-sm">{label}</label>{children}{hint && <p className="text-xs text-gray-500">{hint}</p>}</div>);
-export const Input = (props) => <input {...props} className={`border border-gray-300 rounded-md p-2 w-full focus:ring-2 focus:ring-sky-500 focus:border-sky-500 ${props.className || ''}`} />;
-export const Select = (props) => <select {...props} className={`border border-gray-300 rounded-md p-2 w-full focus:ring-2 focus:ring-sky-500 focus:border-sky-500 ${props.className || ''}`}>{props.children}</select>;
-export const Textarea = (props) => <textarea {...props} className={`border border-gray-300 rounded-md p-2 w-full focus:ring-2 focus:ring-sky-500 focus:border-sky-500 ${props.className || ''}`} />;
+
+// --- CORRECTED FORM COMPONENTS ---
+
+export const FormGroup = ({ label, children, hint }) => (
+    <div className="flex flex-col gap-1">
+        <label className="font-semibold text-gray-700 text-sm rtl:text-right">
+            {label}
+        </label>
+        {children}
+        {hint && <p className="text-xs text-gray-500">{hint}</p>}
+    </div>
+);
+
+export const Input = ({ label, name, ...props }) => (
+    <div className="flex flex-col">
+        <label htmlFor={name} className="mb-1 text-sm font-medium text-gray-700 rtl:text-right">
+            {label}
+        </label>
+        <input
+            id={name}
+            name={name}
+            {...props}
+            className={`border border-gray-300 rounded-md p-2 w-full focus:ring-2 focus:ring-sky-500 focus:border-sky-500 rtl:text-right ${props.className || ''}`}
+        />
+    </div>
+);
+
+export const Select = ({ label, name, children, ...props }) => (
+    <div className="flex flex-col">
+        <label htmlFor={name} className="mb-1 text-sm font-medium text-gray-700 rtl:text-right">
+            {label}
+        </label>
+        <select
+            id={name}
+            name={name}
+            {...props}
+            className={`border border-gray-300 rounded-md p-2 w-full focus:ring-2 focus:ring-sky-500 focus:border-sky-500 rtl:text-right ${props.className || ''}`}
+        >
+            {children}
+        </select>
+    </div>
+);
+
+export const Textarea = ({ label, name, ...props }) => (
+    <div className="flex flex-col">
+        <label htmlFor={name} className="mb-1 text-sm font-medium text-gray-700 rtl:text-right">
+            {label}
+        </label>
+        <textarea
+            id={name}
+            name={name}
+            {...props}
+            className={`border border-gray-300 rounded-md p-2 w-full focus:ring-2 focus:ring-sky-500 focus:border-sky-500 rtl:text-right ${props.className || ''}`}
+        />
+    </div>
+);
+
+// --- OTHER COMPONENTS ---
+
 export const Table = ({ headers, children }) => {
-    // Add null/undefined checks for headers to prevent the 'map' error
     const tableHeaders = Array.isArray(headers) ? headers : [];
     
     return (
@@ -51,7 +105,6 @@ export const Table = ({ headers, children }) => {
                         ))}
                     </tr>
                 </thead>
-                {/* Use a simple check to ensure children exist */}
                 {children && <tbody className="bg-white">{children}</tbody>}
             </table>
         </div>
@@ -61,10 +114,6 @@ export const EmptyState = ({ message, colSpan = 100 }) => (<tr><td colSpan={colS
 export const Spinner = () => <div className="flex justify-center items-center p-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600"></div></div>;
 export const PdfIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
 
-
-
-
-// Add Modal component
 export function Modal({ isOpen, onClose, title, children }) {
   if (!isOpen) return null;
   
@@ -87,7 +136,6 @@ export function Modal({ isOpen, onClose, title, children }) {
   );
 }
 
-// New CourseIcon component
 export const CourseIcon = ({ course }) => {
     const p = { width: 34, height: 34, viewBox: '0 0 48 48' };
     switch (course) {
@@ -120,15 +168,12 @@ export function FileUpload({ accept, onChange, ...props }) {
     );
 }
 
-
 export const Footer = () => (
     <footer className="bg-slate-800 text-slate-400 text-center p-4 mt-8">
         <p>App developed by Dr Qusay Mohamed - <a href="mailto:Gussaay@gmail.com" className="text-sky-400 hover:underline">Gussaay@gmail.com</a></p>
     </footer>
 );
 
-
-// New Checkbox component
 export function Checkbox(props) {
     return (
         <input
@@ -139,7 +184,6 @@ export function Checkbox(props) {
     );
 }
 
-// New Toast component for notifications
 export function Toast({ message, type, onClose }) {
     const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
     const borderColor = type === 'success' ? 'border-green-600' : 'border-red-600';
@@ -192,7 +236,6 @@ export const FileInput = ({ label, ...props }) => {
     );
 };
 
-// New Tabs component
 export function Tabs({ tabs, activeTab, onTabChange }) {
     return (
         <div className="flex gap-2 border-b border-gray-200 pb-2">

@@ -11,12 +11,16 @@ import {
     deleteDoc,
     writeBatch,
     updateDoc,
-    getDoc as firestoreGetDoc
+    getDoc as firestoreGetDoc,
+    serverTimestamp,
+    increment
 } from "firebase/firestore";
 
 import { auth } from './firebase';
 import { storage } from './firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+
+const getDoc = firestoreGetDoc; // Alias to avoid naming conflicts
 
 // --- FILE UPLOAD ---
 export async function uploadFile(file) {
@@ -35,7 +39,6 @@ export async function uploadFile(file) {
     }
 }
 
-// NEW FUNCTION TO DELETE FILE
 export async function deleteFile(fileUrl) {
     if (!fileUrl) return;
 
@@ -50,49 +53,27 @@ export async function deleteFile(fileUrl) {
     }
 }
 
-// --- NEW PUBLIC DATA FETCHING FUNCTIONS ---
-
-/**
- * Fetches a single course document by its ID.
- * Assumes security rules are in place for public/private access.
- * @param {string} courseId The ID of the course to fetch.
- * @param {string} source Cache preference ('default', 'server', 'cache').
- * @returns {Promise<object|null>} The course data or null if not found.
- */
+// --- PUBLIC DATA FETCHING FUNCTIONS ---
 export async function getCourseById(courseId, source = 'default') {
     const courseRef = doc(db, "courses", courseId);
-    const courseSnap = await firestoreGetDoc(courseRef, { source });
+    const courseSnap = await getDoc(courseRef, { source });
     if (!courseSnap.exists()) {
         return null;
     }
     return { id: courseSnap.id, ...courseSnap.data() };
 }
 
-/**
- * Fetches a single participant document by its ID.
- * @param {string} participantId The ID of the participant to fetch.
- * @param {string} source Cache preference ('default', 'server', 'cache').
- * @returns {Promise<object|null>} The participant data or null if not found.
- */
 export async function getParticipantById(participantId, source = 'default') {
     const participantRef = doc(db, "participants", participantId);
-    const participantSnap = await firestoreGetDoc(participantRef, { source });
+    const participantSnap = await getDoc(participantRef, { source });
     if (!participantSnap.exists()) {
         return null;
     }
     return { id: participantSnap.id, ...participantSnap.data() };
 }
 
-
-/**
- * Fetches all necessary data for a public course report.
- * It first checks if the course is marked as public before fetching related data.
- * @param {string} courseId The ID of the course.
- * @returns {Promise<object>} An object containing all report data.
- * @throws {Error} If the report is not found or not public.
- */
 export async function getPublicCourseReportData(courseId) {
-    const course = await getCourseById(courseId, 'server'); // Force server read for public data
+    const course = await getCourseById(courseId, 'server');
     
     if (!course) {
         throw new Error("Report not found.");
@@ -101,8 +82,6 @@ export async function getPublicCourseReportData(courseId) {
         throw new Error("This report is not publicly accessible.");
     }
     
-    // Use existing functions to fetch related data.
-    // Firebase security rules must allow these reads if the course is public.
     const participants = await listParticipants(courseId, 'server');
     const { allObs, allCases } = await listAllDataForCourse(courseId, 'server');
     const finalReport = await getFinalReportByCourseId(courseId, 'server');
@@ -121,7 +100,7 @@ export async function getPublicCourseReportData(courseId) {
 export async function listUsers(source = 'default') {
     try {
         const querySnapshot = await getDocs(collection(db, "users"), { source });
-        const users = querySnapshot.docs.map(doc => {
+        return querySnapshot.docs.map(doc => {
             const data = doc.data();
             return {
                 id: doc.id,
@@ -131,7 +110,6 @@ export async function listUsers(source = 'default') {
                 lastLogin: data.lastLogin || null
             };
         });
-        return users;
     } catch (error) {
         console.error("Error fetching users:", error);
         throw error;
@@ -153,11 +131,6 @@ export async function updateUserAccess(userId, module, newAccess) {
     }
 }
 
-/**
- * Updates a facilitator's role in Firestore.
- * @param {string} facilitatorId The ID of the facilitator to update.
- * @param {string} newRole The new role for the facilitator ('facilitator' or 'course_director').
- */
 export async function updateFacilitatorRole(facilitatorId, newRole) {
     if (!facilitatorId || !newRole) {
         throw new Error("Facilitator ID and new role are required.");
@@ -172,12 +145,10 @@ export async function updateFacilitatorRole(facilitatorId, newRole) {
 // --- FACILITATORS ---
 export async function upsertFacilitator(payload) {
     if (payload.id) {
-        // Update
         const facRef = doc(db, "facilitators", payload.id);
         await setDoc(facRef, payload, { merge: true });
         return payload.id;
     } else {
-        // Create
         const { id, ...dataToSave } = payload;
         const newFacRef = await addDoc(collection(db, "facilitators"), dataToSave);
         return newFacRef.id;
@@ -188,11 +159,9 @@ export async function importFacilitators(facilitators) {
     const batch = writeBatch(db);
     facilitators.forEach(fac => {
         if (fac.id) {
-            // Update existing facilitator
             const facRef = doc(db, "facilitators", fac.id);
             batch.update(facRef, fac);
         } else {
-            // Add new facilitator
             const facRef = doc(collection(db, "facilitators"));
             batch.set(facRef, fac);
         }
@@ -221,7 +190,191 @@ export async function deleteFacilitator(facilitatorId) {
     return true;
 }
 
-// --- NEW: COORDINATORS ---
+// --- FACILITATOR SUBMISSIONS ---
+export async function submitFacilitatorApplication(payload) {
+    const dataToSave = { ...payload, submittedAt: serverTimestamp(), status: 'pending' };
+    const newSubmissionRef = await addDoc(collection(db, "facilitatorSubmissions"), dataToSave);
+    return newSubmissionRef.id;
+}
+
+export async function listPendingFacilitatorSubmissions() {
+    const q = query(collection(db, "facilitatorSubmissions"), where("status", "==", "pending"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+export async function approveFacilitatorSubmission(submission, approverEmail) {
+    const { id: submissionId, status, submittedAt, ...facilitatorData } = submission;
+    const batch = writeBatch(db);
+    const newFacRef = doc(collection(db, "facilitators"));
+    batch.set(newFacRef, facilitatorData);
+    const submissionRef = doc(db, "facilitatorSubmissions", submissionId);
+    batch.update(submissionRef, { 
+        status: 'approved',
+        approvedBy: approverEmail,
+        approvedAt: serverTimestamp()
+    });
+    await batch.commit();
+}
+
+export async function rejectFacilitatorSubmission(submissionId, rejectorEmail) {
+    const submissionRef = doc(db, "facilitatorSubmissions", submissionId);
+    await updateDoc(submissionRef, {
+        status: 'rejected',
+        rejectedBy: rejectorEmail,
+        rejectedAt: serverTimestamp()
+    });
+}
+
+// --- FACILITATOR SUBMISSION LINK CONTROLS ---
+export async function getFacilitatorApplicationSettings() {
+    const settingsRef = doc(db, "settings", "facilitatorApplication");
+    const docSnap = await getDoc(settingsRef);
+    if (docSnap.exists()) {
+        return docSnap.data();
+    }
+    return { isActive: false, openCount: 0 };
+}
+
+export async function updateFacilitatorApplicationStatus(isActive) {
+    const settingsRef = doc(db, "settings", "facilitatorApplication");
+    await setDoc(settingsRef, { isActive }, { merge: true });
+}
+
+export async function incrementFacilitatorApplicationOpenCount() {
+    const settingsRef = doc(db, "settings", "facilitatorApplication");
+    await setDoc(settingsRef, { openCount: increment(1) }, { merge: true });
+}
+
+
+// --- COORDINATOR PUBLIC APPLICATION & SUBMISSIONS (ALL LEVELS) ---
+export async function getCoordinatorApplicationSettings(level = 'state') {
+    const docRef = doc(db, 'appSettings', `${level}CoordinatorApplication`);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+        return docSnap.data();
+    }
+    return { isActive: false, openCount: 0 };
+}
+
+export async function updateCoordinatorApplicationStatus(level = 'state', isActive) {
+    const docRef = doc(db, 'appSettings', `${level}CoordinatorApplication`);
+    await setDoc(docRef, { isActive }, { merge: true });
+}
+
+export async function incrementCoordinatorApplicationOpenCount(level = 'state') {
+    const docRef = doc(db, 'appSettings', `${level}CoordinatorApplication`);
+    await setDoc(docRef, { openCount: increment(1) }, { merge: true });
+}
+
+// State Submission
+export async function submitCoordinatorApplication(payload) {
+    const submissionsRef = collection(db, 'coordinatorSubmissions');
+    await addDoc(submissionsRef, {
+        ...payload,
+        status: 'pending',
+        submittedAt: serverTimestamp()
+    });
+}
+
+export async function listPendingCoordinatorSubmissions() {
+    const q = query(collection(db, "coordinatorSubmissions"), where("status", "==", "pending"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+export async function approveCoordinatorSubmission(submission, approverEmail) {
+    const { id: submissionId, status, submittedAt, ...coordinatorData } = submission;
+
+    const usersRef = collection(db, "users");
+    const userQuery = query(usersRef, where("email", "==", submission.email));
+    const userSnapshot = await getDocs(userQuery);
+
+    const batch = writeBatch(db);
+    const newCoordinatorRef = doc(collection(db, "stateCoordinators"));
+    batch.set(newCoordinatorRef, coordinatorData);
+    const submissionRef = doc(db, "coordinatorSubmissions", submissionId);
+    batch.update(submissionRef, {
+        status: 'approved',
+        approvedBy: approverEmail,
+        approvedAt: serverTimestamp()
+    });
+    if (!userSnapshot.empty) {
+        const userDoc = userSnapshot.docs[0];
+        batch.update(userDoc.ref, {
+            role: 'states_manager',
+            assignedState: submission.state
+        });
+    }
+    await batch.commit();
+}
+
+export async function rejectCoordinatorSubmission(submissionId, rejectorEmail) {
+    const submissionRef = doc(db, "coordinatorSubmissions", submissionId);
+    await updateDoc(submissionRef, {
+        status: 'rejected',
+        rejectedBy: rejectorEmail,
+        rejectedAt: serverTimestamp()
+    });
+}
+
+// Federal Submission
+export async function submitFederalApplication(payload) {
+    const submissionsRef = collection(db, 'federalCoordinatorSubmissions');
+    await addDoc(submissionsRef, { ...payload, status: 'pending', submittedAt: serverTimestamp() });
+}
+export async function listPendingFederalSubmissions() {
+    const q = query(collection(db, "federalCoordinatorSubmissions"), where("status", "==", "pending"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+export async function approveFederalSubmission(submission, approverEmail) {
+    const { id: submissionId, ...coordinatorData } = submission;
+    const usersRef = collection(db, "users");
+    const userQuery = query(usersRef, where("email", "==", submission.email));
+    const userSnapshot = await getDocs(userQuery);
+    const batch = writeBatch(db);
+    const newCoordinatorRef = doc(collection(db, "federalCoordinators"));
+    batch.set(newCoordinatorRef, coordinatorData);
+    const submissionRef = doc(db, "federalCoordinatorSubmissions", submissionId);
+    batch.update(submissionRef, { status: 'approved', approvedBy: approverEmail, approvedAt: serverTimestamp() });
+    if (!userSnapshot.empty) {
+        const userDoc = userSnapshot.docs[0];
+        batch.update(userDoc.ref, { role: 'federal_manager' });
+    }
+    await batch.commit();
+}
+export async function rejectFederalSubmission(submissionId, rejectorEmail) {
+    const submissionRef = doc(db, "federalCoordinatorSubmissions", submissionId);
+    await updateDoc(submissionRef, { status: 'rejected', rejectedBy: rejectorEmail, rejectedAt: serverTimestamp() });
+}
+
+// Locality Submission
+export async function submitLocalityApplication(payload) {
+    const submissionsRef = collection(db, 'localityCoordinatorSubmissions');
+    await addDoc(submissionsRef, { ...payload, status: 'pending', submittedAt: serverTimestamp() });
+}
+export async function listPendingLocalitySubmissions() {
+    const q = query(collection(db, "localityCoordinatorSubmissions"), where("status", "==", "pending"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+export async function approveLocalitySubmission(submission, approverEmail) {
+    const { id: submissionId, ...coordinatorData } = submission;
+    const batch = writeBatch(db);
+    const newCoordinatorRef = doc(collection(db, "localityCoordinators"));
+    batch.set(newCoordinatorRef, coordinatorData);
+    const submissionRef = doc(db, "localityCoordinatorSubmissions", submissionId);
+    batch.update(submissionRef, { status: 'approved', approvedBy: approverEmail, approvedAt: serverTimestamp() });
+    await batch.commit();
+}
+export async function rejectLocalitySubmission(submissionId, rejectorEmail) {
+    const submissionRef = doc(db, "localityCoordinatorSubmissions", submissionId);
+    await updateDoc(submissionRef, { status: 'rejected', rejectedBy: rejectorEmail, rejectedAt: serverTimestamp() });
+}
+
+
+// --- COURSE COORDINATORS (Handles the 'coordinators' collection) ---
 export async function upsertCoordinator(payload) {
     if (payload.id) {
         const coordinatorRef = doc(db, "coordinators", payload.id);
@@ -245,7 +398,76 @@ export async function deleteCoordinator(coordinatorId) {
     return true;
 }
 
-// --- NEW: FUNDERS ---
+// --- STATE COORDINATORS (Handles the 'stateCoordinators' collection) ---
+export async function upsertStateCoordinator(payload) {
+    if (payload.id) {
+        const coordinatorRef = doc(db, "stateCoordinators", payload.id);
+        await setDoc(coordinatorRef, payload, { merge: true });
+        return payload.id;
+    } else {
+        const { id, ...dataToSave } = payload;
+        const newRef = await addDoc(collection(db, "stateCoordinators"), dataToSave);
+        return newRef.id;
+    }
+}
+
+export async function listStateCoordinators(source = 'default') {
+    const q = query(collection(db, "stateCoordinators"));
+    const snapshot = await getDocs(q, { source });
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+export async function deleteStateCoordinator(coordinatorId) {
+    await deleteDoc(doc(db, "stateCoordinators", coordinatorId));
+    return true;
+}
+
+// --- FEDERAL COORDINATORS (Handles the 'federalCoordinators' collection) ---
+export async function upsertFederalCoordinator(payload) {
+    if (payload.id) {
+        const coordinatorRef = doc(db, "federalCoordinators", payload.id);
+        await setDoc(coordinatorRef, payload, { merge: true });
+        return payload.id;
+    } else {
+        const { id, ...dataToSave } = payload;
+        const newRef = await addDoc(collection(db, "federalCoordinators"), dataToSave);
+        return newRef.id;
+    }
+}
+export async function listFederalCoordinators(source = 'default') {
+    const q = query(collection(db, "federalCoordinators"));
+    const snapshot = await getDocs(q, { source });
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+export async function deleteFederalCoordinator(coordinatorId) {
+    await deleteDoc(doc(db, "federalCoordinators", coordinatorId));
+    return true;
+}
+
+// --- LOCALITY COORDINATORS (Handles the 'localityCoordinators' collection) ---
+export async function upsertLocalityCoordinator(payload) {
+    if (payload.id) {
+        const coordinatorRef = doc(db, "localityCoordinators", payload.id);
+        await setDoc(coordinatorRef, payload, { merge: true });
+        return payload.id;
+    } else {
+        const { id, ...dataToSave } = payload;
+        const newRef = await addDoc(collection(db, "localityCoordinators"), dataToSave);
+        return newRef.id;
+    }
+}
+export async function listLocalityCoordinators(source = 'default') {
+    const q = query(collection(db, "localityCoordinators"));
+    const snapshot = await getDocs(q, { source });
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+export async function deleteLocalityCoordinator(coordinatorId) {
+    await deleteDoc(doc(db, "localityCoordinators", coordinatorId));
+    return true;
+}
+
+
+// --- FUNDERS ---
 export async function upsertFunder(payload) {
     if (payload.id) {
         const funderRef = doc(db, "funders", payload.id);
@@ -282,11 +504,6 @@ export async function upsertCourse(payload) {
     }
 }
 
-/**
- * Updates the sharing settings of a course.
- * @param {string} courseId The ID of the course to update.
- * @param {object} settings An object containing isPublic (boolean) and sharedWith (array of emails).
- */
 export async function updateCourseSharingSettings(courseId, settings) {
     if (!courseId) {
         throw new Error("Course ID is required.");
@@ -298,11 +515,6 @@ export async function updateCourseSharingSettings(courseId, settings) {
     });
 }
 
-/**
- * Updates the public access status of a course.
- * @param {string} courseId The ID of the course to update.
- * @param {boolean} isPublic The new public status.
- */
 export async function updateCoursePublicStatus(courseId, isPublic) {
     if (!courseId) {
         throw new Error("Course ID is required.");
@@ -316,14 +528,12 @@ export async function updateCoursePublicStatus(courseId, isPublic) {
 
 export async function listCoursesByType(course_type, userStates, source = 'default') {
     try {
-        console.log(`Fetching courses of type: ${course_type}`);
         let q = query(collection(db, "courses"), where("course_type", "==", course_type));
         if (userStates && userStates.length > 0) {
             q = query(q, where("state", "in", userStates));
         }
         const querySnapshot = await getDocs(q, { source });
         const courses = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        console.log(`Found ${courses.length} courses of type ${course_type}`);
         return courses;
     } catch (error) {
         console.error("Error in listCoursesByType:", error);
@@ -333,14 +543,12 @@ export async function listCoursesByType(course_type, userStates, source = 'defau
 
 export async function listAllCourses(userStates, source = 'default') {
     try {
-        console.log("Fetching all courses...");
         let q = collection(db, "courses");
         if (userStates && userStates.length > 0) {
             q = query(q, where("state", "in", userStates));
         }
         const querySnapshot = await getDocs(q, { source });
         const courses = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        console.log(`Found ${courses.length} courses`);
         return courses;
     } catch (error) {
         console.error("Error in listAllCourses:", error);
@@ -377,11 +585,6 @@ export async function upsertParticipant(payload) {
     }
 }
 
-/**
- * Updates the sharing settings of a participant.
- * @param {string} participantId The ID of the participant to update.
- * @param {object} settings An object containing isPublic (boolean) and sharedWith (array of emails).
- */
 export async function updateParticipantSharingSettings(participantId, settings) {
     if (!participantId) {
         throw new Error("Participant ID is required.");
@@ -398,11 +601,9 @@ export async function importParticipants(participants) {
     const batch = writeBatch(db);
     participants.forEach(participant => {
         if (participant.id) {
-            // Update existing participant
             const participantRef = doc(db, "participants", participant.id);
             batch.update(participantRef, participant);
         } else {
-            // Add new participant
             const participantRef = doc(collection(db, "participants"));
             batch.set(participantRef, participant);
         }
@@ -424,7 +625,6 @@ export async function listAllParticipants(userStates, source = 'default') {
     const allParticipants = [];
     for (const course of allCourses) {
         const participants = await listParticipants(course.id, source);
-        // Enrich participants with course details before pushing
         participants.forEach(p => {
             allParticipants.push({
                 ...p,
@@ -507,7 +707,6 @@ export async function listAllDataForCourse(courseId, source = 'default') {
     const allObs = obsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     const allCases = casesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-    // New Logic: Map observations to cases to determine case correctness
     const allCasesWithCorrectness = allCases.map(caseItem => {
         const caseObservations = allObs.filter(obs => obs.caseId === caseItem.id);
         const is_correct = caseObservations.length > 0 && caseObservations.every(obs => obs.item_correct > 0);
@@ -519,6 +718,8 @@ export async function listAllDataForCourse(courseId, source = 'default') {
 
     return { allObs, allCases: allCasesWithCorrectness };
 }
+
+// --- FINAL REPORTS ---
 export async function upsertFinalReport(payload) {
     if (payload.id) {
         const finalReportRef = doc(db, "finalReports", payload.id);
@@ -529,17 +730,18 @@ export async function upsertFinalReport(payload) {
         return newRef.id;
     }
 }
+
 export async function getFinalReportByCourseId(courseId, source = 'default') {
     if (!courseId) return null;
     const q = query(collection(db, "finalReports"), where("courseId", "==", courseId));
     const snapshot = await getDocs(q, { source });
     if (!snapshot.empty) {
-        // Assuming there is only one final report per course
         const doc = snapshot.docs[0];
         return { id: doc.id, ...doc.data() };
     }
     return null;
 }
+
 export async function listFinalReport(source = 'default') {
     try {
         const querySnapshot = await getDocs(collection(db, "finalReports"), { source });
@@ -549,8 +751,7 @@ export async function listFinalReport(source = 'default') {
         throw error;
     }
 }
-// This function was missing and caused the error.
-// It deletes a final report document from the "finalReports" collection.
+
 export async function deleteFinalReport(reportId) {
     try {
         if (!reportId) {
