@@ -7,6 +7,7 @@ import { Bar, Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
 import { ComposableMap, Geographies, Geography, Marker } from "react-simple-maps";
 import { listAllCourses, listAllParticipants, listFacilitators } from '../data.js';
+import ServiceCoverageDashboard from "./ServiceCoverageDashboard.jsx"; // Import the Service Coverage Dashboard
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
 
@@ -95,7 +96,7 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
     const [fetchedFacilitators, setFetchedFacilitators] = useState([]);
     const [fetchingDetailed, setFetchingDetailed] = useState(false);
 
-    const [viewType, setViewType] = useState('courses');
+    const [viewType, setViewType] = useState('serviceCoverage');
     const [courseTypeFilter, setCourseTypeFilter] = useState('All');
     const [stateFilter, setStateFilter] = useState('All');
     const [localityFilter, setLocalityFilter] = useState('All');
@@ -579,87 +580,92 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
     // =========================================================================
     return (
         <Card className="p-0">
-            <PageHeader title="National Program Dashboard" subtitle="Overview of all courses, participants, and facilitators." />
+            <PageHeader title="National Program Dashboard" subtitle="Overview of service coverage, courses, participants, and facilitators." />
 
             <div className="mb-6 flex flex-wrap items-center gap-4 px-4 md:px-6">
+                <Button variant={viewType === 'serviceCoverage' ? 'primary' : 'secondary'} onClick={() => setViewType('serviceCoverage')}>Service Coverage</Button>
                 <Button variant={viewType === 'courses' ? 'primary' : 'secondary'} onClick={() => setViewType('courses')}>Course Dashboard</Button>
                 <Button variant={viewType === 'participants' ? 'primary' : 'secondary'} onClick={() => setViewType('participants')}>Participant Dashboard</Button>
                 <Button variant={viewType === 'facilitators' ? 'primary' : 'secondary'} onClick={() => setViewType('facilitators')}>Facilitator Dashboard</Button>
             </div>
 
-            {/* Filter section, visible for all views */}
-            <div className="p-4 bg-gray-50 rounded-md mb-6 mx-4 md:mx-6">
-                <h3 className="text-lg font-semibold mb-2">Filters</h3>
-                <div className="grid md:grid-cols-4 lg:grid-cols-5 gap-4">
-                    {viewType === 'facilitators' ? (
-                        <>
-                            <FormGroup label="Search by Name"><Input type="text" value={facSearchQuery} onChange={(e) => setFacSearchQuery(e.target.value)} placeholder="Search name..." /></FormGroup>
-                            <FormGroup label="Filter by Course">
-                                <Select value={facCourseFilter} onChange={(e) => setFacCourseFilter(e.target.value)}>
-                                    <option value="All">All Courses</option>
-                                    {COURSE_TYPES_FACILITATOR.map(c => <option key={c} value={c}>{c}</option>)}
-                                </Select>
-                            </FormGroup>
-                            <FormGroup label="Filter by State">
-                                <Select value={facStateFilter} onChange={(e) => { setFacStateFilter(e.target.value); setFacLocalityFilter('All'); }}>
-                                    <option value="All">All States</option>
-                                    {Object.keys(STATE_LOCALITIES).sort().map(s => <option key={s} value={s}>{s}</option>)}
-                                    <option value="Out of Sudan">Out of Sudan</option>
-                                </Select>
-                            </FormGroup>
-                            <FormGroup label="Filter by Locality">
-                                <Select value={facLocalityFilter} onChange={(e) => setFacLocalityFilter(e.target.value)} disabled={facStateFilter === 'All' || facStateFilter === 'Out of Sudan'}>
-                                    <option value="All">All Localities</option>
-                                    {facilitatorDashboardData.localitiesInSelectedState.map(l => <option key={l} value={l}>{l}</option>)}
-                                </Select>
-                            </FormGroup>
-                            <FormGroup label="Filter by Role">
-                                <Select value={facRoleFilter} onChange={(e) => setFacRoleFilter(e.target.value)}>
-                                    <option value="All">All Roles</option>
-                                    <option value="directorCourse">IMNCI Director</option>
-                                    <option value="isClinicalInstructor">Clinical Instructor</option>
-                                    <option value="teamLeaderCourse">Team Leader</option>
-                                    <option value="followUpCourse">Follow-up Supervisor</option>
-                                </Select>
-                            </FormGroup>
-                        </>
-                    ) : (
-                        <>
-                            <FormGroup label="Course Type">
-                                <Select value={courseTypeFilter} onChange={e => setCourseTypeFilter(e.target.value)}>
-                                    {allCourseTypes.map(c => <option key={c} value={c}>{c}</option>)}
-                                </Select>
-                            </FormGroup>
-                            <FormGroup label="State">
-                                <Select value={stateFilter} onChange={e => setStateFilter(e.target.value)}>
-                                    {allStates.map(s => <option key={s} value={s}>{s}</option>)}
-                                </Select>
-                            </FormGroup>
-                            <FormGroup label="Locality">
-                                <Select value={localityFilter} onChange={e => setLocalityFilter(e.target.value)} disabled={stateFilter === 'All'}>
-                                    {allLocalities.map(l => <option key={l} value={l}>{l}</option>)}
-                                </Select>
-                            </FormGroup>
-                            <FormGroup label="Year">
-                                <Select value={yearFilter} onChange={e => setYearFilter(e.target.value)}>
-                                    {allYears.map(y => <option key={y} value={y}>{y}</option>)}
-                                </Select>
-                            </FormGroup>
-                            <FormGroup label="Month">
-                                <Select value={monthFilter} onChange={e => setMonthFilter(e.target.value)}>
-                                    {allMonths.map(m => <option key={m} value={m}>{m}</option>)}
-                                </Select>
-                            </FormGroup>
-                        </>
-                    )}
+            {/* Filter section, hidden for service coverage view */}
+            {viewType !== 'serviceCoverage' && (
+                <div className="p-4 bg-gray-50 rounded-md mb-6 mx-4 md:mx-6">
+                    <h3 className="text-lg font-semibold mb-2">Filters</h3>
+                    <div className="grid md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        {viewType === 'facilitators' ? (
+                            <>
+                                <FormGroup label="Search by Name"><Input type="text" value={facSearchQuery} onChange={(e) => setFacSearchQuery(e.target.value)} placeholder="Search name..." /></FormGroup>
+                                <FormGroup label="Filter by Course">
+                                    <Select value={facCourseFilter} onChange={(e) => setFacCourseFilter(e.target.value)}>
+                                        <option value="All">All Courses</option>
+                                        {COURSE_TYPES_FACILITATOR.map(c => <option key={c} value={c}>{c}</option>)}
+                                    </Select>
+                                </FormGroup>
+                                <FormGroup label="Filter by State">
+                                    <Select value={facStateFilter} onChange={(e) => { setFacStateFilter(e.target.value); setFacLocalityFilter('All'); }}>
+                                        <option value="All">All States</option>
+                                        {Object.keys(STATE_LOCALITIES).sort().map(s => <option key={s} value={s}>{s}</option>)}
+                                        <option value="Out of Sudan">Out of Sudan</option>
+                                    </Select>
+                                </FormGroup>
+                                <FormGroup label="Filter by Locality">
+                                    <Select value={facLocalityFilter} onChange={(e) => setFacLocalityFilter(e.target.value)} disabled={facStateFilter === 'All' || facStateFilter === 'Out of Sudan'}>
+                                        <option value="All">All Localities</option>
+                                        {facilitatorDashboardData.localitiesInSelectedState.map(l => <option key={l} value={l}>{l}</option>)}
+                                    </Select>
+                                </FormGroup>
+                                <FormGroup label="Filter by Role">
+                                    <Select value={facRoleFilter} onChange={(e) => setFacRoleFilter(e.target.value)}>
+                                        <option value="All">All Roles</option>
+                                        <option value="directorCourse">IMNCI Director</option>
+                                        <option value="isClinicalInstructor">Clinical Instructor</option>
+                                        <option value="teamLeaderCourse">Team Leader</option>
+                                        <option value="followUpCourse">Follow-up Supervisor</option>
+                                    </Select>
+                                </FormGroup>
+                            </>
+                        ) : (
+                            <>
+                                <FormGroup label="Course Type">
+                                    <Select value={courseTypeFilter} onChange={e => setCourseTypeFilter(e.target.value)}>
+                                        {allCourseTypes.map(c => <option key={c} value={c}>{c}</option>)}
+                                    </Select>
+                                </FormGroup>
+                                <FormGroup label="State">
+                                    <Select value={stateFilter} onChange={e => setStateFilter(e.target.value)}>
+                                        {allStates.map(s => <option key={s} value={s}>{s}</option>)}
+                                    </Select>
+                                </FormGroup>
+                                <FormGroup label="Locality">
+                                    <Select value={localityFilter} onChange={e => setLocalityFilter(e.target.value)} disabled={stateFilter === 'All'}>
+                                        {allLocalities.map(l => <option key={l} value={l}>{l}</option>)}
+                                    </Select>
+                                </FormGroup>
+                                <FormGroup label="Year">
+                                    <Select value={yearFilter} onChange={e => setYearFilter(e.target.value)}>
+                                        {allYears.map(y => <option key={y} value={y}>{y}</option>)}
+                                    </Select>
+                                </FormGroup>
+                                <FormGroup label="Month">
+                                    <Select value={monthFilter} onChange={e => setMonthFilter(e.target.value)}>
+                                        {allMonths.map(m => <option key={m} value={m}>{m}</option>)}
+                                    </Select>
+                                </FormGroup>
+                            </>
+                        )}
+                    </div>
                 </div>
-            </div>
+            )}
 
             {loading ? (
                 <div className="text-center py-12">
                     <Spinner />
                     <p className="mt-4 text-gray-500">Loading summary data...</p>
                 </div>
+            ) : viewType === 'serviceCoverage' ? (
+                <ServiceCoverageDashboard />
             ) : (
                 allCourses.length > 0 ? (
                     viewType === 'courses' ? (

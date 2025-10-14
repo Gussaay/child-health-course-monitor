@@ -1,0 +1,56 @@
+[33m3c96173[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m share link for form
+[33me20b017[m add facilitater and coordinater by link
+[33m917975c[m resolve add facilitaer issue
+[33maee0102[m user managment, share public report
+[33mcbe4e80[m Active course badge
+[33mfe0d03c[m simple devided app
+[33m807a5c1[m facilitater dashboard
+[33mea1cfc4[m courses dashboard
+[33mf4781dc[m add facilitaer
+[33mfd21fcf[m Mobile Responsive
+[33m9bc97a6[m responsive and monitor page update
+[33md5667e6[m no google sign in
+[33m5c82e69[m UPDATE FIREBASE.JS
+[33me0af507[m SIGN IN SETTING
+[33m7fe43dd[m sign in with google
+[33ma1d733e[m google sign in
+[33m5f19cdb[m Splash screen + google sign in
+[33m88fa4ae[m remove locl json
+[33m7c38b43[m offline v with error solved
+[33m1bc501f[m V 3 offline capabibility
+[33m695b282[m app V2
+[33me71de34[m Update v2
+[33m4278f17[m Initial React+Node app
+[33m27acfbc[m v1,2
+[33mb2794a1[m fix: Set base path in vite config
+[33ma8ad502[m fix: Add rewrite rule for client-side routing
+[33m51b6dcf[m feat: Add Firebase Hosting configuration
+[33mec4fb46[m test: Use new API key
+[33m3298475[m V1.1
+[33m9612d7c[m v1
+[33m2102c0a[m[33m ([m[1;31morigin/fix/resolve-merge-conflicts[m[33m)[m fIREBASE
+[33mc30ada7[m V 1
+[33m3b6cb86[m MONITOR V1
+[33m207e536[m V1
+[33md30496e[m monitor v1
+[33m03e8096[m v1
+[33mda14821[m Merge branch 'main' of https://github.com/Gussaay/child-health-course-monitor
+[33m139cba5[m course monitor v1
+[33m2f419b7[m CH course monito v1
+[33mb6df99c[m course monitor v1
+[33me27f78a[m Child Health Course Monitor app v1
+[33mf909ca0[m child health course monitoring v1
+[33ma237956[m Initial commit
+[33m9a47416[m feat: Connect to Firestore, fix auth, and update UI
+[33m2721d1f[m authuntication
+[33mf0956e1[m Update App.jsx
+[33m9bafb50[m update with firestore
+[33m8fd6973[m update with firestore and authuntication
+[33m341cd34[m Add files via upload
+[33m74ed065[m Merge pull request #1 from Gussaay/feature/firestore
+[33m955c51b[m[33m ([m[1;31morigin/feature/firestore[m[33m)[m Wire Firestore + add one-time localStorage→Firestore migration
+[33m583bcfe[m Wire Firestore + add one-time localStorage→Firestore migration
+[33ma211c09[m Wire Firestore + add one-time localStorage→Firestore migration
+[33mfe7108e[m Remove lockfile to fix cross-OS optional deps
+[33mf73d7e4[m Pin Node to 20.x for buildpack
+[33m48f4bc1[m Initial commit: IMCI app (React + Vite + Tailwind + Node server)
