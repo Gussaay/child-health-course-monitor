@@ -18,15 +18,22 @@ import { ReportsView } from './components/ReportsView';
 import { AdminDashboard } from './components/AdminDashboard';
 import { HumanResourcesPage } from './components/HumanResources';
 import { ProgramTeamView, TeamMemberApplicationForm } from './components/ProgramTeamView';
-import { PartnersPage } from './components/PartnersPage';
-import { ParticipantsView, ParticipantForm } from './components/Participants';
+import { ParticipantsView, ParticipantForm, ParticipantMigrationMappingView } from './components/Participants';
 import { ParticipantReportView } from './components/ParticipantReport';
+import ChildHealthServicesView from './components/ChildHealthServicesView.jsx';
+import {
+    PublicFacilityUpdateForm,
+    NewFacilityEntryForm,
+    GenericFacilityForm,
+    IMNCIFormFields
+} from './components/FacilityForms.jsx';
+
+
 import {
     listCoursesByType,
     upsertCourse,
     deleteCourse,
     listParticipants,
-    upsertParticipant,
     deleteParticipant,
     listObservationsForParticipant,
     listCasesForParticipant,
@@ -44,6 +51,8 @@ import {
     upsertStateCoordinator,
     listStateCoordinators,
     deleteStateCoordinator,
+    listFederalCoordinators,
+    listLocalityCoordinators,
     upsertFunder,
     listFunders,
     upsertFinalReport,
@@ -58,7 +67,13 @@ import {
     updateParticipantSharingSettings,
     listPendingFacilitatorSubmissions,
     approveFacilitatorSubmission,
-    rejectFacilitatorSubmission
+    rejectFacilitatorSubmission,
+    upsertHealthFacility,
+    getHealthFacilityById,
+    submitFacilityDataForApproval,
+    saveParticipantAndSubmitFacilityUpdate,
+    bulkMigrateFromMappings,
+    listHealthFacilities,
 } from './data.js';
 import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_ETAT, JOB_TITLES_EENC, JOB_TITLES_IMNCI,
@@ -86,13 +101,16 @@ function Landing({ active, onPick }) {
     ];
 
     return (
-        <Card>
+        <Card className="p-6">
             <PageHeader title="Select a Course Package" subtitle="Choose a monitoring package to begin." />
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {items.map(it => (
-                    <button key={it.key} disabled={!it.enabled} className={`border rounded-lg p-4 text-left transition-all duration-200 ${active === it.key ? 'ring-2 ring-sky-500 shadow-lg' : ''} ${it.enabled ? 'hover:shadow-md hover:scale-105' : 'opacity-60 cursor-not-allowed bg-gray-50'}`} onClick={() => it.enabled && onPick(it.key)}>
+                    <button key={it.key} disabled={!it.enabled} className={`border rounded-lg p-6 text-left transition-all duration-200 ${active === it.key ? 'ring-2 ring-sky-500 shadow-lg' : ''} ${it.enabled ? 'hover:shadow-md hover:scale-105' : 'opacity-60 cursor-not-allowed bg-gray-50'}`} onClick={() => it.enabled && onPick(it.key)}>
                         <div className="flex items-center gap-4">
-                            <CourseIcon course={it.key} />
+                            {(it.key === 'IPC' || it.key === 'Small & Sick Newborn')
+                                ? <HospitalIcon className="w-10 h-10 text-slate-500 flex-shrink-0" />
+                                : <CourseIcon course={it.key} />
+                            }
                             <div>
                                 <div className="font-semibold text-gray-800">{it.title}</div>
                                 <div className="text-xs text-gray-500 mt-1">{it.enabled ? 'Click to manage courses' : 'Coming Soon'}</div>
@@ -113,6 +131,8 @@ const MonitorIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg
 const ReportIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 6h13"></path><path d="M8 12h13"></path><path d="M8 18h13"></path><path d="M3 6h.01"></path><path d="M3 12h.01"></path><path d="M3 18h.01"></path></svg>
 const FacilitatorIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path></svg>
 const AdminIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+const HospitalIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v2.85c-.9.17-1.72.6-2.43 1.24L4.3 11.2a1 1 0 0 0-.2 1.39l.2.2c.45.6.84 1.34 1.36 2.14L6 15l2.43-1.6c.71-.48 1.54-.74 2.43-.84V14a1 1 0 0 0 1 1h2c.7 0 1.25-.56 1.25-1.25S15.7 12.5 15 12.5V11a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v1.5a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5V9.85c-.9-.1-1.72-.36-2.43-.84L4.3 7.8a1 1 0 0 0-.2-1.39l.2-.2c.45-.6.84-1.34 1.36-2.14L6 3l2.43 1.6c.71.48 1.54.74 2.43.84V5a3 3 0 0 0-3-3zM12 22v-2a3 3 0 0 0-3-3h-2a3 3 0 0 0-3 3v2zM18 22v-2a3 3 0 0 0-3-3h-2a3 3 0 0 0-3 3v2z"></path><path d="M12 18.5V22"></path><path d="M12 11h-2"></path><path d="M14 11h2"></path><path d="M18 11h2"></path></svg>
+
 
 function BottomNav({ navItems, navigate }) {
     const icons = {
@@ -120,6 +140,7 @@ function BottomNav({ navItems, navigate }) {
         Home: HomeIcon,
         Courses: CoursesIcon,
         'Human Resources': UsersIcon,
+        'Child Health Services': HospitalIcon,
         Participants: UsersIcon,
         Monitoring: MonitorIcon,
         Reports: ReportIcon,
@@ -173,7 +194,7 @@ export default function App() {
     const [allCourses, setAllCourses] = useState([]);
     const [participants, setParticipants] = useState([]);
     const [facilitators, setFacilitators] = useState([]);
-    const [coordinators, setCoordinators] = useState([]); // This holds COURSE coordinators for the CourseForm
+    const [coordinators, setCoordinators] = useState([]);
     const [funders, setFunders] = useState([]);
     const [selectedCourseId, setSelectedCourseId] = useState(null);
     const [selectedParticipantId, setSelectedParticipantId] = useState(null);
@@ -198,10 +219,15 @@ export default function App() {
     const [authLoading, setAuthLoading] = useState(true);
     const [pendingSubmissions, setPendingSubmissions] = useState([]);
     const [isSubmissionsLoading, setIsSubmissionsLoading] = useState(true);
+    const [federalCoordinators, setFederalCoordinators] = useState([]);
+    const [stateCoordinators, setStateCoordinators] = useState([]);
+    const [localityCoordinators, setLocalityCoordinators] = useState([]);
 
     // --- State for Shared View ---
     const [isSharedView, setIsSharedView] = useState(false);
     const [isPublicSubmissionView, setIsPublicSubmissionView] = useState(false);
+    const [isNewFacilityView, setIsNewFacilityView] = useState(false);
+    const [isPublicFacilityUpdateView, setIsPublicFacilityUpdateView] = useState(false);
     const [submissionType, setSubmissionType] = useState(null);
     const [sharedReportData, setSharedReportData] = useState(null);
     const [sharedViewError, setSharedViewError] = useState(null);
@@ -222,6 +248,22 @@ export default function App() {
         const sharedMatch = path.match(/^\/shared\/(course-report|participant-report)\/([a-zA-Z0-9]+)\/?$/);
         const submissionMatch = path.match(/^\/public\/(facilitator-application|team-member-application)\/?$/);
         const unifiedTeamMemberSubmissionMatch = path === '/public/team-member-application';
+        const newFacilityMatch = path.match(/^\/facilities\/data-entry\/new\/?$/);
+        const updateFacilityMatch = path.match(/^\/facilities\/data-entry\/([a-zA-Z0-9]+)\/?$/);
+
+        if (newFacilityMatch) {
+            setIsNewFacilityView(true);
+            setLoading(false);
+            setAuthLoading(false);
+            return;
+        }
+
+        if (updateFacilityMatch && updateFacilityMatch[1]) {
+            setIsPublicFacilityUpdateView(true);
+            setLoading(false);
+            setAuthLoading(false);
+            return;
+        }
 
         if (submissionMatch || unifiedTeamMemberSubmissionMatch) {
             setIsPublicSubmissionView(true);
@@ -311,6 +353,7 @@ export default function App() {
         canViewAdmin: false,
         canViewDetailedData: false,
         canApproveSubmissions: false,
+        canManageHealthFacilities: false,
     }), []);
 
     const DEFAULT_ROLE_PERMISSIONS = useMemo(() => ({
@@ -333,6 +376,7 @@ export default function App() {
             canAddFinalReport: true,
             canEditDeleteFinalReport: true,
             canApproveSubmissions: true,
+            canManageHealthFacilities: true,
         },
         'federal_manager': {
             ...ALL_PERMISSIONS,
@@ -351,6 +395,7 @@ export default function App() {
             canAddFinalReport: true,
             canEditDeleteFinalReport: true,
             canApproveSubmissions: true,
+            canManageHealthFacilities: true,
         },
         'states_manager': {
             ...ALL_PERMISSIONS,
@@ -365,6 +410,7 @@ export default function App() {
             canEditDeleteMonitoring: true,
             canAddFinalReport: true,
             canEditDeleteFinalReport: true,
+            canManageHealthFacilities: true,
         },
         'user': { 
             ...ALL_PERMISSIONS, 
@@ -488,12 +534,10 @@ export default function App() {
     }, [isSharedView, sharedViewRequiresLogin, sharedReportData?.course, DEFAULT_ROLE_PERMISSIONS, ALL_PERMISSIONS]);
 
     // --- Browser History Management ---
-
-    // Effect 1: Handle popstate (browser back/forward buttons)
     useEffect(() => {
         const handlePopState = (event) => {
             if (event.state) {
-                isPopStateNavigation.current = true; // Set flag to prevent pushState loop
+                isPopStateNavigation.current = true;
                 setView(event.state.view || 'dashboard');
                 setActiveCourseType(event.state.activeCourseType || 'IMNCI');
                 setSelectedCourseId(event.state.selectedCourseId || null);
@@ -504,12 +548,11 @@ export default function App() {
         };
         window.addEventListener('popstate', handlePopState);
         return () => window.removeEventListener('popstate', handlePopState);
-    }, []); // Runs once on mount
+    }, []);
 
-    // Effect 2: Manage history stack (initial replace and subsequent pushes)
     useEffect(() => {
         if (authLoading || isSharedView) {
-            return; // Don't manipulate history until the app is ready and not in a shared view
+            return;
         }
 
         const stateToSave = {
@@ -522,21 +565,14 @@ export default function App() {
         };
 
         if (isPopStateNavigation.current) {
-            // This state change was triggered by a popstate event.
-            // We just reset the flag and do nothing to avoid a loop.
             isPopStateNavigation.current = false;
             return;
         }
 
         if (!historyInitialized.current) {
-            // This is the first run after the app has loaded.
-            // We replace the current history entry with our app's initial state.
             window.history.replaceState(stateToSave, '');
             historyInitialized.current = true;
         } else {
-            // This is a forward navigation triggered by the user inside the app.
-            // We push a new state to the history.
-            // Check to avoid pushing identical, consecutive states.
             if (JSON.stringify(stateToSave) !== JSON.stringify(window.history.state)) {
                 window.history.pushState(stateToSave, '');
             }
@@ -549,11 +585,25 @@ export default function App() {
     async function refreshAllData(userStates) {
         setLoading(true);
         try {
-            const coursesData = await listAllCourses(userStates);
-            const facilitatorsData = await listFacilitators(userStates);
-            const coordinatorsData = await listCoordinators(); // These are COURSE coordinators
-            const fundersData = await listFunders();
-            const allParticipantsData = await listAllParticipants(userStates);
+            const [
+                coursesData,
+                facilitatorsData,
+                coordinatorsData,
+                fundersData,
+                allParticipantsData,
+                federalCoordsData,
+                stateCoordsData,
+                localityCoordsData
+            ] = await Promise.all([
+                listAllCourses(userStates),
+                listFacilitators(userStates),
+                listCoordinators(),
+                listFunders(),
+                listAllParticipants(userStates),
+                listFederalCoordinators(),
+                listStateCoordinators(),
+                listLocalityCoordinators()
+            ]);
             
             const courseMap = new Map(coursesData.map(c => [c.id, c]));
             const participantsWithCourseInfo = allParticipantsData.map(p => {
@@ -572,6 +622,9 @@ export default function App() {
             setCoordinators(coordinatorsData);
             setFunders(fundersData);
             setCourses(coursesData.filter(c => c.course_type === activeCourseType));
+            setFederalCoordinators(federalCoordsData);
+            setStateCoordinators(stateCoordsData);
+            setLocalityCoordinators(localityCoordsData);
         } catch (error) {
             console.error("Error refreshing all data:", error);
         } finally {
@@ -579,18 +632,6 @@ export default function App() {
         }
     }
     
-    async function refreshCourses() {
-        setLoading(true);
-        try {
-            const list = await listCoursesByType(activeCourseType, userStates);
-            setCourses(list);
-        } catch (error) {
-            console.error("Error refreshing courses:", error);
-        } finally {
-            setLoading(false);
-        }
-    }
-
     async function refreshParticipants() {
         if (!selectedCourseId) { setParticipants([]); return; }
         setLoading(true);
@@ -601,29 +642,6 @@ export default function App() {
             console.error("Error refreshing participants:", error);
         } finally {
             setLoading(false);
-        }
-    }
-
-    async function refreshFacilitators() {
-        setLoading(true);
-        try {
-            const list = await listFacilitators(userStates);
-            setFacilitators(list);
-        } catch (error) {
-            console.error("Error refreshing facilitators:", error);
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    async function refreshCoordinatorsAndFunders() {
-        try {
-            const coordinatorsData = await listCoordinators();
-            const fundersData = await listFunders();
-            setCoordinators(coordinatorsData);
-            setFunders(fundersData);
-        } catch (error) {
-            console.error("Error refreshing coordinators and funders:", error);
         }
     }
     
@@ -776,23 +794,58 @@ export default function App() {
         }
     };
 
-    const handleImportParticipants = async (importedParticipants) => {
+    const handleImportParticipants = async ({ participantsToImport, facilitiesToUpsert }) => {
         if (!permissions.canBulkUploadParticipant) {
             alert("You do not have permission to import participants.");
             return;
         }
         try {
-            const participantsWithCourseId = importedParticipants.map(p => ({
+            setLoading(true);
+            if (facilitiesToUpsert && facilitiesToUpsert.length > 0) {
+                const submissionPromises = facilitiesToUpsert.map(facility => submitFacilityDataForApproval(facility));
+                await Promise.all(submissionPromises);
+                setToast({ show: true, message: `Submitted ${facilitiesToUpsert.length} facility updates for approval.`, type: 'info' });
+            }
+    
+            const participantsWithCourseId = participantsToImport.map(p => ({
                 ...p,
                 courseId: selectedCourse.id
             }));
             
             await importParticipants(participantsWithCourseId);
             await refreshParticipants();
-            setToast({ show: true, message: `Successfully imported ${importedParticipants.length} participants.`, type: 'success' });
+            setToast({ show: true, message: `Successfully imported ${participantsToImport.length} participants.`, type: 'success' });
         } catch (error) {
-            console.error("Error importing participants:", error);
-            setToast({ show: true, message: "Error importing participants: " + error.message, type: 'error' });
+            console.error("Error importing participants and facilities:", error);
+            setToast({ show: true, message: "Error during import: " + error.message, type: "error" });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // --- Bulk Migration Handlers ---
+    const handleBulkMigrate = (courseId) => {
+        navigate('participantMigration', { courseId });
+    };
+
+    const handleExecuteBulkMigration = async (mappings) => {
+        setLoading(true);
+        try {
+            const result = await bulkMigrateFromMappings(mappings, { dryRun: false });
+            setToast({
+                show: true,
+                message: `Migration submitted! Processed: ${result.totalProcessed}, Submitted: ${result.submitted}, Skipped: ${result.skipped}, Errors: ${result.errors}.`,
+                type: result.errors > 0 ? 'warning' : 'success'
+            });
+            navigate('participants');
+        } catch (error) {
+            setToast({
+                show: true,
+                message: `Migration failed: ${error.message}`,
+                type: 'error'
+            });
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -800,7 +853,7 @@ export default function App() {
         try {
             await upsertCoordinator(coordinatorData);
             setToast({ show: true, message: `Coordinator '${coordinatorData.name}' added.`, type: 'success' });
-            await refreshCoordinatorsAndFunders();
+            await refreshAllData(userStates);
         } catch (error) {
                 console.error("Error adding new coordinator:", error);
             setToast({ show: true, message: "Failed to add new coordinator.", type: 'error' });
@@ -811,7 +864,7 @@ export default function App() {
         try {
             await upsertFunder(funderData);
             setToast({ show: true, message: `Funder '${funderData.orgName}' added.`, type: 'success' });
-            await refreshCoordinatorsAndFunders();
+            await refreshAllData(userStates);
         } catch (error) {
             console.error("Error adding new funder:", error);
             setToast({ show: true, message: "Failed to add new funder.", type: 'error' });
@@ -961,6 +1014,8 @@ export default function App() {
             'facilitatorReport': permissions.canViewFacilitators,
             'finalReportForm': permissions.canAddFinalReport || permissions.canEditDeleteFinalReport,
             'finalReportView': permissions.canViewCourse,
+            'participantMigration': permissions.canBulkUploadParticipant,
+            'childHealthServices': permissions.canManageHealthFacilities,
         };
     
         if (user && !viewPermissions[newView] && !['facilitators', 'programTeams', 'partnersPage'].includes(newView)) {
@@ -1052,6 +1107,8 @@ export default function App() {
             'facilitatorReport': permissions.canViewFacilitators,
             'finalReportForm': permissions.canAddFinalReport || permissions.canEditDeleteFinalReport,
             'finalReportView': permissions.canViewCourse,
+            'participantMigration': permissions.canBulkUploadParticipant,
+            'childHealthServices': permissions.canManageHealthFacilities,
         };
 
         if (user && !viewPermissions[viewToRender]) {
@@ -1108,6 +1165,7 @@ export default function App() {
                     setActiveCoursesTab={setActiveCoursesTab}
                     selectedCourse={selectedCourse}
                     participants={selectedCourseId ? allParticipants.filter(p => p.courseId === selectedCourseId) : []}
+                    allParticipants={allParticipants}
                     onAddParticipant={() => navigate('participantForm')}
                     onEditParticipant={(p) => navigate('participantForm', { editParticipant: p })}
                     onDeleteParticipant={handleDeleteParticipant}
@@ -1117,7 +1175,23 @@ export default function App() {
                     onEditFinalReport={handleEditFinalReport}
                     selectedParticipantId={selectedParticipantId}
                     onSetSelectedParticipantId={setSelectedParticipantId}
+                    onBulkMigrate={handleBulkMigrate}
+                    onBatchUpdate={() => refreshAllData(userStates)}
                 />;
+            case 'participantMigration':
+                return selectedCourse && (
+                    <ParticipantMigrationMappingView
+                        course={selectedCourse}
+                        participants={participants}
+                        onCancel={() => navigate('participants')}
+                        onSave={handleExecuteBulkMigration}
+                        setToast={setToast}
+                    />
+                );
+            case 'childHealthServices':
+                return permissions.canManageHealthFacilities ? (
+                    <ChildHealthServicesView permissions={permissions} setToast={setToast} />
+                ) : null;
             case 'monitoring':
             case 'observe':
                 return permissions.canAddMonitoring ? (
@@ -1131,10 +1205,52 @@ export default function App() {
                     />
                 ) : null;
             case 'courseForm': return permissions.canAddCourse || permissions.canEditDeleteActiveCourse || permissions.canEditDeleteInactiveCourse ? (
-                <CourseForm courseType={activeCourseType} initialData={editingCourse} facilitatorsList={facilitators} onCancel={() => navigate(previousView)} onSave={async (payload) => { const id = await upsertCourse({ ...payload, id: editingCourse?.id, course_type: activeCourseType }); await refreshAllData(); setSelectedCourseId(id); navigate('participants'); }} onAddNewFacilitator={async (data) => { await upsertFacilitator(data); await refreshAllData(); }} onAddNewCoordinator={handleAddNewCoordinator} onAddNewFunder={handleAddNewFunder} coordinatorsList={coordinators} fundersList={funders} />
+                <CourseForm 
+                    courseType={activeCourseType} 
+                    initialData={editingCourse} 
+                    facilitatorsList={facilitators} 
+                    onCancel={() => navigate(previousView)} 
+                    onSave={async (payload) => { 
+                        const id = await upsertCourse({ ...payload, id: editingCourse?.id, course_type: activeCourseType }); 
+                        await refreshAllData(); 
+                        setSelectedCourseId(id); 
+                        navigate('participants'); 
+                    }} 
+                    onAddNewFacilitator={async (data) => { await upsertFacilitator(data); await refreshAllData(); }} 
+                    onAddNewCoordinator={handleAddNewCoordinator} 
+                    onAddNewFunder={handleAddNewFunder} 
+                    fundersList={funders} 
+                    federalCoordinatorsList={federalCoordinators}
+                    stateCoordinatorsList={stateCoordinators}
+                    localityCoordinatorsList={localityCoordinators}
+                />
             ) : null;
             case 'participantForm': return permissions.canAddParticipant || permissions.canEditDeleteParticipant ? (
-                selectedCourse && <ParticipantForm course={selectedCourse} initialData={editingParticipant} onCancel={() => navigate(previousView)} onSave={async (p) => { await upsertParticipant({ ...p, id: editingParticipant?.id, courseId: selectedCourse.id }); await refreshParticipants(); navigate('participants'); }} />
+                selectedCourse && <ParticipantForm course={selectedCourse} initialData={editingParticipant} onCancel={() => navigate(previousView)} onSave={async (participantData, facilityUpdateData) => {
+                    try {
+                        const fullParticipantPayload = {
+                            ...participantData,
+                            id: editingParticipant?.id,
+                            courseId: selectedCourse.id
+                        };
+                        await saveParticipantAndSubmitFacilityUpdate(fullParticipantPayload, facilityUpdateData);
+                        if (facilityUpdateData) {
+                            setToast({
+                                show: true,
+                                message: 'Facility staff update submitted for approval.',
+                                type: 'info'
+                            });
+                        }
+                        await refreshParticipants();
+                        navigate('participants');
+                    } catch (e) {
+                        setToast({
+                            show: true,
+                            message: `Submission failed: ${e.message}`,
+                            type: 'error'
+                        });
+                    }
+                }} />
             ) : null;
             case 'participantReport': return permissions.canViewCourse ? (
                 selectedCourse && currentParticipant && <ParticipantReportView 
@@ -1210,7 +1326,7 @@ export default function App() {
                 />;
             case 'finalReportView':
                 return selectedCourse && finalReportData ? (
-        <div className="p-4 sm:p-6 lg:p-8">
+        <div className="space-y-6">
             <PageHeader
                 title={`Final Report for ${selectedCourse.course_type} - ${selectedCourse.state}`}
                 subtitle="View the complete final report."
@@ -1218,73 +1334,83 @@ export default function App() {
             />
             <Card>
                 <h3 className="text-xl font-bold mb-4">Course Summary</h3>
-                <p>{finalReportData.summary}</p>
+                <p className="whitespace-pre-wrap">{finalReportData.summary}</p>
             </Card>
             <Card>
                 <h3 className="text-xl font-bold mb-4">Course Recommendations</h3>
-                <Table headers={['Recommendation', 'Responsible', 'Status']}>
-                    {finalReportData.recommendations.map((rec, index) => (
-                        <tr key={index}>
-                            <td className="p-2 border">{rec.recommendation}</td>
-                            <td className="p-2 border">{rec.responsible}</td>
-                            <td className="p-2 border">{rec.status}</td>
-                        </tr>
-                    ))}
-                </Table>
+                <div className="overflow-x-auto">
+                    <Table headers={['Recommendation', 'Responsible', 'Status']}>
+                        {finalReportData.recommendations.map((rec, index) => (
+                            <tr key={index}>
+                                <td className="p-2 border">{rec.recommendation}</td>
+                                <td className="p-2 border">{rec.responsible}</td>
+                                <td className="p-2 border">{rec.status}</td>
+                            </tr>
+                        ))}
+                    </Table>
+                </div>
             </Card>
             <Card>
                 <h3 className="text-xl font-bold mb-4">Potential Facilitators</h3>
-                <Table headers={['Name', 'Course Type']}>
-                    {finalReportData.potentialFacilitators.map((fac, index) => {
-                        const participant = participants.find(p => p.id === fac.participant_id);
-                        return (
-                            <tr key={index}>
-                                <td className="p-2 border">{participant?.name || 'N/A'}</td>
-                                <td className="p-2 border">{fac.course_type}</td>
-                            </tr>
-                        );
-                    })}
-                </Table>
+                <div className="overflow-x-auto">
+                    <Table headers={['Name', 'Course Type']}>
+                        {finalReportData.potentialFacilitators.map((fac, index) => {
+                            const participant = participants.find(p => p.id === fac.participant_id);
+                            return (
+                                <tr key={index}>
+                                    <td className="p-2 border">{participant?.name || 'N/A'}</td>
+                                    <td className="p-2 border">{fac.course_type}</td>
+                                </tr>
+                            );
+                        })}
+                    </Table>
+                </div>
             </Card>
 
             <Card>
                 <h3 className="text-xl font-bold mb-4">Final Report PDF</h3>
-                <Table headers={['Document', 'Actions']}>
-                    <tr>
-                        <td className="p-2 border">
-                            {finalReportData?.pdfUrl ? (
-                                <div className="flex items-center gap-2">
-                                    <PdfIcon className="text-blue-500 w-6 h-6" />
-                                    <span>Final Report.pdf</span>
-                                </div>
-                            ) : (
-                                <span className="text-gray-500">No PDF uploaded</span>
-                            )}
-                        </td>
-                        <td className="p-2 border">
-                            {finalReportData?.pdfUrl && (
-                                <div className="flex gap-2">
-                                    <a href={finalReportData.pdfUrl} target="_blank" rel="noopener noreferrer">
-                                        <Button variant="info">View</Button>
-                                    </a>
-                                    <a href={finalReportData.pdfUrl} download="FinalReport.pdf">
-                                        <Button variant="primary">Download</Button>
-                                    </a>
-                                    <Button
-                                        variant="danger"
-                                        onClick={() => handleDeletePdf(selectedCourse.id)}
-                                    >
-                                        Delete
-                                    </Button>
-                                </div>
-                            )}
-                        </td>
-                    </tr>
-                </Table>
+                <div className="overflow-x-auto">
+                    <Table headers={['Document', 'Actions']}>
+                        <tbody>
+                            <tr>
+                                <td className="p-2 border">
+                                    {finalReportData?.pdfUrl ? (
+                                        <div className="flex items-center gap-2">
+                                            <PdfIcon className="text-blue-500 w-6 h-6" />
+                                            <span>Final Report.pdf</span>
+                                        </div>
+                                    ) : (
+                                        <span className="text-gray-500">No PDF uploaded</span>
+                                    )}
+                                </td>
+                                <td className="p-2 border">
+                                    {finalReportData?.pdfUrl && (
+                                        <div className="flex flex-wrap gap-2">
+                                            <a href={finalReportData.pdfUrl} target="_blank" rel="noopener noreferrer">
+                                                <Button variant="info">View</Button>
+                                            </a>
+                                            <a href={finalReportData.pdfUrl} download="FinalReport.pdf">
+                                                <Button variant="primary">Download</Button>
+                                            </a>
+                                            {permissions.canEditDeleteFinalReport && (
+                                                <Button
+                                                    variant="danger"
+                                                    onClick={() => handleDeletePdf(selectedCourse.id)}
+                                                >
+                                                    Delete
+                                                </Button>
+                                            )}
+                                        </div>
+                                    )}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </Table>
+                </div>
             </Card>
         </div>
     ) : (
-        <EmptyState message="Final report not found. Please go back to the course list to add one." />
+        <EmptyState message="Final report not found. Please go back to the course list to add one." onAction={() => navigate('courses')} actionText="Go Back" />
     );
             default: return <div className="p-8 text-center text-red-500">Access Denied: You do not have permission to view this page.</div>;
         }
@@ -1293,13 +1419,18 @@ export default function App() {
     const navItems = [
         { label: 'Dashboard', view: 'dashboard', active: view === 'dashboard', disabled: !permissions.canViewDashboard },
         { label: 'Home', view: 'landing', active: view === 'landing', disabled: !permissions.canViewLanding },
-        { label: 'Courses', view: 'courses', active: ['courses', 'courseForm', 'courseReport', 'participants', 'participantForm', 'participantReport', 'observe', 'monitoring', 'reports', 'finalReportForm', 'finalReportView'].includes(view), disabled: !permissions.canViewCourse },
+        { label: 'Courses', view: 'courses', active: ['courses', 'courseForm', 'courseReport', 'participants', 'participantForm', 'participantReport', 'observe', 'monitoring', 'reports', 'finalReportForm', 'finalReportView', 'participantMigration'].includes(view), disabled: !permissions.canViewCourse },
         { label: 'Human Resources', view: 'humanResources', active: ['humanResources', 'facilitatorForm', 'facilitatorReport'].includes(view), disabled: !permissions.canViewFacilitators },
+        { label: 'Child Health Services', view: 'childHealthServices', active: view === 'childHealthServices', disabled: !permissions.canManageHealthFacilities },
     ];
 
     let mainContent;
 
-    if (isPublicSubmissionView) {
+    if (isPublicFacilityUpdateView) {
+        mainContent = <PublicFacilityUpdateForm setToast={setToast} />;
+    } else if (isNewFacilityView) {
+        mainContent = <NewFacilityEntryForm setToast={setToast} />;
+    } else if (isPublicSubmissionView) {
         if (submissionType === 'facilitator-application') {
             mainContent = <FacilitatorApplicationForm />;
         } else if (submissionType === 'team-member-application') {
@@ -1370,39 +1501,56 @@ export default function App() {
         mainContent = renderView();
     }
 
+    const isPublicView = isPublicSubmissionView || isNewFacilityView || isPublicFacilityUpdateView;
 
     return (
         <div className="min-h-screen bg-sky-50 flex flex-col">
-            <header className="bg-slate-800 shadow-lg sticky top-0 z-10">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4 cursor-pointer" onClick={() => !isSharedView && navigate('dashboard')}>
+            { isPublicView ? (
+                <header className="bg-slate-800 shadow-lg sticky top-0 z-10">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+                        <div className="flex items-center justify-center gap-4">
                             <div className="h-14 w-14 bg-white rounded-full flex items-center justify-center p-1 shadow-md">
                                 <img src="/child.png" alt="NCHP Logo" className="h-12 w-12 object-contain" />
                             </div>
                             <div>
-                                <h1 className="text-xl sm:text-2xl font-bold text-white">National Child Health Program</h1>
-                                <p className="text-sm text-slate-300 hidden sm:block">Course Monitoring System</p>
+                                <h1 className="text-xl sm:text-2xl font-bold text-white text-center">National Child Health Program</h1>
+                                <p className="text-sm text-slate-300 hidden sm:block text-center">Course Monitoring System</p>
                             </div>
                         </div>
-                        {!isSharedView && !isPublicSubmissionView && (
-                            <nav className="hidden md:flex items-center gap-1">
-                                {navItems.map(item => (
-                                    <button key={item.label} onClick={() => !item.disabled && navigate(item.view)} disabled={item.disabled}
-                                        className={`px-3 py-2 text-sm font-semibold rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${item.active
-                                                ? 'bg-sky-600 text-white'
-                                                : 'text-slate-200 hover:bg-slate-700 hover:text-white'
-                                            }`}>
-                                        {item.label}
-                                    </button>
-                                ))}
-                            </nav>
-                        )}
                     </div>
-                </div>
-            </header>
+                </header>
+            ) : (
+                <header className="bg-slate-800 shadow-lg sticky top-0 z-10">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4 cursor-pointer" onClick={() => !isSharedView && navigate('dashboard')}>
+                                <div className="h-14 w-14 bg-white rounded-full flex items-center justify-center p-1 shadow-md">
+                                    <img src="/child.png" alt="NCHP Logo" className="h-12 w-12 object-contain" />
+                                </div>
+                                <div>
+                                    <h1 className="text-xl sm:text-2xl font-bold text-white">National Child Health Program</h1>
+                                    <p className="text-sm text-slate-300 hidden sm:block">Course Monitoring System</p>
+                                </div>
+                            </div>
+                            {!isSharedView && (
+                                <nav className="hidden md:flex items-center gap-1">
+                                    {navItems.map(item => (
+                                        <button key={item.label} onClick={() => !item.disabled && navigate(item.view)} disabled={item.disabled}
+                                            className={`px-3 py-2 text-sm font-semibold rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${item.active
+                                                    ? 'bg-sky-600 text-white'
+                                                    : 'text-slate-200 hover:bg-slate-700 hover:text-white'
+                                                }`}>
+                                            {item.label}
+                                        </button>
+                                    ))}
+                                </nav>
+                            )}
+                        </div>
+                    </div>
+                </header>
+            )}
             
-            {user && !isSharedView && !isPublicSubmissionView && (
+            {user && !isSharedView && !isPublicView && (
                 <div className="bg-slate-700 text-slate-200 p-2 md:p-3 text-center flex items-center justify-center gap-4">
                     <div className="flex items-center gap-2">
                         <span>Welcome, {user.email}</span>
@@ -1421,12 +1569,12 @@ export default function App() {
             )}
             {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ show: false, message: '', type: '' })} />}
             
-            <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 w-full flex-grow mb-16 md:mb-0">
+            <main className="max-w-7xl mx-auto p-6 sm:p-8 w-full flex-grow mb-16 md:mb-0">
                 {mainContent}
             </main>
 
             <Footer />
-            {!isSharedView && !isPublicSubmissionView && <BottomNav navItems={navItems} navigate={navigate} />}
+            { !isSharedView && !isPublicView && <BottomNav navItems={navItems} navigate={navigate} /> }
             
             <ShareModal
                 isOpen={isShareModalOpen}

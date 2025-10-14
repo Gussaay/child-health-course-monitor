@@ -129,16 +129,12 @@ export function CoursesTable({ courses, onOpen, onEdit, onDelete, onOpenReport, 
         if (!course.start_date || !course.course_duration || course.course_duration <= 0) {
             return false;
         }
-
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-
         const startDate = new Date(course.start_date);
         startDate.setHours(0, 0, 0, 0);
-
         const endDate = new Date(startDate);
         endDate.setDate(startDate.getDate() + course.course_duration);
-
         return today >= startDate && today < endDate;
     };
 
@@ -158,124 +154,203 @@ export function CoursesTable({ courses, onOpen, onEdit, onDelete, onOpenReport, 
         return 0;
     });
 
+    const courseType = sortedCourses.length > 0 ? sortedCourses[0].course_type : 'Courses';
+
     return (
         sortedCourses.length === 0 ? <EmptyState message="No courses have been added yet." /> : (
-            <Table headers={["Course Name", "State", "# Participants", "Status", "Actions"]}>
-                {sortedCourses.map(c => {
-                    const active = isCourseActive(c);
-                    const canEdit = active ? canEditDeleteActiveCourse : canEditDeleteInactiveCourse;
-                    const canDelete = active ? canEditDeleteActiveCourse : canEditDeleteInactiveCourse;
+            <div>
+                <h3 className="text-xl font-bold mb-4">{courseType} Courses</h3>
+                <Table headers={["#", "State", "Locality", "Subcourses", "# Participants", "Status", "Actions"]}>
+                    {sortedCourses.map((c, index) => {
+                        const active = isCourseActive(c);
+                        const canEdit = active ? canEditDeleteActiveCourse : canEditDeleteInactiveCourse;
+                        const canDelete = active ? canEditDeleteActiveCourse : canEditDeleteInactiveCourse;
+                        const subcourses = c.facilitatorAssignments && c.facilitatorAssignments.length > 0
+                            ? [...new Set(c.facilitatorAssignments.map(a => a.imci_sub_type))].join(', ')
+                            : 'N/A';
 
-                    return (
-                        <tr key={c.id} className="hover:bg-gray-50">
-                            <td className="p-4 border font-medium text-gray-800">
-                                {c.course_type}
-                                {active && <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Active</span>}
-                            </td>
-                            <td className="p-4 border">{c.state}</td>
-                            <td className="p-4 border">{c.participants_count}</td>
-                            <td className="p-4 border">
-                                {active ? (
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                        Active
-                                    </span>
-                                ) : (
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                        Inactive
-                                    </span>
-                                )}
-                            </td>
-                            <td className="p-4 border text-right">
-                                <div className="flex gap-2 flex-wrap justify-end">
-                                    <Button variant="primary" onClick={() => onOpen(c.id)}>Open Course</Button>
-                                    <Button variant="secondary" onClick={() => onOpenReport(c.id)}>Course Reports</Button>
-                                    <Button
-                                        variant="secondary"
-                                        onClick={() => onEdit(c)}
-                                        disabled={!canEdit}
-                                        title={!canEdit ? "You do not have permission to edit this course." : ""}
-                                    >
-                                        Edit
-                                    </Button>
-                                    <Button
-                                        variant="danger"
-                                        onClick={() => onDelete(c.id)}
-                                        disabled={!canDelete}
-                                        title={!canDelete ? "You do not have permission to delete this course." : ""}
-                                    >
-                                        Delete
-                                    </Button>
-                                    <Button variant="secondary" onClick={() => onAddFinalReport(c.id)}>Final Report</Button>
-                                </div>
-                            </td>
-                        </tr>
-                    );
-                })}
-            </Table>
+                        return (
+                            <tr key={c.id} className="hover:bg-gray-50">
+                                <td className="p-4 border font-medium text-gray-800">{index + 1}</td>
+                                <td className="p-4 border">{c.state}</td>
+                                <td className="p-4 border">{c.locality}</td>
+                                <td className="p-4 border">{subcourses}</td>
+                                <td className="p-4 border">{c.participants_count}</td>
+                                <td className="p-4 border">
+                                    {active ? (
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            Active
+                                        </span>
+                                    ) : (
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                            Inactive
+                                        </span>
+                                    )}
+                                </td>
+                                <td className="p-4 border text-right">
+                                    <div className="flex gap-2 flex-nowrap justify-end">
+                                        <Button variant="primary" onClick={() => onOpen(c.id)}>Open Course</Button>
+                                        <Button variant="secondary" onClick={() => onOpenReport(c.id)}>Course Reports</Button>
+                                        <Button
+                                            variant="secondary"
+                                            onClick={() => onEdit(c)}
+                                            disabled={!canEdit}
+                                            title={!canEdit ? "You do not have permission to edit this course." : ""}
+                                        >
+                                            Edit
+                                        </Button>
+                                        <Button
+                                            variant="danger"
+                                            onClick={() => onDelete(c.id)}
+                                            disabled={!canDelete}
+                                            title={!canDelete ? "You do not have permission to delete this course." : ""}
+                                        >
+                                            Delete
+                                        </Button>
+                                        <Button variant="secondary" onClick={() => onAddFinalReport(c.id)}>Final Report</Button>
+                                    </div>
+                                </td>
+                            </tr>
+                        );
+                    })}
+                </Table>
+            </div>
         )
     );
 }
 
-export function CourseManagementView({
-    courses, onAdd, onOpen, onEdit, onDelete, onOpenReport,
-    canAddCourse, canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates,
-    activeCoursesTab, setActiveCoursesTab, selectedCourse, participants,
-    onAddParticipant, onEditParticipant, onDeleteParticipant,
-    onOpenParticipantReport, onImportParticipants, onAddFinalReport, onEditFinalReport,
-    selectedParticipantId, onSetSelectedParticipantId,
-}) {
-    const currentParticipant = participants.find(p => p.id === selectedParticipantId);
+const DetailItem = ({ label, value }) => (
+    <div className="py-3 sm:grid sm:grid-cols-3 sm:gap-4 px-2 hover:bg-gray-50 rounded-md">
+        <dt className="text-sm font-medium text-gray-600">{label}</dt>
+        <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2 font-medium">{value || 'N/A'}</dd>
+    </div>
+);
+
+const CourseDetailView = ({ course }) => {
+    const facilitatorGroups = useMemo(() => {
+        if (!course.facilitatorAssignments) return {};
+        return course.facilitatorAssignments.reduce((acc, assignment) => {
+            const group = assignment.group || 'Unassigned';
+            if (!acc[group]) {
+                acc[group] = [];
+            }
+            acc[group].push(assignment);
+            return acc;
+        }, {});
+    }, [course.facilitatorAssignments]);
 
     return (
         <Card>
-            {selectedCourse && (
-                <div className="mb-4 p-3 bg-sky-100 border border-sky-200 rounded-lg">
-                    <h3 className="text-lg font-bold text-sky-800">
-                        Selected Course: {selectedCourse.course_type} - {selectedCourse.state} ({selectedCourse.start_date})
-                    </h3>
-                </div>
-            )}
-            
-            <div className="border-b border-gray-200">
-                <nav className="-mb-px flex gap-6" aria-label="Tabs">
-                    <Button variant="tab" isActive={activeCoursesTab === 'courses'} onClick={() => setActiveCoursesTab('courses')}>Courses</Button>
-                    
-                    {selectedCourse && (
-                        <>
-                            <Button
-                                variant="tab"
-                                isActive={activeCoursesTab === 'participants'}
-                                onClick={() => {
-                                    setActiveCoursesTab('participants');
-                                    onSetSelectedParticipantId(null);
-                                }}
-                            >
-                                Participants
-                            </Button>
-                            <Button
-                                variant="tab"
-                                isActive={activeCoursesTab === 'monitoring'}
-                                onClick={() => setActiveCoursesTab('monitoring')}
-                                disabled={!currentParticipant}
-                            >
-                                Monitoring
-                            </Button>
-                            <Button
-                                variant="tab"
-                                isActive={activeCoursesTab === 'reports'}
-                                onClick={() => setActiveCoursesTab('reports')}
-                            >
-                                Reports
-                            </Button>
-                        </>
-                    )}
-                </nav>
+            <PageHeader title="Course Details" subtitle={`${course.course_type} in ${course.state}`} />
+            <div className="border-t border-gray-200 mt-4 pt-4">
+                <dl>
+                    <DetailItem label="State & Locality" value={`${course.state}, ${course.locality}`} />
+                    <DetailItem label="Course Hall" value={course.hall} />
+                    <DetailItem label="Start Date" value={new Date(course.start_date).toLocaleDateString()} />
+                    <DetailItem label="Duration" value={`${course.course_duration} days`} />
+                    <DetailItem label="Coordinator" value={course.coordinator} />
+                    <DetailItem label="Participants" value={course.participants_count} />
+                    <DetailItem label="Funded By" value={course.funded_by} />
+                    <DetailItem label="Budget" value={course.course_budget ? `$${Number(course.course_budget).toLocaleString()}` : 'N/A'} />
+                </dl>
             </div>
 
-            <div className="mt-4">
-                {activeCoursesTab === 'courses' && (
+            <div className="mt-6">
+                <h3 className="text-lg font-semibold leading-6 text-gray-900 px-2">Leadership</h3>
+                <div className="mt-2 border-t border-gray-200 pt-2">
+                    <dl>
+                       <DetailItem label="Course Director" value={course.director} />
+                       {course.clinical_instructor && <DetailItem label="Clinical Instructor" value={course.clinical_instructor} />}
+                    </dl>
+                </div>
+            </div>
+
+            <div className="mt-6">
+                <h3 className="text-lg font-semibold leading-6 text-gray-900 px-2">Facilitator Assignments</h3>
+                <div className="mt-2 border-t border-gray-200 pt-4 space-y-4">
+                    {Object.keys(facilitatorGroups).length > 0 ? Object.entries(facilitatorGroups).map(([groupName, assignments]) => (
+                        <div key={groupName} className="p-3 bg-gray-50 rounded-lg">
+                            <h4 className="font-semibold text-md text-gray-700">{groupName}</h4>
+                            <ul className="list-disc list-inside pl-2 mt-2 space-y-1">
+                            {assignments.map((fac, index) => (
+                                <li key={index} className="text-sm text-gray-800">
+                                    <strong>{fac.name}</strong> - <span className="text-gray-600">{fac.imci_sub_type}</span>
+                                </li>
+                            ))}
+                            </ul>
+                        </div>
+                    )) : <p className="px-2 text-sm text-gray-500">No facilitators assigned.</p>}
+                </div>
+            </div>
+        </Card>
+    );
+};
+
+
+export function CourseManagementView({
+    courses, facilitators, onAdd, onOpen, onEdit, onDelete, onOpenReport,
+    canAddCourse, canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates,
+    activeCoursesTab, setActiveCoursesTab, selectedCourse, participants, allParticipants,
+    onAddParticipant, onEditParticipant, onDeleteParticipant,
+    onOpenParticipantReport, onImportParticipants, onAddFacilitator, onEditFacilitator,
+    onDeleteFacilitator, onOpenFacilitatorReport, onOpenFacilitatorComparison,
+    onImportFacilitators, onAddFinalReport, onEditFinalReport,
+    selectedParticipantId, onSetSelectedParticipantId, onBulkMigrate, onBatchUpdate
+}) {
+    const currentParticipant = participants.find(p => p.id === selectedParticipantId);
+
+    const handleOpenCourse = (id) => {
+        onOpen(id);
+        setActiveCoursesTab('courseDetails');
+    };
+
+    return (
+        <Card>
+            <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-4">
+                <Button variant="tab" isActive={activeCoursesTab === 'courses'} onClick={() => setActiveCoursesTab('courses')}>Courses</Button>
+
+                {selectedCourse && (
+                    <>
+                        <Button
+                            variant="tab"
+                            isActive={activeCoursesTab === 'courseDetails'}
+                            onClick={() => setActiveCoursesTab('courseDetails')}
+                        >
+                            Course Details
+                        </Button>
+                        <Button
+                            variant="tab"
+                            isActive={activeCoursesTab === 'participants'}
+                            onClick={() => {
+                                setActiveCoursesTab('participants');
+                                onSetSelectedParticipantId(null);
+                            }}
+                        >
+                            Participants
+                        </Button>
+                        <Button
+                            variant="tab"
+                            isActive={activeCoursesTab === 'monitoring'}
+                            onClick={() => setActiveCoursesTab('monitoring')}
+                            disabled={!currentParticipant}
+                        >
+                            Monitoring
+                        </Button>
+                        <Button
+                            variant="tab"
+                            isActive={activeCoursesTab === 'reports'}
+                            onClick={() => setActiveCoursesTab('reports')}
+                        >
+                            Reports
+                        </Button>
+                    </>
+                )}
+            </div>
+
+            <div className="p-4">
+                {activeCoursesTab === 'courses' && canAddCourse && (
                     <div className="mb-4">
-                        {canAddCourse && <Button onClick={onAdd}>Add New Course</Button>}
+                        <Button onClick={onAdd} className="bg-sky-600 text-white hover:bg-sky-700">Add New Course</Button>
                     </div>
                 )}
 
@@ -283,7 +358,7 @@ export function CourseManagementView({
                     {activeCoursesTab === 'courses' && (
                         <CoursesTable
                             courses={courses}
-                            onOpen={onOpen}
+                            onOpen={handleOpenCourse}
                             onEdit={onEdit}
                             onDelete={onDelete}
                             onOpenReport={onOpenReport}
@@ -293,10 +368,14 @@ export function CourseManagementView({
                             onAddFinalReport={onAddFinalReport}
                         />
                     )}
+                    {activeCoursesTab === 'courseDetails' && selectedCourse && (
+                        <CourseDetailView course={selectedCourse} />
+                    )}
                     {activeCoursesTab === 'participants' && selectedCourse && (
                         <ParticipantsView
                             course={selectedCourse}
                             participants={participants}
+                            allParticipants={allParticipants}
                             onAdd={onAddParticipant}
                             onOpen={(id) => {
                                 onSetSelectedParticipantId(id);
@@ -306,10 +385,10 @@ export function CourseManagementView({
                             onDelete={onDeleteParticipant}
                             onOpenReport={onOpenParticipantReport}
                             onImport={onImportParticipants}
-                            canAdd={canAddParticipant}
-                            canBulkUpload={canBulkUploadParticipant}
-                            selectedParticipantId={selectedParticipantId}
-                            onSetSelectedParticipantId={onSetSelectedParticipantId}
+                            onBatchUpdate={onBatchUpdate}
+                            canAddParticipant={true}
+                            canBulkUploadParticipant={true}
+                            onBulkMigrate={onBulkMigrate}
                         />
                     )}
                     {activeCoursesTab === 'participants' && !selectedCourse && (
@@ -322,7 +401,7 @@ export function CourseManagementView({
                         <EmptyState message="Please select a participant from the 'Participants' tab to begin monitoring." />
                     )}
                     {activeCoursesTab === 'reports' && selectedCourse && (
-                        <ReportsView course={selectedCourse} participants={participants} onOpenReport={onOpenReport} onAddFinalReport={onAddFinalReport}/>
+                        <ReportsView course={selectedCourse} participants={participants} />
                     )}
                 </div>
             </div>
@@ -367,7 +446,7 @@ const NewCoordinatorForm = ({ initialName, onCancel, onSave }) => {
             <h3 className="text-xl font-bold mb-4">Add New Coordinator</h3>
             <FormGroup label="Name"><Input value={name} onChange={(e) => setName(e.target.value)} /></FormGroup>
             <FormGroup label="State"><Select value={state} onChange={(e) => { setState(e.target.value); setLocality(''); }}><option value="">— Select State —</option>{Object.keys(STATE_LOCALITIES).sort().map(s => <option key={s} value={s}>{s}</option>)}</Select></FormGroup>
-            <FormGroup label="Locality"><Select value={locality} onChange={(e) => setLocality(e.target.value)} disabled={!state}><option value="">— Select Locality —</option>{(STATE_LOCALITIES[state] || []).sort().map(l => <option key={l} value={l}>{l}</option>)}</Select></FormGroup>
+            <FormGroup label="Locality"><Select value={locality} onChange={(e) => setLocality(e.target.value)} disabled={!state}><option value="">— Select Locality —</option>{(STATE_LOCALITIES[state]?.localities || []).sort((a,b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}</Select></FormGroup>
             <FormGroup label="Phone Number"><Input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} /></FormGroup>
             <div className="flex gap-2 justify-end mt-4">
                 <Button variant="secondary" onClick={onCancel}>Cancel</Button>
@@ -481,7 +560,11 @@ const SearchableSelect = ({ label, options, value, onChange, onOpenNewForm, plac
 };
 
 
-export function CourseForm({ courseType, initialData, facilitatorsList, coordinatorsList, fundersList, onCancel, onSave, onAddNewFacilitator, onAddNewCoordinator, onAddNewFunder }) {
+export function CourseForm({ 
+    courseType, initialData, facilitatorsList, fundersList, onCancel, onSave, 
+    onAddNewFacilitator, onAddNewCoordinator, onAddNewFunder, 
+    federalCoordinatorsList = [], stateCoordinatorsList = [], localityCoordinatorsList = []
+}) {
     const [state, setState] = useState(initialData?.state || '');
     const [locality, setLocality] = useState(initialData?.locality || '');
     const [hall, setHall] = useState(initialData?.hall || '');
@@ -493,6 +576,11 @@ export function CourseForm({ courseType, initialData, facilitatorsList, coordina
     const [director, setDirector] = useState(initialData?.director || '');
     const [clinical, setClinical] = useState(initialData?.clinical_instructor || '');
     const [supporter, setSupporter] = useState(initialData?.funded_by || '');
+    const [stateCoordinator, setStateCoordinator] = useState(initialData?.state_coordinator || '');
+    const [localityCoordinator, setLocalityCoordinator] = useState(initialData?.locality_coordinator || '');
+    const [courseProject, setCourseProject] = useState(initialData?.course_project || '');
+    const [implementedBy, setImplementedBy] = useState(initialData?.implemented_by || '');
+
 
     const [directorImciSubType, setDirectorImciSubType] = useState(initialData?.director_imci_sub_type || IMNCI_SUBCOURSE_TYPES[0]);
     const [clinicalImciSubType, setClinicalImciSubType] = useState(initialData?.clinical_instructor_imci_sub_type || IMNCI_SUBCOURSE_TYPES[0]);
@@ -556,12 +644,47 @@ export function CourseForm({ courseType, initialData, facilitatorsList, coordina
             .sort((a, b) => a.name.localeCompare(b.name));
     }, [facilitatorsList, courseType, isInfectionControl]);
 
-    const coordinatorOptions = useMemo(() => {
-        return coordinatorsList.map(c => ({ id: c.id, name: c.name }));
-    }, [coordinatorsList]);
+    const federalCoordinatorOptions = useMemo(() => {
+        return federalCoordinatorsList.map(c => ({ id: c.id, name: c.name }));
+    }, [federalCoordinatorsList]);
+
+    const stateCoordinatorOptions = useMemo(() => {
+        const sortedList = [...stateCoordinatorsList].sort((a, b) => {
+            const aIsMatch = a.state === state;
+            const bIsMatch = b.state === state;
+            if (aIsMatch && !bIsMatch) return -1;
+            if (!aIsMatch && bIsMatch) return 1;
+            return a.name.localeCompare(b.name);
+        });
+        return sortedList.map(c => ({ id: c.id, name: `${c.name} (${c.state})` }));
+    }, [stateCoordinatorsList, state]);
+
+    const localityCoordinatorOptions = useMemo(() => {
+        const sortedList = [...localityCoordinatorsList].sort((a, b) => {
+            const aIsExact = a.state === state && a.locality === locality;
+            const bIsExact = b.state === state && b.locality === locality;
+            if (aIsExact && !bIsExact) return -1;
+            if (!aIsExact && bIsExact) return 1;
+
+            const aIsStateMatch = a.state === state;
+            const bIsStateMatch = b.state === state;
+            if (aIsStateMatch && !bIsStateMatch) return -1;
+            if (!aIsStateMatch && bIsStateMatch) return 1;
+
+            return a.name.localeCompare(b.name);
+        });
+        return sortedList.map(c => ({ id: c.id, name: `${c.name} (${c.locality}, ${c.state})` }));
+    }, [localityCoordinatorsList, state, locality]);
 
     const funderOptions = useMemo(() => {
-        return fundersList.map(f => ({ id: f.id, name: f.orgName }));
+        return (fundersList || []).map(f => ({ id: f.id, name: f.orgName }));
+    }, [fundersList]);
+
+    const projectOptions = useMemo(() => {
+        if (!fundersList) return [];
+        const allProjects = fundersList.flatMap(partner => partner.projects || []);
+        const uniqueProjects = [...new Set(allProjects)].sort();
+        return uniqueProjects.map(proj => ({ id: proj, name: proj }));
     }, [fundersList]);
 
     const addFacilitatorToGroup = (groupName) => {
@@ -615,7 +738,7 @@ export function CourseForm({ courseType, initialData, facilitatorsList, coordina
             return [...acc, ...groupAssignments];
         }, []);
 
-        if (!state || !locality || !hall || !coordinator || !participantsCount || !supporter || !startDate) {
+        if (!state || !locality || !hall || !coordinator || !participantsCount || !supporter || !startDate || !implementedBy) {
             setError('Please complete all required fields.');
             return;
         }
@@ -635,7 +758,11 @@ export function CourseForm({ courseType, initialData, facilitatorsList, coordina
             course_duration: courseDuration,
             participants_count: participantsCount, director,
             funded_by: supporter,
+            implemented_by: implementedBy,
             course_budget: courseBudget,
+            state_coordinator: stateCoordinator,
+            locality_coordinator: localityCoordinator,
+            course_project: courseProject,
             facilitators: allFacilitatorAssignments.map(f => f.name),
             facilitatorAssignments: allFacilitatorAssignments,
         };
@@ -699,137 +826,182 @@ export function CourseForm({ courseType, initialData, facilitatorsList, coordina
 
     return (
         <Card>
-            <PageHeader title={`${initialData ? 'Edit' : 'Add New'} Course`} subtitle={`Package: ${courseType}`} />
-            {error && <div className="p-3 mb-4 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <FormGroup label="State"><Select value={state} onChange={(e) => { setState(e.target.value); setLocality(''); }}><option value="">— Select State —</option>{Object.keys(STATE_LOCALITIES).sort().map(s => <option key={s} value={s}>{s}</option>)}</Select></FormGroup>
-                <FormGroup label="Locality"><Select value={locality} onChange={(e) => setLocality(e.target.value)} disabled={!state}><option value="">— Select Locality —</option>{(STATE_LOCALITIES[state] || []).sort().map(l => <option key={l} value={l}>{l}</option>)}</Select></FormGroup>
-                <FormGroup label="Course Hall"><Input value={hall} onChange={(e) => setHall(e.target.value)} /></FormGroup>
-                <FormGroup label="Start Date of Course"><Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></FormGroup>
-                <FormGroup label="Course Duration (days)"><Input type="number" value={courseDuration} onChange={(e) => setCourseDuration(Number(e.target.value))} /></FormGroup>
+            <div className="p-6">
+                <PageHeader title={`${initialData ? 'Edit' : 'Add New'} Course`} subtitle={`Package: ${courseType}`} className="mb-6" />
+                {error && <div className="p-3 mb-6 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <FormGroup label="State"><Select value={state} onChange={(e) => { setState(e.target.value); setLocality(''); }}><option value="">— Select State —</option>{Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar)).map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar}</option>)}</Select></FormGroup>
+                    <FormGroup label="Locality"><Select value={locality} onChange={(e) => setLocality(e.target.value)} disabled={!state}><option value="">— Select Locality —</option>{(STATE_LOCALITIES[state]?.localities || []).sort((a,b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}</Select></FormGroup>
+                    <FormGroup label="Course Hall"><Input value={hall} onChange={(e) => setHall(e.target.value)} /></FormGroup>
+                    <FormGroup label="Start Date of Course"><Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></FormGroup>
+                    <FormGroup label="Course Duration (days)"><Input type="number" value={courseDuration} onChange={(e) => setCourseDuration(Number(e.target.value))} /></FormGroup>
+                    <FormGroup label="# of Participants"><Input type="number" value={participantsCount} onChange={(e) => setParticipantsCount(Number(e.target.value))} /></FormGroup>
 
-                <FormGroup label="Course Coordinator">
-                    <SearchableSelect
-                        value={coordinator}
-                        onChange={setCoordinator}
-                        options={coordinatorOptions}
-                        onOpenNewForm={handleOpenNewCoordinatorForm}
-                        placeholder="Type to search or add a coordinator"
-                        label="Course Coordinator"
-                    />
-                </FormGroup>
-                <FormGroup label="# of Participants"><Input type="number" value={participantsCount} onChange={(e) => setParticipantsCount(Number(e.target.value))} /></FormGroup>
+                    <FormGroup label="Federal Course Coordinator">
+                        <SearchableSelect
+                            value={coordinator}
+                            onChange={setCoordinator}
+                            options={federalCoordinatorOptions}
+                            onOpenNewForm={handleOpenNewCoordinatorForm}
+                            placeholder="Type to search..."
+                            label="Federal Course Coordinator"
+                        />
+                    </FormGroup>
+                    <FormGroup label="State Course Coordinator">
+                        <SearchableSelect
+                            value={stateCoordinator}
+                            onChange={setStateCoordinator}
+                            options={stateCoordinatorOptions}
+                            onOpenNewForm={handleOpenNewCoordinatorForm}
+                            placeholder="Type to search..."
+                            label="State Course Coordinator"
+                        />
+                    </FormGroup>
+                    <FormGroup label="Locality Course Coordinator">
+                        <SearchableSelect
+                            value={localityCoordinator}
+                            onChange={setLocalityCoordinator}
+                            options={localityCoordinatorOptions}
+                            onOpenNewForm={handleOpenNewCoordinatorForm}
+                            placeholder="Type to search..."
+                            label="Locality Course Coordinator"
+                        />
+                    </FormGroup>
+                    
+                    <FormGroup label="Funded by:">
+                        <SearchableSelect
+                            value={supporter}
+                            onChange={setSupporter}
+                            options={funderOptions}
+                            onOpenNewForm={handleOpenNewFunderForm}
+                            placeholder="Type to search or add a funder"
+                            label="Funded by"
+                        />
+                    </FormGroup>
+                    <FormGroup label="Implemented by:">
+                        <SearchableSelect
+                            value={implementedBy}
+                            onChange={setImplementedBy}
+                            options={funderOptions}
+                            onOpenNewForm={handleOpenNewFunderForm}
+                            placeholder="Type to search or add an implementer"
+                            label="Implemented by"
+                        />
+                    </FormGroup>
+                    <FormGroup label="Course Project">
+                         <SearchableSelect
+                            value={courseProject}
+                            onChange={setCourseProject}
+                            options={projectOptions}
+                            onOpenNewForm={() => alert('Please add new projects via the Partners page in Human Resources.')}
+                            placeholder="Type to search for a project"
+                            label="Course Project"
+                        />
+                    </FormGroup>
 
-                <FormGroup label="Funded by:">
-                    <SearchableSelect
-                        value={supporter}
-                        onChange={setSupporter}
-                        options={funderOptions}
-                        onOpenNewForm={handleOpenNewFunderForm}
-                        placeholder="Type to search or add a funder"
-                        label="Funded by"
-                    />
-                </FormGroup>
-                <FormGroup label="Course Budget (USD)"><Input type="number" value={courseBudget} onChange={(e) => setCourseBudget(Number(e.target.value))} /></FormGroup>
+                    <FormGroup label="Course Budget (USD)"><Input type="number" value={courseBudget} onChange={(e) => setCourseBudget(Number(e.target.value))} /></FormGroup>
 
-                {!isInfectionControl && (
-                    <div className="md:col-span-2 lg:col-span-3">
-                        <h3 className="text-lg font-bold mb-2">Leadership Assignments</h3>
-                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 p-4 border rounded-md bg-gray-50">
-                            <div className="space-y-2">
-                                <FormGroup label="Course Director">
-                                    <SearchableSelect
-                                        value={director}
-                                        onChange={setDirector}
-                                        options={directorOptions}
-                                        onOpenNewForm={handleOpenNewFacilitatorForm}
-                                        placeholder="Select Director"
-                                        label="Course Director"
-                                    />
-                                </FormGroup>
-                                {isImnci && (
-                                    <FormGroup label="IMNCI Subcourse for Director">
-                                        <Select value={directorImciSubType} onChange={(e) => setDirectorImciSubType(e.target.value)} className="w-full">
-                                            {IMNCI_SUBCOURSE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
-                                        </Select>
-                                    </FormGroup>
-                                )}
-                            </div>
+                    <div className="lg:col-span-3" /> 
 
-                            {isImnci && (
+                    {!isInfectionControl && (
+                        <div className="md:col-span-2 lg:col-span-3">
+                            <h3 className="text-lg font-bold mb-2">Leadership Assignments</h3>
+                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 p-4 border rounded-md bg-gray-50">
                                 <div className="space-y-2">
-                                    <FormGroup label="Clinical Instructor (Optional)">
+                                    <FormGroup label="Course Director">
                                         <SearchableSelect
-                                            value={clinical}
-                                            onChange={setClinical}
-                                            options={clinicalInstructorOptions}
+                                            value={director}
+                                            onChange={setDirector}
+                                            options={directorOptions}
                                             onOpenNewForm={handleOpenNewFacilitatorForm}
-                                            placeholder="Select Instructor"
-                                            label="Clinical Instructor"
+                                            placeholder="Select Director"
+                                            label="Course Director"
                                         />
                                     </FormGroup>
-                                    <FormGroup label="IMNCI Subcourse for Clinical Instructor (Optional)">
-                                        <Select value={clinicalImciSubType} onChange={(e) => setClinicalImciSubType(e.target.value)} className="w-full">
-                                            {IMNCI_SUBCOURSE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
-                                        </Select>
-                                    </FormGroup>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                <div className="md:col-span-2 lg:col-span-3 mt-4">
-                    <h3 className="text-lg font-bold mb-2">Facilitator Assignments</h3>
-                    <div className="space-y-6">
-                        {groups.map(groupName => (
-                            <div key={groupName} className="p-4 border rounded-md bg-gray-50">
-                                <h4 className="text-md font-semibold mb-2">{groupName}</h4>
-                                {facilitatorGroups[groupName]?.map((assignment, index) => (
-                                    <div key={index} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                                        <FormGroup label="Subcourse Type">
-                                            <Select
-                                                value={assignment.imci_sub_type || ''}
-                                                onChange={(e) => updateFacilitatorAssignment(groupName, index, 'imci_sub_type', e.target.value)}
-                                                className="w-full"
-                                            >
-                                                <option value="">— Select Subcourse —</option>
-                                                {(isImnci ? IMNCI_SUBCOURSE_TYPES : INFECTION_CONTROL_SUBCOURSE_TYPES).map(type => (
-                                                    <option key={type} value={type}>{type}</option>
-                                                ))}
+                                    {isImnci && (
+                                        <FormGroup label="IMNCI Subcourse for Director">
+                                            <Select value={directorImciSubType} onChange={(e) => setDirectorImciSubType(e.target.value)} className="w-full">
+                                                {IMNCI_SUBCOURSE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
                                             </Select>
                                         </FormGroup>
-                                        <FormGroup label="Facilitator Name">
+                                    )}
+                                </div>
+
+                                {isImnci && (
+                                    <div className="space-y-2">
+                                        <FormGroup label="Clinical Instructor (Optional)">
                                             <SearchableSelect
-                                                value={assignment.name}
-                                                onChange={(value) => updateFacilitatorAssignment(groupName, index, 'name', value)}
-                                                options={facilitatorOptions}
+                                                value={clinical}
+                                                onChange={setClinical}
+                                                options={clinicalInstructorOptions}
                                                 onOpenNewForm={handleOpenNewFacilitatorForm}
-                                                placeholder="Select Facilitator"
-                                                label="Facilitator"
+                                                placeholder="Select Instructor"
+                                                label="Clinical Instructor"
                                             />
                                         </FormGroup>
-                                        <div className="flex items-end">
-                                            <Button type="button" variant="danger" onClick={() => removeFacilitatorFromGroup(groupName, index)} disabled={facilitatorGroups[groupName]?.length <= 1}>Remove</Button>
-                                        </div>
+                                        <FormGroup label="IMNCI Subcourse for Clinical Instructor (Optional)">
+                                            <Select value={clinicalImciSubType} onChange={(e) => setClinicalImciSubType(e.target.value)} className="w-full">
+                                                {IMNCI_SUBCOURSE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
+                                            </Select>
+                                        </FormGroup>
                                     </div>
-                                ))}
-                                <div className="flex justify-end mt-2">
-                                    <Button type="button" variant="secondary" onClick={() => addFacilitatorToGroup(groupName)}>+ Add another facilitator to {groupName}</Button>
-                                </div>
+                                )}
                             </div>
-                        ))}
-                    </div>
-                    {groups.length < COURSE_GROUPS.length && (
-                        <div className="flex justify-start mt-4">
-                            <Button type="button" variant="secondary" onClick={addGroup}>+ Add another group</Button>
                         </div>
                     )}
+
+                    <div className="md:col-span-2 lg:col-span-3 mt-4">
+                        <h3 className="text-lg font-bold mb-2">Facilitator Assignments</h3>
+                        <div className="space-y-6">
+                            {groups.map(groupName => (
+                                <div key={groupName} className="p-4 border rounded-md bg-gray-50">
+                                    <h4 className="text-md font-semibold mb-2">{groupName}</h4>
+                                    {facilitatorGroups[groupName]?.map((assignment, index) => (
+                                        <div key={index} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                                            <FormGroup label="Subcourse Type">
+                                                <Select
+                                                    value={assignment.imci_sub_type || ''}
+                                                    onChange={(e) => updateFacilitatorAssignment(groupName, index, 'imci_sub_type', e.target.value)}
+                                                    className="w-full"
+                                                >
+                                                    <option value="">— Select Subcourse —</option>
+                                                    {(isImnci ? IMNCI_SUBCOURSE_TYPES : INFECTION_CONTROL_SUBCOURSE_TYPES).map(type => (
+                                                        <option key={type} value={type}>{type}</option>
+                                                    ))}
+                                                </Select>
+                                            </FormGroup>
+                                            <FormGroup label="Facilitator Name">
+                                                <SearchableSelect
+                                                    value={assignment.name}
+                                                    onChange={(value) => updateFacilitatorAssignment(groupName, index, 'name', value)}
+                                                    options={facilitatorOptions}
+                                                    onOpenNewForm={handleOpenNewFacilitatorForm}
+                                                    placeholder="Select Facilitator"
+                                                    label="Facilitator"
+                                                />
+                                            </FormGroup>
+                                            <div className="flex items-end">
+                                                <Button type="button" variant="danger" onClick={() => removeFacilitatorFromGroup(groupName, index)} disabled={facilitatorGroups[groupName]?.length <= 1}>Remove</Button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    <div className="flex justify-end mt-2">
+                                        <Button type="button" variant="secondary" onClick={() => addFacilitatorToGroup(groupName)}>+ Add another facilitator to {groupName}</Button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        {groups.length < COURSE_GROUPS.length && (
+                            <div className="flex justify-start mt-4">
+                                <Button type="button" variant="secondary" onClick={addGroup}>+ Add another group</Button>
+                            </div>
+                        )}
+                    </div>
                 </div>
-            </div>
-            <div className="flex gap-2 justify-end mt-6 border-t pt-6">
-                <Button variant="secondary" onClick={onCancel}>Cancel</Button>
-                <Button onClick={submit}>Save Course</Button>
+                <div className="flex gap-2 justify-end mt-8 border-t pt-6">
+                    <Button variant="secondary" onClick={onCancel}>Cancel</Button>
+                    <Button onClick={submit}>Save Course</Button>
+                </div>
             </div>
         </Card>
     );
