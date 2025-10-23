@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "928082473485",
+    "project_id": "imnci-courses-monitor",
+    "storage_bucket": "imnci-courses-monitor.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:928082473485:android:e583c1bb159e51c02a9b44",
+        "android_client_info": {
+          "package_name": "com.nchp.monitoring.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "928082473485-a7uqhcn91rltu2iraiof5pkga5mg2vfu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.nchp.monitoring.app",
+            "certificate_hash": "daa5e6f580b70093d5da7f0f879cc87deaa863dd"
+          }
+        },
+        {
+          "client_id": "928082473485-bu2fbkb8p12qcjijmb9lg4j7asj8emje.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyApaE6SnbttxkU3iaTSWu2-KFHQ6LD-ehw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "928082473485-bu2fbkb8p12qcjijmb9lg4j7asj8emje.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

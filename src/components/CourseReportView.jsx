@@ -12,6 +12,9 @@ import {
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, PointElement, LineElement, ChartDataLabels);
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { FileOpener } from '@capacitor-community/file-opener';
 
 // --- New Icon Component for the Copy Button ---
 const CopyIcon = () => (
@@ -102,24 +105,11 @@ const getCaseCorrectnessName = (pct) => {
 
 
 // --- UPDATED PDF Export Helper with Quality Settings ---
-const generateFullCourseReportPdf = async (course, quality = 'print') => {
+const generateFullCourseReportPdf = async (course, quality = 'print', onSuccess, onError) => {
     // Define quality profiles for different export needs
     const qualityProfiles = {
-        print: {
-            scale: 2,
-            imageType: 'image/png',
-            imageFormat: 'PNG',
-            compression: undefined,
-            fileSuffix: '_Print_Quality'
-        },
-        screen: {
-            scale: 1.5,
-            imageType: 'image/jpeg',
-            imageQuality: 0.85,
-            imageFormat: 'JPEG',
-            compression: 'MEDIUM',
-            fileSuffix: '_Online_Share'
-        }
+        print: { /* ... */ },
+        screen: { /* ... */ }
     };
 
     const profile = qualityProfiles[quality] || qualityProfiles.print;
@@ -130,36 +120,67 @@ const generateFullCourseReportPdf = async (course, quality = 'print') => {
 
     if (!element) {
         console.error("The element with ID 'full-course-report' was not found.");
+        onError("Report element not found. Could not generate PDF."); // Use onError
         return;
     }
 
-    const canvas = await html2canvas(element, {
-        scale: profile.scale,
-        useCORS: true,
-        backgroundColor: '#ffffff' // Set a white background to avoid transparency issues
-    });
+    try {
+        const canvas = await html2canvas(element, {
+            scale: profile.scale,
+            useCORS: true,
+            backgroundColor: '#ffffff' // Set a white background to avoid transparency issues
+        });
 
-    const imgData = canvas.toDataURL(profile.imageType, profile.imageQuality);
-    const imgWidth = 210; // A4 width in mm
-    const pageHeight = 297; // A4 height in mm
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    let heightLeft = imgHeight;
-    let position = 0;
+        const imgData = canvas.toDataURL(profile.imageType, profile.imageQuality);
+        const imgWidth = 210; // A4 width in mm
+        const pageHeight = 297; // A4 height in mm
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        let heightLeft = imgHeight;
+        let position = 0;
 
-    // Add the captured image to the PDF, handling multiple pages
-    doc.addImage(imgData, profile.imageFormat, 0, position, imgWidth, imgHeight, undefined, profile.compression);
-    heightLeft -= pageHeight;
-
-    while (heightLeft > 0) {
-        position = -(imgHeight - heightLeft);
-        doc.addPage();
+        // Add the captured image to the PDF, handling multiple pages
         doc.addImage(imgData, profile.imageFormat, 0, position, imgWidth, imgHeight, undefined, profile.compression);
         heightLeft -= pageHeight;
+
+        while (heightLeft > 0) {
+            position = -(imgHeight - heightLeft);
+            doc.addPage();
+            doc.addImage(imgData, profile.imageFormat, 0, position, imgWidth, imgHeight, undefined, profile.compression);
+            heightLeft -= pageHeight;
+        }
+
+        // --- NEW SAVE LOGIC ---
+        if (Capacitor.isNativePlatform()) {
+            // We are on mobile (Android/iOS)
+            // Get PDF as base64 string (remove data:application/pdf;base64, prefix)
+            const base64Data = doc.output('datauristring').split('base64,')[1];
+            
+            // Write the file to the Downloads directory
+            const writeResult = await Filesystem.writeFile({
+                path: fileName,
+                data: base64Data,
+                directory: Directory.Downloads,
+            });
+
+            // Now, try to open the file using its native URI
+            await FileOpener.open({
+                filePath: writeResult.uri, // Use the URI returned by writeFile
+                contentType: 'application/pdf',
+            });
+
+            onSuccess(`PDF saved to Downloads folder: ${fileName}`);
+        } else {
+            // We are on web
+            doc.save(fileName);
+            onSuccess("PDF download initiated."); // Web download is just an initiation
+        }
+        // --- END NEW SAVE LOGIC ---
+
+    } catch (e) {
+        console.error("Error generating or saving PDF:", e);
+        onError(`Failed to save PDF: ${e.message || 'Unknown error'}`);
     }
-
-    doc.save(fileName);
 };
-
 
 // --- NEW HELPER FUNCTION FOR STATS AND DISTRIBUTION ---
 const getStatsAndDistribution = (scores) => {
@@ -190,7 +211,10 @@ const getStatsAndDistribution = (scores) => {
 };
 
 
-export function CourseReportView({ course, onBack, participants, allObs, allCases, finalReportData, onEditFinalReport, onDeletePdf, onViewParticipantReport, isSharedView = false, onShare }) {
+export function CourseReportView({ 
+    course, onBack, participants, allObs, allCases, finalReportData, onEditFinalReport, 
+    onDeletePdf, onViewParticipantReport, isSharedView = false, onShare, setToast // <-- ACCEPT setToast PROP
+}) {
     const overallChartRef = useRef(null);
     const dailyChartRef = useRef(null);
     const prePostDistributionChartRef = useRef(null);
@@ -198,20 +222,41 @@ export function CourseReportView({ course, onBack, participants, allObs, allCase
     const [caseCorrectnessFilter, setCaseCorrectnessFilter] = useState('All');
     const [isPdfGenerating, setIsPdfGenerating] = useState(false);
 
+    // --- NEW: Notification helper ---
+    const notify = (message, type = 'info') => {
+        if (setToast) {
+            setToast({ show: true, message, type });
+        } else {
+            // Fallback for when setToast is not provided
+            alert(message);
+        }
+    };
+
+
+
     // --- NEW: Wrapper function to handle PDF generation state ---
-    const handlePdfGeneration = async (quality) => {
+   const handlePdfGeneration = async (quality) => {
         setIsPdfGenerating(true);
         // Add a small delay to allow the UI to update to the loading state
         await new Promise(resolve => setTimeout(resolve, 100));
         try {
-            await generateFullCourseReportPdf(course, quality);
+            // Pass the notify functions as callbacks
+            await generateFullCourseReportPdf(
+                course, 
+                quality,
+                (message) => notify(message, 'success'), // OnSuccess callback
+                (message) => notify(message, 'error')    // OnError callback
+            );
         } catch (error) {
+            // This catch is a fallback, but the helper should handle its own errors
             console.error("Failed to generate PDF:", error);
-            alert("Sorry, there was an error generating the PDF.");
+            notify("Sorry, there was an error generating the PDF.", 'error');
         } finally {
             setIsPdfGenerating(false);
         }
     };
+
+
 
     // --- NEW: Function to handle copying a card as an image ---
     const handleCopyAsImage = async (elementId) => {

@@ -90,6 +90,7 @@ function MemberFormFieldset({ level, formData, onFormChange, onDynamicFieldChang
 }
 
 // A single, configurable form for all team levels (internal use)
+// This component is now rendered inside a modal
 function TeamMemberForm({ member, onSave, onCancel }) {
     const [selectedLevel, setSelectedLevel] = useState(member?.level || (member ? (member.locality ? 'locality' : member.state ? 'state' : 'federal') : ''));
     const [formData, setFormData] = useState(() => {
@@ -116,24 +117,23 @@ function TeamMemberForm({ member, onSave, onCancel }) {
     };
 
     return (
-        <Card>
-            <form onSubmit={handleSubmit} className="space-y-4" dir="rtl">
-                <CardBody>
-                    <h2 className="text-xl font-bold text-gray-800 text-center border-b pb-4 mb-6">{member?.id ? `Edit Team Member` : `Add New Team Member`}</h2>
-                    {!member?.id && ( <Select label="اختر المستوى" value={selectedLevel} onChange={(e) => setSelectedLevel(e.target.value)} required><option value="">-- Select Level --</option><option value="federal">Federal</option><option value="state">State</option><option value="locality">Locality</option></Select> )}
-                    {selectedLevel && <MemberFormFieldset level={selectedLevel} formData={formData} onFormChange={handleChange} onDynamicFieldChange={handlePreviousRolesChange} />}
-                </CardBody>
-                {selectedLevel && (
-                    <CardFooter>
-                        <Button type="button" variant="secondary" onClick={onCancel}>إلغاء</Button>
-                        <Button type="submit">حفظ</Button>
-                    </CardFooter>
-                )}
-            </form>
-        </Card>
+        <form onSubmit={handleSubmit} className="space-y-4" dir="rtl">
+            <CardBody>
+                <h2 className="text-xl font-bold text-gray-800 text-center border-b pb-4 mb-6">{member?.id ? `Edit Team Member` : `Add New Team Member`}</h2>
+                {!member?.id && ( <Select label="اختر المستوى" value={selectedLevel} onChange={(e) => setSelectedLevel(e.target.value)} required><option value="">-- Select Level --</option><option value="federal">Federal</option><option value="state">State</option><option value="locality">Locality</option></Select> )}
+                {selectedLevel && <MemberFormFieldset level={selectedLevel} formData={formData} onFormChange={handleChange} onDynamicFieldChange={handlePreviousRolesChange} />}
+            </CardBody>
+            {selectedLevel && (
+                <CardFooter>
+                    <Button type="button" variant="secondary" onClick={onCancel}>Cancel</Button>
+                    <Button type="submit">Save</Button>
+                </CardFooter>
+            )}
+        </form>
     );
 }
 
+// This component is now rendered inside a modal
 function TeamMemberView({ level, member, onBack }) {
     const renderDetail = (label, value) => {
         if (!value) return null;
@@ -146,7 +146,7 @@ function TeamMemberView({ level, member, onBack }) {
     };
 
     return (
-        <Card>
+        <>
             <CardBody>
                 <PageHeader title="View Team Member Details" />
                 <div className="border-t border-gray-200">
@@ -178,9 +178,9 @@ function TeamMemberView({ level, member, onBack }) {
                 </div>
             </CardBody>
             <CardFooter>
-                <Button onClick={onBack}>Back to List</Button>
+                <Button onClick={onBack}>Close</Button>
             </CardFooter>
-        </Card>
+        </>
     );
 }
 
@@ -207,7 +207,11 @@ function PendingSubmissions({ submissions, isLoading, onApprove, onReject, onVie
                             </tr>
                         ))
                     ) : (
-                        <tr><td colSpan={headers.length}><EmptyState message="No pending submissions found." /></td></tr>
+                        <tr>
+                            <td colSpan={headers.length} className="p-8 text-center text-gray-500">
+                                No pending submissions found.
+                            </td>
+                        </tr>
                     )}
                 </Table>
             </CardBody>
@@ -252,21 +256,58 @@ function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleSta
 }
 
 
-export function ProgramTeamView({ permissions }) {
+export function ProgramTeamView({ permissions, userStates }) {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [editingMember, setEditingMember] = useState(null);
-    const [view, setView] = useState('list');
     const [pendingSubmissions, setPendingSubmissions] = useState([]);
     const [isSubmissionsLoading, setIsSubmissionsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('members');
-    const [filters, setFilters] = useState({ level: 'federal', state: '', locality: '' });
-    const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+    
+    // --- START OF FIX ---
+    // 1. Define isFederal *before* setting the filter state
+    // FIX 1: Treat user as 'federal' if their scope is federal OR if they are a superuser.
+    const isFederal = permissions.manageScope === 'federal' || permissions.canUseSuperUserAdvancedFeatures;
 
+    // 2. Set the *initial state* of the filters based on the user's role
+    const [filters, setFilters] = useState(() => {
+        const initialState = {
+            level: isFederal ? 'federal' : 'state',
+            state: isFederal ? '' : (userStates[0] || ''), // Default to user's first state if not federal
+            locality: '',
+        };
+        return initialState;
+    });
+    // --- END OF FIX ---
+
+    const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+    const [linkSettings, setLinkSettings] = useState({ isActive: false, openCount: 0 });
+    const [isSettingsLoading, setIsSettingsLoading] = useState(false);
+
+    // --- REFACTORED STATE FOR MODAL ---
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalMode, setModalMode] = useState(null); // 'view', 'edit', or null
+
+    // Note: isFederal is already defined above the useState hook
+    
     const dataFunctions = {
         state: { list: listStateCoordinators, upsert: upsertStateCoordinator, delete: deleteStateCoordinator, listPending: listPendingCoordinatorSubmissions, approve: approveCoordinatorSubmission, reject: rejectCoordinatorSubmission },
         federal: { list: listFederalCoordinators, upsert: upsertFederalCoordinator, delete: deleteFederalCoordinator, listPending: listPendingFederalSubmissions, approve: approveFederalSubmission, reject: rejectFederalSubmission },
         locality: { list: listLocalityCoordinators, upsert: upsertLocalityCoordinator, delete: deleteLocalityCoordinator, listPending: listPendingLocalitySubmissions, approve: approveLocalitySubmission, reject: rejectLocalitySubmission }
+    };
+
+    const fetchListData = async (level) => {
+        if (!level) return;
+        setLoading(true);
+        try {
+            const listFn = dataFunctions[level].list;
+            const membersData = await listFn();
+            setMembers(membersData);
+        } catch (error) {
+            console.error(`Error fetching ${level} members:`, error);
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
@@ -295,57 +336,171 @@ export function ProgramTeamView({ permissions }) {
             }
         };
         fetchData();
-    }, [filters.level, permissions]);
+    }, [filters.level, permissions]); // This dependency on filters.level is correct
 
     const filteredMembers = useMemo(() => {
         if (loading) return [];
-        return members.filter(m => {
+        
+        let membersToFilter = [...members];
+
+        // 1. Apply permission-based filtering (if not federal)
+        // FIX: Only apply state filter if user is NOT federal AND has states assigned
+        if (!isFederal && userStates && userStates.length > 0) {
+            membersToFilter = membersToFilter.filter(m => {
+                // Federal members are always hidden from non-federal users
+                if (filters.level === 'federal' || !m.state) return false;
+                
+                // State/Locality members must be in the user's assigned states
+                // userStates is an array of state names.
+                return userStates.includes(m.state);
+            });
+        }
+        // FIX: If !isFederal and userStates is empty, the filter is skipped,
+        // which satisfies the "if no state show any level" request.
+
+
+        // 2. Apply UI-based filtering (filters.state, filters.locality)
+        return membersToFilter.filter(m => {
+            // Because filters.state is now pre-filled for state managers, this works on load
             const stateMatch = !filters.state || m.state === filters.state;
             const localityMatch = !filters.locality || m.locality === filters.locality;
             return stateMatch && localityMatch;
         });
-    }, [members, filters, loading]);
+    }, [members, filters, loading, isFederal, userStates]);
 
     const handleFilterChange = (filterName, value) => {
         setFilters(prev => {
             const newFilters = { ...prev, [filterName]: value };
             if (filterName === 'level') {
-                newFilters.state = '';
-                newFilters.locality = '';
+                // When changing level, reset state/locality *only if federal*
+                // Otherwise, keep the pre-filled state.
+                if (isFederal) {
+                    newFilters.state = '';
+                    newFilters.locality = '';
+                } else {
+                    // Non-federal user, keep newFilters.state (which is prev.state)
+                    // but reset locality
+                    newFilters.locality = ''; 
+                }
             }
             if (filterName === 'state') {
+                // This is fine for both user types
                 newFilters.locality = '';
             }
             return newFilters;
         });
     };
+    
+    // --- REFACTORED MODAL HANDLERS ---
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setModalMode(null);
+        setEditingMember(null);
+    };
 
-    const handleBackToList = () => { setEditingMember(null); setView('list'); };
-    const handleAdd = () => { setEditingMember(null); setView('form'); };
-    const handleEdit = (member) => { setEditingMember(member); setView('form'); };
-    const handleView = (member) => { setEditingMember(member); setView('view'); };
+    const handleAdd = () => {
+        setEditingMember(null); // For a new member
+        setModalMode('edit');
+        setIsModalOpen(true);
+    };
+
+    const handleEdit = (member) => {
+        setEditingMember(member);
+        setModalMode('edit');
+        setIsModalOpen(true);
+    };
+
+    const handleView = (member) => {
+        setEditingMember(member);
+        setModalMode('view');
+        setIsModalOpen(true);
+    };
 
     const handleSave = async (level, payload) => {
         try {
             const upsertFn = dataFunctions[level].upsert;
             await upsertFn({ ...payload, id: editingMember?.id });
+            // If the user changed the member's level, switch the main filter to that level
             if (level !== filters.level) {
-                handleFilterChange('level', level); 
+                handleFilterChange('level', level);
             } else {
-                const listFn = dataFunctions[level].list;
-                setMembers(await listFn());
+                // Otherwise, just refresh the current list
+                fetchListData(level);
             }
-            handleBackToList();
-        } catch (error) { console.error("Error saving member:", error); }
+            handleCloseModal(); // Close modal on success
+        } catch (error) { 
+            console.error("Error saving member:", error);
+            alert("Failed to save member. See console for details.");
+        }
     };
     
-    // ... Other handlers (handleDelete, etc.)
+    const handleOpenLinkModal = async () => {
+        setIsLinkModalOpen(true);
+        setIsSettingsLoading(true);
+        try {
+            const settings = await getCoordinatorApplicationSettings();
+            setLinkSettings(settings);
+        } catch (error) {
+            console.error("Failed to fetch link settings:", error);
+        } finally {
+            setIsSettingsLoading(false);
+        }
+    };
 
-    if (view === 'form') {
-        const initialData = editingMember || { level: filters.level };
-        return <TeamMemberForm member={initialData} onSave={handleSave} onCancel={handleBackToList} />;
-    }
-    if (view === 'view') return <TeamMemberView level={filters.level} member={editingMember} onBack={handleBackToList} />;
+    const handleToggleLinkStatus = async () => {
+        try {
+            const newStatus = !linkSettings.isActive;
+            await updateCoordinatorApplicationStatus(newStatus);
+            setLinkSettings(prev => ({ ...prev, isActive: newStatus }));
+        } catch (error) {
+            console.error("Failed to update link status:", error);
+        }
+    };
+    
+    const handleApproveSubmission = async (submission) => {
+        if (!filters.level) return;
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+            console.error("Cannot approve: No user is logged in.");
+            alert("Error: You must be logged in to approve submissions.");
+            return;
+        }
+        try {
+            const approveFn = dataFunctions[filters.level].approve;
+            const approverInfo = { uid: currentUser.uid, email: currentUser.email, approvedAt: new Date() };
+            await approveFn(submission, approverInfo);
+            setPendingSubmissions(prev => prev.filter(s => s.id !== submission.id));
+            setMembers(prev => [...prev, { ...submission, id: submission.id }]);
+        } catch (error) {
+            console.error("Error approving submission:", error);
+            alert(`Failed to approve submission. See console for details.`);
+        }
+    };
+
+    const handleRejectSubmission = async (submissionId) => {
+        if (!filters.level) return;
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+            console.error("Cannot reject: No user is logged in.");
+            alert("Error: You must be logged in to reject submissions.");
+            return;
+        }
+        if (window.confirm("Are you sure you want to reject this submission?")) {
+            try {
+                const rejectFn = dataFunctions[filters.level].reject;
+                const rejecterInfo = { uid: currentUser.uid, email: currentUser.email, rejectedAt: new Date() };
+                await rejectFn(submissionId, rejecterInfo);
+                setPendingSubmissions(prev => prev.filter(s => s.id !== submissionId));
+            } catch (error) {
+                console.error("Error rejecting submission:", error);
+                alert(`Failed to reject submission. See console for details.`);
+            }
+        }
+    };
+    
+    // This logic is no longer needed as the list is always visible
+    // if (view === 'form') { ... }
+    // if (view === 'view') { ... }
 
     const tableHeaders = {
         state: ['الإسم', 'الايميل', 'الولاية', 'المسمى الوظيفي', 'الصفة', 'Actions'],
@@ -357,21 +512,23 @@ export function ProgramTeamView({ permissions }) {
         <div>
             <div className="mb-6 flex flex-wrap items-end gap-4">
                 {activeTab === 'members' && (
-                    <FormGroup label={'\u00A0'}> {/* Invisible label for alignment */}
-                        <Button onClick={handleAdd}>Add New Team Member</Button>
+                    <FormGroup label={'\u00A0'}>
+                        {permissions.canManageHumanResource && <Button onClick={handleAdd}>Add New Team Member</Button>}
                     </FormGroup>
                 )}
                 <div className="flex flex-wrap items-end gap-4 flex-grow">
                     <FormGroup label="Filter by Level">
                         <Select value={filters.level} onChange={(e) => handleFilterChange('level', e.target.value)}>
-                            <option value="federal">Federal</option>
+                            {/* FIX 1: isFederal is now true for superusers, showing this option */ }
+                            {isFederal && <option value="federal">Federal</option>}
                             <option value="state">State</option>
                             <option value="locality">Locality</option>
                         </Select>
                     </FormGroup>
                     {(filters.level === 'state' || filters.level === 'locality') && (
                         <FormGroup label="State">
-                            <Select value={filters.state} onChange={(e) => handleFilterChange('state', e.target.value)}>
+                            {/* This dropdown is correctly disabled for non-federal users, locking them to their state */ }
+                            <Select value={filters.state} onChange={(e) => handleFilterChange('state', e.target.value)} disabled={!isFederal}>
                                 <option value="">All States</option>
                                 {Object.keys(STATE_LOCALITIES).sort().map(s => <option key={s} value={s}>{s}</option>)}
                             </Select>
@@ -379,6 +536,7 @@ export function ProgramTeamView({ permissions }) {
                     )}
                     {filters.level === 'locality' && (
                         <FormGroup label="Locality">
+                            {/* FIX 2: Removed !isFederal from disabled check. Now it only depends on a state being selected. */ }
                             <Select value={filters.locality} onChange={(e) => handleFilterChange('locality', e.target.value)} disabled={!filters.state}>
                                 <option value="">All Localities</option>
                                 {(STATE_LOCALITIES[filters.state] || []).sort().map(l => <option key={l} value={l}>{l}</option>)}
@@ -398,7 +556,7 @@ export function ProgramTeamView({ permissions }) {
                                     Pending Approvals 
                                     <span className="ml-2 bg-sky-100 text-sky-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">{pendingSubmissions.length}</span>
                                 </Button>
-                                <Button variant="secondary" size="sm" onClick={() => setIsLinkModalOpen(true)}>Manage Submission Link</Button>
+                                <Button variant="secondary" size="sm" onClick={handleOpenLinkModal}>Manage Submission Link</Button>
                             </>
                         )}
                     </nav>
@@ -421,27 +579,57 @@ export function ProgramTeamView({ permissions }) {
                                         <td className="p-4 text-sm">
                                             <div className="flex gap-2">
                                                 <Button variant="secondary" onClick={() => handleView(c)}>View</Button>
-                                                <Button onClick={() => handleEdit(c)}>Edit</Button>
-                                                <Button variant="danger" onClick={() => {}}>Delete</Button>
+                                                {permissions.canManageHumanResource && <Button onClick={() => handleEdit(c)}>Edit</Button>}
+                                                {permissions.canManageHumanResource && <Button variant="danger" onClick={() => {}}>Delete</Button>}
                                             </div>
                                         </td>
                                     </tr>
-                                )) : <tr><td colSpan={tableHeaders[filters.level]?.length}><EmptyState message="No team members found for the selected filters." /></td></tr>}
+                                )) : (
+                                    <tr>
+                                        <td colSpan={tableHeaders[filters.level]?.length} className="p-8 text-center text-gray-500">
+                                            No team members found for the selected filters.
+                                        </td>
+                                    </tr>
+                                )}
                             </Table>
                         )}
                     </CardBody>
                 </Card>
             ) : (
-                <PendingSubmissions submissions={pendingSubmissions} isLoading={isSubmissionsLoading} onApprove={()=>{}} onReject={()=>{}} onView={handleView} />
+                <PendingSubmissions 
+                    submissions={pendingSubmissions} 
+                    isLoading={isSubmissionsLoading} 
+                    onApprove={handleApproveSubmission} 
+                    onReject={handleRejectSubmission} 
+                    onView={handleView} 
+                />
             )}
 
             <LinkManagementModal 
                 isOpen={isLinkModalOpen}
                 onClose={() => setIsLinkModalOpen(false)}
-                settings={{}} // Pass settings state here
-                isLoading={false} // Pass loading state here
-                onToggleStatus={() => {}} // Pass toggle handler here
+                settings={linkSettings}
+                isLoading={isSettingsLoading}
+                onToggleStatus={handleToggleLinkStatus}
             />
+
+            {/* --- ADDED MODAL FOR VIEW/EDIT --- */}
+            <Modal isOpen={isModalOpen} onClose={handleCloseModal} size={modalMode === 'view' ? '2xl' : '3xl'}>
+                {modalMode === 'view' && editingMember && (
+                    <TeamMemberView 
+                        level={editingMember.level || filters.level} 
+                        member={editingMember} 
+                        onBack={handleCloseModal} 
+                    />
+                )}
+                {modalMode === 'edit' && (
+                    <TeamMemberForm 
+                        member={editingMember} // Pass null for new members
+                        onSave={handleSave}
+                        onCancel={handleCloseModal}
+                    />
+                )}
+            </Modal>
         </div>
     );
 }

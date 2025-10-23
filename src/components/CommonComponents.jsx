@@ -44,7 +44,7 @@ export const Button = ({ onClick, children, variant = 'primary', disabled = fals
     };
     const activeTabClasses = isActive && variant === 'tab' ? 'bg-sky-600 text-white hover:bg-sky-700' : '';
     const disabledClasses = "disabled:opacity-50 disabled:cursor-not-allowed";
-    
+
     return <button onClick={onClick} disabled={disabled} className={`${baseClasses} ${variantClasses[variant]} ${disabledClasses} ${className} ${activeTabClasses}`}>{children}</button>;
 };
 
@@ -185,6 +185,12 @@ export const Table = ({ headers, children }) => {
           {React.Children.map(children, (row) => {
             if (!React.isValidElement(row)) return row;
 
+            // Handle EmptyState component specifically
+            if (row.type === EmptyState) {
+                return row; // Render EmptyState directly (it already renders a <tr><td>...)
+            }
+
+            // For regular table rows
             const cells = React.Children.map(row.props.children, (cell) => {
               if (!React.isValidElement(cell)) return cell;
               return React.cloneElement(cell, {
@@ -203,7 +209,17 @@ export const Table = ({ headers, children }) => {
   );
 };
 
-export const EmptyState = ({ message, colSpan = 100 }) => (<tr><td colSpan={colSpan} className="py-12 text-center text-gray-500 border border-gray-200">{message}</td></tr>);
+
+// --- MODIFICATION: Updated EmptyState to render a table row ---
+export const EmptyState = ({ message, colSpan = 1 }) => (
+    <tr>
+        <td colSpan={colSpan} className="py-12 text-center text-gray-500 border border-gray-200">
+            {message}
+        </td>
+    </tr>
+);
+// --- END MODIFICATION ---
+
 export const Spinner = () => <div className="flex justify-center items-center p-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600"></div></div>;
 
 export const PdfIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
@@ -244,15 +260,19 @@ export function Modal({ isOpen, onClose, title, children }) {
 }
 
 export function Toast({ message, type, onClose }) {
-    const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
-    const borderColor = type === 'success' ? 'border-green-600' : 'border-red-600';
+    const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500'; // Added default/info case
+    const borderColor = type === 'success' ? 'border-green-600' : type === 'error' ? 'border-red-600' : 'border-blue-600'; // Added default/info case
     const icon = type === 'success' ? (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-    ) : (
+    ) : type === 'error' ? (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+    ) : ( // Default/info icon
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
     );
 

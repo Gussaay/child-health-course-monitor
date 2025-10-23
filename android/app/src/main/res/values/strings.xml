@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">National Child Health Program Monitor</string>
+    <string name="title_activity_main">National Child Health Program Monitor</string>
+    <string name="package_name">com.nchp.monitoring.app</string>
+    <string name="custom_url_scheme">com.nchp.monitoring.app</string>
+
+    <string name="server_client_id">928082473485-bu2fbkb8p12qcjijmb9lg4j7asj8emje.apps.googleusercontent.com</string>
+</resources>

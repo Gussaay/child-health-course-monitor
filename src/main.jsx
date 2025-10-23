@@ -1,13 +1,14 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App.jsx'
-import AuthGate from './auth-gate.jsx'
-import './index.css'
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+import { DataProvider } from './DataContext'; // Import DataProvider
+import './index.css'; // Add this line to import your stylesheet
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
   <React.StrictMode>
-    <AuthGate>
+    <DataProvider>
       <App />
-    </AuthGate>
-  </React.StrictMode>,
-)
+    </DataProvider>
+  </React.StrictMode>
+);

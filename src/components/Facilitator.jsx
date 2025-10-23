@@ -415,7 +415,9 @@ function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublicForm = 
                          <FormGroup label="Current Locality">
                             <Select value={currentLocality} onChange={e => handleFieldChange('currentLocality', e.target.value)} disabled={!currentState || currentState === 'Out of Sudan'}>
                                 <option value="">— Select Locality —</option>
-                                {(STATE_LOCALITIES[currentState] || []).sort().map(l => <option key={l} value={l}>{l}</option>)}
+                                { /* --- START OF FIX --- */ }
+                                {(STATE_LOCALITIES[currentState]?.localities || []).sort((a, b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
+                                { /* --- END OF FIX --- */ }
                             </Select>
                         </FormGroup>
                     </div>
@@ -497,7 +499,7 @@ function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublicForm = 
                                 <FormGroup label="Certificate">
                                      {!isPublicForm && certificateUrls['followUpCourseCert'] && ( <a href={certificateUrls['followUpCourseCert']} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 hover:underline mb-1 block">View Current</a> )}
                                     <Input type="file" accept="image/*,.pdf" onChange={e => onFileChange('followUpCourseCert', e.target.files[0])} />
-                                </FormGroup>
+                                 </FormGroup>
                             </>}
                         </div>
                         <div className="grid md:grid-cols-3 gap-4 items-end">
@@ -572,19 +574,29 @@ export function FacilitatorsView({
     };
 
     const filteredFacilitators = useMemo(() => {
+        // Federal users (or super user) see all facilitators
+        if (permissions.manageScope === 'federal') {
+            return facilitators;
+        }
+
+        // FIX: If user is not federal, but also has no states assigned, show all.
+        // This addresses the "if no state show any level" request for users like superuser
+        // who might not have states assigned.
         if (!userStates || userStates.length === 0) {
             return facilitators;
         }
+        
+        // Non-federal users *with assigned states* are filtered by their assigned states (userStates)
         return facilitators.filter(f => f.currentState && userStates.includes(f.currentState));
-    }, [facilitators, userStates]);
+    }, [facilitators, userStates, permissions.manageScope]);
 
     return (
         <Card>
             <CardBody>
                 <PageHeader title="Manage Facilitators" />
                 <div className="mb-6 flex gap-2 flex-wrap items-start">
-                    <Button onClick={onAdd}>Add New Facilitator</Button>
-                    <Button variant="secondary" onClick={() => setImportModalOpen(true)}>Import from Excel</Button>
+                    {permissions.canManageHumanResource && <Button onClick={onAdd}>Add New Facilitator</Button>}
+                    {permissions.canManageHumanResource && <Button variant="secondary" onClick={() => setImportModalOpen(true)}>Import from Excel</Button>}
                     {permissions.canApproveSubmissions && (
                         <Button variant="secondary" onClick={() => setIsLinkModalOpen(true)}>
                             Manage Submission Link
@@ -645,15 +657,15 @@ export function FacilitatorsView({
                                                     <div className="flex gap-2 flex-wrap justify-end">
                                                         <Button size="sm" onClick={() => onOpenReport(f.id)}>Report</Button>
                                                         <Button size="sm" variant="secondary" onClick={() => setViewingCertsFor(f)} disabled={!hasCerts} title={hasCerts ? "View Certificates" : "No certificates available"}>Certificates</Button>
-                                                        <Button size="sm" variant="secondary" onClick={() => onEdit(f)}>Edit</Button>
-                                                        <Button size="sm" variant="danger" onClick={() => onDelete(f.id)}>Delete</Button>
+                                                        {permissions.canManageHumanResource && <Button size="sm" variant="secondary" onClick={() => onEdit(f)}>Edit</Button>}
+                                                        {permissions.canManageHumanResource && <Button size="sm" variant="danger" onClick={() => onDelete(f.id)}>Delete</Button>}
                                                     </div>
                                                 </td>
                                             </tr>
                                         );
                                     })
                                 ) : (
-                                    <EmptyState key="empty-facilitators" message="No facilitators found for your assigned state(s)." colSpan={4} />
+                                    <EmptyState key="empty-facilitators" message="No facilitators found." colSpan={4} />
                                 )}
                             </Table>
                         )}
@@ -938,12 +950,36 @@ export function FacilitatorReportView({ facilitator, allCourses, onBack }) {
         });
 
         // Other calculations...
+        // NOTE: Placeholder data is used here to prevent crash. Implement real logic as needed.
+        const finalCombinedChartData = {
+            labels: Object.keys(summary),
+            datasets: [
+                {
+                    label: 'Courses Instructed',
+                    data: Object.values(summary).map(s => s.instructed),
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                },
+                {
+                    label: 'Courses Directed',
+                    data: Object.values(summary).map(s => s.directed),
+                    backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                },
+            ],
+        };
+        
+        // You can add logic for imciSubcourseData here if needed
+        const finalImciSubcourseData = null; 
+        
+        // START OF CORRECTION
         return {
             directedCourses: directed,
             facilitatedCourses: facilitated,
-            // ...other returned data
-            courseSummary: Object.entries(summary)
+            courseSummary: Object.entries(summary),
+            // FIX: Ensure these are always included in the returned object
+            combinedChartData: finalCombinedChartData,
+            imciSubcourseData: finalImciSubcourseData
         };
+        // END OF CORRECTION
     }, [facilitator, allCourses]);
     
     const generateFacilitatorPdf = () => {

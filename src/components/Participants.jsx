@@ -7,7 +7,7 @@ import {
 import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_ETAT, JOB_TITLES_EENC
 } from './constants.js';
-import { listHealthFacilities, importParticipants, bulkMigrateFromMappings } from '../data.js';
+import { listHealthFacilities, importParticipants, bulkMigrateFromMappings, listParticipants } from '../data.js';
 
 // --- Reusable Searchable Select Component ---
 const SearchableSelect = ({ options, value, onChange, placeholder, disabled }) => {
@@ -85,6 +85,63 @@ const SearchableSelect = ({ options, value, onChange, placeholder, disabled }) =
                 </div>
             )}
         </div>
+    );
+};
+
+// --- ADDED: New Participant Popup Form ---
+const NewParticipantForm = ({ initialName, jobTitleOptions, onCancel, onSave }) => {
+    const [name, setName] = useState(initialName || '');
+    const [phone, setPhone] = useState('');
+    
+    const [job, setJob] = useState('');
+    const [otherJobTitle, setOtherJobTitle] = useState('');
+    const [error, setError] = useState('');
+
+    const handleSave = () => {
+        const finalJobTitle = job === 'Other' ? otherJobTitle : job;
+        if (!name || !finalJobTitle || !phone) {
+            setError("Please fill in all fields.");
+            return; 
+        }
+        setError('');
+        onSave({
+            name,
+            job_title: finalJobTitle,
+            phone,
+        });
+    };
+
+    return (
+        <Card>
+            <div className="p-6">
+                <PageHeader title="Add New Participant Details" subtitle="This person was not found in the facility's staff list." />
+                {error && <div className="p-3 my-4 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
+                <div className="space-y-4 pt-6">
+                    <FormGroup label="Participant Name">
+                        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full Name" />
+                    </FormGroup>
+                    <FormGroup label="Job Title">
+                        <Select value={job} onChange={(e) => setJob(e.target.value)}>
+                            <option value="">— Select Job —</option>
+                            {jobTitleOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            <option value="Other">Other</option>
+                        </Select>
+                    </FormGroup>
+                    {job === 'Other' && (
+                        <FormGroup label="Specify Job Title">
+                            <Input value={otherJobTitle} onChange={(e) => setOtherJobTitle(e.target.value)} placeholder="Please specify" />
+                        </FormGroup>
+                    )}
+                    <FormGroup label="Phone Number">
+                        <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone Number" />
+                    </FormGroup>
+                </div>
+                <div className="flex gap-2 justify-end mt-6 border-t pt-6">
+                    <Button variant="secondary" onClick={onCancel}>Cancel</Button>
+                    <Button onClick={handleSave}>Continue</Button>
+                </div>
+            </div>
+        </Card>
     );
 };
 
@@ -185,9 +242,7 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, co
             (participants || []).forEach(p => {
                 const value = p[selectedFieldKey];
                 
-                // Process only if the value exists (is not null, undefined, or an empty string)
                 if (value) {
-                    // If the value is not in the set of standard values, it's a mismatch.
                     if (!standardValuesSet.has(value)) {
                         values.add(value);
                     }
@@ -195,7 +250,7 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, co
             });
             
             setNonStandardValues(Array.from(values).sort());
-            setMappings({}); // Reset mappings when field changes
+            setMappings({});
             setIsLoading(false);
         }
     }, [selectedFieldKey, participants, CLEANABLE_FIELDS_CONFIG]);
@@ -211,23 +266,21 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, co
         }
         setIsUpdating(true);
         
-        // Find all participants who have a value that is in our mapping keys
         const participantsToUpdate = participants
             .filter(p => {
                 const originalValue = p[selectedFieldKey];
                 return originalValue !== null && originalValue !== undefined && Object.keys(mappings).includes(String(originalValue));
             })
             .map(p => ({
-                ...p, // keep all original data
-                id: p.id, // ensure id is present for update
-                [selectedFieldKey]: mappings[String(p[selectedFieldKey])] // apply the fix
+                ...p,
+                id: p.id,
+                [selectedFieldKey]: mappings[String(p[selectedFieldKey])]
             }));
 
         try {
             await onSave(participantsToUpdate);
         } catch (error) {
             console.error("Failed to update participants:", error);
-            // Optionally show a toast/error message to the user
         } finally {
             setIsUpdating(false);
             onClose();
@@ -313,7 +366,6 @@ const BulkChangeModal = ({ isOpen, onClose, participants, onSave, courseType }) 
         return ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
     }, [courseType]);
     
-    // Define which fields can be bulk-changed
     const CHANGEABLE_FIELDS_CONFIG = useMemo(() => ({
         'job_title': {
             label: 'Job Title',
@@ -323,7 +375,6 @@ const BulkChangeModal = ({ isOpen, onClose, participants, onSave, courseType }) 
             label: 'Group',
             options: ['Group A', 'Group B', 'Group C', 'Group D'],
         },
-        // Add other fields here if needed, e.g., 'state', 'locality'
     }), [jobTitleOptions]);
 
     useEffect(() => {
@@ -336,7 +387,7 @@ const BulkChangeModal = ({ isOpen, onClose, participants, onSave, courseType }) 
 
     const handleApplyChange = async () => {
         if (!selectedFieldKey || !fromValue || !toValue || fromValue === toValue) {
-            return; // Add user feedback if desired
+            return;
         }
 
         setIsUpdating(true);
@@ -760,100 +811,28 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
     );
 };
 
-// --- Participant Migration Mapping View ---
+
+// --- Participant Migration Mapping View (UPDATED) ---
 export function ParticipantMigrationMappingView({ course, participants, onCancel, onSave, setToast }) {
     const [mappings, setMappings] = useState({});
     const [facilityOptions, setFacilityOptions] = useState({});
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [previewData, setPreviewData] = useState(null);
 
-    const allFacilitiesRef = useRef([]);
-
+    // EFFECT (UPDATED): Simplified to initialize mappings without costly pre-fetching.
     useEffect(() => {
-        const fetchAndInitialize = async () => {
-            setIsLoading(true);
-            try {
-                allFacilitiesRef.current = await listHealthFacilities();
-                const initialMappings = {};
-                
-                for (const p of participants) {
-                    const pState = p.state?.trim();
-                    const pLocality = p.locality?.trim();
-                    const pCenterName = p.center_name?.toLowerCase().trim();
-
-                    // Get the canonical Arabic names for the participant's state and locality for a robust comparison
-                    const participantStateAr = STATE_LOCALITIES[pState]?.ar?.trim();
-                    
-                    let participantLocalityAr = '';
-                    const stateData = STATE_LOCALITIES[pState];
-                    if (stateData && pLocality) {
-                        // Attempt to find the locality by matching the English key first, then the Arabic name.
-                        let localityInfo = stateData.localities.find(l => l.en?.trim() === pLocality);
-                        if (!localityInfo) {
-                           localityInfo = stateData.localities.find(l => l.ar?.trim() === pLocality);
-                        }
-                        if (localityInfo) {
-                            participantLocalityAr = localityInfo.ar?.trim();
-                        }
-                    }
-
-                    const matchedFacility = allFacilitiesRef.current.find(f =>
-                        f['الولاية']?.trim() === participantStateAr &&
-                        f['المحلية']?.trim() === participantLocalityAr &&
-                        f['اسم_المؤسسة']?.toLowerCase().trim() === pCenterName
-                    );
-
-                    let status = 'unmatched';
-                    if (matchedFacility) {
-                        const staffList = matchedFacility.imnci_staff || [];
-                        const participantExistsInStaff = staffList.some(
-                            staff => staff.name?.toLowerCase().trim() === p.name?.toLowerCase().trim()
-                        );
-                        
-                        if (participantExistsInStaff) {
-                            status = 'perfect-match';
-                        } else {
-                            status = 'auto-matched';
-                        }
-                    }
-
-                    initialMappings[p.id] = {
-                        targetState: p.state || '',
-                        targetLocality: p.locality || '',
-                        targetFacilityId: matchedFacility ? matchedFacility.id : '',
-                        status: status,
-                    };
-                }
-                setMappings(initialMappings);
-
-                const facilityPromises = participants.map(p => {
-                    const mapping = initialMappings[p.id];
-                    if (mapping.targetState && mapping.targetLocality) {
-                        return listHealthFacilities({ state: mapping.targetState, locality: mapping.targetLocality })
-                            .then(facilities => ({ participantId: p.id, facilities }));
-                    }
-                    return Promise.resolve(null);
-                });
-
-                const results = await Promise.all(facilityPromises);
-                const initialFacilityOptions = {};
-                results.forEach(result => {
-                    if (result) {
-                        initialFacilityOptions[result.participantId] = result.facilities;
-                    }
-                });
-                setFacilityOptions(initialFacilityOptions);
-
-            } catch (err) {
-                setToast({ show: true, message: 'Failed to load initial migration data.', type: 'error' });
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchAndInitialize();
-    }, [participants, setToast]);
+        const initialMappings = {};
+        for (const p of participants) {
+            initialMappings[p.id] = {
+                // Pre-populate with participant's current location as a starting point.
+                targetState: p.state || '',
+                targetLocality: p.locality || '',
+                targetFacilityId: '',
+            };
+        }
+        setMappings(initialMappings);
+    }, [participants]);
 
     const fetchFacilitiesForParticipant = useCallback(async (participantId, state, locality) => {
         if (!state || !locality) {
@@ -861,6 +840,7 @@ export function ParticipantMigrationMappingView({ course, participants, onCancel
             return;
         }
         try {
+            // This is an efficient query that only gets facilities for the selected area.
             const facilities = await listHealthFacilities({ state, locality });
             setFacilityOptions(prev => ({ ...prev, [participantId]: facilities }));
         } catch (err) {
@@ -873,11 +853,6 @@ export function ParticipantMigrationMappingView({ course, participants, onCancel
         const newMappings = { ...mappings };
         newMappings[pId][field] = value;
         
-        // When a user manually changes something, the status is no longer auto-determined
-        if (field === 'targetState' || field === 'targetLocality' || field === 'targetFacilityId') {
-            newMappings[pId].status = 'manual-selection';
-        }
-
         if (field === 'targetState') {
             newMappings[pId].targetLocality = '';
             newMappings[pId].targetFacilityId = '';
@@ -885,72 +860,49 @@ export function ParticipantMigrationMappingView({ course, participants, onCancel
         }
         if (field === 'targetLocality') {
             newMappings[pId].targetFacilityId = '';
+            // Fetch facilities on-demand when the user selects a locality.
             fetchFacilitiesForParticipant(pId, newMappings[pId].targetState, value);
         }
         setMappings(newMappings);
     };
 
-    const createPayload = () => {
-        return Object.entries(mappings)
-            .filter(([, mapping]) => mapping.targetFacilityId)
-            .map(([participantId, mapping]) => {
-                const targetFacility = allFacilitiesRef.current.find(f => f.id === mapping.targetFacilityId);
-                return {
-                    participantId,
-                    targetFacilityId: mapping.targetFacilityId,
-                    targetState: mapping.targetState,
-                    targetLocality: mapping.targetLocality,
-                    targetFacilityName: targetFacility ? targetFacility['اسم_المؤسسة'] : '',
-                };
-            });
-    };
-
-    const handlePreview = async () => {
-        setIsSaving(true);
-        const validMappings = createPayload();
-
-        if (validMappings.length === 0) {
-            setToast({ show: true, message: 'No participants have been mapped to a facility.', type: 'info' });
-            setIsSaving(false);
-            return;
-        }
-
-        try {
-            const result = await bulkMigrateFromMappings(validMappings, { dryRun: true });
-            setPreviewData(result);
-        } catch (err) {
-            setToast({ show: true, message: `Preview failed: ${err.message}`, type: 'error' });
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
     const handleExecute = async () => {
         setIsSaving(true);
-        const validMappings = createPayload();
+        // This helper function now needs to fetch the facility name on the fly
+        const createPayload = async () => {
+            const validMappings = Object.entries(mappings).filter(([, mapping]) => mapping.targetFacilityId);
+            const payload = [];
+
+            for (const [participantId, mapping] of validMappings) {
+                // Fetch the selected facility to get its name for the payload
+                const facility = (facilityOptions[participantId] || []).find(f => f.id === mapping.targetFacilityId);
+                if (facility) {
+                     payload.push({
+                        participantId,
+                        targetFacilityId: mapping.targetFacilityId,
+                        targetState: mapping.targetState,
+                        targetLocality: mapping.targetLocality,
+                        targetFacilityName: facility['اسم_المؤسسة'],
+                    });
+                }
+            }
+            return payload;
+        };
+
         try {
-            await onSave(validMappings);
+            const finalPayload = await createPayload();
+            if (finalPayload.length > 0) {
+                 await onSave(finalPayload);
+            } else {
+                setToast({ show: true, message: 'No participants have been mapped to a facility.', type: 'info' });
+            }
         } catch (err) {
-            // Error toast is handled in parent component
+            // Error toast is handled by parent
         } finally {
             setIsSaving(false);
         }
     };
     
-    const StatusBadge = ({ status }) => {
-        switch (status) {
-            case 'perfect-match':
-                return <span className="px-2 py-1 text-xs font-medium text-green-800 bg-green-100 rounded-full">Perfect Match</span>;
-            case 'auto-matched':
-                return <span className="px-2 py-1 text-xs font-medium text-blue-800 bg-blue-100 rounded-full">Facility Matched</span>;
-            case 'manual-selection':
-                 return <span className="px-2 py-1 text-xs font-medium text-gray-800 bg-gray-200 rounded-full">Manual</span>;
-            case 'unmatched':
-            default:
-                return null;
-        }
-    };
-
     if (isLoading) return <Spinner />;
 
     return (
@@ -960,12 +912,11 @@ export function ParticipantMigrationMappingView({ course, participants, onCancel
                 subtitle={`Map participants from course: ${course.state} / ${course.locality}`}
             />
             <div className="p-4">
-                <p className="mb-4 text-sm text-gray-600">For each participant, select the target State, Locality, and existing Health Facility. The system will attempt to auto-match and will indicate if the participant already exists at the matched facility.</p>
+                <p className="mb-4 text-sm text-gray-600">For each participant, select the target State, Locality, and Health Facility to create a migration request.</p>
                 <div className="overflow-x-auto border rounded-lg">
                     <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
+                         <thead className="bg-gray-50">
                             <tr>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Participant</th>
                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Original Facility Name</th>
                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase" style={{minWidth: '150px'}}>Target State</th>
@@ -973,28 +924,24 @@ export function ParticipantMigrationMappingView({ course, participants, onCancel
                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase" style={{minWidth: '200px'}}>Target Facility</th>
                             </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {participants.map(p => {
+                         <tbody className="bg-white divide-y divide-gray-200">
+                             {participants.map(p => {
                                 const mapping = mappings[p.id];
                                 if (!mapping) return null;
-                                
-                                let rowClass = '';
-                                if (mapping.status === 'perfect-match') rowClass = 'bg-green-50';
-                                if (mapping.status === 'auto-matched') rowClass = 'bg-blue-50';
 
                                 return (
-                                    <tr key={p.id} className={rowClass}>
-                                        <td className="px-4 py-2 whitespace-nowrap"><StatusBadge status={mapping.status} /></td>
+                                    <tr key={p.id}>
                                         <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{p.name}</td>
                                         <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{p.center_name}</td>
                                         <td className="px-4 py-2"><Select value={mapping.targetState} onChange={e => handleMappingChange(p.id, 'targetState', e.target.value)}><option value="">- State -</option>{Object.keys(STATE_LOCALITIES).map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar}</option>)}</Select></td>
                                         <td className="px-4 py-2"><Select value={mapping.targetLocality} onChange={e => handleMappingChange(p.id, 'targetLocality', e.target.value)} disabled={!mapping.targetState}><option value="">- Locality -</option>{(STATE_LOCALITIES[mapping.targetState]?.localities || []).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}</Select></td>
                                         <td className="px-4 py-2">
-                                            <SearchableSelect
+                                             <SearchableSelect
                                                 value={mapping.targetFacilityId}
                                                 onChange={(facilityId) => handleMappingChange(p.id, 'targetFacilityId', facilityId)}
                                                 options={(facilityOptions[p.id] || []).map(f => ({ id: f.id, name: f['اسم_المؤسسة'] }))}
-                                                placeholder="- Type to search for a facility -"
+                                                placeholder="- Select a locality first -"
+                                                disabled={!mapping.targetLocality}
                                             />
                                         </td>
                                     </tr>
@@ -1003,30 +950,11 @@ export function ParticipantMigrationMappingView({ course, participants, onCancel
                         </tbody>
                     </table>
                 </div>
-
-                {previewData && (
-                    <div className="mt-6 p-4 border-l-4 border-blue-500 bg-blue-50">
-                        <h3 className="font-bold text-lg text-blue-800">Migration Preview</h3>
-                        <p className="text-sm text-blue-700 mt-2">The migration will affect <strong>{previewData.previewPayloads.length}</strong> participant record(s). Participant data (like State and Locality) will be updated, and they will be added to the staff list of their new target facility.</p>
-                        <ul className="list-disc list-inside mt-2 max-h-48 overflow-y-auto text-sm">
-                            {previewData.previewPayloads.map(payload => {
-                                const participant = participants.find(p => p.id === payload.participantId);
-                                const facility = allFacilitiesRef.current.find(f => f.id === payload.targetFacilityId);
-                                return (
-                                     <li key={payload.participantId}><strong>{participant?.name}</strong> will be migrated to <strong>{facility?.['اسم_المؤسسة']}</strong>.</li>
-                                );
-                            })}
-                        </ul>
-                    </div>
-                )}
                 
                 <div className="flex gap-2 justify-end mt-6 border-t pt-6">
                     <Button variant="secondary" onClick={onCancel} disabled={isSaving}>Cancel</Button>
-                    <Button onClick={handlePreview} disabled={isSaving || previewData}>
-                        {isSaving ? <Spinner/> : 'Preview Changes'}
-                    </Button>
-                    <Button onClick={handleExecute} disabled={isSaving || !previewData}>
-                        {isSaving && previewData ? <Spinner/> : 'Confirm & Submit for Approval'}
+                    <Button onClick={handleExecute} disabled={isSaving}>
+                        {isSaving ? <Spinner/> : 'Confirm & Submit for Approval'}
                     </Button>
                 </div>
             </div>
@@ -1034,22 +962,74 @@ export function ParticipantMigrationMappingView({ course, participants, onCancel
     );
 }
 
-export function ParticipantsView({ course, participants, allParticipants, onAdd, onOpen, onEdit, onDelete, onOpenReport, onImport, onBatchUpdate, canAddParticipant, canBulkUploadParticipant, onBulkMigrate }) {
+export function ParticipantsView({ 
+    course, onAdd, onOpen, onEdit, onDelete, onOpenReport, 
+    onImport, onBatchUpdate, onBulkMigrate,
+    // --- NEW PERMISSION PROPS ---
+    isCourseActive,
+    canAddParticipant,
+    canImportParticipants,
+    canCleanParticipantData,
+    canBulkChangeParticipants,
+    canBulkMigrateParticipants,
+    canAddMonitoring,
+    canEditDeleteParticipantActiveCourse,
+    canEditDeleteParticipantInactiveCourse
+}) {
+    const [participants, setParticipants] = useState([]);
+    const [lastVisible, setLastVisible] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [hasMore, setHasMore] = useState(true);
+
     const [groupFilter, setGroupFilter] = useState('All');
     const [importModalOpen, setImportModalOpen] = useState(false);
     const [isCleanupModalOpen, setIsCleanupModalOpen] = useState(false);
     const [isBulkChangeModalOpen, setIsBulkChangeModalOpen] = useState(false);
+    
+    const fetchMoreParticipants = useCallback(async () => {
+        if (!hasMore || isLoading) return;
+        setIsLoading(true);
+        const { participants: newParticipants, lastVisible: newLastVisible } = await listParticipants(course.id, lastVisible);
+        
+        setParticipants(prev => [...prev, ...newParticipants]);
+        setLastVisible(newLastVisible);
+        if (!newLastVisible || newParticipants.length === 0) {
+            setHasMore(false);
+        }
+        setIsLoading(false);
+    }, [course.id, lastVisible, hasMore, isLoading]);
+
+    // Initial fetch
+    useEffect(() => {
+        setParticipants([]);
+        setLastVisible(null);
+        setHasMore(true);
+        setIsLoading(true);
+        
+        const initialFetch = async () => {
+            if (!course?.id) return;
+            const { participants: initialParticipants, lastVisible: newLastVisible } = await listParticipants(course.id);
+            setParticipants(initialParticipants);
+            setLastVisible(newLastVisible);
+            if (!newLastVisible || initialParticipants.length === 0) {
+                setHasMore(false);
+            }
+            setIsLoading(false);
+        };
+
+        initialFetch();
+    }, [course.id]);
+
+
     const filtered = groupFilter === 'All' ? participants : participants.filter(p => p.group === groupFilter);
 
     const handleSaveCleanup = async (participantsToUpdate) => {
         if (!participantsToUpdate || participantsToUpdate.length === 0) return;
         try {
-            // The importParticipants function can be used for bulk updates
             await importParticipants(participantsToUpdate);
             onBatchUpdate(); // This should trigger a refresh of the participant list
         } catch (err) {
             console.error("Cleanup failed", err);
-            // Optionally, set a toast message for the user
         }
     };
 
@@ -1077,36 +1057,41 @@ export function ParticipantsView({ course, participants, allParticipants, onAdd,
                 isOpen={isBulkChangeModalOpen}
                 onClose={() => setIsBulkChangeModalOpen(false)}
                 participants={participants}
-                onSave={handleSaveCleanup} // Re-use the same save/refresh handler
+                onSave={handleSaveCleanup}
                 courseType={course.course_type}
             />
 
 
             <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
                 <div className="flex flex-wrap gap-2">
+                    {/* --- UPDATED PERMISSION CHECKS --- */}
                     {canAddParticipant && (
                         <Button onClick={onAdd}>Add Participant</Button>
                     )}
-                    {canBulkUploadParticipant && (
-                        <>
-                            <Button variant="secondary" onClick={() => setImportModalOpen(true)}>
-                                Import from Excel
-                            </Button>
-                             <Button variant="secondary" onClick={() => setIsCleanupModalOpen(true)}>
-                                Clean Data
-                            </Button>
-                            <Button variant="secondary" onClick={() => setIsBulkChangeModalOpen(true)}>
-                                Bulk Change
-                            </Button>
-                            <Button
-                                variant="secondary"
-                                onClick={() => onBulkMigrate(course.id)}
-                                disabled={!participants || participants.length === 0}
-                                title={(!participants || participants.length === 0) ? "No participants to migrate" : "Update facility records based on these participants"}
-                            >
-                                Bulk Migrate to Facilities
-                            </Button>
-                        </>
+                    {canImportParticipants && (
+                        <Button variant="secondary" onClick={() => setImportModalOpen(true)}>
+                            Import from Excel
+                        </Button>
+                    )}
+                    {canCleanParticipantData && (
+                         <Button variant="secondary" onClick={() => setIsCleanupModalOpen(true)}>
+                            Clean Data
+                        </Button>
+                    )}
+                    {canBulkChangeParticipants && (
+                        <Button variant="secondary" onClick={() => setIsBulkChangeModalOpen(true)}>
+                            Bulk Change
+                        </Button>
+                    )}
+                    {canBulkMigrateParticipants && (
+                        <Button
+                            variant="secondary"
+                            onClick={() => onBulkMigrate(course.id)}
+                            disabled={!participants || participants.length === 0}
+                            title={(!participants || participants.length === 0) ? "No participants to migrate" : "Update facility records based on these participants"}
+                        >
+                            Bulk Migrate to Facilities
+                        </Button>
                     )}
                 </div>
                 <div className="flex items-center gap-2">
@@ -1123,29 +1108,38 @@ export function ParticipantsView({ course, participants, allParticipants, onAdd,
 
             <div className="hidden md:block">
                 <Table headers={["Name", "Group", "Job Title", "Actions"]}>
-                    {filtered.length === 0 ? <EmptyState message="No participants found for this group." /> : filtered.map(p => (
-                        <tr key={p.id} className="hover:bg-gray-50">
-                            <td className="p-4 border border-gray-200 font-medium text-gray-800">{p.name}</td>
-                            <td className="p-4 border border-gray-200">{p.group}</td>
-                            <td className="p-4 border border-gray-200">{p.job_title}</td>
-                            <td className="p-4 border border-gray-200 text-right">
-                                <div className="flex gap-2 flex-wrap justify-end">
-                                    <Button variant="primary" onClick={() => onOpen(p.id)}>Monitor</Button>
-                                    <Button variant="secondary" onClick={() => onOpenReport(p.id)}>Report</Button>
-                                    <Button variant="secondary" onClick={() => onEdit(p)}>Edit</Button>
-                                    <Button variant="danger" onClick={() => onDelete(p.id)}>Delete</Button>
-                                </div>
-                            </td>
-                        </tr>
-                    ))}
+                    {filtered.length > 0 && filtered.map(p => {
+                        // --- NEW LOGIC for active/inactive course permissions ---
+                        const canEdit = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
+                        const canDelete = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
+
+                        return (
+                            <tr key={p.id} className="hover:bg-gray-50">
+                                <td className="p-4 border border-gray-200 font-medium text-gray-800">{p.name}</td>
+                                <td className="p-4 border border-gray-200">{p.group}</td>
+                                <td className="p-4 border border-gray-200">{p.job_title}</td>
+                                <td className="p-4 border border-gray-200 text-right">
+                                    <div className="flex gap-2 flex-wrap justify-end">
+                                        <Button variant="primary" onClick={() => onOpen(p.id)} disabled={!canAddMonitoring} title={!canAddMonitoring ? "You do not have permission to monitor" : "Monitor Participant"}>Monitor</Button>
+                                        <Button variant="secondary" onClick={() => onOpenReport(p.id)}>Report</Button>
+                                        <Button variant="secondary" onClick={() => onEdit(p)} disabled={!canEdit} title={!canEdit ? "Permission denied" : "Edit Participant"}>Edit</Button>
+                                        <Button variant="danger" onClick={() => onDelete(p.id)} disabled={!canDelete} title={!canDelete ? "Permission denied" : "Delete Participant"}>Delete</Button>
+                                    </div>
+                                </td>
+                            </tr>
+                        );
+                    })}
+                    {filtered.length === 0 && !isLoading && <EmptyState message="No participants found for this group." />}
                 </Table>
             </div>
 
             <div className="md:hidden grid gap-4">
-                {filtered.length === 0 ? (
-                    <p className="py-12 text-center text-gray-500">No participants found for this group.</p>
-                ) : (
-                    filtered.map(p => (
+                {filtered.length > 0 && filtered.map(p => {
+                    // --- NEW LOGIC for active/inactive course permissions ---
+                    const canEdit = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
+                    const canDelete = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
+                    
+                    return (
                         <div key={p.id} className="bg-white rounded-lg shadow-md p-4 border border-gray-200">
                             <div className="flex justify-between items-start">
                                 <div>
@@ -1155,15 +1149,23 @@ export function ParticipantsView({ course, participants, allParticipants, onAdd,
                                 </div>
                             </div>
                             <div className="mt-4 pt-4 border-t border-gray-200 flex flex-wrap gap-2 justify-end">
-                                <Button variant="secondary" onClick={() => onOpen(p.id)}>Monitor</Button>
+                                <Button variant="secondary" onClick={() => onOpen(p.id)} disabled={!canAddMonitoring} title={!canAddMonitoring ? "You do not have permission to monitor" : "Monitor Participant"}>Monitor</Button>
                                 <Button variant="secondary" onClick={() => onOpenReport(p.id)}>Report</Button>
-                                <Button variant="secondary" onClick={() => onEdit(p)}>Edit</Button>
-                                <Button variant="danger" onClick={() => onDelete(p.id)}>Delete</Button>
+                                <Button variant="secondary" onClick={() => onEdit(p)} disabled={!canEdit} title={!canEdit ? "Permission denied" : "Edit Participant"}>Edit</Button>
+                                <Button variant="danger" onClick={() => onDelete(p.id)} disabled={!canDelete} title={!canDelete ? "Permission denied" : "Delete Participant"}>Delete</Button>
                             </div>
                         </div>
-                    ))
-                )}
+                    );
+                })}
+                 {filtered.length === 0 && !isLoading && <EmptyState message="No participants found for this group." />}
             </div>
+
+            {isLoading && <div className="text-center p-4"><Spinner /></div>}
+            {hasMore && !isLoading && (
+                <div className="mt-6 text-center">
+                    <Button variant="secondary" onClick={fetchMoreParticipants}>Load More Participants</Button>
+                </div>
+            )}
         </Card>
     );
 }
@@ -1264,6 +1266,9 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
     const [selectedFacility, setSelectedFacility] = useState(null);
     const [isManualFacility, setIsManualFacility] = useState(false);
     const [isEditingExistingWorker, setIsEditingExistingWorker] = useState(false);
+    
+    // --- ADDED: State for the popup modal ---
+    const [showNewParticipantForm, setShowNewParticipantForm] = useState(false);
 
     const initialJobTitle = initialData?.job_title || '';
     const isInitialJobOther = initialJobTitle && !jobTitleOptions.includes(initialJobTitle);
@@ -1342,10 +1347,8 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                 setSelectedFacility(matchedFacility);
                 setIsManualFacility(false);
             } else {
-                // Facility name from initialData is not in the fetched list, so enable manual mode
                 setIsManualFacility(true);
             }
-            // Prevent this logic from running again after the initial setup
             isInitialLoad.current = false;
         }
     }, [facilitiesInLocality, initialData]);
@@ -1372,7 +1375,6 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
             setHasGrowthMonitoring(facility.growth_monitoring_service_exists === 'Yes');
         }
         
-        // Reset participant-specific fields whenever the facility changes
         setIsEditingExistingWorker(false);
         setName('');
         setJob('');
@@ -1382,14 +1384,12 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
         setLastTrainIMNCI('');
     };
     
+    // --- UPDATED: This function now opens the popup ---
     const handleHealthWorkerSelect = (worker) => {
-        if (!worker) { // This means "Add New" was selected
+        if (!worker) { // "Add New" was selected
             setIsEditingExistingWorker(false);
-            setName('');
-            setJob('');
-            setPhone('');
-            setTrainedIMNCI('no');
-            setLastTrainIMNCI('');
+            // Open the popup, the 'name' state already has what the user typed
+            setShowNewParticipantForm(true); 
         } else {
             setIsEditingExistingWorker(true);
             setName(worker.name || '');
@@ -1400,6 +1400,23 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                 setLastTrainIMNCI(worker.training_date || '');
             }
         }
+    };
+
+    // --- ADDED: Handler for when the new participant popup saves ---
+    const handleSaveNewParticipant = (newParticipantData) => {
+        // Update the main form's state with the data from the popup
+        setName(newParticipantData.name);
+        setJob(newParticipantData.job_title);
+        setPhone(newParticipantData.phone);
+        
+        // Handle 'Other' job title
+        if (!jobTitleOptions.includes(newParticipantData.job_title)) {
+            setJob('Other');
+            setOtherJobTitle(newParticipantData.job_title);
+        }
+
+        setIsEditingExistingWorker(false); // Ensure we're in "new participant" mode
+        setShowNewParticipantForm(false); // Close the popup
     };
 
     const professionalCategory = useMemo(() => {
@@ -1495,6 +1512,18 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
         (facilitiesInLocality || []).map(f => ({ id: f.id, name: f['اسم_المؤسسة'] })),
         [facilitiesInLocality]
     );
+
+    // --- ADDED: Conditional render for the popup ---
+    if (showNewParticipantForm) {
+        return (
+            <NewParticipantForm
+                initialName={name} // Pass in the name the user already typed
+                jobTitleOptions={jobTitleOptions}
+                onCancel={() => setShowNewParticipantForm(false)}
+                onSave={handleSaveNewParticipant}
+            />
+        );
+    }
 
     return (
         <Card>
@@ -1649,7 +1678,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                         <FormGroup label={`Number of ${professionalCategory}s trained in ETAT`}><Input type="number" min="0" value={numStaffTrainedInEtat} onChange={e => setNumStaffTrainedInEtat(Number(e.target.value || 0))} /></FormGroup>
                     </>)}
 
-                    {isEenc && (<>
+               {isEenc && (<>
                         <FormGroup label="Hospital Type"><Select value={hospitalTypeEenc} onChange={e => setHospitalTypeEenc(e.target.value)}><option value="">— Select Type —</option><option>Comprehensive EmONC</option><option>Basic EmONC</option><option value="other">Other (specify)</option></Select></FormGroup>
                         {hospitalTypeEenc === 'other' && <FormGroup label="Specify Hospital Type"><Input value={otherHospitalTypeEenc} onChange={e => setOtherHospitalTypeEenc(e.target.value)} /></FormGroup>}
                         <FormGroup label="Previously trained on EENC?"><Select value={trainedEENC} onChange={e => setTrainedEENC(e.target.value)}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>

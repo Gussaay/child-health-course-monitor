@@ -1,24 +1,22 @@
 // Course.jsx
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, Suspense } from 'react';
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Bar, Line } from 'react-chartjs-2';
-import { Button, Card, EmptyState, FormGroup, Input, PageHeader, PdfIcon, Select, Spinner, Table, Textarea } from './CommonComponents';
+// --- MODIFIED: Added CourseIcon ---
+import { Button, Card, EmptyState, FormGroup, Input, PageHeader, PdfIcon, Select, Spinner, Table, Textarea, CourseIcon } from './CommonComponents';
 import { listAllDataForCourse, listParticipants, listCoordinators, upsertCoordinator, deleteCoordinator, listFunders, upsertFunder, deleteFunder, listFinalReport, upsertFinalReport, deleteFinalReport } from '../data.js';
 // Updated imports for participant components
 import { ParticipantsView, ParticipantForm } from './Participants';
-import { ParticipantReportView } from './ParticipantReport';
-import { ObservationView } from './MonitoringView';
-import { ReportsView } from './ReportsView';
-import { FacilitatorsView } from './Facilitator';
-import { CoordinatorsPage } from './CoordinatorsPage';
-import { PartnersPage } from './PartnersPage';
 import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES,
 } from './constants.js';
 import html2canvas from 'html2canvas';
-import { CourseReportView } from './CourseReportView';
-import { FinalReportForm } from './FinalReportForm';
+
+// Lazy load components that are not always visible to speed up initial load
+const ReportsView = React.lazy(() => import('./ReportsView').then(module => ({ default: module.ReportsView })));
+const ObservationView = React.lazy(() => import('./MonitoringView').then(module => ({ default: module.ObservationView })));
+
 
 const calcPct = (correct, total) => {
     if (total === 0) {
@@ -124,7 +122,44 @@ const generateFullCourseReportPdf = async (course, overallChartRef, dailyChartRe
     if(dailyImg) dailyImg.remove();
 };
 
-export function CoursesTable({ courses, onOpen, onEdit, onDelete, onOpenReport, canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates, onAddFinalReport }) {
+// --- ADDED: HospitalIcon component (moved from App.jsx) ---
+const HospitalIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v2.85c-.9.17-1.72.6-2.43 1.24L4.3 11.2a1 1 0 0 0-.2 1.39l.2.2c.45.6.84 1.34 1.36 2.14L6 15l2.43-1.6c.71-.48 1.54-.74 2.43-.84V14a1 1 0 0 0 1 1h2c.7 0 1.25-.56 1.25-1.25S15.7 12.5 15 12.5V11a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v1.5a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5V9.85c-.9-.1-1.72-.36-2.43-.84L4.3 7.8a1 1 0 0 0-.2-1.39l.2-.2c.45-.6.84-1.34 1.36-2.14L6 3l2.43 1.6c.71.48 1.54.74 2.43.84V5a3 3 0 0 0-3-3zM12 22v-2a3 3 0 0 0-3-3h-2a3 3 0 0 0-3 3v2zM18 22v-2a3 3 0 0 0-3-3h-2a3 3 0 0 0-3 3v2z"></path><path d="M12 18.5V22"></path><path d="M12 11h-2"></path><path d="M14 11h2"></path><path d="M18 11h2"></path></svg>;
+
+// --- ADDED: Landing component (moved from App.jsx) ---
+const Landing = React.memo(function Landing({ active, onPick }) {
+    const items = [
+        { key: 'IMNCI', title: 'Integrated Management of Newborn and Childhood Illnesses (IMNCI)', enabled: true },
+        { key: 'ETAT', title: 'Emergency Triage, Assessment & Treatment (ETAT)', enabled: true },
+        { key: 'EENC', title: 'Early Essential Newborn Care (EENC)', enabled: true },
+        { key: 'IPC', title: 'Infection Prevention & Control (Neonatal Unit)', enabled: true },
+        { key: 'Small & Sick Newborn', title: 'Small & Sick Newborn Case Management', enabled: true },
+    ];
+
+    return (
+        <Card className="p-6">
+            <PageHeader title="Select a Course Package" subtitle="Choose a monitoring package to begin." />
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {items.map(it => (
+                    <button key={it.key} disabled={!it.enabled} className={`border rounded-lg p-6 text-left transition-all duration-200 ${active === it.key ? 'ring-2 ring-sky-500 shadow-lg' : ''} ${it.enabled ? 'hover:shadow-md hover:scale-105' : 'opacity-60 cursor-not-allowed bg-gray-50'}`} onClick={() => it.enabled && onPick(it.key)}>
+                        <div className="flex items-center gap-4">
+                            {(it.key === 'IPC' || it.key === 'Small & Sick Newborn')
+                                ? <HospitalIcon className="w-10 h-10 text-slate-500 flex-shrink-0" />
+                                : <CourseIcon course={it.key} />
+                            }
+                            <div>
+                                <div className="font-semibold text-gray-800">{it.title}</div>
+                                <div className="text-xs text-gray-500 mt-1">{it.enabled ? 'Click to manage courses' : 'Coming Soon'}</div>
+                            </div>
+                        </div>
+                    </button>
+                ))}
+            </div>
+        </Card>
+    );
+});
+
+
+export function CoursesTable({ courses, onOpen, onEdit, onDelete, onOpenReport, canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates, onAddFinalReport, canManageFinalReport }) {
     const isCourseActive = (course) => {
         if (!course.start_date || !course.course_duration || course.course_duration <= 0) {
             return false;
@@ -157,7 +192,7 @@ export function CoursesTable({ courses, onOpen, onEdit, onDelete, onOpenReport, 
     const courseType = sortedCourses.length > 0 ? sortedCourses[0].course_type : 'Courses';
 
     return (
-        sortedCourses.length === 0 ? <EmptyState message="No courses have been added yet." /> : (
+        sortedCourses.length === 0 ? <EmptyState message="No courses have been added yet for this package." /> : (
             <div>
                 <h3 className="text-xl font-bold mb-4">{courseType} Courses</h3>
                 <Table headers={["#", "State", "Locality", "Subcourses", "# Participants", "Status", "Actions"]}>
@@ -207,7 +242,9 @@ export function CoursesTable({ courses, onOpen, onEdit, onDelete, onOpenReport, 
                                         >
                                             Delete
                                         </Button>
-                                        <Button variant="secondary" onClick={() => onAddFinalReport(c.id)}>Final Report</Button>
+                                        {canManageFinalReport && (
+                                            <Button variant="secondary" onClick={() => onAddFinalReport(c.id)}>Final Report</Button>
+                                        )}
                                     </div>
                                 </td>
                             </tr>
@@ -219,89 +256,53 @@ export function CoursesTable({ courses, onOpen, onEdit, onDelete, onOpenReport, 
     );
 }
 
-const DetailItem = ({ label, value }) => (
-    <div className="py-3 sm:grid sm:grid-cols-3 sm:gap-4 px-2 hover:bg-gray-50 rounded-md">
-        <dt className="text-sm font-medium text-gray-600">{label}</dt>
-        <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2 font-medium">{value || 'N/A'}</dd>
-    </div>
-);
-
-const CourseDetailView = ({ course }) => {
-    const facilitatorGroups = useMemo(() => {
-        if (!course.facilitatorAssignments) return {};
-        return course.facilitatorAssignments.reduce((acc, assignment) => {
-            const group = assignment.group || 'Unassigned';
-            if (!acc[group]) {
-                acc[group] = [];
-            }
-            acc[group].push(assignment);
-            return acc;
-        }, {});
-    }, [course.facilitatorAssignments]);
-
-    return (
-        <Card>
-            <PageHeader title="Course Details" subtitle={`${course.course_type} in ${course.state}`} />
-            <div className="border-t border-gray-200 mt-4 pt-4">
-                <dl>
-                    <DetailItem label="State & Locality" value={`${course.state}, ${course.locality}`} />
-                    <DetailItem label="Course Hall" value={course.hall} />
-                    <DetailItem label="Start Date" value={new Date(course.start_date).toLocaleDateString()} />
-                    <DetailItem label="Duration" value={`${course.course_duration} days`} />
-                    <DetailItem label="Coordinator" value={course.coordinator} />
-                    <DetailItem label="Participants" value={course.participants_count} />
-                    <DetailItem label="Funded By" value={course.funded_by} />
-                    <DetailItem label="Budget" value={course.course_budget ? `$${Number(course.course_budget).toLocaleString()}` : 'N/A'} />
-                </dl>
-            </div>
-
-            <div className="mt-6">
-                <h3 className="text-lg font-semibold leading-6 text-gray-900 px-2">Leadership</h3>
-                <div className="mt-2 border-t border-gray-200 pt-2">
-                    <dl>
-                       <DetailItem label="Course Director" value={course.director} />
-                       {course.clinical_instructor && <DetailItem label="Clinical Instructor" value={course.clinical_instructor} />}
-                    </dl>
-                </div>
-            </div>
-
-            <div className="mt-6">
-                <h3 className="text-lg font-semibold leading-6 text-gray-900 px-2">Facilitator Assignments</h3>
-                <div className="mt-2 border-t border-gray-200 pt-4 space-y-4">
-                    {Object.keys(facilitatorGroups).length > 0 ? Object.entries(facilitatorGroups).map(([groupName, assignments]) => (
-                        <div key={groupName} className="p-3 bg-gray-50 rounded-lg">
-                            <h4 className="font-semibold text-md text-gray-700">{groupName}</h4>
-                            <ul className="list-disc list-inside pl-2 mt-2 space-y-1">
-                            {assignments.map((fac, index) => (
-                                <li key={index} className="text-sm text-gray-800">
-                                    <strong>{fac.name}</strong> - <span className="text-gray-600">{fac.imci_sub_type}</span>
-                                </li>
-                            ))}
-                            </ul>
-                        </div>
-                    )) : <p className="px-2 text-sm text-gray-500">No facilitators assigned.</p>}
-                </div>
-            </div>
-        </Card>
-    );
-};
-
+// --- REMOVED CourseDetailView and DetailItem components ---
 
 export function CourseManagementView({
-    courses, facilitators, onAdd, onOpen, onEdit, onDelete, onOpenReport,
-    canAddCourse, canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates,
-    activeCoursesTab, setActiveCoursesTab, selectedCourse, participants, allParticipants,
+    // --- MODIFIED: 'courses' prop is now 'allCourses' ---
+    allCourses, onAdd, onOpen, onEdit, onDelete, onOpenReport,
+    /* canAddCourse, */ canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates,
+    activeCoursesTab, setActiveCoursesTab, selectedCourse, participants,
     onAddParticipant, onEditParticipant, onDeleteParticipant,
-    onOpenParticipantReport, onImportParticipants, onAddFacilitator, onEditFacilitator,
-    onDeleteFacilitator, onOpenFacilitatorReport, onOpenFacilitatorComparison,
-    onImportFacilitators, onAddFinalReport, onEditFinalReport,
-    selectedParticipantId, onSetSelectedParticipantId, onBulkMigrate, onBatchUpdate
+    onOpenParticipantReport, onImportParticipants, onAddFinalReport, onEditFinalReport,
+    selectedParticipantId, onSetSelectedParticipantId, onBulkMigrate, onBatchUpdate,
+    loadingDetails, 
+    
+    // --- ADDED PROPS FROM App.jsx ---
+    canManageCourse,
+    canUseSuperUserAdvancedFeatures,
+    canUseFederalManagerAdvancedFeatures,
+
+    // --- NEW PROPS to manage course type selection ---
+    activeCourseType,
+    setActiveCourseType
 }) {
     const currentParticipant = participants.find(p => p.id === selectedParticipantId);
 
+    // --- NEW: Filter allCourses based on activeCourseType ---
+    const courses = useMemo(() => {
+        if (!activeCourseType) return [];
+        return allCourses.filter(c => c.course_type === activeCourseType);
+    }, [allCourses, activeCourseType]);
+
+    const isCourseActive = useMemo(() => {
+        if (!selectedCourse?.start_date || !selectedCourse?.course_duration || selectedCourse.course_duration <= 0) {
+            return false;
+        }
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const startDate = new Date(selectedCourse.start_date);
+        startDate.setHours(0, 0, 0, 0);
+        const endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + selectedCourse.course_duration);
+        return today >= startDate && today < endDate;
+    }, [selectedCourse]);
+
+    // --- MODIFIED: handleOpenCourse now defaults to 'participants' tab ---
     const handleOpenCourse = (id) => {
         onOpen(id);
-        setActiveCoursesTab('courseDetails');
+        setActiveCoursesTab('participants');
+        onSetSelectedParticipantId(null); // Clear participant selection when opening a new course
     };
 
     return (
@@ -311,100 +312,104 @@ export function CourseManagementView({
 
                 {selectedCourse && (
                     <>
-                        <Button
-                            variant="tab"
-                            isActive={activeCoursesTab === 'courseDetails'}
-                            onClick={() => setActiveCoursesTab('courseDetails')}
-                        >
-                            Course Details
-                        </Button>
-                        <Button
-                            variant="tab"
-                            isActive={activeCoursesTab === 'participants'}
-                            onClick={() => {
-                                setActiveCoursesTab('participants');
-                                onSetSelectedParticipantId(null);
-                            }}
-                        >
-                            Participants
-                        </Button>
-                        <Button
-                            variant="tab"
-                            isActive={activeCoursesTab === 'monitoring'}
-                            onClick={() => setActiveCoursesTab('monitoring')}
-                            disabled={!currentParticipant}
-                        >
-                            Monitoring
-                        </Button>
-                        <Button
-                            variant="tab"
-                            isActive={activeCoursesTab === 'reports'}
-                            onClick={() => setActiveCoursesTab('reports')}
-                        >
-                            Reports
-                        </Button>
+                        {/* --- REMOVED: Course Details Tab Button --- */}
+                        <Button variant="tab" isActive={activeCoursesTab === 'participants'} onClick={() => { setActiveCoursesTab('participants'); onSetSelectedParticipantId(null); }}>Participants</Button>
+                        <Button variant="tab" isActive={activeCoursesTab === 'monitoring'} onClick={() => setActiveCoursesTab('monitoring')} disabled={!currentParticipant}>Monitoring</Button>
+                        <Button variant="tab" isActive={activeCoursesTab === 'reports'} onClick={() => setActiveCoursesTab('reports')}>Reports</Button>
                     </>
                 )}
             </div>
-
+            
+            {/* --- MODIFIED: This entire block is refactored --- */}
             <div className="p-4">
-                {activeCoursesTab === 'courses' && canAddCourse && (
-                    <div className="mb-4">
-                        <Button onClick={onAdd} className="bg-sky-600 text-white hover:bg-sky-700">Add New Course</Button>
-                    </div>
+                {/* --- COURSES TAB LOGIC --- */}
+                {activeCoursesTab === 'courses' && (
+                    <>
+                        {!activeCourseType ? (
+                            // Show package selector if no type is selected
+                            <Landing
+                                active={activeCourseType}
+                                onPick={(t) => setActiveCourseType(t)}
+                            />
+                        ) : (
+                            // Show course list if a type is selected
+                            <div>
+                                <div className="mb-4 flex flex-wrap justify-between items-center gap-2">
+                                    {/* "Add" button */}
+                                    {canManageCourse && (
+                                        <Button onClick={onAdd} className="bg-sky-600 text-white hover:bg-sky-700">Add New Course</Button>
+                                    )}
+                                    {/* "Change Package" button */}
+                                    <Button variant="secondary" onClick={() => setActiveCourseType(null)}>
+                                        Change Course Package
+                                    </Button>
+                                </div>
+                                
+                                <CoursesTable
+                                    courses={courses} // Use the new filtered list
+                                    onOpen={handleOpenCourse}
+                                    onEdit={onEdit}
+                                    onDelete={onDelete}
+                                    onOpenReport={onOpenReport}
+                                    canEditDeleteActiveCourse={canEditDeleteActiveCourse}
+                                    canEditDeleteInactiveCourse={canEditDeleteInactiveCourse}
+                                    userStates={userStates}
+                                    onAddFinalReport={onAddFinalReport}
+                                    canManageFinalReport={canUseFederalManagerAdvancedFeatures}
+                                />
+                            </div>
+                        )}
+                    </>
                 )}
-
-                <div>
-                    {activeCoursesTab === 'courses' && (
-                        <CoursesTable
-                            courses={courses}
-                            onOpen={handleOpenCourse}
-                            onEdit={onEdit}
-                            onDelete={onDelete}
-                            onOpenReport={onOpenReport}
-                            canEditDeleteActiveCourse={canEditDeleteActiveCourse}
-                            canEditDeleteInactiveCourse={canEditDeleteInactiveCourse}
-                            userStates={userStates}
-                            onAddFinalReport={onAddFinalReport}
-                        />
-                    )}
-                    {activeCoursesTab === 'courseDetails' && selectedCourse && (
-                        <CourseDetailView course={selectedCourse} />
-                    )}
-                    {activeCoursesTab === 'participants' && selectedCourse && (
-                        <ParticipantsView
-                            course={selectedCourse}
-                            participants={participants}
-                            allParticipants={allParticipants}
-                            onAdd={onAddParticipant}
-                            onOpen={(id) => {
-                                onSetSelectedParticipantId(id);
-                                setActiveCoursesTab('monitoring');
-                            }}
-                            onEdit={onEditParticipant}
-                            onDelete={onDeleteParticipant}
-                            onOpenReport={onOpenParticipantReport}
-                            onImport={onImportParticipants}
-                            onBatchUpdate={onBatchUpdate}
-                            canAddParticipant={true}
-                            canBulkUploadParticipant={true}
-                            onBulkMigrate={onBulkMigrate}
-                        />
-                    )}
-                    {activeCoursesTab === 'participants' && !selectedCourse && (
-                        <EmptyState message="Please select a course from the 'Courses' tab to view participants." />
-                    )}
-                    {activeCoursesTab === 'monitoring' && selectedCourse && currentParticipant && (
-                        <ObservationView course={selectedCourse} participant={currentParticipant} participants={participants} onChangeParticipant={(id) => onSetSelectedParticipantId(id)} />
-                    )}
-                    {activeCoursesTab === 'monitoring' && selectedCourse && !currentParticipant && (
-                        <EmptyState message="Please select a participant from the 'Participants' tab to begin monitoring." />
-                    )}
-                    {activeCoursesTab === 'reports' && selectedCourse && (
-                        <ReportsView course={selectedCourse} participants={participants} />
-                    )}
-                </div>
+                
+                {/* --- OTHER TABS LOGIC --- */}
+                {/* Show spinner *only* if not on courses tab and loading details */}
+                {loadingDetails && activeCoursesTab !== 'courses' ? <div className="flex justify-center p-8"><Spinner /></div> : (
+                    <>
+                        {/* --- REMOVED: Course Details Content --- */}
+                        {activeCoursesTab === 'participants' && selectedCourse && (
+                            <ParticipantsView
+                                course={selectedCourse}
+                                participants={participants}
+                                onAdd={onAddParticipant}
+                                onOpen={(id) => { onSetSelectedParticipantId(id); setActiveCoursesTab('monitoring'); }}
+                                onEdit={onEditParticipant}
+                                onDelete={onDeleteParticipant}
+                                onOpenReport={onOpenParticipantReport}
+                                onImport={onImportParticipants}
+                                onBatchUpdate={onBatchUpdate}
+                                onBulkMigrate={onBulkMigrate}
+                                // --- PASS ALL THE CORRECT PERMISSION PROPS ---
+                                isCourseActive={isCourseActive}
+                                canAddParticipant={canManageCourse}
+                                canImportParticipants={canUseSuperUserAdvancedFeatures}
+                                canCleanParticipantData={canUseSuperUserAdvancedFeatures}
+                                canBulkChangeParticipants={canUseSuperUserAdvancedFeatures}
+                                canBulkMigrateParticipants={canUseSuperUserAdvancedFeatures}
+                                
+                                // *** MODIFIED: This prop now uses the new logic ***
+                                canAddMonitoring={(canManageCourse && isCourseActive) || canUseFederalManagerAdvancedFeatures}
+                                
+                                canEditDeleteParticipantActiveCourse={canManageCourse}
+                                canEditDeleteParticipantInactiveCourse={canUseFederalManagerAdvancedFeatures}
+                            />
+                        )}
+                        {activeCoursesTab === 'participants' && !selectedCourse && activeCoursesTab !== 'courses' && (
+                            <EmptyState message="Please select a course from the 'Courses' tab to view participants." />
+                        )}
+                        {activeCoursesTab === 'monitoring' && selectedCourse && currentParticipant && (
+                           <Suspense fallback={<Spinner />}><ObservationView course={selectedCourse} participant={currentParticipant} participants={participants} onChangeParticipant={(id) => onSetSelectedParticipantId(id)} /></Suspense>
+                        )}
+                        {activeCoursesTab === 'monitoring' && selectedCourse && !currentParticipant && activeCoursesTab !== 'courses' && (
+                            <EmptyState message="Please select a participant from the 'Participants' tab to begin monitoring." />
+                        )}
+                        {activeCoursesTab === 'reports' && selectedCourse && (
+                            <Suspense fallback={<Spinner />}><ReportsView course={selectedCourse} participants={participants} /></Suspense>
+                        )}
+                    </>
+                )}
             </div>
+            {/* --- END OF MODIFIED BLOCK --- */}
         </Card>
     );
 }
@@ -742,6 +747,12 @@ export function CourseForm({
             setError('Please complete all required fields.');
             return;
         }
+        
+        // --- ADDED: Check if courseType is provided ---
+        if (!courseType) {
+            setError('Could not determine course type. Please go back to the courses page and select a package before adding a new course.');
+            return;
+        }
 
         if (!isInfectionControl && !director) {
             setError('Please select a Course Director. This is a mandatory field for this course type.');
@@ -765,6 +776,9 @@ export function CourseForm({
             course_project: courseProject,
             facilitators: allFacilitatorAssignments.map(f => f.name),
             facilitatorAssignments: allFacilitatorAssignments,
+            // course_type is passed in from App.jsx, but we'll add it to the payload
+            // onSave in App.jsx adds it, so this is redundant but safe
+            course_type: courseType, 
         };
 
         if (isImnci) {
@@ -820,14 +834,14 @@ export function CourseForm({
     if (showNewCoordinatorForm) {
         return <NewCoordinatorForm initialName={newCoordinatorName} onCancel={() => setShowNewCoordinatorForm(false)} onSave={handleSaveNewCoordinator} />;
     }
-    if (showNewFunderForm) {
+    if (showNewFFunderForm) {
         return <NewFunderForm initialOrgName={newFunderOrgName} onCancel={() => setShowNewFunderForm(false)} onSave={handleSaveNewFunder} />;
     }
 
     return (
         <Card>
             <div className="p-6">
-                <PageHeader title={`${initialData ? 'Edit' : 'Add New'} Course`} subtitle={`Package: ${courseType}`} className="mb-6" />
+                <PageHeader title={`${initialData ? 'Edit' : 'Add New'} Course`} subtitle={`Package: ${courseType || 'N/A'}`} className="mb-6" />
                 {error && <div className="p-3 mb-6 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <FormGroup label="State"><Select value={state} onChange={(e) => { setState(e.target.value); setLocality(''); }}><option value="">— Select State —</option>{Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar)).map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar}</option>)}</Select></FormGroup>

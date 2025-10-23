@@ -49,8 +49,9 @@ export function HumanResourcesPage({
                             permissions={permissions}
                         />
                     )}
-                    {activeTab === 'programTeams' && <ProgramTeamView permissions={permissions} />}
-                    {activeTab === 'partnersPage' && <PartnersPage />}
+                    {/* FIX: Pass userStates prop to ProgramTeamView */}
+                    {activeTab === 'programTeams' && <ProgramTeamView permissions={permissions} userStates={userStates} />}
+                    {activeTab === 'partnersPage' && <PartnersPage permissions={permissions} userStates={userStates} />}
                 </div>
             </CardBody>
         </Card>
