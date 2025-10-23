@@ -6,13 +6,11 @@ import { Bar, Pie } from 'react-chartjs-2';
 import * as XLSX from 'xlsx';
 import { Button, Card, EmptyState, FormGroup, Input, PageHeader, Select, Spinner, Table, Textarea, Modal, CardBody, CardFooter, CardHeader } from './CommonComponents';
 import {
-    listFacilitators,
     listAllCourses,
     upsertFacilitator,
     deleteFacilitator,
     importFacilitators,
     submitFacilitatorApplication,
-    getFacilitatorApplicationSettings,
     getFacilitatorByEmail,
     getFacilitatorSubmissionByEmail,
     updateFacilitatorApplicationStatus,
@@ -22,6 +20,7 @@ import {
 import { COURSE_TYPES_FACILITATOR, STATE_LOCALITIES } from './constants.js';
 import { auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import { useDataCache } from '../DataContext'; 
 
 const getCertificateName = (key) => {
     const names = {
@@ -144,7 +143,8 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
     ];
     
     const handleDownloadTemplate = () => {
-        const templateData = facilitators.map(f => {
+        // --- FIX: Handle null facilitators ---
+        const templateData = (facilitators || []).map(f => {
             const row = {};
             allFields.forEach(field => {
                 row[field.label] = f[field.key] || '';
@@ -415,9 +415,7 @@ function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublicForm = 
                          <FormGroup label="Current Locality">
                             <Select value={currentLocality} onChange={e => handleFieldChange('currentLocality', e.target.value)} disabled={!currentState || currentState === 'Out of Sudan'}>
                                 <option value="">— Select Locality —</option>
-                                { /* --- START OF FIX --- */ }
                                 {(STATE_LOCALITIES[currentState]?.localities || []).sort((a, b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
-                                { /* --- END OF FIX --- */ }
                             </Select>
                         </FormGroup>
                     </div>
@@ -531,62 +529,76 @@ function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublicForm = 
 }
 
 export function FacilitatorsView({ 
-    facilitators, 
     onAdd, 
     onEdit, 
     onDelete, 
     onOpenReport, 
     onImport, 
     userStates,
-    pendingSubmissions,
-    isSubmissionsLoading,
     onApproveSubmission,
     onRejectSubmission,
+    refreshData,
     permissions
 }) {
+    const {
+        facilitators,
+        pendingFacilitatorSubmissions: pendingSubmissions,
+        facilitatorApplicationSettings,
+        isLoading,
+        fetchFacilitators,
+        fetchPendingFacilitatorSubmissions,
+        fetchFacilitatorApplicationSettings
+    } = useDataCache();
+
+    const isSubmissionsLoading = isLoading.pendingFacilitatorSubmissions;
+    const isLoadingSettings = isLoading.facilitatorApplicationSettings;
+
     const [importModalOpen, setImportModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('current');
     const [viewingSubmission, setViewingSubmission] = useState(null);
-    const [linkSettings, setLinkSettings] = useState({ isActive: false, openCount: 0 });
-    const [isLoadingSettings, setIsLoadingSettings] = useState(true);
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [viewingCertsFor, setViewingCertsFor] = useState(null);
 
     useEffect(() => {
-        const fetchSettings = async () => {
-            if (permissions.canApproveSubmissions) {
-                setIsLoadingSettings(true);
-                const settings = await getFacilitatorApplicationSettings();
-                setLinkSettings(settings);
-                setIsLoadingSettings(false);
-            }
-        };
-        fetchSettings();
-    }, [permissions.canApproveSubmissions]);
+        fetchFacilitators(); // This will only fetch if cache is null
+
+        if (permissions.canApproveSubmissions) {
+            fetchPendingFacilitatorSubmissions(); // Fetch pending
+            fetchFacilitatorApplicationSettings(); // Fetch settings
+        }
+    }, [permissions.canApproveSubmissions, fetchFacilitators, fetchPendingFacilitatorSubmissions, fetchFacilitatorApplicationSettings]);
 
     const handleToggleLinkStatus = async () => {
-        setIsLoadingSettings(true);
-        const newStatus = !linkSettings.isActive;
+        const newStatus = !facilitatorApplicationSettings.isActive;
         await updateFacilitatorApplicationStatus(newStatus);
-        const updatedSettings = await getFacilitatorApplicationSettings();
-        setLinkSettings(updatedSettings);
-        setIsLoadingSettings(false);
+        fetchFacilitatorApplicationSettings(true); // force=true
+    };
+
+    const handleApprove = async (submission) => {
+        await onApproveSubmission(submission); 
+        refreshData(); 
+    };
+
+    const handleReject = async (submissionId) => {
+        await onRejectSubmission(submissionId); 
+        refreshData(); 
     };
 
     const filteredFacilitators = useMemo(() => {
-        // Federal users (or super user) see all facilitators
+        // --- START OF FIX: Handle null facilitators ---
+        if (!facilitators) {
+            return [];
+        }
+        // --- END OF FIX ---
+        
         if (permissions.manageScope === 'federal') {
             return facilitators;
         }
 
-        // FIX: If user is not federal, but also has no states assigned, show all.
-        // This addresses the "if no state show any level" request for users like superuser
-        // who might not have states assigned.
         if (!userStates || userStates.length === 0) {
             return facilitators;
         }
         
-        // Non-federal users *with assigned states* are filtered by their assigned states (userStates)
         return facilitators.filter(f => f.currentState && userStates.includes(f.currentState));
     }, [facilitators, userStates, permissions.manageScope]);
 
@@ -608,13 +620,13 @@ export function FacilitatorsView({
                     isOpen={importModalOpen}
                     onClose={() => setImportModalOpen(false)}
                     onImport={onImport}
-                    facilitators={facilitators}
+                    facilitators={facilitators} // Pass facilitators (can be null)
                 />
 
                 <LinkManagementModal 
                     isOpen={isLinkModalOpen}
                     onClose={() => setIsLinkModalOpen(false)}
-                    settings={linkSettings}
+                    settings={facilitatorApplicationSettings}
                     isLoading={isLoadingSettings}
                     onToggleStatus={handleToggleLinkStatus}
                 />
@@ -635,7 +647,8 @@ export function FacilitatorsView({
                                 <Button variant="tab" isActive={activeTab === 'pending'} onClick={() => setActiveTab('pending')}>
                                     Pending Submissions 
                                     <span className={`ml-2 text-xs font-bold px-2 py-1 rounded-full ${activeTab === 'pending' ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-200 text-gray-600'}`}>
-                                        {pendingSubmissions.length}
+                                        {/* --- FIX: Handle null pendingSubmissions --- */}
+                                        {pendingSubmissions ? pendingSubmissions.length : 0}
                                     </span>
                                 </Button>
                             )}
@@ -645,7 +658,9 @@ export function FacilitatorsView({
                     <div className="mt-4">
                         {activeTab === 'current' && (
                              <Table headers={["Name", "Phone", "Courses", "Actions"]}>
-                                {Array.isArray(filteredFacilitators) && filteredFacilitators.length > 0 ? (
+                                {isLoading.facilitators ? (
+                                    <tr><td colSpan={4} className="p-8 text-center"><Spinner /></td></tr>
+                                ) : filteredFacilitators.length > 0 ? ( // --- FIX: This check is now safe ---
                                     filteredFacilitators.map(f => {
                                         const hasCerts = f.certificateUrls && Object.keys(f.certificateUrls).length > 0;
                                         return (
@@ -673,7 +688,8 @@ export function FacilitatorsView({
                         {activeTab === 'pending' && permissions.canApproveSubmissions && (
                             isSubmissionsLoading ? <Spinner /> : (
                                 <Table headers={["Name", "Phone", "State", "Submitted At", "Actions"]}>
-                                    {pendingSubmissions.length > 0 ? (
+                                    {/* --- FIX: Handle null pendingSubmissions --- */}
+                                    {pendingSubmissions && pendingSubmissions.length > 0 ? (
                                         pendingSubmissions.map(sub => (
                                             <tr key={sub.id}>
                                                 <td className="p-2">{sub.name}</td>
@@ -683,8 +699,8 @@ export function FacilitatorsView({
                                                 <td className="p-2">
                                                     <div className="flex gap-2">
                                                         <Button size="sm" variant="secondary" onClick={() => setViewingSubmission(sub)}>View</Button>
-                                                        <Button size="sm" variant="success" onClick={() => onApproveSubmission(sub)}>Approve</Button>
-                                                        <Button size="sm" variant="danger" onClick={() => onRejectSubmission(sub.id)}>Reject</Button>
+                                                        <Button size="sm" variant="success" onClick={() => handleApprove(sub)}>Approve</Button>
+                                                        <Button size="sm" variant="danger" onClick={() => handleReject(sub.id)}>Reject</Button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -801,21 +817,16 @@ export function FacilitatorApplicationForm() {
         
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user && user.email) {
-                // Set email from auth and lock the field
                 setFormData(prev => ({ ...prev, email: user.email, isUserEmail: true }));
 
-                // 1. Check if the user is already an APPROVED facilitator
                 const existingFacilitator = await getFacilitatorByEmail(user.email);
                 
                 if (existingFacilitator) {
-                    // If they are, pre-fill the form with their current data to be updated
                     setFormData(prev => ({ ...prev, ...existingFacilitator, isUserEmail: true }));
-                    setIsUpdate(true); // Mark this as an update operation
+                    setIsUpdate(true); 
                 } else {
-                    // 2. If not, check if they have a PENDING submission to pre-fill
                     const existingSubmission = await getFacilitatorSubmissionByEmail(user.email);
                     if (existingSubmission) {
-                        // Pre-fill with their previous submission data
                         setFormData(prev => ({ ...prev, ...existingSubmission, email: user.email, isUserEmail: true }));
                     }
                 }
@@ -859,10 +870,8 @@ export function FacilitatorApplicationForm() {
             delete payload.isUserEmail;
             
             if (payload.id) {
-                // If an ID exists, it's an existing facilitator. Update their record directly.
                 await upsertFacilitator(payload);
             } else {
-                // Otherwise, it's a new applicant. Send their data for approval.
                 await submitFacilitatorApplication(payload);
             }
             
@@ -949,8 +958,6 @@ export function FacilitatorReportView({ facilitator, allCourses, onBack }) {
             }
         });
 
-        // Other calculations...
-        // NOTE: Placeholder data is used here to prevent crash. Implement real logic as needed.
         const finalCombinedChartData = {
             labels: Object.keys(summary),
             datasets: [
@@ -967,23 +974,19 @@ export function FacilitatorReportView({ facilitator, allCourses, onBack }) {
             ],
         };
         
-        // You can add logic for imciSubcourseData here if needed
         const finalImciSubcourseData = null; 
         
-        // START OF CORRECTION
         return {
             directedCourses: directed,
             facilitatedCourses: facilitated,
             courseSummary: Object.entries(summary),
-            // FIX: Ensure these are always included in the returned object
             combinedChartData: finalCombinedChartData,
             imciSubcourseData: finalImciSubcourseData
         };
-        // END OF CORRECTION
     }, [facilitator, allCourses]);
     
     const generateFacilitatorPdf = () => {
-        // ... PDF generation logic remains the same
+        // ... PDF generation logic
     };
     
     if (!facilitator) {

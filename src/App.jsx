@@ -13,7 +13,7 @@ const CourseReportView = lazy(() => import('./components/CourseReportView.jsx').
 const ShareModal = lazy(() => import('./components/ShareModal').then(module => ({ default: module.ShareModal })));
 const FinalReportManager = lazy(() => import('./components/FinalReportManager.jsx').then(module => ({ default: module.FinalReportManager })));
 const ObservationView = lazy(() => import('./components/MonitoringView').then(module => ({ default: module.ObservationView })));
-const ReportsView = lazy(() => import('./components/ReportsView').then(module => ({ default: module.ReportsView })));
+const ReportsView = lazy(() => import('./components/ReportsView'));
 const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
 const ParticipantReportView = lazy(() => import('./components/ParticipantReport').then(module => ({ default: module.ParticipantReportView })));
 const ChildHealthServicesView = lazy(() => import('./components/ChildHealthServicesView.jsx'));
@@ -183,7 +183,6 @@ export default function App() {
         funders, federalCoordinators, stateCoordinators, localityCoordinators,
         // Ensure all fetch functions from context are included
         fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators,
-        // --- MODIFICATION: Get fetchHealthFacilities from context ---
         fetchHealthFacilities,
     } = useDataCache();
     const { user, userStates, authLoading } = useAuth();
@@ -406,7 +405,6 @@ export default function App() {
             fetchCourses();
             fetchParticipants(); // Now this function is available
             fetchFacilitators();
-            // --- MODIFICATION: Fetch health facilities here ---
             fetchHealthFacilities();
         }
         if (['humanResources', 'facilitatorForm', 'facilitatorReport', 'courseForm', 'dashboard', 'landing'].includes(view)) {
@@ -421,7 +419,6 @@ export default function App() {
         if (view === 'courses') {
             fetchCourses();
         }
-    // --- MODIFICATION: Add fetchHealthFacilities to dependency array ---
     }, [view, isSharedView, user, fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchCoordinators, fetchHealthFacilities]); // Added fetchParticipants to dependencies
 
 
@@ -431,6 +428,11 @@ export default function App() {
     }, [permissions]);
 
     const filteredCourses = useMemo(() => {
+        // --- START OF FIX: Add null guard ---
+        if (!allCourses) {
+            return [];
+        }
+        // --- END OF FIX ---
         if (canSeeAllData || !userStates || userStates.length === 0) {
             return allCourses;
         }
@@ -439,6 +441,11 @@ export default function App() {
     }, [allCourses, userStates, canSeeAllData]);
 
     const filteredFacilitators = useMemo(() => {
+        // --- START OF FIX: Add null guard ---
+        if (!allFacilitators) {
+            return [];
+        }
+        // --- END OF FIX ---
         if (canSeeAllData || !userStates || userStates.length === 0) {
             return allFacilitators;
         }
@@ -477,7 +484,9 @@ export default function App() {
         return allParticipants;
     };
 
-    const selectedCourse = useMemo(() => allCourses.find(c => c.id === selectedCourseId) || null, [allCourses, selectedCourseId]);
+    // --- START OF FIX: Add null guard for allCourses ---
+    const selectedCourse = useMemo(() => (allCourses || []).find(c => c.id === selectedCourseId) || null, [allCourses, selectedCourseId]);
+    // --- END OF FIX ---
 
     const isCourseActive = useMemo(() => {
         if (!selectedCourse?.start_date || !selectedCourse?.course_duration || selectedCourse.course_duration <= 0) {
@@ -492,7 +501,9 @@ export default function App() {
         return today >= startDate && today < endDate;
     }, [selectedCourse]);
 
-    const selectedFacilitator = useMemo(() => allFacilitators.find(f => f.id === selectedFacilitatorId) || null, [allFacilitators, selectedFacilitatorId]);
+    // --- START OF FIX: Add null guard for allFacilitators ---
+    const selectedFacilitator = useMemo(() => (allFacilitators || []).find(f => f.id === selectedFacilitatorId) || null, [allFacilitators, selectedFacilitatorId]);
+    // --- END OF FIX ---
 
     const navigate = useCallback((newView, state = {}) => {
         const viewPermissions = {
@@ -716,7 +727,9 @@ export default function App() {
     const handleAddFinalReport = useCallback(async (courseId) => {
         // Uses wrapped functions
         if (!permissions.canUseFederalManagerAdvancedFeatures) return;
-        const courseToReport = allCourses.find(c => c.id === courseId);
+        // --- START OF FIX: Add null guard ---
+        const courseToReport = (allCourses || []).find(c => c.id === courseId);
+        // --- END OF FIX ---
         if (!courseToReport) return;
         setFinalReportCourse(courseToReport);
         setSelectedCourseId(courseId);
@@ -766,7 +779,9 @@ export default function App() {
     const handleEditFinalReport = useCallback(async (courseId) => {
         // Uses wrapped functions
         if (!permissions.canUseFederalManagerAdvancedFeatures) return;
-        const courseToEditReport = allCourses.find(c => c.id === courseId);
+        // --- START OF FIX: Add null guard ---
+        const courseToEditReport = (allCourses || []).find(c => c.id === courseId);
+        // --- END OF FIX ---
         if (!courseToEditReport) { setToast({ show: true, message: 'Course not found.', type: 'error' }); return; }
         setFinalReportCourse(courseToEditReport); setSelectedCourseId(courseId); setLoading(true);
         try {
@@ -787,7 +802,8 @@ export default function App() {
     }, []);
 
     const renderView = () => {
-        const currentParticipant = courseDetails.participants.find(p => p.id === selectedParticipantId);
+        // --- FIX: Add null guard for participants ---
+        const currentParticipant = (courseDetails.participants || []).find(p => p.id === selectedParticipantId);
         const viewToRender = view;
 
         switch (viewToRender) {
@@ -797,15 +813,15 @@ export default function App() {
             case 'humanResources': return <HumanResourcesPage
                 activeTab={activeHRTab}
                 setActiveTab={setActiveHRTab}
-                facilitators={filteredFacilitators} // <-- USE FILTERED LIST
+                // facilitators={filteredFacilitators} // <-- REMOVED: Component now fetches its own data
                 onAddFacilitator={() => navigate('facilitatorForm')}
                 onEditFacilitator={(f) => navigate('facilitatorForm', { editFacilitator: f })}
                 onDeleteFacilitator={handleDeleteFacilitator}
                 onOpenFacilitatorReport={(fid) => navigate('facilitatorReport', { openFacilitatorReport: fid })}
                 onImportFacilitators={async (data) => { await importParticipants(data); await fetchFacilitators(true); }}
                 userStates={userStates}
-                pendingSubmissions={pendingSubmissions}
-                isSubmissionsLoading={isSubmissionsLoading}
+                // pendingSubmissions={pendingSubmissions} // <-- REMOVED
+                // isSubmissionsLoading={isSubmissionsLoading} // <-- REMOVED
                 onApproveSubmission={handleApproveSubmission}
                 onRejectSubmission={handleRejectSubmission}
                 permissions={permissions}
@@ -824,7 +840,7 @@ export default function App() {
                 userStates={userStates}
                 activeCoursesTab={activeCoursesTab}
                 setActiveCoursesTab={setActiveCoursesTab}
-                selectedCourse={selectedCourse} // selectedCourse is derived from allCourses
+                selectedCourse={selectedCourse} // selectedCourse is derived from filteredCourses
                 participants={courseDetails.participants}
                 onAddParticipant={() => navigate('participantForm')}
                 onEditParticipant={(p) => navigate('participantForm', { editParticipant: p })}
@@ -866,8 +882,22 @@ export default function App() {
                 const canMonitor = (permissions.canManageCourse && isCourseActive) || permissions.canUseFederalManagerAdvancedFeatures;
                 return canMonitor ? (selectedCourse && currentParticipant && <ObservationView course={selectedCourse} participant={currentParticipant} participants={courseDetails.participants} onChangeParticipant={(id) => setSelectedParticipantId(id)} initialCaseToEdit={editingCaseFromReport} />) : null;
 
-            // --- Pass 'allFacilitators' to dropdown ---
-            case 'courseForm': return permissions.canManageCourse ? (<CourseForm courseType={activeCourseType || editingCourse?.course_type} initialData={editingCourse} facilitatorsList={allFacilitators} onCancel={() => navigate(previousView)} onSave={async (payload) => { const id = await upsertCourse({ ...payload, id: editingCourse?.id, course_type: activeCourseType || editingCourse?.course_type }); await fetchCourses(true); handleOpenCourse(id); }} onAddNewFacilitator={async (data) => { await upsertFacilitator(data); await fetchFacilitators(true); }} onAddNewCoordinator={handleAddNewCoordinator} onAddNewFunder={handleAddNewFunder} fundersList={funders} federalCoordinatorsList={federalCoordinators} stateCoordinatorsList={stateCoordinators} localityCoordinatorsList={localityCoordinators} />) : null;
+            // --- START OF FIX: Add null guards to lists ---
+            case 'courseForm': return permissions.canManageCourse ? (<CourseForm 
+                courseType={activeCourseType || editingCourse?.course_type} 
+                initialData={editingCourse} 
+                facilitatorsList={allFacilitators || []} 
+                onCancel={() => navigate(previousView)} 
+                onSave={async (payload) => { const id = await upsertCourse({ ...payload, id: editingCourse?.id, course_type: activeCourseType || editingCourse?.course_type }); await fetchCourses(true); handleOpenCourse(id); }} 
+                onAddNewFacilitator={async (data) => { await upsertFacilitator(data); await fetchFacilitators(true); }} 
+                onAddNewCoordinator={handleAddNewCoordinator} 
+                onAddNewFunder={handleAddNewFunder} 
+                fundersList={funders || []} 
+                federalCoordinatorsList={federalCoordinators || []} 
+                stateCoordinatorsList={stateCoordinators || []} 
+                localityCoordinatorsList={localityCoordinators || []} 
+            />) : null;
+            // --- END OF FIX ---
 
             case 'participantForm': return permissions.canManageCourse ? (selectedCourse && <ParticipantForm course={selectedCourse} initialData={editingParticipant} onCancel={() => navigate(previousView)} onSave={async (participantData, facilityUpdateData) => { try { const fullPayload = { ...participantData, id: editingParticipant?.id, courseId: selectedCourse.id }; await saveParticipantAndSubmitFacilityUpdate(fullPayload, facilityUpdateData); if (facilityUpdateData) setToast({ show: true, message: 'Facility update submitted for approval.', type: 'info' }); await handleOpenCourse(selectedCourse.id); navigate('participants'); } catch (e) { setToast({ show: true, message: `Submission failed: ${e.message}`, type: 'error' }); } }} />) : null;
 
@@ -878,12 +908,16 @@ export default function App() {
             case 'facilitatorForm':
                 return permissions.canManageHumanResource ? (<FacilitatorForm initialData={editingFacilitator} onCancel={() => navigate(previousView)} onSave={async (payload) => { try { setLoading(true); const { certificateFiles, ...data } = payload; let urls = data.certificateUrls || {}; if (certificateFiles) { for (const key in certificateFiles) { if (editingFacilitator?.certificateUrls?.[key]) await deleteFile(editingFacilitator.certificateUrls[key]); urls[key] = await uploadFile(certificateFiles[key]); } } const finalPayload = { ...data, id: editingFacilitator?.id, certificateUrls: urls }; delete finalPayload.certificateFiles; await upsertFacilitator(finalPayload); await fetchFacilitators(true); setToast({ show: true, message: 'Facilitator saved.', type: 'success' }); navigate('humanResources'); } catch (error) { setToast({ show: true, message: `Error saving: ${error.message}`, type: 'error' }); } finally { setLoading(false); } }} />) : null;
 
-            // --- Pass 'allCourses' for complete history ---
-            case 'facilitatorReport': return permissions.canViewHumanResource ? (selectedFacilitator && <FacilitatorReportView facilitator={selectedFacilitator} allCourses={allCourses} onBack={() => navigate(previousView)} />) : null;
+            // --- START OF FIX: Add null guard to allCourses ---
+            case 'facilitatorReport': return permissions.canViewHumanResource ? (selectedFacilitator && <FacilitatorReportView 
+                facilitator={selectedFacilitator} 
+                allCourses={allCourses || []} 
+                onBack={() => navigate(previousView)} 
+            />) : null;
+            // --- END OF FIX ---
 
             case 'admin': return <AdminDashboard />;
 
-            // --- DashboardView fetches its own data from useDataCache ---
             case 'dashboard': return <DashboardView onOpenCourseReport={handleOpenCourseReport} onOpenParticipantReport={(pId, cId) => navigate('participantReport', { openParticipantReport: pId, openCourseReport: cId })} onOpenFacilitatorReport={(id) => { setSelectedFacilitatorId(id); navigate('facilitatorReport'); }} permissions={permissions} userStates={userStates} STATE_LOCALITIES={STATE_LOCALITIES} />;
 
             case 'finalReport':

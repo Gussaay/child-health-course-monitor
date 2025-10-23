@@ -10,16 +10,13 @@ import {
     listLocalityCoordinators,
     listHealthFacilities,
     
-    // --- START OF FIX: Import missing data functions ---
-    // (Assuming these are the function names from your data.js)
     listPendingFacilitatorSubmissions,
     getFacilitatorApplicationSettings,
     
     listPendingFederalSubmissions,
-    listPendingStateSubmissions,
+    listPendingCoordinatorSubmissions,
     listPendingLocalitySubmissions,
     getCoordinatorApplicationSettings
-    // --- END OF FIX ---
 
 } from './data';
 import { useAuth } from './hooks/useAuth';
@@ -31,22 +28,22 @@ export const useDataCache = () => useContext(DataCacheContext);
 export const DataProvider = ({ children }) => {
     const { user } = useAuth();
     const [cache, setCache] = useState({
-        courses: [],
-        participants: [], 
-        facilitators: [],
-        funders: [],
-        federalCoordinators: [],
-        stateCoordinators: [],
-        localityCoordinators: [],
-        healthFacilities: [],
+        // --- START OF FIX: Initialize all array caches to null ---
+        courses: null,
+        participants: null, 
+        facilitators: null,
+        funders: null,
+        federalCoordinators: null,
+        stateCoordinators: null,
+        localityCoordinators: null,
+        healthFacilities: null,
         
-        // --- START OF FIX: Add new cache properties ---
-        pendingFacilitatorSubmissions: [],
+        pendingFacilitatorSubmissions: null,
         facilitatorApplicationSettings: { isActive: false, openCount: 0 },
         
-        pendingFederalSubmissions: [],
-        pendingStateSubmissions: [],
-        pendingLocalitySubmissions: [],
+        pendingFederalSubmissions: null,
+        pendingStateSubmissions: null,
+        pendingLocalitySubmissions: null,
         coordinatorApplicationSettings: { isActive: false, openCount: 0 },
         // --- END OF FIX ---
     });
@@ -57,7 +54,6 @@ export const DataProvider = ({ children }) => {
         facilitators: true,
         healthFacilities: true,
         
-        // --- START OF FIX: Add loading states for new properties ---
         pendingFacilitatorSubmissions: true,
         facilitatorApplicationSettings: true,
         
@@ -65,7 +61,6 @@ export const DataProvider = ({ children }) => {
         pendingStateSubmissions: true,
         pendingLocalitySubmissions: true,
         coordinatorApplicationSettings: true,
-        // --- END OF FIX ---
     });
     
     const cacheRef = useRef(cache);
@@ -78,19 +73,17 @@ export const DataProvider = ({ children }) => {
         return async (force = false) => {
             const currentCache = cacheRef.current[key];
             
-            // --- MODIFIED: Improved check for both arrays and objects ---
-            const hasData = Array.isArray(currentCache) 
-                ? currentCache.length > 0 
-                : (currentCache instanceof Map ? currentCache.size > 0 : (typeof currentCache === 'object' && currentCache !== null ? Object.keys(currentCache).length > 0 : false));
+            // --- START OF FIX: Check for null, not length ---
+            // We consider data "cached" if it's not null (even if it's an empty array)
+            const hasData = currentCache !== null;
+            // --- END OF FIX ---
             
-            // For settings objects, we want to fetch them if they are in their default state
-            const isDefaultSettings = (key.includes('Settings') && currentCache.openCount === 0);
+            const isDefaultSettings = (key.includes('Settings') && currentCache?.openCount === 0);
 
             if (hasData && !force && !isDefaultSettings) {
                 setIsLoading(prev => ({ ...prev, [key]: false }));
                 return currentCache;
             }
-            // --- END MODIFICATION ---
 
             setIsLoading(prev => ({ ...prev, [key]: true }));
             try {
@@ -99,16 +92,20 @@ export const DataProvider = ({ children }) => {
                 return data;
             } catch (error) {
                 console.error(`Failed to fetch ${key}:`, error);
-                // --- MODIFIED: Return appropriate empty type ---
-                if (Array.isArray(currentCache)) return [];
-                if (currentCache instanceof Map) return new Map();
-                if (typeof currentCache === 'object' && currentCache !== null) return {};
-                return undefined;
+                
+                // --- START OF FIX: On error, set to an empty array or default object ---
+                // This prevents re-fetching on every tab switch after a failure
+                const defaultEmpty = key.includes('Settings') 
+                    ? { isActive: false, openCount: 0 } 
+                    : [];
+                setCache(prev => ({ ...prev, [key]: defaultEmpty }));
+                return defaultEmpty;
+                // --- END OF FIX ---
             } finally {
                 setIsLoading(prev => ({ ...prev, [key]: false }));
             }
         };
-    }, []); 
+    }, []); // Empty array is correct
 
     const fetchers = useMemo(() => ({
         fetchCourses: createFetcher('courses', listAllCourses),
@@ -120,51 +117,45 @@ export const DataProvider = ({ children }) => {
         fetchLocalityCoordinators: createFetcher('localityCoordinators', listLocalityCoordinators),
         fetchHealthFacilities: createFetcher('healthFacilities', listHealthFacilities),
 
-        // --- START OF FIX: Add new fetchers ---
         fetchPendingFacilitatorSubmissions: createFetcher('pendingFacilitatorSubmissions', listPendingFacilitatorSubmissions),
         fetchFacilitatorApplicationSettings: createFetcher('facilitatorApplicationSettings', getFacilitatorApplicationSettings),
 
         fetchPendingFederalSubmissions: createFetcher('pendingFederalSubmissions', listPendingFederalSubmissions),
-        fetchPendingStateSubmissions: createFetcher('pendingStateSubmissions', listPendingStateSubmissions),
+        fetchPendingStateSubmissions: createFetcher('pendingStateSubmissions', listPendingCoordinatorSubmissions),
         fetchPendingLocalitySubmissions: createFetcher('pendingLocalitySubmissions', listPendingLocalitySubmissions),
         fetchCoordinatorApplicationSettings: createFetcher('coordinatorApplicationSettings', getCoordinatorApplicationSettings),
-        // --- END OF FIX ---
     }), [createFetcher]);
 
     useEffect(() => {
         if (!user) {
-            // Clear all cache on logout
+            // Clear all cache on logout, reset to null
             setCache({
-                courses: [], 
-                participants: [],
-                facilitators: [], 
-                funders: [],
-                federalCoordinators: [], 
-                stateCoordinators: [], 
-                localityCoordinators: [],
-                healthFacilities: [],
-                // --- START OF FIX: Reset new cache properties ---
-                pendingFacilitatorSubmissions: [],
+                courses: null, 
+                participants: null,
+                facilitators: null, 
+                funders: null,
+                federalCoordinators: null, 
+                stateCoordinators: null, 
+                localityCoordinators: null,
+                healthFacilities: null,
+                pendingFacilitatorSubmissions: null,
                 facilitatorApplicationSettings: { isActive: false, openCount: 0 },
-                pendingFederalSubmissions: [],
-                pendingStateSubmissions: [],
-                pendingLocalitySubmissions: [],
+                pendingFederalSubmissions: null,
+                pendingStateSubmissions: null,
+                pendingLocalitySubmissions: null,
                 coordinatorApplicationSettings: { isActive: false, openCount: 0 },
-                // --- END OF FIX ---
             });
             setIsLoading({
                 courses: true,
                 participants: true,
                 facilitators: true,
                 healthFacilities: true,
-                // --- START OF FIX: Reset new loading states ---
                 pendingFacilitatorSubmissions: true,
                 facilitatorApplicationSettings: true,
                 pendingFederalSubmissions: true,
                 pendingStateSubmissions: true,
                 pendingLocalitySubmissions: true,
                 coordinatorApplicationSettings: true,
-                // --- END OF FIX ---
             });
         }
     }, [user]); 

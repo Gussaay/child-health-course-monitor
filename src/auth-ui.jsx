@@ -4,7 +4,11 @@ import {
   GoogleAuthProvider, 
   signInWithPopup,
   createUserWithEmailAndPassword,
-  signInWithEmailAndPassword
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+  fetchSignInMethodsForEmail, // Import this
+  linkWithCredential,         // Import this
+  EmailAuthProvider           // Import this
 } from 'firebase/auth';
 
 import { auth } from './firebase.js';
@@ -14,39 +18,130 @@ export function SignInBox() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
 
-  const handleSignUp = async (e) => {
+  // --- New state for account linking ---
+  // This will hold the password the user wants to link
+  const [passwordToLink, setPasswordToLink] = useState('');
+  // This flag tells the Google sign-in to perform the link
+  const [isLinkingPassword, setIsLinkingPassword] = useState(false);
+
+
+  const handleEmailPasswordAuth = async (e) => {
     e.preventDefault();
     setError('');
+    setMessage('');
+    
+    // Clear any pending link
+    setIsLinkingPassword(false);
+    setPasswordToLink('');
+    
+    if (!email) {
+      setError("Please enter an email address.");
+      return;
+    }
     if (password.length < 6) {
       setError("Password must be at least 6 characters long.");
       return;
     }
+
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-    } catch (err) {
-      setError(err.message);
-      console.error("Sign-up Error:", err);
+      // 1. Check what sign-in methods exist for this email
+      const methods = await fetchSignInMethodsForEmail(auth, email);
+
+      if (methods.length === 0) {
+        // 2. Case 1: Brand new user. Create account.
+        try {
+          await createUserWithEmailAndPassword(auth, email, password);
+        } catch (signUpError) {
+          setError(signUpError.message);
+          console.error("Sign-up Error:", signUpError);
+        }
+      } else if (methods.includes('password')) {
+        // 3. Case 2: Existing email/password user. Sign them in.
+        try {
+          await signInWithEmailAndPassword(auth, email, password);
+        } catch (signInError) {
+          // Handle wrong password, etc.
+          setError(signInError.message);
+          console.error("Sign-in Error:", signInError);
+        }
+      } else if (methods.includes('google.com')) {
+        // 4. Case 3: This is the Google user. Start the linking flow.
+        setError("This email is registered with Google. Please sign in with Google to link this password to your account.");
+        // Save the password and set the flag
+        setPasswordToLink(password);
+        setIsLinkingPassword(true);
+      } else {
+        // 5. Case 4: Other provider (e.g., Facebook, etc.)
+        setError(`This email is registered with ${methods.join(', ')}. Please use that method to sign in.`);
+      }
+
+    } catch (fetchError) {
+      // Handle errors from fetchSignInMethodsForEmail (e.g., invalid-email)
+      setError(fetchError.message);
+      console.error("Fetch Methods Error:", fetchError);
     }
   };
-  
-  const handleSignIn = async (e) => {
+
+  const handlePasswordReset = async (e) => {
     e.preventDefault();
     setError('');
+    setMessage('');
+    
+    if (!email) {
+      setError("Please enter your email to reset password.");
+      return;
+    }
+    
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await sendPasswordResetEmail(auth, email);
+      setMessage("Password reset email sent! Check your inbox.");
     } catch (err) {
       setError(err.message);
-      console.error("Sign-in Error:", err);
+      console.error("Password Reset Error:", err);
     }
   };
 
   const signInWithGoogle = () => {
+    setError('');
+    setMessage('');
     const provider = new GoogleAuthProvider();
+    
     signInWithPopup(auth, provider)
+      .then(async (result) => {
+        // --- Check if we need to link a password ---
+        if (isLinkingPassword && passwordToLink && result.user.email === email) {
+          try {
+            // Create an email/password credential with the saved password
+            const credential = EmailAuthProvider.credential(result.user.email, passwordToLink);
+            // Link it to the (now signed-in) Google user
+            await linkWithCredential(result.user, credential);
+            setMessage("Password successfully linked to your Google account!");
+          } catch (linkError) {
+            // Handle errors like 'auth/credential-already-in-use'
+            if (linkError.code === 'auth/credential-already-in-use') {
+              setError("This account is already linked to a password.");
+            } else {
+              setError(linkError.message);
+            }
+            console.error("Linking Error:", linkError);
+          } finally {
+            // Clear the linking state regardless of outcome
+            setIsLinkingPassword(false);
+            setPasswordToLink('');
+          }
+        }
+        // --- End of linking logic ---
+        
+      })
       .catch((err) => {
+        // Handle Google sign-in errors
         setError(err.message);
         console.error("Google Auth Error:", err);
+        // Clear linking state if Google sign-in fails
+        setIsLinkingPassword(false);
+        setPasswordToLink('');
       });
   };
 
@@ -67,20 +162,38 @@ export function SignInBox() {
             className="w-full px-4 py-2 text-gray-700 bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
-          <input 
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            className="w-full px-4 py-2 text-gray-700 bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
-          />
+          <div>
+            <input 
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className="w-full px-4 py-2 text-gray-700 bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+            {/* --- Forgot Password Button --- */}
+            <div className="text-right mt-2">
+              <button 
+                type="button" // Prevent form submission
+                onClick={handlePasswordReset}
+                className="text-sm font-medium text-indigo-600 hover:text-indigo-500 focus:outline-none"
+              >
+                Forgot Password?
+              </button>
+            </div>
+          </div>
+
 
           {error && <p className="text-sm text-red-600">{error}</p>}
+          {message && <p className="text-sm text-green-600">{message}</p>}
           
-          <div className="flex flex-col sm:flex-row gap-2">
-            <button onClick={handleSignIn} className="w-full px-4 py-2 font-bold text-white bg-green-600 rounded-md hover:bg-green-700 transition duration-300">Sign In</button>
-            <button onClick={handleSignUp} className="w-full px-4 py-2 font-bold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition duration-300">Sign Up</button>
+          <div className="flex">
+            <button 
+              onClick={handleEmailPasswordAuth} 
+              className="w-full px-4 py-2 font-bold text-white bg-green-600 rounded-md hover:bg-green-700 transition duration-300"
+            >
+              Sign In / Sign Up
+            </button>
           </div>
         </form>
 

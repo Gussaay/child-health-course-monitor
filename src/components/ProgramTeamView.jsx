@@ -1,35 +1,24 @@
 // src/components/ProgramTeamView.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-    // State Coordinators
-    listStateCoordinators,
     upsertStateCoordinator,
     deleteStateCoordinator,
     submitCoordinatorApplication,
-    listPendingCoordinatorSubmissions,
     approveCoordinatorSubmission,
     rejectCoordinatorSubmission,
     
-    // Federal Coordinators
-    listFederalCoordinators,
     upsertFederalCoordinator,
     deleteFederalCoordinator,
     submitFederalApplication,
-    listPendingFederalSubmissions,
     approveFederalSubmission,
     rejectFederalSubmission,
 
-    // Locality Coordinators
-    listLocalityCoordinators,
     upsertLocalityCoordinator,
     deleteLocalityCoordinator,
     submitLocalityApplication,
-    listPendingLocalitySubmissions,
     approveLocalitySubmission,
     rejectLocalitySubmission,
 
-    // Application Settings
-    getCoordinatorApplicationSettings,
     updateCoordinatorApplicationStatus,
     incrementCoordinatorApplicationOpenCount,
 } from '../data';
@@ -37,6 +26,7 @@ import { Button, Card, Table, Modal, Input, Select, Textarea, Spinner, PageHeade
 import { STATE_LOCALITIES } from './constants';
 import { auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import { useDataCache } from '../DataContext'; 
 
 
 // Reusable component for dynamic experience fields
@@ -67,7 +57,7 @@ function DynamicExperienceFields({ experiences, onChange }) {
 // A single, reusable component for displaying form fields
 function MemberFormFieldset({ level, formData, onFormChange, onDynamicFieldChange }) {
     const states = Object.keys(STATE_LOCALITIES);
-    const localities = formData.state ? STATE_LOCALITIES[formData.state] : [];
+    const localities = formData.state ? (STATE_LOCALITIES[formData.state]?.localities || []).map(l => l.en) : [];
     const joinDateLabels = { state: 'تاريخ الانضمام لبرنامج صحة الطفل بالولاية', federal: 'تاريخ الانضمام لبرنامج صحة الطفل بالاتحادية' };
 
     return (
@@ -90,7 +80,6 @@ function MemberFormFieldset({ level, formData, onFormChange, onDynamicFieldChang
 }
 
 // A single, configurable form for all team levels (internal use)
-// This component is now rendered inside a modal
 function TeamMemberForm({ member, onSave, onCancel }) {
     const [selectedLevel, setSelectedLevel] = useState(member?.level || (member ? (member.locality ? 'locality' : member.state ? 'state' : 'federal') : ''));
     const [formData, setFormData] = useState(() => {
@@ -192,6 +181,7 @@ function PendingSubmissions({ submissions, isLoading, onApprove, onReject, onVie
         <Card>
             <CardBody>
                 <Table headers={headers}>
+                    {/* --- FIX: Handle null submissions --- */}
                     {submissions && submissions.length > 0 ? (
                         submissions.map(s => (
                             <tr key={s.id}>
@@ -257,141 +247,149 @@ function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleSta
 
 
 export function ProgramTeamView({ permissions, userStates }) {
-    const [members, setMembers] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [editingMember, setEditingMember] = useState(null);
-    const [pendingSubmissions, setPendingSubmissions] = useState([]);
-    const [isSubmissionsLoading, setIsSubmissionsLoading] = useState(true);
+    const {
+        federalCoordinators,
+        stateCoordinators,
+        localityCoordinators,
+        
+        pendingFederalSubmissions,
+        pendingStateSubmissions,
+        pendingLocalitySubmissions,
+        
+        coordinatorApplicationSettings,
+        
+        isLoading,
+        
+        fetchFederalCoordinators,
+        fetchStateCoordinators,
+        fetchLocalityCoordinators,
+        
+        fetchPendingFederalSubmissions,
+        fetchPendingStateSubmissions,
+        fetchPendingLocalitySubmissions,
+        
+        fetchCoordinatorApplicationSettings,
+    } = useDataCache();
+    
     const [activeTab, setActiveTab] = useState('members');
     
-    // --- START OF FIX ---
-    // 1. Define isFederal *before* setting the filter state
-    // FIX 1: Treat user as 'federal' if their scope is federal OR if they are a superuser.
     const isFederal = permissions.manageScope === 'federal' || permissions.canUseSuperUserAdvancedFeatures;
 
-    // 2. Set the *initial state* of the filters based on the user's role
     const [filters, setFilters] = useState(() => {
         const initialState = {
             level: isFederal ? 'federal' : 'state',
-            state: isFederal ? '' : (userStates[0] || ''), // Default to user's first state if not federal
+            state: isFederal ? '' : (userStates[0] || ''), 
             locality: '',
         };
         return initialState;
     });
-    // --- END OF FIX ---
 
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
-    const [linkSettings, setLinkSettings] = useState({ isActive: false, openCount: 0 });
-    const [isSettingsLoading, setIsSettingsLoading] = useState(false);
-
-    // --- REFACTORED STATE FOR MODAL ---
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [modalMode, setModalMode] = useState(null); // 'view', 'edit', or null
+    const [modalMode, setModalMode] = useState(null); 
+    const [editingMember, setEditingMember] = useState(null);
 
-    // Note: isFederal is already defined above the useState hook
-    
-    const dataFunctions = {
-        state: { list: listStateCoordinators, upsert: upsertStateCoordinator, delete: deleteStateCoordinator, listPending: listPendingCoordinatorSubmissions, approve: approveCoordinatorSubmission, reject: rejectCoordinatorSubmission },
-        federal: { list: listFederalCoordinators, upsert: upsertFederalCoordinator, delete: deleteFederalCoordinator, listPending: listPendingFederalSubmissions, approve: approveFederalSubmission, reject: rejectFederalSubmission },
-        locality: { list: listLocalityCoordinators, upsert: upsertLocalityCoordinator, delete: deleteLocalityCoordinator, listPending: listPendingLocalitySubmissions, approve: approveLocalitySubmission, reject: rejectLocalitySubmission }
-    };
-
-    const fetchListData = async (level) => {
-        if (!level) return;
-        setLoading(true);
-        try {
-            const listFn = dataFunctions[level].list;
-            const membersData = await listFn();
-            setMembers(membersData);
-        } catch (error) {
-            console.error(`Error fetching ${level} members:`, error);
-        } finally {
-            setLoading(false);
+    const fetchersByLevel = useMemo(() => ({
+        federal: {
+            list: fetchFederalCoordinators,
+            listPending: fetchPendingFederalSubmissions,
+        },
+        state: {
+            list: fetchStateCoordinators,
+            listPending: fetchPendingStateSubmissions,
+        },
+        locality: {
+            list: fetchLocalityCoordinators,
+            listPending: fetchPendingLocalitySubmissions,
         }
-    };
+    }), [
+        fetchFederalCoordinators, fetchPendingFederalSubmissions,
+        fetchStateCoordinators, fetchPendingStateSubmissions,
+        fetchLocalityCoordinators, fetchPendingLocalitySubmissions
+    ]);
 
+    const dataByLevel = useMemo(() => ({
+        federal: {
+            members: federalCoordinators,
+            pending: pendingFederalSubmissions,
+            loading: isLoading.federalCoordinators,
+            pendingLoading: isLoading.pendingFederalSubmissions,
+        },
+        state: {
+            members: stateCoordinators,
+            pending: pendingStateSubmissions,
+            loading: isLoading.stateCoordinators,
+            pendingLoading: isLoading.pendingStateSubmissions,
+        },
+        locality: {
+            members: localityCoordinators,
+            pending: pendingLocalitySubmissions,
+            loading: isLoading.localityCoordinators,
+            pendingLoading: isLoading.pendingLocalitySubmissions,
+        }
+    }), [
+        federalCoordinators, pendingFederalSubmissions, isLoading.federalCoordinators, isLoading.pendingFederalSubmissions,
+        stateCoordinators, pendingStateSubmissions, isLoading.stateCoordinators, isLoading.pendingStateSubmissions,
+        localityCoordinators, pendingLocalitySubmissions, isLoading.localityCoordinators, isLoading.pendingLocalitySubmissions
+    ]);
+    
     useEffect(() => {
-        const fetchData = async () => {
-            if (!filters.level) { 
-                setMembers([]);
-                setPendingSubmissions([]);
-                return;
-            }
-            setLoading(true);
-            setIsSubmissionsLoading(true);
-            try {
-                const listFn = dataFunctions[filters.level].list;
-                const listPendingFn = dataFunctions[filters.level].listPending;
-                const [membersData, pendingData] = await Promise.all([
-                    listFn(),
-                    permissions?.canApproveSubmissions ? listPendingFn() : []
-                ]);
-                setMembers(membersData);
-                setPendingSubmissions(pendingData);
-            } catch (error) {
-                console.error(`Error fetching ${filters.level} data:`, error);
-            } finally {
-                setLoading(false);
-                setIsSubmissionsLoading(false);
-            }
-        };
-        fetchData();
-    }, [filters.level, permissions]); // This dependency on filters.level is correct
+        const level = filters.level;
+        if (!level || !fetchersByLevel[level]) return;
+
+        fetchersByLevel[level].list();
+
+        if (permissions?.canApproveSubmissions) {
+            fetchersByLevel[level].listPending();
+        }
+    }, [filters.level, permissions, fetchersByLevel]);
+
 
     const filteredMembers = useMemo(() => {
-        if (loading) return [];
+        if (!filters.level) return [];
+        
+        const { members, loading } = dataByLevel[filters.level];
+
+        // --- START OF FIX: Handle null members and loading state ---
+        if (loading || !members) {
+            return [];
+        }
+        // --- END OF FIX ---
         
         let membersToFilter = [...members];
 
-        // 1. Apply permission-based filtering (if not federal)
-        // FIX: Only apply state filter if user is NOT federal AND has states assigned
         if (!isFederal && userStates && userStates.length > 0) {
             membersToFilter = membersToFilter.filter(m => {
-                // Federal members are always hidden from non-federal users
                 if (filters.level === 'federal' || !m.state) return false;
-                
-                // State/Locality members must be in the user's assigned states
-                // userStates is an array of state names.
                 return userStates.includes(m.state);
             });
         }
-        // FIX: If !isFederal and userStates is empty, the filter is skipped,
-        // which satisfies the "if no state show any level" request.
 
-
-        // 2. Apply UI-based filtering (filters.state, filters.locality)
         return membersToFilter.filter(m => {
-            // Because filters.state is now pre-filled for state managers, this works on load
             const stateMatch = !filters.state || m.state === filters.state;
             const localityMatch = !filters.locality || m.locality === filters.locality;
             return stateMatch && localityMatch;
         });
-    }, [members, filters, loading, isFederal, userStates]);
+    }, [filters, isFederal, userStates, dataByLevel]);
 
     const handleFilterChange = (filterName, value) => {
         setFilters(prev => {
             const newFilters = { ...prev, [filterName]: value };
             if (filterName === 'level') {
-                // When changing level, reset state/locality *only if federal*
-                // Otherwise, keep the pre-filled state.
                 if (isFederal) {
                     newFilters.state = '';
                     newFilters.locality = '';
                 } else {
-                    // Non-federal user, keep newFilters.state (which is prev.state)
-                    // but reset locality
                     newFilters.locality = ''; 
                 }
             }
             if (filterName === 'state') {
-                // This is fine for both user types
                 newFilters.locality = '';
             }
             return newFilters;
         });
     };
     
-    // --- REFACTORED MODAL HANDLERS ---
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setModalMode(null);
@@ -399,7 +397,7 @@ export function ProgramTeamView({ permissions, userStates }) {
     };
 
     const handleAdd = () => {
-        setEditingMember(null); // For a new member
+        setEditingMember(null); 
         setModalMode('edit');
         setIsModalOpen(true);
     };
@@ -417,17 +415,21 @@ export function ProgramTeamView({ permissions, userStates }) {
     };
 
     const handleSave = async (level, payload) => {
+        const upsertFnMap = {
+            federal: upsertFederalCoordinator,
+            state: upsertStateCoordinator,
+            locality: upsertLocalityCoordinator,
+        };
         try {
-            const upsertFn = dataFunctions[level].upsert;
+            const upsertFn = upsertFnMap[level];
             await upsertFn({ ...payload, id: editingMember?.id });
-            // If the user changed the member's level, switch the main filter to that level
+            
+            fetchersByLevel[level].list(true); // force=true
+            
             if (level !== filters.level) {
                 handleFilterChange('level', level);
-            } else {
-                // Otherwise, just refresh the current list
-                fetchListData(level);
             }
-            handleCloseModal(); // Close modal on success
+            handleCloseModal(); 
         } catch (error) { 
             console.error("Error saving member:", error);
             alert("Failed to save member. See console for details.");
@@ -436,28 +438,26 @@ export function ProgramTeamView({ permissions, userStates }) {
     
     const handleOpenLinkModal = async () => {
         setIsLinkModalOpen(true);
-        setIsSettingsLoading(true);
-        try {
-            const settings = await getCoordinatorApplicationSettings();
-            setLinkSettings(settings);
-        } catch (error) {
-            console.error("Failed to fetch link settings:", error);
-        } finally {
-            setIsSettingsLoading(false);
-        }
+        fetchCoordinatorApplicationSettings();
     };
 
     const handleToggleLinkStatus = async () => {
         try {
-            const newStatus = !linkSettings.isActive;
+            const newStatus = !coordinatorApplicationSettings.isActive;
             await updateCoordinatorApplicationStatus(newStatus);
-            setLinkSettings(prev => ({ ...prev, isActive: newStatus }));
+            fetchCoordinatorApplicationSettings(true); // force=true
         } catch (error) {
             console.error("Failed to update link status:", error);
         }
     };
     
     const handleApproveSubmission = async (submission) => {
+        const approveFnMap = {
+            federal: approveFederalSubmission,
+            state: approveCoordinatorSubmission,
+            locality: approveLocalitySubmission,
+        };
+        
         if (!filters.level) return;
         const currentUser = auth.currentUser;
         if (!currentUser) {
@@ -466,11 +466,13 @@ export function ProgramTeamView({ permissions, userStates }) {
             return;
         }
         try {
-            const approveFn = dataFunctions[filters.level].approve;
+            const approveFn = approveFnMap[filters.level];
             const approverInfo = { uid: currentUser.uid, email: currentUser.email, approvedAt: new Date() };
             await approveFn(submission, approverInfo);
-            setPendingSubmissions(prev => prev.filter(s => s.id !== submission.id));
-            setMembers(prev => [...prev, { ...submission, id: submission.id }]);
+
+            fetchersByLevel[filters.level].listPending(true); // force=true
+            fetchersByLevel[filters.level].list(true); // force=true
+            
         } catch (error) {
             console.error("Error approving submission:", error);
             alert(`Failed to approve submission. See console for details.`);
@@ -478,6 +480,12 @@ export function ProgramTeamView({ permissions, userStates }) {
     };
 
     const handleRejectSubmission = async (submissionId) => {
+        const rejectFnMap = {
+            federal: rejectFederalSubmission,
+            state: rejectCoordinatorSubmission,
+            locality: rejectLocalitySubmission,
+        };
+        
         if (!filters.level) return;
         const currentUser = auth.currentUser;
         if (!currentUser) {
@@ -487,10 +495,12 @@ export function ProgramTeamView({ permissions, userStates }) {
         }
         if (window.confirm("Are you sure you want to reject this submission?")) {
             try {
-                const rejectFn = dataFunctions[filters.level].reject;
+                const rejectFn = rejectFnMap[filters.level];
                 const rejecterInfo = { uid: currentUser.uid, email: currentUser.email, rejectedAt: new Date() };
                 await rejectFn(submissionId, rejecterInfo);
-                setPendingSubmissions(prev => prev.filter(s => s.id !== submissionId));
+                
+                fetchersByLevel[filters.level].listPending(true); // force=true
+
             } catch (error) {
                 console.error("Error rejecting submission:", error);
                 alert(`Failed to reject submission. See console for details.`);
@@ -498,15 +508,14 @@ export function ProgramTeamView({ permissions, userStates }) {
         }
     };
     
-    // This logic is no longer needed as the list is always visible
-    // if (view === 'form') { ... }
-    // if (view === 'view') { ... }
-
     const tableHeaders = {
         state: ['الإسم', 'الايميل', 'الولاية', 'المسمى الوظيفي', 'الصفة', 'Actions'],
         federal: ['الإسم', 'الايميل', 'المسمى الوظيفي', 'الصفة', 'Actions'],
         locality: ['الإسم', 'الايميل', 'الولاية', 'المحلية', 'المسمى الوظيفي', 'Actions'],
     };
+    
+    // --- FIX: Handle null by providing safe defaults ---
+    const currentLevelData = dataByLevel[filters.level] || { members: null, pending: null, loading: true, pendingLoading: true };
 
     return (
         <div>
@@ -519,7 +528,6 @@ export function ProgramTeamView({ permissions, userStates }) {
                 <div className="flex flex-wrap items-end gap-4 flex-grow">
                     <FormGroup label="Filter by Level">
                         <Select value={filters.level} onChange={(e) => handleFilterChange('level', e.target.value)}>
-                            {/* FIX 1: isFederal is now true for superusers, showing this option */ }
                             {isFederal && <option value="federal">Federal</option>}
                             <option value="state">State</option>
                             <option value="locality">Locality</option>
@@ -527,7 +535,6 @@ export function ProgramTeamView({ permissions, userStates }) {
                     </FormGroup>
                     {(filters.level === 'state' || filters.level === 'locality') && (
                         <FormGroup label="State">
-                            {/* This dropdown is correctly disabled for non-federal users, locking them to their state */ }
                             <Select value={filters.state} onChange={(e) => handleFilterChange('state', e.target.value)} disabled={!isFederal}>
                                 <option value="">All States</option>
                                 {Object.keys(STATE_LOCALITIES).sort().map(s => <option key={s} value={s}>{s}</option>)}
@@ -536,10 +543,9 @@ export function ProgramTeamView({ permissions, userStates }) {
                     )}
                     {filters.level === 'locality' && (
                         <FormGroup label="Locality">
-                            {/* FIX 2: Removed !isFederal from disabled check. Now it only depends on a state being selected. */ }
                             <Select value={filters.locality} onChange={(e) => handleFilterChange('locality', e.target.value)} disabled={!filters.state}>
                                 <option value="">All Localities</option>
-                                {(STATE_LOCALITIES[filters.state] || []).sort().map(l => <option key={l} value={l}>{l}</option>)}
+                                {(STATE_LOCALITIES[filters.state]?.localities || []).sort((a,b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
                             </Select>
                         </FormGroup>
                     )}
@@ -554,7 +560,10 @@ export function ProgramTeamView({ permissions, userStates }) {
                             <>
                                 <Button variant="tab" isActive={activeTab === 'pending'} onClick={() => setActiveTab('pending')}>
                                     Pending Approvals 
-                                    <span className="ml-2 bg-sky-100 text-sky-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">{pendingSubmissions.length}</span>
+                                    <span className="ml-2 bg-sky-100 text-sky-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                                        {/* --- FIX: Handle null pending --- */}
+                                        {currentLevelData.pending ? currentLevelData.pending.length : 0}
+                                    </span>
                                 </Button>
                                 <Button variant="secondary" size="sm" onClick={handleOpenLinkModal}>Manage Submission Link</Button>
                             </>
@@ -566,7 +575,7 @@ export function ProgramTeamView({ permissions, userStates }) {
             {activeTab === 'members' ? ( 
                 <Card>
                     <CardBody>
-                        {loading ? <Spinner /> : (
+                        {currentLevelData.loading ? <Spinner /> : (
                             <Table headers={tableHeaders[filters.level]}>
                                 {filteredMembers.length > 0 ? filteredMembers.map(c => (
                                     <tr key={c.id}>
@@ -597,8 +606,8 @@ export function ProgramTeamView({ permissions, userStates }) {
                 </Card>
             ) : (
                 <PendingSubmissions 
-                    submissions={pendingSubmissions} 
-                    isLoading={isSubmissionsLoading} 
+                    submissions={currentLevelData.pending} 
+                    isLoading={currentLevelData.pendingLoading} 
                     onApprove={handleApproveSubmission} 
                     onReject={handleRejectSubmission} 
                     onView={handleView} 
@@ -608,12 +617,11 @@ export function ProgramTeamView({ permissions, userStates }) {
             <LinkManagementModal 
                 isOpen={isLinkModalOpen}
                 onClose={() => setIsLinkModalOpen(false)}
-                settings={linkSettings}
-                isLoading={isSettingsLoading}
+                settings={coordinatorApplicationSettings}
+                isLoading={isLoading.coordinatorApplicationSettings}
                 onToggleStatus={handleToggleLinkStatus}
             />
 
-            {/* --- ADDED MODAL FOR VIEW/EDIT --- */}
             <Modal isOpen={isModalOpen} onClose={handleCloseModal} size={modalMode === 'view' ? '2xl' : '3xl'}>
                 {modalMode === 'view' && editingMember && (
                     <TeamMemberView 
@@ -624,7 +632,7 @@ export function ProgramTeamView({ permissions, userStates }) {
                 )}
                 {modalMode === 'edit' && (
                     <TeamMemberForm 
-                        member={editingMember} // Pass null for new members
+                        member={editingMember} 
                         onSave={handleSave}
                         onCancel={handleCloseModal}
                     />
@@ -635,6 +643,6 @@ export function ProgramTeamView({ permissions, userStates }) {
 }
 
 export function TeamMemberApplicationForm() {
-    // ... This component's code is unchanged and remains complete
-    return <Card>{/* ... form JSX ... */}</Card>;
+    // ... This component's code is unchanged
+    return <Card><CardBody><EmptyState message="Form implementation goes here." /></CardBody></Card>;
 }
