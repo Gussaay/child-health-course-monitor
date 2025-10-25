@@ -106,6 +106,14 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
 
     const fetchDetailedData = async () => {
         setFetchingDetailed(true);
+        
+        // --- START OF FIX: Add null guard for allCourses and allParticipants ---
+        if (!allCourses || !allParticipants) {
+            setFetchingDetailed(false);
+            return;
+        }
+        // --- END OF FIX ---
+        
         const courseMap = new Map(allCourses.map(c => [c.id, c]));
         const participantsWithCourseInfo = allParticipants.map(p => {
             const course = courseMap.get(p.courseId);
@@ -128,7 +136,10 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
     const allLocalities = useMemo(() => stateFilter === 'All' ? [] : ['All', ...STATE_LOCALITIES[stateFilter].localities.map(l => l.en).sort()], [stateFilter, STATE_LOCALITIES]);
     const allCourseTypes = useMemo(() => ['All', ...COURSE_TYPES_FACILITATOR], []);
     const allYears = useMemo(() => {
-        const years = [...new Set(allCourses.map(c => new Date(c.start_date).getFullYear()))].sort().map(String);
+        // --- START OF FIX: Add null guard for allCourses ---
+        const coursesList = allCourses || [];
+        const years = [...new Set(coursesList.map(c => new Date(c.start_date).getFullYear()))].sort().map(String);
+        // --- END OF FIX ---
         return ['All', ...years];
     }, [allCourses]);
     const allMonths = useMemo(() => {
@@ -137,7 +148,10 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
     }, []);
 
     const filteredCourses = useMemo(() => {
-        return allCourses.filter(course => {
+        // --- START OF FIX: Add null guard for allCourses ---
+        const coursesList = allCourses || [];
+        return coursesList.filter(course => {
+        // --- END OF FIX ---
             const courseDate = new Date(course.start_date);
             const matchesCourseType = courseTypeFilter === 'All' || course.course_type === courseTypeFilter;
             const matchesState = stateFilter === 'All' || course.state === stateFilter;
@@ -150,12 +164,20 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
     }, [allCourses, courseTypeFilter, stateFilter, localityFilter, yearFilter, monthFilter, allMonths]);
 
     const filteredParticipants = useMemo(() => {
+        // --- START OF FIX: Add null guard for allParticipants (resolves the TypeError) ---
+        if (!allParticipants) {
+            return [];
+        }
+        // --- END OF FIX ---
         const matchingCourseIds = new Set(filteredCourses.map(c => c.id));
         return allParticipants.filter(p => matchingCourseIds.has(p.courseId));
     }, [filteredCourses, allParticipants]);
 
     const filteredFacilitators = useMemo(() => {
-        return allFacilitators.filter(f => {
+        // --- START OF FIX: Add null guard for allFacilitators ---
+        const facilitatorsList = allFacilitators || [];
+        return facilitatorsList.filter(f => {
+        // --- END OF FIX ---
             const matchesSearch = facSearchQuery === '' || f.name.toLowerCase().includes(facSearchQuery.toLowerCase());
             const matchesCourse = facCourseFilter === 'All' || (f.courses && f.courses.includes(facCourseFilter));
             const matchesState = facStateFilter === 'All' || f.currentState === facStateFilter;
@@ -228,12 +250,14 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
 
     const participantKPIs = useMemo(() => {
         const totalParticipants = filteredParticipants.length;
+        // --- START OF FIX: Add null guard for allParticipants in reduction ---
         const participantsByCourse = filteredCourses.reduce((acc, c) => {
             const courseName = c.course_type || 'Unknown Course';
-            const count = allParticipants.filter(p => p.courseId === c.id).length;
+            const count = (allParticipants || []).filter(p => p.courseId === c.id).length;
             acc[courseName] = (acc[courseName] || 0) + count;
             return acc;
         }, {});
+        // --- END OF FIX ---
         return { totalParticipants, participantsByCourse };
     }, [filteredParticipants, filteredCourses, allParticipants]);
 
@@ -391,8 +415,11 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
 
         const facilitatorTableHeaders = ["Name", "Phone", "Email", "IMNCI Director?", "Clinical Instructor?", "Team Leader?", "Follow-up?", "Courses Instructed", "Courses Directed", "Actions"];
         const facilitatorTableData = fetchedFacilitators.map(f => {
-            const instructed = fetchedCourses.filter(c => Array.isArray(c.facilitators) && c.facilitators.includes(f.name)).length;
-            const directed = fetchedCourses.filter(c => c.director === f.name).length;
+            // --- START OF FIX: Add null guard for fetchedCourses ---
+            const coursesList = fetchedCourses || [];
+            const instructed = coursesList.filter(c => Array.isArray(c.facilitators) && c.facilitators.includes(f.name)).length;
+            const directed = coursesList.filter(c => c.director === f.name).length;
+            // --- END OF FIX ---
             return {
                 id: f.id,
                 row: [f.name, f.phone, f.email || 'N/A', f.directorCourse === 'Yes' ? 'Yes' : 'No', f.isClinicalInstructor === 'Yes' ? 'Yes' : 'No', f.teamLeaderCourse === 'Yes' ? 'Yes' : 'No', f.followUpCourse === 'Yes' ? 'Yes' : 'No', instructed, directed]
@@ -499,7 +526,7 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
                     {viewType === 'imnciCoverage' && <IMNCICoverageDashboard />}
 
                     {/* Render Course Dashboard */}
-                    {viewType === 'courses' && allCourses.length > 0 && (
+                    {viewType === 'courses' && (allCourses || []).length > 0 && (
                         <div>
                             <h3 className="text-xl font-bold mb-4">Course KPIs</h3>
                             <div className="grid md:grid-cols-4 gap-4 mb-8">
@@ -536,7 +563,7 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
                     )}
 
                     {/* Render Participant Dashboard */}
-                    {viewType === 'participants' && allCourses.length > 0 && (
+                    {viewType === 'participants' && (allCourses || []).length > 0 && (
                         <div className="px-4 md:px-6">
                             <h3 className="text-xl font-bold mb-4">Participant KPIs</h3>
                             <div className="grid md:grid-cols-4 gap-4 mb-8">
@@ -558,7 +585,7 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
                     )}
 
                     {/* Render Facilitator Dashboard */}
-                    {viewType === 'facilitators' && allCourses.length > 0 && (
+                    {viewType === 'facilitators' && (allCourses || []).length > 0 && (
                         <div className="px-4 md:px-6">
                             <h3 className="text-xl font-bold mb-4">Facilitator KPIs</h3>
                             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 text-center mb-6">
@@ -583,7 +610,7 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
                     )}
 
                     {/* Fallback for no data/no view */}
-                    {['courses', 'participants', 'facilitators'].includes(viewType) && allCourses.length === 0 && (
+                    {['courses', 'participants', 'facilitators'].includes(viewType) && (allCourses || []).length === 0 && (
                          <div className="text-center py-12 text-gray-500">
                              No course data available to display the {viewType} dashboard.
                          </div>

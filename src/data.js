@@ -10,13 +10,12 @@ import {
     setDoc as fbSetDoc,
     addDoc as fbAddDoc,
     deleteDoc as fbDeleteDoc,
-    writeBatch as fbWriteBatch,
+    writeBatch as fbWriteBatch, // Ensure this is imported correctly
     updateDoc as fbUpdateDoc,
     getDoc as fbGetDoc,
     increment, // Import increment
     // --- END MODIFICATION ---
     serverTimestamp,
-    // increment, // Already imported above
     orderBy,
     limit,
     Timestamp,
@@ -36,10 +35,8 @@ const UPDATE_THRESHOLD = 15; // Or update every 15 operations
 let updateTimeout = null; // To debounce updates
 
 // --- MODIFIED: Duration Tracking Variables ---
-// --- REMOVED lastActivityTime dependency for duration ---
 let localSessionDurationMs = 0; // In-memory counter for the current session
 let durationIntervalId = null; // Timer for the local counter
-// --- REMOVED ACTIVITY_TIMEOUT_MS ---
 const DURATION_TICK_MS = 60 * 1000; // Update local duration every 1 minute
 const LOCAL_STORAGE_KEY_DURATION = 'unsyncedAppDuration'; // Key for browser storage
 
@@ -72,23 +69,21 @@ const tickLocalDuration = () => {
         return;
     }
 
-    // --- REMOVED inactivity check ---
     // Always increment the local counter as long as the interval is running
     localSessionDurationMs += DURATION_TICK_MS;
 };
 
 // --- NEW: Function to save duration to localStorage on browser close/refresh ---
-// (Unchanged from previous version)
 const saveDurationToLocalStorage = () => {
     if (localSessionDurationMs > 0) {
         // Add our current in-memory time to any time that might already be in storage
         const existingUnsyncedMs = parseInt(localStorage.getItem(LOCAL_STORAGE_KEY_DURATION) || '0', 10);
         const totalUnsyncedMs = existingUnsyncedMs + localSessionDurationMs;
-        
+
         localStorage.setItem(LOCAL_STORAGE_KEY_DURATION, totalUnsyncedMs.toString());
-        
+
         // Reset in-memory counter to prevent double-counting if logout also fires
-        localSessionDurationMs = 0; 
+        localSessionDurationMs = 0;
     }
 };
 
@@ -106,8 +101,7 @@ export const initializeUsageTracking = () => {
         // 2. Remove the "browser close" listener
         window.removeEventListener('beforeunload', saveDurationToLocalStorage);
 
-        // 3. Sync any remaining duration from this session (this is the "Sign Out" event)
-        // We check 'currentUser' because it still holds the user data from *before* logout
+        // 3. Sync any remaining duration from this session
         if (currentUser && localSessionDurationMs > 0) {
             syncDurationToDb(localSessionDurationMs, currentUser.uid);
         }
@@ -117,7 +111,7 @@ export const initializeUsageTracking = () => {
         localSessionDurationMs = 0;
         sessionReads = 0;
         sessionWrites = 0;
-        
+
         // 5. Clear localStorage just in case (logout is a clean exit)
         localStorage.removeItem(LOCAL_STORAGE_KEY_DURATION);
 
@@ -127,7 +121,7 @@ export const initializeUsageTracking = () => {
     // --- This block runs on LOGIN ---
     if (user && !currentUser) { // Check !currentUser to run only once on login
         currentUser = { uid: user.uid, email: user.email };
-        
+
         // 1. Sync any duration left over from a previous *crashed* session
         const unsyncedMs = parseInt(localStorage.getItem(LOCAL_STORAGE_KEY_DURATION) || '0', 10);
         if (unsyncedMs > 0) {
@@ -140,9 +134,8 @@ export const initializeUsageTracking = () => {
         sessionReads = 0;
         sessionWrites = 0;
         lastDbUpdateTime = Date.now(); // Reset op count timer base
-        // --- lastActivityTime is no longer needed for duration ---
 
-        // 3. Start the local duration timer (runs every minute unconditionally)
+        // 3. Start the local duration timer
         durationIntervalId = setInterval(tickLocalDuration, DURATION_TICK_MS);
 
         // 4. Add the "browser close" listener
@@ -153,12 +146,11 @@ export const initializeUsageTracking = () => {
 
 
 // --- NEW: Function to update Firestore (uses RAW functions) ---
-// (Unchanged from previous version - only handles op counts)
 const updateUsageStatsInDb = () => {
     if (!currentUser || (sessionReads === 0 && sessionWrites === 0)) {
-        if (updateTimeout) clearTimeout(updateTimeout); 
+        if (updateTimeout) clearTimeout(updateTimeout);
         updateTimeout = null;
-        lastDbUpdateTime = Date.now(); 
+        lastDbUpdateTime = Date.now();
         return;
     }
 
@@ -178,8 +170,8 @@ const updateUsageStatsInDb = () => {
     fbSetDoc(userUsageRef, {
         totalReads: increment(readsToUpdate),
         totalWrites: increment(writesToUpdate),
-        email: userEmail, 
-        lastUpdated: serverTimestamp() // Op counts update lastUpdated
+        email: userEmail,
+        lastUpdated: serverTimestamp()
     }, { merge: true })
     .catch(error => {
         console.error("Failed to update usage stats:", error);
@@ -189,10 +181,7 @@ const updateUsageStatsInDb = () => {
 
 // --- MODIFIED: Global event dispatcher & usage tracker ---
 const dispatchOpEvent = (type, count = 1) => {
-  if (count > 0 && currentUser) { // Added currentUser check
-    // --- REMOVED: No need to update lastActivityTime for duration ---
-    // --- REMOVED: No need to restart duration timer ---
-
+  if (count > 0 && currentUser) {
     // 1. Dispatch browser event for real-time UI update (ResourceMonitor)
     window.dispatchEvent(new CustomEvent('firestoreOperation', { detail: { type, count } }));
 
@@ -203,13 +192,13 @@ const dispatchOpEvent = (type, count = 1) => {
       sessionWrites += count;
     }
 
-    // 3. Check if we need to schedule a Firestore update (for op-counting only)
+    // 3. Check if we need to schedule a Firestore update
     const totalOpsSinceLastUpdate = sessionReads + sessionWrites;
     const timeSinceLastUpdate = Date.now() - lastDbUpdateTime;
 
     if (updateTimeout && totalOpsSinceLastUpdate >= UPDATE_THRESHOLD) {
       clearTimeout(updateTimeout);
-      updateTimeout = null; 
+      updateTimeout = null;
       updateUsageStatsInDb();
     }
     else if (!updateTimeout && (timeSinceLastUpdate > UPDATE_INTERVAL || totalOpsSinceLastUpdate >= UPDATE_THRESHOLD)) {
@@ -223,9 +212,7 @@ const dispatchOpEvent = (type, count = 1) => {
   }
 };
 
-// --- Wrapped Firestore functions (Unchanged from previous version) ---
-// ... (rest of the file remains the same) ...
-
+// --- Wrapped Firestore functions (Unchanged) ---
 export const getDocs = async (query, options) => {
   const snapshot = await fbGetDocs(query, options);
   if (options?.source !== 'cache') {
@@ -305,9 +292,9 @@ export const writeBatch = (firestore) => {
   };
 
   const originalUpdate = batch.update;
-  batch.update = (docRef, data) => {
+  batch.update = (docRef, data) => { // Correct signature
     writeCount++;
-    return originalUpdate.call(batch, docRef, data);
+    return originalUpdate.call(batch, docRef, data); // Pass docRef and data
   };
 
   const originalDelete = batch.delete;
@@ -356,18 +343,21 @@ export async function uploadFile(file) {
 
 export async function deleteFile(fileUrl) {
     if (!fileUrl) return;
-    const fileRef = ref(storage, fileUrl);
     try {
+        const fileRef = ref(storage, fileUrl);
         await deleteObject(fileRef);
     } catch (error) {
-        console.error("Error deleting file:", error);
-        throw error;
+       if (error.code !== 'storage/object-not-found') {
+            console.error("Error deleting file:", error);
+            throw error;
+       } else {
+            console.warn("Attempted to delete a file that does not exist:", fileUrl);
+       }
     }
 }
 
 
-// All following functions use the wrapped Firestore functions implicitly
-// ... (rest of the functions remain unchanged) ...
+// --- MODIFIED: saveFacilitySnapshot ensures lastSnapshotAt is set ---
 export async function saveFacilitySnapshot(payload, externalBatch = null) {
     if (!payload.date_of_visit) {
         throw new Error("Cannot save a historical snapshot without a 'date_of_visit'.");
@@ -383,7 +373,7 @@ export async function saveFacilitySnapshot(payload, externalBatch = null) {
         throw new Error(`Failed to process date_of_visit ('${payload.date_of_visit}'). Reason: ${e.message}`);
     }
 
-    const batch = externalBatch || writeBatch(db); // Uses our wrapped writeBatch
+    const batch = externalBatch || writeBatch(db);
     let facilityId = payload.id;
     let facilityRef;
     let isNewFacility = false;
@@ -396,7 +386,7 @@ export async function saveFacilitySnapshot(payload, externalBatch = null) {
             throw new Error("State (الولاية), Locality (المحلية), and Facility Name (اسم_المؤسسة) are required to check for duplicates or create a new facility.");
         }
         const q = query(collection(db, "healthFacilities"), where("الولاية", "==", state), where("المحلية", "==", locality), where("اسم_المؤسسة", "==", facilityName));
-        const querySnapshot = await getDocs(q); // Uses our wrapped getDocs
+        const querySnapshot = await getDocs(q);
         if (!querySnapshot.empty) {
             const existingDoc = querySnapshot.docs[0];
             facilityId = existingDoc.id;
@@ -415,14 +405,17 @@ export async function saveFacilitySnapshot(payload, externalBatch = null) {
     delete snapshotData.submittedAt;
     batch.set(snapshotRef, snapshotData);
 
+    // KEY CHANGE: Ensure lastSnapshotAt is set on every update to the main document to support incremental fetching
     const mainFacilityData = { ...payload, id: facilityId, lastSnapshotAt: serverTimestamp() };
     if (isNewFacility) mainFacilityData.createdAt = serverTimestamp();
     delete mainFacilityData.submissionId;
     delete mainFacilityData.status;
     delete mainFacilityData.submittedAt;
     batch.set(facilityRef, mainFacilityData, { merge: true });
+    // --- END KEY CHANGE ---
 
-    if (!externalBatch) await batch.commit(); // This will trigger the op count
+
+    if (!externalBatch) await batch.commit();
     return facilityId;
 }
 export async function upsertHealthFacility(payload) {
@@ -435,66 +428,116 @@ const isDataChanged = (newData, oldData) => {
     const keysToCompare = Object.keys(newData);
     for (const key of keysToCompare) {
         if (['id', 'lastSnapshotAt', 'createdAt', 'اخر تحديث', 'updated_by'].includes(key)) continue;
+        // Basic check, might need deep comparison for nested objects if they occur
         if (JSON.stringify(newData[key]) !== JSON.stringify(oldData[key])) return true;
+    }
+    // Check if keys were removed in newData
+    for (const key of Object.keys(oldData)) {
+         if (['id', 'lastSnapshotAt', 'createdAt', 'اخر تحديث', 'updated_by'].includes(key)) continue;
+         if (!(key in newData)) return true; // Key removed
     }
     return false;
 };
-export async function importHealthFacilities(facilities, onProgress, originalRows) {
+export async function importHealthFacilities(facilities, originalRows, onProgress) {
     const errors = [];
-    let createdCount = 0;
-    let updatedCount = 0;
+    const successes = [];
+    const failedRowsData = [];
     const BATCH_SIZE = 490;
 
     for (let i = 0; i < facilities.length; i += BATCH_SIZE) {
-        const batch = writeBatch(db); // Uses wrapped writeBatch
+        const batch = writeBatch(db);
         const chunk = facilities.slice(i, i + BATCH_SIZE);
+        const chunkOriginalRows = originalRows ? originalRows.slice(i, i + BATCH_SIZE) : null;
 
         for (let j = 0; j < chunk.length; j++) {
             const facilityData = chunk[j];
             const progressIndex = i + j;
+            let existingDocSnap = null;
+            let existingDocData = null;
+
             try {
                 if (!facilityData.date_of_visit) throw new Error("Skipped due to missing 'Date of Visit'.");
 
-                let existingDoc = null;
                 if (facilityData.id) {
-                    existingDoc = await getDoc(doc(db, "healthFacilities", facilityData.id)); // Uses wrapped getDoc
+                    const docRef = doc(db, "healthFacilities", facilityData.id);
+                    existingDocSnap = await getDoc(docRef); // Use wrapped getDoc
+                    if (existingDocSnap.exists()) {
+                         existingDocData = existingDocSnap.data();
+                    }
                 } else {
                     const { "الولاية": state, "المحلية": locality, "اسم_المؤسسة": facilityName } = facilityData;
                     if (state && locality && facilityName) {
                         const q = query(collection(db, "healthFacilities"), where("الولاية", "==", state), where("المحلية", "==", locality), where("اسم_المؤسسة", "==", facilityName), limit(1));
-                        const snapshot = await getDocs(q); // Uses wrapped getDocs
-                        if (!snapshot.empty) existingDoc = snapshot.docs[0];
+                        const snapshot = await getDocs(q); // Use wrapped getDocs
+                        if (!snapshot.empty) {
+                             existingDocSnap = snapshot.docs[0];
+                             existingDocData = existingDocSnap.data();
+                        }
+                    } else {
+                         throw new Error("Missing State, Locality, or Name for new facility lookup.");
                     }
                 }
 
-                if (!existingDoc || !existingDoc.exists()) {
+                if (!existingDocSnap || !existingDocSnap.exists()) {
                     await saveFacilitySnapshot(facilityData, batch);
-                    createdCount++;
+                    successes.push({ id: facilityData.id || 'new', action: 'created' });
                 } else {
-                    if (isDataChanged(facilityData, existingDoc.data())) {
-                        const payload = { ...existingDoc.data(), ...facilityData, id: existingDoc.id };
+                    // Combine existing data with new data, ensuring ID is correct
+                    const payload = { ...existingDocData, ...facilityData, id: existingDocSnap.id };
+                    if (isDataChanged(payload, existingDocData)) {
                         await saveFacilitySnapshot(payload, batch);
-                        updatedCount++;
+                        successes.push({ id: existingDocSnap.id, action: 'updated' });
+                    } else {
+                         successes.push({ id: existingDocSnap.id, action: 'skipped (no changes)' });
                     }
                 }
             } catch (e) {
-                const originalRowForError = originalRows ? originalRows[progressIndex] : null;
-                errors.push({ message: e.message, rowIndex: progressIndex, rowData: originalRowForError });
+                const originalRowForError = chunkOriginalRows ? chunkOriginalRows[j] : null;
+                const errorPayload = { message: e.message || 'Unknown error during import.', rowIndex: progressIndex, rowData: originalRowForError };
+                errors.push(errorPayload);
+                if (originalRowForError) {
+                    failedRowsData.push(errorPayload);
+                }
+                // Don't re-throw, just record error and continue batch
             }
-            if (onProgress) onProgress(progressIndex + 1, errors.length > 0 ? errors[errors.length - 1] : null);
+             // Report progress after attempting each row
+             if (onProgress) {
+                 onProgress({ processed: progressIndex + 1, total: facilities.length });
+             }
         }
-        await batch.commit(); // Triggers op count
+         try {
+             await batch.commit(); // Commit batch
+         } catch(commitError) {
+             console.error(`Batch commit failed starting at index ${i}:`, commitError);
+             // Mark all rows in this chunk as failed if commit fails
+             for (let k = 0; k < chunk.length; k++) {
+                 const progressIndex = i + k;
+                 const originalRowForError = chunkOriginalRows ? chunkOriginalRows[k] : null;
+                 // Avoid adding duplicate errors if individual row already failed
+                 if (!errors.some(err => err.rowIndex === progressIndex)) {
+                     const errorPayload = { message: `Batch commit failed: ${commitError.message}`, rowIndex: progressIndex, rowData: originalRowForError };
+                     errors.push(errorPayload);
+                      if (originalRowForError) {
+                         failedRowsData.push(errorPayload);
+                      }
+                 }
+             }
+         }
     }
-    return { created: createdCount, updated: updatedCount, errors };
+    return { successes, errors, failedRowsData };
 }
+
 export async function approveFacilitySubmission(submission, approverEmail) {
-    await saveFacilitySnapshot(submission);
-    const submissionRef = doc(db, "facilitySubmissions", submission.submissionId);
-    await updateDoc(submissionRef, { status: 'approved', approvedBy: approverEmail, approvedAt: serverTimestamp() }); // Uses wrapped updateDoc
+    const { submissionId, ...facilityData } = submission; // Separate submissionId
+    await saveFacilitySnapshot(facilityData); // Save the actual data
+    const submissionRef = doc(db, "facilitySubmissions", submissionId);
+    await updateDoc(submissionRef, { status: 'approved', approvedBy: approverEmail, approvedAt: serverTimestamp() });
 }
+// --- MODIFIED: listHealthFacilities now supports incremental fetching ---
 export async function listHealthFacilities(filters = {}) {
     let q = collection(db, "healthFacilities");
     const conditions = [];
+    let shouldOrderByState = true; // Default order
 
     if (filters.state && filters.state !== 'NOT_ASSIGNED') conditions.push(where("الولاية", "==", filters.state));
     if (filters.locality) conditions.push(where("المحلية", "==", filters.locality));
@@ -502,12 +545,31 @@ export async function listHealthFacilities(filters = {}) {
     if (filters.functioningStatus && filters.functioningStatus !== 'NOT_SET') conditions.push(where("هل_المؤسسة_تعمل", "==", filters.functioningStatus));
     if (filters.project) conditions.push(where("project_name", "==", filters.project));
 
+    // NEW TIMESTAMP FILTER LOGIC: Filter by 'lastSnapshotAt'
+    if (filters.lastUpdatedAfter instanceof Date) { // Check if it's a Date object
+        // lastUpdatedAfter is a JavaScript Date object, convert to Firestore Timestamp
+        const timestamp = Timestamp.fromDate(filters.lastUpdatedAfter);
+        // Query for documents where the last update time is *after* the provided timestamp
+        conditions.push(where("lastSnapshotAt", ">", timestamp));
+        // Must include an orderBy on the field used in the range query
+        conditions.push(orderBy("lastSnapshotAt"));
+        shouldOrderByState = false; // Don't add default order if ordering by timestamp
+    }
+    // END NEW TIMESTAMP FILTER LOGIC
+
+
     if (conditions.length > 0) q = query(q, ...conditions);
 
+    // Fallback order for full queries (if not incrementally fetching)
+    if (shouldOrderByState) {
+        q = query(q, orderBy("الولاية")); // Apply default order
+    }
+
     try {
-        const querySnapshot = await getData(q); // Uses our wrapped getData
+        const querySnapshot = await getData(q);
         let facilities = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
+        // Post-query filtering (only needed for complex filters not supported by Firestore query)
         if (filters.state === 'NOT_ASSIGNED') facilities = facilities.filter(f => !f['الولاية']);
         if (filters.functioningStatus === 'NOT_SET') facilities = facilities.filter(f => f['هل_المؤسسة_تعمل'] == null || f['هل_المؤسسة_تعمل'] === '');
 
@@ -517,14 +579,16 @@ export async function listHealthFacilities(filters = {}) {
         throw error;
     }
 }
+// --- END MODIFIED: listHealthFacilities ---
+
 export async function getHealthFacilityById(facilityId) {
     const docRef = doc(db, "healthFacilities", facilityId);
-    const docSnap = await getDoc(docRef); // Uses wrapped getDoc
+    const docSnap = await getDoc(docRef);
     if (docSnap.exists()) return { id: docSnap.id, ...docSnap.data() };
     return null;
 }
 export async function deleteHealthFacility(facilityId) {
-    await deleteDoc(doc(db, "healthFacilities", facilityId)); // Uses wrapped deleteDoc
+    await deleteDoc(doc(db, "healthFacilities", facilityId));
     return true;
 }
 export async function deleteFacilitiesBatch(facilityIds) {
@@ -532,33 +596,116 @@ export async function deleteFacilitiesBatch(facilityIds) {
     const BATCH_SIZE = 500;
     let deletedCount = 0;
     for (let i = 0; i < facilityIds.length; i += BATCH_SIZE) {
-        const batch = writeBatch(db); // Uses wrapped writeBatch
+        const batch = writeBatch(db);
         const chunk = facilityIds.slice(i, i + BATCH_SIZE);
         chunk.forEach(id => batch.delete(doc(db, "healthFacilities", id)));
-        await batch.commit(); // Triggers op count
+        await batch.commit();
         deletedCount += chunk.length;
     }
     return deletedCount;
 }
-export async function submitFacilityDataForApproval(payload) {
-    const submissionData = { ...payload, submittedAt: serverTimestamp(), status: 'pending' };
-    if (submissionData.id === undefined) {
-        delete submissionData.id;
-    }
-    const newSubmissionRef = await addDoc(collection(db, "facilitySubmissions"), submissionData); // Uses wrapped addDoc
+export async function submitFacilityDataForApproval(payload, submitterIdentifier = 'Unknown User') {
+    const { id, ...dataToSubmit } = payload; // Separate original ID if exists
+    const submissionData = {
+         ...dataToSubmit,
+         originalFacilityId: id || null, // Store original ID if updating
+         submittedAt: serverTimestamp(),
+         status: 'pending',
+         updated_by: submitterIdentifier // Record who submitted
+     };
+     // Ensure no 'id' field is sent if it was undefined
+     if (submissionData.id === undefined) {
+         delete submissionData.id;
+     }
+    const newSubmissionRef = await addDoc(collection(db, "facilitySubmissions"), submissionData);
     return newSubmissionRef.id;
 }
 export async function listPendingFacilitySubmissions() {
     const q = query(collection(db, "facilitySubmissions"), where("status", "==", "pending"));
-    const snapshot = await getDocs(q); // Uses wrapped getDocs
+    const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ submissionId: doc.id, ...doc.data() }));
 }
 export async function rejectFacilitySubmission(submissionId, rejectorEmail) {
-    await updateDoc(doc(db, "facilitySubmissions", submissionId), { status: 'rejected', rejectedBy: rejectorEmail, rejectedAt: serverTimestamp() }); // Uses wrapped updateDoc
+    await updateDoc(doc(db, "facilitySubmissions", submissionId), { status: 'rejected', rejectedBy: rejectorEmail, rejectedAt: serverTimestamp() });
 }
+
+// --- NEW FUNCTION TO ADD/UPDATE A HEALTH WORKER IN A FACILITY ---
+/**
+ * Adds a new health worker or updates an existing one in a facility's imnci_staff list.
+ * This function creates a new facility snapshot.
+ * @param {string} facilityId - The ID of the facility to update.
+ * @param {object} newWorkerData - An object with { name, job_title, training_date, phone }.
+ * @param {string} mentorIdentifier - The email or name of the user making the change.
+ * @returns {Promise<boolean>} True on success.
+ */
+export async function addHealthWorkerToFacility(facilityId, newWorkerData, mentorIdentifier = 'Unknown User') {
+    if (!facilityId) throw new Error("Facility ID is required.");
+    if (!newWorkerData || !newWorkerData.name) throw new Error("New worker data (at least name) is required.");
+
+    // 1. Get the latest facility data
+    const facility = await getHealthFacilityById(facilityId); // Uses wrapped getDoc
+    if (!facility) throw new Error(`Facility with ID ${facilityId} not found.`);
+
+    // 2. Prepare the new staff member object
+    const newWorker = {
+        name: newWorkerData.name.trim(),
+        job_title: newWorkerData.job_title || '',
+        training_date: newWorkerData.training_date || '', // Date from form
+        phone: newWorkerData.phone || '',
+        // Mark as trained if a training date is provided
+        is_trained: newWorkerData.training_date ? 'Yes' : 'No' 
+    };
+
+    // 3. Get existing staff list, parsing if necessary
+    let existingStaff = [];
+    if (facility.imnci_staff) {
+        try {
+            existingStaff = typeof facility.imnci_staff === 'string'
+                ? JSON.parse(facility.imnci_staff)
+                // Deep copy if already object to avoid modifying cached data
+                : JSON.parse(JSON.stringify(facility.imnci_staff)); 
+            if (!Array.isArray(existingStaff)) existingStaff = []; // Fallback
+        } catch (e) {
+            console.error("Error parsing existing imnci_staff, starting fresh list.", e);
+            existingStaff = [];
+        }
+    }
+
+    // 4. Check if worker exists (by name or phone) and update or add
+    const staffIndex = existingStaff.findIndex(s =>
+        s.name === newWorker.name || (s.phone && newWorker.phone && s.phone === newWorker.phone)
+    );
+
+    if (staffIndex !== -1) {
+        // Update existing worker
+        existingStaff[staffIndex] = newWorker;
+    } else {
+        // Add new worker
+        existingStaff.push(newWorker);
+    }
+
+    // 5. Prepare payload for saveFacilitySnapshot
+    const payload = {
+        ...facility, // Spread existing data
+        id: facilityId, // Ensure ID is correct
+        imnci_staff: existingStaff, // Set the updated staff list
+        date_of_visit: new Date().toISOString().split('T')[0], // Use today's date for the snapshot
+        updated_by: mentorIdentifier // Record who made the change
+    };
+
+    // 6. Save using saveFacilitySnapshot to create historical record and update main doc
+    // This will also automatically update 'lastSnapshotAt'
+    await saveFacilitySnapshot(payload);
+
+    return true; // Indicate success
+}
+// --- END NEW FUNCTION ---
+
+
+// ... (Course, Participant, Facilitator, Coordinator, Funder, etc. functions remain the same) ...
 export async function getCourseById(courseId, source = 'default') {
     const courseRef = doc(db, "courses", courseId);
-    const courseSnap = await getDoc(courseRef, { source }); // Uses wrapped getDoc
+    const courseSnap = await getDoc(courseRef, { source });
     if (!courseSnap.exists()) {
         return null;
     }
@@ -566,14 +713,14 @@ export async function getCourseById(courseId, source = 'default') {
 }
 export async function getParticipantById(participantId, source = 'default') {
     const participantRef = doc(db, "participants", participantId);
-    const participantSnap = await getDoc(participantRef, { source }); // Uses wrapped getDoc
+    const participantSnap = await getDoc(participantRef, { source });
     if (!participantSnap.exists()) {
         return null;
     }
     return { id: participantSnap.id, ...participantSnap.data() };
 }
 export async function getPublicCourseReportData(courseId) {
-    const course = await getCourseById(courseId, 'server'); // Uses wrapped getCourseById
+    const course = await getCourseById(courseId, 'server');
 
     if (!course) {
         throw new Error("Report not found.");
@@ -602,8 +749,8 @@ export async function getPublicCourseReportData(courseId) {
 
     const [participants, { allObs, allCases }, finalReport] = await Promise.all([
         listAllParticipantsForCourse(courseId),
-        listAllDataForCourse(courseId, 'server'), // Uses wrapped listAllDataForCourse
-        getFinalReportByCourseId(courseId, 'server') // Uses wrapped getFinalReportByCourseId
+        listAllDataForCourse(courseId, 'server'),
+        getFinalReportByCourseId(courseId, 'server')
     ]);
 
     return {
@@ -616,13 +763,17 @@ export async function getPublicCourseReportData(courseId) {
 }
 export async function listUsers(source = 'default') {
     try {
-        const querySnapshot = await getDocs(collection(db, "users"), { source }); // Uses wrapped getDocs
+        const querySnapshot = await getDocs(collection(db, "users"), { source });
         return querySnapshot.docs.map(doc => {
             const data = doc.data();
             return {
                 id: doc.id,
                 email: data.email || '',
-                isAdmin: data.isAdmin || false,
+                isAdmin: data.isAdmin || false, // Consider removing if role is primary
+                role: data.role || 'user', // Add role
+                permissions: data.permissions || {}, // Add permissions
+                assignedState: data.assignedState || '', // Add assignedState
+                assignedLocalities: data.assignedLocalities || [], // Add assignedLocalities
                 access: data.access || {},
                 lastLogin: data.lastLogin || null
             };
@@ -635,7 +786,7 @@ export async function listUsers(source = 'default') {
 export async function updateUserAccess(userId, module, newAccess) {
     try {
         const userRef = doc(db, "users", userId);
-        await setDoc(userRef, { // Uses wrapped setDoc
+        await setDoc(userRef, {
             access: {
                 [module]: newAccess
             }
@@ -651,7 +802,7 @@ export async function updateFacilitatorRole(facilitatorId, newRole) {
         throw new Error("Facilitator ID and new role are required.");
     }
     const facilitatorRef = doc(db, 'facilitators', facilitatorId);
-    await updateDoc(facilitatorRef, { // Uses wrapped updateDoc
+    await updateDoc(facilitatorRef, {
         role: newRole
     });
 }
@@ -663,7 +814,7 @@ export async function getFacilitatorByEmail(email) {
             where("email", "==", email),
             limit(1)
         );
-        const snapshot = await getDocs(q); // Uses wrapped getDocs
+        const snapshot = await getDocs(q);
         if (!snapshot.empty) {
             const doc = snapshot.docs[0];
             return { id: doc.id, ...doc.data() };
@@ -677,16 +828,16 @@ export async function getFacilitatorByEmail(email) {
 export async function upsertFacilitator(payload) {
     if (payload.id) {
         const facRef = doc(db, "facilitators", payload.id);
-        await setDoc(facRef, payload, { merge: true }); // Uses wrapped setDoc
+        await setDoc(facRef, payload, { merge: true });
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
-        const newFacRef = await addDoc(collection(db, "facilitators"), dataToSave); // Uses wrapped addDoc
+        const newFacRef = await addDoc(collection(db, "facilitators"), dataToSave);
         return newFacRef.id;
     }
 }
 export async function importFacilitators(facilitators) {
-    const batch = writeBatch(db); // Uses wrapped writeBatch
+    const batch = writeBatch(db);
     facilitators.forEach(fac => {
         if (fac.id) {
             const facRef = doc(db, "facilitators", fac.id);
@@ -696,14 +847,13 @@ export async function importFacilitators(facilitators) {
             batch.set(facRef, fac);
         }
     });
-    await batch.commit(); // Triggers op count
+    await batch.commit();
     return true;
 }
-export async function listFacilitators() { // Removed userStates parameter
+export async function listFacilitators() {
     try {
         let q = collection(db, "facilitators");
-        // Filtering by userStates is removed here, handled in App.jsx if needed
-        const querySnapshot = await getData(q); // Uses our wrapped getData
+        const querySnapshot = await getData(q);
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
         console.error("Error in listFacilitators:", error);
@@ -711,7 +861,7 @@ export async function listFacilitators() { // Removed userStates parameter
     }
 }
 export async function deleteFacilitator(facilitatorId) {
-    await deleteDoc(doc(db, "facilitators", facilitatorId)); // Uses wrapped deleteDoc
+    await deleteDoc(doc(db, "facilitators", facilitatorId));
     return true;
 }
 export async function getFacilitatorSubmissionByEmail(email) {
@@ -727,11 +877,12 @@ export async function getFacilitatorSubmissionByEmail(email) {
             limit(1)
         );
 
-        const querySnapshot = await getDocs(q); // Uses wrapped getDocs
+        const querySnapshot = await getDocs(q);
 
         if (!querySnapshot.empty) {
-            const doc = querySnapshot.docs[0];
-            return { id: doc.id, ...doc.data() };
+            // Check correct property access (docs, not doc)
+            const docSnap = querySnapshot.docs[0];
+            return { id: docSnap.id, ...docSnap.data() };
         }
 
         return null;
@@ -740,19 +891,20 @@ export async function getFacilitatorSubmissionByEmail(email) {
         return null;
     }
 }
+
 export async function submitFacilitatorApplication(payload) {
     const dataToSave = { ...payload, submittedAt: serverTimestamp(), status: 'pending' };
-    const newSubmissionRef = await addDoc(collection(db, "facilitatorSubmissions"), dataToSave); // Uses wrapped addDoc
+    const newSubmissionRef = await addDoc(collection(db, "facilitatorSubmissions"), dataToSave);
     return newSubmissionRef.id;
 }
 export async function listPendingFacilitatorSubmissions() {
     const q = query(collection(db, "facilitatorSubmissions"), where("status", "==", "pending"));
-    const snapshot = await getDocs(q); // Uses wrapped getDocs
+    const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 export async function approveFacilitatorSubmission(submission, approverEmail) {
     const { id: submissionId, status, submittedAt, ...facilitatorData } = submission;
-    const batch = writeBatch(db); // Uses wrapped writeBatch
+    const batch = writeBatch(db);
     const newFacRef = doc(collection(db, "facilitators"));
     batch.set(newFacRef, facilitatorData);
     const submissionRef = doc(db, "facilitatorSubmissions", submissionId);
@@ -761,11 +913,11 @@ export async function approveFacilitatorSubmission(submission, approverEmail) {
         approvedBy: approverEmail,
         approvedAt: serverTimestamp()
     });
-    await batch.commit(); // Triggers op count
+    await batch.commit();
 }
 export async function rejectFacilitatorSubmission(submissionId, rejectorEmail) {
     const submissionRef = doc(db, "facilitatorSubmissions", submissionId);
-    await updateDoc(submissionRef, { // Uses wrapped updateDoc
+    await updateDoc(submissionRef, {
         status: 'rejected',
         rejectedBy: rejectorEmail,
         rejectedAt: serverTimestamp()
@@ -773,7 +925,7 @@ export async function rejectFacilitatorSubmission(submissionId, rejectorEmail) {
 }
 export async function getFacilitatorApplicationSettings() {
     const settingsRef = doc(db, "settings", "facilitatorApplication");
-    const docSnap = await getDoc(settingsRef); // Uses wrapped getDoc
+    const docSnap = await getDoc(settingsRef);
     if (docSnap.exists()) {
         return docSnap.data();
     }
@@ -781,15 +933,15 @@ export async function getFacilitatorApplicationSettings() {
 }
 export async function updateFacilitatorApplicationStatus(isActive) {
     const settingsRef = doc(db, "settings", "facilitatorApplication");
-    await setDoc(settingsRef, { isActive }, { merge: true }); // Uses wrapped setDoc
+    await setDoc(settingsRef, { isActive }, { merge: true });
 }
 export async function incrementFacilitatorApplicationOpenCount() {
     const settingsRef = doc(db, "settings", "facilitatorApplication");
-    await setDoc(settingsRef, { openCount: increment(1) }, { merge: true }); // Uses wrapped setDoc
+    await setDoc(settingsRef, { openCount: increment(1) }, { merge: true });
 }
 export async function getCoordinatorApplicationSettings() {
     const docRef = doc(db, 'appSettings', 'coordinatorApplication');
-    const docSnap = await getDoc(docRef); // Uses wrapped getDoc
+    const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
         return docSnap.data();
     }
@@ -797,15 +949,15 @@ export async function getCoordinatorApplicationSettings() {
 }
 export async function updateCoordinatorApplicationStatus(isActive) {
     const docRef = doc(db, 'appSettings', 'coordinatorApplication');
-    await setDoc(docRef, { isActive }, { merge: true }); // Uses wrapped setDoc
+    await setDoc(docRef, { isActive }, { merge: true });
 }
 export async function incrementCoordinatorApplicationOpenCount() {
     const docRef = doc(db, 'appSettings', 'coordinatorApplication');
-    await setDoc(docRef, { openCount: increment(1) }, { merge: true }); // Uses wrapped setDoc
+    await setDoc(docRef, { openCount: increment(1) }, { merge: true });
 }
 export async function submitCoordinatorApplication(payload) {
     const submissionsRef = collection(db, 'coordinatorSubmissions');
-    await addDoc(submissionsRef, { // Uses wrapped addDoc
+    await addDoc(submissionsRef, {
         ...payload,
         status: 'pending',
         submittedAt: serverTimestamp()
@@ -813,15 +965,15 @@ export async function submitCoordinatorApplication(payload) {
 }
 export async function listPendingCoordinatorSubmissions() {
     const q = query(collection(db, "coordinatorSubmissions"), where("status", "==", "pending"));
-    const snapshot = await getDocs(q); // Uses wrapped getDocs
+    const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 export async function approveCoordinatorSubmission(submission, approverEmail) {
     const { id: submissionId, status, submittedAt, ...coordinatorData } = submission;
     const usersRef = collection(db, "users");
     const userQuery = query(usersRef, where("email", "==", submission.email));
-    const userSnapshot = await getDocs(userQuery); // Uses wrapped getDocs
-    const batch = writeBatch(db); // Uses wrapped writeBatch
+    const userSnapshot = await getDocs(userQuery);
+    const batch = writeBatch(db);
     const newCoordinatorRef = doc(collection(db, "stateCoordinators"));
     batch.set(newCoordinatorRef, coordinatorData);
     const submissionRef = doc(db, "coordinatorSubmissions", submissionId);
@@ -833,15 +985,16 @@ export async function approveCoordinatorSubmission(submission, approverEmail) {
     if (!userSnapshot.empty) {
         const userDoc = userSnapshot.docs[0];
         batch.update(userDoc.ref, {
-            role: 'states_manager',
-            assignedState: submission.state
+            role: 'states_manager', // Consider standardizing role names (e.g., state_manager)
+            assignedState: submission.state // Use assignedState for consistency
         });
     }
-    await batch.commit(); // Triggers op count
+    await batch.commit();
 }
+
 export async function rejectCoordinatorSubmission(submissionId, rejectorEmail) {
     const submissionRef = doc(db, "coordinatorSubmissions", submissionId);
-    await updateDoc(submissionRef, { // Uses wrapped updateDoc
+    await updateDoc(submissionRef, {
         status: 'rejected',
         rejectedBy: rejectorEmail,
         rejectedAt: serverTimestamp()
@@ -849,163 +1002,180 @@ export async function rejectCoordinatorSubmission(submissionId, rejectorEmail) {
 }
 export async function submitFederalApplication(payload) {
     const submissionsRef = collection(db, 'federalCoordinatorSubmissions');
-    await addDoc(submissionsRef, { ...payload, status: 'pending', submittedAt: serverTimestamp() }); // Uses wrapped addDoc
+    await addDoc(submissionsRef, { ...payload, status: 'pending', submittedAt: serverTimestamp() });
 }
 export async function listPendingFederalSubmissions() {
     const q = query(collection(db, "federalCoordinatorSubmissions"), where("status", "==", "pending"));
-    const snapshot = await getDocs(q); // Uses wrapped getDocs
+    const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 export async function approveFederalSubmission(submission, approverEmail) {
-    const { id: submissionId, ...coordinatorData } = submission;
+    const { id: submissionId, status, submittedAt, ...coordinatorData } = submission; // Remove unused variables
     const usersRef = collection(db, "users");
     const userQuery = query(usersRef, where("email", "==", submission.email));
-    const userSnapshot = await getDocs(userQuery); // Uses wrapped getDocs
-    const batch = writeBatch(db); // Uses wrapped writeBatch
+    const userSnapshot = await getDocs(userQuery);
+    const batch = writeBatch(db);
     const newCoordinatorRef = doc(collection(db, "federalCoordinators"));
-    batch.set(newCoordinatorRef, coordinatorData);
+    batch.set(newCoordinatorRef, coordinatorData); // Save coordinator data
     const submissionRef = doc(db, "federalCoordinatorSubmissions", submissionId);
     batch.update(submissionRef, { status: 'approved', approvedBy: approverEmail, approvedAt: serverTimestamp() });
     if (!userSnapshot.empty) {
         const userDoc = userSnapshot.docs[0];
-        batch.update(userDoc.ref, { role: 'federal_manager' });
+        batch.update(userDoc.ref, { role: 'federal_manager' }); // Use consistent role name
     }
-    await batch.commit(); // Triggers op count
+    await batch.commit();
 }
+
 export async function rejectFederalSubmission(submissionId, rejectorEmail) {
     const submissionRef = doc(db, "federalCoordinatorSubmissions", submissionId);
-    await updateDoc(submissionRef, { status: 'rejected', rejectedBy: rejectorEmail, rejectedAt: serverTimestamp() }); // Uses wrapped updateDoc
+    await updateDoc(submissionRef, { status: 'rejected', rejectedBy: rejectorEmail, rejectedAt: serverTimestamp() });
 }
 export async function submitLocalityApplication(payload) {
     const submissionsRef = collection(db, 'localityCoordinatorSubmissions');
-    await addDoc(submissionsRef, { ...payload, status: 'pending', submittedAt: serverTimestamp() }); // Uses wrapped addDoc
+    await addDoc(submissionsRef, { ...payload, status: 'pending', submittedAt: serverTimestamp() });
 }
 export async function listPendingLocalitySubmissions() {
     const q = query(collection(db, "localityCoordinatorSubmissions"), where("status", "==", "pending"));
-    const snapshot = await getDocs(q); // Uses wrapped getDocs
+    const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 export async function approveLocalitySubmission(submission, approverEmail) {
-    const { id: submissionId, ...coordinatorData } = submission;
-    const batch = writeBatch(db); // Uses wrapped writeBatch
+    const { id: submissionId, status, submittedAt, ...coordinatorData } = submission; // Remove unused vars
+    const usersRef = collection(db, "users"); // Get users collection ref
+    const userQuery = query(usersRef, where("email", "==", submission.email)); // Query for user by email
+    const userSnapshot = await getDocs(userQuery); // Execute query
+
+    const batch = writeBatch(db);
     const newCoordinatorRef = doc(collection(db, "localityCoordinators"));
-    batch.set(newCoordinatorRef, coordinatorData);
+    batch.set(newCoordinatorRef, coordinatorData); // Save coordinator data
     const submissionRef = doc(db, "localityCoordinatorSubmissions", submissionId);
     batch.update(submissionRef, { status: 'approved', approvedBy: approverEmail, approvedAt: serverTimestamp() });
-    await batch.commit(); // Triggers op count
+
+    // Update user role and assigned localities if user exists
+    if (!userSnapshot.empty) {
+        const userDoc = userSnapshot.docs[0];
+        batch.update(userDoc.ref, {
+            role: 'locality_manager', // Use consistent role name
+            assignedState: submission.state, // Also store the state
+            assignedLocalities: [submission.locality] // Store locality in the array
+        });
+    }
+
+    await batch.commit();
 }
+
 export async function rejectLocalitySubmission(submissionId, rejectorEmail) {
     const submissionRef = doc(db, "localityCoordinatorSubmissions", submissionId);
-    await updateDoc(submissionRef, { status: 'rejected', rejectedBy: rejectorEmail, rejectedAt: serverTimestamp() }); // Uses wrapped updateDoc
+    await updateDoc(submissionRef, { status: 'rejected', rejectedBy: rejectorEmail, rejectedAt: serverTimestamp() });
 }
-export async function upsertCoordinator(payload) {
+export async function upsertCoordinator(payload) { // Generic coordinator - might deprecate
     if (payload.id) {
         const coordinatorRef = doc(db, "coordinators", payload.id);
-        await setDoc(coordinatorRef, payload, { merge: true }); // Uses wrapped setDoc
+        await setDoc(coordinatorRef, payload, { merge: true });
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
-        const newRef = await addDoc(collection(db, "coordinators"), dataToSave); // Uses wrapped addDoc
+        const newRef = await addDoc(collection(db, "coordinators"), dataToSave);
         return newRef.id;
     }
 }
-export async function listCoordinators() {
+export async function listCoordinators() { // Generic coordinator - might deprecate
     const q = query(collection(db, "coordinators"));
-    const snapshot = await getData(q); // Uses our wrapped getData
+    const snapshot = await getData(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
-export async function deleteCoordinator(coordinatorId) {
-    await deleteDoc(doc(db, "coordinators", coordinatorId)); // Uses wrapped deleteDoc
+export async function deleteCoordinator(coordinatorId) { // Generic coordinator - might deprecate
+    await deleteDoc(doc(db, "coordinators", coordinatorId));
     return true;
 }
 export async function upsertStateCoordinator(payload) {
     if (payload.id) {
         const coordinatorRef = doc(db, "stateCoordinators", payload.id);
-        await setDoc(coordinatorRef, payload, { merge: true }); // Uses wrapped setDoc
+        await setDoc(coordinatorRef, payload, { merge: true });
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
-        const newRef = await addDoc(collection(db, "stateCoordinators"), dataToSave); // Uses wrapped addDoc
+        const newRef = await addDoc(collection(db, "stateCoordinators"), dataToSave);
         return newRef.id;
     }
 }
 export async function listStateCoordinators() {
     const q = query(collection(db, "stateCoordinators"));
-    const snapshot = await getData(q); // Uses our wrapped getData
+    const snapshot = await getData(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 export async function deleteStateCoordinator(coordinatorId) {
-    await deleteDoc(doc(db, "stateCoordinators", coordinatorId)); // Uses wrapped deleteDoc
+    await deleteDoc(doc(db, "stateCoordinators", coordinatorId));
     return true;
 }
 export async function upsertFederalCoordinator(payload) {
     if (payload.id) {
         const coordinatorRef = doc(db, "federalCoordinators", payload.id);
-        await setDoc(coordinatorRef, payload, { merge: true }); // Uses wrapped setDoc
+        await setDoc(coordinatorRef, payload, { merge: true });
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
-        const newRef = await addDoc(collection(db, "federalCoordinators"), dataToSave); // Uses wrapped addDoc
+        const newRef = await addDoc(collection(db, "federalCoordinators"), dataToSave);
         return newRef.id;
     }
 }
 export async function listFederalCoordinators() {
     const q = query(collection(db, "federalCoordinators"));
-    const snapshot = await getData(q); // Uses our wrapped getData
+    const snapshot = await getData(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 export async function deleteFederalCoordinator(coordinatorId) {
-    await deleteDoc(doc(db, "federalCoordinators", coordinatorId)); // Uses wrapped deleteDoc
+    await deleteDoc(doc(db, "federalCoordinators", coordinatorId));
     return true;
 }
 export async function upsertLocalityCoordinator(payload) {
     if (payload.id) {
         const coordinatorRef = doc(db, "localityCoordinators", payload.id);
-        await setDoc(coordinatorRef, payload, { merge: true }); // Uses wrapped setDoc
+        await setDoc(coordinatorRef, payload, { merge: true });
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
-        const newRef = await addDoc(collection(db, "localityCoordinators"), dataToSave); // Uses wrapped addDoc
+        const newRef = await addDoc(collection(db, "localityCoordinators"), dataToSave);
         return newRef.id;
     }
 }
 export async function listLocalityCoordinators() {
     const q = query(collection(db, "localityCoordinators"));
-    const snapshot = await getData(q); // Uses our wrapped getData
+    const snapshot = await getData(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 export async function deleteLocalityCoordinator(coordinatorId) {
-    await deleteDoc(doc(db, "localityCoordinators", coordinatorId)); // Uses wrapped deleteDoc
+    await deleteDoc(doc(db, "localityCoordinators", coordinatorId));
     return true;
 }
 export async function upsertFunder(payload) {
     if (payload.id) {
         const funderRef = doc(db, "funders", payload.id);
-        await setDoc(funderRef, payload, { merge: true }); // Uses wrapped setDoc
+        await setDoc(funderRef, payload, { merge: true });
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
-        const newRef = await addDoc(collection(db, "funders"), dataToSave); // Uses wrapped addDoc
+        const newRef = await addDoc(collection(db, "funders"), dataToSave);
         return newRef.id;
     }
 }
 export async function listFunders() {
     const q = query(collection(db, "funders"));
-    const snapshot = await getData(q); // Uses our wrapped getData
+    const snapshot = await getData(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 export async function deleteFunder(funderId) {
-    await deleteDoc(doc(db, "funders", funderId)); // Uses wrapped deleteDoc
+    await deleteDoc(doc(db, "funders", funderId));
     return true;
 }
 export async function upsertCourse(payload) {
     if (payload.id) {
         const courseRef = doc(db, "courses", payload.id);
-        await setDoc(courseRef, payload, { merge: true }); // Uses wrapped setDoc
+        await setDoc(courseRef, payload, { merge: true });
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
-        const newCourseRef = await addDoc(collection(db, "courses"), dataToSave); // Uses wrapped addDoc
+        const newCourseRef = await addDoc(collection(db, "courses"), dataToSave);
         return newCourseRef.id;
     }
 }
@@ -1014,7 +1184,7 @@ export async function updateCourseSharingSettings(courseId, settings) {
         throw new Error("Course ID is required.");
     }
     const courseRef = doc(db, "courses", courseId);
-    await updateDoc(courseRef, { // Uses wrapped updateDoc
+    await updateDoc(courseRef, {
         isPublic: settings.isPublic,
         sharedWith: settings.sharedWith
     });
@@ -1024,17 +1194,22 @@ export async function updateCoursePublicStatus(courseId, isPublic) {
         throw new Error("Course ID is required.");
     }
     const courseRef = doc(db, "courses", courseId);
-    await updateDoc(courseRef, { // Uses wrapped updateDoc
+    await updateDoc(courseRef, {
         isPublic: isPublic
     });
 }
 export async function listCoursesByType(course_type, userStates) {
     try {
-        let q = query(collection(db, "courses"), where("course_type", "==", course_type));
+        let conditions = [where("course_type", "==", course_type)];
         if (userStates && userStates.length > 0) {
-            q = query(q, where("state", "in", userStates));
+            conditions.push(where("state", "in", userStates));
         }
-        const querySnapshot = await getData(q); // Uses our wrapped getData
+         // Add ordering for consistency, e.g., by start date descending
+         conditions.push(orderBy("start_date", "desc"));
+
+        let q = query(collection(db, "courses"), ...conditions);
+
+        const querySnapshot = await getData(q);
         const courses = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         return courses;
     } catch (error) {
@@ -1042,10 +1217,11 @@ export async function listCoursesByType(course_type, userStates) {
         throw error;
     }
 }
-export async function listAllCourses() { // Removed userStates parameter
+export async function listAllCourses() {
     try {
-        let q = collection(db, "courses");
-        const querySnapshot = await getData(q); // Uses our wrapped getData
+         // Add ordering for consistency
+        let q = query(collection(db, "courses"), orderBy("start_date", "desc"));
+        const querySnapshot = await getData(q);
         const courses = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         return courses;
     } catch (error) {
@@ -1054,28 +1230,33 @@ export async function listAllCourses() { // Removed userStates parameter
     }
 }
 export async function deleteCourse(courseId) {
-    const batch = writeBatch(db); // Uses wrapped writeBatch
+    const batch = writeBatch(db);
     batch.delete(doc(db, "courses", courseId));
     const participantsQuery = query(collection(db, "participants"), where("courseId", "==", courseId));
-    const participantsSnap = await getDocs(participantsQuery); // Uses wrapped getDocs
+    const participantsSnap = await getDocs(participantsQuery);
     participantsSnap.forEach(d => batch.delete(d.ref));
     const observationsQuery = query(collection(db, "observations"), where("courseId", "==", courseId));
-    const observationsSnap = await getDocs(observationsQuery); // Uses wrapped getDocs
+    const observationsSnap = await getDocs(observationsQuery);
     observationsSnap.forEach(d => batch.delete(d.ref));
     const casesQuery = query(collection(db, "cases"), where("courseId", "==", courseId));
-    const casesSnap = await getDocs(casesQuery); // Uses wrapped getDocs
+    const casesSnap = await getDocs(casesQuery);
     casesSnap.forEach(d => batch.delete(d.ref));
-    await batch.commit(); // Triggers op count
+    // Also delete final report if exists
+    const finalReportQuery = query(collection(db, "finalReports"), where("courseId", "==", courseId));
+    const finalReportSnap = await getDocs(finalReportQuery);
+    finalReportSnap.forEach(d => batch.delete(d.ref));
+
+    await batch.commit();
     return true;
 }
 export async function upsertParticipant(payload) {
     if (payload.id) {
         const participantRef = doc(db, "participants", payload.id);
-        await setDoc(participantRef, payload, { merge: true }); // Uses wrapped setDoc
+        await setDoc(participantRef, payload, { merge: true });
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
-        const newParticipantRef = await addDoc(collection(db, "participants"), dataToSave); // Uses wrapped addDoc
+        const newParticipantRef = await addDoc(collection(db, "participants"), dataToSave);
         return newParticipantRef.id;
     }
 }
@@ -1084,13 +1265,13 @@ export async function updateParticipantSharingSettings(participantId, settings) 
         throw new Error("Participant ID is required.");
     }
     const participantRef = doc(db, "participants", participantId);
-    await updateDoc(participantRef, { // Uses wrapped updateDoc
+    await updateDoc(participantRef, {
         isPublic: settings.isPublic,
         sharedWith: settings.sharedWith
     });
 }
 export async function importParticipants(participants) {
-    const batch = writeBatch(db); // Uses wrapped writeBatch
+    const batch = writeBatch(db);
     participants.forEach(participant => {
         if (participant.id) {
             const participantRef = doc(db, "participants", participant.id);
@@ -1100,13 +1281,13 @@ export async function importParticipants(participants) {
             batch.set(participantRef, participant);
         }
     });
-    await batch.commit(); // Triggers op count
+    await batch.commit();
     return true;
 }
 export async function listParticipants(courseId, lastVisible = null, source = 'default') {
     if (!courseId) return { participants: [], lastVisible: null };
 
-    const PAGE_SIZE = 25;
+    const PAGE_SIZE = 50; // Increased page size slightly
 
     let q = query(
         collection(db, "participants"),
@@ -1119,17 +1300,17 @@ export async function listParticipants(courseId, lastVisible = null, source = 'd
         q = query(q, startAfter(lastVisible));
     }
 
-    const documentSnapshots = await getDocs(q, { source }); // Uses wrapped getDocs
+    const documentSnapshots = await getDocs(q, { source });
 
     const participants = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     const newLastVisible = documentSnapshots.docs[documentSnapshots.docs.length - 1];
 
     return { participants, lastVisible: newLastVisible };
 }
-export async function listAllParticipants() { // No userStates needed
+export async function listAllParticipants() {
     try {
         const q = collection(db, "participants");
-        const querySnapshot = await getData(q); // Uses our wrapped getData
+        const querySnapshot = await getData(q);
         const participants = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         return participants;
     } catch (error) {
@@ -1138,24 +1319,29 @@ export async function listAllParticipants() { // No userStates needed
     }
 }
 export async function deleteParticipant(participantId) {
-    const batch = writeBatch(db); // Uses wrapped writeBatch
+    const batch = writeBatch(db);
     batch.delete(doc(db, "participants", participantId));
     const oq = query(collection(db, "observations"), where("participant_id", "==", participantId));
-    const oSnap = await getDocs(oq); // Uses wrapped getDocs
+    const oSnap = await getDocs(oq);
     oSnap.forEach(d => batch.delete(d.ref));
     const cq = query(collection(db, "cases"), where("participant_id", "==", participantId));
-    const cSnap = await getDocs(cq); // Uses wrapped getDocs
+    const cSnap = await getDocs(cq);
     cSnap.forEach(d => batch.delete(d.ref));
-    await batch.commit(); // Triggers op count
+    await batch.commit();
     return true;
 }
 export async function saveParticipantAndSubmitFacilityUpdate(participantData, facilityUpdateData) {
-    const participantId = await upsertParticipant(participantData); // Uses wrapped upsert
+    const participantId = await upsertParticipant(participantData);
     if (facilityUpdateData) {
-        await submitFacilityDataForApproval(facilityUpdateData); // Uses wrapped submit
+        // Assume submitterIdentifier is needed, get from auth or pass as arg
+        const auth = getAuth();
+        const user = auth.currentUser;
+        const submitter = user ? (user.displayName || user.email) : 'Participant Form';
+        await submitFacilityDataForApproval(facilityUpdateData, submitter);
     }
     return participantId;
 }
+
 export async function bulkMigrateFromMappings(mappings, options = { dryRun: false }) {
     if (!mappings || mappings.length === 0) {
         return { message: "No mappings provided." };
@@ -1169,6 +1355,10 @@ export async function bulkMigrateFromMappings(mappings, options = { dryRun: fals
         errorDetails: [],
         previewPayloads: []
     };
+    const auth = getAuth(); // Get auth instance
+    const currentUser = auth.currentUser; // Get current user
+    const submitterIdentifier = currentUser ? (currentUser.displayName || currentUser.email) : 'Bulk Migration'; // Set submitter
+
 
     for (const mapping of mappings) {
         try {
@@ -1189,25 +1379,25 @@ export async function bulkMigrateFromMappings(mappings, options = { dryRun: fals
             }
 
             // --- Live Run Logic ---
-            const batch = writeBatch(db); // Uses wrapped writeBatch
-
-            const participantRef = doc(db, "participants", participantId);
-            batch.update(participantRef, {
-                state: targetState,
-                locality: targetLocality,
-                center_name: targetFacilityName
-            });
-
-            const participant = await getParticipantById(participantId); // Uses wrapped get
+            // Fetch necessary data first (using wrapped functions)
+            const participant = await getParticipantById(participantId);
             if (!participant) throw new Error(`Participant with ID ${participantId} not found during live run.`);
 
             const [facility, course] = await Promise.all([
-                getHealthFacilityById(targetFacilityId), // Uses wrapped get
-                getCourseById(participant.courseId) // Uses wrapped get
+                getHealthFacilityById(targetFacilityId),
+                getCourseById(participant.courseId)
             ]);
             if (!facility) throw new Error(`Target facility with ID ${targetFacilityId} not found.`);
             if (!course) throw new Error(`Course for participant ${participantId} not found.`);
 
+            // Prepare participant update
+            const participantUpdate = {
+                state: targetState,
+                locality: targetLocality,
+                center_name: targetFacilityName
+            };
+
+            // Prepare facility update payload
             const participantAsStaff = {
                 name: participant.name,
                 job_title: participant.job_title,
@@ -1215,7 +1405,20 @@ export async function bulkMigrateFromMappings(mappings, options = { dryRun: fals
                 training_date: course.start_date || '',
                 phone: participant.phone || ''
             };
-            const existingStaff = facility.imnci_staff ? JSON.parse(JSON.stringify(facility.imnci_staff)) : [];
+            // Deep copy to avoid modifying cache, handle stringified JSON
+             let existingStaff = [];
+             if (facility.imnci_staff) {
+                 try {
+                     existingStaff = typeof facility.imnci_staff === 'string'
+                         ? JSON.parse(facility.imnci_staff)
+                         : JSON.parse(JSON.stringify(facility.imnci_staff));
+                     if (!Array.isArray(existingStaff)) existingStaff = []; // Fallback if parse result isn't array
+                 } catch (e) {
+                     console.error("Error parsing existing staff, starting fresh:", e);
+                     existingStaff = [];
+                 }
+             }
+
             const staffIndex = existingStaff.findIndex(s => s.name === participant.name || (s.phone && participant.phone && s.phone === participant.phone));
 
             if (staffIndex !== -1) {
@@ -1223,33 +1426,32 @@ export async function bulkMigrateFromMappings(mappings, options = { dryRun: fals
             } else {
                 existingStaff.push(participantAsStaff);
             }
+             const numTrained = existingStaff.filter(s => s.is_trained === 'Yes').length;
 
             const facilityUpdatePayload = {
-                ...facility,
+                ...facility, // Start with existing facility data
+                id: targetFacilityId, // Ensure ID is included
                 imnci_staff: existingStaff,
                 "وجود_العلاج_المتكامل_لامراض_الطفولة": 'Yes',
                 "وجود_كتيب_لوحات": 'Yes',
                 "وجود_سجل_علاج_متكامل": 'Yes',
-                "date_of_visit": new Date().toISOString().split('T')[0],
+                "date_of_visit": new Date().toISOString().split('T')[0], // Use today's date for snapshot
                 "updated_by": `Migrated from Participant ${participantId}`,
-                'growth_monitoring_service_exists': participant.has_growth_monitoring ? 'Yes' : 'No',
-                nutrition_center_exists: participant.has_nutrition_service ? 'Yes' : 'No',
+                'growth_monitoring_service_exists': participant.has_growth_monitoring ? 'Yes' : (facility.growth_monitoring_service_exists || 'No'),
+                nutrition_center_exists: participant.has_nutrition_service ? 'Yes' : (facility.nutrition_center_exists || 'No'),
                 nearest_nutrition_center: participant.nearest_nutrition_center || facility.nearest_nutrition_center || '',
-                immunization_office_exists: participant.has_immunization_service ? 'Yes' : 'No',
+                immunization_office_exists: participant.has_immunization_service ? 'Yes' : (facility.immunization_office_exists || 'No'),
                 nearest_immunization_center: participant.nearest_immunization_center || facility.nearest_immunization_center || '',
-                'غرفة_إرواء': participant.has_ors_room ? 'Yes' : 'No',
-                'العدد_الكلي_للكوادر_طبية_العاملة_أطباء_ومساعدين': participant.num_other_providers ?? existingStaff.length,
-                'العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل': participant.num_other_providers_imci ?? existingStaff.filter(s => s.is_trained === 'Yes').length,
+                'غرفة_إرواء': participant.has_ors_room ? 'Yes' : (facility['غرفة_إرواء'] || 'No'),
+                'العدد_الكلي_للكوادر_طبية_العاملة_أطباء_ومساعدين': participant.num_other_providers ?? (facility['العدد_الكلي_للكوادر_طبية_العاملة_أطباء_ومساعدين'] ?? existingStaff.length),
+                 // Update trained count based on actual staff list
+                'العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل': participant.num_other_providers_imci ?? (facility['العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل'] ?? numTrained),
             };
 
-            const submissionRef = doc(collection(db, "facilitySubmissions"));
-            batch.set(submissionRef, {
-                ...facilityUpdatePayload,
-                submittedAt: serverTimestamp(),
-                status: 'pending'
-            });
+            // Use separate operations instead of batch to avoid complexity with potential partial failures
+            await upsertParticipant({ id: participantId, ...participantUpdate }); // Update participant
+            await submitFacilityDataForApproval(facilityUpdatePayload, submitterIdentifier); // Submit facility update
 
-            await batch.commit(); // Triggers op count
             summary.submitted++;
 
         } catch (error) {
@@ -1261,84 +1463,91 @@ export async function bulkMigrateFromMappings(mappings, options = { dryRun: fals
 
     return summary;
 }
+
 export async function listObservationsForParticipant(courseId, participantId, source = 'default') {
     const q = query(collection(db, "observations"), where("courseId", "==", courseId), where("participant_id", "==", participantId));
-    const snapshot = await getDocs(q, { source }); // Uses wrapped getDocs
+    const snapshot = await getDocs(q, { source });
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 export async function listCasesForParticipant(courseId, participantId, source = 'default') {
     const q = query(collection(db, "cases"), where("courseId", "==", courseId), where("participant_id", "==", participantId));
-    const snapshot = await getDocs(q, { source }); // Uses wrapped getDocs
+    const snapshot = await getDocs(q, { source });
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 export async function upsertCaseAndObservations(caseData, observations, editingCaseId = null) {
-    const batch = writeBatch(db); // Uses wrapped writeBatch
-    const caseId = editingCaseId || doc(collection(db, 'temp')).id;
+    const batch = writeBatch(db);
+    const caseId = editingCaseId || doc(collection(db, 'temp')).id; // Generate ID locally
     const caseRef = doc(db, "cases", caseId);
 
+    // If editing, delete old observations first
     if (editingCaseId) {
         const oldObsQuery = query(collection(db, "observations"), where("caseId", "==", editingCaseId));
-        const oldObsSnapshot = await getDocs(oldObsQuery); // Uses wrapped getDocs
+        const oldObsSnapshot = await getDocs(oldObsQuery); // Use wrapped getDocs
         oldObsSnapshot.forEach(doc => batch.delete(doc.ref));
     }
 
-    batch.set(caseRef, { ...caseData, id: caseId });
+    // Set/overwrite the case data
+    batch.set(caseRef, { ...caseData, id: caseId }); // Ensure ID is part of the data
 
+    // Add new observations
     observations.forEach(obs => {
-        const obsRef = doc(collection(db, "observations"));
-        batch.set(obsRef, { ...obs, id: obsRef.id, caseId: caseId });
+        const obsRef = doc(collection(db, "observations")); // Generate new ID for each observation
+        batch.set(obsRef, { ...obs, id: obsRef.id, caseId: caseId }); // Ensure obs ID and caseId link are set
     });
 
-    await batch.commit(); // Triggers op count
+    await batch.commit(); // Commit the batch
 }
 export async function deleteCaseAndObservations(caseId) {
-    const batch = writeBatch(db); // Uses wrapped writeBatch
+    const batch = writeBatch(db);
     batch.delete(doc(db, "cases", caseId));
 
     const q = query(collection(db, "observations"), where("caseId", "==", caseId));
-    const snapshot = await getDocs(q); // Uses wrapped getDocs
+    const snapshot = await getDocs(q); // Use wrapped getDocs
     snapshot.forEach(d => batch.delete(d.ref));
 
-    await batch.commit(); // Triggers op count
+    await batch.commit(); // Commit the batch
 }
 export async function listAllDataForCourse(courseId, source = 'default') {
     const obsQuery = query(collection(db, "observations"), where("courseId", "==", courseId));
     const casesQuery = query(collection(db, "cases"), where("courseId", "==", courseId));
 
     const [obsSnap, casesSnap] = await Promise.all([
-        getDocs(obsQuery, { source }), // Uses wrapped getDocs
-        getDocs(casesQuery, { source }) // Uses wrapped getDocs
+        getDocs(obsQuery, { source }), // Use wrapped getDocs
+        getDocs(casesQuery, { source })  // Use wrapped getDocs
     ]);
 
     const allObs = obsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     const allCases = casesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
+    // Calculate correctness within this function
     const allCasesWithCorrectness = allCases.map(caseItem => {
         const caseObservations = allObs.filter(obs => obs.caseId === caseItem.id);
-        const is_correct = caseObservations.length > 0 && caseObservations.every(obs => obs.item_correct > 0);
+        // Ensure item_correct is treated as a number for comparison
+        const is_correct = caseObservations.length > 0 && caseObservations.every(obs => Number(obs.item_correct) > 0);
         return {
             ...caseItem,
             is_correct
         };
     });
 
+
     return { allObs, allCases: allCasesWithCorrectness };
 }
 export async function upsertFinalReport(payload) {
     if (payload.id) {
         const finalReportRef = doc(db, "finalReports", payload.id);
-        await setDoc(finalReportRef, payload, { merge: true }); // Uses wrapped setDoc
+        await setDoc(finalReportRef, payload, { merge: true });
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
-        const newRef = await addDoc(collection(db, "finalReports"), dataToSave); // Uses wrapped addDoc
+        const newRef = await addDoc(collection(db, "finalReports"), dataToSave);
         return newRef.id;
     }
 }
 export async function getFinalReportByCourseId(courseId, source = 'default') {
     if (!courseId) return null;
     const q = query(collection(db, "finalReports"), where("courseId", "==", courseId));
-    const snapshot = await getDocs(q, { source }); // Uses wrapped getDocs
+    const snapshot = await getDocs(q, { source });
     if (!snapshot.empty) {
         const doc = snapshot.docs[0];
         return { id: doc.id, ...doc.data() };
@@ -1347,7 +1556,7 @@ export async function getFinalReportByCourseId(courseId, source = 'default') {
 }
 export async function listFinalReport(source = 'default') {
     try {
-        const querySnapshot = await getDocs(collection(db, "finalReports"), { source }); // Uses wrapped getDocs
+        const querySnapshot = await getDocs(collection(db, "finalReports"), { source });
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
         console.error("Error fetching final reports:", error);
@@ -1359,10 +1568,147 @@ export async function deleteFinalReport(reportId) {
         if (!reportId) {
             throw new Error("Report ID is required to delete a final report.");
         }
-        await deleteDoc(doc(db, "finalReports", reportId)); // Uses wrapped deleteDoc
+        await deleteDoc(doc(db, "finalReports", reportId));
         return true;
     } catch (error) {
         console.error("Error deleting final report:", error);
         throw error;
     }
 }
+
+// --- NEW MENTORSHIP FUNCTIONS ---
+
+/**
+ * Saves a new skill mentorship session or updates an existing one (if sessionId is provided).
+ * Can be used with a batch or as a standalone operation.
+ * @param {object} payload - The mentorship session data.
+ * @param {string|null} sessionId - The ID of the session to update, or null to create new.
+ * @param {object|null} externalBatch - An optional Firestore write batch.
+ * @returns {string} The ID of the created or updated document.
+ */
+export async function saveMentorshipSession(payload, sessionId = null, externalBatch = null) {
+    try {
+        const sessionData = {
+            ...payload,
+            // Add createdAt only if it's a new document
+            ...( !sessionId ? { createdAt: serverTimestamp() } : { lastUpdatedAt: serverTimestamp() } ),
+        };
+
+        const docRef = sessionId 
+            ? doc(db, "skillMentorship", sessionId) // Get ref to existing doc
+            : doc(collection(db, "skillMentorship")); // Create ref for new doc
+
+        if (externalBatch) {
+            // Use set with merge:true for updates, or set for new
+            externalBatch.set(docRef, sessionData, { merge: !!sessionId }); 
+            return docRef.id; 
+        } else {
+            // Use the wrapped setDoc for standalone operations
+            await setDoc(docRef, sessionData, { merge: !!sessionId });
+            return docRef.id;
+        }
+    } catch (error) {
+        console.error("Error saving mentorship session:", error);
+        throw error;
+    }
+}
+
+
+/**
+ * Lists all skill mentorship sessions from Firestore.
+ * @returns {Array<object>} A list of mentorship session documents.
+ */
+export async function listMentorshipSessions() {
+    try {
+        const q = query(collection(db, "skillMentorship"), orderBy("effectiveDate", "desc"));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error fetching mentorship sessions:", error);
+        throw error;
+    }
+}
+
+// --- NEW MENTORSHIP IMPORT FUNCTION ---
+/**
+ * Imports a batch of mentorship sessions from processed Excel data.
+ * @param {Array<object>} sessions - Array of session payloads to import.
+ * @param {Array<Array<any>>} originalRows - The original raw Excel rows for error reporting.
+ * @param {function} onProgress - Callback function for progress updates. ({ processed: number, total: number })
+ * @returns {object} An object containing successes, errors, and failedRowsData.
+ */
+export async function importMentorshipSessions(sessions, originalRows, onProgress) {
+    const errors = [];
+    const successes = [];
+    const failedRowsData = [];
+    const BATCH_SIZE = 490; // Firestore batch limit is 500
+
+    for (let i = 0; i < sessions.length; i += BATCH_SIZE) {
+        const batch = writeBatch(db); // Use wrapped batch
+        const chunk = sessions.slice(i, i + BATCH_SIZE);
+        const chunkOriginalRows = originalRows ? originalRows.slice(i, i + BATCH_SIZE) : null;
+
+
+        for (let j = 0; j < chunk.length; j++) {
+            const sessionData = chunk[j];
+            const progressIndex = i + j;
+            try {
+                // Basic validation before adding to batch
+                if (!sessionData.effectiveDate || !(sessionData.effectiveDate instanceof Timestamp)) {
+                    throw new Error("Invalid or missing 'session_date'. Expected YYYY-MM-DD.");
+                }
+                 if (!sessionData.facilityId) {
+                     // Attempted lookup failed in the modal, flag as error here.
+                     throw new Error(`Facility '${sessionData.facilityName}' in ${sessionData.locality}, ${sessionData.state} not found.`);
+                }
+                 if (!sessionData.state || !sessionData.locality) {
+                     throw new Error("Missing State or Locality Key.");
+                 }
+                 if (!sessionData.healthWorkerName) {
+                    throw new Error("Missing Health Worker Name.");
+                 }
+
+                // Call saveMentorshipSession with the batch (passing null for sessionId)
+                await saveMentorshipSession(sessionData, null, batch);
+                successes.push({ rowIndex: progressIndex }); // Record success by index
+
+            } catch (e) {
+                const originalRowForError = chunkOriginalRows ? chunkOriginalRows[j] : null;
+                const errorPayload = { message: e.message || 'Unknown import error.', rowIndex: progressIndex, rowData: originalRowForError };
+                errors.push(errorPayload);
+                if (originalRowForError) {
+                    failedRowsData.push(errorPayload);
+                }
+                 // Continue to next item in chunk even if one fails
+            }
+
+            // Report progress after attempting each row
+            if (onProgress) {
+                onProgress({ processed: progressIndex + 1, total: sessions.length });
+            }
+        }
+
+        try {
+            await batch.commit(); // Commit the processed chunk
+        } catch (commitError) {
+             console.error(`Batch commit failed starting at index ${i}:`, commitError);
+             // Mark all rows in this chunk *that haven't already failed* as failed due to commit error
+             for (let k = 0; k < chunk.length; k++) {
+                 const progressIndex = i + k;
+                 // Check if this row index already has an error recorded
+                 if (!errors.some(err => err.rowIndex === progressIndex)) {
+                     const originalRowForError = chunkOriginalRows ? chunkOriginalRows[k] : null;
+                     const errorPayload = { message: `Batch commit failed: ${commitError.message}`, rowIndex: progressIndex, rowData: originalRowForError };
+                     errors.push(errorPayload);
+                      if (originalRowForError && !failedRowsData.some(fr => fr.rowIndex === progressIndex)) {
+                         failedRowsData.push(errorPayload);
+                      }
+                 }
+             }
+        }
+    }
+
+    return { successes, errors, failedRowsData };
+}
+// --- END NEW MENTORSHIP IMPORT FUNCTION ---
+// --- END NEW MENTORSHIP FUNCTIONS ---

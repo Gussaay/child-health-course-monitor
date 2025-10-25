@@ -6,9 +6,9 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
-  fetchSignInMethodsForEmail, // Import this
-  linkWithCredential,         // Import this
-  EmailAuthProvider           // Import this
+  fetchSignInMethodsForEmail,
+  linkWithCredential,
+  EmailAuthProvider
 } from 'firebase/auth';
 
 import { auth } from './firebase.js';
@@ -46,34 +46,45 @@ export function SignInBox() {
     }
 
     try {
-      // 1. Check what sign-in methods exist for this email
+      // 1. **FIRST ATTEMPT TO SIGN IN**
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        // If successful, the user is signed in.
+        return; 
+      } catch (signInError) {
+        // Sign-in failed. Proceed to check methods to provide a clear error/action.
+        // The specific error (e.g., 'wrong-password') will be handled below if the method is 'password'.
+        console.error("Initial Sign-in Attempt Failed:", signInError);
+      }
+      
+      // 2. Check what sign-in methods exist for this email after sign-in failed
       const methods = await fetchSignInMethodsForEmail(auth, email);
 
       if (methods.length === 0) {
-        // 2. Case 1: Brand new user. Create account.
+        // 3. Case 1: Brand new user. Show message to sign up.
+        setError("Account not found. Click 'Sign In / Sign Up' again to create a new account.");
+        // --- OPTIONAL: To automatically create the account, uncomment the block below:
+        /*
         try {
           await createUserWithEmailAndPassword(auth, email, password);
         } catch (signUpError) {
           setError(signUpError.message);
           console.error("Sign-up Error:", signUpError);
         }
+        */
       } else if (methods.includes('password')) {
-        // 3. Case 2: Existing email/password user. Sign them in.
-        try {
-          await signInWithEmailAndPassword(auth, email, password);
-        } catch (signInError) {
-          // Handle wrong password, etc.
-          setError(signInError.message);
-          console.error("Sign-in Error:", signInError);
-        }
+        // 4. Case 2: Email/Password account exists, but the sign-in failed (wrong password/user-not-found, etc.)
+        // Since we already attempted sign-in, this indicates a wrong credential.
+        setError("Invalid credentials. Please try again or use 'Forgot Password?'.");
+
       } else if (methods.includes('google.com')) {
-        // 4. Case 3: This is the Google user. Start the linking flow.
+        // 5. Case 3: This is a Google user. Start the linking flow.
         setError("This email is registered with Google. Please sign in with Google to link this password to your account.");
         // Save the password and set the flag
         setPasswordToLink(password);
         setIsLinkingPassword(true);
       } else {
-        // 5. Case 4: Other provider (e.g., Facebook, etc.)
+        // 6. Case 4: Other provider (e.g., Facebook, etc.)
         setError(`This email is registered with ${methods.join(', ')}. Please use that method to sign in.`);
       }
 
