@@ -193,7 +193,7 @@ const BottomNav = React.memo(function BottomNav({ navItems, navigate }) {
 function SplashScreen() {
     return (
         <div className="fixed inset-0 bg-sky-50 flex flex-col items-center justify-center gap-6 text-center p-4">
-            <div className="h-24 w-24 bg-white rounded-full flex items-center justify-center p-1 shadow-xl animate-pulse"><img src="./child.png" alt="NCHP Logo" className="h-20 w-20 object-contain" /></div>
+            <div className="h-24 w-24 bg-white rounded-full flex items-center justify-center p-1 shadow-xl animate-pulse"><img src="/child.png" alt="NCHP Logo" className="h-20 w-20 object-contain" /></div>
             <div><h1 className="text-3xl font-bold text-slate-800">National Child Health Program</h1><p className="text-lg text-slate-500 mt-1">Program & Course Monitoring System</p></div>
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600 mt-4"></div>
             <p className="text-slate-600 mt-4">Loading application, please wait...</p>
@@ -296,6 +296,7 @@ export default function App() {
             setIsNewFacilityView(false);
             setIsPublicFacilityUpdateView(false);
             setPublicMentorshipProps(null);
+            setSubmissionType(null);
             setSharedViewError(null);
 
             const facilityUpdateMatch = path.match(/^\/facilities\/data-entry\/([a-zA-Z0-9]+)\/?$/);
@@ -308,7 +309,7 @@ export default function App() {
                 return;
             }
 
-            // Public Mentorship Link
+            // Public Mentorship Link - path still checked, authentication check moved to render logic
             const publicMentorshipMatch = path.match(/^\/mentorship\/submit\/([a-zA-Z0-9_]+)\/?$/);
             if (publicMentorshipMatch && publicMentorshipMatch[1]) {
                 setPublicMentorshipProps({ serviceType: publicMentorshipMatch[1] });
@@ -963,10 +964,17 @@ export default function App() {
 
     const visibleNavItems = useMemo(() => navItems.filter(item => !item.disabled), [navItems]);
 
-    const isPublicView = isPublicSubmissionView || isNewFacilityView || isPublicFacilityUpdateView || !!publicMentorshipProps || isSharedView; // Group all public views
+    // isApplicationPublicView includes forms that ARE public (like application forms, facility updates, and shared reports)
+    const isApplicationPublicView = isPublicSubmissionView || isNewFacilityView || isPublicFacilityUpdateView || isSharedView;
+    // isMentorshipPublicView is a specific path, but access is now restricted to logged-in users.
+    const isMentorshipPublicView = !!publicMentorshipProps; 
+
+    // This checks if the user is on *any* minimal UI path (whether authenticated or not)
+    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView;
+
     let mainContent;
 
-    if ((authLoading || permissionsLoading) && !isPublicView) {
+    if ((authLoading || permissionsLoading) && !isMinimalUILayout) {
         mainContent = <SplashScreen />;
     }
     else if (isPublicFacilityUpdateView) {
@@ -974,20 +982,6 @@ export default function App() {
     }
     else if (isNewFacilityView) {
         mainContent = <NewFacilityEntryForm setToast={setToast} />;
-    }
-    // Public Mentorship View
-    else if (publicMentorshipProps) {
-        mainContent = (
-            <SkillsMentorshipView
-                setToast={setToast}
-                permissions={{}}
-                userStates={[]}
-                userLocalities={[]}
-                publicSubmissionMode={true}
-                publicServiceType={publicMentorshipProps.serviceType}
-                canBulkUploadMentorships={false}
-            />
-        );
     }
     else if (isPublicSubmissionView) {
         if (submissionType === 'facilitator-application') mainContent = <FacilitatorApplicationForm />;
@@ -1014,6 +1008,26 @@ export default function App() {
             );
         }
     }
+    // MODIFICATION: Mentorship Public View now requires 'user'
+    else if (isMentorshipPublicView) {
+        if (!user) { // CRITICAL CHECK: If user is NOT authenticated, show sign-in
+            mainContent = <SignInBox message="You must sign in to use the mentorship submission link." />;
+        } else {
+            // User IS authenticated, proceed to render the Mentorship View with minimal UI
+            mainContent = (
+                <SkillsMentorshipView
+                    setToast={setToast}
+                    permissions={permissions} // Pass actual permissions
+                    userStates={userStates} // Pass actual states
+                    userLocalities={userLocalities} // Pass actual localities
+                    publicSubmissionMode={true} // Keep publicSubmissionMode to enable setup mode
+                    publicServiceType={publicMentorshipProps.serviceType}
+                    canBulkUploadMentorships={permissions.canUseSuperUserAdvancedFeatures}
+                />
+            );
+        }
+    }
+    // Standard authenticated view
     else if (!user && !authLoading) {
         mainContent = <SignInBox />;
     }
@@ -1024,24 +1038,36 @@ export default function App() {
 
     return (
         <div className="min-h-screen bg-sky-50 flex flex-col">
-            {/* --- MODIFIED HEADER: Always show logo, hide nav bar if public view --- */}
+            {/* --- MODIFIED HEADER: Always show logo, hide nav bar if minimal layout --- */}
             <header className="bg-slate-800 shadow-lg sticky top-0 z-10">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
                     <div className="flex items-center justify-between">
                         {/* Always show the logo/title block */}
                         <div className="flex items-center gap-4 cursor-pointer" onClick={() => !isSharedView && navigate('landing')}>
-                            <div className="h-14 w-14 bg-white rounded-full flex items-center justify-center p-1 shadow-md"><img src="./child.png" alt="NCHP Logo" className="h-12 w-12 object-contain" /></div>
+                            <div className="h-14 w-14 bg-white rounded-full flex items-center justify-center p-1 shadow-md">
+                                {/* --- MODIFICATION: Changed to absolute path --- */}
+                                <img src="/child.png" alt="NCHP Logo" className="h-12 w-12 object-contain" />
+                                {/* --- END MODIFICATION --- */}
+                            </div>
                             <div><h1 className="text-xl sm:text-2xl font-bold text-white">National Child Health Program</h1><p className="text-sm text-slate-300 hidden sm:block">Program & Course Monitoring System</p></div>
                         </div>
-                        {/* Only show the full navigation for authenticated, non-public users */}
-                        {!isPublicView && user && (<nav className="hidden md:flex items-center gap-1">{visibleNavItems.map(item => (<button key={item.label} onClick={() => navigate(item.view)} className={`px-3 py-2 text-sm font-semibold rounded-md transition-colors ${item.active ? 'bg-sky-600 text-white' : 'text-slate-200 hover:bg-slate-700'}`}>{item.label}</button>))} </nav>)}
+                        {/* Only show the full navigation for authenticated users NOT on a minimal UI path */}
+                        {!isMinimalUILayout && user && (
+                            <nav className="hidden md:flex items-center gap-1">
+                                {visibleNavItems.map(item => (
+                                    <button key={item.label} onClick={() => navigate(item.view)} className={`px-3 py-2 text-sm font-semibold rounded-md transition-colors ${item.active ? 'bg-sky-600 text-white' : 'text-slate-200 hover:bg-slate-700'}`}>
+                                        {item.label}
+                                    </button>
+                                ))} 
+                            </nav>
+                        )}
                     </div>
                 </div>
             </header>
             {/* --- END MODIFIED HEADER --- */}
 
-            {/* --- User/Admin Info Bar: Hidden in public view --- */}
-            {user && !isPublicView && (
+            {/* --- User/Admin Info Bar: Hidden if minimal layout OR not logged in --- */}
+            {user && !isMinimalUILayout && (
                 <div className="bg-slate-700 text-slate-200 p-2 md:p-3 text-center flex items-center justify-center gap-4">
                     <div className="flex items-center gap-2"><span>Welcome, {user.email}</span>{userRole && <span className="bg-sky-600 text-xs px-2 py-1 rounded">{userRole}</span>}</div>
                     {permissions.canViewAdmin && (<Button onClick={() => navigate('admin')} variant="primary">Admin Dashboard</Button>)}
@@ -1057,8 +1083,8 @@ export default function App() {
             </main>
 
             <Footer />
-            {/* --- Mobile Nav: Hidden in public view --- */}
-            { user && !isPublicView && <BottomNav navItems={visibleNavItems} navigate={navigate} /> }
+            {/* --- Mobile Nav: Hidden if minimal layout OR not logged in --- */}
+            { user && !isMinimalUILayout && <BottomNav navItems={visibleNavItems} navigate={navigate} /> }
 
             <Suspense fallback={null}>
                 {isShareModalOpen && user && (

@@ -35,15 +35,15 @@ const evaluateRelevance = (relevanceString, formData) => {
     const match = relevanceString.match(logicRegex);
     if (!match) {
         console.warn("Could not parse relevance string:", relevanceString);
-        return true; 
+        return true;
     }
     const [, varName, expectedValue] = match;
-    let actualValue = formData[varName]; 
+    let actualValue = formData[varName];
     if (actualValue === undefined && formData.assessment_skills) {
-        actualValue = formData.assessment_skills[varName]; 
+        actualValue = formData.assessment_skills[varName];
     }
      if (actualValue === undefined && formData.treatment_skills) {
-        actualValue = formData.treatment_skills[varName]; 
+        actualValue = formData.treatment_skills[varName];
     }
      if (actualValue === undefined && varName === 'decisionMatches') {
          actualValue = formData.decisionMatches;
@@ -57,8 +57,9 @@ const evaluateRelevance = (relevanceString, formData) => {
 
 // --- Function to calculate scores (Copied & adapted from SkillsAssessmentForm) ---
 const calculateScores = (formData) => {
-    // ... (Implementation largely unchanged, kept for completeness) ...
-     const IMNCI_FORM_STRUCTURE = [
+    // This is the implementation of calculateScores from the previous context,
+    // kept inline for bulk upload functionality, ensuring consistency.
+    const IMNCI_FORM_STRUCTURE = [
         {
             group: 'تقييم مهارات التقييم والتصنيف',
             sectionKey: 'assessment_skills',
@@ -79,18 +80,18 @@ const calculateScores = (formData) => {
         },
         { group: 'القرار النهائي', step: 8, scoreKey: 'finalDecision', maxScore: 1, isDecisionSection: true, sectionKey: null, subgroups: [] },
         {
-            group: 'تقييم مهارات العلاج والنصح', step: 9, scoreKey: 'treatment', maxScore: null, 
+            group: 'تقييم مهارات العلاج والنصح', step: 9, scoreKey: 'treatment', maxScore: null,
             sectionKey: 'treatment_skills',
             subgroups: [
                  {
                     subgroupTitle: 'الحالات التي تحتاج لتحويل ، تم تحويلها',
                     scoreKey: 'ref_treatment',
-                    maxScore: 2, 
+                    maxScore: 2,
                     skills: [
                         { key: 'skill_ref_abx', label: 'في حالة التحويل : هل أعطى الجرعة الاولى من المضاد الحيوي المناسب قبل تحويل الطفل' },
-                        { key: 'skill_ref_quinine', label: 'في حالة التحويل : أعطى الكينيين بالعضل قبل التحويل', relevant: "${as_supervisor_correct_fever_classification}='مرض حمي شديد'" }, 
+                        { key: 'skill_ref_quinine', label: 'في حالة التحويل : أعطى الكينيين بالعضل قبل التحويل', relevant: "${as_supervisor_correct_fever_classification}='مرض حمي شديد'" },
                     ],
-                    relevant: "${finalDecision}='referral'" 
+                    relevant: "${finalDecision}='referral'"
                 },
                  {
                     subgroupTitle: 'في حالة الإلتهاب الرئوي',
@@ -104,7 +105,7 @@ const calculateScores = (formData) => {
                     scoreKey: 'diar_treatment',
                     maxScore: 4,
                     skills: [ { key: 'skill_diar_ors', label: 'هل حدد كمية محلول الإرواء بصورة صحيحة' }, { key: 'skill_diar_counsel', label: 'هل نصح الأم بالRعاية المنزلية بإعطاء سوائل أكثر و الاستمرار في تغذية الطفل)' }, { key: 'skill_diar_zinc', label: 'هل وصف دواء الزنك بصورة صحيحة' }, { key: 'skill_diar_zinc_dose', label: 'هل أعطى الجرعة الأولى من دواء الزنك للطفل بالوحدة الصحية بطريقة صحيحة', relevant: "${ts_skill_diar_zinc}='yes'" }, ],
-                    relevant: (formData) => { 
+                    relevant: (formData) => {
                         const cls = formData.assessment_skills?.supervisor_correct_diarrhea_classification || {};
                         const relevantKeys = ['جفاف حاد', 'بعض الجفاف', 'إسهال مستمر شديد', 'إسهال مستمر', 'دسنتاريا', 'لا يوجد جفاف'];
                         return relevantKeys.some(key => cls[key]);
@@ -159,24 +160,24 @@ const calculateScores = (formData) => {
 
     IMNCI_FORM_STRUCTURE.forEach(group => {
         let groupCurrentScore = 0;
-        let groupMaxScore = 0; 
+        let groupMaxScore = 0;
 
         if (group.isDecisionSection) {
-            groupMaxScore = 1; 
+            groupMaxScore = 1;
             groupCurrentScore = formData.decisionMatches === 'yes' ? 1 : 0;
-            totalMaxScore += groupMaxScore; 
-            totalCurrentScore += groupCurrentScore; 
-            if (group.scoreKey) { 
+            totalMaxScore += groupMaxScore;
+            totalCurrentScore += groupCurrentScore;
+            if (group.scoreKey) {
                 scores[group.scoreKey] = { score: groupCurrentScore, maxScore: groupMaxScore };
             }
         } else if (group.sectionKey) {
             const sectionData = formData[group.sectionKey] || {};
-            let groupRelevantMaxScore = 0; 
+            let groupRelevantMaxScore = 0;
 
             group.subgroups?.forEach(subgroup => {
                 let subgroupCurrentScore = 0;
-                let subgroupMaxScore = 0; 
-                let subgroupRelevantMaxScore = 0; 
+                let subgroupMaxScore = 0;
+                let subgroupRelevantMaxScore = 0;
                 let isSubgroupRelevantForScoring = true;
 
                 if (subgroup.relevant) {
@@ -187,7 +188,7 @@ const calculateScores = (formData) => {
                             let val = formData[key] ?? sectionData[key] ?? formData.assessment_skills?.[key] ?? formData.treatment_skills?.[key];
                              if (key.startsWith('as_') && val === undefined) val = formData.assessment_skills?.[key.replace('as_', '')];
                              if (key.startsWith('ts_') && val === undefined) val = formData.treatment_skills?.[key.replace('ts_', '')];
-                            return `'${val || ''}'`; 
+                            return `'${val || ''}'`;
                         });
                         try {
                            isSubgroupRelevantForScoring = eval(simplifiedRelevanceString.replace(/='(.*?)'/g, '===\'$1\''));
@@ -196,15 +197,15 @@ const calculateScores = (formData) => {
                             isSubgroupRelevantForScoring = false;
                         }
                     } else {
-                         isSubgroupRelevantForScoring = false; 
+                         isSubgroupRelevantForScoring = false;
                     }
                 }
 
                 if (!isSubgroupRelevantForScoring) {
                    if (subgroup.scoreKey) {
-                        scores[subgroup.scoreKey] = { score: 0, maxScore: 0 }; 
+                        scores[subgroup.scoreKey] = { score: 0, maxScore: 0 };
                    }
-                   return; 
+                   return;
                 }
 
                 if (subgroup.isSymptomGroupContainer) {
@@ -234,14 +235,14 @@ const calculateScores = (formData) => {
                              }
                          }
                          subgroupCurrentScore += currentSymptomScore;
-                         subgroupRelevantMaxScore += maxSymptomScore; 
+                         subgroupRelevantMaxScore += maxSymptomScore;
                          if (sg.mainSkill.scoreKey) {
                              scores[sg.mainSkill.scoreKey] = { score: currentSymptomScore, maxScore: maxSymptomScore };
                          }
                     });
                 } else if (Array.isArray(subgroup.skills)) {
                     subgroup.skills.forEach(skill => {
-                        let isSkillRelevantForScoring = true; 
+                        let isSkillRelevantForScoring = true;
                         if (skill.relevant) {
                              if (typeof skill.relevant === 'function') {
                                 isSkillRelevantForScoring = skill.relevant(formData);
@@ -259,24 +260,24 @@ const calculateScores = (formData) => {
                                       isSkillRelevantForScoring = false;
                                  }
                              } else {
-                                शासितSkillRelevantForScoring = false;
+                                isSkillRelevantForScoring = false;
                              }
                         }
 
                         if (isSkillRelevantForScoring) {
                             const value = sectionData[skill.key];
                             if (value === 'yes' || value === 'no') {
-                                subgroupRelevantMaxScore += 1; 
+                                subgroupRelevantMaxScore += 1;
                                 if (value === 'yes') {
-                                    subgroupCurrentScore += 1; 
+                                    subgroupCurrentScore += 1;
                                 }
                             }
-                        } 
+                        }
                     });
                 }
 
                 groupCurrentScore += subgroupCurrentScore;
-                groupRelevantMaxScore += subgroupRelevantMaxScore; 
+                groupRelevantMaxScore += subgroupRelevantMaxScore;
 
                 if (subgroup.scoreKey) {
                     scores[subgroup.scoreKey] = { score: subgroupCurrentScore, maxScore: subgroupRelevantMaxScore };
@@ -293,7 +294,7 @@ const calculateScores = (formData) => {
                 scores['assessment_total_score'] = { score: groupCurrentScore, maxScore: groupRelevantMaxScore };
              }
              if (group.sectionKey === 'treatment_skills') {
-                 scores['treatment_score'] = { score: groupCurrentScore, maxScore: groupRelevantMaxScore }; 
+                 scores['treatment_score'] = { score: groupCurrentScore, maxScore: groupRelevantMaxScore };
              }
         }
     });
@@ -308,7 +309,7 @@ const calculateScores = (formData) => {
      }
      if(scores['treatment_score']){
         scoresPayload['treatment_score'] = scores['treatment_score'].score;
-        scoresPayload['treatment_maxScore'] = scores['treatment_score'].maxScore; 
+        scoresPayload['treatment_maxScore'] = scores['treatment_score'].maxScore;
      } else {
         scoresPayload['treatment_score'] = 0;
         scoresPayload['treatment_maxScore'] = 0;
@@ -393,12 +394,12 @@ const DetailedMentorshipBulkUploadModal = ({
         { key: 'as_skill_other', label: 'AS: Checked Other Problems' },
     ];
     const DECISION_FIELDS = [
-        { key: 'finalDecision', label: 'Final Decision (Worker)', required: true }, 
-        { key: 'decisionMatches', label: 'Decision Matches Supervisor', required: true }, 
+        { key: 'finalDecision', label: 'Final Decision (Worker)', required: true },
+        { key: 'decisionMatches', label: 'Decision Matches Supervisor', required: true },
     ];
     const TREATMENT_SKILL_FIELDS = [
         { key: 'ts_skill_ref_abx', label: 'TS: Gave Pre-Referral ABX', relevant: "${finalDecision}='referral'" },
-        { key: 'ts_skill_ref_quinine', label: 'TS: Gave Pre-Referral Quinine', relevant: "${finalDecision}='referral' and ${as_supervisor_correct_fever_classification}='مرض حمي شديد'" }, 
+        { key: 'ts_skill_ref_quinine', label: 'TS: Gave Pre-Referral Quinine', relevant: "${finalDecision}='referral' and ${as_supervisor_correct_fever_classification}='مرض حمي شديد'" },
         { key: 'ts_skill_pneu_abx', label: 'TS: Prescribed Pneumonia ABX Correctly', relevant: "${as_supervisor_correct_cough_classification}='التهاب رئوي'" },
         { key: 'ts_skill_pneu_dose', label: 'TS: Gave Pneumonia ABX Dose Correctly', relevant: "${ts_skill_pneu_abx}='yes'" },
         { key: 'ts_skill_diar_ors', label: 'TS: Determined ORS Amount Correctly' },
@@ -425,7 +426,7 @@ const DetailedMentorshipBulkUploadModal = ({
         ...ASSESSMENT_SKILL_FIELDS,
         ...DECISION_FIELDS,
         ...TREATMENT_SKILL_FIELDS
-    ], []); 
+    ], []);
     const ALL_TEMPLATE_HEADERS = useMemo(() => ALL_MENTORSHIP_FIELDS.map(f => f.key), [ALL_MENTORSHIP_FIELDS]);
 
     const stateArToKey = useMemo(() => {
@@ -446,7 +447,7 @@ const DetailedMentorshipBulkUploadModal = ({
         return healthFacilities.reduce((acc, facility) => {
             const state = facility['الولاية'];
             const locality = facility['المحلية'];
-            const name = String(facility['اسم_المؤسسة'] ?? '').trim().toLowerCase(); 
+            const name = String(facility['اسم_المؤسسة'] ?? '').trim().toLowerCase();
             if (state && locality && name) {
                 const key = `${state}-${locality}-${name}`;
                 acc.set(key, facility.id);
@@ -504,7 +505,7 @@ const DetailedMentorshipBulkUploadModal = ({
     };
     const handleDownloadTemplate = () => {
         const fileName = `Mentorship_Upload_Template_Detailed_${activeService}.xlsx`;
-        const worksheetData = [ALL_TEMPLATE_HEADERS]; 
+        const worksheetData = [ALL_TEMPLATE_HEADERS];
         const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Mentorships");
@@ -519,7 +520,7 @@ const DetailedMentorshipBulkUploadModal = ({
         });
     }, []);
     const handleValidation = () => {
-        const missingMappings = BASE_FIELDS 
+        const missingMappings = BASE_FIELDS
             .filter(field => field.required && !fieldMappings[field.key])
             .map(field => field.label);
         if (missingMappings.length > 0) {
@@ -553,10 +554,10 @@ const DetailedMentorshipBulkUploadModal = ({
             });
             if (!sessionFromRow.session_date || !sessionFromRow.state || !sessionFromRow.locality || !sessionFromRow.facility_name || !sessionFromRow.health_worker_name) {
                  console.warn(`Skipping row ${rowIndex + 2}: Missing required base info.`);
-                return; 
+                return;
             }
             const formDataForRow = {
-                 session_date: '', 
+                 session_date: '',
                  notes: sessionFromRow.notes || '',
                  assessment_skills: {},
                  treatment_skills: {},
@@ -565,7 +566,7 @@ const DetailedMentorshipBulkUploadModal = ({
             };
             ASSESSMENT_SKILL_FIELDS.forEach(field => {
                  const keyWithoutPrefix = field.key.replace('as_', '');
-                 const value = sessionFromRow[field.key]; 
+                 const value = sessionFromRow[field.key];
                  if (value !== undefined) {
                      if (field.key === 'as_worker_diarrhea_classification' || field.key === 'as_supervisor_correct_diarrhea_classification') {
                         const selected = (value || '').split(',').map(s => s.trim()).filter(Boolean);
@@ -588,7 +589,7 @@ const DetailedMentorshipBulkUploadModal = ({
                       } else if (field.key === 'as_worker_fever_classification' || field.key === 'as_supervisor_correct_fever_classification') {
                          formDataForRow.assessment_skills[keyWithoutPrefix] = createInitialClassificationState(FEVER_CLASSIFICATIONS);
                       } else {
-                         formDataForRow.assessment_skills[keyWithoutPrefix] = ''; 
+                         formDataForRow.assessment_skills[keyWithoutPrefix] = '';
                       }
                  }
             });
@@ -598,18 +599,18 @@ const DetailedMentorshipBulkUploadModal = ({
                  if (value !== undefined) {
                      formDataForRow.treatment_skills[keyWithoutPrefix] = value;
                  } else {
-                     formDataForRow.treatment_skills[keyWithoutPrefix] = ''; 
+                     formDataForRow.treatment_skills[keyWithoutPrefix] = '';
                  }
             });
             const payload = {
                 serviceType: activeService,
-                status: 'complete', 
+                status: 'complete',
                 healthWorkerName: sessionFromRow.health_worker_name,
                 notes: formDataForRow.notes,
                 mentorEmail: sessionFromRow.mentor_email || user.email,
                 mentorName: user.displayName || 'Batch Upload',
-                assessmentSkills: formDataForRow.assessment_skills, 
-                treatmentSkills: formDataForRow.treatment_skills, 
+                assessmentSkills: formDataForRow.assessment_skills,
+                treatmentSkills: formDataForRow.treatment_skills,
                 finalDecision: formDataForRow.finalDecision,
                 decisionMatches: formDataForRow.decisionMatches,
             };
@@ -627,27 +628,27 @@ const DetailedMentorshipBulkUploadModal = ({
                 payload.effectiveDate = effectiveDate;
             } catch (e) {
                 console.warn(`Skipping row ${rowIndex + 2}: Invalid date - ${sessionFromRow.session_date}`);
-                 payload.effectiveDate = null; 
+                 payload.effectiveDate = null;
             }
             const stateKey = stateArToKey[String(sessionFromRow.state).trim().toLowerCase()];
             const localityKey = localityArToKey(stateKey, String(sessionFromRow.locality));
-            payload.state = stateKey; 
-            payload.locality = localityKey; 
-            payload.facilityName = sessionFromRow.facility_name; 
+            payload.state = stateKey;
+            payload.locality = localityKey;
+            payload.facilityName = sessionFromRow.facility_name;
             const facilityNameLower = String(sessionFromRow.facility_name).trim().toLowerCase();
             const lookupKey = `${stateKey}-${localityKey}-${facilityNameLower}`;
-            payload.facilityId = facilityLookup.get(lookupKey) || null; 
+            payload.facilityId = facilityLookup.get(lookupKey) || null;
              try {
                  payload.scores = calculateScores(formDataForRow);
              } catch (scoreError) {
                  console.error(`Error calculating scores for row ${rowIndex + 2}:`, scoreError);
-                 payload.scores = {}; 
+                 payload.scores = {};
              }
             processedSessions.push(payload);
         });
         if (processedSessions.length === 0) {
             setError('No valid sessions could be processed from the Excel file. Check required fields and formats.');
-            setCurrentPage(1); 
+            setCurrentPage(1);
             return;
         }
         onImport(processedSessions, originalRawData);
@@ -846,10 +847,10 @@ const AddHealthWorkerModal = ({ isOpen, onClose, onSave, facilityName }) => {
         }
         setError('');
         onSave({ name, job_title, training_date, phone });
-        setName(''); setJobTitle(''); setTrainingDate(''); setPhone(''); 
+        setName(''); setJobTitle(''); setTrainingDate(''); setPhone('');
     };
     const handleClose = () => {
-        setName(''); setJobTitle(''); setTrainingDate(''); setPhone(''); setError(''); 
+        setName(''); setJobTitle(''); setTrainingDate(''); setPhone(''); setError('');
         onClose();
     };
 
@@ -858,10 +859,10 @@ const AddHealthWorkerModal = ({ isOpen, onClose, onSave, facilityName }) => {
             <div className="p-6 text-right" dir="rtl">
                 {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
                 <div className="space-y-4">
-                    <FormGroup label="الاسم كامل *">
+                    <FormGroup label="الاسم كامل *" className="text-right">
                         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="ادخل الاسم الكامل" required />
                     </FormGroup>
-                    <FormGroup label="الوصف الوظيفي">
+                    <FormGroup label="الوصف الوظيفي" className="text-right">
                         <Select value={job_title} onChange={(e) => setJobTitle(e.target.value)}>
                             <option value="">-- اختر الوصف الوظيفي --</option>
                             {IMNCI_JOB_TITLES.map(title => (
@@ -869,10 +870,10 @@ const AddHealthWorkerModal = ({ isOpen, onClose, onSave, facilityName }) => {
                             ))}
                         </Select>
                     </FormGroup>
-                    <FormGroup label="اخر تاريخ تدريب على العلاج المتكامل">
+                    <FormGroup label="اخر تاريخ تدريب على العلاج المتكامل" className="text-right">
                         <Input type="date" value={training_date} onChange={(e) => setTrainingDate(e.target.value)} />
                     </FormGroup>
-                    <FormGroup label="رقم الهاتف">
+                    <FormGroup label="رقم الهاتف" className="text-right">
                         <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="ادخل رقم الهاتف" />
                     </FormGroup>
                 </div>
@@ -887,27 +888,27 @@ const AddHealthWorkerModal = ({ isOpen, onClose, onSave, facilityName }) => {
 // --- END AddHealthWorkerModal ---
 
 
-// --- Mentorship Table Column Component ---
+// --- Mentorship Table Column Component (MODIFIED to English Headers) ---
 const MentorshipTableColumns = () => (
     <>
-        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
-        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">المؤسسة</th>
-        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">العامل الصحي</th>
-        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">المشرف</th>
-        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">تاريخ الجلسة</th>
-        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الحالة</th>
-        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الدرجة الكلية</th>
-        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الإجراءات</th>
+        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
+        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Facility</th>
+        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Health Worker</th>
+        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supervisor</th>
+        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Overall Score</th>
+        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
     </>
 );
 // --- END Mentorship Table Column Component ---
 
-// --- Friendly Service Titles (Unchanged) ---
+// --- Friendly Service Titles (MODIFIED to English) ---
 const SERVICE_TITLES = {
-    'IMNCI': 'المعالجة المتكاملة',
-    'EENC': 'رعاية حديثي الولادة',
-    'ETAT': 'الفرز والعلاج في الطوارئ',
-    'IPC': 'مكافحة العدوى'
+    'IMNCI': 'Integrated Management of Newborn and Childhood Illnesses (IMNCI)',
+    'EENC': 'Early Essential Newborn Care (EENC)',
+    'ETAT': 'Emergency Triage, Assessment and Treatment (ETAT)',
+    'IPC': 'Infection Prevention and Control in Neonatal Units (IPC)'
 };
 
 // --- NEW: View Submission Modal ---
@@ -926,7 +927,7 @@ const ViewSubmissionModal = ({ submission, onClose }) => {
         // Only calculate if maxScore is positive
         if (score !== undefined && maxScore !== undefined && maxScore > 0) {
             percentage = Math.round((score / maxScore) * 100);
-        } 
+        }
         // Handle 0/0 case as N/A or 100% depending on logic, here N/A
         else if (score === 0 && maxScore === 0) {
              percentage = null; // Or 100 if 0/0 means 100% complete (N/A)
@@ -958,7 +959,7 @@ const ViewSubmissionModal = ({ submission, onClose }) => {
                         <p><span className="font-medium text-gray-500">المحلية:</span> <span className="font-semibold text-gray-900">{STATE_LOCALITIES[submission.state]?.localities.find(l=>l.en === submission.locality)?.ar || submission.locality}</span></p>
                     </div>
                 </div>
-                
+
                 {/* Scores */}
                 <div>
                     <h4 className="text-lg font-bold text-sky-800 mb-3 border-b pb-2">الدرجات التفصيلية</h4>
@@ -1009,16 +1010,62 @@ const ViewSubmissionModal = ({ submission, onClose }) => {
 };
 // --- END View Submission Modal ---
 
+// --- NEW: Drafts Modal ---
+const DraftsModal = ({ isOpen, onClose, drafts, onView, onEdit, onDelete }) => {
 
-// --- Mentorship Submissions Table Component ---
+    const handleAction = (action, submissionId) => {
+        if (action === 'view') {
+            onView(submissionId);
+        } else if (action === 'edit') {
+            onEdit(submissionId);
+        } else if (action === 'delete') {
+            onDelete(submissionId);
+        }
+        onClose(); // Close modal after action
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="المسودات المحفوظة" size="xl">
+            <div className="p-6 text-right" dir="rtl">
+                {drafts.length === 0 ? (
+                    <EmptyState message="لا توجد مسودات محفوظة لهذا المستخدم/الخدمة." />
+                ) : (
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                        {drafts.map(draft => (
+                            <div key={draft.id} className="p-3 border rounded-lg bg-yellow-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                <div className="text-sm flex-grow">
+                                    <p><span className="font-medium text-gray-600">العامل الصحي:</span> <span className="font-semibold text-gray-900">{draft.staff}</span></p>
+                                    <p><span className="font-medium text-gray-600">المؤسسة:</span> <span className="font-semibold text-gray-900">{draft.facility}</span></p>
+                                    <p><span className="font-medium text-gray-600">تاريخ المسودة:</span> <span className="font-semibold text-gray-900">{draft.date}</span></p>
+                                </div>
+                                <div className="flex gap-2 flex-shrink-0 mt-2 sm:mt-0">
+                                    <Button size="sm" variant="info" onClick={() => handleAction('view', draft.id)}>عرض</Button>
+                                    <Button size="sm" variant="warning" onClick={() => handleAction('edit', draft.id)}>تعديل</Button>
+                                    <Button size="sm" variant="danger" onClick={() => handleAction('delete', draft.id)}>حذف</Button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+                <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
+                    <Button variant="secondary" onClick={onClose}>إغلاق</Button>
+                </div>
+            </div>
+        </Modal>
+    );
+};
+// --- END Drafts Modal ---
+
+
+// --- Mentorship Submissions Table Component (MODIFIED Filters) ---
 const MentorshipSubmissionsTable = ({
     submissions,
     onNewVisit,
     onBackToServiceSelection,
     activeService,
-    onView, 
-    onEdit, 
-    onDelete, 
+    onView,
+    onEdit,
+    onDelete,
     availableStates,
     userStates,
     fetchSubmissions,
@@ -1030,7 +1077,8 @@ const MentorshipSubmissionsTable = ({
 }) => {
     const [stateFilter, setStateFilter] = useState('');
     const [localityFilter, setLocalityFilter] = useState('');
-    const [workerFilter, setWorkerFilter] = useState('');
+    const [supervisorFilter, setSupervisorFilter] = useState(''); // State for Supervisor filter (now Select value)
+    const [statusFilter, setStatusFilter] = useState('');
 
     const handleAction = (action, submission) => {
         if (action === 'view') {
@@ -1042,6 +1090,16 @@ const MentorshipSubmissionsTable = ({
         }
     };
 
+    // Calculate unique supervisors for the dropdown
+    const uniqueSupervisors = useMemo(() => {
+        const supervisors = new Set();
+        submissions.forEach(sub => {
+            if (sub.supervisor) {
+                supervisors.add(sub.supervisor);
+            }
+        });
+        return Array.from(supervisors).sort((a, b) => a.localeCompare(b));
+    }, [submissions]);
 
     const filteredSubmissions = useMemo(() => {
         let filtered = submissions;
@@ -1054,64 +1112,91 @@ const MentorshipSubmissionsTable = ({
         if (localityFilter) {
              filtered = filtered.filter(sub => sub.locality === localityFilter);
         }
-        if (workerFilter) {
-            filtered = filtered.filter(sub => (sub.staff || '').toLowerCase().includes(workerFilter.toLowerCase()));
+        // MODIFIED: Filter by selected Supervisor email (exact match)
+        if (supervisorFilter) {
+            filtered = filtered.filter(sub => sub.supervisor === supervisorFilter);
+        }
+        // Filter by Status
+        if (statusFilter) {
+             filtered = filtered.filter(sub => sub.status === statusFilter);
         }
         return filtered.sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort by date descending
-    }, [submissions, activeService, stateFilter, localityFilter, workerFilter]);
+    }, [submissions, activeService, stateFilter, localityFilter, supervisorFilter, statusFilter]);
 
     const availableLocalities = useMemo(() => {
         if (!stateFilter || !STATE_LOCALITIES[stateFilter]) return [];
         return [
-            { key: "", label: "-- اختر المحلية --" },
+            { key: "", label: "Select Locality" },
             ...STATE_LOCALITIES[stateFilter].localities.sort((a, b) => a.ar.localeCompare(b.ar)).map(l => ({ key: l.en, label: l.ar }))
         ];
     }, [stateFilter]);
 
 
+    // Determine the service title for the header and button
     const serviceTitle = SERVICE_TITLES[activeService] || activeService;
+    const headerTitle = `${activeService} Mentorship Records`;
 
     return (
-        <Card dir="rtl">
+        <Card dir="ltr"> {/* Changed to LTR */}
             <div className="p-6">
                 <div className="flex justify-between items-start mb-6">
-                    <div className="flex gap-2 flex-wrap">
-                        <Button onClick={onNewVisit}>+ إضافة زيارة {serviceTitle}</Button>
+                    {/* MODIFIED: Add New Visit button moved to left and renamed */}
+                    <div className="flex gap-2 flex-wrap order-1">
+                        <Button onClick={onNewVisit}>+ Add New Mentorship Visit</Button>
                         {canBulkUpload && (
                             <Button onClick={onBulkUpload}>Bulk Upload</Button>
                         )}
-                        <Button variant="secondary" onClick={onBackToServiceSelection}> العودة لاختيار الخدمة </Button>
+                        <Button variant="secondary" onClick={onBackToServiceSelection}> Back to Service Selection </Button>
                         {canShareLink && (
                              <Button variant="info" onClick={onShareLink}>
-                                 مشاركة رابط الإدخال
+                                 Share Submission Link
                              </Button>
                         )}
                     </div>
-                    <div className="text-right flex-shrink-0 ml-4">
+                    {/* MODIFIED: Header renamed and moved to right (order-2) */}
+                    <div className="text-left flex-shrink-0 order-2">
                         <PageHeader
-                            title={`سجل زيارات: ${serviceTitle}`}
-                            subtitle="قائمة بجميع النماذج المقدمة لهذه الخدمة."
+                            title={headerTitle}
+                            subtitle="List of all submitted mentorship forms for this service."
                         />
                     </div>
                 </div>
 
-                {/* Filters (Unchanged) */}
-                 <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6 border p-4 rounded-lg bg-gray-50">
-                    <FormGroup label="الولاية" className="text-right">
+                {/* Filters (Modified to use Select for Supervisor) */}
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 border p-4 rounded-lg bg-gray-50">
+
+                    <FormGroup label="State" className="text-left" dir="ltr">
                         <Select value={stateFilter} onChange={(e) => { setStateFilter(e.target.value); setLocalityFilter(''); }}>
                             {availableStates.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
                         </Select>
                     </FormGroup>
-                    <FormGroup label="المحلية" className="text-right">
+
+                    <FormGroup label="Locality" className="text-left" dir="ltr">
                         <Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}>
                              {availableLocalities.map(l => <option key={l.key} value={l.key}>{l.label}</option>)}
                         </Select>
                     </FormGroup>
-                    <FormGroup label="البحث بالموظف" className="text-right">
-                        <Input value={workerFilter} onChange={(e) => setWorkerFilter(e.target.value)} placeholder="بحث باسم العامل الصحي..." />
+
+                    {/* MODIFIED: Supervisor Filter changed to Select (Dropdown) */}
+                    <FormGroup label="Supervisor" className="text-left" dir="ltr">
+                        <Select
+                            value={supervisorFilter}
+                            onChange={(e) => setSupervisorFilter(e.target.value)}
+                        >
+                            <option value="">All Supervisors</option>
+                            {uniqueSupervisors.map(email => (
+                                <option key={email} value={email}>{email}</option>
+                            ))}
+                        </Select>
                     </FormGroup>
-                    <FormGroup label="تاريخ الجلسة" className="text-right">
-                         <Input type="date" placeholder="التاريخ" /> 
+
+                    {/* Status Filter (Remains Select) */}
+                    <FormGroup label="Status" className="text-left" dir="ltr">
+                        <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                            <option value="">All Statuses</option>
+                            <option value="complete">Complete</option>
+                            <option value="draft">Draft</option>
+                        </Select>
                     </FormGroup>
                 </div>
 
@@ -1121,7 +1206,7 @@ const MentorshipSubmissionsTable = ({
                      {isSubmissionsLoading ? (
                         <div className="flex justify-center p-8"><Spinner /></div>
                     ) : (
-                        <table className="min-w-full divide-y divide-gray-200">
+                        <table className="min-w-full divide-y divide-gray-200" dir="ltr"> {/* LTR Table */}
                             <thead className="bg-gray-50">
                                 <tr>
                                     <MentorshipTableColumns />
@@ -1129,7 +1214,7 @@ const MentorshipSubmissionsTable = ({
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {filteredSubmissions.length === 0 ? (
-                                    <tr><td colSpan="8"><EmptyState title="لا توجد بيانات" message="لم يتم تسجيل أي زيارات متابعة مطابقة لفلاتر البحث لهذه الخدمة." /></td></tr>
+                                    <tr><td colSpan="8"><EmptyState title="No Records Found" message="No mentorship visits matched the current filters for this service." /></td></tr>
                                 ) : (
                                     filteredSubmissions.map((sub, index) => {
                                         const scoreData = sub.scores;
@@ -1140,33 +1225,33 @@ const MentorshipSubmissionsTable = ({
 
                                         return (
                                         <tr key={sub.id} className={sub.status === 'draft' ? 'bg-yellow-50' : 'bg-white'}>
-                                            <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{index + 1}</td>
-                                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{sub.facility}</td>
-                                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{sub.staff}</td>
-                                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{sub.supervisor}</td>
-                                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{sub.date}</td>
+                                            <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-left">{index + 1}</td>
+                                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-left">{sub.facility}</td>
+                                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-left">{sub.staff}</td>
+                                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-left">{sub.supervisor}</td>
+                                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-left">{sub.date}</td>
                                             {/* Status Badge */}
-                                            <td className="px-4 py-4 whitespace-nowrap text-sm">
+                                            <td className="px-4 py-4 whitespace-nowrap text-sm text-left">
                                                 {sub.status === 'draft' ? (
                                                     <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                                        مسودة
+                                                        Draft
                                                     </span>
                                                 ) : (
                                                     <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                                        مكتمل
+                                                        Complete
                                                     </span>
                                                 )}
                                             </td>
                                             {/* Score */}
-                                            <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-800">
+                                            <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-800 text-left">
                                                 {percentage !== null ? `${percentage}%` : 'N/A'}
                                             </td>
                                             {/* Actions */}
-                                            <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
+                                            <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-left">
                                                 <div className="flex gap-2">
-                                                    <Button size="sm" variant="info" onClick={() => handleAction('view', sub)}>عرض</Button>
-                                                    <Button size="sm" variant="warning" onClick={() => handleAction('edit', sub)}>تعديل</Button>
-                                                    <Button size="sm" variant="danger" onClick={() => handleAction('delete', sub)}>حذف</Button>
+                                                    <Button size="sm" variant="info" onClick={() => handleAction('view', sub)}>View</Button>
+                                                    <Button size="sm" variant="warning" onClick={() => handleAction('edit', sub)}>Edit</Button>
+                                                    <Button size="sm" variant="danger" onClick={() => handleAction('delete', sub)}>Delete</Button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -1177,7 +1262,7 @@ const MentorshipSubmissionsTable = ({
                     )}
                 </div>
                 <div className="flex justify-center mt-4">
-                    <Button variant="secondary" onClick={() => fetchSubmissions(true)}>تحديث البيانات</Button>
+                    <Button variant="secondary" onClick={() => fetchSubmissions(true)}>Refresh Data</Button>
                 </div>
             </div>
         </Card>
@@ -1185,22 +1270,38 @@ const MentorshipSubmissionsTable = ({
 };
 // --- END Mentorship Submissions Table Component ---
 
-// --- Service Selection Component (Unchanged) ---
+// --- Service Selection Component (MODIFIED to English Layout) ---
 const ServiceSelector = ({ onSelectService }) => {
-    const services = [ { key: 'IMNCI', title: 'متابعة مهارات المعالجة المتكاملة', enabled: true }, { key: 'EENC', title: 'متابعة مهارات الرعاية الأساسية لحديثي الولادة', enabled: false }, { key: 'ETAT', title: 'متابعة مهارة الفرز والعلاج في الطوارئ', enabled: false }, { key: 'IPC', title: 'مكافحة العدوى' } ];
+    const services = [
+        { key: 'IMNCI', title: 'Mentorship on Integrated Management of Newborn and Childhood Illnesses (IMNCI)', enabled: true },
+        { key: 'EENC', title: 'Mentorship on Early Essential Newborn Care (EENC)', enabled: false },
+        { key: 'ETAT', title: 'Mentorship on Emergency Triage, Assessment and Treatment (ETAT)', enabled: false },
+        { key: 'IPC', title: 'Mentorship on Infection Prevention and Control in Neonatal Units (IPC)', enabled: false }
+    ];
+
     return (
-        <Card className="p-6" dir="rtl">
-            <div className="text-right flex justify-between items-start">
-                <PageHeader title="اختر برنامج المتابعة" subtitle="اختر خدمة لبدء متابعة المهارات." />
+        <Card className="p-6" dir="ltr">
+            <div className="text-left flex justify-between items-start">
+                <PageHeader
+                    title="Choose Service for Mentorship"
+                    subtitle="Select a program to begin skills mentorship."
+                />
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {services.map(service => (
-                    <button key={service.key} disabled={!service.enabled} className={`border rounded-lg p-6 text-right transition-all duration-200 ${service.enabled ? 'hover:shadow-md hover:scale-105' : 'opacity-60 cursor-not-allowed bg-gray-50'}`} onClick={() => service.enabled && onSelectService(service.key)} >
+                    <button
+                        key={service.key}
+                        disabled={!service.enabled}
+                        className={`border rounded-lg p-6 text-left transition-all duration-200 ${service.enabled ? 'hover:shadow-md hover:scale-105' : 'opacity-60 cursor-not-allowed bg-gray-50'}`}
+                        onClick={() => service.enabled && onSelectService(service.key)}
+                    >
                         <div className="flex items-center gap-4">
                             <CourseIcon course={service.key} />
                             <div>
-                                <div className="font-semibold text-gray-800 text-right">{service.title}</div>
-                                <div className="text-xs text-gray-500 mt-1 text-right">{service.enabled ? 'اضغط لبدء الجلسة' : 'قريباً'}</div>
+                                <div className="font-semibold text-gray-800 text-left">{service.title}</div>
+                                <div className="text-xs text-gray-500 mt-1 text-left">
+                                    {service.enabled ? 'Click to start session' : 'Coming Soon'}
+                                </div>
                             </div>
                         </div>
                     </button>
@@ -1227,22 +1328,22 @@ const SkillsMentorshipView = ({
     const [selectedState, setSelectedState] = useState('');
     const [selectedLocality, setSelectedLocality] = useState('');
     const [selectedFacilityId, setSelectedFacilityId] = useState('');
-    const [selectedHealthWorkerName, setSelectedHealthWorkerName] = useState(''); 
-    
+    const [selectedHealthWorkerName, setSelectedHealthWorkerName] = useState('');
+
     // --- MODIFICATION: Get data and fetchers from DataContext ---
-    const { 
-        healthFacilities, 
-        fetchHealthFacilities, 
-        isLoading: isDataCacheLoading, 
-        skillMentorshipSubmissions, 
-        fetchSkillMentorshipSubmissions, 
+    const {
+        healthFacilities,
+        fetchHealthFacilities,
+        isLoading: isDataCacheLoading,
+        skillMentorshipSubmissions,
+        fetchSkillMentorshipSubmissions,
         isFacilitiesLoading, // Use this directly for form setup
     } = useDataCache();
     // --- END MODIFICATION ---
-    
+
     const [viewingSubmission, setViewingSubmission] = useState(null);
     const [editingSubmission, setEditingSubmission] = useState(null);
-    
+
     const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
     const [uploadStatus, setUploadStatus] = useState({
         inProgress: false,
@@ -1253,35 +1354,63 @@ const SkillsMentorshipView = ({
     });
     const [isAddWorkerModalOpen, setIsAddWorkerModalOpen] = useState(false);
     const auth = getAuth();
-    const [selectedWorkerOriginalData, setSelectedWorkerOriginalData] = useState(null); 
+    const user = auth.currentUser; // Get current user for filtering drafts
+    const [selectedWorkerOriginalData, setSelectedWorkerOriginalData] = useState(null);
     const [workerJobTitle, setWorkerJobTitle] = useState('');
     const [workerTrainingDate, setWorkerTrainingDate] = useState('');
     const [workerPhone, setWorkerPhone] = useState('');
     const [isWorkerInfoChanged, setIsWorkerInfoChanged] = useState(false);
     const [isUpdatingWorker, setIsUpdatingWorker] = useState(false);
 
-    // --- NEW: useMemo to process submissions for table ---
+    // --- NEW: State for Drafts Modal ---
+    const [isDraftsModalOpen, setIsDraftsModalOpen] = useState(false);
+
+    // --- NEW: useMemo to process submissions for table and drafts ---
     const processedSubmissions = useMemo(() => {
         if (!skillMentorshipSubmissions) return [];
         return skillMentorshipSubmissions.map(sub => ({
+            // --- Keep existing fields ---
             id: sub.id,
             service: sub.serviceType,
             date: sub.effectiveDate ? new Date(sub.effectiveDate.seconds * 1000).toISOString().split('T')[0] : (sub.sessionDate || 'N/A'),
-            effectiveDateTimestamp: sub.effectiveDate, 
-            state: sub.state || 'N/A', 
-            locality: sub.locality || 'N/A', 
+            effectiveDateTimestamp: sub.effectiveDate,
+            state: sub.state || 'N/A',
+            locality: sub.locality || 'N/A',
             facility: sub.facilityName || 'N/A',
             staff: sub.healthWorkerName || 'N/A',
             supervisor: sub.mentorEmail || 'N/A',
             facilityId: sub.facilityId || null,
             scores: sub.scores || null,
-            status: sub.status || 'complete'
+            status: sub.status || 'complete',
+            // --- Add full submission data for editing ---
+            fullData: sub // Store the original data for editing drafts
         }));
     }, [skillMentorshipSubmissions]);
 
+    // --- NEW: Memoized list of user's drafts for the current service ---
+    const currentUserDrafts = useMemo(() => {
+        if (!user || !processedSubmissions || !activeService) return [];
+        return processedSubmissions.filter(sub =>
+            sub.status === 'draft' &&
+            sub.supervisor === user.email && // Match current user's email
+            sub.service === activeService   // Match the active service
+        ).sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort by date descending
+    }, [processedSubmissions, user, activeService]);
+
+
+     // --- MODIFICATION START ---
      useEffect(() => {
         fetchHealthFacilities();
-    }, [fetchHealthFacilities, publicSubmissionMode]); 
+
+        // If we are in public mode, App.jsx's view-based fetcher
+        // (in App.jsx) didn't run, so we must trigger the submission
+        // fetch here. We need this data for visit number calculation and drafts.
+        if (publicSubmissionMode) {
+            fetchSkillMentorshipSubmissions();
+        }
+
+    }, [fetchHealthFacilities, fetchSkillMentorshipSubmissions, publicSubmissionMode]); // Add fetchSkillMentorshipSubmissions to deps array
+    // --- MODIFICATION END ---
 
      const availableStates = useMemo(() => {
         const allStates = Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar));
@@ -1341,10 +1470,10 @@ const SkillsMentorshipView = ({
             if (!Array.isArray(staffList)) return [];
             return staffList
                 .map(s => ({
-                    id: s.name, 
+                    id: s.name,
                     name: s.name || 'N/A',
                 }))
-                .filter(w => w.name !== 'N/A') 
+                .filter(w => w.name !== 'N/A')
                 .sort((a, b) => a.name.localeCompare(b.name));
         } catch (e) {
             console.error("Error processing imnci_staff for dropdown:", e);
@@ -1352,49 +1481,74 @@ const SkillsMentorshipView = ({
         }
     }, [selectedFacility]);
 
+    // --- Visit Number Logic MODIFICATION ---
     const visitNumber = useMemo(() => {
+        // --- MODIFICATION: REMOVED THIS BLOCK ---
+        // if (publicSubmissionMode) {
+        //     return 'N/A';
+        // }
+        // --- END MODIFICATION ---
+
         if (!Array.isArray(processedSubmissions) || !selectedFacilityId || !selectedHealthWorkerName || !activeService) {
-            return 1; 
+            return 1;
         }
+
+        // Authenticated Logic (unchanged)
         const existingVisitsCount = processedSubmissions.filter(sub =>
             sub.facilityId === selectedFacilityId &&
             sub.staff === selectedHealthWorkerName &&
             sub.service === activeService &&
-            sub.status !== 'draft'
+            sub.status !== 'draft' // Only count completed visits
         ).length;
 
-        if (editingSubmission) {
-            return editingSubmission.visitNumber || 1; 
+        // If editing a COMPLETED session, keep its original visit number
+        if (editingSubmission && editingSubmission.status === 'complete') {
+             return editingSubmission.fullData.visitNumber || 1; // Use fullData to get original
         }
-
+        // If editing a DRAFT, calculate as if it's a new visit (count completed ones + 1)
+        else if (editingSubmission && editingSubmission.status === 'draft') {
+            return existingVisitsCount + 1;
+        }
+        // If creating a new visit, count completed ones + 1
         return existingVisitsCount + 1;
-    }, [processedSubmissions, selectedFacilityId, selectedHealthWorkerName, activeService, editingSubmission]);
 
+    }, [processedSubmissions, selectedFacilityId, selectedHealthWorkerName, activeService, editingSubmission]); // <-- MODIFICATION: Removed publicSubmissionMode from deps
+
+    // --- Last Session Date Logic MODIFICATION ---
     const lastSessionDate = useMemo(() => {
+         // --- MODIFICATION: REMOVED THIS BLOCK ---
+        // if (publicSubmissionMode) {
+        //     return 'N/A';
+        // }
+        // --- END MODIFICATION ---
+
         if (!Array.isArray(processedSubmissions) || !selectedFacilityId || !selectedHealthWorkerName || !activeService) {
             return null;
         }
 
+        // Authenticated Logic (unchanged)
         const workerSessions = processedSubmissions
             .filter(sub =>
                 sub.facilityId === selectedFacilityId &&
                 sub.staff === selectedHealthWorkerName &&
                 sub.service === activeService &&
-                sub.status !== 'draft'
+                sub.status !== 'draft' // Only consider completed sessions for 'last session'
             )
-            .sort((a, b) => new Date(b.date) - new Date(a.date));
+            .sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort completed sessions
 
-        if (workerSessions.length === 0) {
-            return null;
-        }
-
+        // If editing, find the latest COMPLETED session *before* the one being edited
         if (editingSubmission) {
-            const previousSession = workerSessions.find(s => s.id !== editingSubmission.id);
-            return previousSession ? previousSession.date : null;
-        } else {
-            return workerSessions[0].date;
+            const sessionsBeforeThisOne = workerSessions.filter(s =>
+                s.id !== editingSubmission.id && // Exclude the current draft/session
+                new Date(s.date) < new Date(editingSubmission.date) // Only consider sessions strictly before
+            );
+             return sessionsBeforeThisOne.length > 0 ? sessionsBeforeThisOne[0].date : null;
         }
-    }, [processedSubmissions, selectedFacilityId, selectedHealthWorkerName, activeService, editingSubmission]);
+        // If creating new, find the latest completed session
+        else {
+            return workerSessions.length > 0 ? workerSessions[0].date : null;
+        }
+    }, [processedSubmissions, selectedFacilityId, selectedHealthWorkerName, activeService, editingSubmission]); // <-- MODIFICATION: Removed publicSubmissionMode from deps
 
 
     useEffect(() => {
@@ -1407,11 +1561,11 @@ const SkillsMentorshipView = ({
                     ? staffList.find(w => w.name === selectedHealthWorkerName)
                     : null;
                 if (workerData) {
-                    setSelectedWorkerOriginalData(workerData); 
+                    setSelectedWorkerOriginalData(workerData);
                     setWorkerJobTitle(workerData.job_title || '');
                     setWorkerTrainingDate(workerData.training_date || '');
                     setWorkerPhone(workerData.phone || '');
-                    setIsWorkerInfoChanged(false); 
+                    setIsWorkerInfoChanged(false);
                 } else {
                     setSelectedWorkerOriginalData(null);
                     setWorkerJobTitle('');
@@ -1434,7 +1588,7 @@ const SkillsMentorshipView = ({
             setWorkerPhone('');
             setIsWorkerInfoChanged(false);
         }
-    }, [selectedHealthWorkerName, selectedFacility]); 
+    }, [selectedHealthWorkerName, selectedFacility]);
 
     useEffect(() => {
         if (!selectedWorkerOriginalData || !selectedHealthWorkerName) {
@@ -1452,20 +1606,28 @@ const SkillsMentorshipView = ({
 
     // --- Navigation and Form Handlers ---
     const resetSelection = () => {
-        if (!publicSubmissionMode && userStates && userStates.length === 1) { setSelectedState(userStates[0]); } else { setSelectedState(''); }
-        if (!publicSubmissionMode && permissions.manageScope === 'locality' && userLocalities && userLocalities.length === 1) { setSelectedLocality(userLocalities[0]); } else { setSelectedLocality(''); }
-        setSelectedFacilityId(''); setSelectedHealthWorkerName('');
+        // Keep state/locality if user is restricted
+        if (publicSubmissionMode || !(userStates && userStates.length === 1)) {
+            setSelectedState('');
+        }
+        if (publicSubmissionMode || !(permissions.manageScope === 'locality' && userLocalities && userLocalities.length === 1)) {
+            setSelectedLocality('');
+        }
+        setSelectedFacilityId('');
+        setSelectedHealthWorkerName('');
         setSelectedWorkerOriginalData(null);
         setWorkerJobTitle('');
         setWorkerTrainingDate('');
         setWorkerPhone('');
         setIsWorkerInfoChanged(false);
+        setEditingSubmission(null); // Clear editing state here too
     };
     const handleSelectService = (serviceKey) => {
         setActiveService(serviceKey);
         setCurrentView('history');
     };
     const handleStartNewVisit = () => {
+        resetSelection(); // Ensure selection is cleared before setting up form
         setCurrentView('form_setup');
     };
     const handleReturnToServiceSelection = () => {
@@ -1475,24 +1637,23 @@ const SkillsMentorshipView = ({
     };
 
     const handleFormCompletion = async () => {
-        const cameFromSetup = previousViewRef.current === 'form_setup';
         const wasEditing = !!editingSubmission;
 
-        resetSelection();
-        setEditingSubmission(null);
-        
+        resetSelection(); // This now also clears editingSubmission
+
         if (publicSubmissionMode) {
             setToast({ show: true, message: 'Submission successful! Thank you.', type: 'success' });
-             setCurrentView('form_setup');
+             setCurrentView('form_setup'); // Go back to setup in public mode
         } else {
-             if (cameFromSetup || wasEditing) {
+             // If coming from setup OR finishing an edit, refresh history
+             if (previousViewRef.current === 'form_setup' || wasEditing) {
                 await fetchSkillMentorshipSubmissions(true);
              }
-            setCurrentView('history');
+            setCurrentView('history'); // Go back to history in normal mode
         }
     };
-    
-    const previousViewRef = useRef(currentView); 
+
+    const previousViewRef = useRef(currentView);
     useEffect(() => {
         previousViewRef.current = currentView;
     }, [currentView]);
@@ -1501,7 +1662,7 @@ const SkillsMentorshipView = ({
     const handleBackToHistoryView = () => {
         setCurrentView('history');
          resetSelection();
-         setEditingSubmission(null);
+         // editingSubmission is cleared in resetSelection
     };
 
     const handleShareSubmissionLink = () => {
@@ -1553,14 +1714,14 @@ const SkillsMentorshipView = ({
         try {
             const mentorIdentifier = user ? (user.displayName || user.email) : (publicSubmissionMode ? 'PublicMentorshipForm' : 'SkillsMentorshipForm');
             await addHealthWorkerToFacility(selectedFacilityId, workerData, mentorIdentifier);
-            await fetchHealthFacilities(true); 
+            await fetchHealthFacilities(true);
             setToast({ show: true, message: 'تمت إضافة العامل الصحي بنجاح!', type: 'success' });
             setWorkerJobTitle('');
             setWorkerTrainingDate('');
             setWorkerPhone('');
             setIsWorkerInfoChanged(false);
-            setSelectedWorkerOriginalData(null); 
-            setSelectedHealthWorkerName(workerData.name); 
+            setSelectedWorkerOriginalData(null);
+            setSelectedHealthWorkerName(workerData.name);
             setIsAddWorkerModalOpen(false);
         } catch (error) {
             console.error("Error saving new health worker:", error);
@@ -1569,31 +1730,32 @@ const SkillsMentorshipView = ({
     };
     const handleUpdateHealthWorkerInfo = async () => {
         if (!selectedHealthWorkerName || !selectedFacilityId || !isWorkerInfoChanged) {
-            return; 
+            return;
         }
         setIsUpdatingWorker(true);
         const user = auth.currentUser;
         try {
              // Use default identifier for public mode, otherwise use current user
-             const mentorIdentifier = publicSubmissionMode 
-                 ? 'PublicMentorshipForm' 
+             const mentorIdentifier = publicSubmissionMode
+                 ? 'PublicMentorshipForm'
                  : (user ? (user.displayName || user.email) : 'SkillsMentorshipForm');
-                 
+
              const updatedData = {
-                name: selectedHealthWorkerName, 
+                name: selectedHealthWorkerName,
                 job_title: workerJobTitle,
                 training_date: workerTrainingDate,
                 phone: workerPhone
              };
              await addHealthWorkerToFacility(selectedFacilityId, updatedData, mentorIdentifier);
-             await fetchHealthFacilities(true); 
+             await fetchHealthFacilities(true);
              setToast({ show: true, message: 'تم تحديث بيانات العامل الصحي بنجاح!', type: 'success' });
-             setIsWorkerInfoChanged(false); 
-             const updatedFacility = healthFacilities.find(f => f.id === selectedFacilityId); 
+             setIsWorkerInfoChanged(false);
+             // Re-fetch worker data after update to reset original data baseline
+             const updatedFacility = await fetchHealthFacilities(true).then(() => healthFacilities.find(f => f.id === selectedFacilityId)); // Re-fetch might be needed
              if (updatedFacility?.imnci_staff) {
                  const staffList = typeof updatedFacility.imnci_staff === 'string' ? JSON.parse(updatedFacility.imnci_staff) : updatedFacility.imnci_staff;
                  const freshWorkerData = Array.isArray(staffList) ? staffList.find(w => w.name === selectedHealthWorkerName) : null;
-                 setSelectedWorkerOriginalData(freshWorkerData); 
+                 setSelectedWorkerOriginalData(freshWorkerData);
              }
         } catch (error) {
              console.error("Error updating health worker info:", error);
@@ -1603,45 +1765,55 @@ const SkillsMentorshipView = ({
         }
     };
 
-    // --- NEW: View, Edit, Delete Handlers ---
+    // --- MODIFIED: View, Edit, Delete Handlers ---
     const handleViewSubmission = (submissionId) => {
+        // Find the full original data from the *source* array
         const fullSubmission = skillMentorshipSubmissions.find(s => s.id === submissionId);
         setViewingSubmission(fullSubmission);
+        setIsDraftsModalOpen(false); // Close drafts modal if open
     };
 
     const handleEditSubmission = (submissionId) => {
+        // Find the full original data using the ID
         const fullSubmission = skillMentorshipSubmissions.find(s => s.id === submissionId);
         if (!fullSubmission) return;
 
+        // Set state based on the *original* data structure
         setSelectedState(fullSubmission.state);
         setSelectedLocality(fullSubmission.locality);
         setSelectedFacilityId(fullSubmission.facilityId);
         setSelectedHealthWorkerName(fullSubmission.healthWorkerName);
-        
+
+        // Pass the *original* data structure to editingSubmission
         setEditingSubmission(fullSubmission);
-        
-        setCurrentView('form_setup');
+
+        setIsDraftsModalOpen(false); // Close drafts modal if open
+        setCurrentView('form_setup'); // Navigate to form setup
     };
 
+
     const handleDeleteSubmission = async (submissionId) => {
-        const submissionToDelete = skillMentorshipSubmissions.find(s => s.id === submissionId);
+        // Find the submission from the *processed* array for display info
+        const submissionToDelete = processedSubmissions.find(s => s.id === submissionId);
         if (!submissionToDelete) return;
 
-        const confirmMessage = `هل أنت متأكد من حذف جلسة العامل الصحي: ${submissionToDelete.healthWorkerName} بتاريخ ${submissionToDelete.sessionDate}؟
+        const confirmMessage = `هل أنت متأكد من حذف جلسة العامل الصحي: ${submissionToDelete.staff} بتاريخ ${submissionToDelete.date}؟
 ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
 
         if (window.confirm(confirmMessage)) {
             try {
                 await deleteMentorshipSession(submissionId);
                 setToast({ show: true, message: 'تم حذف الجلسة بنجاح.', type: 'success' });
-                await fetchSkillMentorshipSubmissions(true);
+                await fetchSkillMentorshipSubmissions(true); // Refresh list
+                setIsDraftsModalOpen(false); // Close drafts modal if open
+                setViewingSubmission(null); // Close view modal if this was viewed
             } catch (error) {
                 console.error("Error deleting session:", error);
                 setToast({ show: true, message: `فشل الحذف: ${error.message}`, type: 'error' });
             }
         }
     };
-    // --- END NEW Handlers ---
+    // --- END MODIFIED Handlers ---
 
 
     // --- Render Logic ---
@@ -1654,13 +1826,13 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
         return (
             <>
                 <MentorshipSubmissionsTable
-                    submissions={processedSubmissions} 
+                    submissions={processedSubmissions}
                     onNewVisit={handleStartNewVisit}
                     onBackToServiceSelection={handleReturnToServiceSelection}
                     activeService={activeService}
-                    onView={handleViewSubmission}
-                    onEdit={handleEditSubmission}
-                    onDelete={handleDeleteSubmission}
+                    onView={handleViewSubmission} // Pass directly
+                    onEdit={handleEditSubmission} // Pass directly
+                    onDelete={handleDeleteSubmission} // Pass directly
                     availableStates={availableStates}
                     userStates={userStates}
                     fetchSubmissions={fetchSkillMentorshipSubmissions}
@@ -1680,6 +1852,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         healthFacilities={healthFacilities || []}
                     />
                 )}
+                {/* Viewing uses the original data structure */}
                 {viewingSubmission && (
                     <ViewSubmissionModal
                         submission={viewingSubmission}
@@ -1691,7 +1864,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
     }
 
     if (currentView === 'form_setup' && (editingSubmission || (selectedHealthWorkerName && selectedFacility)) && activeService && !isAddWorkerModalOpen && !isWorkerInfoChanged) {
-        
+
         const facilityData = editingSubmission ? {
             'الولاية': editingSubmission.state,
             'المحلية': editingSubmission.locality,
@@ -1699,22 +1872,51 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
             'id': editingSubmission.facilityId,
         } : selectedFacility;
 
-        // When in public mode, facilityData is guaranteed to be set if the form is rendered,
-        // but worker details might be empty strings if they weren't in the database.
-        
+        // Pass the original editingSubmission data (not the processed one)
         return (
-            <SkillsAssessmentForm
-                facility={facilityData}
-                healthWorkerName={editingSubmission ? editingSubmission.healthWorkerName : selectedHealthWorkerName}
-                healthWorkerJobTitle={workerJobTitle}
-                healthWorkerTrainingDate={workerTrainingDate}
-                healthWorkerPhone={workerPhone} 
-                onCancel={handleFormCompletion}
-                setToast={setToast}
-                visitNumber={visitNumber}
-                existingSessionData={editingSubmission}
-                lastSessionDate={lastSessionDate}
-            />
+            <>
+                {/* --- NEW: Sticky Drafts Button (Square, Top Right) --- */}
+                 {publicSubmissionMode && user && (
+                    <button
+                        onClick={() => setIsDraftsModalOpen(true)}
+                        className="fixed top-4 right-4 z-30 bg-yellow-500 text-white w-16 h-16 rounded-md shadow-lg hover:bg-yellow-600 transition-colors flex flex-col items-center justify-center text-xs font-medium"
+                        title="عرض المسودات المحفوظة"
+                        dir="rtl" // Ensure text direction is correct
+                    >
+                         <span>المسودات</span>
+                         <span>({currentUserDrafts.length})</span>
+                    </button>
+                )}
+                {/* --- END Sticky Drafts Button --- */}
+                <SkillsAssessmentForm
+                    facility={facilityData}
+                    healthWorkerName={editingSubmission ? editingSubmission.healthWorkerName : selectedHealthWorkerName}
+                    healthWorkerJobTitle={workerJobTitle}
+                    healthWorkerTrainingDate={workerTrainingDate}
+                    healthWorkerPhone={workerPhone}
+                    onCancel={handleFormCompletion}
+                    setToast={setToast}
+                    visitNumber={visitNumber}
+                    existingSessionData={editingSubmission} // Pass the original data
+                    lastSessionDate={lastSessionDate}
+                />
+                 {/* --- NEW: Drafts Modal --- */}
+                 <DraftsModal
+                    isOpen={isDraftsModalOpen}
+                    onClose={() => setIsDraftsModalOpen(false)}
+                    drafts={currentUserDrafts} // Pass the filtered drafts
+                    onView={handleViewSubmission}
+                    onEdit={handleEditSubmission}
+                    onDelete={handleDeleteSubmission}
+                 />
+                 {/* Viewing uses the original data structure */}
+                 {viewingSubmission && (
+                    <ViewSubmissionModal
+                        submission={viewingSubmission}
+                        onClose={() => setViewingSubmission(null)}
+                    />
+                 )}
+            </>
         );
     }
 
@@ -1726,6 +1928,19 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
           const serviceTitle = SERVICE_TITLES[activeService] || activeService;
         return (
             <>
+                {/* --- NEW: Sticky Drafts Button --- */}
+                {publicSubmissionMode && user && (
+                    <button
+                        onClick={() => setIsDraftsModalOpen(true)}
+                        className="fixed top-1/2 right-4 transform -translate-y-1/2 z-30 bg-yellow-500 text-white px-3 py-2 rounded-md shadow-lg hover:bg-yellow-600 transition-colors"
+                        title="عرض المسودات المحفوظة"
+                        dir="rtl" // Ensure text direction is correct
+                    >
+                         عرض المسودات ({currentUserDrafts.length})
+                    </button>
+                )}
+                {/* --- END Sticky Drafts Button --- */}
+
                 <Card dir="rtl">
                     <div className="p-6">
                         {/* --- Header and Back Button --- */}
@@ -1742,7 +1957,6 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         </div>
 
                         {/* --- Selection Grid --- */}
-                        {/* MODIFICATION: Loading spinner for facilities */}
                         {isFacilitiesLoading ? (
                             <div className="flex justify-center p-8"><Spinner /></div>
                         ) : (
@@ -1765,7 +1979,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                                 ) : (
                                                     <option value="">-- لم يتم تحديد محلية --</option>
                                                 )
-                                            ) : ( 
+                                            ) : (
                                                 <>
                                                     <option value="">-- اختر المحلية --</option>
                                                     {selectedState && STATE_LOCALITIES[selectedState]?.localities.sort((a, b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
@@ -1843,8 +2057,8 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                                          <Button
                                                             type="button"
                                                             onClick={handleUpdateHealthWorkerInfo}
-                                                            disabled={isUpdatingWorker} // Removed || !!editingSubmission
-                                                            variant="success" 
+                                                            disabled={isUpdatingWorker}
+                                                            variant="success"
                                                             size="sm"
                                                         >
                                                             {isUpdatingWorker ? 'جاري التحديث...' : 'حفظ تعديلات بيانات العامل'}
@@ -1860,8 +2074,8 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                     </div>
                 </Card>
 
-                {/* --- Add Worker Modal --- */}
-                {isAddWorkerModalOpen && (
+                 {/* --- Add Worker Modal --- */}
+                 {isAddWorkerModalOpen && (
                     <AddHealthWorkerModal
                         isOpen={isAddWorkerModalOpen}
                         onClose={() => setIsAddWorkerModalOpen(false)}
@@ -1869,6 +2083,23 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         facilityName={selectedFacility?.['اسم_المؤسسة'] || 'المؤسسة المحددة'}
                     />
                 )}
+
+                 {/* --- NEW: Drafts Modal (rendered here too for consistency) --- */}
+                 <DraftsModal
+                    isOpen={isDraftsModalOpen}
+                    onClose={() => setIsDraftsModalOpen(false)}
+                    drafts={currentUserDrafts}
+                    onView={handleViewSubmission}
+                    onEdit={handleEditSubmission}
+                    onDelete={handleDeleteSubmission}
+                 />
+                 {/* Viewing uses the original data structure */}
+                 {viewingSubmission && (
+                    <ViewSubmissionModal
+                        submission={viewingSubmission}
+                        onClose={() => setViewingSubmission(null)}
+                    />
+                 )}
             </>
         );
     }

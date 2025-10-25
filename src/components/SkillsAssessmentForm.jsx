@@ -10,7 +10,7 @@ import {
 } from './CommonComponents';
 import { getAuth } from "firebase/auth";
 
-// --- Single Skill Checklist Item (Ensure score circle has space) ---
+// --- Single Skill Checklist Item (Ensure score circle has space and text wraps) ---
 const SkillChecklistItem = ({ label, value, onChange, name, showNaOption = true, naLabel = "لا ينطبق", isMainSymptom = false, scoreCircle = null }) => {
     const handleChange = (e) => { onChange(name, e.target.value); };
 
@@ -30,11 +30,12 @@ const SkillChecklistItem = ({ label, value, onChange, name, showNaOption = true,
                 {/* MODIFICATION: Added self-start/sm:self-auto */}
                 {scoreCircle && <span className="ml-2 flex-shrink-0 self-start sm:self-auto">{scoreCircle}</span>} 
                 {/* Label Text */}
-                <span className="break-words sm:whitespace-nowrap">{label}</span> {/* MODIFICATION: Replaced truncate with break-words */}
+                {/* MODIFICATION: Added w-full on small screens to ensure full width for wrapping */}
+                <span className="w-full sm:w-auto break-words sm:whitespace-nowrap">{label}</span> 
             </span>
 
-            {/* Radio Buttons */}
-            <div className="flex gap-4 flex-shrink-0 mt-2 sm:mt-0"> {/* Added margin top on small screens */}
+            {/* Radio Buttons - Moved below the label on small screen using flex-col in parent and mt-2 here */}
+            <div className="flex gap-4 flex-shrink-0 mt-2 sm:mt-0"> 
                 <label className="flex items-center gap-1 cursor-pointer text-sm">
                     <input type="radio" name={name} value="yes" checked={value === 'yes'} onChange={handleChange} className="form-radio text-green-600" /> نعم
                 </label>
@@ -469,12 +470,6 @@ const calculateScores = (formData) => {
                         subgroupMaxScore = mainSymptomsMaxScore;
                     }
 
-                    // --- FIX: DO NOT add to totalAssessmentMaxScore here. It's added at the end. ---
-                    // if (!isTreatmentSubgroup) {
-                    //    totalAssessmentMaxScore += subgroupMaxScore; // <--- THIS WAS THE BUG
-                    // }
-                    // --- END FIX ---
-
                 } else if (Array.isArray(subgroup.skills)) {
                     let isSubgroupRelevantForScoring = true;
                     if (isTreatmentSubgroup && subgroup.relevant) {
@@ -587,20 +582,18 @@ const calculateScores = (formData) => {
 
 
 // --- Form Component Start ---
-// --- MODIFICATION: Accept new props ---
 const SkillsAssessmentForm = ({
     facility,
     healthWorkerName,
     healthWorkerJobTitle,
     healthWorkerTrainingDate,
-    healthWorkerPhone, // <-- ADDED PROP
+    healthWorkerPhone, 
     onCancel,
     setToast,
     existingSessionData = null,
-    visitNumber = 1, // Default to 1 if not provided
-    lastSessionDate = null // <-- NEW PROP
+    visitNumber = 1, 
+    lastSessionDate = null 
 }) => {
-// --- END MODIFICATION ---
 
     const [formData, setFormData] = useState(
         existingSessionData
@@ -1173,13 +1166,17 @@ const SkillsAssessmentForm = ({
                                         className="p-1 text-sm mr-2 w-auto"
                                     />
                                 </div>
-                                {/* --- MODIFIED: Display lastSessionDate prop --- */}
+                                {/* MODIFIED: Display lastSessionDate prop */}
                                 <div className="text-sm">
                                     <span className="font-medium text-gray-500">تاريخ الجلسة السابقة:</span>
-                                    <span className="font-semibold text-gray-900 mr-2">{lastSessionDate || '---'}</span>
+                                    {/* Ensure prop is displayed whether it's 'N/A' or a date string */}
+                                    <span className="font-semibold text-gray-900 mr-2">{lastSessionDate || '---'}</span> 
                                 </div>
-                                {/* --- END MODIFIED --- */}
-                                <div className="text-sm"><span className="font-medium text-gray-700">رقم الجلسة:</span><span className="text-lg font-bold text-sky-700 mr-2">{visitNumber}</span></div>
+                                {/* MODIFIED: Display visitNumber prop */}
+                                <div className="text-sm"><span className="font-medium text-gray-700">رقم الجلسة:</span>
+                                    {/* Ensure prop is displayed whether it's 'N/A' or a number */}
+                                    <span className="text-lg font-bold text-sky-700 mr-2">{visitNumber}</span>
+                                </div>
                                 
                             </div>
                         </div>
