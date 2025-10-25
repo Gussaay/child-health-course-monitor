@@ -1,20 +1,13 @@
 // SkillsMentorshipView.jsx
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-// --- MODIFICATION: Import useDataCache ---
 import { useDataCache } from '../DataContext';
-// --- END MODIFICATION ---
 import { Timestamp } from 'firebase/firestore';
-// --- MODIFICATION: Import deleteMentorshipSession ---
 import {
     saveMentorshipSession,
-    // --- MODIFICATION: listMentorshipSessions is no longer needed here ---
-    // listMentorshipSessions, 
-    // --- END MODIFICATION ---
     importMentorshipSessions,
     addHealthWorkerToFacility,
-    deleteMentorshipSession // <-- ADDED
+    deleteMentorshipSession
 } from '../data';
-// --- END MODIFICATION ---
 import {
     Card, PageHeader, Button, FormGroup, Select, Spinner,
     EmptyState, Input, Textarea, CourseIcon, Checkbox, Modal
@@ -64,9 +57,7 @@ const evaluateRelevance = (relevanceString, formData) => {
 
 // --- Function to calculate scores (Copied & adapted from SkillsAssessmentForm) ---
 const calculateScores = (formData) => {
-    // ... (Implementation unchanged) ...
-    // Requires IMNCI_FORM_STRUCTURE to be defined globally or passed in
-    // For simplicity in this context, assume IMNCI_FORM_STRUCTURE is accessible
+    // ... (Implementation largely unchanged, kept for completeness) ...
      const IMNCI_FORM_STRUCTURE = [
         {
             group: 'تقييم مهارات التقييم والتصنيف',
@@ -138,7 +129,7 @@ const calculateScores = (formData) => {
                     scoreKey: 'ear_treatment',
                     maxScore: 4,
                     skills: [ { key: 'skill_ear_abx', label: 'هل وصف مضاد حيوي لعلاج التهاب الأذن الحاد بصورة صحيحة' }, { key: 'skill_ear_dose', label: 'هل أعطى الجرعة الأولى من مضاد حيوي لعلاج التهاب الأذن الحاد بصورة صحيحة', relevant: "${ts_skill_ear_abx}='yes'" }, { key: 'skill_ear_para', label: 'هل وصف دواء الباراسيتامول بصورة صحيحة' }, { key: 'skill_ear_para_dose', label: 'هل أعطى الجرعة الأولى من الباراسيتامول بصورة صحيحة', relevant: "${ts_skill_ear_para}='yes'" }, ],
-                    relevant: (formData) => ['التهاب العظمة خلف الاذن', 'التهاب اذن حاد', 'التهاب اذن مزمن'].includes(formData.assessment_skills?.supervisor_correct_ear_classification)
+                    relevant: (formData) => ['التهاب العظمة خلف الاذن', 'التهاب أذن حاد', 'التهاب أذن مزمن'].includes(formData.assessment_skills?.supervisor_correct_ear_classification)
                 },
                 {
                     subgroupTitle: 'في حالة سوء التغذية',
@@ -268,7 +259,7 @@ const calculateScores = (formData) => {
                                       isSkillRelevantForScoring = false;
                                  }
                              } else {
-                                isSkillRelevantForScoring = false;
+                                शासितSkillRelevantForScoring = false;
                              }
                         }
 
@@ -330,7 +321,7 @@ const calculateScores = (formData) => {
 
 // --- Bulk Upload Modal (Detailed Version) ---
 const DetailedMentorshipBulkUploadModal = ({
-    // ... (Implementation unchanged) ...
+    // ... (rest of props)
     isOpen,
     onClose,
     onImport,
@@ -438,14 +429,12 @@ const DetailedMentorshipBulkUploadModal = ({
     const ALL_TEMPLATE_HEADERS = useMemo(() => ALL_MENTORSHIP_FIELDS.map(f => f.key), [ALL_MENTORSHIP_FIELDS]);
 
     const stateArToKey = useMemo(() => {
-        // ... (Implementation unchanged) ...
         return Object.entries(STATE_LOCALITIES).reduce((acc, [key, value]) => {
             acc[value.ar.trim().toLowerCase()] = key;
             return acc;
         }, {});
     }, []);
     const localityArToKey = (stateKey, localityAr) => {
-        // ... (Implementation unchanged) ...
         if (!stateKey || !localityAr) return null;
         const stateData = STATE_LOCALITIES[stateKey];
         if (!stateData) return null;
@@ -453,7 +442,6 @@ const DetailedMentorshipBulkUploadModal = ({
         return locality ? locality.en : null;
     };
     const facilityLookup = useMemo(() => {
-        // ... (Implementation unchanged) ...
         if (!healthFacilities) return new Map();
         return healthFacilities.reduce((acc, facility) => {
             const state = facility['الولاية'];
@@ -468,7 +456,6 @@ const DetailedMentorshipBulkUploadModal = ({
     }, [healthFacilities]);
 
     useEffect(() => {
-        // ... (Implementation unchanged) ...
         if (uploadStatus.inProgress) {
             setCurrentPage(2);
         } else if (uploadStatus.message) {
@@ -482,7 +469,6 @@ const DetailedMentorshipBulkUploadModal = ({
         }
     }, [uploadStatus.inProgress, uploadStatus.message, uploadStatus.errors]);
     useEffect(() => {
-        // ... (Implementation unchanged) ...
         if (isOpen) {
             setCurrentPage(0);
             setError('');
@@ -493,7 +479,6 @@ const DetailedMentorshipBulkUploadModal = ({
         }
     }, [isOpen]);
     const handleFileUpload = (e) => {
-        // ... (Implementation unchanged) ...
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
@@ -518,7 +503,6 @@ const DetailedMentorshipBulkUploadModal = ({
         reader.readAsArrayBuffer(file);
     };
     const handleDownloadTemplate = () => {
-        // ... (Implementation unchanged) ...
         const fileName = `Mentorship_Upload_Template_Detailed_${activeService}.xlsx`;
         const worksheetData = [ALL_TEMPLATE_HEADERS]; 
         const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
@@ -527,7 +511,6 @@ const DetailedMentorshipBulkUploadModal = ({
         XLSX.writeFile(workbook, fileName);
     };
     const handleMappingChange = useCallback((appField, excelHeader) => {
-        // ... (Implementation unchanged) ...
         setFieldMappings(prev => {
             const newMappings = { ...prev };
             if (excelHeader) newMappings[appField] = excelHeader;
@@ -536,7 +519,6 @@ const DetailedMentorshipBulkUploadModal = ({
         });
     }, []);
     const handleValidation = () => {
-        // ... (Implementation unchanged) ...
         const missingMappings = BASE_FIELDS 
             .filter(field => field.required && !fieldMappings[field.key])
             .map(field => field.label);
@@ -548,7 +530,6 @@ const DetailedMentorshipBulkUploadModal = ({
         startImportProcess(excelData, excelData);
     };
     const processAndStartImport = (dataForProcessing, originalRawData) => {
-        // ... (Implementation unchanged) ...
         const user = auth.currentUser;
         if (!user) {
             setError('You must be logged in to import data.');
@@ -673,13 +654,11 @@ const DetailedMentorshipBulkUploadModal = ({
     };
     const startImportProcess = (data, rawData) => processAndStartImport(data, rawData);
     const handleRetryUpload = () => {
-        // ... (Implementation unchanged) ...
         const dataToRetry = failedRows.map(failedRow => failedRow.rowData);
         setFailedRows([]);
         processAndStartImport(dataToRetry, dataToRetry);
     };
     const handleCorrectionDataChange = (errorIndex, cellIndex, value) => {
-        // ... (Implementation unchanged) ...
         const updatedFailedRows = [...failedRows];
         const newRowData = [...updatedFailedRows[errorIndex].rowData];
         newRowData[cellIndex] = value;
@@ -687,7 +666,6 @@ const DetailedMentorshipBulkUploadModal = ({
         setFailedRows(updatedFailedRows);
     };
     const renderPreview = () => (excelData.length === 0) ? null : (
-        // ... (Implementation unchanged) ...
         <div className="mt-4 overflow-auto max-h-60">
             <h4 className="font-medium mb-2">Data Preview (first 5 rows)</h4>
             <table className="min-w-full border border-gray-200">
@@ -697,7 +675,6 @@ const DetailedMentorshipBulkUploadModal = ({
         </div>
     );
     const MappingRow = ({ field, headers, selectedValue, onMappingChange }) => (
-        // ... (Implementation unchanged) ...
         <div className="flex flex-col">
             <label htmlFor={field.key} className="text-sm font-medium mb-1">
                 {field.label} {field.required && <span className="text-red-500">*</span>}
@@ -716,7 +693,6 @@ const DetailedMentorshipBulkUploadModal = ({
         </div>
     );
     const renderProgressView = () => (
-        // ... (Implementation unchanged) ...
         <div>
             <h4 className="font-medium text-lg mb-2">Import in Progress...</h4>
             <p className="text-sm text-gray-600 mb-4">Please wait while the sessions are being uploaded.</p>
@@ -727,7 +703,6 @@ const DetailedMentorshipBulkUploadModal = ({
         </div>
     );
     const renderResultView = () => (
-        // ... (Implementation unchanged) ...
          <div>
             <h4 className="font-medium text-lg mb-2">Import Complete</h4>
             <div className="bg-gray-50 p-4 rounded-md">
@@ -763,7 +738,6 @@ const DetailedMentorshipBulkUploadModal = ({
         </div>
     );
     const renderCorrectionScreen = () => (
-        // ... (Implementation unchanged) ...
         <div>
             <h4 className="font-medium text-lg text-red-700 mb-2">Import Errors</h4>
             <p className="text-sm text-gray-600 mb-4">Some rows failed to import. You can correct the data below and retry uploading only the failed rows.</p>
@@ -804,7 +778,6 @@ const DetailedMentorshipBulkUploadModal = ({
     );
 
     return (
-        // ... (Modal structure unchanged) ...
         <Modal isOpen={isOpen} onClose={onClose} title={`Bulk Upload (Detailed) for ${activeService}`} size="full">
             <div className="p-4">
                 {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
@@ -851,7 +824,6 @@ const DetailedMentorshipBulkUploadModal = ({
 
 // --- AddHealthWorkerModal Component (with job title dropdown) ---
 const IMNCI_JOB_TITLES = [
-    // ... (Implementation unchanged) ...
     "مساعد طبي",
     "طبيب عمومي",
     "ممرض",
@@ -862,7 +834,6 @@ const IMNCI_JOB_TITLES = [
     "أخرى"
 ];
 const AddHealthWorkerModal = ({ isOpen, onClose, onSave, facilityName }) => {
-    // ... (Implementation unchanged) ...
     const [name, setName] = useState('');
     const [job_title, setJobTitle] = useState('');
     const [training_date, setTrainingDate] = useState('');
@@ -916,12 +887,10 @@ const AddHealthWorkerModal = ({ isOpen, onClose, onSave, facilityName }) => {
 // --- END AddHealthWorkerModal ---
 
 
-// --- MODIFIED: Table Column Component ---
+// --- Mentorship Table Column Component ---
 const MentorshipTableColumns = () => (
     <>
         <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
-        {/* <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الولاية</th> */}
-        {/* <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">المحلية</th> */}
         <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">المؤسسة</th>
         <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">العامل الصحي</th>
         <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">المشرف</th>
@@ -931,11 +900,10 @@ const MentorshipTableColumns = () => (
         <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الإجراءات</th>
     </>
 );
-// --- END MODIFICATION ---
+// --- END Mentorship Table Column Component ---
 
 // --- Friendly Service Titles (Unchanged) ---
 const SERVICE_TITLES = {
-    // ... (Implementation unchanged) ...
     'IMNCI': 'المعالجة المتكاملة',
     'EENC': 'رعاية حديثي الولادة',
     'ETAT': 'الفرز والعلاج في الطوارئ',
@@ -1042,16 +1010,15 @@ const ViewSubmissionModal = ({ submission, onClose }) => {
 // --- END View Submission Modal ---
 
 
-// --- MODIFIED: Submissions Table Component ---
+// --- Mentorship Submissions Table Component ---
 const MentorshipSubmissionsTable = ({
     submissions,
     onNewVisit,
     onBackToServiceSelection,
     activeService,
-    // setToast, // Removed, handled by parent
-    onView, // ADDED
-    onEdit, // ADDED
-    onDelete, // ADDED
+    onView, 
+    onEdit, 
+    onDelete, 
     availableStates,
     userStates,
     fetchSubmissions,
@@ -1065,20 +1032,18 @@ const MentorshipSubmissionsTable = ({
     const [localityFilter, setLocalityFilter] = useState('');
     const [workerFilter, setWorkerFilter] = useState('');
 
-    // MODIFIED: handleAction now calls parent handlers
     const handleAction = (action, submission) => {
         if (action === 'view') {
-            onView(submission.id); // Pass ID
+            onView(submission.id);
         } else if (action === 'edit') {
-            onEdit(submission.id); // Pass ID
+            onEdit(submission.id);
         } else if (action === 'delete') {
-            onDelete(submission.id); // Pass ID
+            onDelete(submission.id);
         }
     };
 
 
     const filteredSubmissions = useMemo(() => {
-        // ... (Implementation unchanged) ...
         let filtered = submissions;
         if (activeService) {
             filtered = filtered.filter(sub => sub.service === activeService);
@@ -1090,14 +1055,12 @@ const MentorshipSubmissionsTable = ({
              filtered = filtered.filter(sub => sub.locality === localityFilter);
         }
         if (workerFilter) {
-            // Use 'staff' property from processed submission
             filtered = filtered.filter(sub => (sub.staff || '').toLowerCase().includes(workerFilter.toLowerCase()));
         }
         return filtered.sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort by date descending
     }, [submissions, activeService, stateFilter, localityFilter, workerFilter]);
 
     const availableLocalities = useMemo(() => {
-        // ... (Implementation unchanged) ...
         if (!stateFilter || !STATE_LOCALITIES[stateFilter]) return [];
         return [
             { key: "", label: "-- اختر المحلية --" },
@@ -1112,7 +1075,6 @@ const MentorshipSubmissionsTable = ({
         <Card dir="rtl">
             <div className="p-6">
                 <div className="flex justify-between items-start mb-6">
-                    {/* ... (Header buttons unchanged) ... */}
                     <div className="flex gap-2 flex-wrap">
                         <Button onClick={onNewVisit}>+ إضافة زيارة {serviceTitle}</Button>
                         {canBulkUpload && (
@@ -1154,7 +1116,7 @@ const MentorshipSubmissionsTable = ({
                 </div>
 
 
-                {/* MODIFIED Table */}
+                {/* Table */}
                 <div className="mt-6 overflow-x-auto">
                      {isSubmissionsLoading ? (
                         <div className="flex justify-center p-8"><Spinner /></div>
@@ -1162,7 +1124,6 @@ const MentorshipSubmissionsTable = ({
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    {/* Updated Columns */}
                                     <MentorshipTableColumns />
                                 </tr>
                             </thead>
@@ -1171,7 +1132,6 @@ const MentorshipSubmissionsTable = ({
                                     <tr><td colSpan="8"><EmptyState title="لا توجد بيانات" message="لم يتم تسجيل أي زيارات متابعة مطابقة لفلاتر البحث لهذه الخدمة." /></td></tr>
                                 ) : (
                                     filteredSubmissions.map((sub, index) => {
-                                        // Calculate Score
                                         const scoreData = sub.scores;
                                         let percentage = null;
                                         if (scoreData && scoreData.overallScore_maxScore > 0) {
@@ -1181,8 +1141,6 @@ const MentorshipSubmissionsTable = ({
                                         return (
                                         <tr key={sub.id} className={sub.status === 'draft' ? 'bg-yellow-50' : 'bg-white'}>
                                             <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{index + 1}</td>
-                                            {/* <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{STATE_LOCALITIES[sub.state]?.ar || sub.state}</td> */}
-                                            {/* <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{STATE_LOCALITIES[sub.state]?.localities.find(l=>l.en === sub.locality)?.ar || sub.locality}</td> */}
                                             <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{sub.facility}</td>
                                             <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{sub.staff}</td>
                                             <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{sub.supervisor}</td>
@@ -1225,12 +1183,11 @@ const MentorshipSubmissionsTable = ({
         </Card>
     );
 };
-// --- END MODIFIED TABLE ---
+// --- END Mentorship Submissions Table Component ---
 
 // --- Service Selection Component (Unchanged) ---
 const ServiceSelector = ({ onSelectService }) => {
-    // ... (Implementation unchanged) ...
-    const services = [ { key: 'IMNCI', title: 'متابعة مهارات المعالجة المتكاملة', enabled: true }, { key: 'EENC', title: 'متابعة مهارات الرعاية الأساسية لحديثي الولادة', enabled: false }, { key: 'ETAT', title: 'متابعة مهارة الفرز والعلاج في الطوارئ', enabled: false }, { key: 'IPC', title: 'متابعة مهارات مكافحة العدوى', enabled: false }, ];
+    const services = [ { key: 'IMNCI', title: 'متابعة مهارات المعالجة المتكاملة', enabled: true }, { key: 'EENC', title: 'متابعة مهارات الرعاية الأساسية لحديثي الولادة', enabled: false }, { key: 'ETAT', title: 'متابعة مهارة الفرز والعلاج في الطوارئ', enabled: false }, { key: 'IPC', title: 'مكافحة العدوى' } ];
     return (
         <Card className="p-6" dir="rtl">
             <div className="text-right flex justify-between items-start">
@@ -1276,22 +1233,15 @@ const SkillsMentorshipView = ({
     const { 
         healthFacilities, 
         fetchHealthFacilities, 
-        isFacilitiesLoading, // Use this directly
-        skillMentorshipSubmissions, // <-- Get cached data
-        fetchSkillMentorshipSubmissions, // <-- Get context fetcher
-        isLoading: isDataCacheLoading // <-- Get context loading object
+        isLoading: isDataCacheLoading, 
+        skillMentorshipSubmissions, 
+        fetchSkillMentorshipSubmissions, 
+        isFacilitiesLoading, // Use this directly for form setup
     } = useDataCache();
     // --- END MODIFICATION ---
     
-    // --- MODIFICATION: State for raw data, view/edit modals ---
-    // const [rawSubmissions, setRawSubmissions] = useState(null); // <-- Store raw data
-    const [viewingSubmission, setViewingSubmission] = useState(null); // <-- For View Modal
-    const [editingSubmission, setEditingSubmission] = useState(null); // <-- For Edit Form
-    // --- END MODIFICATION ---
-
-    // --- MODIFICATION: isSubmissionsLoading state removed ---
-    // const [isSubmissionsLoading, setIsSubmissionsLoading] = useState(true);
-    // --- END MODIFICATION ---
+    const [viewingSubmission, setViewingSubmission] = useState(null);
+    const [editingSubmission, setEditingSubmission] = useState(null);
     
     const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
     const [uploadStatus, setUploadStatus] = useState({
@@ -1310,41 +1260,30 @@ const SkillsMentorshipView = ({
     const [isWorkerInfoChanged, setIsWorkerInfoChanged] = useState(false);
     const [isUpdatingWorker, setIsUpdatingWorker] = useState(false);
 
-    // --- MODIFICATION: fetchMentorshipSubmissions useCallback removed ---
-    // The local fetchMentorshipSubmissions function is no longer needed
-    // --- END MODIFICATION ---
-
     // --- NEW: useMemo to process submissions for table ---
     const processedSubmissions = useMemo(() => {
-        if (!skillMentorshipSubmissions) return []; // <-- Use cached data
-        return skillMentorshipSubmissions.map(sub => ({ // <-- Use cached data
+        if (!skillMentorshipSubmissions) return [];
+        return skillMentorshipSubmissions.map(sub => ({
             id: sub.id,
             service: sub.serviceType,
-            // Convert Firestore Timestamp to string for display/filtering
             date: sub.effectiveDate ? new Date(sub.effectiveDate.seconds * 1000).toISOString().split('T')[0] : (sub.sessionDate || 'N/A'),
-            effectiveDateTimestamp: sub.effectiveDate, // Keep the timestamp for sorting/filtering
-            state: sub.state || 'N/A', // Keep for filtering
-            locality: sub.locality || 'N/A', // Keep for filtering
+            effectiveDateTimestamp: sub.effectiveDate, 
+            state: sub.state || 'N/A', 
+            locality: sub.locality || 'N/A', 
             facility: sub.facilityName || 'N/A',
             staff: sub.healthWorkerName || 'N/A',
             supervisor: sub.mentorEmail || 'N/A',
             facilityId: sub.facilityId || null,
-            scores: sub.scores || null, // Pass scores
-            status: sub.status || 'complete' // Pass status
+            scores: sub.scores || null,
+            status: sub.status || 'complete'
         }));
-    }, [skillMentorshipSubmissions]); // <-- Dependency on cached data
-    // --- END NEW useMemo ---
+    }, [skillMentorshipSubmissions]);
 
      useEffect(() => {
-        // ... (Implementation unchanged) ...
         fetchHealthFacilities();
-        // --- MODIFICATION: local fetchMentorshipSubmissions call removed ---
-        // This is now handled by App.jsx when the view changes
-        // --- END MODIFICATION ---
-    }, [fetchHealthFacilities, publicSubmissionMode]); // <-- Modified dependencies
+    }, [fetchHealthFacilities, publicSubmissionMode]); 
 
      const availableStates = useMemo(() => {
-        // ... (Implementation unchanged) ...
         const allStates = Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar));
         const userAllowedStates = allStates.filter(sKey =>
              publicSubmissionMode || !userStates || userStates.length === 0 || userStates.includes(sKey)
@@ -1356,14 +1295,12 @@ const SkillsMentorshipView = ({
     }, [userStates, publicSubmissionMode]);
 
      useEffect(() => {
-        // ... (Implementation unchanged) ...
         if (!publicSubmissionMode && userStates && userStates.length === 1) {
             setSelectedState(userStates[0]);
         }
     }, [userStates, publicSubmissionMode]);
 
     useEffect(() => {
-       // ... (Implementation unchanged) ...
        if (!publicSubmissionMode && permissions.manageScope === 'locality' && userLocalities && userLocalities.length === 1) {
             setSelectedLocality(userLocalities[0]);
         }
@@ -1371,7 +1308,6 @@ const SkillsMentorshipView = ({
 
 
     const handleStateChange = (e) => {
-        // ... (Implementation unchanged) ...
         setSelectedState(e.target.value);
         if (permissions.manageScope !== 'locality' || publicSubmissionMode) {
              setSelectedLocality('');
@@ -1387,19 +1323,16 @@ const SkillsMentorshipView = ({
 
 
     const filteredFacilities = useMemo(() => {
-        // ... (Implementation unchanged) ...
         if (!healthFacilities || !selectedState || !selectedLocality) return [];
         return healthFacilities.filter(f => f['الولاية'] === selectedState && f['المحلية'] === selectedLocality)
                .sort((a, b) => (a['اسم_المؤسسة'] || '').localeCompare(b['اسم_المؤسسة'] || ''));
     }, [healthFacilities, selectedState, selectedLocality]);
 
     const selectedFacility = useMemo(() => {
-        // ... (Implementation unchanged) ...
         return filteredFacilities.find(f => f.id === selectedFacilityId);
     }, [filteredFacilities, selectedFacilityId]);
 
     const healthWorkers = useMemo(() => {
-        // ... (Implementation unchanged) ...
         if (!selectedFacility || !selectedFacility.imnci_staff) return [];
         try {
             const staffList = typeof selectedFacility.imnci_staff === 'string'
@@ -1419,7 +1352,6 @@ const SkillsMentorshipView = ({
         }
     }, [selectedFacility]);
 
-    // --- MODIFICATION: Calculate visitNumber ---
     const visitNumber = useMemo(() => {
         if (!Array.isArray(processedSubmissions) || !selectedFacilityId || !selectedHealthWorkerName || !activeService) {
             return 1; 
@@ -1428,13 +1360,8 @@ const SkillsMentorshipView = ({
             sub.facilityId === selectedFacilityId &&
             sub.staff === selectedHealthWorkerName &&
             sub.service === activeService &&
-            sub.status !== 'draft' // Only count completed submissions
+            sub.status !== 'draft'
         ).length;
-
-        // If editing a draft, the existingVisitsCount is the number of *completed* sessions.
-        // If editing a completed session, the count is the total completed sessions, including the current one.
-        // The visit number is stored in the submission data, so we don't need a complex formula here.
-        // If we are creating a new one (not editing), the number is completed + 1.
 
         if (editingSubmission) {
             return editingSubmission.visitNumber || 1; 
@@ -1442,9 +1369,7 @@ const SkillsMentorshipView = ({
 
         return existingVisitsCount + 1;
     }, [processedSubmissions, selectedFacilityId, selectedHealthWorkerName, activeService, editingSubmission]);
-    // --- END MODIFICATION ---
 
-    // --- MODIFICATION: Calculate lastSessionDate ---
     const lastSessionDate = useMemo(() => {
         if (!Array.isArray(processedSubmissions) || !selectedFacilityId || !selectedHealthWorkerName || !activeService) {
             return null;
@@ -1455,29 +1380,24 @@ const SkillsMentorshipView = ({
                 sub.facilityId === selectedFacilityId &&
                 sub.staff === selectedHealthWorkerName &&
                 sub.service === activeService &&
-                sub.status !== 'draft' // Only consider completed sessions
+                sub.status !== 'draft'
             )
-            // Sort by effectiveDate/date descending (most recent first)
             .sort((a, b) => new Date(b.date) - new Date(a.date));
 
         if (workerSessions.length === 0) {
-            return null; // No previous completed sessions
+            return null;
         }
 
         if (editingSubmission) {
-            // Find the most recent session that is *not* the one being edited.
             const previousSession = workerSessions.find(s => s.id !== editingSubmission.id);
             return previousSession ? previousSession.date : null;
         } else {
-            // If creating a new session, the most recent one is the previous one.
             return workerSessions[0].date;
         }
     }, [processedSubmissions, selectedFacilityId, selectedHealthWorkerName, activeService, editingSubmission]);
-    // --- END MODIFICATION ---
 
 
     useEffect(() => {
-        // ... (Implementation unchanged) ...
         if (selectedHealthWorkerName && selectedFacility?.imnci_staff) {
             try {
                 const staffList = typeof selectedFacility.imnci_staff === 'string'
@@ -1517,7 +1437,6 @@ const SkillsMentorshipView = ({
     }, [selectedHealthWorkerName, selectedFacility]); 
 
     useEffect(() => {
-        // ... (Implementation unchanged) ...
         if (!selectedWorkerOriginalData || !selectedHealthWorkerName) {
             setIsWorkerInfoChanged(false);
             return;
@@ -1533,7 +1452,6 @@ const SkillsMentorshipView = ({
 
     // --- Navigation and Form Handlers ---
     const resetSelection = () => {
-        // ... (Implementation unchanged) ...
         if (!publicSubmissionMode && userStates && userStates.length === 1) { setSelectedState(userStates[0]); } else { setSelectedState(''); }
         if (!publicSubmissionMode && permissions.manageScope === 'locality' && userLocalities && userLocalities.length === 1) { setSelectedLocality(userLocalities[0]); } else { setSelectedLocality(''); }
         setSelectedFacilityId(''); setSelectedHealthWorkerName('');
@@ -1544,61 +1462,49 @@ const SkillsMentorshipView = ({
         setIsWorkerInfoChanged(false);
     };
     const handleSelectService = (serviceKey) => {
-        // ... (Implementation unchanged) ...
         setActiveService(serviceKey);
         setCurrentView('history');
     };
     const handleStartNewVisit = () => {
-        // ... (Implementation unchanged) ...
         setCurrentView('form_setup');
     };
     const handleReturnToServiceSelection = () => {
-        // ... (Implementation unchanged) ...
         setActiveService(null);
         setCurrentView('service_selection');
         resetSelection();
     };
 
-    // --- MODIFIED: handleFormCompletion ---
-    // Clears editing state
     const handleFormCompletion = async () => {
         const cameFromSetup = previousViewRef.current === 'form_setup';
-        const wasEditing = !!editingSubmission; // Check if we were editing
+        const wasEditing = !!editingSubmission;
 
         resetSelection();
-        setEditingSubmission(null); // <-- CLEAR EDITING STATE
+        setEditingSubmission(null);
         
         if (publicSubmissionMode) {
             setToast({ show: true, message: 'Submission successful! Thank you.', type: 'success' });
-             setCurrentView('form_setup'); // Stay on setup for public
+             setCurrentView('form_setup');
         } else {
-             if (cameFromSetup || wasEditing) { // Refetch if new or editing
-                // --- MODIFICATION: Use context fetcher ---
-                await fetchSkillMentorshipSubmissions(true); // Refetch submissions
-                // --- END MODIFICATION ---
+             if (cameFromSetup || wasEditing) {
+                await fetchSkillMentorshipSubmissions(true);
              }
-            setCurrentView('history'); // Go back to the history list
+            setCurrentView('history');
         }
     };
-    // --- END MODIFICATION ---
-
+    
     const previousViewRef = useRef(currentView); 
     useEffect(() => {
         previousViewRef.current = currentView;
     }, [currentView]);
 
 
-    // --- MODIFIED: handleBackToHistoryView ---
-    // Clears editing state
     const handleBackToHistoryView = () => {
         setCurrentView('history');
          resetSelection();
-         setEditingSubmission(null); // <-- CLEAR EDITING STATE
+         setEditingSubmission(null);
     };
-    // --- END MODIFICATION ---
 
     const handleShareSubmissionLink = () => {
-        // ... (Implementation unchanged) ...
         const publicUrl = `${window.location.origin}/mentorship/submit/${activeService}`;
         navigator.clipboard.writeText(publicUrl).then(() => {
             setToast({ show: true, message: 'Public submission link copied to clipboard!', type: 'success' });
@@ -1607,7 +1513,6 @@ const SkillsMentorshipView = ({
         });
     };
     const handleImportMentorships = async (data, originalRows) => {
-        // ... (Implementation unchanged) ...
         if (!canBulkUploadMentorships) {
              setToast({ show: true, message: 'You do not have permission to import sessions.', type: 'error' });
              return;
@@ -1628,9 +1533,7 @@ const SkillsMentorshipView = ({
                 message += `\n${errorCount} rows failed to import. Check results for details.`;
             }
              setUploadStatus(prev => ({ ...prev, inProgress: false, message, errors: failedRowsData }));
-             // --- MODIFICATION: Use context fetcher ---
              fetchSkillMentorshipSubmissions(true);
-             // --- END MODIFICATION ---
         } catch (error) {
              setUploadStatus({
                  inProgress: false,
@@ -1642,7 +1545,6 @@ const SkillsMentorshipView = ({
         }
     };
     const handleSaveNewHealthWorker = async (workerData) => {
-        // ... (Implementation unchanged) ...
         const user = auth.currentUser;
         if (!selectedFacilityId || !workerData.name) {
              setToast({ show: true, message: 'خطأ: لم يتم تحديد المؤسسة أو اسم العامل الصحي.', type: 'error' });
@@ -1666,14 +1568,17 @@ const SkillsMentorshipView = ({
         }
     };
     const handleUpdateHealthWorkerInfo = async () => {
-        // ... (Implementation unchanged) ...
         if (!selectedHealthWorkerName || !selectedFacilityId || !isWorkerInfoChanged) {
             return; 
         }
         setIsUpdatingWorker(true);
         const user = auth.currentUser;
         try {
-             const mentorIdentifier = user ? (user.displayName || user.email) : (publicSubmissionMode ? 'PublicMentorshipForm' : 'SkillsMentorshipForm');
+             // Use default identifier for public mode, otherwise use current user
+             const mentorIdentifier = publicSubmissionMode 
+                 ? 'PublicMentorshipForm' 
+                 : (user ? (user.displayName || user.email) : 'SkillsMentorshipForm');
+                 
              const updatedData = {
                 name: selectedHealthWorkerName, 
                 job_title: workerJobTitle,
@@ -1697,40 +1602,29 @@ const SkillsMentorshipView = ({
             setIsUpdatingWorker(false);
         }
     };
-    // --- END NEW HANDLER ---
 
     // --- NEW: View, Edit, Delete Handlers ---
     const handleViewSubmission = (submissionId) => {
-        // --- MODIFICATION: Use cached data ---
         const fullSubmission = skillMentorshipSubmissions.find(s => s.id === submissionId);
-        // --- END MODIFICATION ---
         setViewingSubmission(fullSubmission);
     };
 
     const handleEditSubmission = (submissionId) => {
-        // --- MODIFICATION: Use cached data ---
         const fullSubmission = skillMentorshipSubmissions.find(s => s.id === submissionId);
-        // --- END MODIFICATION ---
         if (!fullSubmission) return;
 
-        // Set up all the state needed for the form setup view
-        setActiveService(fullSubmission.serviceType);
         setSelectedState(fullSubmission.state);
         setSelectedLocality(fullSubmission.locality);
         setSelectedFacilityId(fullSubmission.facilityId);
         setSelectedHealthWorkerName(fullSubmission.healthWorkerName);
         
-        // Set the submission data to be passed to the form
         setEditingSubmission(fullSubmission);
         
-        // Navigate to the form
         setCurrentView('form_setup');
     };
 
     const handleDeleteSubmission = async (submissionId) => {
-        // --- MODIFICATION: Use cached data ---
         const submissionToDelete = skillMentorshipSubmissions.find(s => s.id === submissionId);
-        // --- END MODIFICATION ---
         if (!submissionToDelete) return;
 
         const confirmMessage = `هل أنت متأكد من حذف جلسة العامل الصحي: ${submissionToDelete.healthWorkerName} بتاريخ ${submissionToDelete.sessionDate}؟
@@ -1740,9 +1634,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
             try {
                 await deleteMentorshipSession(submissionId);
                 setToast({ show: true, message: 'تم حذف الجلسة بنجاح.', type: 'success' });
-                // --- MODIFICATION: Use context fetcher ---
-                await fetchSkillMentorshipSubmissions(true); // Refetch list
-                // --- END MODIFICATION ---
+                await fetchSkillMentorshipSubmissions(true);
             } catch (error) {
                 console.error("Error deleting session:", error);
                 setToast({ show: true, message: `فشل الحذف: ${error.message}`, type: 'error' });
@@ -1757,27 +1649,22 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
         return <ServiceSelector onSelectService={handleSelectService} />;
     }
 
-    // --- MODIFIED: history view render ---
     if (currentView === 'history') {
         const canShareLink = permissions.canManageSkillsMentorship || permissions.canUseSuperUserAdvancedFeatures;
         return (
             <>
                 <MentorshipSubmissionsTable
-                    submissions={processedSubmissions} // <-- Pass processed data
+                    submissions={processedSubmissions} 
                     onNewVisit={handleStartNewVisit}
                     onBackToServiceSelection={handleReturnToServiceSelection}
                     activeService={activeService}
-                    // Pass new handlers
                     onView={handleViewSubmission}
                     onEdit={handleEditSubmission}
                     onDelete={handleDeleteSubmission}
-                    //
                     availableStates={availableStates}
                     userStates={userStates}
-                    // --- MODIFICATION: Pass context fetcher and loading state ---
                     fetchSubmissions={fetchSkillMentorshipSubmissions}
-                    isSubmissionsLoading={isDataCacheLoading.skillMentorshipSubmissions || !skillMentorshipSubmissions} // Show loading if context is loading OR data is null
-                    // --- END MODIFICATION ---
+                    isSubmissionsLoading={isDataCacheLoading.skillMentorshipSubmissions || !skillMentorshipSubmissions}
                     onShareLink={handleShareSubmissionLink}
                     canShareLink={canShareLink}
                     canBulkUpload={canBulkUploadMentorships}
@@ -1793,7 +1680,6 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         healthFacilities={healthFacilities || []}
                     />
                 )}
-                {/* NEW: Render View Modal */}
                 {viewingSubmission && (
                     <ViewSubmissionModal
                         submission={viewingSubmission}
@@ -1803,42 +1689,36 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
             </>
         );
     }
-    // --- END MODIFICATION ---
 
-
-    // --- MODIFIED: Render SkillsAssessmentForm ---
-    // This logic now checks for editingSubmission as well
     if (currentView === 'form_setup' && (editingSubmission || (selectedHealthWorkerName && selectedFacility)) && activeService && !isAddWorkerModalOpen && !isWorkerInfoChanged) {
         
-        // When editing, the useEffects for worker info will run based on state set by handleEditSubmission
-        // and populate workerJobTitle, workerTrainingDate, workerPhone from the *latest* facility data.
+        const facilityData = editingSubmission ? {
+            'الولاية': editingSubmission.state,
+            'المحلية': editingSubmission.locality,
+            'اسم_المؤسسة': editingSubmission.facilityName,
+            'id': editingSubmission.facilityId,
+        } : selectedFacility;
+
+        // When in public mode, facilityData is guaranteed to be set if the form is rendered,
+        // but worker details might be empty strings if they weren't in the database.
         
         return (
             <SkillsAssessmentForm
-                facility={editingSubmission ? { // Construct a minimal facility object if editing
-                    'الولاية': editingSubmission.state,
-                    'المحلية': editingSubmission.locality,
-                    'اسم_المؤسسة': editingSubmission.facilityName,
-                    'id': editingSubmission.facilityId,
-                    // Add any other facility details the form might need, if any
-                } : selectedFacility}
+                facility={facilityData}
                 healthWorkerName={editingSubmission ? editingSubmission.healthWorkerName : selectedHealthWorkerName}
-                // Pass worker details. These will be populated by useEffects
                 healthWorkerJobTitle={workerJobTitle}
                 healthWorkerTrainingDate={workerTrainingDate}
                 healthWorkerPhone={workerPhone} 
-                //
-                onCancel={handleFormCompletion} // Handles navigation back
+                onCancel={handleFormCompletion}
                 setToast={setToast}
-                visitNumber={visitNumber} // Use calculated value (which respects editing mode)
-                existingSessionData={editingSubmission} // <-- PASS THE SUBMISSION DATA FOR EDITING
-                lastSessionDate={lastSessionDate} // <-- PASS CALCULATED VALUE
+                visitNumber={visitNumber}
+                existingSessionData={editingSubmission}
+                lastSessionDate={lastSessionDate}
             />
         );
     }
-    // --- END MODIFICATION ---
 
-    // --- Render Setup View (Unchanged logic, but now leads to form above) ---
+    // --- Render Setup View ---
     const isStateFilterDisabled = !publicSubmissionMode && userStates && userStates.length === 1;
     const isLocalityFilterDisabled = publicSubmissionMode ? !selectedState : (permissions.manageScope === 'locality' || !selectedState);
 
@@ -1862,6 +1742,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         </div>
 
                         {/* --- Selection Grid --- */}
+                        {/* MODIFICATION: Loading spinner for facilities */}
                         {isFacilitiesLoading ? (
                             <div className="flex justify-center p-8"><Spinner /></div>
                         ) : (
@@ -1962,10 +1843,9 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                                          <Button
                                                             type="button"
                                                             onClick={handleUpdateHealthWorkerInfo}
-                                                            disabled={isUpdatingWorker || !!editingSubmission}
+                                                            disabled={isUpdatingWorker} // Removed || !!editingSubmission
                                                             variant="success" 
                                                             size="sm"
-                                                            title={editingSubmission ? "لا يمكن تعديل بيانات العامل أثناء تعديل الجلسة" : ""}
                                                         >
                                                             {isUpdatingWorker ? 'جاري التحديث...' : 'حفظ تعديلات بيانات العامل'}
                                                         </Button>
@@ -1978,17 +1858,6 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                             </div>
                         )}
                     </div>
-                     {/* Button to Proceed - now hidden, as form renders automatically */}
-                     {/* {selectedHealthWorkerName && !isWorkerInfoChanged && !editingSubmission && (
-                         <div className="p-4 border-t bg-gray-50 flex justify-end">
-                             <Button
-                                 onClick={() => {}} // Form renders automatically
-                                 disabled={true} // No need to click
-                             >
-                                 بدء جلسة المتابعة لـ {selectedHealthWorkerName}
-                             </Button>
-                         </div>
-                     )} */}
                 </Card>
 
                 {/* --- Add Worker Modal --- */}

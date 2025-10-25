@@ -19,17 +19,18 @@ const SkillChecklistItem = ({ label, value, onChange, name, showNaOption = true,
         : "flex flex-col sm:flex-row justify-between sm:items-center p-3 border rounded-md bg-white shadow-sm transition-all hover:shadow-md sm:mr-4"; // sm:mr-4 provides space on the right in RTL
 
     const labelClasses = isMainSymptom
-        ? "text-sm font-bold mb-2 sm:mb-0 text-right flex items-center flex-grow min-w-0 mr-4" // flex-grow allows label to take space, mr-4 for space before radios
-        : "text-sm font-medium text-gray-800 mb-2 sm:mb-0 text-right flex items-center flex-grow min-w-0 mr-4"; // flex-grow allows label to take space, mr-4 for space before radios
+        ? "text-sm font-bold mb-2 sm:mb-0 text-right flex items-start sm:items-center flex-grow mr-4" // MODIFICATION: items-start/sm:items-center, Removed min-w-0
+        : "text-sm font-medium text-gray-800 mb-2 sm:mb-0 text-right flex items-start sm:items-center flex-grow mr-4"; // MODIFICATION: items-start/sm:items-center, Removed min-w-0
 
     return (
         <div dir="rtl" className={containerClasses}>
             {/* Label and Score Circle Container */}
             <span className={labelClasses}>
                 {/* Score Circle - rendered first in RTL */}
-                {scoreCircle && <span className="ml-2 flex-shrink-0">{scoreCircle}</span>} {/* Added flex-shrink-0 */}
+                {/* MODIFICATION: Added self-start/sm:self-auto */}
+                {scoreCircle && <span className="ml-2 flex-shrink-0 self-start sm:self-auto">{scoreCircle}</span>} 
                 {/* Label Text */}
-                <span className="truncate">{label}</span> {/* Added truncate in case label is long */}
+                <span className="break-words sm:whitespace-nowrap">{label}</span> {/* MODIFICATION: Replaced truncate with break-words */}
             </span>
 
             {/* Radio Buttons */}
@@ -619,9 +620,9 @@ const SkillsAssessmentForm = ({
     const isDangerSignsComplete = (data) => { const skills = data.assessment_skills; return skills.skill_ds_drink !== '' && skills.skill_ds_vomit !== '' && skills.skill_ds_convulsion !== '' && skills.skill_ds_conscious !== ''; };
 
     // --- START CORRECTION: Updated isMainSymptomsComplete function ---
+    const isMultiSelectGroupEmpty = (obj) => !obj || !Object.values(obj).some(v => v === true);
     const isMainSymptomsComplete = (data) => {
         const skills = data.assessment_skills;
-        const isMultiSelectGroupEmpty = (obj) => !obj || !Object.values(obj).some(v => v === true);
 
         // Cough
         if (skills.skill_ask_cough === '') return false;
