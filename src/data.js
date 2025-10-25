@@ -1711,4 +1711,20 @@ export async function importMentorshipSessions(sessions, originalRows, onProgres
     return { successes, errors, failedRowsData };
 }
 // --- END NEW MENTORSHIP IMPORT FUNCTION ---
+
+// --- NEW FUNCTION TO DELETE A MENTORSHIP SESSION ---
+/**
+ * Deletes a skill mentorship session from Firestore.
+ * @param {string} sessionId - The ID of the session to delete.
+ * @returns {Promise<boolean>} True on success.
+ */
+export async function deleteMentorshipSession(sessionId) {
+    if (!sessionId) {
+        throw new Error("Session ID is required to delete.");
+    }
+    const sessionRef = doc(db, "skillMentorship", sessionId);
+    await deleteDoc(sessionRef); // Use the wrapped deleteDoc
+    return true;
+}
+// --- END NEW FUNCTION ---
 // --- END NEW MENTORSHIP FUNCTIONS ---

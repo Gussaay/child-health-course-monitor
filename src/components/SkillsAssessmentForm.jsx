@@ -10,25 +10,30 @@ import {
 } from './CommonComponents';
 import { getAuth } from "firebase/auth";
 
-// --- Single Skill Checklist Item (Unchanged) ---
+// --- Single Skill Checklist Item (Ensure score circle has space) ---
 const SkillChecklistItem = ({ label, value, onChange, name, showNaOption = true, naLabel = "لا ينطبق", isMainSymptom = false, scoreCircle = null }) => {
     const handleChange = (e) => { onChange(name, e.target.value); };
 
     const containerClasses = isMainSymptom
         ? "flex flex-col sm:flex-row justify-between sm:items-center p-3 bg-sky-700 text-white rounded-t-md"
-        : "flex flex-col sm:flex-row justify-between sm:items-center p-3 border rounded-md bg-white shadow-sm transition-all hover:shadow-md sm:mr-4";
+        : "flex flex-col sm:flex-row justify-between sm:items-center p-3 border rounded-md bg-white shadow-sm transition-all hover:shadow-md sm:mr-4"; // sm:mr-4 provides space on the right in RTL
 
     const labelClasses = isMainSymptom
-        ? "text-sm font-bold mb-2 sm:mb-0 sm:ml-4 text-right flex items-center"
-        : "text-sm font-medium text-gray-800 mb-2 sm:mb-0 sm:ml-4 text-right";
+        ? "text-sm font-bold mb-2 sm:mb-0 text-right flex items-center flex-grow min-w-0 mr-4" // flex-grow allows label to take space, mr-4 for space before radios
+        : "text-sm font-medium text-gray-800 mb-2 sm:mb-0 text-right flex items-center flex-grow min-w-0 mr-4"; // flex-grow allows label to take space, mr-4 for space before radios
 
     return (
         <div dir="rtl" className={containerClasses}>
+            {/* Label and Score Circle Container */}
             <span className={labelClasses}>
-                {scoreCircle}
-                <span>{label}</span>
+                {/* Score Circle - rendered first in RTL */}
+                {scoreCircle && <span className="ml-2 flex-shrink-0">{scoreCircle}</span>} {/* Added flex-shrink-0 */}
+                {/* Label Text */}
+                <span className="truncate">{label}</span> {/* Added truncate in case label is long */}
             </span>
-            <div className="flex gap-4 flex-shrink-0">
+
+            {/* Radio Buttons */}
+            <div className="flex gap-4 flex-shrink-0 mt-2 sm:mt-0"> {/* Added margin top on small screens */}
                 <label className="flex items-center gap-1 cursor-pointer text-sm">
                     <input type="radio" name={name} value="yes" checked={value === 'yes'} onChange={handleChange} className="form-radio text-green-600" /> نعم
                 </label>
@@ -45,7 +50,8 @@ const SkillChecklistItem = ({ label, value, onChange, name, showNaOption = true,
     );
 };
 
-// --- Score Circle Component (Unchanged) ---
+
+// --- Score Circle Component (Ensured flex-shrink-0) ---
 const ScoreCircle = ({ score, maxScore }) => {
     if (maxScore === null || maxScore === undefined || score === null || score === undefined) {
         return null;
@@ -71,14 +77,16 @@ const ScoreCircle = ({ score, maxScore }) => {
          bgColor = 'bg-green-600'; // Or gray if you prefer N/A look
     }
 
+    // --- MODIFICATION: Added flex-shrink-0 ---
     return (
         <div
-            className={`flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full ${bgColor} text-white font-bold text-xs shadow-md ml-3`}
+            className={`flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full ${bgColor} text-white font-bold text-xs shadow-md`}
             title={`${score} / ${maxScore} (${maxScore > 0 ? percentage + '%' : 'N/A'})`}
         >
             {maxScore === 0 ? 'N/A' : `${percentage}%`}
         </div>
     );
+    // --- END MODIFICATION ---
 };
 
 // --- New Sticky Overall Score Component (Unchanged) ---
@@ -106,7 +114,7 @@ const StickyOverallScore = ({ score, maxScore }) => {
     );
 };
 
-// --- Helper function to evaluate the relevance logic (Unchanged) ---
+// --- Helper function to evaluate the relevance logic (Unchanged from File 1) ---
 const evaluateRelevance = (relevanceString, formData) => {
     if (!relevanceString) return true;
     const logicRegex = /\$\{(.*?)\}='(.*?)'/;
@@ -365,172 +373,201 @@ const rehydrateDraftData = (draft) => {
 };
 
 
-// --- Function to calculate scores (updated logic) ---
+// --- START: calculateScores function (Corrected) ---
 const calculateScores = (formData) => {
     const scores = {};
+    let totalTreatmentMaxScore = 0;
+    let currentTreatmentScore = 0;
+    let totalAssessmentMaxScore = 0; // Will hold max for non-symptom skills
+    let mainSymptomsCurrentScore = 0;
+    let mainSymptomsMaxScore = 0;
+    let totalMaxScore = 0;
     let totalCurrentScore = 0;
-    let totalMaxScore = 0; // Total relevant max score
+
 
     IMNCI_FORM_STRUCTURE.forEach(group => {
         let groupCurrentScore = 0;
-        let groupRelevantMaxScore = 0; // Track max score for relevant items in this group
+        let groupMaxScore = group.maxScore;
 
         if (group.isDecisionSection) {
-            groupRelevantMaxScore = 1; // Decision is always relevant and max 1
             groupCurrentScore = formData.decisionMatches === 'yes' ? 1 : 0;
-            totalMaxScore += groupRelevantMaxScore; // Add to total max
-            totalCurrentScore += groupCurrentScore; // Add to total current
-            if (group.scoreKey) { // Store decision score
-                scores[group.scoreKey] = { score: groupCurrentScore, maxScore: groupRelevantMaxScore };
+            groupMaxScore = 1;
+            if (group.scoreKey) {
+                scores[group.scoreKey] = { score: groupCurrentScore, maxScore: groupMaxScore };
             }
+            totalMaxScore += groupMaxScore;
+            totalCurrentScore += groupCurrentScore;
+
         } else if (group.sectionKey) {
             const sectionData = formData[group.sectionKey] || {};
 
             group.subgroups?.forEach(subgroup => {
                 let subgroupCurrentScore = 0;
-                let subgroupRelevantMaxScore = 0; // Max score for relevant items in subgroup
-                let isSubgroupRelevantForScoring = true;
+                let subgroupMaxScore = subgroup.maxScore ?? 0;
+                let isSubgroupScored = !!subgroup.scoreKey;
+                let isTreatmentSubgroup = group.sectionKey === 'treatment_skills';
+                let dynamicSubgroupMaxScore = 0;
 
-                // Check subgroup relevance first
-                if (subgroup.relevant) {
-                    if (typeof subgroup.relevant === 'function') {
-                        isSubgroupRelevantForScoring = subgroup.relevant(formData);
-                    } else if (typeof subgroup.relevant === 'string') {
-                        isSubgroupRelevantForScoring = evaluateRelevance(subgroup.relevant, formData);
-                    } else {
-                         isSubgroupRelevantForScoring = false; // Unknown format
-                    }
-                }
-
-                // If subgroup NOT relevant, skip scoring it
-                if (!isSubgroupRelevantForScoring) {
-                   if (subgroup.scoreKey) {
-                        scores[subgroup.scoreKey] = { score: 0, maxScore: 0 }; // Report 0/0
-                   }
-                   // Ensure skills within are marked 'na' (should ideally happen in form effect)
-                   // ...
-                   return; // Skip to next subgroup
-                }
-
-                // Process relevant subgroup
                 if (subgroup.isSymptomGroupContainer) {
                     subgroup.symptomGroups?.forEach(sg => {
-                         const askSkillKey = sg.mainSkill.key;
-                         const symptomPrefix = askSkillKey.split('_')[2];
-                         const confirmsKey = `supervisor_confirms_${symptomPrefix}`;
-                         const checkSkillKey = `skill_check_${symptomPrefix === 'cough' ? 'rr' : symptomPrefix === 'diarrhea' ? 'dehydration' : symptomPrefix === 'fever' ? 'rdt' : 'ear'}`;
-                         const classifySkillKey = `skill_classify_${symptomPrefix}`;
+                        const symptomPrefix = sg.mainSkill.key.split('_')[2];
+                        const askSkillKey = sg.mainSkill.key;
+                        const confirmsKey = `supervisor_confirms_${symptomPrefix}`;
+                        const checkSkillKey = `skill_check_${symptomPrefix === 'cough' ? 'rr' : symptomPrefix === 'diarrhea' ? 'dehydration' : symptomPrefix === 'fever' ? 'rdt' : 'ear'}`;
+                        const classifySkillKey = `skill_classify_${symptomPrefix}`;
+                        const askValue = sectionData[askSkillKey];
 
-                         let currentSymptomScore = 0;
-                         let maxSymptomScore = 0;
+                        let symptomCurrentScore = 0;
+                        let symptomMaxScore = 0;
 
-                         // Score asking the question (always contributes 1 to max if not empty)
-                         if (sectionData[askSkillKey] === 'yes' || sectionData[askSkillKey] === 'no') {
-                            maxSymptomScore += 1;
-                            if (sectionData[askSkillKey] === 'yes') currentSymptomScore += 1;
-                         }
-
-                         // Score sub-questions ONLY if asked AND confirmed by supervisor
-                         if (sectionData[askSkillKey] === 'yes' && formData.assessment_skills?.[confirmsKey] === 'yes') {
-                             // Check skill (contributes 1 to max if not empty/na)
-                             if (sectionData[checkSkillKey] === 'yes' || sectionData[checkSkillKey] === 'no') {
-                                maxSymptomScore += 1;
-                                if (sectionData[checkSkillKey] === 'yes') currentSymptomScore += 1;
-                             }
-                             // Classify skill (contributes 1 to max if not empty/na)
-                             if (sectionData[classifySkillKey] === 'yes' || sectionData[classifySkillKey] === 'no') {
-                                maxSymptomScore += 1;
-                                if (sectionData[classifySkillKey] === 'yes') currentSymptomScore += 1;
-                             }
-                         }
-                         subgroupCurrentScore += currentSymptomScore;
-                         subgroupRelevantMaxScore += maxSymptomScore; // Use relevant max
-                         if (sg.mainSkill.scoreKey) {
-                             scores[sg.mainSkill.scoreKey] = { score: currentSymptomScore, maxScore: maxSymptomScore };
-                         }
-                    });
-                } else if (Array.isArray(subgroup.skills)) {
-                    subgroup.skills.forEach(skill => {
-                        let isSkillRelevantForScoring = true; // Assume relevant if subgroup is relevant
-                        // Check individual skill relevance if defined
-                        if (skill.relevant) {
-                             if (typeof skill.relevant === 'function') {
-                                isSkillRelevantForScoring = skill.relevant(formData);
-                             } else if (typeof skill.relevant === 'string') {
-                                 isSkillRelevantForScoring = evaluateRelevance(skill.relevant, formData);
-                             } else {
-                                isSkillRelevantForScoring = false;
-                             }
+                        if (askValue === 'yes' || askValue === 'no') {
+                            symptomMaxScore += 1;
+                            if (askValue === 'yes') {
+                                symptomCurrentScore += 1;
+                            }
                         }
 
-                        // If the skill is relevant for scoring (based on subgroup and skill relevance)
+                        if (askValue === 'yes' && formData.assessment_skills[confirmsKey] === 'yes') {
+                            // Only count 'yes'/'no' answers towards max score
+                            if (sectionData[checkSkillKey] === 'yes' || sectionData[checkSkillKey] === 'no') {
+                                symptomMaxScore += 1;
+                                if (sectionData[checkSkillKey] === 'yes') symptomCurrentScore += 1;
+                            }
+                             if (sectionData[classifySkillKey] === 'yes' || sectionData[classifySkillKey] === 'no') {
+                                symptomMaxScore += 1;
+                                if (sectionData[classifySkillKey] === 'yes') symptomCurrentScore += 1;
+                            }
+                        }
+
+                        mainSymptomsCurrentScore += symptomCurrentScore;
+                        mainSymptomsMaxScore += symptomMaxScore;
+
+                        if (sg.mainSkill?.scoreKey) {
+                             scores[sg.mainSkill.scoreKey] = { score: symptomCurrentScore, maxScore: symptomMaxScore };
+                        }
+                    });
+
+                    if (isSubgroupScored) {
+                        subgroupCurrentScore = mainSymptomsCurrentScore;
+                        subgroupMaxScore = mainSymptomsMaxScore;
+                    }
+
+                    // --- FIX: DO NOT add to totalAssessmentMaxScore here. It's added at the end. ---
+                    // if (!isTreatmentSubgroup) {
+                    //    totalAssessmentMaxScore += subgroupMaxScore; // <--- THIS WAS THE BUG
+                    // }
+                    // --- END FIX ---
+
+                } else if (Array.isArray(subgroup.skills)) {
+                    let isSubgroupRelevantForScoring = true;
+                    if (isTreatmentSubgroup && subgroup.relevant) {
+                        if (typeof subgroup.relevant === 'function') isSubgroupRelevantForScoring = subgroup.relevant(formData);
+                        else if (typeof subgroup.relevant === 'string') isSubgroupRelevantForScoring = evaluateRelevance(subgroup.relevant, formData);
+                    }
+
+                    subgroup.skills.forEach(skill => {
+                        let isSkillRelevantForScoring = isSubgroupRelevantForScoring;
+                        if (isSubgroupRelevantForScoring && skill.relevant) {
+                             if (typeof skill.relevant === 'function') isSkillRelevantForScoring = skill.relevant(formData);
+                             else if (typeof skill.relevant === 'string') isSkillRelevantForScoring = evaluateRelevance(skill.relevant, formData);
+                        }
+
                         if (isSkillRelevantForScoring) {
                             const value = sectionData[skill.key];
-                            // Only count towards max score if the value is 'yes' or 'no'
-                            if (value === 'yes' || value === 'no') {
-                                subgroupRelevantMaxScore += 1; // Increment relevant max score for the subgroup
-                                if (value === 'yes') {
-                                    subgroupCurrentScore += 1; // Increment current score if 'yes'
+                            
+                            if (isTreatmentSubgroup) {
+                                // Only count 'yes'/'no' answers towards max score
+                                if (value === 'yes' || value === 'no') {
+                                    totalTreatmentMaxScore += 1;
+                                    if (isSubgroupScored) dynamicSubgroupMaxScore += 1;
+                                }
+                            } else {
+                                // Only count 'yes'/'no' answers towards max score for assessment
+                                // 'na' for vitals (لا يوجد / لا يعمل الجهاز) should not count towards max score
+                                const isVitalSignsNa = (subgroup.scoreKey === 'vitalSigns' && value === 'na');
+                                if ((value === 'yes' || value === 'no') && !isVitalSignsNa) {
+                                    totalAssessmentMaxScore += 1;
+                                }
+                            }
+
+                            if (value === 'yes') {
+                                // This logic correctly adds to subgroup score for assessment,
+                                // and group score for treatment.
+                                if (isTreatmentSubgroup) {
+                                    groupCurrentScore += 1; 
+                                }
+                                if (isSubgroupScored) {
+                                    subgroupCurrentScore += 1; 
                                 }
                             }
                         }
-                        // else { // Skill not relevant, ensure 'na' (handled by effect) }
                     });
+
+                    if (isTreatmentSubgroup) {
+                        if (isSubgroupScored) subgroupMaxScore = dynamicSubgroupMaxScore;
+                    }
+
+                    if (!isTreatmentSubgroup) {
+                         // This adds the subgroup's total to the group's total
+                         groupCurrentScore += subgroupCurrentScore; 
+                    }
                 }
 
-                // Add subgroup scores to group totals
-                groupCurrentScore += subgroupCurrentScore;
-                groupRelevantMaxScore += subgroupRelevantMaxScore; // Sum relevant max scores
-
-                // Store individual subgroup score if key exists, using relevant max
-                if (subgroup.scoreKey) {
-                    scores[subgroup.scoreKey] = { score: subgroupCurrentScore, maxScore: subgroupRelevantMaxScore };
+                if (isSubgroupScored) {
+                    // Manually set max score for vitals since it's dynamic
+                    if (subgroup.scoreKey === 'vitalSigns') {
+                        let vitalMax = 0;
+                        if (sectionData['skill_weight'] === 'yes' || sectionData['skill_weight'] === 'no') vitalMax++;
+                        if (sectionData['skill_temp'] === 'yes' || sectionData['skill_temp'] === 'no') vitalMax++;
+                        if (sectionData['skill_height'] === 'yes' || sectionData['skill_height'] === 'no') vitalMax++;
+                        subgroupMaxScore = vitalMax;
+                    } else if (subgroup.scoreKey === 'dangerSigns') {
+                        let dangerMax = 0;
+                        if (sectionData['skill_ds_drink'] === 'yes' || sectionData['skill_ds_drink'] === 'no') dangerMax++;
+                        if (sectionData['skill_ds_vomit'] === 'yes' || sectionData['skill_ds_vomit'] === 'no') dangerMax++;
+                        if (sectionData['skill_ds_convulsion'] === 'yes' || sectionData['skill_ds_convulsion'] === 'no') dangerMax++;
+                        if (sectionData['skill_ds_conscious'] === 'yes' || sectionData['skill_ds_conscious'] === 'no') dangerMax++;
+                        subgroupMaxScore = dangerMax;
+                    } else if (!isTreatmentSubgroup && !subgroup.isSymptomGroupContainer) {
+                        // For other assessment subgroups (malnutrition, anemia, etc.)
+                        // max score is the count of 'yes'/'no' answers
+                        let subMax = 0;
+                        subgroup.skills.forEach(skill => {
+                            const skillValue = sectionData[skill.key];
+                            if(skillValue === 'yes' || skillValue === 'no') subMax++;
+                        });
+                        subgroupMaxScore = subMax;
+                    }
+                    
+                    scores[subgroup.scoreKey] = { score: subgroupCurrentScore, maxScore: subgroupMaxScore };
                 }
             });
 
-             // Add group's total relevant score to overall totals
-            totalCurrentScore += groupCurrentScore;
-            totalMaxScore += groupRelevantMaxScore;
-
-            // Store group score if key exists (using relevant max score)
-            if (group.scoreKey) {
-                 scores[group.scoreKey] = { score: groupCurrentScore, maxScore: groupRelevantMaxScore };
+            if (group.scoreKey === 'treatment') {
+                currentTreatmentScore = groupCurrentScore;
+                groupMaxScore = totalTreatmentMaxScore;
+                scores[group.scoreKey] = { score: currentTreatmentScore, maxScore: groupMaxScore };
+                totalMaxScore += groupMaxScore;
+                totalCurrentScore += currentTreatmentScore;
+            } else if (group.sectionKey === 'assessment_skills') {
+                // Here is the final tally, using the correctly separated max scores
+                scores['assessment_total_score'] = { 
+                    score: groupCurrentScore + mainSymptomsCurrentScore, 
+                    maxScore: totalAssessmentMaxScore + mainSymptomsMaxScore 
+                };
+                totalMaxScore += totalAssessmentMaxScore + mainSymptomsMaxScore;
+                totalCurrentScore += groupCurrentScore + mainSymptomsCurrentScore;
             }
-             // Store assessment/treatment specific totals
-             if (group.sectionKey === 'assessment_skills') {
-                scores['assessment_total_score'] = { score: groupCurrentScore, maxScore: groupRelevantMaxScore };
-             }
-             if (group.sectionKey === 'treatment_skills') {
-                 scores['treatment_score_calculated'] = { score: groupCurrentScore, maxScore: groupRelevantMaxScore }; // Use a distinct key
-             }
         }
     });
 
-    // Final overall score using accumulated totals
+    scores.treatmentScoreForSave = currentTreatmentScore;
     scores.overallScore = { score: totalCurrentScore, maxScore: totalMaxScore };
 
-    // Format scores payload for saving (using calculated max scores)
-     const scoresPayload = {};
-     for (const key in scores) {
-         // Exclude the temporary calculated treatment score key
-         if (key !== 'treatment_score_calculated' && scores[key]?.score !== undefined && scores[key]?.maxScore !== undefined) {
-             scoresPayload[`${key}_score`] = scores[key].score;
-             scoresPayload[`${key}_maxScore`] = scores[key].maxScore;
-         }
-     }
-     // Ensure treatment specific score/max are included correctly using the calculated values
-     if(scores['treatment_score_calculated']){
-        scoresPayload['treatment_score'] = scores['treatment_score_calculated'].score;
-        scoresPayload['treatment_maxScore'] = scores['treatment_score_calculated'].maxScore; // Use calculated max
-     } else {
-        // If treatment group wasn't relevant at all or had no scorable items
-        scoresPayload['treatment_score'] = 0;
-        scoresPayload['treatment_maxScore'] = 0;
-     }
-
-    // Return the payload format
-    return scoresPayload;
+    return scores;
 };
+// --- END: calculateScores function (Corrected) ---
+
 
 // --- Form Component Start ---
 // --- MODIFICATION: Accept new props ---
@@ -539,10 +576,12 @@ const SkillsAssessmentForm = ({
     healthWorkerName,
     healthWorkerJobTitle,
     healthWorkerTrainingDate,
+    healthWorkerPhone, // <-- ADDED PROP
     onCancel,
     setToast,
     existingSessionData = null,
-    visitNumber = 1 // Default to 1 if not provided
+    visitNumber = 1, // Default to 1 if not provided
+    lastSessionDate = null // <-- NEW PROP
 }) => {
 // --- END MODIFICATION ---
 
@@ -647,10 +686,10 @@ const SkillsAssessmentForm = ({
             const mainSkillKey = `skill_ask_${symptomPrefix}`;
             if (newAssessmentSkills[mainSkillKey] === 'yes') {
                 const confirmsKey = `supervisor_confirms_${symptomPrefix}`;
-                const checkSkillKey = `skill_check_${symptomPrefix === 'cough' ? 'rr' : symptomPrefix === 'diarrhea' ? 'dehydration' : symptomPrefix === 'fever' ? 'rdt' : 'ear'}`;
+                const checkSkillKey = `skill_check_${symptomPrefix === 'cough' ? 'rr' : prefix === 'diarrhea' ? 'dehydration' : prefix === 'fever' ? 'rdt' : 'ear'}`;
                 const classifySkillKey = `skill_classify_${symptomPrefix}`;
-                const workerClassKey = `worker_${symptomPrefix}_classification`;
-                const correctClassKey = `supervisor_correct_${symptomPrefix}_classification`;
+                const workerClassKey = `worker_${symptomPrefix}_classification`; // Corrected from 'prefix'
+                const correctClassKey = `supervisor_correct_${symptomPrefix}_classification`; // Corrected from 'prefix'
                 const supervisorConfirms = newAssessmentSkills[confirmsKey] === 'yes';
                 const initialClassState = isMulti ? createInitialClassificationState(classifications || []) : '';
                 const didClassifyCorrectly = newAssessmentSkills[classifySkillKey] === 'yes';
@@ -745,7 +784,7 @@ const SkillsAssessmentForm = ({
         }
 
         // Calculate scores based on the *current* (potentially cleaned) formData
-        setScores(calculateScores(newFormData)); // Use cleaned data for scoring
+        setScores(calculateScores(newFormData)); 
 
     }, [formData, visibleStep, existingSessionData]); // Rerun on data change, step change, or if draft loaded
 
@@ -811,7 +850,7 @@ const SkillsAssessmentForm = ({
             ...prev,
             [section]: {
                 ...prev[section], // Spread existing skills in the section
-                [key]: value,    // Update the specific skill
+                [key]: value,    // Update the specific skill,
             }
         }));
     };
@@ -870,18 +909,19 @@ const SkillsAssessmentForm = ({
             delete assessmentSkillsPayload.supervisor_agrees_anemia_classification;
 
 
+            // --- START: Score processing logic (Corrected) ---
             // Use calculated scores directly from state
-            const calculatedScores = calculateScores(formData); // Recalculate just before save for safety
+            const calculatedScores = calculateScores(formData); // Recalculate just before save
             const scoresPayload = {};
-             for (const key in calculatedScores) {
-                 if (key !== 'treatment_score_calculated' && calculatedScores[key]?.score !== undefined && calculatedScores[key]?.maxScore !== undefined) {
-                     scoresPayload[`${key}_score`] = calculatedScores[key].score;
-                     scoresPayload[`${key}_maxScore`] = calculatedScores[key].maxScore;
-                 }
-             }
-            // Add treatment score specifically
-             scoresPayload['treatment_score'] = calculatedScores['treatment_score_calculated']?.score ?? 0;
-             scoresPayload['treatment_maxScore'] = calculatedScores['treatment_score_calculated']?.maxScore ?? 0;
+            for (const key in calculatedScores) { 
+                if (key !== 'treatmentScoreForSave' && calculatedScores[key]?.score !== undefined && calculatedScores[key]?.maxScore !== undefined) {
+                    scoresPayload[`${key}_score`] = calculatedScores[key].score;
+                    scoresPayload[`${key}_maxScore`] = calculatedScores[key].maxScore;
+                }
+            }
+            scoresPayload['treatment_score'] = calculatedScores.treatmentScoreForSave ?? 0;
+            scoresPayload['treatment_maxScore'] = calculatedScores['treatment']?.maxScore ?? 0;
+            // --- END: Score processing logic (Corrected) ---
 
 
             const effectiveDateTimestamp = Timestamp.fromDate(new Date(formData.session_date));
@@ -938,17 +978,19 @@ const SkillsAssessmentForm = ({
             delete assessmentSkillsPayload.supervisor_confirms_fever;
             delete assessmentSkillsPayload.supervisor_confirms_ear;
 
+            // --- START: Score processing logic (Corrected) ---
             // Calculate and format scores for draft
-            const calculatedScores = calculateScores(formData);
+            const calculatedScores = calculateScores(formData); // Recalculate
             const scoresPayload = {};
-             for (const key in calculatedScores) {
-                 if (key !== 'treatment_score_calculated' && calculatedScores[key]?.score !== undefined && calculatedScores[key]?.maxScore !== undefined) {
-                     scoresPayload[`${key}_score`] = calculatedScores[key].score;
-                     scoresPayload[`${key}_maxScore`] = calculatedScores[key].maxScore;
-                 }
-             }
-             scoresPayload['treatment_score'] = calculatedScores['treatment_score_calculated']?.score ?? 0;
-             scoresPayload['treatment_maxScore'] = calculatedScores['treatment_score_calculated']?.maxScore ?? 0;
+            for (const key in calculatedScores) { 
+                if (key !== 'treatmentScoreForSave' && calculatedScores[key]?.score !== undefined && calculatedScores[key]?.maxScore !== undefined) {
+                    scoresPayload[`${key}_score`] = calculatedScores[key].score;
+                    scoresPayload[`${key}_maxScore`] = calculatedScores[key].maxScore;
+                }
+            }
+            scoresPayload['treatment_score'] = calculatedScores.treatmentScoreForSave ?? 0;
+            scoresPayload['treatment_maxScore'] = calculatedScores['treatment']?.maxScore ?? 0;
+            // --- END: Score processing logic (Corrected) ---
 
 
              const effectiveDateTimestamp = Timestamp.fromDate(new Date(formData.session_date));
@@ -991,75 +1033,68 @@ const SkillsAssessmentForm = ({
             />
             <form onSubmit={handleSubmit}>
                 <div className="p-6">
-                    {/* Header */}
-                    <div className="text-right">
-                        <PageHeader
-                            title={`متابعة مهارات IMNCI: ${healthWorkerName}`}
-                            subtitle={`المؤسسة: ${facility['اسم_المؤسسة']} (${facility['المحلية']}, ${facility['الولاية']})`}
-                        />
+                    {/* --- Centered Title --- */}
+                    <div className="text-center mb-4">
+                        <h2 className="text-2xl font-bold text-sky-800">
+                            متابعة مهارات العلاج المتكامل للأطفال اقل من 5 سنوات
+                        </h2>
                     </div>
 
-                    {/* Facility Info */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 mb-4 p-4 border rounded-lg bg-gray-50 text-right">
-                        <div>
-                            <span className="text-sm font-medium text-gray-500">نوع المؤسسة:</span>
-                            <span className="text-sm font-semibold text-gray-900 mr-2">
-                                {facility['نوع_المؤسسةالصحية'] || 'غير محدد'}
-                            </span>
+                    {/* --- Compact Info Cards Wrapper (Reduced margin between cards) --- */}
+                    <div className="space-y-2 mb-4"> {/* Reduced bottom margin */}
+
+                        {/* --- Compact Facility Info Card --- */}
+                        <div className="p-2 border rounded-lg bg-gray-50 text-right space-y-0.5">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-0.5" dir="rtl">
+                                <div><span className="text-sm font-medium text-gray-500">الولاية:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility['الولاية'] || 'غير محدد'}</span></div>
+                                <div><span className="text-sm font-medium text-gray-500">المحلية:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility['المحلية'] || 'غير محدد'}</span></div>
+                                <div><span className="text-sm font-medium text-gray-500">اسم المؤسسة:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility['اسم_المؤسسة'] || 'غير محدد'}</span></div>
+                                <div><span className="text-sm font-medium text-gray-500">نوع المؤسسة:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility['نوع_المؤسسةالصحية'] || 'غير محدد'}</span></div>
+                                <div><span className="text-sm font-medium text-gray-500">العدد الكلي للكوادر الطبية:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility['العدد_الكلي_للكوادر_الطبية_العاملة_أطباء_ومساعدين'] ?? 'غير محدد'}</span></div>
+                                <div><span className="text-sm font-medium text-gray-500">الكوادر المدربة (IMNCI):</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility['العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل'] ?? 'غير محدد'}</span></div>
+                            </div>
                         </div>
-                        <div>
-                            <span className="text-sm font-medium text-gray-500">العدد الكلي للكوادر الطبية (أطباء ومساعدين):</span>
-                            <span className="text-sm font-semibold text-gray-900 mr-2">
-                                {facility['العدد_الكلي_للكوادر_الطبية_العاملة_أطباء_ومساعدين'] ?? 'غير محدد'}
-                            </span>
+
+                        {/* --- Compact Health Worker Info Card --- */}
+                        <div className="p-2 border rounded-lg bg-gray-50 text-right space-y-0.5">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-3 gap-y-0.5" dir="rtl">
+                                <div><span className="text-sm font-medium text-gray-500">اسم العامل الصحي:</span><span className="text-sm font-semibold text-gray-900 mr-2">{healthWorkerName || 'غير محدد'}</span></div>
+                                <div><span className="text-sm font-medium text-gray-500">الوصف الوظيفي:</span><span className="text-sm font-semibold text-gray-900 mr-2">{healthWorkerJobTitle || 'غير محدد'}</span></div>
+                                <div className="whitespace-nowrap overflow-hidden text-ellipsis"><span className="text-sm font-medium text-gray-500">تاريخ اخر تدريب (IMNCI):</span><span className="text-sm font-semibold text-gray-900 mr-2">{healthWorkerTrainingDate || 'غير محدد'}</span></div>
+                                <div><span className="text-sm font-medium text-gray-500">رقم الهاتف:</span><span className="text-sm font-semibold text-gray-900 mr-2">{healthWorkerPhone || 'غير محدد'}</span></div>
+                            </div>
                         </div>
-                        <div>
-                            <span className="text-sm font-medium text-gray-500">العدد الكلي للكوادر المدربة على IMNCI:</span>
-                            <span className="text-sm font-semibold text-gray-900 mr-2">
-                                {facility['العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل'] ?? 'غير محدد'}
-                            </span>
+
+                        {/* --- Compact Mentor/Session Info Card --- */}
+                        <div className="p-2 border rounded-lg bg-gray-50 text-right">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-3 gap-y-0.5 items-end" dir="rtl">
+                                {/* Using simple divs for display */}
+                                <div className="text-sm"><span className="font-medium text-gray-500">اسم المشرف:</span><span className="font-semibold text-gray-900 mr-2">{user?.displayName || user?.email || '...'}</span></div>
+                                <div className="text-sm"><span className="font-medium text-gray-500">تاريخ الجلسة:</span>
+                                    {/* Swapped to Input to allow editing date */}
+                                    <Input 
+                                        type="date" 
+                                        name="session_date" 
+                                        value={formData.session_date} 
+                                        onChange={handleFormChange} 
+                                        required 
+                                        className="p-1 text-sm mr-2 w-auto"
+                                    />
+                                </div>
+                                <div className="text-sm"><span className="font-medium text-gray-500">تاريخ الجلسة السابقة:</span><span className="font-semibold text-gray-900 mr-2">{lastSessionDate || '---'}</span></div>
+                                <div className="text-sm"><span className="font-medium text-gray-700">رقم الجلسة:</span><span className="text-lg font-bold text-sky-700 mr-2">{visitNumber}</span></div>
+                                
+                            </div>
                         </div>
                     </div>
+                    {/* --- END Compact Info Cards Wrapper --- */}
 
-                    {/* --- NEW: Health Worker Info --- */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 mb-4 p-4 border rounded-lg bg-gray-50 text-right">
-                        <div>
-                            <span className="text-sm font-medium text-gray-500">الوصف الوظيفي للعامل الصحي:</span>
-                            <span className="text-sm font-semibold text-gray-900 mr-2">
-                                {healthWorkerJobTitle || 'غير محدد'}
-                            </span>
-                        </div>
-                        <div>
-                            <span className="text-sm font-medium text-gray-500">اخر تاريخ تدريب على IMNCI:</span>
-                            <span className="text-sm font-semibold text-gray-900 mr-2">
-                                {healthWorkerTrainingDate || 'غير محDد'}
-                            </span>
-                        </div>
-                    </div>
-                    {/* --- END NEW: Health Worker Info --- */}
-
-
-                    {/* Date, Mentor, Visit Number Row */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 mb-8 items-end">
-                        <FormGroup label="تاريخ الجلسة" className="text-right">
-                            <Input type="date" name="session_date" value={formData.session_date} onChange={handleFormChange} required />
-                        </FormGroup>
-                        <div className="md:col-span-1">
-                            <FormGroup label="اسم المتابع (Mentor)" className="text-right">
-                                <Input type="text" value={user?.displayName || user?.email || '...'} disabled />
-                            </FormGroup>
-                        </div>
-                         <div className="md:col-span-1 text-right pb-2"> {/* Align baseline */}
-                             <span className="text-sm font-medium text-gray-700">رقم الزيارة: </span>
-                             <span className="text-lg font-bold text-sky-700">{visitNumber}</span>
-                         </div>
-                    </div>
 
                     {/* Form Structure Mapping */}
                     {IMNCI_FORM_STRUCTURE.map(group => {
                         const isGroupVisible = !group.step || visibleStep >= group.step;
                         if (!isGroupVisible) return null;
-                         const groupScoreData = group.scoreKey ? scores[group.scoreKey] : (group.sectionKey === 'assessment_skills' ? scores['assessment_total_score'] : (group.sectionKey === 'treatment_skills' ? scores['treatment_score_calculated'] : null));
+                         const groupScoreData = group.scoreKey ? scores[group.scoreKey] : (group.sectionKey === 'assessment_skills' ? scores['assessment_total_score'] : (group.sectionKey === 'treatment_skills' ? scores['treatment'] : null));
 
                          // Decision Section Rendering
                          if (group.isDecisionSection) {
@@ -1068,7 +1103,7 @@ const SkillsAssessmentForm = ({
                                     <h3 dir="rtl" className="flex justify-between items-center text-xl font-bold mb-4 text-white bg-sky-900 p-2 rounded-md text-right">
                                         <span className="flex items-center">
                                             {groupScoreData && <ScoreCircle score={groupScoreData.score} maxScore={groupScoreData.maxScore} />}
-                                            <span>{group.group}</span>
+                                            <span className="mr-2">{group.group}</span> {/* Margin for spacing */}
                                         </span>
                                     </h3>
                                     <div className="mb-4 p-0 border border-gray-300 rounded-md bg-white overflow-hidden shadow-sm">
@@ -1100,7 +1135,7 @@ const SkillsAssessmentForm = ({
                                 <h3 dir="rtl" className={`flex justify-between items-center text-xl font-bold mb-4 border-b pb-2 text-right ${ group.group.includes('الأعراض الأساسية') ? 'text-white bg-sky-900 p-2 rounded-md border-b-0' : 'text-gray-800 border-gray-300' }`}>
                                     <span className="flex items-center">
                                         {groupScoreData && <ScoreCircle score={groupScoreData.score} maxScore={groupScoreData.maxScore} />}
-                                        <span>{group.group}</span>
+                                        <span className="mr-2">{group.group}</span> {/* Margin for spacing */}
                                     </span>
                                 </h3>
                                 {/* Subgroups */}
@@ -1123,32 +1158,28 @@ const SkillsAssessmentForm = ({
                                             <div key={subgroup.subgroupTitle} className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
                                                 <h4 dir="rtl" className="flex items-center text-sm font-bold mb-4 text-sky-800 text-right">
                                                     {subgroupScoreData && <ScoreCircle score={subgroupScoreData.score} maxScore={subgroupScoreData.maxScore} />}
-                                                    <span>{subgroup.subgroupTitle}</span>
+                                                    <span className="mr-2">{subgroup.subgroupTitle}</span> {/* Margin for spacing */}
                                                 </h4>
                                                 {subgroup.symptomGroups.map(symptomGroup => {
-                                                    // ... (logic to determine symptom prefix, labels, classifications) ...
+                                                    // ... logic to determine symptom prefix, etc. ...
                                                      const mainSkill = symptomGroup.mainSkill; if (!mainSkill?.key) return null;
                                                      const { assessment_skills } = formData;
-
                                                      let previousAskKey = null; let previousConfirmKey = null;
                                                      if (mainSkill.key === 'skill_ask_diarrhea') { previousAskKey = 'skill_ask_cough'; previousConfirmKey = 'supervisor_confirms_cough'; }
                                                      else if (mainSkill.key === 'skill_ask_fever') { previousAskKey = 'skill_ask_diarrhea'; previousConfirmKey = 'supervisor_confirms_diarrhea'; }
                                                      else if (mainSkill.key === 'skill_ask_ear') { previousAskKey = 'skill_ask_fever'; previousConfirmKey = 'supervisor_confirms_fever'; }
-
-                                                     // Hide step if previous symptom confirmation is pending (unless editing draft)
                                                      if (!existingSessionData && previousAskKey) {
                                                          const previousAskValue = assessment_skills[previousAskKey];
-                                                         if (previousAskValue === '') return null; // Previous not answered
-                                                         if (previousAskValue === 'yes' && assessment_skills[previousConfirmKey] === '') return null; // Previous needs confirmation
+                                                         if (previousAskValue === '') return null;
+                                                         if (previousAskValue === 'yes' && assessment_skills[previousConfirmKey] === '') return null;
                                                      }
-
                                                      let symptomPrefix = ''; let symptomClassifications = []; let originalCheckSkill = null; let originalClassifySkill = null; let supervisorConfirmLabel = ''; let multiSelectCols = null;
                                                      const symptomScoreData = mainSkill.scoreKey ? scores[mainSkill.scoreKey] : null;
                                                      const symptomScoreCircle = symptomScoreData ? <ScoreCircle score={symptomScoreData.score} maxScore={symptomScoreData.maxScore} /> : null;
                                                      switch (mainSkill.key) { case 'skill_ask_cough': symptomPrefix = 'cough'; symptomClassifications = COUGH_CLASSIFICATIONS; originalCheckSkill = { key: 'skill_check_rr', label: 'هل قاس معدل التنفس بصورة صحيحة'}; originalClassifySkill = { key: 'skill_classify_cough', label: 'هل صنف الكحة بصورة صحيحة'}; supervisorConfirmLabel = 'هل يوجد كحة او ضيق تنفس (سؤال للمشرف)'; break; case 'skill_ask_diarrhea': symptomPrefix = 'diarrhea'; symptomClassifications = DIARRHEA_CLASSIFICATIONS; originalCheckSkill = { key: 'skill_check_dehydration', label: 'هل قيم فقدان السوائل بصورة صحيحة'}; originalClassifySkill = { key: 'skill_classify_diarrhea', label: 'هل صنف الاسهال بصورة صحيحة'}; supervisorConfirmLabel = 'هل يوجد إسهال (سؤال للمشرف)'; multiSelectCols = { col1: DIARRHEA_COLS_1, col2: DIARRHEA_COLS_2 }; break; case 'skill_ask_fever': symptomPrefix = 'fever'; symptomClassifications = FEVER_CLASSIFICATIONS; originalCheckSkill = { key: 'skill_check_rdt', label: 'هل أجرى فحص الملاريا السريع بصورة صحيحة'}; originalClassifySkill = { key: 'skill_classify_fever', label: 'هل صنف الحمى بصورة صحيحة'}; supervisorConfirmLabel = 'هل يوجد حمى (سؤال للمشرف)'; multiSelectCols = { col1: FEVER_COLS_1, col2: FEVER_COLS_2 }; break; case 'skill_ask_ear': symptomPrefix = 'ear'; symptomClassifications = EAR_CLASSIFICATIONS; originalCheckSkill = { key: 'skill_check_ear', label: 'هل فحص الفحص ورم مؤلم خلف الأذن'}; originalClassifySkill = { key: 'skill_classify_ear', label: 'هل صنف مشكلة الأذن بصورة صحيحة'}; supervisorConfirmLabel = 'هل يوجد مشكلة اذن (سؤال للمشرف)'; break; default: return null; }
                                                      const supervisorConfirmsKey = `supervisor_confirms_${symptomPrefix}`; const workerClassKey = `worker_${symptomPrefix}_classification`; const correctClassKey = `supervisor_correct_${symptomPrefix}_classification`; const classifySkillKey = `skill_classify_${symptomPrefix}`;
                                                      const mainSkillValue = formData[group.sectionKey]?.[mainSkill.key];
-                                                     const isMainRelevant = true; // Main symptoms always considered relevant initially
+                                                     const isMainRelevant = true;
                                                      if (!isMainRelevant) return null;
                                                      const isMultiSelectClassification = ['diarrhea', 'fever'].includes(symptomPrefix);
                                                      const showSubQuestions = mainSkillValue === 'yes';
@@ -1160,7 +1191,7 @@ const SkillsAssessmentForm = ({
                                                             {/* Main Symptom Question */}
                                                             <SkillChecklistItem name={mainSkill.key} label={mainSkill.label} value={mainSkillValue} onChange={(key, value) => handleSkillChange(group.sectionKey, key, value)} showNaOption={false} isMainSymptom={true} scoreCircle={symptomScoreCircle} />
 
-                                                            {/* Sub-questions and Classifications (conditionally rendered) */}
+                                                            {/* Sub-questions and Classifications */}
                                                             {showSubQuestions && (
                                                                 <div dir="rtl" className="p-4 pt-2 bg-gray-50 space-y-4 text-right rounded-b-md">
                                                                     {/* Supervisor Confirmation */}
@@ -1172,7 +1203,7 @@ const SkillsAssessmentForm = ({
                                                                          </div>
                                                                     </div>
 
-                                                                    {/* Check and Classify Skills (if supervisor confirms) */}
+                                                                    {/* Check and Classify Skills */}
                                                                     {showClassifications && ( <>
                                                                         {originalCheckSkill && <SkillChecklistItem key={originalCheckSkill.key} name={originalCheckSkill.key} label={originalCheckSkill.label} value={formData.assessment_skills[originalCheckSkill.key]} onChange={(key, value) => handleSkillChange(group.sectionKey, key, value)} showNaOption={false} />}
                                                                         {originalClassifySkill && <SkillChecklistItem key={originalClassifySkill.key} name={originalClassifySkill.key} label={originalClassifySkill.label} value={formData.assessment_skills[classifySkillKey]} onChange={(key, value) => handleSkillChange(group.sectionKey, key, value)} showNaOption={false} />}
@@ -1189,7 +1220,7 @@ const SkillsAssessmentForm = ({
                                                                             )}
                                                                         </FormGroup>
 
-                                                                        {/* Supervisor Correction (if needed) */}
+                                                                        {/* Supervisor Correction */}
                                                                         {showSupervisorCorrection && (
                                                                             <FormGroup label="ما هو التصنيف الصحيح؟" className="text-right">
                                                                                 {isMultiSelectClassification && multiSelectCols ? (
@@ -1214,18 +1245,11 @@ const SkillsAssessmentForm = ({
                                     // Regular Subgroup Rendering
                                     else if (Array.isArray(subgroup.skills)) {
                                         const isVitalSignsGroup = subgroup.subgroupTitle === 'القياسات الجسمانية والحيوية';
-                                        // Filter skills based on relevance *before* rendering
                                         const relevantSkills = subgroup.skills.filter(skill => {
-                                            if (skill.relevant) {
-                                                return typeof skill.relevant === 'function'
-                                                    ? skill.relevant(formData)
-                                                    : evaluateRelevance(skill.relevant, formData);
-                                            }
-                                            return true; // No relevance rule means it's relevant
+                                            if (skill.relevant) { return typeof skill.relevant === 'function' ? skill.relevant(formData) : evaluateRelevance(skill.relevant, formData); }
+                                            return true;
                                         });
-
-                                        if (relevantSkills.length === 0) return null; // Don't render subgroup if no skills are relevant
-
+                                        if (relevantSkills.length === 0) return null;
                                         const isMalnutrition = subgroup.subgroupTitle === 'تحرى عن سوء التغذية الحاد'; const isAnemia = subgroup.subgroupTitle === 'تحرى عن الانيميا'; let classPrefix = ''; let classifications = []; if (isMalnutrition) { classPrefix = 'malnutrition'; classifications = MALNUTRITION_CLASSIFICATIONS; } if (isAnemia) { classPrefix = 'anemia'; classifications = ANEMIA_CLASSIFICATIONS; } const workerClassKey = `worker_${classPrefix}_classification`; const correctClassKey = `supervisor_correct_${classPrefix}_classification`; const classifySkillKey = isMalnutrition ? 'skill_mal_classify' : isAnemia ? 'skill_anemia_classify' : null;
                                         const showClassifications = (isMalnutrition || isAnemia) && classifySkillKey;
                                         const showSupervisorCorrection = showClassifications && formData.assessment_skills[classifySkillKey] === 'no';
@@ -1235,10 +1259,10 @@ const SkillsAssessmentForm = ({
                                                 {/* Subgroup Header */}
                                                 <h5 dir="rtl" className="flex items-center text-sm font-bold text-white bg-sky-700 p-3 text-right">
                                                     {subgroupScoreData && <ScoreCircle score={subgroupScoreData.score} maxScore={subgroupScoreData.maxScore} />}
-                                                    <span>{subgroup.subgroupTitle}</span>
+                                                    <span className="mr-2">{subgroup.subgroupTitle}</span> {/* Margin for spacing */}
                                                 </h5>
                                                 <div className="space-y-3 p-4 text-right" dir="rtl">
-                                                    {/* Render only relevant skills */}
+                                                    {/* Skills */}
                                                     {relevantSkills.map(skill => (
                                                         <SkillChecklistItem
                                                             key={skill.key}
@@ -1246,11 +1270,11 @@ const SkillsAssessmentForm = ({
                                                             label={skill.label}
                                                             value={formData[group.sectionKey]?.[skill.key]}
                                                             onChange={(key, value) => handleSkillChange(group.sectionKey, key, value)}
-                                                            showNaOption={isVitalSignsGroup} // Specific NA logic for vital signs
+                                                            showNaOption={isVitalSignsGroup}
                                                             naLabel={isVitalSignsGroup ? "لا يوجد / لا يعمل الجهاز" : "لا ينطبق"}
                                                         />
                                                     ))}
-                                                    {/* Malnutrition/Anemia Classifications */}
+                                                    {/* Classifications */}
                                                     {showClassifications && (
                                                         <div className="pt-4 mt-4 border-t border-gray-200 space-y-4">
                                                             <FormGroup label="ما هو التصنيف الذي الذي صنفه العامل الصحي؟" className="text-right">
@@ -1267,7 +1291,7 @@ const SkillsAssessmentForm = ({
                                             </div>
                                         );
                                     }
-                                    return null; // Should not happen if structure is correct
+                                    return null;
                                 })}
                             </div>
                         );

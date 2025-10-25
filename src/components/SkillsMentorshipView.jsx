@@ -1,16 +1,26 @@
 // SkillsMentorshipView.jsx
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+// --- MODIFICATION: Import useDataCache ---
 import { useDataCache } from '../DataContext';
+// --- END MODIFICATION ---
 import { Timestamp } from 'firebase/firestore';
-// --- MODIFICATION: Import new function ---
-import { saveMentorshipSession, listMentorshipSessions, importMentorshipSessions, addHealthWorkerToFacility } from '../data';
+// --- MODIFICATION: Import deleteMentorshipSession ---
+import {
+    saveMentorshipSession,
+    // --- MODIFICATION: listMentorshipSessions is no longer needed here ---
+    // listMentorshipSessions, 
+    // --- END MODIFICATION ---
+    importMentorshipSessions,
+    addHealthWorkerToFacility,
+    deleteMentorshipSession // <-- ADDED
+} from '../data';
 // --- END MODIFICATION ---
 import {
     Card, PageHeader, Button, FormGroup, Select, Spinner,
     EmptyState, Input, Textarea, CourseIcon, Checkbox, Modal
 } from './CommonComponents';
 import { STATE_LOCALITIES } from "./constants.js";
-import SkillsAssessmentForm from './SkillsAssessmentForm'; // Keep for individual form view
+import SkillsAssessmentForm from './SkillsAssessmentForm';
 import * as XLSX from 'xlsx';
 import { getAuth } from "firebase/auth";
 
@@ -26,46 +36,38 @@ const createInitialClassificationState = (classifications) => classifications.re
 
 // --- Helper function to evaluate the relevance logic (Copied from SkillsAssessmentForm) ---
 const evaluateRelevance = (relevanceString, formData) => {
+    // ... (Implementation unchanged) ...
     if (!relevanceString) return true;
-    // Simple evaluator: checks for ${key}='value'
     const logicRegex = /\$\{(.*?)\}='(.*?)'/;
     const match = relevanceString.match(logicRegex);
     if (!match) {
         console.warn("Could not parse relevance string:", relevanceString);
-        return true; // Default to relevant if parsing fails
+        return true; 
     }
     const [, varName, expectedValue] = match;
-
-    // Look for the variable in different potential locations within formData
-    let actualValue = formData[varName]; // Top level first
+    let actualValue = formData[varName]; 
     if (actualValue === undefined && formData.assessment_skills) {
-        actualValue = formData.assessment_skills[varName]; // Check assessment_skills
+        actualValue = formData.assessment_skills[varName]; 
     }
      if (actualValue === undefined && formData.treatment_skills) {
-        actualValue = formData.treatment_skills[varName]; // Check treatment_skills
+        actualValue = formData.treatment_skills[varName]; 
     }
-     // Add specific checks if needed, e.g., for decisionMatches
      if (actualValue === undefined && varName === 'decisionMatches') {
          actualValue = formData.decisionMatches;
      }
-
-    // Handle boolean-like strings
     if (expectedValue.toLowerCase() === 'yes') return actualValue === 'yes';
     if (expectedValue.toLowerCase() === 'no') return actualValue === 'no';
     if (expectedValue.toLowerCase() === 'na') return actualValue === 'na';
-
     return actualValue === expectedValue;
 };
 
 
 // --- Function to calculate scores (Copied & adapted from SkillsAssessmentForm) ---
 const calculateScores = (formData) => {
+    // ... (Implementation unchanged) ...
     // Requires IMNCI_FORM_STRUCTURE to be defined globally or passed in
     // For simplicity in this context, assume IMNCI_FORM_STRUCTURE is accessible
-    // Note: If IMNCI_FORM_STRUCTURE is not available here, it needs to be imported or passed.
-     // --- Re-define FORM_STRUCTURE here for use in calculateScores ---
-    const IMNCI_FORM_STRUCTURE = [
-        // PASTE THE FULL IMNCI_FORM_STRUCTURE ARRAY HERE from SkillsAssessmentForm.jsx
+     const IMNCI_FORM_STRUCTURE = [
         {
             group: 'تقييم مهارات التقييم والتصنيف',
             sectionKey: 'assessment_skills',
@@ -86,18 +88,18 @@ const calculateScores = (formData) => {
         },
         { group: 'القرار النهائي', step: 8, scoreKey: 'finalDecision', maxScore: 1, isDecisionSection: true, sectionKey: null, subgroups: [] },
         {
-            group: 'تقييم مهارات العلاج والنصح', step: 9, scoreKey: 'treatment', maxScore: null, // Max score calculated dynamically
+            group: 'تقييم مهارات العلاج والنصح', step: 9, scoreKey: 'treatment', maxScore: null, 
             sectionKey: 'treatment_skills',
             subgroups: [
                  {
                     subgroupTitle: 'الحالات التي تحتاج لتحويل ، تم تحويلها',
                     scoreKey: 'ref_treatment',
-                    maxScore: 2, // Example fixed max score if relevance isn't perfectly calculated offline
+                    maxScore: 2, 
                     skills: [
                         { key: 'skill_ref_abx', label: 'في حالة التحويل : هل أعطى الجرعة الاولى من المضاد الحيوي المناسب قبل تحويل الطفل' },
-                        { key: 'skill_ref_quinine', label: 'في حالة التحويل : أعطى الكينيين بالعضل قبل التحويل', relevant: "${as_supervisor_correct_fever_classification}='مرض حمي شديد'" }, // Simplified relevance for example
+                        { key: 'skill_ref_quinine', label: 'في حالة التحويل : أعطى الكينيين بالعضل قبل التحويل', relevant: "${as_supervisor_correct_fever_classification}='مرض حمي شديد'" }, 
                     ],
-                    relevant: "${finalDecision}='referral'" // Example relevance
+                    relevant: "${finalDecision}='referral'" 
                 },
                  {
                     subgroupTitle: 'في حالة الإلتهاب الرئوي',
@@ -111,7 +113,7 @@ const calculateScores = (formData) => {
                     scoreKey: 'diar_treatment',
                     maxScore: 4,
                     skills: [ { key: 'skill_diar_ors', label: 'هل حدد كمية محلول الإرواء بصورة صحيحة' }, { key: 'skill_diar_counsel', label: 'هل نصح الأم بالRعاية المنزلية بإعطاء سوائل أكثر و الاستمرار في تغذية الطفل)' }, { key: 'skill_diar_zinc', label: 'هل وصف دواء الزنك بصورة صحيحة' }, { key: 'skill_diar_zinc_dose', label: 'هل أعطى الجرعة الأولى من دواء الزنك للطفل بالوحدة الصحية بطريقة صحيحة', relevant: "${ts_skill_diar_zinc}='yes'" }, ],
-                    relevant: (formData) => { // Keep complex relevance as function if needed
+                    relevant: (formData) => { 
                         const cls = formData.assessment_skills?.supervisor_correct_diarrhea_classification || {};
                         const relevantKeys = ['جفاف حاد', 'بعض الجفاف', 'إسهال مستمر شديد', 'إسهال مستمر', 'دسنتاريا', 'لا يوجد جفاف'];
                         return relevantKeys.some(key => cls[key]);
@@ -159,8 +161,6 @@ const calculateScores = (formData) => {
             ]
         }
     ];
-     // --- END FORM STRUCTURE ---
-
 
     const scores = {};
     let totalMaxScore = 0;
@@ -168,37 +168,35 @@ const calculateScores = (formData) => {
 
     IMNCI_FORM_STRUCTURE.forEach(group => {
         let groupCurrentScore = 0;
-        let groupMaxScore = 0; // Initialize max score to 0
+        let groupMaxScore = 0; 
 
         if (group.isDecisionSection) {
-            groupMaxScore = 1; // Decision is always max 1
+            groupMaxScore = 1; 
             groupCurrentScore = formData.decisionMatches === 'yes' ? 1 : 0;
-            totalMaxScore += groupMaxScore; // Add to total max
-            totalCurrentScore += groupCurrentScore; // Add to total current
-            if (group.scoreKey) { // Store decision score
+            totalMaxScore += groupMaxScore; 
+            totalCurrentScore += groupCurrentScore; 
+            if (group.scoreKey) { 
                 scores[group.scoreKey] = { score: groupCurrentScore, maxScore: groupMaxScore };
             }
         } else if (group.sectionKey) {
             const sectionData = formData[group.sectionKey] || {};
-            let groupRelevantMaxScore = 0; // Track max score for relevant items in this group
+            let groupRelevantMaxScore = 0; 
 
             group.subgroups?.forEach(subgroup => {
                 let subgroupCurrentScore = 0;
-                let subgroupMaxScore = 0; // Initialize subgroup max score
-                let subgroupRelevantMaxScore = 0; // Max score for relevant items in subgroup
+                let subgroupMaxScore = 0; 
+                let subgroupRelevantMaxScore = 0; 
                 let isSubgroupRelevantForScoring = true;
 
-                // Check subgroup relevance first
                 if (subgroup.relevant) {
                     if (typeof subgroup.relevant === 'function') {
                         isSubgroupRelevantForScoring = subgroup.relevant(formData);
                     } else if (typeof subgroup.relevant === 'string') {
-                        // Simple relevance evaluation (less robust)
                         const simplifiedRelevanceString = subgroup.relevant.replace(/\$\{(.*?)\}/g, (match, key) => {
                             let val = formData[key] ?? sectionData[key] ?? formData.assessment_skills?.[key] ?? formData.treatment_skills?.[key];
                              if (key.startsWith('as_') && val === undefined) val = formData.assessment_skills?.[key.replace('as_', '')];
                              if (key.startsWith('ts_') && val === undefined) val = formData.treatment_skills?.[key.replace('ts_', '')];
-                            return `'${val || ''}'`; // Wrap in quotes
+                            return `'${val || ''}'`; 
                         });
                         try {
                            isSubgroupRelevantForScoring = eval(simplifiedRelevanceString.replace(/='(.*?)'/g, '===\'$1\''));
@@ -207,21 +205,17 @@ const calculateScores = (formData) => {
                             isSubgroupRelevantForScoring = false;
                         }
                     } else {
-                         isSubgroupRelevantForScoring = false; // Unknown format
+                         isSubgroupRelevantForScoring = false; 
                     }
                 }
 
-                // If subgroup NOT relevant, skip scoring it
                 if (!isSubgroupRelevantForScoring) {
                    if (subgroup.scoreKey) {
-                        scores[subgroup.scoreKey] = { score: 0, maxScore: 0 }; // Report 0/0
+                        scores[subgroup.scoreKey] = { score: 0, maxScore: 0 }; 
                    }
-                   // Ensure skills within are marked 'na' (should ideally happen in form effect)
-                   // ...
-                   return; // Skip to next subgroup
+                   return; 
                 }
 
-                // Process relevant subgroup
                 if (subgroup.isSymptomGroupContainer) {
                     subgroup.symptomGroups?.forEach(sg => {
                          const askSkillKey = sg.mainSkill.key;
@@ -233,41 +227,35 @@ const calculateScores = (formData) => {
                          let currentSymptomScore = 0;
                          let maxSymptomScore = 0;
 
-                         // Score asking the question (always contributes 1 to max if not empty)
                          if (sectionData[askSkillKey] === 'yes' || sectionData[askSkillKey] === 'no') {
                             maxSymptomScore += 1;
                             if (sectionData[askSkillKey] === 'yes') currentSymptomScore += 1;
                          }
 
-                         // Score sub-questions ONLY if asked AND confirmed by supervisor
                          if (sectionData[askSkillKey] === 'yes' && formData.assessment_skills?.[confirmsKey] === 'yes') {
-                             // Check skill (contributes 1 to max if not empty/na)
                              if (sectionData[checkSkillKey] === 'yes' || sectionData[checkSkillKey] === 'no') {
                                 maxSymptomScore += 1;
                                 if (sectionData[checkSkillKey] === 'yes') currentSymptomScore += 1;
                              }
-                             // Classify skill (contributes 1 to max if not empty/na)
                              if (sectionData[classifySkillKey] === 'yes' || sectionData[classifySkillKey] === 'no') {
                                 maxSymptomScore += 1;
                                 if (sectionData[classifySkillKey] === 'yes') currentSymptomScore += 1;
                              }
                          }
                          subgroupCurrentScore += currentSymptomScore;
-                         subgroupRelevantMaxScore += maxSymptomScore; // Use relevant max
+                         subgroupRelevantMaxScore += maxSymptomScore; 
                          if (sg.mainSkill.scoreKey) {
                              scores[sg.mainSkill.scoreKey] = { score: currentSymptomScore, maxScore: maxSymptomScore };
                          }
                     });
                 } else if (Array.isArray(subgroup.skills)) {
                     subgroup.skills.forEach(skill => {
-                        let isSkillRelevantForScoring = true; // Assume relevant if subgroup is relevant
-                        // Check individual skill relevance if defined
+                        let isSkillRelevantForScoring = true; 
                         if (skill.relevant) {
                              if (typeof skill.relevant === 'function') {
                                 isSkillRelevantForScoring = skill.relevant(formData);
                              } else if (typeof skill.relevant === 'string') {
                                  const simplifiedRelevanceString = skill.relevant.replace(/\$\{(.*?)\}/g, (match, key) => {
-                                      // More robust value finding
                                       let val = formData[key] ?? sectionData[key] ?? formData.assessment_skills?.[key] ?? formData.treatment_skills?.[key];
                                       if (key.startsWith('as_') && val === undefined) val = formData.assessment_skills?.[key.replace('as_', '')];
                                       if (key.startsWith('ts_') && val === undefined) val = formData.treatment_skills?.[key.replace('ts_', '')];
@@ -284,74 +272,57 @@ const calculateScores = (formData) => {
                              }
                         }
 
-                        // If the skill is relevant for scoring (based on subgroup and skill relevance)
                         if (isSkillRelevantForScoring) {
                             const value = sectionData[skill.key];
-                            // Only count towards max score if the value is 'yes' or 'no'
                             if (value === 'yes' || value === 'no') {
-                                subgroupRelevantMaxScore += 1; // Increment relevant max score for the subgroup
+                                subgroupRelevantMaxScore += 1; 
                                 if (value === 'yes') {
-                                    subgroupCurrentScore += 1; // Increment current score if 'yes'
+                                    subgroupCurrentScore += 1; 
                                 }
                             }
-                        } else {
-                             // If skill is not relevant, ensure its value is 'na' (should be done by form effect)
-                             // sectionData[skill.key] = 'na';
-                        }
+                        } 
                     });
                 }
 
-                // Add subgroup scores to group totals
                 groupCurrentScore += subgroupCurrentScore;
-                groupRelevantMaxScore += subgroupRelevantMaxScore; // Sum relevant max scores
+                groupRelevantMaxScore += subgroupRelevantMaxScore; 
 
-                // Store individual subgroup score if key exists
                 if (subgroup.scoreKey) {
                     scores[subgroup.scoreKey] = { score: subgroupCurrentScore, maxScore: subgroupRelevantMaxScore };
                 }
             });
 
-             // Add group's total relevant score to overall totals
             totalCurrentScore += groupCurrentScore;
             totalMaxScore += groupRelevantMaxScore;
 
-            // Store group score if key exists (using relevant max score)
             if (group.scoreKey) {
                  scores[group.scoreKey] = { score: groupCurrentScore, maxScore: groupRelevantMaxScore };
             }
-             // Store assessment/treatment specific totals
              if (group.sectionKey === 'assessment_skills') {
                 scores['assessment_total_score'] = { score: groupCurrentScore, maxScore: groupRelevantMaxScore };
              }
              if (group.sectionKey === 'treatment_skills') {
-                 scores['treatment_score'] = { score: groupCurrentScore, maxScore: groupRelevantMaxScore }; // Use relevant max
+                 scores['treatment_score'] = { score: groupCurrentScore, maxScore: groupRelevantMaxScore }; 
              }
         }
     });
 
-    // Final overall score using accumulated totals
     scores.overallScore = { score: totalCurrentScore, maxScore: totalMaxScore };
-
-    // Format scores payload for saving (using calculated max scores)
-     const scoresPayload = {};
+    const scoresPayload = {};
      for (const key in scores) {
-         // Exclude the specific 'treatment_score' key here, handle it separately
          if (key !== 'treatment_score' && scores[key]?.score !== undefined && scores[key]?.maxScore !== undefined) {
              scoresPayload[`${key}_score`] = scores[key].score;
              scoresPayload[`${key}_maxScore`] = scores[key].maxScore;
          }
      }
-     // Ensure treatment specific score/max are included correctly using the calculated values
      if(scores['treatment_score']){
         scoresPayload['treatment_score'] = scores['treatment_score'].score;
-        scoresPayload['treatment_maxScore'] = scores['treatment_score'].maxScore; // Use calculated max
+        scoresPayload['treatment_maxScore'] = scores['treatment_score'].maxScore; 
      } else {
-        // If treatment group wasn't relevant at all
         scoresPayload['treatment_score'] = 0;
         scoresPayload['treatment_maxScore'] = 0;
      }
 
-    // Return the payload format
     return scoresPayload;
 };
 // --- END calculateScores ---
@@ -359,6 +330,7 @@ const calculateScores = (formData) => {
 
 // --- Bulk Upload Modal (Detailed Version) ---
 const DetailedMentorshipBulkUploadModal = ({
+    // ... (Implementation unchanged) ...
     isOpen,
     onClose,
     onImport,
@@ -366,7 +338,6 @@ const DetailedMentorshipBulkUploadModal = ({
     healthFacilities,
     activeService
 }) => {
-    // ... (Implementation unchanged) ...
     const [currentPage, setCurrentPage] = useState(0);
     const [error, setError] = useState('');
     const [excelData, setExcelData] = useState([]);
@@ -376,7 +347,6 @@ const DetailedMentorshipBulkUploadModal = ({
     const fileInputRef = useRef(null);
     const auth = getAuth();
 
-    // --- Define ALL fields for mapping ---
     const BASE_FIELDS = [
         { key: 'session_date', label: 'Session Date (YYYY-MM-DD)', required: true },
         { key: 'state', label: 'State (Arabic Name)', required: true },
@@ -386,135 +356,109 @@ const DetailedMentorshipBulkUploadModal = ({
         { key: 'notes', label: 'Notes' },
         { key: 'mentor_email', label: 'Mentor Email (Optional)' },
     ];
-
     const ASSESSMENT_SKILL_FIELDS = [
-        // Vital Signs
         { key: 'as_skill_weight', label: 'AS: Weight Correctly' },
         { key: 'as_skill_temp', label: 'AS: Temperature Correctly' },
         { key: 'as_skill_height', label: 'AS: Height Correctly' },
-        // Danger Signs
         { key: 'as_skill_ds_drink', label: 'AS: Asked/Checked DS Drink' },
         { key: 'as_skill_ds_vomit', label: 'AS: Asked/Checked DS Vomit' },
         { key: 'as_skill_ds_convulsion', label: 'AS: Asked/Checked DS Convulsion' },
         { key: 'as_skill_ds_conscious', label: 'AS: Checked DS Conscious' },
-         // Cough
         { key: 'as_skill_ask_cough', label: 'AS: Asked Cough' },
         { key: 'as_supervisor_confirms_cough', label: 'AS: Supervisor Confirms Cough' },
         { key: 'as_skill_check_rr', label: 'AS: Checked RR Correctly', relevant: "${as_supervisor_confirms_cough}='yes'" },
         { key: 'as_skill_classify_cough', label: 'AS: Classified Cough Correctly', relevant: "${as_supervisor_confirms_cough}='yes'" },
         { key: 'as_worker_cough_classification', label: 'AS: Worker Cough Classification', relevant: "${as_supervisor_confirms_cough}='yes'" },
         { key: 'as_supervisor_correct_cough_classification', label: 'AS: Correct Cough Classification', relevant: "${as_skill_classify_cough}='no'" },
-         // Diarrhea
         { key: 'as_skill_ask_diarrhea', label: 'AS: Asked Diarrhea' },
         { key: 'as_supervisor_confirms_diarrhea', label: 'AS: Supervisor Confirms Diarrhea' },
         { key: 'as_skill_check_dehydration', label: 'AS: Checked Dehydration Correctly', relevant: "${as_supervisor_confirms_diarrhea}='yes'" },
         { key: 'as_skill_classify_diarrhea', label: 'AS: Classified Diarrhea Correctly', relevant: "${as_supervisor_confirms_diarrhea}='yes'" },
         { key: 'as_worker_diarrhea_classification', label: 'AS: Worker Diarrhea Class (comma-sep)', relevant: "${as_supervisor_confirms_diarrhea}='yes'" },
         { key: 'as_supervisor_correct_diarrhea_classification', label: 'AS: Correct Diarrhea Class (comma-sep)', relevant: "${as_skill_classify_diarrhea}='no'" },
-        // Fever
         { key: 'as_skill_ask_fever', label: 'AS: Asked Fever' },
         { key: 'as_supervisor_confirms_fever', label: 'AS: Supervisor Confirms Fever' },
         { key: 'as_skill_check_rdt', label: 'AS: Checked RDT Correctly', relevant: "${as_supervisor_confirms_fever}='yes'" },
         { key: 'as_skill_classify_fever', label: 'AS: Classified Fever Correctly', relevant: "${as_supervisor_confirms_fever}='yes'" },
         { key: 'as_worker_fever_classification', label: 'AS: Worker Fever Class (comma-sep)', relevant: "${as_supervisor_confirms_fever}='yes'" },
         { key: 'as_supervisor_correct_fever_classification', label: 'AS: Correct Fever Class (comma-sep)', relevant: "${as_skill_classify_fever}='no'" },
-        // Ear
         { key: 'as_skill_ask_ear', label: 'AS: Asked Ear Problem' },
         { key: 'as_supervisor_confirms_ear', label: 'AS: Supervisor Confirms Ear Problem' },
         { key: 'as_skill_check_ear', label: 'AS: Checked Ear Correctly', relevant: "${as_supervisor_confirms_ear}='yes'" },
         { key: 'as_skill_classify_ear', label: 'AS: Classified Ear Correctly', relevant: "${as_supervisor_confirms_ear}='yes'" },
         { key: 'as_worker_ear_classification', label: 'AS: Worker Ear Classification', relevant: "${as_supervisor_confirms_ear}='yes'" },
         { key: 'as_supervisor_correct_ear_classification', label: 'AS: Correct Ear Classification', relevant: "${as_skill_classify_ear}='no'" },
-         // Malnutrition
         { key: 'as_skill_mal_muac', label: 'AS: Measured MUAC Correctly' },
         { key: 'as_skill_mal_wfh', label: 'AS: Checked WFH Correctly' },
         { key: 'as_skill_mal_classify', label: 'AS: Classified Malnutrition Correctly' },
         { key: 'as_worker_malnutrition_classification', label: 'AS: Worker Malnutrition Classification' },
         { key: 'as_supervisor_correct_malnutrition_classification', label: 'AS: Correct Malnutrition Classification', relevant: "${as_skill_mal_classify}='no'" },
-        // Anemia
         { key: 'as_skill_anemia_pallor', label: 'AS: Checked Pallor Correctly' },
         { key: 'as_skill_anemia_classify', label: 'AS: Classified Anemia Correctly' },
         { key: 'as_worker_anemia_classification', label: 'AS: Worker Anemia Classification' },
         { key: 'as_supervisor_correct_anemia_classification', label: 'AS: Correct Anemia Classification', relevant: "${as_skill_anemia_classify}='no'" },
-        // Immunization
         { key: 'as_skill_imm_vacc', label: 'AS: Checked Immunization Correctly' },
         { key: 'as_skill_imm_vita', label: 'AS: Checked Vitamin A Correctly' },
-        // Other
         { key: 'as_skill_other', label: 'AS: Checked Other Problems' },
     ];
-
     const DECISION_FIELDS = [
-        { key: 'finalDecision', label: 'Final Decision (Worker)', required: true }, // Add required if needed by form logic
-        { key: 'decisionMatches', label: 'Decision Matches Supervisor', required: true }, // Add required if needed
+        { key: 'finalDecision', label: 'Final Decision (Worker)', required: true }, 
+        { key: 'decisionMatches', label: 'Decision Matches Supervisor', required: true }, 
     ];
-
     const TREATMENT_SKILL_FIELDS = [
-         // Referral
         { key: 'ts_skill_ref_abx', label: 'TS: Gave Pre-Referral ABX', relevant: "${finalDecision}='referral'" },
-        { key: 'ts_skill_ref_quinine', label: 'TS: Gave Pre-Referral Quinine', relevant: "${finalDecision}='referral' and ${as_supervisor_correct_fever_classification}='مرض حمي شديد'" }, // Simplified
-        // Pneumonia
+        { key: 'ts_skill_ref_quinine', label: 'TS: Gave Pre-Referral Quinine', relevant: "${finalDecision}='referral' and ${as_supervisor_correct_fever_classification}='مرض حمي شديد'" }, 
         { key: 'ts_skill_pneu_abx', label: 'TS: Prescribed Pneumonia ABX Correctly', relevant: "${as_supervisor_correct_cough_classification}='التهاب رئوي'" },
         { key: 'ts_skill_pneu_dose', label: 'TS: Gave Pneumonia ABX Dose Correctly', relevant: "${ts_skill_pneu_abx}='yes'" },
-        // Diarrhea
-        { key: 'ts_skill_diar_ors', label: 'TS: Determined ORS Amount Correctly' /* Add relevance if needed */ },
-        { key: 'ts_skill_diar_counsel', label: 'TS: Counselled Diarrhea Home Care' /* Add relevance */ },
-        { key: 'ts_skill_diar_zinc', label: 'TS: Prescribed Zinc Correctly' /* Add relevance */ },
+        { key: 'ts_skill_diar_ors', label: 'TS: Determined ORS Amount Correctly' },
+        { key: 'ts_skill_diar_counsel', label: 'TS: Counselled Diarrhea Home Care' },
+        { key: 'ts_skill_diar_zinc', label: 'TS: Prescribed Zinc Correctly' },
         { key: 'ts_skill_diar_zinc_dose', label: 'TS: Gave Zinc Dose Correctly', relevant: "${ts_skill_diar_zinc}='yes'" },
-        // Dysentery
-        { key: 'ts_skill_dyst_abx', label: 'TS: Prescribed Dysentery ABX Correctly' /* Add relevance */ },
+        { key: 'ts_skill_dyst_abx', label: 'TS: Prescribed Dysentery ABX Correctly' },
         { key: 'ts_skill_dyst_dose', label: 'TS: Gave Dysentery ABX Dose Correctly', relevant: "${ts_skill_dyst_abx}='yes'" },
-        // Malaria
-        { key: 'ts_skill_mal_meds', label: 'TS: Prescribed Malaria Meds Correctly' /* Add relevance */ },
+        { key: 'ts_skill_mal_meds', label: 'TS: Prescribed Malaria Meds Correctly' },
         { key: 'ts_skill_mal_dose', label: 'TS: Gave Malaria Meds Dose Correctly', relevant: "${ts_skill_mal_meds}='yes'" },
-        // Ear
-        { key: 'ts_skill_ear_abx', label: 'TS: Prescribed Ear ABX Correctly' /* Add relevance */ },
+        { key: 'ts_skill_ear_abx', label: 'TS: Prescribed Ear ABX Correctly' },
         { key: 'ts_skill_ear_dose', label: 'TS: Gave Ear ABX Dose Correctly', relevant: "${ts_skill_ear_abx}='yes'" },
-        { key: 'ts_skill_ear_para', label: 'TS: Prescribed Paracetamol Correctly' /* Add relevance */ },
+        { key: 'ts_skill_ear_para', label: 'TS: Prescribed Paracetamol Correctly' },
         { key: 'ts_skill_ear_para_dose', label: 'TS: Gave Paracetamol Dose Correctly', relevant: "${ts_skill_ear_para}='yes'" },
-        // Nutrition
-        { key: 'ts_skill_nut_assess', label: 'TS: Assessed Feeding Correctly' /* Add relevance */ },
-        { key: 'ts_skill_nut_counsel', label: 'TS: Counselled Feeding Correctly' /* Add relevance */ },
-        // Anemia
+        { key: 'ts_skill_nut_assess', label: 'TS: Assessed Feeding Correctly' },
+        { key: 'ts_skill_nut_counsel', label: 'TS: Counselled Feeding Correctly' },
         { key: 'ts_skill_anemia_iron', label: 'TS: Prescribed Iron Correctly', relevant: "${as_supervisor_correct_anemia_classification}='فقر دم'" },
         { key: 'ts_skill_anemia_iron_dose', label: 'TS: Gave Iron Dose Correctly', relevant: "${ts_skill_anemia_iron}='yes'" },
-         // Follow-up
         { key: 'ts_skill_fu_when', label: 'TS: Counselled When to Return Immediately' },
         { key: 'ts_skill_fu_return', label: 'TS: Counselled Follow-Up Visit' },
     ];
-
     const ALL_MENTORSHIP_FIELDS = useMemo(() => [
         ...BASE_FIELDS,
         ...ASSESSMENT_SKILL_FIELDS,
         ...DECISION_FIELDS,
         ...TREATMENT_SKILL_FIELDS
-    ], []); // Dependencies can be empty as definitions are static
-
+    ], []); 
     const ALL_TEMPLATE_HEADERS = useMemo(() => ALL_MENTORSHIP_FIELDS.map(f => f.key), [ALL_MENTORSHIP_FIELDS]);
 
-
-    // --- State & Handlers ---
-    // (stateArToKey, localityArToKey, facilityLookup remain the same)
     const stateArToKey = useMemo(() => {
+        // ... (Implementation unchanged) ...
         return Object.entries(STATE_LOCALITIES).reduce((acc, [key, value]) => {
             acc[value.ar.trim().toLowerCase()] = key;
             return acc;
         }, {});
     }, []);
-
     const localityArToKey = (stateKey, localityAr) => {
+        // ... (Implementation unchanged) ...
         if (!stateKey || !localityAr) return null;
         const stateData = STATE_LOCALITIES[stateKey];
         if (!stateData) return null;
         const locality = stateData.localities.find(l => l.ar.trim().toLowerCase() === String(localityAr).trim().toLowerCase());
         return locality ? locality.en : null;
     };
-
     const facilityLookup = useMemo(() => {
+        // ... (Implementation unchanged) ...
         if (!healthFacilities) return new Map();
         return healthFacilities.reduce((acc, facility) => {
             const state = facility['الولاية'];
             const locality = facility['المحلية'];
-            const name = String(facility['اسم_المؤسسة'] ?? '').trim().toLowerCase(); // Ensure string conversion
+            const name = String(facility['اسم_المؤسسة'] ?? '').trim().toLowerCase(); 
             if (state && locality && name) {
                 const key = `${state}-${locality}-${name}`;
                 acc.set(key, facility.id);
@@ -523,8 +467,8 @@ const DetailedMentorshipBulkUploadModal = ({
         }, new Map());
     }, [healthFacilities]);
 
-
     useEffect(() => {
+        // ... (Implementation unchanged) ...
         if (uploadStatus.inProgress) {
             setCurrentPage(2);
         } else if (uploadStatus.message) {
@@ -537,8 +481,8 @@ const DetailedMentorshipBulkUploadModal = ({
             }
         }
     }, [uploadStatus.inProgress, uploadStatus.message, uploadStatus.errors]);
-
     useEffect(() => {
+        // ... (Implementation unchanged) ...
         if (isOpen) {
             setCurrentPage(0);
             setError('');
@@ -548,8 +492,8 @@ const DetailedMentorshipBulkUploadModal = ({
             setFailedRows([]);
         }
     }, [isOpen]);
-
     const handleFileUpload = (e) => {
+        // ... (Implementation unchanged) ...
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
@@ -573,17 +517,17 @@ const DetailedMentorshipBulkUploadModal = ({
         };
         reader.readAsArrayBuffer(file);
     };
-
     const handleDownloadTemplate = () => {
+        // ... (Implementation unchanged) ...
         const fileName = `Mentorship_Upload_Template_Detailed_${activeService}.xlsx`;
-        const worksheetData = [ALL_TEMPLATE_HEADERS]; // Use the detailed headers
+        const worksheetData = [ALL_TEMPLATE_HEADERS]; 
         const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Mentorships");
         XLSX.writeFile(workbook, fileName);
     };
-
     const handleMappingChange = useCallback((appField, excelHeader) => {
+        // ... (Implementation unchanged) ...
         setFieldMappings(prev => {
             const newMappings = { ...prev };
             if (excelHeader) newMappings[appField] = excelHeader;
@@ -591,12 +535,11 @@ const DetailedMentorshipBulkUploadModal = ({
             return newMappings;
         });
     }, []);
-
     const handleValidation = () => {
-        const missingMappings = BASE_FIELDS // Only check required base fields for mapping presence
+        // ... (Implementation unchanged) ...
+        const missingMappings = BASE_FIELDS 
             .filter(field => field.required && !fieldMappings[field.key])
             .map(field => field.label);
-
         if (missingMappings.length > 0) {
             setError(`The following base fields must be mapped: ${missingMappings.join(', ')}.`);
             return;
@@ -604,27 +547,22 @@ const DetailedMentorshipBulkUploadModal = ({
         setError('');
         startImportProcess(excelData, excelData);
     };
-
-    // --- Reworked processAndStartImport ---
     const processAndStartImport = (dataForProcessing, originalRawData) => {
+        // ... (Implementation unchanged) ...
         const user = auth.currentUser;
         if (!user) {
             setError('You must be logged in to import data.');
             return;
         }
-
         const processedSessions = [];
-
         dataForProcessing.forEach((row, rowIndex) => {
             const sessionFromRow = {};
-            // Map all defined fields from Excel row using the mapping config
             ALL_MENTORSHIP_FIELDS.forEach(field => {
                  const excelHeader = fieldMappings[field.key];
                  if (excelHeader) {
                      const headerIndex = headers.indexOf(excelHeader);
                      if (headerIndex !== -1) {
                          let cellValue = row[headerIndex];
-                         // Basic cleanup: trim strings, keep dates/numbers as is for now
                          if (typeof cellValue === 'string') cellValue = cellValue.trim();
                          if (cellValue !== null && cellValue !== undefined && cellValue !== '') {
                             sessionFromRow[field.key] = cellValue;
@@ -632,30 +570,22 @@ const DetailedMentorshipBulkUploadModal = ({
                      }
                  }
             });
-
-
-            // --- Basic Validation ---
             if (!sessionFromRow.session_date || !sessionFromRow.state || !sessionFromRow.locality || !sessionFromRow.facility_name || !sessionFromRow.health_worker_name) {
                  console.warn(`Skipping row ${rowIndex + 2}: Missing required base info.`);
-                return; // Skip row if required base fields are missing
+                return; 
             }
-
-            // --- Reconstruct formData structure ---
             const formDataForRow = {
-                 session_date: '', // Will be set below
+                 session_date: '', 
                  notes: sessionFromRow.notes || '',
                  assessment_skills: {},
                  treatment_skills: {},
                  finalDecision: sessionFromRow.finalDecision || '',
                  decisionMatches: sessionFromRow.decisionMatches || '',
             };
-
-            // Populate assessment_skills
             ASSESSMENT_SKILL_FIELDS.forEach(field => {
                  const keyWithoutPrefix = field.key.replace('as_', '');
-                 const value = sessionFromRow[field.key]; // Raw value from Excel
+                 const value = sessionFromRow[field.key]; 
                  if (value !== undefined) {
-                     // Handle multi-select classifications (expecting comma-separated string)
                      if (field.key === 'as_worker_diarrhea_classification' || field.key === 'as_supervisor_correct_diarrhea_classification') {
                         const selected = (value || '').split(',').map(s => s.trim()).filter(Boolean);
                         formDataForRow.assessment_skills[keyWithoutPrefix] = DIARRHEA_CLASSIFICATIONS.reduce((acc, c) => {
@@ -669,57 +599,45 @@ const DetailedMentorshipBulkUploadModal = ({
                            return acc;
                         }, {});
                      } else {
-                        // Simple assignment for yes/no/na or classification string
                         formDataForRow.assessment_skills[keyWithoutPrefix] = value;
                      }
                  } else {
-                     // Set default for missing optional fields if needed, e.g., 'na' or ''
-                     // Multi-select defaults to all false
                       if (field.key === 'as_worker_diarrhea_classification' || field.key === 'as_supervisor_correct_diarrhea_classification') {
                          formDataForRow.assessment_skills[keyWithoutPrefix] = createInitialClassificationState(DIARRHEA_CLASSIFICATIONS);
                       } else if (field.key === 'as_worker_fever_classification' || field.key === 'as_supervisor_correct_fever_classification') {
                          formDataForRow.assessment_skills[keyWithoutPrefix] = createInitialClassificationState(FEVER_CLASSIFICATIONS);
                       } else {
-                         // Default other missing skills to empty string or 'na' based on logic
-                         formDataForRow.assessment_skills[keyWithoutPrefix] = ''; // Or 'na' if applicable
+                         formDataForRow.assessment_skills[keyWithoutPrefix] = ''; 
                       }
                  }
             });
-
-             // Populate treatment_skills
             TREATMENT_SKILL_FIELDS.forEach(field => {
                  const keyWithoutPrefix = field.key.replace('ts_', '');
                  const value = sessionFromRow[field.key];
                  if (value !== undefined) {
                      formDataForRow.treatment_skills[keyWithoutPrefix] = value;
                  } else {
-                     formDataForRow.treatment_skills[keyWithoutPrefix] = ''; // Default missing treatment skills
+                     formDataForRow.treatment_skills[keyWithoutPrefix] = ''; 
                  }
             });
-
-
-            // --- Build Final Payload ---
             const payload = {
                 serviceType: activeService,
-                status: 'complete', // Assume uploaded data is complete
+                status: 'complete', 
                 healthWorkerName: sessionFromRow.health_worker_name,
                 notes: formDataForRow.notes,
                 mentorEmail: sessionFromRow.mentor_email || user.email,
                 mentorName: user.displayName || 'Batch Upload',
-                assessmentSkills: formDataForRow.assessment_skills, // Nested object
-                treatmentSkills: formDataForRow.treatment_skills, // Nested object
+                assessmentSkills: formDataForRow.assessment_skills, 
+                treatmentSkills: formDataForRow.treatment_skills, 
                 finalDecision: formDataForRow.finalDecision,
                 decisionMatches: formDataForRow.decisionMatches,
             };
-
-            // Date processing
             try {
                 let effectiveDate;
                 if (sessionFromRow.session_date instanceof Date) {
                     effectiveDate = Timestamp.fromDate(sessionFromRow.session_date);
                     payload.sessionDate = sessionFromRow.session_date.toISOString().split('T')[0];
                 } else {
-                    // Attempt to parse string date (e.g., YYYY-MM-DD)
                     const parsedDate = new Date(sessionFromRow.session_date);
                     if (isNaN(parsedDate.getTime())) throw new Error('Invalid date format');
                     effectiveDate = Timestamp.fromDate(parsedDate);
@@ -728,63 +646,48 @@ const DetailedMentorshipBulkUploadModal = ({
                 payload.effectiveDate = effectiveDate;
             } catch (e) {
                 console.warn(`Skipping row ${rowIndex + 2}: Invalid date - ${sessionFromRow.session_date}`);
-                // Add to errors? For now, just skip. The import function will catch it.
-                 payload.effectiveDate = null; // Mark as invalid for import function
+                 payload.effectiveDate = null; 
             }
-
-            // Location processing
             const stateKey = stateArToKey[String(sessionFromRow.state).trim().toLowerCase()];
             const localityKey = localityArToKey(stateKey, String(sessionFromRow.locality));
-            payload.state = stateKey; // Store the key
-            payload.locality = localityKey; // Store the key
-            payload.facilityName = sessionFromRow.facility_name; // Keep original name
-
+            payload.state = stateKey; 
+            payload.locality = localityKey; 
+            payload.facilityName = sessionFromRow.facility_name; 
             const facilityNameLower = String(sessionFromRow.facility_name).trim().toLowerCase();
             const lookupKey = `${stateKey}-${localityKey}-${facilityNameLower}`;
-            payload.facilityId = facilityLookup.get(lookupKey) || null; // Will be null if not found
-
-
-            // Calculate Scores (using the reconstructed formData)
+            payload.facilityId = facilityLookup.get(lookupKey) || null; 
              try {
                  payload.scores = calculateScores(formDataForRow);
              } catch (scoreError) {
                  console.error(`Error calculating scores for row ${rowIndex + 2}:`, scoreError);
-                 // Decide how to handle score errors: skip row, or save with empty scores?
-                 payload.scores = {}; // Save empty scores object on error
+                 payload.scores = {}; 
              }
-
-
             processedSessions.push(payload);
         });
-
         if (processedSessions.length === 0) {
             setError('No valid sessions could be processed from the Excel file. Check required fields and formats.');
-            setCurrentPage(1); // Go back to mapping if needed
+            setCurrentPage(1); 
             return;
         }
-
         onImport(processedSessions, originalRawData);
     };
-    // --- End Reworked processAndStartImport ---
-
-
     const startImportProcess = (data, rawData) => processAndStartImport(data, rawData);
-
     const handleRetryUpload = () => {
+        // ... (Implementation unchanged) ...
         const dataToRetry = failedRows.map(failedRow => failedRow.rowData);
         setFailedRows([]);
         processAndStartImport(dataToRetry, dataToRetry);
     };
-
     const handleCorrectionDataChange = (errorIndex, cellIndex, value) => {
+        // ... (Implementation unchanged) ...
         const updatedFailedRows = [...failedRows];
         const newRowData = [...updatedFailedRows[errorIndex].rowData];
         newRowData[cellIndex] = value;
         updatedFailedRows[errorIndex].rowData = newRowData;
         setFailedRows(updatedFailedRows);
     };
-
     const renderPreview = () => (excelData.length === 0) ? null : (
+        // ... (Implementation unchanged) ...
         <div className="mt-4 overflow-auto max-h-60">
             <h4 className="font-medium mb-2">Data Preview (first 5 rows)</h4>
             <table className="min-w-full border border-gray-200">
@@ -793,9 +696,8 @@ const DetailedMentorshipBulkUploadModal = ({
             </table>
         </div>
     );
-
-    // --- MappingRow Component ---
     const MappingRow = ({ field, headers, selectedValue, onMappingChange }) => (
+        // ... (Implementation unchanged) ...
         <div className="flex flex-col">
             <label htmlFor={field.key} className="text-sm font-medium mb-1">
                 {field.label} {field.required && <span className="text-red-500">*</span>}
@@ -813,7 +715,6 @@ const DetailedMentorshipBulkUploadModal = ({
             </Select>
         </div>
     );
-
     const renderProgressView = () => (
         // ... (Implementation unchanged) ...
         <div>
@@ -825,14 +726,12 @@ const DetailedMentorshipBulkUploadModal = ({
             <p className="text-center mt-2 font-medium">{uploadStatus.processed} / {uploadStatus.total}</p>
         </div>
     );
-
     const renderResultView = () => (
         // ... (Implementation unchanged) ...
          <div>
             <h4 className="font-medium text-lg mb-2">Import Complete</h4>
             <div className="bg-gray-50 p-4 rounded-md">
                 <p className="font-semibold whitespace-pre-wrap">{uploadStatus.message}</p>
-                {/* Display specific row errors if available */}
                  {uploadStatus.errors && uploadStatus.errors.some(e => e.rowData) && (
                     <div className="mt-4 max-h-40 overflow-y-auto">
                         <h5 className="font-semibold text-red-700">Rows with Errors:</h5>
@@ -844,7 +743,6 @@ const DetailedMentorshipBulkUploadModal = ({
                          <p className="text-sm mt-2">Go back to the 'Correction Screen' to fix these rows.</p>
                     </div>
                 )}
-                 {/* Display general errors if no row data */}
                  {uploadStatus.errors && !uploadStatus.errors.some(e => e.rowData) && uploadStatus.errors.length > 0 && (
                      <div className="mt-4 max-h-40 overflow-y-auto">
                          <h5 className="font-semibold text-red-700">Errors encountered:</h5>
@@ -855,7 +753,6 @@ const DetailedMentorshipBulkUploadModal = ({
                  )}
             </div>
             <div className="flex justify-end mt-6">
-                 {/* Provide button to go back to correction if there were row errors */}
                  {failedRows.length > 0 && (
                      <Button variant="secondary" onClick={() => setCurrentPage('correction')} className="mr-2">
                          Go to Correction Screen ({failedRows.length})
@@ -865,7 +762,6 @@ const DetailedMentorshipBulkUploadModal = ({
             </div>
         </div>
     );
-
     const renderCorrectionScreen = () => (
         // ... (Implementation unchanged) ...
         <div>
@@ -912,7 +808,6 @@ const DetailedMentorshipBulkUploadModal = ({
         <Modal isOpen={isOpen} onClose={onClose} title={`Bulk Upload (Detailed) for ${activeService}`} size="full">
             <div className="p-4">
                 {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
-
                 {currentPage === 0 && (
                     <div>
                         <p className="mb-4">Download the detailed template for {activeService}. Use Arabic names for State/Locality. Use 'yes', 'no', 'na' for skill checks. Use comma-separated values for multi-select classifications (e.g., "بعض الجفاف,دسنتاريا").</p>
@@ -922,12 +817,10 @@ const DetailedMentorshipBulkUploadModal = ({
                         <input type="file" accept=".xlsx,.xls" onChange={handleFileUpload} ref={fileInputRef} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
                     </div>
                 )}
-
                 {currentPage === 1 && (
                     <div>
                         <h4 className="font-medium mb-4">Map Excel columns to application fields</h4>
                         <p className="text-sm text-gray-600 mb-4">Match columns to fields. Base fields marked * are required for basic processing. Ensure all relevant detail columns are mapped for full scoring.</p>
-                        {/* Make the mapping section scrollable */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 mb-4 max-h-[50vh] overflow-y-auto p-2 border rounded">
                             {ALL_MENTORSHIP_FIELDS.map(field =>
                                 <MappingRow
@@ -946,7 +839,6 @@ const DetailedMentorshipBulkUploadModal = ({
                         </div>
                     </div>
                 )}
-
                 {currentPage === 'correction' && renderCorrectionScreen()}
                 {currentPage === 2 && renderProgressView()}
                 {currentPage === 3 && renderResultView()}
@@ -959,6 +851,7 @@ const DetailedMentorshipBulkUploadModal = ({
 
 // --- AddHealthWorkerModal Component (with job title dropdown) ---
 const IMNCI_JOB_TITLES = [
+    // ... (Implementation unchanged) ...
     "مساعد طبي",
     "طبيب عمومي",
     "ممرض",
@@ -968,15 +861,13 @@ const IMNCI_JOB_TITLES = [
     "صيدلي",
     "أخرى"
 ];
-
 const AddHealthWorkerModal = ({ isOpen, onClose, onSave, facilityName }) => {
-    // ... (State and handlers unchanged) ...
+    // ... (Implementation unchanged) ...
     const [name, setName] = useState('');
     const [job_title, setJobTitle] = useState('');
     const [training_date, setTrainingDate] = useState('');
     const [phone, setPhone] = useState('');
     const [error, setError] = useState('');
-
     const handleSave = () => {
         if (!name.trim()) {
             setError('الاسم الكامل مطلوب.');
@@ -984,11 +875,10 @@ const AddHealthWorkerModal = ({ isOpen, onClose, onSave, facilityName }) => {
         }
         setError('');
         onSave({ name, job_title, training_date, phone });
-        setName(''); setJobTitle(''); setTrainingDate(''); setPhone(''); // Clear form
+        setName(''); setJobTitle(''); setTrainingDate(''); setPhone(''); 
     };
-
     const handleClose = () => {
-        setName(''); setJobTitle(''); setTrainingDate(''); setPhone(''); setError(''); // Clear form
+        setName(''); setJobTitle(''); setTrainingDate(''); setPhone(''); setError(''); 
         onClose();
     };
 
@@ -1026,36 +916,142 @@ const AddHealthWorkerModal = ({ isOpen, onClose, onSave, facilityName }) => {
 // --- END AddHealthWorkerModal ---
 
 
-// --- Table Column Component (Unchanged) ---
+// --- MODIFIED: Table Column Component ---
 const MentorshipTableColumns = () => (
-    // ... (Implementation unchanged) ...
     <>
         <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
-        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الولاية</th>
-        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">المحلية</th>
+        {/* <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الولاية</th> */}
+        {/* <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">المحلية</th> */}
         <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">المؤسسة</th>
         <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">العامل الصحي</th>
         <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">المشرف</th>
         <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">تاريخ الجلسة</th>
+        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الحالة</th>
+        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الدرجة الكلية</th>
         <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الإجراءات</th>
     </>
 );
+// --- END MODIFICATION ---
 
 // --- Friendly Service Titles (Unchanged) ---
 const SERVICE_TITLES = {
+    // ... (Implementation unchanged) ...
     'IMNCI': 'المعالجة المتكاملة',
     'EENC': 'رعاية حديثي الولادة',
     'ETAT': 'الفرز والعلاج في الطوارئ',
     'IPC': 'مكافحة العدوى'
 };
 
-// --- Submissions Table Component (Unchanged) ---
+// --- NEW: View Submission Modal ---
+const ViewSubmissionModal = ({ submission, onClose }) => {
+    if (!submission) return null;
+
+    const scores = submission.scores || {};
+    const serviceTitle = SERVICE_TITLES[submission.serviceType] || submission.serviceType;
+
+    // Helper to render score
+    const renderScore = (scoreKey, label) => {
+        const score = scores[`${scoreKey}_score`];
+        const maxScore = scores[`${scoreKey}_maxScore`];
+        let percentage = null;
+
+        // Only calculate if maxScore is positive
+        if (score !== undefined && maxScore !== undefined && maxScore > 0) {
+            percentage = Math.round((score / maxScore) * 100);
+        } 
+        // Handle 0/0 case as N/A or 100% depending on logic, here N/A
+        else if (score === 0 && maxScore === 0) {
+             percentage = null; // Or 100 if 0/0 means 100% complete (N/A)
+        }
+
+        return (
+            <li className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                <span className="font-medium text-gray-700">{label}</span>
+                <span className="font-bold text-gray-900">
+                    {percentage !== null ? `${percentage}%` : 'N/A'}
+                    <span className="text-xs font-normal text-gray-500 mr-2" dir="ltr">({score !== undefined ? score : 0}/{maxScore !== undefined ? maxScore : 0})</span>
+                </span>
+            </li>
+        );
+    };
+
+    return (
+        <Modal isOpen={true} onClose={onClose} title={`تفاصيل جلسة: ${serviceTitle}`} size="2xl">
+            <div className="p-6 text-right" dir="rtl">
+                {/* Worker Info */}
+                <div className="mb-6">
+                    <h4 className="text-lg font-bold text-sky-800 mb-3 border-b pb-2">بيانات الجلسة</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                        <p><span className="font-medium text-gray-500">العامل الصحي:</span> <span className="font-semibold text-gray-900">{submission.healthWorkerName}</span></p>
+                        <p><span className="font-medium text-gray-500">المؤسسة:</span> <span className="font-semibold text-gray-900">{submission.facilityName}</span></p>
+                        <p><span className="font-medium text-gray-500">المشرف:</span> <span className="font-semibold text-gray-900">{submission.mentorEmail}</span></p>
+                        <p><span className="font-medium text-gray-500">التاريخ:</span> <span className="font-semibold text-gray-900">{submission.sessionDate}</span></p>
+                        <p><span className="font-medium text-gray-500">الولاية:</span> <span className="font-semibold text-gray-900">{STATE_LOCALITIES[submission.state]?.ar || submission.state}</span></p>
+                        <p><span className="font-medium text-gray-500">المحلية:</span> <span className="font-semibold text-gray-900">{STATE_LOCALITIES[submission.state]?.localities.find(l=>l.en === submission.locality)?.ar || submission.locality}</span></p>
+                    </div>
+                </div>
+                
+                {/* Scores */}
+                <div>
+                    <h4 className="text-lg font-bold text-sky-800 mb-3 border-b pb-2">الدرجات التفصيلية</h4>
+                    <ul className="space-y-2 max-h-80 overflow-y-auto pr-2">
+                        {renderScore('overallScore', 'الدرجة الكلية')}
+                        <hr className="my-2"/>
+                        {renderScore('assessment_total_score', 'مهارات التقييم والتصنيف')}
+                        {renderScore('vitalSigns', ' - القياسات الحيوية')}
+                        {renderScore('dangerSigns', ' - علامات الخطورة العامة')}
+                        {renderScore('mainSymptoms', ' - الأعراض الأساسية (الإجمالي)')}
+                        {renderScore('symptom_cough', '   - الكحة')}
+                        {renderScore('symptom_diarrhea', '   - الإسهال')}
+                        {renderScore('symptom_fever', '   - الحمى')}
+                        {renderScore('symptom_ear', '   - الأذن')}
+                        {renderScore('malnutrition', ' - سوء التغذية')}
+                        {renderScore('anemia', ' - فقر الدم')}
+                        {renderScore('immunization', ' - التطعيم وفيتامين أ')}
+                        {renderScore('otherProblems', ' - الأمراض الأخرى')}
+                        {renderScore('finalDecision', 'القرار النهائي')}
+                        <hr className="my-2"/>
+                        {renderScore('treatment', 'مهارات العلاج والنصح (الإجمالي)')}
+                        {renderScore('ref_treatment', ' - العلاج قبل التحويل')}
+                        {renderScore('pneu_treatment', ' - علاج الإلتهاب الرئوي')}
+                        {renderScore('diar_treatment', ' - علاج الإسهال')}
+                        {renderScore('dyst_treatment', ' - علاج الدسنتاريا')}
+                        {renderScore('mal_treatment', ' - علاج الملاريا')}
+                        {renderScore('ear_treatment', ' - علاج الأذن')}
+                        {renderScore('nut_treatment', ' - علاج سوء التغذية')}
+                        {renderScore('anemia_treatment', ' - علاج فقر الدم')}
+                        {renderScore('fu_treatment', ' - نصح المتابعة')}
+                    </ul>
+                </div>
+
+                {/* Notes */}
+                {submission.notes && (
+                    <div className="mt-6">
+                        <h4 className="text-lg font-bold text-sky-800 mb-3 border-b pb-2">الملاحظات</h4>
+                        <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded border whitespace-pre-wrap">{submission.notes}</p>
+                    </div>
+                )}
+
+                <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
+                    <Button variant="secondary" onClick={onClose}>إغلاق</Button>
+                </div>
+            </div>
+        </Modal>
+    );
+};
+// --- END View Submission Modal ---
+
+
+// --- MODIFIED: Submissions Table Component ---
 const MentorshipSubmissionsTable = ({
     submissions,
     onNewVisit,
     onBackToServiceSelection,
     activeService,
-    setToast,
+    // setToast, // Removed, handled by parent
+    onView, // ADDED
+    onEdit, // ADDED
+    onDelete, // ADDED
     availableStates,
     userStates,
     fetchSubmissions,
@@ -1065,25 +1061,24 @@ const MentorshipSubmissionsTable = ({
     canBulkUpload,
     onBulkUpload
 }) => {
-    // ... (Implementation unchanged) ...
     const [stateFilter, setStateFilter] = useState('');
     const [localityFilter, setLocalityFilter] = useState('');
     const [workerFilter, setWorkerFilter] = useState('');
 
+    // MODIFIED: handleAction now calls parent handlers
     const handleAction = (action, submission) => {
-        let message = '';
         if (action === 'view') {
-            message = `عرض تفاصيل الجلسة رقم ${submission.id}`;
+            onView(submission.id); // Pass ID
         } else if (action === 'edit') {
-            message = `تعديل الجلسة رقم ${submission.id}`;
+            onEdit(submission.id); // Pass ID
         } else if (action === 'delete') {
-            message = `حذف الجلسة رقم ${submission.id}`;
+            onDelete(submission.id); // Pass ID
         }
-        setToast({ message: message, variant: 'info' });
     };
 
 
     const filteredSubmissions = useMemo(() => {
+        // ... (Implementation unchanged) ...
         let filtered = submissions;
         if (activeService) {
             filtered = filtered.filter(sub => sub.service === activeService);
@@ -1095,12 +1090,14 @@ const MentorshipSubmissionsTable = ({
              filtered = filtered.filter(sub => sub.locality === localityFilter);
         }
         if (workerFilter) {
+            // Use 'staff' property from processed submission
             filtered = filtered.filter(sub => (sub.staff || '').toLowerCase().includes(workerFilter.toLowerCase()));
         }
-        return filtered;
+        return filtered.sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort by date descending
     }, [submissions, activeService, stateFilter, localityFilter, workerFilter]);
 
     const availableLocalities = useMemo(() => {
+        // ... (Implementation unchanged) ...
         if (!stateFilter || !STATE_LOCALITIES[stateFilter]) return [];
         return [
             { key: "", label: "-- اختر المحلية --" },
@@ -1115,6 +1112,7 @@ const MentorshipSubmissionsTable = ({
         <Card dir="rtl">
             <div className="p-6">
                 <div className="flex justify-between items-start mb-6">
+                    {/* ... (Header buttons unchanged) ... */}
                     <div className="flex gap-2 flex-wrap">
                         <Button onClick={onNewVisit}>+ إضافة زيارة {serviceTitle}</Button>
                         {canBulkUpload && (
@@ -1135,7 +1133,7 @@ const MentorshipSubmissionsTable = ({
                     </div>
                 </div>
 
-                {/* Filters */}
+                {/* Filters (Unchanged) */}
                  <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6 border p-4 rounded-lg bg-gray-50">
                     <FormGroup label="الولاية" className="text-right">
                         <Select value={stateFilter} onChange={(e) => { setStateFilter(e.target.value); setLocalityFilter(''); }}>
@@ -1151,12 +1149,12 @@ const MentorshipSubmissionsTable = ({
                         <Input value={workerFilter} onChange={(e) => setWorkerFilter(e.target.value)} placeholder="بحث باسم العامل الصحي..." />
                     </FormGroup>
                     <FormGroup label="تاريخ الجلسة" className="text-right">
-                         <Input type="date" placeholder="التاريخ" /> {/* TODO: Implement date filtering */}
+                         <Input type="date" placeholder="التاريخ" /> 
                     </FormGroup>
                 </div>
 
 
-                {/* Table */}
+                {/* MODIFIED Table */}
                 <div className="mt-6 overflow-x-auto">
                      {isSubmissionsLoading ? (
                         <div className="flex justify-center p-8"><Spinner /></div>
@@ -1164,6 +1162,7 @@ const MentorshipSubmissionsTable = ({
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
+                                    {/* Updated Columns */}
                                     <MentorshipTableColumns />
                                 </tr>
                             </thead>
@@ -1171,15 +1170,40 @@ const MentorshipSubmissionsTable = ({
                                 {filteredSubmissions.length === 0 ? (
                                     <tr><td colSpan="8"><EmptyState title="لا توجد بيانات" message="لم يتم تسجيل أي زيارات متابعة مطابقة لفلاتر البحث لهذه الخدمة." /></td></tr>
                                 ) : (
-                                    filteredSubmissions.map((sub, index) => (
-                                        <tr key={sub.id}>
+                                    filteredSubmissions.map((sub, index) => {
+                                        // Calculate Score
+                                        const scoreData = sub.scores;
+                                        let percentage = null;
+                                        if (scoreData && scoreData.overallScore_maxScore > 0) {
+                                            percentage = Math.round((scoreData.overallScore_score / scoreData.overallScore_maxScore) * 100);
+                                        }
+
+                                        return (
+                                        <tr key={sub.id} className={sub.status === 'draft' ? 'bg-yellow-50' : 'bg-white'}>
                                             <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{index + 1}</td>
-                                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{STATE_LOCALITIES[sub.state]?.ar || sub.state}</td>
-                                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{STATE_LOCALITIES[sub.state]?.localities.find(l=>l.en === sub.locality)?.ar || sub.locality}</td>
+                                            {/* <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{STATE_LOCALITIES[sub.state]?.ar || sub.state}</td> */}
+                                            {/* <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{STATE_LOCALITIES[sub.state]?.localities.find(l=>l.en === sub.locality)?.ar || sub.locality}</td> */}
                                             <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{sub.facility}</td>
                                             <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{sub.staff}</td>
                                             <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{sub.supervisor}</td>
                                             <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{sub.date}</td>
+                                            {/* Status Badge */}
+                                            <td className="px-4 py-4 whitespace-nowrap text-sm">
+                                                {sub.status === 'draft' ? (
+                                                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                                        مسودة
+                                                    </span>
+                                                ) : (
+                                                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                                        مكتمل
+                                                    </span>
+                                                )}
+                                            </td>
+                                            {/* Score */}
+                                            <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-800">
+                                                {percentage !== null ? `${percentage}%` : 'N/A'}
+                                            </td>
+                                            {/* Actions */}
                                             <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
                                                 <div className="flex gap-2">
                                                     <Button size="sm" variant="info" onClick={() => handleAction('view', sub)}>عرض</Button>
@@ -1188,7 +1212,7 @@ const MentorshipSubmissionsTable = ({
                                                 </div>
                                             </td>
                                         </tr>
-                                    ))
+                                    )})
                                 )}
                             </tbody>
                         </table>
@@ -1201,6 +1225,7 @@ const MentorshipSubmissionsTable = ({
         </Card>
     );
 };
+// --- END MODIFIED TABLE ---
 
 // --- Service Selection Component (Unchanged) ---
 const ServiceSelector = ({ onSelectService }) => {
@@ -1245,11 +1270,29 @@ const SkillsMentorshipView = ({
     const [selectedState, setSelectedState] = useState('');
     const [selectedLocality, setSelectedLocality] = useState('');
     const [selectedFacilityId, setSelectedFacilityId] = useState('');
-    const [selectedHealthWorkerName, setSelectedHealthWorkerName] = useState(''); // Name selected from dropdown
+    const [selectedHealthWorkerName, setSelectedHealthWorkerName] = useState(''); 
+    
+    // --- MODIFICATION: Get data and fetchers from DataContext ---
+    const { 
+        healthFacilities, 
+        fetchHealthFacilities, 
+        isFacilitiesLoading, // Use this directly
+        skillMentorshipSubmissions, // <-- Get cached data
+        fetchSkillMentorshipSubmissions, // <-- Get context fetcher
+        isLoading: isDataCacheLoading // <-- Get context loading object
+    } = useDataCache();
+    // --- END MODIFICATION ---
+    
+    // --- MODIFICATION: State for raw data, view/edit modals ---
+    // const [rawSubmissions, setRawSubmissions] = useState(null); // <-- Store raw data
+    const [viewingSubmission, setViewingSubmission] = useState(null); // <-- For View Modal
+    const [editingSubmission, setEditingSubmission] = useState(null); // <-- For Edit Form
+    // --- END MODIFICATION ---
 
-    const { healthFacilities, fetchHealthFacilities, isFacilitiesLoading } = useDataCache();
-    const [submissions, setSubmissions] = useState(null);
-    const [isSubmissionsLoading, setIsSubmissionsLoading] = useState(true);
+    // --- MODIFICATION: isSubmissionsLoading state removed ---
+    // const [isSubmissionsLoading, setIsSubmissionsLoading] = useState(true);
+    // --- END MODIFICATION ---
+    
     const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
     const [uploadStatus, setUploadStatus] = useState({
         inProgress: false,
@@ -1260,52 +1303,46 @@ const SkillsMentorshipView = ({
     });
     const [isAddWorkerModalOpen, setIsAddWorkerModalOpen] = useState(false);
     const auth = getAuth();
-
-    // --- NEW STATE for Editable Worker Info ---
-    const [selectedWorkerOriginalData, setSelectedWorkerOriginalData] = useState(null); // Store original data for comparison
+    const [selectedWorkerOriginalData, setSelectedWorkerOriginalData] = useState(null); 
     const [workerJobTitle, setWorkerJobTitle] = useState('');
     const [workerTrainingDate, setWorkerTrainingDate] = useState('');
     const [workerPhone, setWorkerPhone] = useState('');
     const [isWorkerInfoChanged, setIsWorkerInfoChanged] = useState(false);
     const [isUpdatingWorker, setIsUpdatingWorker] = useState(false);
-    // --- END NEW STATE ---
 
-    // --- Hooks and Handlers ---
-    const fetchMentorshipSubmissions = useCallback(async (force = false) => {
-        setIsSubmissionsLoading(true);
-        try {
-            const result = await listMentorshipSessions();
-            // --- MODIFICATION: Add facilityId to processed list ---
-            const processedSubmissions = result.map(sub => ({
-                id: sub.id,
-                service: sub.serviceType,
-                date: sub.effectiveDate ? new Date(sub.effectiveDate.seconds * 1000).toISOString().split('T')[0] : 'N/A',
-                state: sub.state || 'N/A',
-                locality: sub.locality || 'N/A',
-                facility: sub.facilityName || 'N/A',
-                staff: sub.healthWorkerName || 'N/A',
-                supervisor: sub.mentorEmail || 'N/A',
-                facilityId: sub.facilityId || null // Track facilityId for visit counting
-            }));
-            // --- END MODIFICATION ---
-            setSubmissions(processedSubmissions);
-        } catch (error) {
-            console.error("Failed to fetch mentorship submissions:", error);
-            setToast({ message: 'فشل في تحميل سجلات المتابعة.', variant: 'error' });
-            setSubmissions([]);
-        } finally {
-            setIsSubmissionsLoading(false);
-        }
-    }, [setToast]);
+    // --- MODIFICATION: fetchMentorshipSubmissions useCallback removed ---
+    // The local fetchMentorshipSubmissions function is no longer needed
+    // --- END MODIFICATION ---
+
+    // --- NEW: useMemo to process submissions for table ---
+    const processedSubmissions = useMemo(() => {
+        if (!skillMentorshipSubmissions) return []; // <-- Use cached data
+        return skillMentorshipSubmissions.map(sub => ({ // <-- Use cached data
+            id: sub.id,
+            service: sub.serviceType,
+            date: sub.effectiveDate ? new Date(sub.effectiveDate.seconds * 1000).toISOString().split('T')[0] : 'N/A',
+            state: sub.state || 'N/A', // Keep for filtering
+            locality: sub.locality || 'N/A', // Keep for filtering
+            facility: sub.facilityName || 'N/A',
+            staff: sub.healthWorkerName || 'N/A',
+            supervisor: sub.mentorEmail || 'N/A',
+            facilityId: sub.facilityId || null,
+            scores: sub.scores || null, // Pass scores
+            status: sub.status || 'complete' // Pass status
+        }));
+    }, [skillMentorshipSubmissions]); // <-- Dependency on cached data
+    // --- END NEW useMemo ---
 
      useEffect(() => {
+        // ... (Implementation unchanged) ...
         fetchHealthFacilities();
-        if (!publicSubmissionMode) {
-            fetchMentorshipSubmissions();
-        }
-    }, [fetchHealthFacilities, fetchMentorshipSubmissions, publicSubmissionMode]);
+        // --- MODIFICATION: local fetchMentorshipSubmissions call removed ---
+        // This is now handled by App.jsx when the view changes
+        // --- END MODIFICATION ---
+    }, [fetchHealthFacilities, publicSubmissionMode]); // <-- Modified dependencies
 
      const availableStates = useMemo(() => {
+        // ... (Implementation unchanged) ...
         const allStates = Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar));
         const userAllowedStates = allStates.filter(sKey =>
              publicSubmissionMode || !userStates || userStates.length === 0 || userStates.includes(sKey)
@@ -1317,12 +1354,14 @@ const SkillsMentorshipView = ({
     }, [userStates, publicSubmissionMode]);
 
      useEffect(() => {
+        // ... (Implementation unchanged) ...
         if (!publicSubmissionMode && userStates && userStates.length === 1) {
             setSelectedState(userStates[0]);
         }
     }, [userStates, publicSubmissionMode]);
 
     useEffect(() => {
+       // ... (Implementation unchanged) ...
        if (!publicSubmissionMode && permissions.manageScope === 'locality' && userLocalities && userLocalities.length === 1) {
             setSelectedLocality(userLocalities[0]);
         }
@@ -1330,95 +1369,85 @@ const SkillsMentorshipView = ({
 
 
     const handleStateChange = (e) => {
+        // ... (Implementation unchanged) ...
         setSelectedState(e.target.value);
         if (permissions.manageScope !== 'locality' || publicSubmissionMode) {
              setSelectedLocality('');
         }
         setSelectedFacilityId('');
         setSelectedHealthWorkerName('');
-        // --- Clear worker details ---
         setSelectedWorkerOriginalData(null);
         setWorkerJobTitle('');
         setWorkerTrainingDate('');
         setWorkerPhone('');
         setIsWorkerInfoChanged(false);
-        // ---
     };
 
 
-    // --- Hooks for Facility and Worker Data ---
     const filteredFacilities = useMemo(() => {
+        // ... (Implementation unchanged) ...
         if (!healthFacilities || !selectedState || !selectedLocality) return [];
         return healthFacilities.filter(f => f['الولاية'] === selectedState && f['المحلية'] === selectedLocality)
                .sort((a, b) => (a['اسم_المؤسسة'] || '').localeCompare(b['اسم_المؤسسة'] || ''));
     }, [healthFacilities, selectedState, selectedLocality]);
 
     const selectedFacility = useMemo(() => {
+        // ... (Implementation unchanged) ...
         return filteredFacilities.find(f => f.id === selectedFacilityId);
     }, [filteredFacilities, selectedFacilityId]);
 
-    // --- MODIFIED: healthWorkers useMemo (simpler, only name) ---
     const healthWorkers = useMemo(() => {
+        // ... (Implementation unchanged) ...
         if (!selectedFacility || !selectedFacility.imnci_staff) return [];
         try {
             const staffList = typeof selectedFacility.imnci_staff === 'string'
                 ? JSON.parse(selectedFacility.imnci_staff)
                 : selectedFacility.imnci_staff;
-
             if (!Array.isArray(staffList)) return [];
-
-            // Just return name and id (which is also name)
             return staffList
                 .map(s => ({
-                    id: s.name, // Use name as the value/ID
+                    id: s.name, 
                     name: s.name || 'N/A',
                 }))
-                .filter(w => w.name !== 'N/A') // Filter out invalid entries if any
+                .filter(w => w.name !== 'N/A') 
                 .sort((a, b) => a.name.localeCompare(b.name));
-
         } catch (e) {
             console.error("Error processing imnci_staff for dropdown:", e);
             return [];
         }
     }, [selectedFacility]);
-    // --- END MODIFICATION ---
 
-    // --- NEW: Calculate Visit Number ---
     const visitNumber = useMemo(() => {
-        // Ensure submissions is an array before filtering
-        if (!Array.isArray(submissions) || !selectedFacilityId || !selectedHealthWorkerName || !activeService) {
-            return 1; // Default to 1 if data isn't ready
+        // ... (Implementation unchanged) ...
+        // Use processedSubmissions for this calculation
+        if (!Array.isArray(processedSubmissions) || !selectedFacilityId || !selectedHealthWorkerName || !activeService) {
+            return 1; 
         }
-        const existingVisitsCount = submissions.filter(sub =>
+        const existingVisitsCount = processedSubmissions.filter(sub =>
             sub.facilityId === selectedFacilityId &&
             sub.staff === selectedHealthWorkerName &&
             sub.service === activeService
         ).length;
-    
         return existingVisitsCount + 1;
-    }, [submissions, selectedFacilityId, selectedHealthWorkerName, activeService]);
-    // --- END NEW ---
+    }, [processedSubmissions, selectedFacilityId, selectedHealthWorkerName, activeService]); // Changed dependency
 
-    // --- Effect to update editable fields when worker selection changes ---
     useEffect(() => {
+        // ... (Implementation unchanged) ...
         if (selectedHealthWorkerName && selectedFacility?.imnci_staff) {
             try {
                 const staffList = typeof selectedFacility.imnci_staff === 'string'
                     ? JSON.parse(selectedFacility.imnci_staff)
                     : selectedFacility.imnci_staff;
-
                 const workerData = Array.isArray(staffList)
                     ? staffList.find(w => w.name === selectedHealthWorkerName)
                     : null;
-
                 if (workerData) {
-                    setSelectedWorkerOriginalData(workerData); // Store original
+                    setSelectedWorkerOriginalData(workerData); 
                     setWorkerJobTitle(workerData.job_title || '');
                     setWorkerTrainingDate(workerData.training_date || '');
                     setWorkerPhone(workerData.phone || '');
-                    setIsWorkerInfoChanged(false); // Reset changed status
+                    setIsWorkerInfoChanged(false); 
                 } else {
-                    // Worker not found in list (maybe deleted?), clear fields
                     setSelectedWorkerOriginalData(null);
                     setWorkerJobTitle('');
                     setWorkerTrainingDate('');
@@ -1434,17 +1463,16 @@ const SkillsMentorshipView = ({
                  setIsWorkerInfoChanged(false);
             }
         } else {
-            // No worker selected or no facility staff list, clear fields
             setSelectedWorkerOriginalData(null);
             setWorkerJobTitle('');
             setWorkerTrainingDate('');
             setWorkerPhone('');
             setIsWorkerInfoChanged(false);
         }
-    }, [selectedHealthWorkerName, selectedFacility]); // Re-run when selection changes
+    }, [selectedHealthWorkerName, selectedFacility]); 
 
-    // --- Effect to check if worker info has changed ---
     useEffect(() => {
+        // ... (Implementation unchanged) ...
         if (!selectedWorkerOriginalData || !selectedHealthWorkerName) {
             setIsWorkerInfoChanged(false);
             return;
@@ -1460,56 +1488,69 @@ const SkillsMentorshipView = ({
 
     // --- Navigation and Form Handlers ---
     const resetSelection = () => {
+        // ... (Implementation unchanged) ...
         if (!publicSubmissionMode && userStates && userStates.length === 1) { setSelectedState(userStates[0]); } else { setSelectedState(''); }
         if (!publicSubmissionMode && permissions.manageScope === 'locality' && userLocalities && userLocalities.length === 1) { setSelectedLocality(userLocalities[0]); } else { setSelectedLocality(''); }
         setSelectedFacilityId(''); setSelectedHealthWorkerName('');
-        // Clear worker details on full reset
         setSelectedWorkerOriginalData(null);
         setWorkerJobTitle('');
         setWorkerTrainingDate('');
         setWorkerPhone('');
         setIsWorkerInfoChanged(false);
     };
-
     const handleSelectService = (serviceKey) => {
+        // ... (Implementation unchanged) ...
         setActiveService(serviceKey);
         setCurrentView('history');
     };
-
     const handleStartNewVisit = () => {
+        // ... (Implementation unchanged) ...
         setCurrentView('form_setup');
     };
-
     const handleReturnToServiceSelection = () => {
+        // ... (Implementation unchanged) ...
         setActiveService(null);
         setCurrentView('service_selection');
         resetSelection();
     };
 
-    // Called when SkillsAssessmentForm finishes (saves or cancels)
+    // --- MODIFIED: handleFormCompletion ---
+    // Clears editing state
     const handleFormCompletion = async () => {
-        const cameFromSetup = previousViewRef.current === 'form_setup'; // Check where we came from
-        resetSelection(); // Clear selections (state, locality, facility, worker)
+        const cameFromSetup = previousViewRef.current === 'form_setup';
+        const wasEditing = !!editingSubmission; // Check if we were editing
+
+        resetSelection();
+        setEditingSubmission(null); // <-- CLEAR EDITING STATE
+        
         if (publicSubmissionMode) {
             setToast({ show: true, message: 'Submission successful! Thank you.', type: 'success' });
              setCurrentView('form_setup'); // Stay on setup for public
         } else {
-             if (cameFromSetup) { // Only refetch if we just submitted/saved a draft
-                await fetchMentorshipSubmissions(true); // Refetch submissions
+             if (cameFromSetup || wasEditing) { // Refetch if new or editing
+                // --- MODIFICATION: Use context fetcher ---
+                await fetchSkillMentorshipSubmissions(true); // Refetch submissions
+                // --- END MODIFICATION ---
              }
             setCurrentView('history'); // Go back to the history list
         }
     };
-    const previousViewRef = useRef(currentView); // Track previous view
+    // --- END MODIFICATION ---
+
+    const previousViewRef = useRef(currentView); 
     useEffect(() => {
         previousViewRef.current = currentView;
     }, [currentView]);
 
 
+    // --- MODIFIED: handleBackToHistoryView ---
+    // Clears editing state
     const handleBackToHistoryView = () => {
         setCurrentView('history');
          resetSelection();
+         setEditingSubmission(null); // <-- CLEAR EDITING STATE
     };
+    // --- END MODIFICATION ---
 
     const handleShareSubmissionLink = () => {
         // ... (Implementation unchanged) ...
@@ -1520,7 +1561,6 @@ const SkillsMentorshipView = ({
             setToast({ show: true, message: 'Failed to copy link.', type: 'error' });
         });
     };
-
     const handleImportMentorships = async (data, originalRows) => {
         // ... (Implementation unchanged) ...
         if (!canBulkUploadMentorships) {
@@ -1528,7 +1568,6 @@ const SkillsMentorshipView = ({
              return;
         }
         setUploadStatus({ inProgress: true, processed: 0, total: data.length, errors: [], message: '' });
-
         try {
             const { successes, errors, failedRowsData } = await importMentorshipSessions(
                 data,
@@ -1537,17 +1576,16 @@ const SkillsMentorshipView = ({
                     setUploadStatus(prev => ({ ...prev, processed: progress.processed }));
                 }
             );
-
             const successCount = successes.length;
             const errorCount = errors.length;
             let message = `${successCount} sessions imported successfully.`;
             if (errorCount > 0) {
                 message += `\n${errorCount} rows failed to import. Check results for details.`;
             }
-
              setUploadStatus(prev => ({ ...prev, inProgress: false, message, errors: failedRowsData }));
-             fetchMentorshipSubmissions(true);
-
+             // --- MODIFICATION: Use context fetcher ---
+             fetchSkillMentorshipSubmissions(true);
+             // --- END MODIFICATION ---
         } catch (error) {
              setUploadStatus({
                  inProgress: false,
@@ -1558,10 +1596,8 @@ const SkillsMentorshipView = ({
             });
         }
     };
-
-    // --- MODIFIED: handleSaveNewHealthWorker ---
-    // Now also needs to clear the editable fields after saving
     const handleSaveNewHealthWorker = async (workerData) => {
+        // ... (Implementation unchanged) ...
         const user = auth.currentUser;
         if (!selectedFacilityId || !workerData.name) {
              setToast({ show: true, message: 'خطأ: لم يتم تحديد المؤسسة أو اسم العامل الصحي.', type: 'error' });
@@ -1570,56 +1606,45 @@ const SkillsMentorshipView = ({
         try {
             const mentorIdentifier = user ? (user.displayName || user.email) : (publicSubmissionMode ? 'PublicMentorshipForm' : 'SkillsMentorshipForm');
             await addHealthWorkerToFacility(selectedFacilityId, workerData, mentorIdentifier);
-            await fetchHealthFacilities(true); // Refetch
+            await fetchHealthFacilities(true); 
             setToast({ show: true, message: 'تمت إضافة العامل الصحي بنجاح!', type: 'success' });
-
-            // Clear editable fields (important!)
             setWorkerJobTitle('');
             setWorkerTrainingDate('');
             setWorkerPhone('');
             setIsWorkerInfoChanged(false);
-            setSelectedWorkerOriginalData(null); // Clear original data too
-
-            // Auto-select the newly added worker in the dropdown
-            setSelectedHealthWorkerName(workerData.name); // This will trigger the useEffect to load data
-
+            setSelectedWorkerOriginalData(null); 
+            setSelectedHealthWorkerName(workerData.name); 
             setIsAddWorkerModalOpen(false);
         } catch (error) {
             console.error("Error saving new health worker:", error);
             setToast({ show: true, message: `فشل الحفظ: ${error.message}`, type: 'error' });
         }
     };
-    // --- END MODIFICATION ---
-
-    // --- NEW: Handler to save updated worker info ---
     const handleUpdateHealthWorkerInfo = async () => {
+        // ... (Implementation unchanged) ...
         if (!selectedHealthWorkerName || !selectedFacilityId || !isWorkerInfoChanged) {
-            return; // No worker selected, no facility, or no changes
+            return; 
         }
         setIsUpdatingWorker(true);
         const user = auth.currentUser;
         try {
              const mentorIdentifier = user ? (user.displayName || user.email) : (publicSubmissionMode ? 'PublicMentorshipForm' : 'SkillsMentorshipForm');
              const updatedData = {
-                name: selectedHealthWorkerName, // Keep the name
+                name: selectedHealthWorkerName, 
                 job_title: workerJobTitle,
                 training_date: workerTrainingDate,
                 phone: workerPhone
              };
-             // Call the SAME function used for adding, it handles updates too
              await addHealthWorkerToFacility(selectedFacilityId, updatedData, mentorIdentifier);
-             await fetchHealthFacilities(true); // Refetch to get updated list/data
+             await fetchHealthFacilities(true); 
              setToast({ show: true, message: 'تم تحديث بيانات العامل الصحي بنجاح!', type: 'success' });
-             setIsWorkerInfoChanged(false); // Reset changed status after successful save
-
-             // Re-fetch the worker data to update the 'original' state after save
-             const updatedFacility = healthFacilities.find(f => f.id === selectedFacilityId); // Get latest from potentially updated cache
+             setIsWorkerInfoChanged(false); 
+             const updatedFacility = healthFacilities.find(f => f.id === selectedFacilityId); 
              if (updatedFacility?.imnci_staff) {
                  const staffList = typeof updatedFacility.imnci_staff === 'string' ? JSON.parse(updatedFacility.imnci_staff) : updatedFacility.imnci_staff;
                  const freshWorkerData = Array.isArray(staffList) ? staffList.find(w => w.name === selectedHealthWorkerName) : null;
-                 setSelectedWorkerOriginalData(freshWorkerData); // Update original data reference
+                 setSelectedWorkerOriginalData(freshWorkerData); 
              }
-
         } catch (error) {
              console.error("Error updating health worker info:", error);
              setToast({ show: true, message: `فشل تحديث بيانات العامل: ${error.message}`, type: 'error' });
@@ -1629,26 +1654,85 @@ const SkillsMentorshipView = ({
     };
     // --- END NEW HANDLER ---
 
+    // --- NEW: View, Edit, Delete Handlers ---
+    const handleViewSubmission = (submissionId) => {
+        // --- MODIFICATION: Use cached data ---
+        const fullSubmission = skillMentorshipSubmissions.find(s => s.id === submissionId);
+        // --- END MODIFICATION ---
+        setViewingSubmission(fullSubmission);
+    };
+
+    const handleEditSubmission = (submissionId) => {
+        // --- MODIFICATION: Use cached data ---
+        const fullSubmission = skillMentorshipSubmissions.find(s => s.id === submissionId);
+        // --- END MODIFICATION ---
+        if (!fullSubmission) return;
+
+        // Set up all the state needed for the form setup view
+        setActiveService(fullSubmission.serviceType);
+        setSelectedState(fullSubmission.state);
+        setSelectedLocality(fullSubmission.locality);
+        setSelectedFacilityId(fullSubmission.facilityId);
+        setSelectedHealthWorkerName(fullSubmission.healthWorkerName);
+        
+        // Set the submission data to be passed to the form
+        setEditingSubmission(fullSubmission);
+        
+        // Navigate to the form
+        setCurrentView('form_setup');
+    };
+
+    const handleDeleteSubmission = async (submissionId) => {
+        // --- MODIFICATION: Use cached data ---
+        const submissionToDelete = skillMentorshipSubmissions.find(s => s.id === submissionId);
+        // --- END MODIFICATION ---
+        if (!submissionToDelete) return;
+
+        const confirmMessage = `هل أنت متأكد من حذف جلسة العامل الصحي: ${submissionToDelete.healthWorkerName} بتاريخ ${submissionToDelete.sessionDate}؟
+${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
+
+        if (window.confirm(confirmMessage)) {
+            try {
+                await deleteMentorshipSession(submissionId);
+                setToast({ show: true, message: 'تم حذف الجلسة بنجاح.', type: 'success' });
+                // --- MODIFICATION: Use context fetcher ---
+                await fetchSkillMentorshipSubmissions(true); // Refetch list
+                // --- END MODIFICATION ---
+            } catch (error) {
+                console.error("Error deleting session:", error);
+                setToast({ show: true, message: `فشل الحذف: ${error.message}`, type: 'error' });
+            }
+        }
+    };
+    // --- END NEW Handlers ---
+
 
     // --- Render Logic ---
     if (currentView === 'service_selection') {
         return <ServiceSelector onSelectService={handleSelectService} />;
     }
 
+    // --- MODIFIED: history view render ---
     if (currentView === 'history') {
         const canShareLink = permissions.canManageSkillsMentorship || permissions.canUseSuperUserAdvancedFeatures;
         return (
             <>
                 <MentorshipSubmissionsTable
-                    submissions={submissions || []}
+                    submissions={processedSubmissions} // <-- Pass processed data
                     onNewVisit={handleStartNewVisit}
                     onBackToServiceSelection={handleReturnToServiceSelection}
                     activeService={activeService}
-                    setToast={setToast}
+                    // Pass new handlers
+                    onView={handleViewSubmission}
+                    onEdit={handleEditSubmission}
+                    onDelete={handleDeleteSubmission}
+                    //
                     availableStates={availableStates}
                     userStates={userStates}
-                    fetchSubmissions={fetchMentorshipSubmissions}
-                    isSubmissionsLoading={isSubmissionsLoading}
+                    // --- MODIFICATION: Pass context fetcher and loading state ---
+                    fetchSubmissions={fetchSkillMentorshipSubmissions}
+                    isSubmissionsLoading={isDataCacheLoading.skillMentorshipSubmissions || !skillMentorshipSubmissions} // Show loading if context is loading OR data is null
+                    // --- END MODIFICATION ---
                     onShareLink={handleShareSubmissionLink}
                     canShareLink={canShareLink}
                     canBulkUpload={canBulkUploadMentorships}
@@ -1664,38 +1748,55 @@ const SkillsMentorshipView = ({
                         healthFacilities={healthFacilities || []}
                     />
                 )}
+                {/* NEW: Render View Modal */}
+                {viewingSubmission && (
+                    <ViewSubmissionModal
+                        submission={viewingSubmission}
+                        onClose={() => setViewingSubmission(null)}
+                    />
+                )}
             </>
         );
     }
+    // --- END MODIFICATION ---
 
 
-    // --- Render SkillsAssessmentForm when worker name is selected ---
-    // This view is now separate and triggered *only* when a worker name is finally selected and ready for assessment.
-    // --- MODIFICATION: Pass visitNumber and new worker props ---
-    if (currentView === 'form_setup' && selectedHealthWorkerName && selectedFacility && activeService && !isAddWorkerModalOpen && !isWorkerInfoChanged) {
-        // Only render the form if a worker is selected, facility exists, service active, modal is closed, AND info isn't pending update
+    // --- MODIFIED: Render SkillsAssessmentForm ---
+    // This logic now checks for editingSubmission as well
+    if (currentView === 'form_setup' && (editingSubmission || (selectedHealthWorkerName && selectedFacility)) && activeService && !isAddWorkerModalOpen && !isWorkerInfoChanged) {
+        
+        // When editing, the useEffects for worker info will run based on state set by handleEditSubmission
+        // and populate workerJobTitle, workerTrainingDate, workerPhone from the *latest* facility data.
+        
         return (
             <SkillsAssessmentForm
-                facility={selectedFacility}
-                healthWorkerName={selectedHealthWorkerName}
-                // --- ADD NEW PROPS ---
+                facility={editingSubmission ? { // Construct a minimal facility object if editing
+                    'الولاية': editingSubmission.state,
+                    'المحلية': editingSubmission.locality,
+                    'اسم_المؤسسة': editingSubmission.facilityName,
+                    'id': editingSubmission.facilityId,
+                    // Add any other facility details the form might need, if any
+                } : selectedFacility}
+                healthWorkerName={editingSubmission ? editingSubmission.healthWorkerName : selectedHealthWorkerName}
+                // Pass worker details. These will be populated by useEffects
                 healthWorkerJobTitle={workerJobTitle}
                 healthWorkerTrainingDate={workerTrainingDate}
-                // --- END ADD NEW PROPS ---
-                onCancel={handleFormCompletion} // Handles navigation back to history/setup
+                healthWorkerPhone={workerPhone} 
+                //
+                onCancel={handleFormCompletion} // Handles navigation back
                 setToast={setToast}
-                visitNumber={visitNumber} // Pass the calculated visit number
-                // existingSessionData can be passed here if editing a draft later
+                visitNumber={editingSubmission ? editingSubmission.visitNumber : visitNumber} // Use submission's visit # if editing
+                existingSessionData={editingSubmission} // <-- PASS THE SUBMISSION DATA FOR EDITING
+                lastSessionDate={null} // TODO: Could calculate this
             />
         );
     }
     // --- END MODIFICATION ---
 
-    // --- Render Setup View ---
+    // --- Render Setup View (Unchanged logic, but now leads to form above) ---
     const isStateFilterDisabled = !publicSubmissionMode && userStates && userStates.length === 1;
     const isLocalityFilterDisabled = publicSubmissionMode ? !selectedState : (permissions.manageScope === 'locality' || !selectedState);
 
-    // This view remains if we haven't selected a worker or if info is being edited.
     if (currentView === 'form_setup') {
           const serviceTitle = SERVICE_TITLES[activeService] || activeService;
         return (
@@ -1706,7 +1807,7 @@ const SkillsMentorshipView = ({
                         <div className="flex justify-between items-start mb-4">
                             <div className="text-right">
                                 <PageHeader
-                                    title={publicSubmissionMode ? `إدخال بيانات: ${serviceTitle}` : `متابعة مهارات: ${serviceTitle}`}
+                                    title={editingSubmission ? `تعديل جلسة: ${serviceTitle}` : (publicSubmissionMode ? `إدخال بيانات: ${serviceTitle}` : `متابعة مهارات: ${serviceTitle}`)}
                                     subtitle={publicSubmissionMode ? "الرجاء اختيار الولاية والمحلية والمنشأة والعامل الصحي للمتابعة." : "اختر عاملاً صحياً لبدء الجلسة."}
                                 />
                             </div>
@@ -1723,12 +1824,12 @@ const SkillsMentorshipView = ({
                                 {/* --- Location Selection Row --- */}
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border p-4 rounded-lg bg-gray-50">
                                     <FormGroup label="الولاية" className="text-right">
-                                        <Select value={selectedState} onChange={handleStateChange} disabled={isStateFilterDisabled}>
+                                        <Select value={selectedState} onChange={handleStateChange} disabled={isStateFilterDisabled || !!editingSubmission}>
                                             {availableStates.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
                                         </Select>
                                     </FormGroup>
                                     <FormGroup label="المحلية" className="text-right">
-                                        <Select value={selectedLocality} onChange={(e) => { setSelectedLocality(e.target.value); setSelectedFacilityId(''); setSelectedHealthWorkerName(''); setSelectedWorkerOriginalData(null); setWorkerJobTitle(''); setWorkerTrainingDate(''); setWorkerPhone(''); setIsWorkerInfoChanged(false); }} disabled={isLocalityFilterDisabled}>
+                                        <Select value={selectedLocality} onChange={(e) => { setSelectedLocality(e.target.value); setSelectedFacilityId(''); setSelectedHealthWorkerName(''); setSelectedWorkerOriginalData(null); setWorkerJobTitle(''); setWorkerTrainingDate(''); setWorkerPhone(''); setIsWorkerInfoChanged(false); }} disabled={isLocalityFilterDisabled || !!editingSubmission}>
                                              {(!publicSubmissionMode && permissions.manageScope === 'locality') ? (
                                                 userLocalities && userLocalities.length > 0 ? (
                                                     userLocalities.map(locEn => {
@@ -1738,7 +1839,7 @@ const SkillsMentorshipView = ({
                                                 ) : (
                                                     <option value="">-- لم يتم تحديد محلية --</option>
                                                 )
-                                            ) : ( // Public mode OR non-locality scope user
+                                            ) : ( 
                                                 <>
                                                     <option value="">-- اختر المحلية --</option>
                                                     {selectedState && STATE_LOCALITIES[selectedState]?.localities.sort((a, b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
@@ -1747,7 +1848,7 @@ const SkillsMentorshipView = ({
                                         </Select>
                                     </FormGroup>
                                     <FormGroup label="المؤسسة الصحية" className="text-right">
-                                        <Select value={selectedFacilityId} onChange={(e) => { setSelectedFacilityId(e.target.value); setSelectedHealthWorkerName(''); setSelectedWorkerOriginalData(null); setWorkerJobTitle(''); setWorkerTrainingDate(''); setWorkerPhone(''); setIsWorkerInfoChanged(false); }} disabled={!selectedLocality}>
+                                        <Select value={selectedFacilityId} onChange={(e) => { setSelectedFacilityId(e.target.value); setSelectedHealthWorkerName(''); setSelectedWorkerOriginalData(null); setWorkerJobTitle(''); setWorkerTrainingDate(''); setWorkerPhone(''); setIsWorkerInfoChanged(false); }} disabled={!selectedLocality || !!editingSubmission}>
                                             <option value="">-- اختر المؤسسة --</option>
                                             {filteredFacilities.map(f => ( <option key={f.id} value={f.id}>{f['اسم_المؤسسة']}</option> ))}
                                         </Select>
@@ -1769,22 +1870,23 @@ const SkillsMentorshipView = ({
                                                         setSelectedWorkerOriginalData(null); setWorkerJobTitle(''); setWorkerTrainingDate(''); setWorkerPhone(''); setIsWorkerInfoChanged(false);
                                                     } else {
                                                         setSelectedHealthWorkerName(e.target.value);
-                                                        // useEffect will handle populating fields
                                                     }
                                                 }}
-                                                disabled={!selectedFacilityId}
+                                                disabled={!selectedFacilityId || !!editingSubmission}
                                             >
                                                 <option value="">-- اختر العامل الصحي --</option>
-                                                <option value="ADD_NEW_WORKER" className="font-bold text-blue-600 bg-blue-50">
-                                                    + إضافة عامل صحي جديد...
-                                                </option>
+                                                {!editingSubmission && (
+                                                    <option value="ADD_NEW_WORKER" className="font-bold text-blue-600 bg-blue-50">
+                                                        + إضافة عامل صحي جديد...
+                                                    </option>
+                                                )}
                                                 {healthWorkers.map(w => (
                                                     <option key={w.id} value={w.name}>
                                                         {w.name}
                                                     </option>
                                                 ))}
                                             </Select>
-                                            {healthWorkers.length === 0 && (
+                                            {healthWorkers.length === 0 && !editingSubmission && (
                                                 <p className="text-xs text-red-600 mt-1">
                                                     لا يوجد كوادر مسجلين. أضف واحداً.
                                                 </p>
@@ -1815,9 +1917,10 @@ const SkillsMentorshipView = ({
                                                          <Button
                                                             type="button"
                                                             onClick={handleUpdateHealthWorkerInfo}
-                                                            disabled={isUpdatingWorker}
-                                                            variant="success" // Changed variant
+                                                            disabled={isUpdatingWorker || !!editingSubmission}
+                                                            variant="success" 
                                                             size="sm"
+                                                            title={editingSubmission ? "لا يمكن تعديل بيانات العامل أثناء تعديل الجلسة" : ""}
                                                         >
                                                             {isUpdatingWorker ? 'جاري التحديث...' : 'حفظ تعديلات بيانات العامل'}
                                                         </Button>
@@ -1830,18 +1933,17 @@ const SkillsMentorshipView = ({
                             </div>
                         )}
                     </div>
-                     {/* --- Button to Proceed to Assessment (only if worker selected and info not changed) --- */}
-                     {selectedHealthWorkerName && !isWorkerInfoChanged && (
+                     {/* Button to Proceed - now hidden, as form renders automatically */}
+                     {/* {selectedHealthWorkerName && !isWorkerInfoChanged && !editingSubmission && (
                          <div className="p-4 border-t bg-gray-50 flex justify-end">
                              <Button
-                                 onClick={() => { /* Simply letting the component re-render will show the form */ }}
-                                 disabled={!selectedHealthWorkerName || isWorkerInfoChanged} // Extra safety check
-                                 title={isWorkerInfoChanged ? "الرجاء حفظ تعديلات بيانات العامل أولاً" : ""}
+                                 onClick={() => {}} // Form renders automatically
+                                 disabled={true} // No need to click
                              >
                                  بدء جلسة المتابعة لـ {selectedHealthWorkerName}
                              </Button>
                          </div>
-                     )}
+                     )} */}
                 </Card>
 
                 {/* --- Add Worker Modal --- */}

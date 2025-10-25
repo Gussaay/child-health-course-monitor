@@ -219,6 +219,7 @@ export default function App() { //
         // Ensure all fetch functions from context are included
         fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators,
         fetchHealthFacilities,
+        fetchSkillMentorshipSubmissions, // <-- ADD THIS
     } = useDataCache(); //
     const { user, userStates, authLoading, userLocalities } = useAuth(); // --- MODIFIED: Added userLocalities ---
 
@@ -469,12 +470,13 @@ export default function App() { //
         if (view === 'courses') { //
             fetchCourses(); //
         }
-        // --- NEW: Fetch facilities for skills mentorship ---
+        // --- NEW: Fetch facilities and mentorship data ---
         if (view === 'skillsMentorship') { //
             fetchHealthFacilities(); // Will use cache or fetch if needed
+            fetchSkillMentorshipSubmissions(); // <-- ADD THIS
         }
         // --- END NEW ---
-    }, [view, isSharedView, user, fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchCoordinators, fetchHealthFacilities]); // Added fetchParticipants to dependencies
+    }, [view, isSharedView, user, fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchCoordinators, fetchHealthFacilities, fetchSkillMentorshipSubmissions]); // Added fetchSkillMentorshipSubmissions to dependencies
 
 
     // --- FILTERING LOGIC ---
