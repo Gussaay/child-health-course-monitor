@@ -151,7 +151,7 @@ const IMNCI_FORM_STRUCTURE = [
             { subgroupTitle: 'القياسات الجسمانية والحيوية', step: 1, scoreKey: 'vitalSigns', maxScore: 3, skills: [ { key: 'skill_weight', label: 'وزن الطفل بصورة صحيحة' }, { key: 'skill_temp', label: 'قياس درجة الطفل بصورة صحيحة' }, { key: 'skill_height', label: 'قياس طول / ارتفاع الطفل بصورة صحيحة' }, ] },
             { subgroupTitle: 'قيم علامات الخطورة العامة بصورة صحيحة', step: 2, scoreKey: 'dangerSigns', maxScore: 4, skills: [ { key: 'skill_ds_drink', label: 'هل سأل وتأكد من علامة الخطورة : لا يستطيع ان يرضع أو يشرب' }, { key: 'skill_ds_vomit', label: 'هل سأل وتأكد من علامة الخطورة : يتقيأ كل شئ' }, { key: 'skill_ds_convulsion', label: 'هل سأل وتأكد من علامة الخطورة : تشنجات أثناء المرض الحالي' }, { key: 'skill_ds_conscious', label: 'هل تأكد من علامة الخطورة : حامل أو فاقد للوعي' }, ] },
             { subgroupTitle: 'قيم الطفل بصورة صحيحة لوجود كل الأعراض الأساسية', step: 3, scoreKey: 'mainSymptoms', maxScore: 12, isSymptomGroupContainer: true, symptomGroups: [
-                { mainSkill: { key: 'skill_ask_cough', label: 'هل سأل عن وجود الكحة', scoreKey: 'symptom_cough' } },
+                { mainSkill: { key: 'skill_ask_cough', label: 'هل سأل عن وجود الكحة أو ضيق التنفس', scoreKey: 'symptom_cough' } },
                 { mainSkill: { key: 'skill_ask_diarrhea', label: 'هل سأل عن وجود الاسهال', scoreKey: 'symptom_diarrhea' } },
                 { mainSkill: { key: 'skill_ask_fever', label: 'هل سأل عن وجود الحمى', scoreKey: 'symptom_fever' } },
                 { mainSkill: { key: 'skill_ask_ear', label: 'هل سأل عن وجود مشكلة في الأذن', scoreKey: 'symptom_ear' } },
@@ -171,7 +171,7 @@ const IMNCI_FORM_STRUCTURE = [
                 subgroupTitle: 'الحالات التي تحتاج لتحويل ، تم تحويلها',
                 scoreKey: 'ref_treatment',
                 skills: [
-                    { key: 'skill_ref_abx', label: 'في حالة التحويل : هل أعطى الجرعة الاولى من المضاد الحيوي المناسب قبل تحويل الطفل' },
+                    { key: 'skill_ref_abx', label: 'هل أعطى الجرعة الاولى من المضاد الحيوي المناسب قبل تحويل الطفل' },
                     {
                         key: 'skill_ref_quinine',
                         label: 'في حالة التحويل : أعطى الكينيين بالعضل قبل التحويل',
@@ -203,13 +203,13 @@ const IMNCI_FORM_STRUCTURE = [
             {
                 subgroupTitle: 'في حالة الإسهال',
                 scoreKey: 'diar_treatment',
-                skills: [ { key: 'skill_diar_ors', label: 'هل حدد كمية محلول الإرواء بصورة صحيحة' }, { key: 'skill_diar_counsel', label: 'هل نصح الأم بالRعاية المنزلية بإعطاء سوائل أكثر و الاستمرار في تغذية الطفل)' }, { key: 'skill_diar_zinc', label: 'هل وصف دواء الزنك بصورة صحيحة' }, { key: 'skill_diar_zinc_dose', label: 'هل أعطى الجرعة الأولى من دواء الزنك للطفل بالوحدة الصحية بطريقة صحيحة', relevant: "${skill_diar_zinc}='yes'" }, ],
+                skills: [ { key: 'skill_diar_ors', label: 'هل حدد كمية محلول الإرواء بصورة صحيحة' }, { key: 'skill_diar_counsel', label: 'هل نصح الأم بالرعاية المنزلية بإعطاء سوائل أكثر و الاستمرار في تغذية الطفل)' }, { key: 'skill_diar_zinc', label: 'هل وصف دواء الزنك بصورة صحيحة' }, { key: 'skill_diar_zinc_dose', label: 'هل أعطى الجرعة الأولى من دواء الزنك للطفل بالوحدة الصحية بطريقة صحيحة', relevant: "${skill_diar_zinc}='yes'" }, ],
                 relevant: (formData) => { // Show if effective classification includes relevant keys (including 'لا يوجد جفاف')
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_diarrhea === 'yes';
                     const workerCls = formData.assessment_skills.worker_diarrhea_classification || {};
                     const supervisorCls = formData.assessment_skills.supervisor_correct_diarrhea_classification || {};
                     const effectiveCls = didClassifyCorrectly ? workerCls : supervisorCls;
-                    const relevantKeys = ['جفاف حاد', 'بعض الجفاف', 'إسهال مستمر شديد', 'إسهال مستمر', 'دسنتاريا', 'لا يوجد جفاف'];
+                    const relevantKeys = ['جفاف شديد', 'بعض الجفاف', 'إسهال مستمر شديد', 'إسهال مستمر', 'دسنتاريا', 'لا يوجد جفاف'];
                     return relevantKeys.some(key => effectiveCls[key]);
                 }
             },
@@ -241,24 +241,40 @@ const IMNCI_FORM_STRUCTURE = [
                 subgroupTitle: 'في حالة التهاب الأذن',
                 scoreKey: 'ear_treatment',
                 skills: [ { key: 'skill_ear_abx', label: 'هل وصف مضاد حيوي لعلاج التهاب الأذن الحاد بصورة صحيحة' }, { key: 'skill_ear_dose', label: 'هل أعطى الجرعة الأولى من مضاد حيوي لعلاج التهاب الأذن الحاد بصورة صحيحة', relevant: "${skill_ear_abx}='yes'" }, { key: 'skill_ear_para', label: 'هل وصف دواء الباراسيتامول بصورة صحيحة' }, { key: 'skill_ear_para_dose', label: 'هل أعطى الجرعة الأولى من الباراسيتامول بصورة صحيحة', relevant: "${skill_ear_para}='yes'" }, ],
+                // --- START CORRECTION: Added hamza (أ) to match classification constants ---
                 relevant: (formData) => { // Show if effective classification is 'التهاب اذن حاد' or 'التهاب اذن مزمن'
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_ear === 'yes';
                     const workerCls = formData.assessment_skills.worker_ear_classification;
                     const supervisorCls = formData.assessment_skills.supervisor_correct_ear_classification;
                     const effectiveCls = didClassifyCorrectly ? workerCls : supervisorCls;
-                    return ['التهاب العظمة خلف الاذن', 'التهاب اذن حاد', 'التهاب اذن مزمن'].includes(effectiveCls);
+                    return ['التهاب العظمة خلف الاذن', 'التهاب أذن حاد', 'التهاب أذن مزمن'].includes(effectiveCls);
                 }
+                // --- END CORRECTION ---
             },
             {
                 subgroupTitle: 'في حالة سوء التغذية',
                 scoreKey: 'nut_treatment',
-                skills: [ { key: 'skill_nut_assess', label: 'قيم تغذية الطفل بما في ذلك مشاكل الرضاعة (لأقل من عمر سنتين)' }, { key: 'skill_nut_counsel', label: 'أرشد الأم عن تغذية الطفل بما في ذلك مشاكل الرضاعة الأقل من عمر سنتين)' }, ],
+                skills: [
+                    {
+                        key: 'skill_nut_refer_otp',
+                        label: 'هل حول الطفل الى مركز المعالجة الخارجي OTP',
+                        relevant: (formData) => {
+                            const didClassifyCorrectly = formData.assessment_skills.skill_mal_classify === 'yes';
+                            const workerCls = formData.assessment_skills.worker_malnutrition_classification;
+                            const supervisorCls = formData.assessment_skills.supervisor_correct_malnutrition_classification;
+                            const effectiveCls = didClassifyCorrectly ? workerCls : supervisorCls;
+                            // Show for MAM and SAM without complications, hide for SAM with complications
+                            return ['سوء تغذية شديد غير مصحوب بمضاعفات', 'سوء تغذية حاد متوسط'].includes(effectiveCls);
+                        }
+                    },
+                    { key: 'skill_nut_assess', label: 'قيم تغذية الطفل بما في ذلك مشاكل الرضاعة (لأقل من عمر سنتين)' }, { key: 'skill_nut_counsel', label: 'أرشد الأم عن تغذية الطفل بما في ذلك مشاكل الرضاعة الأقل من عمر سنتين)' },
+                ],
                 relevant: (formData) => { // Show if effective classification is SAM or MAM
                     const didClassifyCorrectly = formData.assessment_skills.skill_mal_classify === 'yes';
                     const workerCls = formData.assessment_skills.worker_malnutrition_classification;
                     const supervisorCls = formData.assessment_skills.supervisor_correct_malnutrition_classification;
                     const effectiveCls = didClassifyCorrectly ? workerCls : supervisorCls;
-                    return ['سوء تغذية حاد شديد مع مضاعفات', 'سوء تغذية حاد شديد من غير مضاعفات', 'سوء تغذية حاد متوسط'].includes(effectiveCls);
+                    return ['سوء تغذية شديد غير مصحوب بمضاعفات', 'سوء تغذية حاد متوسط'].includes(effectiveCls);
                 }
             },
             {
@@ -281,15 +297,15 @@ const IMNCI_FORM_STRUCTURE = [
 ];
 
 // --- Classification Constants (Unchanged) ---
-const COUGH_CLASSIFICATIONS = ["التهاب رئوي حاد وخيم", "التهاب رئوي", "كحة أو زكام"];
-const DIARRHEA_CLASSIFICATIONS = ["جفاف حاد", "بعض الجفاف", "لا يوجد جفاف", "إسهال مستمر شديد", "إسهال مستمر", "دسنتاريا"];
-const DIARRHEA_COLS_1 = ["جفاف حاد", "بعض الجفاف", "لا يوجد جفاف"];
+const COUGH_CLASSIFICATIONS = ["التهاب رئوي شديد أو مرض شديد جدا", "التهاب رئوي", "كحة أو نزلة برد"];
+const DIARRHEA_CLASSIFICATIONS = ["جفاف شديد", "بعض الجفاف", "لا يوجد جفاف", "إسهال مستمر شديد", "إسهال مستمر", "دسنتاريا"];
+const DIARRHEA_COLS_1 = ["جفاف شديد", "بعض الجفاف", "لا يوجد جفاف"];
 const DIARRHEA_COLS_2 = ["إسهال مستمر شديد", "إسهال مستمر", "دسنتاريا"];
 const FEVER_CLASSIFICATIONS = ["مرض حمي شديد", "ملاريا", "حمى لا توجد ملاريا", "حصبة مصحوبة بمضاعفات شديدة", "حصبة مصحوبة بمضاعفات في العين والفم", "حصبة"];
 const FEVER_COLS_1 = ["مرض حمي شديد", "ملاريا", "حمى لا توجد ملاريا"];
 const FEVER_COLS_2 = ["حصبة مصحوبة بمضاعفات شديدة", "حصبة مصحوبة بمضاعفات في العين والفم", "حصبة"];
 const EAR_CLASSIFICATIONS = ["التهاب العظمة خلف الاذن", "التهاب أذن حاد", "التهاب أذن مزمن", "لا يوجد التهاب أذن"];
-const MALNUTRITION_CLASSIFICATIONS = ["سوء تغذية حاد شديد مع مضاعفات", "سوء تغذية حاد شديد من غير مضاعفات", "سوء تغذية حاد متوسط", "لا يوجد سوء تغذية"];
+const MALNUTRITION_CLASSIFICATIONS = ["سوء تغذية شديد مصحوب بمضاعفات", "سوء تغذية شديد غير مصحوب بمضاعفات", "سوء تغذية حاد متوسط", "لا يوجد سوء تغذية"];
 const ANEMIA_CLASSIFICATIONS = ["فقر دم شديد", "فقر دم", "لا يوجد فقر دم"];
 
 // Helper for initial state (Unchanged)
@@ -601,25 +617,96 @@ const SkillsAssessmentForm = ({
     // --- Helper functions to check step completion (Unchanged) ---
     const isVitalSignsComplete = (data) => { const skills = data.assessment_skills; return skills.skill_weight !== '' && skills.skill_temp !== '' && skills.skill_height !== ''; };
     const isDangerSignsComplete = (data) => { const skills = data.assessment_skills; return skills.skill_ds_drink !== '' && skills.skill_ds_vomit !== '' && skills.skill_ds_convulsion !== '' && skills.skill_ds_conscious !== ''; };
+
+    // --- START CORRECTION: Updated isMainSymptomsComplete function ---
     const isMainSymptomsComplete = (data) => {
         const skills = data.assessment_skills;
+        const isMultiSelectGroupEmpty = (obj) => !obj || !Object.values(obj).some(v => v === true);
+
+        // Cough
         if (skills.skill_ask_cough === '') return false;
-        if (skills.skill_ask_cough === 'yes' && skills.supervisor_confirms_cough === '') return false;
+        if (skills.skill_ask_cough === 'yes') {
+            if (skills.supervisor_confirms_cough === '') return false;
+            if (skills.supervisor_confirms_cough === 'yes') {
+                if (skills.skill_check_rr === '' || skills.skill_classify_cough === '') return false;
+                if (skills.skill_classify_cough === 'yes' && skills.worker_cough_classification === '') return false;
+                if (skills.skill_classify_cough === 'no' && skills.supervisor_correct_cough_classification === '') return false;
+            }
+        }
+
+        // Diarrhea
         if (skills.skill_ask_diarrhea === '') return false;
-        if (skills.skill_ask_diarrhea === 'yes' && skills.supervisor_confirms_diarrhea === '') return false;
+        if (skills.skill_ask_diarrhea === 'yes') {
+            if (skills.supervisor_confirms_diarrhea === '') return false;
+            if (skills.supervisor_confirms_diarrhea === 'yes') {
+                if (skills.skill_check_dehydration === '' || skills.skill_classify_diarrhea === '') return false;
+                if (skills.skill_classify_diarrhea === 'yes' && isMultiSelectGroupEmpty(skills.worker_diarrhea_classification)) return false;
+                if (skills.skill_classify_diarrhea === 'no' && isMultiSelectGroupEmpty(skills.supervisor_correct_diarrhea_classification)) return false;
+            }
+        }
+        
+        // Fever
         if (skills.skill_ask_fever === '') return false;
-        if (skills.skill_ask_fever === 'yes' && skills.supervisor_confirms_fever === '') return false;
+        if (skills.skill_ask_fever === 'yes') {
+            if (skills.supervisor_confirms_fever === '') return false;
+            if (skills.supervisor_confirms_fever === 'yes') {
+                if (skills.skill_check_rdt === '' || skills.skill_classify_fever === '') return false;
+                if (skills.skill_classify_fever === 'yes' && isMultiSelectGroupEmpty(skills.worker_fever_classification)) return false;
+                if (skills.skill_classify_fever === 'no' && isMultiSelectGroupEmpty(skills.supervisor_correct_fever_classification)) return false;
+            }
+        }
+
+        // Ear
         if (skills.skill_ask_ear === '') return false;
-        if (skills.skill_ask_ear === 'yes' && skills.supervisor_confirms_ear === '') return false;
-        // Check sub-questions based on confirmation
-        if (skills.skill_ask_cough === 'yes' && skills.supervisor_confirms_cough === 'yes' && (skills.skill_check_rr === '' || skills.skill_classify_cough === '')) return false;
-        if (skills.skill_ask_diarrhea === 'yes' && skills.supervisor_confirms_diarrhea === 'yes' && (skills.skill_check_dehydration === '' || skills.skill_classify_diarrhea === '')) return false;
-        if (skills.skill_ask_fever === 'yes' && skills.supervisor_confirms_fever === 'yes' && (skills.skill_check_rdt === '' || skills.skill_classify_fever === '')) return false;
-        if (skills.skill_ask_ear === 'yes' && skills.supervisor_confirms_ear === 'yes' && (skills.skill_check_ear === '' || skills.skill_classify_ear === '')) return false;
+        if (skills.skill_ask_ear === 'yes') {
+            if (skills.supervisor_confirms_ear === '') return false;
+            if (skills.supervisor_confirms_ear === 'yes') { 
+                if (skills.skill_check_ear === '' || skills.skill_classify_ear === '') return false;
+                if (skills.skill_classify_ear === 'yes' && skills.worker_ear_classification === '') return false;
+                if (skills.skill_classify_ear === 'no' && skills.supervisor_correct_ear_classification === '') return false;
+            }
+        }
+        
         return true;
     };
-    const isMalnutritionComplete = (data) => { const skills = data.assessment_skills; if (skills.skill_mal_muac === '' || skills.skill_mal_wfh === '' || skills.skill_mal_classify === '') return false; if (skills.worker_malnutrition_classification === '') return false; if (skills.skill_mal_classify === 'no' && skills.supervisor_correct_malnutrition_classification === '') return false; return true; };
-    const isAnemiaComplete = (data) => { const skills = data.assessment_skills; if (skills.skill_anemia_pallor === '' || skills.skill_anemia_classify === '') return false; if (skills.worker_anemia_classification === '') return false; if (skills.skill_anemia_classify === 'no' && skills.supervisor_correct_anemia_classification === '') return false; return true; };
+    // --- END CORRECTION ---
+
+    // --- START CORRECTION: Updated isMalnutritionComplete and isAnemiaComplete functions ---
+    const isMalnutritionComplete = (data) => {
+        const skills = data.assessment_skills;
+        // 1. Check main skills
+        if (skills.skill_mal_muac === '' || skills.skill_mal_wfh === '' || skills.skill_mal_classify === '') {
+            return false;
+        }
+        // 2. Check conditional classification fields
+        if (skills.skill_mal_classify === 'yes') {
+            if (skills.worker_malnutrition_classification === '') return false;
+        } else if (skills.skill_mal_classify === 'no') {
+            if (skills.worker_malnutrition_classification === '') return false;
+            if (skills.supervisor_correct_malnutrition_classification === '') return false;
+        }
+        // If skill_mal_classify is 'na', we don't need to check classification fields.
+        return true;
+    };
+
+    const isAnemiaComplete = (data) => {
+        const skills = data.assessment_skills;
+        // 1. Check main skills
+        if (skills.skill_anemia_pallor === '' || skills.skill_anemia_classify === '') {
+            return false;
+        }
+        // 2. Check conditional classification fields
+        if (skills.skill_anemia_classify === 'yes') {
+            if (skills.worker_anemia_classification === '') return false;
+        } else if (skills.skill_anemia_classify === 'no') {
+            if (skills.worker_anemia_classification === '') return false;
+            if (skills.supervisor_correct_anemia_classification === '') return false;
+        }
+        // If skill_anemia_classify is 'na', we don't need to check classification fields.
+        return true;
+    };
+    // --- END CORRECTION ---
+
     const isImmunizationComplete = (data) => { const skills = data.assessment_skills; return skills.skill_imm_vacc !== '' && skills.skill_imm_vita !== ''; };
     const isOtherProblemsComplete = (data) => { const skills = data.assessment_skills; return skills.skill_other !== ''; };
     const isDecisionComplete = (data) => { return data.finalDecision !== '' && data.decisionMatches !== ''; };
@@ -686,10 +773,14 @@ const SkillsAssessmentForm = ({
             const mainSkillKey = `skill_ask_${symptomPrefix}`;
             if (newAssessmentSkills[mainSkillKey] === 'yes') {
                 const confirmsKey = `supervisor_confirms_${symptomPrefix}`;
-                const checkSkillKey = `skill_check_${symptomPrefix === 'cough' ? 'rr' : prefix === 'diarrhea' ? 'dehydration' : prefix === 'fever' ? 'rdt' : 'ear'}`;
+                
+                // --- FIX: Replaced 'prefix' with 'symptomPrefix' in all 3 locations ---
+                const checkSkillKey = `skill_check_${symptomPrefix === 'cough' ? 'rr' : symptomPrefix === 'diarrhea' ? 'dehydration' : symptomPrefix === 'fever' ? 'rdt' : 'ear'}`;
                 const classifySkillKey = `skill_classify_${symptomPrefix}`;
-                const workerClassKey = `worker_${symptomPrefix}_classification`; // Corrected from 'prefix'
-                const correctClassKey = `supervisor_correct_${symptomPrefix}_classification`; // Corrected from 'prefix'
+                const workerClassKey = `worker_${symptomPrefix}_classification`; 
+                const correctClassKey = `supervisor_correct_${symptomPrefix}_classification`; 
+                // --- END FIX ---
+
                 const supervisorConfirms = newAssessmentSkills[confirmsKey] === 'yes';
                 const initialClassState = isMulti ? createInitialClassificationState(classifications || []) : '';
                 const didClassifyCorrectly = newAssessmentSkills[classifySkillKey] === 'yes';
@@ -1081,7 +1172,12 @@ const SkillsAssessmentForm = ({
                                         className="p-1 text-sm mr-2 w-auto"
                                     />
                                 </div>
-                                <div className="text-sm"><span className="font-medium text-gray-500">تاريخ الجلسة السابقة:</span><span className="font-semibold text-gray-900 mr-2">{lastSessionDate || '---'}</span></div>
+                                {/* --- MODIFIED: Display lastSessionDate prop --- */}
+                                <div className="text-sm">
+                                    <span className="font-medium text-gray-500">تاريخ الجلسة السابقة:</span>
+                                    <span className="font-semibold text-gray-900 mr-2">{lastSessionDate || '---'}</span>
+                                </div>
+                                {/* --- END MODIFIED --- */}
                                 <div className="text-sm"><span className="font-medium text-gray-700">رقم الجلسة:</span><span className="text-lg font-bold text-sky-700 mr-2">{visitNumber}</span></div>
                                 
                             </div>

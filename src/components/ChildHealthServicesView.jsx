@@ -139,11 +139,21 @@ const LocationMapModal = ({ isOpen, onClose, facility, onSaveLocation }) => {
             setOriginalPosition(initialPos);
             setHasValidCoordinates(validCoordsFound);
 
-            if (mapRef.current) {
-                mapRef.current.flyTo(initialPos, 16);
-            }
+            // --- REMOVED from here ---
+            // if (mapRef.current) {
+            //     mapRef.current.flyTo(initialPos, 16);
+            // }
         }
     }, [isOpen, facility]);
+
+    // --- ADDED THIS NEW useEffect ---
+    // This effect runs *after* the position state has been updated
+    // and *after* the MapContainer has rendered and set the mapRef.
+    useEffect(() => {
+        if (mapRef.current && position) {
+            mapRef.current.flyTo(position, 16);
+        }
+    }, [position]); // Dependency on the position state
 
     const eventHandlers = useMemo(() => ({
         dragend() {

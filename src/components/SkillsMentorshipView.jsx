@@ -1320,7 +1320,9 @@ const SkillsMentorshipView = ({
         return skillMentorshipSubmissions.map(sub => ({ // <-- Use cached data
             id: sub.id,
             service: sub.serviceType,
-            date: sub.effectiveDate ? new Date(sub.effectiveDate.seconds * 1000).toISOString().split('T')[0] : 'N/A',
+            // Convert Firestore Timestamp to string for display/filtering
+            date: sub.effectiveDate ? new Date(sub.effectiveDate.seconds * 1000).toISOString().split('T')[0] : (sub.sessionDate || 'N/A'),
+            effectiveDateTimestamp: sub.effectiveDate, // Keep the timestamp for sorting/filtering
             state: sub.state || 'N/A', // Keep for filtering
             locality: sub.locality || 'N/A', // Keep for filtering
             facility: sub.facilityName || 'N/A',
@@ -1417,19 +1419,62 @@ const SkillsMentorshipView = ({
         }
     }, [selectedFacility]);
 
+    // --- MODIFICATION: Calculate visitNumber ---
     const visitNumber = useMemo(() => {
-        // ... (Implementation unchanged) ...
-        // Use processedSubmissions for this calculation
         if (!Array.isArray(processedSubmissions) || !selectedFacilityId || !selectedHealthWorkerName || !activeService) {
             return 1; 
         }
         const existingVisitsCount = processedSubmissions.filter(sub =>
             sub.facilityId === selectedFacilityId &&
             sub.staff === selectedHealthWorkerName &&
-            sub.service === activeService
+            sub.service === activeService &&
+            sub.status !== 'draft' // Only count completed submissions
         ).length;
+
+        // If editing a draft, the existingVisitsCount is the number of *completed* sessions.
+        // If editing a completed session, the count is the total completed sessions, including the current one.
+        // The visit number is stored in the submission data, so we don't need a complex formula here.
+        // If we are creating a new one (not editing), the number is completed + 1.
+
+        if (editingSubmission) {
+            return editingSubmission.visitNumber || 1; 
+        }
+
         return existingVisitsCount + 1;
-    }, [processedSubmissions, selectedFacilityId, selectedHealthWorkerName, activeService]); // Changed dependency
+    }, [processedSubmissions, selectedFacilityId, selectedHealthWorkerName, activeService, editingSubmission]);
+    // --- END MODIFICATION ---
+
+    // --- MODIFICATION: Calculate lastSessionDate ---
+    const lastSessionDate = useMemo(() => {
+        if (!Array.isArray(processedSubmissions) || !selectedFacilityId || !selectedHealthWorkerName || !activeService) {
+            return null;
+        }
+
+        const workerSessions = processedSubmissions
+            .filter(sub =>
+                sub.facilityId === selectedFacilityId &&
+                sub.staff === selectedHealthWorkerName &&
+                sub.service === activeService &&
+                sub.status !== 'draft' // Only consider completed sessions
+            )
+            // Sort by effectiveDate/date descending (most recent first)
+            .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        if (workerSessions.length === 0) {
+            return null; // No previous completed sessions
+        }
+
+        if (editingSubmission) {
+            // Find the most recent session that is *not* the one being edited.
+            const previousSession = workerSessions.find(s => s.id !== editingSubmission.id);
+            return previousSession ? previousSession.date : null;
+        } else {
+            // If creating a new session, the most recent one is the previous one.
+            return workerSessions[0].date;
+        }
+    }, [processedSubmissions, selectedFacilityId, selectedHealthWorkerName, activeService, editingSubmission]);
+    // --- END MODIFICATION ---
+
 
     useEffect(() => {
         // ... (Implementation unchanged) ...
@@ -1785,9 +1830,9 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                 //
                 onCancel={handleFormCompletion} // Handles navigation back
                 setToast={setToast}
-                visitNumber={editingSubmission ? editingSubmission.visitNumber : visitNumber} // Use submission's visit # if editing
+                visitNumber={visitNumber} // Use calculated value (which respects editing mode)
                 existingSessionData={editingSubmission} // <-- PASS THE SUBMISSION DATA FOR EDITING
-                lastSessionDate={null} // TODO: Could calculate this
+                lastSessionDate={lastSessionDate} // <-- PASS CALCULATED VALUE
             />
         );
     }
