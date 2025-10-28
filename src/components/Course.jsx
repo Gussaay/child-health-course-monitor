@@ -834,7 +834,7 @@ export function CourseForm({
     if (showNewCoordinatorForm) {
         return <NewCoordinatorForm initialName={newCoordinatorName} onCancel={() => setShowNewCoordinatorForm(false)} onSave={handleSaveNewCoordinator} />;
     }
-    if (showNewFFunderForm) {
+    if (showNewFunderForm) {
         return <NewFunderForm initialOrgName={newFunderOrgName} onCancel={() => setShowNewFunderForm(false)} onSave={handleSaveNewFunder} />;
     }
 

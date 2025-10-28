@@ -1,5 +1,5 @@
 // SkillsAssessmentForm.jsx
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
 import { saveMentorshipSession } from "../data.js";
 // --- FIX: Import Timestamp ---
 import { Timestamp } from 'firebase/firestore';
@@ -402,6 +402,16 @@ const calculateScores = (formData) => {
     let totalMaxScore = 0;
     let totalCurrentScore = 0;
 
+    // --- NEW KPI VARS ---
+    let totalCoughCases = 0;
+    let totalCorrectCoughClassifications = 0;
+    let totalPneumoniaCases = 0;
+    let totalCorrectPneumoniaMgmt = 0;
+    let totalDiarrheaCases = 0;
+    let totalCorrectDiarrheaClassifications = 0;
+    let totalCorrectDiarrheaMgmt = 0;
+    // --- END NEW KPI VARS ---
+
 
     IMNCI_FORM_STRUCTURE.forEach(group => {
         let groupCurrentScore = 0;
@@ -463,6 +473,34 @@ const calculateScores = (formData) => {
                         if (sg.mainSkill?.scoreKey) {
                              scores[sg.mainSkill.scoreKey] = { score: symptomCurrentScore, maxScore: symptomMaxScore };
                         }
+
+                        // --- NEW KPI 1 LOGIC (Cough Classification) ---
+                        if (symptomPrefix === 'cough') {
+                            const confirmsValue = formData.assessment_skills[confirmsKey];
+                            const classifyValue = sectionData[classifySkillKey];
+
+                            if (askValue === 'yes' && confirmsValue === 'yes') {
+                                totalCoughCases = 1; // 1 = This case had cough
+                                if (classifyValue === 'yes') {
+                                    totalCorrectCoughClassifications = 1; // 1 = Correctly classified
+                                }
+                            }
+                        }
+                        // --- END NEW KPI 1 LOGIC ---
+
+                        // --- NEW KPI 1 LOGIC (Diarrhea Classification) ---
+                        if (symptomPrefix === 'diarrhea') {
+                            const confirmsValue = formData.assessment_skills[confirmsKey];
+                            const classifyValue = sectionData[classifySkillKey];
+
+                            if (askValue === 'yes' && confirmsValue === 'yes') {
+                                totalDiarrheaCases = 1; // 1 = This case had diarrhea
+                                if (classifyValue === 'yes') {
+                                    totalCorrectDiarrheaClassifications = 1; // 1 = Correctly classified
+                                }
+                            }
+                        }
+                        // --- END NEW KPI 1 LOGIC ---
                     });
 
                     if (isSubgroupScored) {
@@ -476,6 +514,29 @@ const calculateScores = (formData) => {
                         if (typeof subgroup.relevant === 'function') isSubgroupRelevantForScoring = subgroup.relevant(formData);
                         else if (typeof subgroup.relevant === 'string') isSubgroupRelevantForScoring = evaluateRelevance(subgroup.relevant, formData);
                     }
+
+                    // --- NEW KPI 2 LOGIC (Pneumonia Management) ---
+                    if (isTreatmentSubgroup && subgroup.scoreKey === 'pneu_treatment' && isSubgroupRelevantForScoring) {
+                        totalPneumoniaCases = 1; // 1 = This was a pneumonia case
+                        const abxValue = sectionData['skill_pneu_abx'];
+                        if (abxValue === 'yes') {
+                            totalCorrectPneumoniaMgmt = 1; // 1 = Correct ABX given
+                        }
+                    }
+                    // --- END NEW KPI 2 LOGIC ---
+
+                    // --- NEW KPI 2 LOGIC (Diarrhea Management) ---
+                    if (isTreatmentSubgroup && subgroup.scoreKey === 'diar_treatment' && isSubgroupRelevantForScoring) {
+                        // Denominator (totalDiarrheaCases) is set from assessment.
+                        // Relevance check (isSubgroupRelevantForScoring) confirms this is a diarrhea case.
+                        const orsValue = sectionData['skill_diar_ors'];
+                        const zincValue = sectionData['skill_diar_zinc'];
+
+                        if (orsValue === 'yes' && zincValue === 'yes') {
+                            totalCorrectDiarrheaMgmt = 1; // 1 = Correct ORS and Zinc given
+                        }
+                    }
+                    // --- END NEW KPI 2 LOGIC ---
 
                     subgroup.skills.forEach(skill => {
                         let isSkillRelevantForScoring = isSubgroupRelevantForScoring;
@@ -576,24 +637,32 @@ const calculateScores = (formData) => {
     scores.treatmentScoreForSave = currentTreatmentScore;
     scores.overallScore = { score: totalCurrentScore, maxScore: totalMaxScore };
 
+    // --- NEW KPI SCORES ---
+    scores.coughClassification = { score: totalCorrectCoughClassifications, maxScore: totalCoughCases };
+    scores.pneumoniaManagement = { score: totalCorrectPneumoniaMgmt, maxScore: totalPneumoniaCases };
+    scores.diarrheaClassification = { score: totalCorrectDiarrheaClassifications, maxScore: totalDiarrheaCases };
+    scores.diarrheaManagement = { score: totalCorrectDiarrheaMgmt, maxScore: totalDiarrheaCases };
+    // --- END NEW KPI SCORES ---
+
     return scores;
 };
 // --- END: calculateScores function (Corrected) ---
 
 
-// --- Form Component Start ---
-const SkillsAssessmentForm = ({
-    facility,
-    healthWorkerName,
-    healthWorkerJobTitle,
-    healthWorkerTrainingDate,
-    healthWorkerPhone, 
-    onCancel,
-    setToast,
-    existingSessionData = null,
-    visitNumber = 1, 
-    lastSessionDate = null 
-}) => {
+// --- Form Component Start (MODIFIED) ---
+const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in forwardRef
+    const { // MODIFIED: Destructure props
+        facility,
+        healthWorkerName,
+        healthWorkerJobTitle,
+        healthWorkerTrainingDate,
+        healthWorkerPhone, 
+        onCancel,
+        setToast,
+        existingSessionData = null,
+        visitNumber = 1, 
+        lastSessionDate = null 
+    } = props;
 
     const [formData, setFormData] = useState(
         existingSessionData
@@ -607,6 +676,68 @@ const SkillsAssessmentForm = ({
     const [scores, setScores] = useState({});
     const auth = getAuth();
     const user = auth.currentUser;
+
+    // --- START: New state and refs for autosave ---
+    const [isDirty, setIsDirty] = useState(false);
+    const [isAutoSaving, setIsAutoSaving] = useState(false);
+    const autoSaveTimerRef = useRef(null);
+
+    // Create refs to hold stable values for props and state
+    // This avoids stale closures in the useCallback for silentSave
+    const formDataRef = useRef(formData);
+    useEffect(() => {
+        formDataRef.current = formData;
+    }, [formData]);
+
+    const allPropsRef = useRef({
+        facility, healthWorkerName, user, visitNumber, existingSessionData,
+        isSaving, isSavingDraft, isAutoSaving, isDirty, setToast,
+        healthWorkerJobTitle // <-- ADDED
+    });
+    useEffect(() => {
+        allPropsRef.current = {
+            facility, healthWorkerName, user, visitNumber, existingSessionData,
+            isSaving, isSavingDraft, isAutoSaving, isDirty, setToast,
+            healthWorkerJobTitle // <-- ADDED
+        };
+    }, [
+        facility, healthWorkerName, user, visitNumber, existingSessionData,
+        isSaving, isSavingDraft, isAutoSaving, isDirty, setToast,
+        healthWorkerJobTitle // <-- ADDED
+    ]);
+    // --- END: New state and refs for autosave ---
+
+
+    // ================== BEGIN FIX ==================
+    //
+    // This effect synchronizes the form's internal state with the
+    // existingSessionData prop. This is crucial for when the user
+    // switches from one draft to another, or from a draft to a new form,
+    // while the form component is already mounted.
+    useEffect(() => {
+        if (existingSessionData) {
+            // A draft is being loaded (or re-loaded).
+            // Populate the form with the draft's data.
+            setFormData(rehydrateDraftData(existingSessionData));
+            // Ensure visible step is max if editing
+            setVisibleStep(9);
+        } else {
+            // No draft is active (e.g., user clicked "Add New Visit").
+            // Reset the form to its initial blank state.
+            setFormData(getInitialFormData());
+            // Reset visible step to 1 for new form
+            setVisibleStep(1);
+        }
+        // Reset dirty state when loading/clearing a form
+        setIsDirty(false); 
+        // Reset autosave timer
+        if (autoSaveTimerRef.current) {
+            clearTimeout(autoSaveTimerRef.current);
+        }
+    }, [existingSessionData]); // Re-run this effect whenever the prop changes
+    //
+    // =================== END FIX ===================
+
 
     // --- Helper functions to check step completion (Unchanged) ---
     const isVitalSignsComplete = (data) => { const skills = data.assessment_skills; return skills.skill_weight !== '' && skills.skill_temp !== '' && skills.skill_height !== ''; };
@@ -874,6 +1005,144 @@ const SkillsAssessmentForm = ({
     }, [formData, visibleStep, existingSessionData]); // Rerun on data change, step change, or if draft loaded
 
 
+    // --- START: New silentSaveDraft function for autosave ---
+    const silentSaveDraft = useCallback(async () => {
+        // Get all props/state from the ref to ensure they are current
+        const {
+            facility, healthWorkerName, user, visitNumber, existingSessionData,
+            isSaving, isSavingDraft, setToast, healthWorkerJobTitle // <-- ADDED
+        } = allPropsRef.current;
+        
+        // Get the latest formData from its ref
+        const currentFormData = formDataRef.current;
+
+        // Don't autosave if a manual save is in progress
+        if (isSaving || isSavingDraft) return;
+
+        setIsAutoSaving(true);
+        
+        try {
+            // Payload processing (copied from handleSaveDraft)
+            const getSelectedKeys = (obj) => Object.entries(obj || {}).filter(([, isSelected]) => isSelected).map(([key]) => key);
+            const assessmentSkillsPayload = {
+                ...currentFormData.assessment_skills,
+                worker_diarrhea_classification: getSelectedKeys(currentFormData.assessment_skills.worker_diarrhea_classification),
+                supervisor_correct_diarrhea_classification: getSelectedKeys(currentFormData.assessment_skills.supervisor_correct_diarrhea_classification),
+                worker_fever_classification: getSelectedKeys(currentFormData.assessment_skills.worker_fever_classification),
+                supervisor_correct_fever_classification: getSelectedKeys(currentFormData.assessment_skills.supervisor_correct_fever_classification),
+            };
+            delete assessmentSkillsPayload.supervisor_confirms_cough;
+            delete assessmentSkillsPayload.supervisor_confirms_diarrhea;
+            delete assessmentSkillsPayload.supervisor_confirms_fever;
+            delete assessmentSkillsPayload.supervisor_confirms_ear;
+
+            const calculatedScores = calculateScores(currentFormData);
+            const scoresPayload = {};
+            for (const key in calculatedScores) { 
+                if (key !== 'treatmentScoreForSave' && calculatedScores[key]?.score !== undefined && calculatedScores[key]?.maxScore !== undefined) {
+                    scoresPayload[`${key}_score`] = calculatedScores[key].score;
+                    scoresPayload[`${key}_maxScore`] = calculatedScores[key].maxScore;
+                }
+            }
+            scoresPayload['treatment_score'] = calculatedScores.treatmentScoreForSave ?? 0;
+            scoresPayload['treatment_maxScore'] = calculatedScores['treatment']?.maxScore ?? 0;
+
+            const effectiveDateTimestamp = Timestamp.fromDate(new Date(currentFormData.session_date));
+
+            const payload = {
+                serviceType: 'IMNCI', state: facility['الولاية'], locality: facility['المحلية'], facilityId: facility.id, facilityName: facility['اسم_المؤسسة'], healthWorkerName: healthWorkerName,
+                
+                // --- START: ADDITIONS ---
+                facilityType: facility['نوع_المؤسسةالصحية'],
+                workerType: healthWorkerJobTitle,
+                // --- END: ADDITIONS ---
+
+                sessionDate: currentFormData.session_date,
+                effectiveDate: effectiveDateTimestamp,
+                assessmentSkills: assessmentSkillsPayload,
+                finalDecision: currentFormData.finalDecision,
+                decisionMatches: currentFormData.decisionMatches,
+                treatmentSkills: currentFormData.treatment_skills,
+                scores: scoresPayload,
+                notes: currentFormData.notes,
+                mentorEmail: user?.email || 'unknown', mentorName: user?.displayName || 'Unknown Mentor',
+                status: 'draft',
+                visitNumber: visitNumber
+            };
+
+            const sessionId = existingSessionData ? existingSessionData.id : null;
+            await saveMentorshipSession(payload, sessionId);
+
+            setIsDirty(false); // Mark as clean after successful save
+        } catch (error) {
+            console.error("Autosave failed:", error);
+            // Only show toast on error for silent save
+            setToast({ show: true, message: `فشل الحفظ التلقائي: ${error.message}`, type: 'error' });
+        } finally {
+            setIsAutoSaving(false);
+        }
+    }, []); // MODIFIED: Empty dependency array, relies on refs
+
+    // --- END: New silentSaveDraft function for autosave ---
+
+    // --- START: New useEffect to trigger autosave ---
+    useEffect(() => {
+        // Don't autosave if not dirty, or if a manual/auto save is in progress
+        if (!isDirty || isSaving || isSavingDraft || isAutoSaving) {
+            return;
+        }
+
+        // If a timer is already running, clear it
+        if (autoSaveTimerRef.current) {
+            clearTimeout(autoSaveTimerRef.current);
+        }
+
+        // Set a new timer to trigger the silent save
+        autoSaveTimerRef.current = setTimeout(() => {
+            silentSaveDraft();
+        }, 5000); // Autosave 5 seconds after the last change
+
+        // Cleanup function to clear the timer
+        return () => {
+            if (autoSaveTimerRef.current) {
+                clearTimeout(autoSaveTimerRef.current);
+            }
+        };
+    }, [isDirty, isSaving, isSavingDraft, isAutoSaving, silentSaveDraft]); // MODIFIED: Depends on isDirty and save statuses
+    // --- END: New useEffect to trigger autosave ---
+
+    // --- START: New useImperativeHandle to expose saveDraft ---
+    useImperativeHandle(ref, () => ({
+        saveDraft: async () => {
+            const { isSaving, isSavingDraft, isAutoSaving } = allPropsRef.current;
+            
+            // ================== BEGIN FIX ==================
+            //
+            // If a manual or auto save is already in progress, just return to avoid conflicts
+            if (isSaving || isSavingDraft || isAutoSaving) {
+                return;
+            }
+            //
+            // REMOVED: The check for "!isDirty".
+            // The parent component (SkillsMentorshipView) is explicitly
+            // asking the form to save its state before switching.
+            // We must honor this request even if isDirty is false,
+            // (e.g., to correctly save a new, empty draft).
+            //
+            // =================== END FIX ===================
+
+            // If a timer is running, clear it because we are saving now
+            if (autoSaveTimerRef.current) {
+                clearTimeout(autoSaveTimerRef.current);
+            }
+
+            // Trigger the save immediately and wait for it
+            await silentSaveDraft();
+        }
+    }));
+    // --- END: New useImperativeHandle ---
+
+
     // --- Handlers ---
     const handleFormChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -928,6 +1197,8 @@ const SkillsAssessmentForm = ({
              }
              // Note: SkillChecklistItem uses handleSkillChange, not this one.
         }
+
+        setIsDirty(true); // MODIFIED: Mark form as dirty
     };
 
     const handleSkillChange = (section, key, value) => {
@@ -938,6 +1209,7 @@ const SkillsAssessmentForm = ({
                 [key]: value,    // Update the specific skill,
             }
         }));
+        setIsDirty(true); // MODIFIED: Mark form as dirty
     };
 
     // --- Submit handler for final save ---
@@ -1014,6 +1286,11 @@ const SkillsAssessmentForm = ({
             const payload = {
                 serviceType: 'IMNCI', state: facility['الولاية'], locality: facility['المحلية'], facilityId: facility.id, facilityName: facility['اسم_المؤسسة'], healthWorkerName: healthWorkerName,
 
+                // --- START: ADDITIONS ---
+                facilityType: facility['نوع_المؤسسةالصحية'],
+                workerType: healthWorkerJobTitle,
+                // --- END: ADDITIONS ---
+
                 sessionDate: formData.session_date, // Keep the original string
                 effectiveDate: effectiveDateTimestamp, // Add the Firestore Timestamp
 
@@ -1082,6 +1359,12 @@ const SkillsAssessmentForm = ({
 
              const payload = {
                  serviceType: 'IMNCI', state: facility['الولاية'], locality: facility['المحلية'], facilityId: facility.id, facilityName: facility['اسم_المؤسسة'], healthWorkerName: healthWorkerName,
+                 
+                 // --- START: ADDITIONS ---
+                 facilityType: facility['نوع_المؤسسةالصحية'],
+                 workerType: healthWorkerJobTitle,
+                 // --- END: ADDITIONS ---
+
                  sessionDate: formData.session_date,
                  effectiveDate: effectiveDateTimestamp,
                  assessmentSkills: assessmentSkillsPayload,
@@ -1401,15 +1684,39 @@ const SkillsAssessmentForm = ({
                     )}
                 </div>
 
-                 {/* --- Button Bar --- */}
-                 <div className="flex gap-2 justify-end p-4 border-t bg-gray-50 sticky bottom-0 z-10">
-                     <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving || isSavingDraft}> إلغاء </Button>
-                     <Button type="button" variant="outline" onClick={handleSaveDraft} disabled={isSaving || isSavingDraft}> {isSavingDraft ? 'جاري حفظ المسودة...' : 'حفظ كمسودة'} </Button>
-                     <Button type="submit" disabled={isSaving || isSavingDraft || visibleStep < 9} title={visibleStep < 9 ? "يجب إكمال جميع الخطوات أولاً لحفظ الجلسة" : "حفظ وإنهاء الجلسة"}> {isSaving ? 'جاري الحفظ...' : 'حفظ وإكمال الجلسة'} </Button>
+                 {/* --- Button Bar (MODIFIED) --- */}
+                 <div className="flex gap-4 justify-between items-center p-4 border-t bg-gray-50 sticky bottom-0 z-10">
+                     {/* START: New Autosave Status Indicator */}
+                     <div className="flex-shrink-0">
+                        {isAutoSaving && (
+                            <span className="text-sm text-gray-500 italic flex items-center gap-1">
+                                <Spinner size="sm" />
+                                جاري الحفظ التلقائي...
+                            </span>
+                        )}
+                        {!isAutoSaving && !isDirty && (
+                            <span className="text-sm text-gray-500 italic">
+                                (تم حفظ كل التغييرات)
+                            </span>
+                        )}
+                        {!isAutoSaving && isDirty && (
+                            <span className="text-sm text-yellow-700 italic">
+                                (تغييرات غير محفوظة)
+                            </span>
+                        )}
+                     </div>
+                     {/* END: New Autosave Status Indicator */}
+
+                     {/* Button Group */}
+                     <div className="flex gap-2 justify-end">
+                        <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving || isSavingDraft}> إلغاء </Button>
+                        <Button type="button" variant="outline" onClick={handleSaveDraft} disabled={isSaving || isSavingDraft}> {isSavingDraft ? 'جاري حفظ المسودة...' : 'حفظ كمسودة'} </Button>
+                        <Button type="submit" disabled={isSaving || isSavingDraft || visibleStep < 9} title={visibleStep < 9 ? "يجب إكمال جميع الخطوات أولاً لحفظ الجلسة" : "حفظ وإنهاء الجلسة"}> {isSaving ? 'جاري الحفظ...' : 'حفظ وإكمال الجلسة'} </Button>
+                     </div>
                  </div>
             </form>
         </Card>
     );
-};
+}); // MODIFIED: Closed forwardRef
 
 export default SkillsAssessmentForm;

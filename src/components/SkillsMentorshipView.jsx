@@ -14,6 +14,7 @@ import {
 } from './CommonComponents';
 import { STATE_LOCALITIES } from "./constants.js";
 import SkillsAssessmentForm from './SkillsAssessmentForm';
+import MentorshipDashboard from './MentorshipDashboard'; // <-- IMPORT ADDED
 import * as XLSX from 'xlsx';
 import { getAuth } from "firebase/auth";
 
@@ -318,7 +319,6 @@ const calculateScores = (formData) => {
     return scoresPayload;
 };
 // --- END calculateScores ---
-
 
 // --- Bulk Upload Modal (Detailed Version) ---
 const DetailedMentorshipBulkUploadModal = ({
@@ -1060,8 +1060,6 @@ const DraftsModal = ({ isOpen, onClose, drafts, onView, onEdit, onDelete }) => {
 // --- Mentorship Submissions Table Component (MODIFIED Filters) ---
 const MentorshipSubmissionsTable = ({
     submissions,
-    onNewVisit,
-    onBackToServiceSelection,
     activeService,
     onView,
     onEdit,
@@ -1069,11 +1067,7 @@ const MentorshipSubmissionsTable = ({
     availableStates,
     userStates,
     fetchSubmissions,
-    isSubmissionsLoading,
-    onShareLink,
-    canShareLink,
-    canBulkUpload,
-    onBulkUpload
+    isSubmissionsLoading
 }) => {
     const [stateFilter, setStateFilter] = useState('');
     const [localityFilter, setLocalityFilter] = useState('');
@@ -1132,36 +1126,8 @@ const MentorshipSubmissionsTable = ({
     }, [stateFilter]);
 
 
-    // Determine the service title for the header and button
-    const serviceTitle = SERVICE_TITLES[activeService] || activeService;
-    const headerTitle = `${activeService} Mentorship Records`;
-
     return (
-        <Card dir="ltr"> {/* Changed to LTR */}
-            <div className="p-6">
-                <div className="flex justify-between items-start mb-6">
-                    {/* MODIFIED: Add New Visit button moved to left and renamed */}
-                    <div className="flex gap-2 flex-wrap order-1">
-                        <Button onClick={onNewVisit}>+ Add New Mentorship Visit</Button>
-                        {canBulkUpload && (
-                            <Button onClick={onBulkUpload}>Bulk Upload</Button>
-                        )}
-                        <Button variant="secondary" onClick={onBackToServiceSelection}> Back to Service Selection </Button>
-                        {canShareLink && (
-                             <Button variant="info" onClick={onShareLink}>
-                                 Share Submission Link
-                             </Button>
-                        )}
-                    </div>
-                    {/* MODIFIED: Header renamed and moved to right (order-2) */}
-                    <div className="text-left flex-shrink-0 order-2">
-                        <PageHeader
-                            title={headerTitle}
-                            subtitle="List of all submitted mentorship forms for this service."
-                        />
-                    </div>
-                </div>
-
+        <div dir="ltr" className="p-4"> {/* Changed to LTR and p-4 */}
                 {/* Filters (Modified to use Select for Supervisor) */}
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 border p-4 rounded-lg bg-gray-50">
 
@@ -1264,8 +1230,7 @@ const MentorshipSubmissionsTable = ({
                 <div className="flex justify-center mt-4">
                     <Button variant="secondary" onClick={() => fetchSubmissions(true)}>Refresh Data</Button>
                 </div>
-            </div>
-        </Card>
+        </div>
     );
 };
 // --- END Mentorship Submissions Table Component ---
@@ -1330,6 +1295,15 @@ const SkillsMentorshipView = ({
     const [selectedFacilityId, setSelectedFacilityId] = useState('');
     const [selectedHealthWorkerName, setSelectedHealthWorkerName] = useState('');
 
+    // --- NEW: Tab state ---
+    const [activeTab, setActiveTab] = useState('dashboard'); // Default to dashboard
+
+    // --- NEW: Dashboard Filter State ---
+    const [activeDashboardState, setActiveDashboardState] = useState('');
+    const [activeDashboardLocality, setActiveDashboardLocality] = useState('');
+    const [activeDashboardFacilityType, setActiveDashboardFacilityType] = useState('');
+    const [activeDashboardWorkerType, setActiveDashboardWorkerType] = useState('');
+
     // --- MODIFICATION: Get data and fetchers from DataContext ---
     const {
         healthFacilities,
@@ -1365,6 +1339,9 @@ const SkillsMentorshipView = ({
     // --- NEW: State for Drafts Modal ---
     const [isDraftsModalOpen, setIsDraftsModalOpen] = useState(false);
 
+    // --- NEW: Ref for the SkillsAssessmentForm ---
+    const formRef = useRef(null);
+
     // --- NEW: useMemo to process submissions for table and drafts ---
     const processedSubmissions = useMemo(() => {
         if (!skillMentorshipSubmissions) return [];
@@ -1382,7 +1359,12 @@ const SkillsMentorshipView = ({
             facilityId: sub.facilityId || null,
             scores: sub.scores || null,
             status: sub.status || 'complete',
-            // --- Add full submission data for editing ---
+            
+            // --- START: ADDITIONS ---
+            facilityType: sub.facilityType || null,
+            workerType: sub.workerType || null,
+            // --- END: ADDITIONS ---
+
             fullData: sub // Store the original data for editing drafts
         }));
     }, [skillMentorshipSubmissions]);
@@ -1625,6 +1607,7 @@ const SkillsMentorshipView = ({
     const handleSelectService = (serviceKey) => {
         setActiveService(serviceKey);
         setCurrentView('history');
+        setActiveTab('dashboard'); // Default to dashboard tab
     };
     const handleStartNewVisit = () => {
         resetSelection(); // Ensure selection is cleared before setting up form
@@ -1650,6 +1633,7 @@ const SkillsMentorshipView = ({
                 await fetchSkillMentorshipSubmissions(true);
              }
             setCurrentView('history'); // Go back to history in normal mode
+            setActiveTab('submissions_list'); // Go to list after saving
         }
     };
 
@@ -1773,10 +1757,40 @@ const SkillsMentorshipView = ({
         setIsDraftsModalOpen(false); // Close drafts modal if open
     };
 
-    const handleEditSubmission = (submissionId) => {
+    const handleEditSubmission = async (submissionId) => { // MODIFIED: Made async
         // Find the full original data using the ID
         const fullSubmission = skillMentorshipSubmissions.find(s => s.id === submissionId);
         if (!fullSubmission) return;
+
+        // --- START: New logic to save current draft before switching ---
+        const isFormOpen = currentView === 'form_setup';
+        // Check if we are switching to a *different* draft than the one currently being edited
+        const isDifferentDraft = !editingSubmission || (editingSubmission.id !== submissionId);
+
+        if (isFormOpen && isDifferentDraft && formRef.current) {
+            try {
+                // Show a toast that we are saving
+                setToast({ show: true, message: 'Saving current draft before switching...', type: 'info' });
+                // Call the saveDraft method exposed by the form via useImperativeHandle
+                await formRef.current.saveDraft();
+                
+                // ================== BEGIN FIX ==================
+                //
+                // After the silent save, we must manually fetch submissions
+                // to refresh the list in the background, so the
+                // drafts modal will be up-to-date.
+                await fetchSkillMentorshipSubmissions(true);
+                //
+                // =================== END FIX ===================
+
+            } catch (e) {
+                console.error("Failed to save current draft before switching:", e);
+                setToast({ show: true, message: `Failed to save current draft: ${e.message}`, type: 'error' });
+                // We'll proceed even if save fails, but the user is warned
+            }
+        }
+        // --- END: New logic ---
+
 
         // Set state based on the *original* data structure
         setSelectedState(fullSubmission.state);
@@ -1821,27 +1835,105 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
         return <ServiceSelector onSelectService={handleSelectService} />;
     }
 
+    // --- MODIFIED: 'history' view now renders tabs ---
     if (currentView === 'history') {
         const canShareLink = permissions.canManageSkillsMentorship || permissions.canUseSuperUserAdvancedFeatures;
+        const serviceTitle = SERVICE_TITLES[activeService] || activeService;
+        const headerTitle = `${activeService} Mentorship`;
+
         return (
             <>
-                <MentorshipSubmissionsTable
-                    submissions={processedSubmissions}
-                    onNewVisit={handleStartNewVisit}
-                    onBackToServiceSelection={handleReturnToServiceSelection}
-                    activeService={activeService}
-                    onView={handleViewSubmission} // Pass directly
-                    onEdit={handleEditSubmission} // Pass directly
-                    onDelete={handleDeleteSubmission} // Pass directly
-                    availableStates={availableStates}
-                    userStates={userStates}
-                    fetchSubmissions={fetchSkillMentorshipSubmissions}
-                    isSubmissionsLoading={isDataCacheLoading.skillMentorshipSubmissions || !skillMentorshipSubmissions}
-                    onShareLink={handleShareSubmissionLink}
-                    canShareLink={canShareLink}
-                    canBulkUpload={canBulkUploadMentorships}
-                    onBulkUpload={() => setIsBulkUploadModalOpen(true)}
-                />
+                <Card dir="ltr">
+                    <div className="p-6">
+                        {/* Common Header */}
+                        <div className="flex justify-between items-start mb-6">
+                            <div className="flex gap-2 flex-wrap order-1">
+                                <Button onClick={handleStartNewVisit}>+ Add New Mentorship Visit</Button>
+                                {canBulkUploadMentorships && (
+                                    <Button onClick={() => setIsBulkUploadModalOpen(true)}>Bulk Upload</Button>
+                                )}
+                                <Button variant="secondary" onClick={handleReturnToServiceSelection}> Back to Service Selection </Button>
+                                {canShareLink && (
+                                     <Button variant="info" onClick={handleShareSubmissionLink}>
+                                         Share Submission Link
+                                     </Button>
+                                )}
+                            </div>
+                            <div className="text-left flex-shrink-0 order-2">
+                                <PageHeader
+                                    title={headerTitle}
+                                    subtitle="Mentorship dashboard and submissions list."
+                                />
+                            </div>
+                        </div>
+
+                        {/* Tab Navigation */}
+                        <div className="border-b border-gray-200 mb-4">
+                            <nav className="-mb-px flex gap-6" aria-label="Tabs">
+                                <button
+                                    onClick={() => setActiveTab('dashboard')}
+                                    className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm
+                                        ${activeTab === 'dashboard'
+                                            ? 'border-sky-500 text-sky-600'
+                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                        }`}
+                                >
+                                    Dashboard
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('submissions_list')}
+                                    className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm
+                                        ${activeTab === 'submissions_list'
+                                            ? 'border-sky-500 text-sky-600'
+                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                        }`}
+                                >
+                                    Submissions List
+                                </button>
+                            </nav>
+                        </div>
+
+                        {/* Tab Content */}
+                        <div>
+                            {activeTab === 'dashboard' && (
+                                <MentorshipDashboard
+                                    allSubmissions={processedSubmissions}
+                                    STATE_LOCALITIES={STATE_LOCALITIES} // <-- PASS PROP
+                                    activeService={activeService}
+                                    
+                                    // --- START: PASS FILTER PROPS ---
+                                    activeState={activeDashboardState}
+                                    onStateChange={(value) => {
+                                        setActiveDashboardState(value);
+                                        setActiveDashboardLocality(""); // Reset locality
+                                    }}
+                                    activeLocality={activeDashboardLocality}
+                                    onLocalityChange={setActiveDashboardLocality}
+                                    activeFacilityType={activeDashboardFacilityType}
+                                    onFacilityTypeChange={setActiveDashboardFacilityType}
+                                    activeWorkerType={activeDashboardWorkerType}
+                                    onWorkerTypeChange={setActiveDashboardWorkerType}
+                                    // --- END: PASS FILTER PROPS ---
+                                />
+                            )}
+                            {activeTab === 'submissions_list' && (
+                                <MentorshipSubmissionsTable
+                                    submissions={processedSubmissions} // Pass the full list
+                                    activeService={activeService} // Table filters by this
+                                    onView={handleViewSubmission}
+                                    onEdit={handleEditSubmission}
+                                    onDelete={handleDeleteSubmission}
+                                    availableStates={availableStates}
+                                    userStates={userStates}
+                                    fetchSubmissions={fetchSkillMentorshipSubmissions}
+                                    isSubmissionsLoading={isDataCacheLoading.skillMentorshipSubmissions || !skillMentorshipSubmissions}
+                                />
+                            )}
+                        </div>
+                    </div>
+                </Card>
+
+                {/* Modals */}
                 {isBulkUploadModalOpen && (
                     <DetailedMentorshipBulkUploadModal
                         isOpen={isBulkUploadModalOpen}
@@ -1852,7 +1944,6 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         healthFacilities={healthFacilities || []}
                     />
                 )}
-                {/* Viewing uses the original data structure */}
                 {viewingSubmission && (
                     <ViewSubmissionModal
                         submission={viewingSubmission}
@@ -1862,14 +1953,20 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
             </>
         );
     }
+    // --- END 'history' VIEW MODIFICATION ---
+
 
     if (currentView === 'form_setup' && (editingSubmission || (selectedHealthWorkerName && selectedFacility)) && activeService && !isAddWorkerModalOpen && !isWorkerInfoChanged) {
-
+ 
         const facilityData = editingSubmission ? {
             'الولاية': editingSubmission.state,
             'المحلية': editingSubmission.locality,
             'اسم_المؤسسة': editingSubmission.facilityName,
             'id': editingSubmission.facilityId,
+            // --- START: ADDITION ---
+            // Ensure facilityType is passed from the original submission data
+            'نوع_المؤسسةالصحية': editingSubmission.facilityType 
+            // --- END: ADDITION ---
         } : selectedFacility;
 
         // Pass the original editingSubmission data (not the processed one)
@@ -1889,9 +1986,10 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                 )}
                 {/* --- END Sticky Drafts Button --- */}
                 <SkillsAssessmentForm
+                    ref={formRef} // MODIFIED: Pass the ref
                     facility={facilityData}
                     healthWorkerName={editingSubmission ? editingSubmission.healthWorkerName : selectedHealthWorkerName}
-                    healthWorkerJobTitle={workerJobTitle}
+                    healthWorkerJobTitle={editingSubmission ? editingSubmission.workerType : workerJobTitle} // <-- MODIFIED: Use editing data if available
                     healthWorkerTrainingDate={workerTrainingDate}
                     healthWorkerPhone={workerPhone}
                     onCancel={handleFormCompletion}
