@@ -242,6 +242,7 @@ export default function App() {
     const [isPublicSubmissionView, setIsPublicSubmissionView] = useState(false);
     const [isNewFacilityView, setIsNewFacilityView] = useState(false);
     const [isPublicFacilityUpdateView, setIsPublicFacilityUpdateView] = useState(false);
+    const [publicServiceType, setPublicServiceType] = useState(null);
     const [publicMentorshipProps, setPublicMentorshipProps] = useState(null);
     const [submissionType, setSubmissionType] = useState(null);
     const [sharedReportData, setSharedReportData] = useState(null);
@@ -295,6 +296,7 @@ export default function App() {
             setIsPublicSubmissionView(false);
             setIsNewFacilityView(false);
             setIsPublicFacilityUpdateView(false);
+            setPublicServiceType(null); // <-- ADD THIS
             setPublicMentorshipProps(null);
             setSubmissionType(null);
             setSharedViewError(null);
@@ -306,6 +308,13 @@ export default function App() {
             }
             if (facilityUpdateMatch) {
                 setIsPublicFacilityUpdateView(true);
+                // --- NEW: Check for query string ---
+                const searchParams = new URLSearchParams(window.location.search);
+                const service = searchParams.get('service');
+                if (service) {
+                    setPublicServiceType(service); // e.g., 'imnci', 'eenc'
+                }
+                // --- END NEW ---
                 return;
             }
 
@@ -620,7 +629,7 @@ export default function App() {
             ]);
             const { allObs, allCases } = allCourseData;
             setCourseDetails({ participants: participantsData, allObs, allCases, finalReport });
-            navigate('courseDetails', { courseId });
+            navigate('participants', { courseId });
         } catch (error) {
             console.error("Error loading course details:", error);
             setToast({ show: true, message: 'Failed to load course details. Please try again.', type: 'error' });
@@ -978,7 +987,7 @@ export default function App() {
         mainContent = <SplashScreen />;
     }
     else if (isPublicFacilityUpdateView) {
-        mainContent = <PublicFacilityUpdateForm setToast={setToast} />;
+        mainContent = <PublicFacilityUpdateForm setToast={setToast} serviceType={publicServiceType} />;
     }
     else if (isNewFacilityView) {
         mainContent = <NewFacilityEntryForm setToast={setToast} />;

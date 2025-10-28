@@ -301,8 +301,7 @@ export function CourseManagementView({
     // --- MODIFIED: handleOpenCourse now defaults to 'participants' tab ---
     const handleOpenCourse = (id) => {
         onOpen(id);
-        setActiveCoursesTab('participants');
-        onSetSelectedParticipantId(null); // Clear participant selection when opening a new course
+                onSetSelectedParticipantId(null); // Clear participant selection when opening a new course
     };
 
     return (

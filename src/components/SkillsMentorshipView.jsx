@@ -1485,7 +1485,7 @@ const SkillsMentorshipView = ({
 
         // If editing a COMPLETED session, keep its original visit number
         if (editingSubmission && editingSubmission.status === 'complete') {
-             return editingSubmission.fullData.visitNumber || 1; // Use fullData to get original
+             return editingSubmission.visitNumber || 1; 
         }
         // If editing a DRAFT, calculate as if it's a new visit (count completed ones + 1)
         else if (editingSubmission && editingSubmission.status === 'draft') {
@@ -1609,10 +1609,45 @@ const SkillsMentorshipView = ({
         setCurrentView('history');
         setActiveTab('dashboard'); // Default to dashboard tab
     };
-    const handleStartNewVisit = () => {
-        resetSelection(); // Ensure selection is cleared before setting up form
-        setCurrentView('form_setup');
+    
+    // --- MODIFIED: handleStartNewVisit to enforce one-draft rule ---
+    const handleStartNewVisit = async () => {
+        if (currentUserDrafts && currentUserDrafts.length > 0) {
+            // User has at least one existing draft
+            const draftNames = currentUserDrafts.map(d => `- ${d.staff} at ${d.facility} (${d.date})`).join("\n");
+            const confirmMessage = `You have ${currentUserDrafts.length} existing draft(s) for ${activeService}:\n\n${draftNames}\n\nDo you want to edit the most recent one?\n\nClicking 'Cancel' will DELETE ALL your existing drafts for this service and start a new one.`;
+
+            const mostRecentDraft = currentUserDrafts[0]; // List is already sorted
+
+            if (window.confirm(confirmMessage)) {
+                // "OK" -> Edit the most recent draft
+                handleEditSubmission(mostRecentDraft.id);
+            } else {
+                // "Cancel" -> Delete ALL existing drafts and start new
+                setToast({ show: true, message: 'Deleting old draft(s)...', type: 'info' });
+                try {
+                    // Delete all drafts for this service
+                    await Promise.all(currentUserDrafts.map(draft => 
+                        deleteMentorshipSession(draft.id)
+                    ));
+                    
+                    await fetchSkillMentorshipSubmissions(true); // Refresh data
+                    setToast({ show: true, message: 'Old draft(s) deleted. Starting new visit.', type: 'success' });
+                    resetSelection(); // This clears editingSubmission
+                    setCurrentView('form_setup');
+                } catch (e) {
+                    console.error("Error deleting drafts:", e);
+                    setToast({ show: true, message: `Failed to delete old drafts: ${e.message}`, type: 'error' });
+                }
+            }
+        } else {
+            // No existing drafts, just start a new visit
+            resetSelection();
+            setCurrentView('form_setup');
+        }
     };
+    // --- END MODIFICATION ---
+
     const handleReturnToServiceSelection = () => {
         setActiveService(null);
         setCurrentView('service_selection');
@@ -1829,6 +1864,19 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
     };
     // --- END MODIFIED Handlers ---
 
+    // --- NEW: Handler for when form autosaves a NEW draft ---
+    const handleDraftCreated = (newDraftObject) => {
+        // The form's autosave just created a new draft.
+        // We must update our `editingSubmission` state
+        // so the form's *next* autosave updates this same draft.
+        setEditingSubmission(newDraftObject);
+        
+        // Also, trigger a background refresh of the submissions list
+        // so the "Drafts (1)" button and list are accurate.
+        fetchSkillMentorshipSubmissions(true);
+    };
+    // --- END NEW HANDLER ---
+
 
     // --- Render Logic ---
     if (currentView === 'service_selection') {
@@ -1997,6 +2045,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                     visitNumber={visitNumber}
                     existingSessionData={editingSubmission} // Pass the original data
                     lastSessionDate={lastSessionDate}
+                    onDraftCreated={handleDraftCreated} // <-- MODIFIED: Pass handler
                 />
                  {/* --- NEW: Drafts Modal --- */}
                  <DraftsModal

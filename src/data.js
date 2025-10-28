@@ -537,10 +537,19 @@ export async function approveFacilitySubmission(submission, approverEmail) {
 export async function listHealthFacilities(filters = {}) {
     let q = collection(db, "healthFacilities");
     const conditions = [];
-    let shouldOrderByState = true; // Default order
+    
+    // Set a default order. This will be overwritten if more specific filters are used.
+    let orderByClause = orderBy("الولاية"); 
 
     if (filters.state && filters.state !== 'NOT_ASSIGNED') conditions.push(where("الولاية", "==", filters.state));
-    if (filters.locality) conditions.push(where("المحلية", "==", filters.locality));
+    
+    if (filters.locality) {
+        conditions.push(where("المحلية", "==", filters.locality));
+        // If we filter by locality, it's logical to sort by facility name.
+        // This also fixes the invalid query error.
+        orderByClause = orderBy("اسم_المؤسسة");
+    }
+
     if (filters.facilityType) conditions.push(where("نوع_المؤسسةالصحية", "==", filters.facilityType));
     if (filters.functioningStatus && filters.functioningStatus !== 'NOT_SET') conditions.push(where("هل_المؤسسة_تعمل", "==", filters.functioningStatus));
     if (filters.project) conditions.push(where("project_name", "==", filters.project));
@@ -551,19 +560,17 @@ export async function listHealthFacilities(filters = {}) {
         const timestamp = Timestamp.fromDate(filters.lastUpdatedAfter);
         // Query for documents where the last update time is *after* the provided timestamp
         conditions.push(where("lastSnapshotAt", ">", timestamp));
-        // Must include an orderBy on the field used in the range query
-        conditions.push(orderBy("lastSnapshotAt"));
-        shouldOrderByState = false; // Don't add default order if ordering by timestamp
+        
+        // This is the primary order when fetching incrementally
+        orderByClause = orderBy("lastSnapshotAt");
     }
     // END NEW TIMESTAMP FILTER LOGIC
 
 
     if (conditions.length > 0) q = query(q, ...conditions);
 
-    // Fallback order for full queries (if not incrementally fetching)
-    if (shouldOrderByState) {
-        q = query(q, orderBy("الولاية")); // Apply default order
-    }
+    // Apply the single, correct orderBy clause
+    q = query(q, orderByClause);
 
     try {
         const querySnapshot = await getData(q);

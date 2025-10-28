@@ -1053,8 +1053,8 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                 serviceType: 'IMNCI', state: facility['الولاية'], locality: facility['المحلية'], facilityId: facility.id, facilityName: facility['اسم_المؤسسة'], healthWorkerName: healthWorkerName,
                 
                 // --- START: ADDITIONS ---
-                facilityType: facility['نوع_المؤسسةالصحية'],
-                workerType: healthWorkerJobTitle,
+                facilityType: facility['نوع_المؤسسةالصحية'] || null,
+                workerType: healthWorkerJobTitle || null,
                 // --- END: ADDITIONS ---
 
                 sessionDate: currentFormData.session_date,
@@ -1287,8 +1287,8 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                 serviceType: 'IMNCI', state: facility['الولاية'], locality: facility['المحلية'], facilityId: facility.id, facilityName: facility['اسم_المؤسسة'], healthWorkerName: healthWorkerName,
 
                 // --- START: ADDITIONS ---
-                facilityType: facility['نوع_المؤسسةالصحية'],
-                workerType: healthWorkerJobTitle,
+                facilityType: facility['نوع_المؤسسةالصحية'] || null,
+                workerType: healthWorkerJobTitle || null,
                 // --- END: ADDITIONS ---
 
                 sessionDate: formData.session_date, // Keep the original string
@@ -1361,8 +1361,8 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                  serviceType: 'IMNCI', state: facility['الولاية'], locality: facility['المحلية'], facilityId: facility.id, facilityName: facility['اسم_المؤسسة'], healthWorkerName: healthWorkerName,
                  
                  // --- START: ADDITIONS ---
-                 facilityType: facility['نوع_المؤسسةالصحية'],
-                 workerType: healthWorkerJobTitle,
+                 facilityType: facility['نوع_المؤسسةالصحية'] || null,
+                 workerType: healthWorkerJobTitle || null,
                  // --- END: ADDITIONS ---
 
                  sessionDate: formData.session_date,

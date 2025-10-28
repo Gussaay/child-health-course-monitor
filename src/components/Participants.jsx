@@ -7,7 +7,18 @@ import {
 import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_ETAT, JOB_TITLES_EENC
 } from './constants.js';
-import { listHealthFacilities, importParticipants, bulkMigrateFromMappings, listParticipants } from '../data.js';
+// Updated imports
+import {
+    listHealthFacilities,
+    importParticipants,
+    bulkMigrateFromMappings,
+    listParticipants,
+    submitFacilityDataForApproval, // Added
+    getHealthFacilityById // Added
+} from '../data.js';
+// Import necessary components from FacilityForms
+import { GenericFacilityForm, IMNCIFormFields } from './FacilityForms.jsx';
+
 
 // --- Reusable Searchable Select Component ---
 const SearchableSelect = ({ options, value, onChange, placeholder, disabled }) => {
@@ -42,6 +53,11 @@ const SearchableSelect = ({ options, value, onChange, placeholder, disabled }) =
         if (selectedOption && selectedOption.name === inputValue) {
             return options;
         }
+        // Special handling for the "Add New" option
+        if (value === 'addNewFacility' && options[0]?.id === 'addNewFacility') {
+             return options.filter(opt => opt.id === 'addNewFacility' || opt.name.toLowerCase().includes(inputValue.toLowerCase()));
+        }
+
         return options.filter(opt => opt.name.toLowerCase().includes(inputValue.toLowerCase()));
     }, [options, inputValue, value]);
 
@@ -73,14 +89,25 @@ const SearchableSelect = ({ options, value, onChange, placeholder, disabled }) =
                         filteredOptions.map(opt => (
                             <div
                                 key={opt.id}
-                                className="p-2 cursor-pointer hover:bg-gray-100"
+                                className={`p-2 cursor-pointer hover:bg-gray-100 ${opt.id === 'addNewFacility' ? 'font-bold text-sky-600 bg-sky-50' : ''}`}
                                 onClick={() => handleSelect(opt)}
                             >
                                 {opt.name}
                             </div>
                         ))
                     ) : (
-                        <div className="p-2 text-gray-500">No results found.</div>
+                         // If no results, but input has text, still show Add New
+                         inputValue && options[0]?.id === 'addNewFacility' ? (
+                            <div
+                                key={options[0].id}
+                                className={`p-2 cursor-pointer hover:bg-gray-100 ${options[0].id === 'addNewFacility' ? 'font-bold text-sky-600 bg-sky-50' : ''}`}
+                                onClick={() => handleSelect(options[0])}
+                            >
+                                {options[0].name}
+                            </div>
+                         ) : (
+                            <div className="p-2 text-gray-500">No results found.</div>
+                         )
                     )}
                 </div>
             )}
@@ -92,7 +119,7 @@ const SearchableSelect = ({ options, value, onChange, placeholder, disabled }) =
 const NewParticipantForm = ({ initialName, jobTitleOptions, onCancel, onSave }) => {
     const [name, setName] = useState(initialName || '');
     const [phone, setPhone] = useState('');
-    
+
     const [job, setJob] = useState('');
     const [otherJobTitle, setOtherJobTitle] = useState('');
     const [error, setError] = useState('');
@@ -101,7 +128,7 @@ const NewParticipantForm = ({ initialName, jobTitleOptions, onCancel, onSave }) 
         const finalJobTitle = job === 'Other' ? otherJobTitle : job;
         if (!name || !finalJobTitle || !phone) {
             setError("Please fill in all fields.");
-            return; 
+            return;
         }
         setError('');
         onSave({
@@ -112,36 +139,38 @@ const NewParticipantForm = ({ initialName, jobTitleOptions, onCancel, onSave }) 
     };
 
     return (
-        <Card>
-            <div className="p-6">
-                <PageHeader title="Add New Participant Details" subtitle="This person was not found in the facility's staff list." />
-                {error && <div className="p-3 my-4 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
-                <div className="space-y-4 pt-6">
-                    <FormGroup label="Participant Name">
-                        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full Name" />
-                    </FormGroup>
-                    <FormGroup label="Job Title">
-                        <Select value={job} onChange={(e) => setJob(e.target.value)}>
-                            <option value="">— Select Job —</option>
-                            {jobTitleOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                            <option value="Other">Other</option>
-                        </Select>
-                    </FormGroup>
-                    {job === 'Other' && (
-                        <FormGroup label="Specify Job Title">
-                            <Input value={otherJobTitle} onChange={(e) => setOtherJobTitle(e.target.value)} placeholder="Please specify" />
+        <Modal isOpen={true} onClose={onCancel} title="Add New Participant Details">
+            <Card>
+                <div className="p-6">
+                    <p className="text-sm text-gray-600 mb-4">This person was not found in the facility's staff list. Please provide their details.</p>
+                    {error && <div className="p-3 my-4 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
+                    <div className="space-y-4 pt-6">
+                        <FormGroup label="Participant Name">
+                            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full Name" />
                         </FormGroup>
-                    )}
-                    <FormGroup label="Phone Number">
-                        <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone Number" />
-                    </FormGroup>
+                        <FormGroup label="Job Title">
+                            <Select value={job} onChange={(e) => setJob(e.target.value)}>
+                                <option value="">— Select Job —</option>
+                                {jobTitleOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                <option value="Other">Other</option>
+                            </Select>
+                        </FormGroup>
+                        {job === 'Other' && (
+                            <FormGroup label="Specify Job Title">
+                                <Input value={otherJobTitle} onChange={(e) => setOtherJobTitle(e.target.value)} placeholder="Please specify" />
+                            </FormGroup>
+                        )}
+                        <FormGroup label="Phone Number">
+                            <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone Number" />
+                        </FormGroup>
+                    </div>
+                    <div className="flex gap-2 justify-end mt-6 border-t pt-6">
+                        <Button variant="secondary" onClick={onCancel}>Cancel</Button>
+                        <Button onClick={handleSave}>Continue</Button>
+                    </div>
                 </div>
-                <div className="flex gap-2 justify-end mt-6 border-t pt-6">
-                    <Button variant="secondary" onClick={onCancel}>Cancel</Button>
-                    <Button onClick={handleSave}>Continue</Button>
-                </div>
-            </div>
-        </Card>
+            </Card>
+        </Modal>
     );
 };
 
@@ -203,7 +232,7 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, co
                 getOptionLabel: (opt) => opt
             };
         }
-        
+
         if (courseType === 'ETAT') {
             config['hospital_type'] = {
                 label: 'Hospital Type (ETAT)',
@@ -241,14 +270,14 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, co
 
             (participants || []).forEach(p => {
                 const value = p[selectedFieldKey];
-                
+
                 if (value) {
                     if (!standardValuesSet.has(value)) {
                         values.add(value);
                     }
                 }
             });
-            
+
             setNonStandardValues(Array.from(values).sort());
             setMappings({});
             setIsLoading(false);
@@ -265,7 +294,7 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, co
             return;
         }
         setIsUpdating(true);
-        
+
         const participantsToUpdate = participants
             .filter(p => {
                 const originalValue = p[selectedFieldKey];
@@ -286,7 +315,7 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, co
             onClose();
         }
     };
-    
+
     const renderSelectionScreen = () => (
         <div>
             <p className="text-sm text-gray-600 mb-4">
@@ -365,7 +394,7 @@ const BulkChangeModal = ({ isOpen, onClose, participants, onSave, courseType }) 
         if (courseType === 'EENC') return JOB_TITLES_EENC;
         return ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
     }, [courseType]);
-    
+
     const CHANGEABLE_FIELDS_CONFIG = useMemo(() => ({
         'job_title': {
             label: 'Job Title',
@@ -409,7 +438,7 @@ const BulkChangeModal = ({ isOpen, onClose, participants, onSave, courseType }) 
             onClose();
         }
     };
-    
+
     const currentConfig = CHANGEABLE_FIELDS_CONFIG[selectedFieldKey];
     const affectedParticipantsCount = useMemo(() => {
         if (!selectedFieldKey || !fromValue) return 0;
@@ -457,11 +486,11 @@ const BulkChangeModal = ({ isOpen, onClose, participants, onSave, courseType }) 
                         This will change the <strong>{currentConfig.label}</strong> from "<strong>{fromValue}</strong>" to "<strong>{toValue}</strong>" for <strong>{affectedParticipantsCount}</strong> participant(s).
                     </div>
                 )}
-                
+
                 <div className="flex justify-end items-center mt-6 pt-4 border-t">
                     <Button variant="secondary" onClick={onClose} className="mr-2">Cancel</Button>
-                    <Button 
-                        onClick={handleApplyChange} 
+                    <Button
+                        onClick={handleApplyChange}
                         disabled={isUpdating || !selectedFieldKey || !fromValue || !toValue || fromValue === toValue || affectedParticipantsCount === 0}
                     >
                         {isUpdating ? 'Applying...' : `Apply Change`}
@@ -485,7 +514,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
     const [isValidating, setIsValidating] = useState(false);
     const [validationIssues, setValidationIssues] = useState([]);
     const [userCorrections, setUserCorrections] = useState({});
-    
+
     const jobTitleOptions = useMemo(() => {
         if (course.course_type === 'ETAT') return JOB_TITLES_ETAT;
         if (course.course_type === 'EENC') return JOB_TITLES_EENC;
@@ -610,7 +639,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
         }
 
         const issues = {};
-        
+
         excelData.forEach(row => {
             Object.entries(validationConfig).forEach(([fieldKey, config]) => {
                 const header = fieldMappings[fieldKey];
@@ -649,7 +678,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
     const startImportProcess = () => {
         const participantsToImport = [];
         const facilityUpdatesMap = new Map();
-    
+
         excelData.forEach(row => {
             const participant = {};
             allFields.forEach(field => {
@@ -661,16 +690,16 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
                     }
                 }
             });
-    
+
             if (!participant.name || !participant.state || !participant.locality || !participant.center_name) {
                 return;
             }
-    
+
             participantsToImport.push(participant);
-    
+
             const facilityKey = `${participant.state}-${participant.locality}-${participant.center_name}`;
             const existingPayload = facilityUpdatesMap.get(facilityKey) || {};
-    
+
             const newStaffMember = {
                 name: participant.name,
                 job_title: participant.job_title,
@@ -678,12 +707,12 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
                 training_date: course.start_date || '',
                 phone: participant.phone || '',
             };
-    
+
             const staffList = existingPayload.imnci_staff || [];
             if (!staffList.some(s => s.name === newStaffMember.name)) {
                 staffList.push(newStaffMember);
             }
-    
+
             const payload = {
                 ...existingPayload,
                 'اسم_المؤسسة': participant.center_name,
@@ -705,16 +734,16 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
                 'العدد_الكلي_للكوادر_طبية_العاملة_أطباء_ومساعدين': participant.num_other_providers ?? staffList.length,
                 'العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل': participant.num_other_providers_imci ?? staffList.filter(s => s.is_trained === 'Yes').length,
             };
-    
+
             facilityUpdatesMap.set(facilityKey, payload);
         });
-    
+
         const facilitiesToUpsert = Array.from(facilityUpdatesMap.values());
-    
+
         onImport({ participantsToImport, facilitiesToUpsert });
         onClose();
     };
-    
+
     const renderValidationScreen = () => {
         const allCorrectionsMade = validationIssues.every(issue => issue.invalidValues.every(val => userCorrections[val]));
         return (
@@ -745,7 +774,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
                          {!allCorrectionsMade && <p className="text-right text-sm text-red-600 mt-1">Please resolve all mismatches to proceed.</p>}
                     </div>
                 )}
-                
+
                 <div className="flex justify-end mt-6 space-x-2">
                     <Button variant="secondary" onClick={() => setCurrentPage(1)}>Back to Mapping</Button>
                     <Button onClick={startImportProcess} disabled={!allCorrectionsMade}>
@@ -852,7 +881,7 @@ export function ParticipantMigrationMappingView({ course, participants, onCancel
         setPreviewData(null);
         const newMappings = { ...mappings };
         newMappings[pId][field] = value;
-        
+
         if (field === 'targetState') {
             newMappings[pId].targetLocality = '';
             newMappings[pId].targetFacilityId = '';
@@ -898,11 +927,13 @@ export function ParticipantMigrationMappingView({ course, participants, onCancel
             }
         } catch (err) {
             // Error toast is handled by parent
+            console.error("Migration execution error:", err); // Log error for debugging
+            setToast({ show: true, message: `Migration failed: ${err.message}`, type: 'error' });
         } finally {
             setIsSaving(false);
         }
     };
-    
+
     if (isLoading) return <Spinner />;
 
     return (
@@ -950,7 +981,7 @@ export function ParticipantMigrationMappingView({ course, participants, onCancel
                         </tbody>
                     </table>
                 </div>
-                
+
                 <div className="flex gap-2 justify-end mt-6 border-t pt-6">
                     <Button variant="secondary" onClick={onCancel} disabled={isSaving}>Cancel</Button>
                     <Button onClick={handleExecute} disabled={isSaving}>
@@ -962,8 +993,10 @@ export function ParticipantMigrationMappingView({ course, participants, onCancel
     );
 }
 
-export function ParticipantsView({ 
-    course, onAdd, onOpen, onEdit, onDelete, onOpenReport, 
+
+// --- Participants List View Component ---
+export function ParticipantsView({
+    course, onAdd, onOpen, onEdit, onDelete, onOpenReport,
     onImport, onBatchUpdate, onBulkMigrate,
     // --- NEW PERMISSION PROPS ---
     isCourseActive,
@@ -985,18 +1018,24 @@ export function ParticipantsView({
     const [importModalOpen, setImportModalOpen] = useState(false);
     const [isCleanupModalOpen, setIsCleanupModalOpen] = useState(false);
     const [isBulkChangeModalOpen, setIsBulkChangeModalOpen] = useState(false);
-    
+
     const fetchMoreParticipants = useCallback(async () => {
         if (!hasMore || isLoading) return;
         setIsLoading(true);
-        const { participants: newParticipants, lastVisible: newLastVisible } = await listParticipants(course.id, lastVisible);
-        
-        setParticipants(prev => [...prev, ...newParticipants]);
-        setLastVisible(newLastVisible);
-        if (!newLastVisible || newParticipants.length === 0) {
-            setHasMore(false);
+        try {
+            const { participants: newParticipants, lastVisible: newLastVisible } = await listParticipants(course.id, lastVisible);
+
+            setParticipants(prev => [...prev, ...newParticipants]);
+            setLastVisible(newLastVisible);
+            if (!newLastVisible || newParticipants.length === 0) {
+                setHasMore(false);
+            }
+        } catch (error) {
+            console.error("Error fetching more participants:", error);
+            // Optionally set an error state here
+        } finally {
+            setIsLoading(false);
         }
-        setIsLoading(false);
     }, [course.id, lastVisible, hasMore, isLoading]);
 
     // Initial fetch
@@ -1005,16 +1044,26 @@ export function ParticipantsView({
         setLastVisible(null);
         setHasMore(true);
         setIsLoading(true);
-        
+
         const initialFetch = async () => {
-            if (!course?.id) return;
-            const { participants: initialParticipants, lastVisible: newLastVisible } = await listParticipants(course.id);
-            setParticipants(initialParticipants);
-            setLastVisible(newLastVisible);
-            if (!newLastVisible || initialParticipants.length === 0) {
-                setHasMore(false);
+            if (!course?.id) {
+                setIsLoading(false);
+                return;
             }
-            setIsLoading(false);
+            try {
+                const { participants: initialParticipants, lastVisible: newLastVisible } = await listParticipants(course.id);
+                setParticipants(initialParticipants);
+                setLastVisible(newLastVisible);
+                if (!newLastVisible || initialParticipants.length === 0) {
+                    setHasMore(false);
+                }
+            } catch (error) {
+                console.error("Error fetching initial participants:", error);
+                setHasMore(false); // Stop trying to load more on error
+                // Optionally set an error state here
+            } finally {
+                setIsLoading(false);
+            }
         };
 
         initialFetch();
@@ -1042,21 +1091,21 @@ export function ParticipantsView({
                 onClose={() => setImportModalOpen(false)}
                 onImport={onImport}
                 course={course}
-                participants={participants}
+                participants={participants} // Pass current full list for template download
             />
 
             <ParticipantDataCleanupModal
                 isOpen={isCleanupModalOpen}
                 onClose={() => setIsCleanupModalOpen(false)}
-                participants={participants}
+                participants={participants} // Pass current full list for cleanup
                 onSave={handleSaveCleanup}
                 courseType={course.course_type}
             />
-            
+
             <BulkChangeModal
                 isOpen={isBulkChangeModalOpen}
                 onClose={() => setIsBulkChangeModalOpen(false)}
-                participants={participants}
+                participants={participants} // Pass current full list for bulk change
                 onSave={handleSaveCleanup}
                 courseType={course.course_type}
             />
@@ -1106,6 +1155,7 @@ export function ParticipantsView({
                 </div>
             </div>
 
+            {/* Desktop View */}
             <div className="hidden md:block">
                 <Table headers={["Name", "Group", "Job Title", "Actions"]}>
                     {filtered.length > 0 && filtered.map(p => {
@@ -1133,12 +1183,13 @@ export function ParticipantsView({
                 </Table>
             </div>
 
+            {/* Mobile View */}
             <div className="md:hidden grid gap-4">
                 {filtered.length > 0 && filtered.map(p => {
                     // --- NEW LOGIC for active/inactive course permissions ---
                     const canEdit = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
                     const canDelete = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
-                    
+
                     return (
                         <div key={p.id} className="bg-white rounded-lg shadow-md p-4 border border-gray-200">
                             <div className="flex justify-between items-start">
@@ -1157,7 +1208,12 @@ export function ParticipantsView({
                         </div>
                     );
                 })}
-                 {filtered.length === 0 && !isLoading && <EmptyState message="No participants found for this group." />}
+                 {/* --- FIX: Replaced EmptyState with a div to solve nesting error --- */}
+                 {filtered.length === 0 && !isLoading && (
+                    <div className="p-4 text-center text-gray-500 bg-white rounded-lg shadow-md border border-gray-200">
+                        No participants found for this group.
+                    </div>
+                 )}
             </div>
 
             {isLoading && <div className="text-center p-4"><Spinner /></div>}
@@ -1171,7 +1227,7 @@ export function ParticipantsView({
 }
 
 
-// --- Searchable and Creatable Name Input Component ---
+// --- Searchable and Creatable Name Input Component (for Participant Name) ---
 const CreatableNameInput = ({ value, onChange, options, onSelect, disabled }) => {
     const [isOpen, setIsOpen] = useState(false);
     const ref = useRef(null);
@@ -1188,7 +1244,7 @@ const CreatableNameInput = ({ value, onChange, options, onSelect, disabled }) =>
 
     const filteredOptions = useMemo(() => {
         if (!value) return options;
-        return options.filter(opt => opt.name.toLowerCase().includes(value.toLowerCase()));
+        return options.filter(opt => opt.name && opt.name.toLowerCase().includes(value.toLowerCase()));
     }, [options, value]);
 
     const handleSelect = (option) => {
@@ -1217,15 +1273,15 @@ const CreatableNameInput = ({ value, onChange, options, onSelect, disabled }) =>
                     {filteredOptions.length > 0 ? (
                         filteredOptions.map((opt, index) => (
                             <div
-                                key={index}
+                                key={index} // Use index or a unique property if available
                                 className="p-2 cursor-pointer hover:bg-gray-100"
                                 onClick={() => handleSelect(opt)}
                             >
-                                {opt.name} ({opt.job_title})
+                                {opt.name} ({opt.job_title || 'No Job Title'})
                             </div>
                         ))
                     ) : (
-                        <div className="p-2 text-gray-500">No existing staff found.</div>
+                        value && <div className="p-2 text-gray-500">No existing staff found matching "{value}".</div>
                     )}
                 </div>
             )}
@@ -1233,7 +1289,84 @@ const CreatableNameInput = ({ value, onChange, options, onSelect, disabled }) =>
     );
 };
 
+// --- Add Facility Modal Component ---
+const AddFacilityModal = ({ isOpen, onClose, onSaveSuccess, initialState, initialLocality, initialName = '', setToast }) => {
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const facilityInitialData = useMemo(() => ({
+        'الولاية': initialState || '',
+        'المحلية': initialLocality || '',
+        'اسم_المؤسسة': initialName || '',
+        'هل_المؤسسة_تعمل': 'Yes',
+        'date_of_visit': new Date().toISOString().split('T')[0],
+        'وجود_العلاج_المتكامل_لامراض_الطفولة': 'No',
+        'وجود_سجل_علاج_متكامل': 'No',
+        'وجود_كتيب_لوحات': 'No',
+        'ميزان_وزن': 'No',
+        'ميزان_طول': 'No',
+        'ميزان_حرارة': 'No',
+        'ساعة_مؤقت': 'No',
+        'غرفة_إرواء': 'No',
+        'immunization_office_exists': 'No',
+        'nutrition_center_exists': 'No',
+        'growth_monitoring_service_exists': 'No',
+        'imnci_staff': [], // Start with empty staff list
+    }), [initialState, initialLocality, initialName]);
+
+    const handleSaveFacility = async (formData) => {
+        setIsSubmitting(true);
+        try {
+            const submitterIdentifier = 'Participant Form - New Facility';
+            const { id, ...dataToSubmit } = formData;
+
+            if (!dataToSubmit['اسم_المؤسسة'] || !dataToSubmit['الولاية'] || !dataToSubmit['المحلية']) {
+                throw new Error("Facility Name, State, and Locality are required.");
+            }
+
+            // Ensure imnci_staff is an array before submitting
+             dataToSubmit.imnci_staff = Array.isArray(dataToSubmit.imnci_staff) ? dataToSubmit.imnci_staff : [];
+
+            await submitFacilityDataForApproval(dataToSubmit, submitterIdentifier);
+
+            setToast({ show: true, message: "New facility submitted for approval. It may take time to appear in the list.", type: 'info' });
+
+            onSaveSuccess({
+                id: `pending_${Date.now()}`,
+                ...dataToSubmit
+            });
+            onClose();
+
+        } catch (error) {
+            console.error("Failed to submit new facility:", error);
+            setToast({ show: true, message: `Error submitting facility: ${error.message}`, type: 'error' });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Add New Health Facility">
+             <div className="p-1 max-h-[80vh] overflow-y-auto">
+                <GenericFacilityForm
+                    initialData={facilityInitialData}
+                    onSave={handleSaveFacility}
+                    onCancel={onClose}
+                    setToast={setToast}
+                    title="بيانات المنشأة الصحية الجديدة"
+                    subtitle={`Adding a new facility in ${STATE_LOCALITIES[initialState]?.ar || initialState}, ${STATE_LOCALITIES[initialState]?.localities.find(l=>l.en === initialLocality)?.ar || initialLocality}`}
+                    isPublicForm={false}
+                    saveButtonText="Submit New Facility for Approval"
+                    isSubmitting={isSubmitting}
+                >
+                    {(props) => <IMNCIFormFields {...props} />}
+                </GenericFacilityForm>
+            </div>
+        </Modal>
+    );
+};
+
+
+// --- Participant Form Component (Main logic) ---
 export function ParticipantForm({ course, initialData, onCancel, onSave }) {
     const isImnci = course.course_type === 'IMNCI';
     const isEtat = course.course_type === 'ETAT';
@@ -1251,31 +1384,33 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
     // Participant States
     const [name, setName] = useState(initialData?.name || '');
     const [email, setEmail] = useState(initialData?.email || '');
-    const [state, setState] = useState(initialData?.state || '');
-    const [locality, setLocality] = useState(initialData?.locality || '');
-    const [center, setCenter] = useState(initialData?.center_name || '');
+    const [state, setState] = useState(initialData?.state || course?.state || ''); // Default to course state
+    const [locality, setLocality] = useState(initialData?.locality || course?.locality || ''); // Default to course locality
+    const [center, setCenter] = useState(initialData?.center_name || ''); // This holds the facility *name*
     const [phone, setPhone] = useState(initialData?.phone || '');
     const [group, setGroup] = useState(initialData?.group || 'Group A');
     const [error, setError] = useState('');
     const [preTestScore, setPreTestScore] = useState(initialData?.pre_test_score || '');
     const [postTestScore, setPostTestScore] = useState(initialData?.post_test_score || '');
-    
+
     // Facility Related States
     const [facilitiesInLocality, setFacilitiesInLocality] = useState([]);
     const [isLoadingFacilities, setIsLoadingFacilities] = useState(false);
-    const [selectedFacility, setSelectedFacility] = useState(null);
-    const [isManualFacility, setIsManualFacility] = useState(false);
+    const [selectedFacility, setSelectedFacility] = useState(null); // This holds the *selected facility object* or null
     const [isEditingExistingWorker, setIsEditingExistingWorker] = useState(false);
-    
-    // --- ADDED: State for the popup modal ---
-    const [showNewParticipantForm, setShowNewParticipantForm] = useState(false);
 
+    // Modal States
+    const [showNewParticipantForm, setShowNewParticipantForm] = useState(false);
+    const [isAddFacilityModalOpen, setIsAddFacilityModalOpen] = useState(false);
+    const [newFacilityNameSuggestion, setNewFacilityNameSuggestion] = useState('');
+
+    // Job Title States
     const initialJobTitle = initialData?.job_title || '';
     const isInitialJobOther = initialJobTitle && !jobTitleOptions.includes(initialJobTitle);
     const [job, setJob] = useState(isInitialJobOther ? 'Other' : initialJobTitle);
     const [otherJobTitle, setOtherJobTitle] = useState(isInitialJobOther ? initialJobTitle : '');
 
-    // IMNCI Specific States
+    // Service Specific States
     const [imciSubType, setImciSubType] = useState(initialData?.imci_sub_type || 'Standard 7 days course');
     const [facilityType, setFacilityType] = useState(initialData?.facility_type || '');
     const [trainedIMNCI, setTrainedIMNCI] = useState(initialData?.trained_before ? 'yes' : 'no');
@@ -1292,8 +1427,6 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
     const [hasThermometer, setHasThermometer] = useState(initialData?.['ميزان_حرارة'] === 'Yes');
     const [hasTimer, setHasTimer] = useState(initialData?.['ساعة_مؤقت'] === 'Yes');
     const [hasGrowthMonitoring, setHasGrowthMonitoring] = useState(initialData?.has_growth_monitoring || false);
-    
-    // ETAT Specific States
     const [hospitalTypeEtat, setHospitalTypeEtat] = useState(initialData?.hospital_type || '');
     const [trainedEtat, setTrainedEtat] = useState(initialData?.trained_etat_before ? 'yes' : 'no');
     const [lastTrainEtat, setLastTrainEtat] = useState(initialData?.last_etat_training || '');
@@ -1302,8 +1435,6 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
     const [hasHdu, setHasHdu] = useState(initialData?.has_hdu || false);
     const [numStaffInEr, setNumStaffInEr] = useState(initialData?.num_staff_in_er || 0);
     const [numStaffTrainedInEtat, setNumStaffTrainedInEtat] = useState(initialData?.num_staff_trained_in_etat || 0);
-
-    // EENC Specific States
     const [hospitalTypeEenc, setHospitalTypeEenc] = useState(initialData?.hospital_type || '');
     const [otherHospitalTypeEenc, setOtherHospitalTypeEenc] = useState(initialData?.other_hospital_type || '');
     const [trainedEENC, setTrainedEENC] = useState(initialData?.trained_eenc_before ? 'yes' : 'no');
@@ -1313,385 +1444,461 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
     const [numStaffInDelivery, setNumStaffInDelivery] = useState(initialData?.num_staff_in_delivery || 0);
     const [numStaffTrainedInEenc, setNumStaffTrainedInEenc] = useState(initialData?.num_staff_trained_in_eenc || 0);
     const [hasKangaroo, setHasKangaroo] = useState(initialData?.has_kangaroo_room || false);
-    
-    const isInitialLoad = useRef(true);
 
-    // Effect to fetch facilities when state or locality changes
+    const isInitialLoad = useRef(true);
+    const facilitySelectRef = useRef();
+
+    // Effect to fetch facilities
     useEffect(() => {
         const fetchFacilities = async () => {
+            setError('');
             if (state && locality) {
                 setIsLoadingFacilities(true);
                 try {
                     const facilities = await listHealthFacilities({ state, locality });
                     setFacilitiesInLocality(facilities);
+                    // If editing, try to re-select the facility after fetch
+                    if (initialData?.facilityId) {
+                         const matchedFacility = facilities.find(f => f.id === initialData.facilityId);
+                         if(matchedFacility){
+                             setSelectedFacility(matchedFacility);
+                             setCenter(matchedFacility['اسم_المؤسسة']);
+                         } else if (initialData.center_name) {
+                             // Keep name if ID not found (might be pending or manually entered)
+                             setCenter(initialData.center_name);
+                             setSelectedFacility(null);
+                         }
+                    } else if (initialData?.center_name) {
+                         // If only name exists initially, try to match it
+                         const matchedFacility = facilities.find(f => f['اسم_المؤسسة'] === initialData.center_name);
+                          if(matchedFacility){
+                             setSelectedFacility(matchedFacility);
+                             setCenter(matchedFacility['اسم_المؤسسة']);
+                         } else {
+                             // Keep name if no match
+                             setCenter(initialData.center_name);
+                             setSelectedFacility(null);
+                         }
+                    }
+
                 } catch (err) {
-                    setError("Failed to load health facilities for this location.");
+                    console.error("Facility fetch error:", err);
+                    setError("Failed to load health facilities for this location. Check console for details.");
+                    setFacilitiesInLocality([]);
                 } finally {
                     setIsLoadingFacilities(false);
+                    isInitialLoad.current = false; // Mark initial load attempt as done
                 }
             } else {
                 setFacilitiesInLocality([]);
+                 isInitialLoad.current = false; // Mark as done even if no state/locality
             }
         };
-        fetchFacilities();
-    }, [state, locality]);
-
-    // Effect to set the initial facility selection after facilities have loaded
-    useEffect(() => {
-        if (facilitiesInLocality.length > 0 && initialData?.center_name && isInitialLoad.current) {
-            const matchedFacility = facilitiesInLocality.find(
-                fac => fac['اسم_المؤسسة'] === initialData.center_name
-            );
-
-            if (matchedFacility) {
-                setSelectedFacility(matchedFacility);
-                setIsManualFacility(false);
-            } else {
-                setIsManualFacility(true);
-            }
-            isInitialLoad.current = false;
+        // Only fetch if state and locality are set
+        if (state && locality) {
+             fetchFacilities();
+        } else {
+             setFacilitiesInLocality([]); // Clear list if state/locality not set
+             setIsLoadingFacilities(false);
+             isInitialLoad.current = false;
         }
-    }, [facilitiesInLocality, initialData]);
 
-    const handleFacilitySelect = (facilityId) => {
-        setIsManualFacility(false);
-        const facility = facilitiesInLocality.find(f => f.id === facilityId);
+    }, [state, locality, initialData?.facilityId, initialData?.center_name]); // Re-run if initial data changes too
+
+
+    // Handle Facility Selection or "Add New"
+    const handleFacilitySelect = (facilityIdOrAction) => {
+        setError('');
+        if (facilityIdOrAction === 'addNewFacility') {
+            setNewFacilityNameSuggestion(''); // Can potentially prefill later
+            setIsAddFacilityModalOpen(true);
+            return;
+        }
+
+        const facility = facilitiesInLocality.find(f => f.id === facilityIdOrAction);
         setSelectedFacility(facility || null);
         setCenter(facility ? facility['اسم_المؤسسة'] : '');
-        
-        if (isImnci && facility) {
-            setFacilityType(facility['نوع_المؤسسةالصحية'] || '');
-            setHasNutri(facility.nutrition_center_exists === 'Yes');
-            setNearestNutri(facility.nearest_nutrition_center || '');
-            setHasImm(facility.immunization_office_exists === 'Yes');
-            setNearestImm(facility.nearest_immunization_center || '');
-            setHasORS(facility['غرفة_إرواء'] === 'Yes');
-            setNumProv(facility['العدد_الكلي_للكوادر_طبية_العاملة_أطباء_ومساعدين'] || 1);
-            setNumProvIMNCI(facility['العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل'] || 0);
-            setHasWeightScale(facility['ميزان_وزن'] === 'Yes');
-            setHasHeightScale(facility['ميزان_طول'] === 'Yes');
-            setHasThermometer(facility['ميزان_حرارة'] === 'Yes');
-            setHasTimer(facility['ساعة_مؤقت'] === 'Yes');
-            setHasGrowthMonitoring(facility.growth_monitoring_service_exists === 'Yes');
-        }
-        
+
+        // Reset participant details
         setIsEditingExistingWorker(false);
         setName('');
         setJob('');
+        setOtherJobTitle('');
         setPhone('');
         setEmail('');
-        setTrainedIMNCI('no');
-        setLastTrainIMNCI('');
+
+        // Reset service-specific fields based on selected facility (or clear them)
+        if (isImnci) {
+            if (facility) {
+                 setFacilityType(facility['نوع_المؤسسةالصحية'] || '');
+                 setHasNutri(facility.nutrition_center_exists === 'Yes');
+                 setNearestNutri(facility.nearest_nutrition_center || '');
+                 setHasImm(facility.immunization_office_exists === 'Yes');
+                 setNearestImm(facility.nearest_immunization_center || '');
+                 setHasORS(facility['غرفة_إرواء'] === 'Yes');
+                 setNumProv(facility['العدد_الكلي_للكوادر_طبية_العاملة_أطباء_ومساعدين'] || 1);
+                 setNumProvIMNCI(facility['العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل'] || 0);
+                 setHasWeightScale(facility['ميزان_وزن'] === 'Yes');
+                 setHasHeightScale(facility['ميزان_طول'] === 'Yes');
+                 setHasThermometer(facility['ميزان_حرارة'] === 'Yes');
+                 setHasTimer(facility['ساعة_مؤقت'] === 'Yes');
+                 setHasGrowthMonitoring(facility.growth_monitoring_service_exists === 'Yes');
+                 setTrainedIMNCI('no');
+                 setLastTrainIMNCI('');
+            } else {
+                 setFacilityType('');
+                 setHasNutri(false); setNearestNutri('');
+                 setHasImm(false); setNearestImm('');
+                 setHasORS(false);
+                 setNumProv(1); setNumProvIMNCI(0);
+                 setHasWeightScale(false); setHasHeightScale(false); setHasThermometer(false); setHasTimer(false); setHasGrowthMonitoring(false);
+                 setTrainedIMNCI('no'); setLastTrainIMNCI('');
+            }
+        }
+        // Add similar resets for ETAT/EENC if needed
     };
-    
-    // --- UPDATED: This function now opens the popup ---
+
+     // Callback when AddFacilityModal saves successfully
+     const handleNewFacilitySaved = (newlySubmittedFacilityData) => {
+        const representation = {
+            id: newlySubmittedFacilityData.id, // Use temporary ID
+            'اسم_المؤسسة': newlySubmittedFacilityData['اسم_المؤسسة'],
+            'الولاية': newlySubmittedFacilityData['الولاية'],
+            'المحلية': newlySubmittedFacilityData['المحلية'],
+             ...newlySubmittedFacilityData // Include other data submitted
+        };
+        // Add representation to the current list
+        setFacilitiesInLocality(prev => [...prev, representation]);
+        // Automatically select the new representation
+        handleFacilitySelect(representation.id);
+        // Modal is closed by AddFacilityModal itself
+    };
+
+
+    // Handle selecting an existing staff member or triggering "Add New" participant form
     const handleHealthWorkerSelect = (worker) => {
-        if (!worker) { // "Add New" was selected
+        if (!worker) {
             setIsEditingExistingWorker(false);
-            // Open the popup, the 'name' state already has what the user typed
-            setShowNewParticipantForm(true); 
+            setShowNewParticipantForm(true); // Open the participant detail popup
         } else {
             setIsEditingExistingWorker(true);
             setName(worker.name || '');
-            setJob(worker.job_title || '');
+            const staffJob = worker.job_title || '';
+            if (jobTitleOptions.includes(staffJob)) {
+                setJob(staffJob); setOtherJobTitle('');
+            } else {
+                setJob('Other'); setOtherJobTitle(staffJob);
+            }
             setPhone(worker.phone || '');
             if (isImnci) {
                 setTrainedIMNCI(String(worker.is_trained || '').trim().toLowerCase() === 'yes' ? 'yes' : 'no');
                 setLastTrainIMNCI(worker.training_date || '');
             }
+            // Add ETAT/EENC logic if needed
         }
     };
 
-    // --- ADDED: Handler for when the new participant popup saves ---
+    // Callback when the NewParticipantForm popup saves
     const handleSaveNewParticipant = (newParticipantData) => {
-        // Update the main form's state with the data from the popup
         setName(newParticipantData.name);
-        setJob(newParticipantData.job_title);
         setPhone(newParticipantData.phone);
-        
-        // Handle 'Other' job title
-        if (!jobTitleOptions.includes(newParticipantData.job_title)) {
-            setJob('Other');
-            setOtherJobTitle(newParticipantData.job_title);
+        if (jobTitleOptions.includes(newParticipantData.job_title)) {
+            setJob(newParticipantData.job_title); setOtherJobTitle('');
+        } else {
+            setJob('Other'); setOtherJobTitle(newParticipantData.job_title);
         }
-
-        setIsEditingExistingWorker(false); // Ensure we're in "new participant" mode
+        setIsEditingExistingWorker(false); // Ensure we treat this as a new participant for the main form
         setShowNewParticipantForm(false); // Close the popup
     };
 
+    // Determine professional category (keep existing)
     const professionalCategory = useMemo(() => {
         const lowerCaseJob = (job === 'Other' ? otherJobTitle : job).toLowerCase();
-        if (lowerCaseJob.includes('doctor') || lowerCaseJob.includes('specialist') || lowerCaseJob.includes('registrar') || lowerCaseJob.includes('practioner')) return 'doctor';
-        if (lowerCaseJob.includes('nurse')) return 'nurse';
-        if (lowerCaseJob.includes('midwife')) return 'midwife';
+        if (lowerCaseJob.includes('doctor') || lowerCaseJob.includes('طبيب')) return 'doctor';
+        if (lowerCaseJob.includes('nurse') || lowerCaseJob.includes('ممرض')) return 'nurse';
+        if (lowerCaseJob.includes('midwife') || lowerCaseJob.includes('قابلة')) return 'midwife';
+        if (lowerCaseJob.includes('assistant') || lowerCaseJob.includes('مساعد')) return 'assistant';
         return 'provider';
-    }, [job, otherJobTitle]);
+     }, [job, otherJobTitle]);
 
+    // Submit Participant Data
     const submit = () => {
+        setError('');
         const finalJobTitle = job === 'Other' ? otherJobTitle : job;
-        if (!name || !state || !locality || !center || !finalJobTitle || !phone) { setError('Please complete all required fields'); return; }
 
-        let p = { name, group, state, locality, center_name: center, job_title: finalJobTitle, phone, email };
+        // Validation
+        if (!name.trim()) { setError('Participant Name is required.'); return; }
+        if (!state) { setError('State is required.'); return; }
+        if (!locality) { setError('Locality is required.'); return; }
+        if (!center.trim()) { setError('Health Facility Name is required.'); return; }
+        if (!finalJobTitle) { setError('Job Title is required.'); return; }
+        if (!phone.trim()) { setError('Phone Number is required.'); return; }
+
+        let p = {
+            name: name.trim(), group, state, locality,
+            center_name: center.trim(),
+            facilityId: selectedFacility?.id.startsWith('pending_') ? null : selectedFacility?.id || null, // Don't save pending IDs
+            job_title: finalJobTitle, phone: phone.trim(), email: email ? email.trim() : null
+        };
 
         if (showTestScores) {
-            p = { ...p, pre_test_score: preTestScore, post_test_score: postTestScore };
+            p = { ...p, pre_test_score: preTestScore || null, post_test_score: postTestScore || null };
         }
 
+        // Add service-specific data and perform validation
         if (isImnci) {
-            if (!facilityType || !imciSubType) { setError('Please complete all required fields'); return; }
-            if (numProv <= 0) { setError('Number of providers at health center must be more than zero.'); return; }
-            p = { ...p, imci_sub_type: imciSubType, facility_type: facilityType, trained_before: trainedIMNCI === 'yes', last_imci_training: trainedIMNCI === 'yes' ? lastTrainIMNCI : '', num_other_providers: numProv, num_other_providers_imci: numProvIMNCI, has_nutrition_service: hasNutri, has_immunization_service: hasImm, has_ors_room: hasORS, nearest_nutrition_center: !hasNutri ? nearestNutri : '', nearest_immunization_center: !hasImm ? nearestImm : '', has_growth_monitoring: hasGrowthMonitoring };
+            if (!imciSubType) { setError('IMCI Course Sub-type is required.'); return; }
+            const currentFacilityType = facilityType || selectedFacility?.['نوع_المؤسسةالصحية'];
+            if (!currentFacilityType) { setError('Facility Type is required.'); return; }
+            if (numProv === null || numProv < 1) { setError('Number of providers must be 1 or more.'); return; }
+            if (numProvIMNCI === null || numProvIMNCI < 0) { setError('Number of trained providers cannot be negative.'); return; }
+            p = { ...p, imci_sub_type: imciSubType, facility_type: currentFacilityType, trained_before: trainedIMNCI === 'yes', last_imci_training: trainedIMNCI === 'yes' ? (lastTrainIMNCI || null) : null, num_other_providers: numProv, num_other_providers_imci: numProvIMNCI, has_nutrition_service: hasNutri, has_immunization_service: hasImm, has_ors_room: hasORS, nearest_nutrition_center: !hasNutri ? (nearestNutri || null) : null, nearest_immunization_center: !hasImm ? (nearestImm || null) : null, has_growth_monitoring: hasGrowthMonitoring };
         } else if (isEtat) {
-            if (!hospitalTypeEtat) { setError('Please complete all required fields'); return; }
-            p = { ...p, hospital_type: hospitalTypeEtat, trained_etat_before: trainedEtat === 'yes', last_etat_training: trainedEtat === 'yes' ? lastTrainEtat : '', has_triage_system: hasTriageSystem, has_stabilization_center: hasStabilizationCenter, has_hdu: hasHdu, num_staff_in_er: numStaffInEr, num_staff_trained_in_etat: numStaffTrainedInEtat };
+            if (!hospitalTypeEtat) { setError('Hospital Type is required for ETAT.'); return; }
+            p = { ...p, hospital_type: hospitalTypeEtat, trained_etat_before: trainedEtat === 'yes', last_etat_training: trainedEtat === 'yes' ? (lastTrainEtat || null) : null, has_triage_system: hasTriageSystem, has_stabilization_center: hasStabilizationCenter, has_hdu: hasHdu, num_staff_in_er: numStaffInEr || 0, num_staff_trained_in_etat: numStaffTrainedInEtat || 0 };
         } else if (isEenc) {
-            if (!hospitalTypeEenc) { setError('Please complete all required fields'); return; }
-            p = { ...p, hospital_type: hospitalTypeEenc === 'other' ? otherHospitalTypeEenc : hospitalTypeEenc, trained_eenc_before: trainedEENC === 'yes', last_eenc_training: trainedEENC === 'yes' ? lastTrainEENC : '', has_sncu: hasSncu, has_iycf_center: hasIycfCenter, num_staff_in_delivery: numStaffInDelivery, num_staff_trained_in_eenc: numStaffTrainedInEenc, has_kangaroo_room: hasKangaroo };
+            if (!hospitalTypeEenc) { setError('Hospital Type is required for EENC.'); return; }
+            if (hospitalTypeEenc === 'other' && !otherHospitalTypeEenc) { setError('Please specify the Hospital Type for EENC.'); return; }
+            p = { ...p, hospital_type: hospitalTypeEenc === 'other' ? otherHospitalTypeEenc : hospitalTypeEenc, trained_eenc_before: trainedEENC === 'yes', last_eenc_training: trainedEENC === 'yes' ? (lastTrainEENC || null) : null, has_sncu: hasSncu, has_iycf_center: hasIycfCenter, num_staff_in_delivery: numStaffInDelivery || 0, num_staff_trained_in_eenc: numStaffTrainedInEenc || 0, has_kangaroo_room: hasKangaroo };
         }
-        
+
+        // Facility Update Payload Generation
         let facilityUpdatePayload = null;
-        if (isImnci && (selectedFacility || isManualFacility)) {
-            const newStaffMember = {
-                name,
-                job_title: finalJobTitle,
-                phone,
-                is_trained: 'Yes',
-                training_date: course.start_date || '',
-            };
+        // Only trigger if IMNCI, a *real* facility is selected, and it's not a pending one
+        if (isImnci && selectedFacility && !selectedFacility.id.startsWith('pending_')) {
+            const staffMemberData = { name: name.trim(), job_title: finalJobTitle, phone: phone.trim(), is_trained: 'Yes', training_date: course.start_date || '' };
+            let existingStaff = [];
+             try {
+                 existingStaff = selectedFacility.imnci_staff ? (typeof selectedFacility.imnci_staff === 'string' ? JSON.parse(selectedFacility.imnci_staff) : JSON.parse(JSON.stringify(selectedFacility.imnci_staff))) : [];
+                if (!Array.isArray(existingStaff)) existingStaff = [];
+            } catch (e) { console.error("Error parsing staff list:", e); existingStaff = []; }
+
+            let updatedStaffList = [...existingStaff];
+            const existingIndex = updatedStaffList.findIndex(staff => staff.name === staffMemberData.name || (staff.phone && staff.phone === staffMemberData.phone));
+            if (existingIndex > -1) updatedStaffList[existingIndex] = staffMemberData; else updatedStaffList.push(staffMemberData);
 
             const baseFacilityPayload = {
-                'وجود_العلاج_المتكامل_لامراض_الطفولة': 'Yes',
-                'وجود_كتيب_لوحات': 'Yes',
-                'وجود_سجل_علاج_متكامل': 'Yes',
-                'نوع_المؤسسةالصحية': facilityType,
-                'nutrition_center_exists': hasNutri ? 'Yes' : 'No',
-                'nearest_nutrition_center': !hasNutri ? nearestNutri : '',
-                'immunization_office_exists': hasImm ? 'Yes' : 'No',
-                'nearest_immunization_center': !hasImm ? nearestImm : '',
-                'غرفة_إرواء': hasORS ? 'Yes' : 'No',
-                'growth_monitoring_service_exists': hasGrowthMonitoring ? 'Yes' : 'No',
-                'العدد_الكلي_للكوادر_طبية_العاملة_أطباء_ومساعدين': numProv,
-                'العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل': numProvIMNCI,
-                'ميزان_وزن': hasWeightScale ? 'Yes' : 'No',
-                'ميزان_طول': hasHeightScale ? 'Yes' : 'No',
-                'ميزان_حرارة': hasThermometer ? 'Yes' : 'No',
-                'ساعة_مؤقت': hasTimer ? 'Yes' : 'No',
+                'نوع_المؤسسةالصحية': facilityType || selectedFacility['نوع_المؤسسةالصحية'] || 'no data',
+                'nutrition_center_exists': hasNutri ? 'Yes' : 'No', 'nearest_nutrition_center': !hasNutri ? (nearestNutri || selectedFacility.nearest_nutrition_center || '') : '',
+                'immunization_office_exists': hasImm ? 'Yes' : 'No', 'nearest_immunization_center': !hasImm ? (nearestImm || selectedFacility.nearest_immunization_center || '') : '',
+                'غرفة_إرواء': hasORS ? 'Yes' : 'No', 'growth_monitoring_service_exists': hasGrowthMonitoring ? 'Yes' : 'No',
+                'العدد_الكلي_للكوادر_طبية_العاملة_أطباء_ومساعدين': numProv ?? selectedFacility['العدد_الكلي_للكوادر_طبية_العاملة_أطباء_ومساعدين'] ?? updatedStaffList.length,
+                'العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل': numProvIMNCI ?? selectedFacility['العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل'] ?? updatedStaffList.filter(s => s.is_trained === 'Yes').length,
+                'ميزان_وزن': hasWeightScale ? 'Yes' : 'No', 'ميزان_طول': hasHeightScale ? 'Yes' : 'No', 'ميزان_حرارة': hasThermometer ? 'Yes' : 'No', 'ساعة_مؤقت': hasTimer ? 'Yes' : 'No',
             };
 
-            if (selectedFacility && !isManualFacility) {
-                let updatedStaffList = [...(selectedFacility.imnci_staff || [])];
-                const existingIndex = updatedStaffList.findIndex(staff => staff.name === name || (staff.phone && staff.phone === phone));
-                if (existingIndex > -1) {
-                    updatedStaffList[existingIndex] = newStaffMember;
-                } else {
-                    updatedStaffList.push(newStaffMember);
-                }
-                facilityUpdatePayload = { 
-                    ...selectedFacility, 
-                    ...baseFacilityPayload,
-                    id: selectedFacility.id, 
-                    date_of_visit: new Date().toISOString().split('T')[0], 
-                    imnci_staff: updatedStaffList, 
-                };
-            } else if (isManualFacility) {
-                facilityUpdatePayload = { 
-                    ...baseFacilityPayload,
-                    'اسم_المؤسسة': center, 
-                    'الولاية': state, 
-                    'المحلية': locality, 
-                    'هل_المؤسسة_تعمل': 'Yes', 
-                    date_of_visit: new Date().toISOString().split('T')[0], 
-                    imnci_staff: [newStaffMember], 
-                };
-            }
+            facilityUpdatePayload = { ...selectedFacility, ...baseFacilityPayload, id: selectedFacility.id, date_of_visit: new Date().toISOString().split('T')[0], imnci_staff: updatedStaffList };
         }
+
+        // Pass participant data and potential facility update payload to parent
         onSave(p, facilityUpdatePayload);
     };
-    
-    const facilityOptionsForSelect = useMemo(() =>
-        (facilitiesInLocality || []).map(f => ({ id: f.id, name: f['اسم_المؤسسة'] })),
-        [facilitiesInLocality]
-    );
 
-    // --- ADDED: Conditional render for the popup ---
-    if (showNewParticipantForm) {
-        return (
-            <NewParticipantForm
-                initialName={name} // Pass in the name the user already typed
-                jobTitleOptions={jobTitleOptions}
-                onCancel={() => setShowNewParticipantForm(false)}
-                onSave={handleSaveNewParticipant}
-            />
-        );
-    }
+    // Prepare options for the facility select, including "Add New"
+    const facilityOptionsForSelect = useMemo(() => {
+        const options = (facilitiesInLocality || []).map(f => ({ id: f.id, name: f['اسم_المؤسسة'] }));
+        options.unshift({ id: 'addNewFacility', name: "+ Add New Facility..." });
+        return options;
+    }, [facilitiesInLocality]);
 
+    // Render logic
     return (
-        <Card>
-            <div className="p-6">
-                 <PageHeader title={initialData ? 'Edit Participant' : 'Add New Participant'} />
-                {error && <div className="p-3 my-4 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
-                    
-                    <FormGroup label="Group"><Select value={group} onChange={(e) => setGroup(e.target.value)}><option>Group A</option><option>Group B</option><option>Group C</option><option>Group D</option></Select></FormGroup>
-                    <FormGroup label="State">
-                        <Select value={state} onChange={(e) => {
-                            setState(e.target.value);
-                            setLocality('');
-                            setCenter('');
-                            setSelectedFacility(null);
-                            setIsManualFacility(false);
-                            setFacilitiesInLocality([]);
-                        }}>
-                            <option value="">— Select State —</option>
-                            {Object.keys(STATE_LOCALITIES).sort().map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar}</option>)}
-                        </Select>
-                    </FormGroup>
-                    <FormGroup label="Locality">
-                        <Select value={locality} onChange={(e) => {
-                            setLocality(e.target.value);
-                            setCenter('');
-                            setSelectedFacility(null);
-                            setIsManualFacility(false);
-                        }} disabled={!state}>
-                            <option value="">— Select Locality —</option>
-                            {(STATE_LOCALITIES[state]?.localities || []).sort((a,b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
-                        </Select>
-                    </FormGroup>
-                    
-                    <FormGroup label={isEtat ? "Hospital Name" : "Health Facility Name"}>
-                        <div className="flex items-center gap-2">
-                            <div className="flex-grow">
-                                <SearchableSelect
-                                    value={selectedFacility?.id || ''}
-                                    onChange={handleFacilitySelect}
-                                    options={facilityOptionsForSelect}
-                                    placeholder={isLoadingFacilities ? "Loading..." : "- Type to search for a facility -"}
-                                    disabled={isLoadingFacilities || !locality || isManualFacility}
-                                />
-                            </div>
-                            <div className="flex items-center whitespace-nowrap pl-2">
-                                <input
-                                    type="checkbox"
-                                    id="manual-facility-checkbox"
-                                    checked={isManualFacility}
-                                    onChange={(e) => {
-                                        const isChecked = e.target.checked;
-                                        setIsManualFacility(isChecked);
-                                        if (isChecked) {
-                                            handleFacilitySelect(''); // Clear selection when switching to manual
-                                        }
-                                    }}
-                                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                />
-                                <label htmlFor="manual-facility-checkbox" className="ml-2 text-sm text-gray-700">Add Manually</label>
-                            </div>
-                        </div>
-                    </FormGroup>
+        <>
+            <AddFacilityModal
+                isOpen={isAddFacilityModalOpen}
+                onClose={() => setIsAddFacilityModalOpen(false)}
+                onSaveSuccess={handleNewFacilitySaved}
+                initialState={state}
+                initialLocality={locality}
+                initialName={newFacilityNameSuggestion}
+                setToast={setError} // Use setError as a simple toast mechanism here
+            />
 
-                    {isManualFacility && (
-                        <FormGroup label="Enter Facility Name Manually">
-                            <Input value={center} onChange={(e) => setCenter(e.target.value)} />
-                        </FormGroup>
-                    )}
-                    
-                    <FormGroup label="Participant Name">
-                        <CreatableNameInput 
-                            value={name}
-                            onChange={setName}
-                            onSelect={handleHealthWorkerSelect}
-                            options={selectedFacility?.imnci_staff || []}
-                            disabled={!selectedFacility || isManualFacility}
-                        />
-                        {isEditingExistingWorker && <p className="text-sm text-blue-600 mt-2">Editing an existing person. To add a new participant, select "Add as New" from the list.</p>}
-                    </FormGroup>
+             {/* Conditionally render the NewParticipantForm as a Modal */}
+             {showNewParticipantForm && (
+                <NewParticipantForm
+                    initialName={name}
+                    jobTitleOptions={jobTitleOptions}
+                    onCancel={() => setShowNewParticipantForm(false)}
+                    onSave={handleSaveNewParticipant}
+                />
+             )}
 
-                    <FormGroup label="Job Title">
-                        <Select value={job} onChange={(e) => setJob(e.target.value)} disabled={isEditingExistingWorker}>
-                            <option value="">— Select Job —</option>
-                            {jobTitleOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                             <option value="Other">Other</option>
-                        </Select>
-                    </FormGroup>
-                    {job === 'Other' && (
-                        <FormGroup label="Specify Job Title">
-                            <Input value={otherJobTitle} onChange={(e) => setOtherJobTitle(e.target.value)} placeholder="Please specify" disabled={isEditingExistingWorker} />
-                        </FormGroup>
-                    )}
-                    <FormGroup label="Phone Number"><Input value={phone} onChange={(e) => setPhone(e.target.value)} disabled={isEditingExistingWorker} /></FormGroup>
-                    <FormGroup label="Email (Optional)"><Input value={email} onChange={(e) => setEmail(e.target.value)} /></FormGroup>
-                    {showTestScores && (
-                        <>
-                            <FormGroup label="Pre-Test Score (%)">
-                                <Input type="number" min="0" max="100" value={preTestScore} onChange={(e) => setPreTestScore(e.target.value)} />
-                            </FormGroup>
-                            <FormGroup label="Post-Test Score (%)">
-                                <Input type="number" min="0" max="100" value={postTestScore} onChange={(e) => setPostTestScore(e.target.value)} />
-                            </FormGroup>
-                        </>
-                    )}
 
-                    {isImnci && (<>
-                        <FormGroup label="IMCI Course Sub-type">
-                            <Select value={imciSubType} onChange={(e) => setImciSubType(e.target.value)}>
-                                {IMNCI_SUBCOURSE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
+            <Card>
+                <div className="p-6">
+                    <PageHeader title={initialData ? 'Edit Participant' : 'Add New Participant'} />
+                    {error && <div className="p-3 my-4 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
+
+                        {/* Group */}
+                        <FormGroup label="Group">
+                            <Select value={group} onChange={(e) => setGroup(e.target.value)}>
+                                <option>Group A</option><option>Group B</option><option>Group C</option><option>Group D</option>
                             </Select>
                         </FormGroup>
-                        <FormGroup label="Facility Type">
-                            <Select value={facilityType} onChange={(e) => setFacilityType(e.target.value)}>
-                                <option value="">— Select Type —</option>
-                                <option value="مركز صحة الاسرة">مركز صحة الاسرة</option>
-                                <option value="مستشفى ريفي">مستشفى ريفي</option>
-                                <option value="وحدة صحة الاسرة">وحدة صحة الاسرة</option>
-                                <option value="مستشفى">مستشفى</option>
+
+                        {/* State */}
+                        <FormGroup label="State">
+                             <Select value={state} onChange={(e) => {
+                                setState(e.target.value);
+                                setLocality(''); // Reset locality
+                                setCenter(''); // Reset facility name
+                                setSelectedFacility(null); // Clear selected facility object
+                                setFacilitiesInLocality([]); // Clear facility list
+                             }}>
+                                <option value="">— Select State —</option>
+                                {Object.keys(STATE_LOCALITIES).sort((a,b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar)).map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar}</option>)}
                             </Select>
                         </FormGroup>
-                        <FormGroup label="Previously trained in IMCI?"><Select value={trainedIMNCI} onChange={(e) => setTrainedIMNCI(e.target.value)}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                        {trainedIMNCI === 'yes' && <FormGroup label="Date of last training"><Input type="date" value={lastTrainIMNCI} onChange={(e) => setLastTrainIMNCI(e.target.value)} /></FormGroup>}
-                        <FormGroup label="Number of provider at health center including the current participant"><Input type="number" min="1" value={numProv} onChange={(e) => setNumProv(Number(e.target.value || 1))} /></FormGroup>
-                        <FormGroup label="Number of providers trained in IMCI (not including current COURSE)"><Input type="number" min="0" value={numProvIMNCI} onChange={(e) => setNumProvIMNCI(Number(e.target.value || 0))} /></FormGroup>
-                        
-                        <div className="md:col-span-2 lg:col-span-3 my-4 p-4 border rounded-md bg-gray-50">
-                            <h3 className="text-lg font-semibold mb-3 border-b pb-2">Facility Services & Equipment</h3>
-                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                <FormGroup label="Has therapeutic nutrition service?"><Select value={hasNutri ? 'yes' : 'no'} onChange={e => setHasNutri(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                                {!hasNutri && <FormGroup label="Nearest therapeutic nutrition center?"><Input value={nearestNutri} onChange={e => setNearestNutri(e.target.value)} /></FormGroup>}
-                                <FormGroup label="Has immunization service?"><Select value={hasImm ? 'yes' : 'no'} onChange={e => setHasImm(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                                {!hasImm && <FormGroup label="Nearest immunization center?"><Input value={nearestImm} onChange={e => setNearestImm(e.target.value)} /></FormGroup>}
-                                <FormGroup label="Has ORS corner service?"><Select value={hasORS ? 'yes' : 'no'} onChange={e => setHasORS(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                                <FormGroup label="خدمة متابعة النمو (Growth Monitoring)"><Select value={hasGrowthMonitoring ? 'yes' : 'no'} onChange={e => setHasGrowthMonitoring(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                                <FormGroup label="ميزان وزن (Weighting scale)"><Select value={hasWeightScale ? 'yes' : 'no'} onChange={e => setHasWeightScale(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                                <FormGroup label="ميزان طول (Height scale)"><Select value={hasHeightScale ? 'yes' : 'no'} onChange={e => setHasHeightScale(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                                <FormGroup label="ميزان حرارة (Thermometer)"><Select value={hasThermometer ? 'yes' : 'no'} onChange={e => setHasThermometer(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                                <FormGroup label="ساعة مؤقت (Timer)"><Select value={hasTimer ? 'yes' : 'no'} onChange={e => setHasTimer(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+
+                        {/* Locality */}
+                        <FormGroup label="Locality">
+                            <Select value={locality} onChange={(e) => {
+                                setLocality(e.target.value);
+                                setCenter(''); // Reset facility name
+                                setSelectedFacility(null); // Clear selected facility object
+                            }} disabled={!state}>
+                                <option value="">— Select Locality —</option>
+                                {(STATE_LOCALITIES[state]?.localities || []).sort((a,b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
+                            </Select>
+                        </FormGroup>
+
+                        {/* Facility Name */}
+                        <FormGroup label={isEtat ? "Hospital Name" : "Health Facility Name"}>
+                            <SearchableSelect
+                                value={selectedFacility?.id || ''}
+                                onChange={handleFacilitySelect}
+                                options={facilityOptionsForSelect}
+                                placeholder={isLoadingFacilities ? "Loading..." : (!locality ? "Select Locality first" : "Search or Add New Facility...")}
+                                disabled={isLoadingFacilities || !locality}
+                            />
+                        </FormGroup>
+
+                        {/* Participant Name */}
+                        <FormGroup label="Participant Name">
+                            <CreatableNameInput
+                                value={name}
+                                onChange={setName}
+                                onSelect={handleHealthWorkerSelect}
+                                options={useMemo(() => {
+                                     if (!selectedFacility?.imnci_staff) return [];
+                                     try {
+                                         let staff = typeof selectedFacility.imnci_staff === 'string'
+                                             ? JSON.parse(selectedFacility.imnci_staff)
+                                             : selectedFacility.imnci_staff;
+                                        return Array.isArray(staff) ? staff : [];
+                                     } catch (e) { return []; }
+                                 }, [selectedFacility?.imnci_staff])}
+                                disabled={!selectedFacility || selectedFacility.id.startsWith('pending_')} // Disable if pending facility selected
+                            />
+                             {isEditingExistingWorker && <p className="text-sm text-blue-600 mt-1">Editing staff member info.</p>}
+                             {!selectedFacility && !isLoadingFacilities && locality && <p className="text-sm text-orange-600 mt-1">Select or add a facility to search existing staff.</p>}
+                        </FormGroup>
+
+                        {/* Job Title */}
+                        <FormGroup label="Job Title">
+                             <Select value={job} onChange={(e) => setJob(e.target.value)} disabled={isEditingExistingWorker}>
+                                <option value="">— Select Job —</option>
+                                {jobTitleOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                <option value="Other">Other</option>
+                            </Select>
+                        </FormGroup>
+                        {job === 'Other' && (
+                            <FormGroup label="Specify Job Title">
+                                <Input value={otherJobTitle} onChange={(e) => setOtherJobTitle(e.target.value)} placeholder="Please specify" disabled={isEditingExistingWorker} />
+                            </FormGroup>
+                        )}
+
+                        {/* Phone & Email */}
+                        <FormGroup label="Phone Number"><Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} disabled={isEditingExistingWorker} /></FormGroup>
+                        <FormGroup label="Email (Optional)"><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></FormGroup>
+
+                        {/* Scores */}
+                        {showTestScores && (
+                            <>
+                                <FormGroup label="Pre-Test Score (%)"><Input type="number" min="0" max="100" value={preTestScore} onChange={(e) => setPreTestScore(e.target.value)} /></FormGroup>
+                                <FormGroup label="Post-Test Score (%)"><Input type="number" min="0" max="100" value={postTestScore} onChange={(e) => setPostTestScore(e.target.value)} /></FormGroup>
+                            </>
+                        )}
+
+                        {/* --- Service Specific Sections --- */}
+                        {isImnci && (<>
+                            <FormGroup label="IMCI Course Sub-type">
+                                <Select value={imciSubType} onChange={(e) => setImciSubType(e.target.value)}>
+                                    {IMNCI_SUBCOURSE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
+                                </Select>
+                            </FormGroup>
+                            <FormGroup label="Facility Type">
+                                <Select value={facilityType} onChange={(e) => setFacilityType(e.target.value)} disabled={!!selectedFacility /* Disable if facility selected, let it auto-fill */}>
+                                     <option value="">— Select Type —</option>
+                                     <option value="مركز صحة الاسرة">مركز صحة الاسرة</option>
+                                     <option value="مستشفى ريفي">مستشفى ريفي</option>
+                                     <option value="وحدة صحة الاسرة">وحدة صحة الاسرة</option>
+                                     <option value="مستشفى">مستشفى</option>
+                                </Select>
+                            </FormGroup>
+                            <FormGroup label="Previously trained in IMNCI?">
+                                <Select value={trainedIMNCI} onChange={(e) => setTrainedIMNCI(e.target.value)} disabled={isEditingExistingWorker}>
+                                    <option value="no">No</option><option value="yes">Yes</option>
+                                </Select>
+                            </FormGroup>
+                            {trainedIMNCI === 'yes' && <FormGroup label="Date of last training"><Input type="date" value={lastTrainIMNCI} onChange={(e) => setLastTrainIMNCI(e.target.value)} disabled={isEditingExistingWorker}/></FormGroup>}
+                            <FormGroup label="Total Providers at Facility (incl. this participant)">
+                                <Input type="number" min="1" value={numProv} onChange={(e) => setNumProv(Number(e.target.value || 1))} />
+                            </FormGroup>
+                            <FormGroup label="IMCI Trained Providers at Facility (excl. current course)">
+                                <Input type="number" min="0" value={numProvIMNCI} onChange={(e) => setNumProvIMNCI(Number(e.target.value || 0))} />
+                            </FormGroup>
+
+                            {/* Facility Services Sub-section */}
+                            <div className="md:col-span-2 lg:col-span-3 my-4 p-4 border rounded-md bg-gray-50">
+                                <h3 className="text-lg font-semibold mb-3 border-b pb-2">Facility Services & Equipment (IMNCI Related)</h3>
+                                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    <FormGroup label="Has therapeutic nutrition service?"><Select value={hasNutri ? 'yes' : 'no'} onChange={e => setHasNutri(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                                    {!hasNutri && <FormGroup label="Nearest therapeutic nutrition center?"><Input value={nearestNutri} onChange={e => setNearestNutri(e.target.value)} /></FormGroup>}
+                                    <FormGroup label="Has immunization service?"><Select value={hasImm ? 'yes' : 'no'} onChange={e => setHasImm(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                                    {!hasImm && <FormGroup label="Nearest immunization center?"><Input value={nearestImm} onChange={e => setNearestImm(e.target.value)} /></FormGroup>}
+                                    <FormGroup label="Has ORS corner service?"><Select value={hasORS ? 'yes' : 'no'} onChange={e => setHasORS(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                                    <FormGroup label="Growth Monitoring Service"><Select value={hasGrowthMonitoring ? 'yes' : 'no'} onChange={e => setHasGrowthMonitoring(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                                    <FormGroup label="Weighting scale"><Select value={hasWeightScale ? 'yes' : 'no'} onChange={e => setHasWeightScale(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                                    <FormGroup label="Height scale"><Select value={hasHeightScale ? 'yes' : 'no'} onChange={e => setHasHeightScale(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                                    <FormGroup label="Thermometer"><Select value={hasThermometer ? 'yes' : 'no'} onChange={e => setHasThermometer(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                                    <FormGroup label="Timer"><Select value={hasTimer ? 'yes' : 'no'} onChange={e => setHasTimer(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                                </div>
                             </div>
-                        </div>
-                    </>)}
+                        </>)}
 
-                     {isEtat && (<>
-                        <FormGroup label="Hospital Type"><Select value={hospitalTypeEtat} onChange={e => setHospitalTypeEtat(e.target.value)}><option value="">— Select Type —</option><option>Pediatric Hospital</option><option>Pediatric Department in General Hospital</option><option>Rural Hospital</option><option>other</option></Select></FormGroup>
-                        <FormGroup label="Previously trained on ETAT?"><Select value={trainedEtat} onChange={e => setTrainedEtat(e.target.value)}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                        {trainedEtat === 'yes' && <FormGroup label="Date of last ETAT training"><Input type="date" value={lastTrainEtat} onChange={(e) => setLastTrainEtat(e.target.value)} /></FormGroup>}
-                        <FormGroup label="Does hospital have a current triaging system?"><Select value={hasTriageSystem ? 'yes' : 'no'} onChange={e => setHasTriageSystem(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                        <FormGroup label="Does hospital have a stabilization center for malnutrition?"><Select value={hasStabilizationCenter ? 'yes' : 'no'} onChange={e => setHasStabilizationCenter(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                        <FormGroup label="Does hospital have a high dependency unit?"><Select value={hasHdu ? 'yes' : 'no'} onChange={e => setHasHdu(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                        <FormGroup label={`Number of ${professionalCategory}s working in Emergency Room`}><Input type="number" min="0" value={numStaffInEr} onChange={e => setNumStaffInEr(Number(e.target.value || 0))} /></FormGroup>
-                        <FormGroup label={`Number of ${professionalCategory}s trained in ETAT`}><Input type="number" min="0" value={numStaffTrainedInEtat} onChange={e => setNumStaffTrainedInEtat(Number(e.target.value || 0))} /></FormGroup>
-                    </>)}
+                         {isEtat && (<>
+                             <FormGroup label="Hospital Type"><Select value={hospitalTypeEtat} onChange={e => setHospitalTypeEtat(e.target.value)}><option value="">— Select Type —</option><option>Pediatric Hospital</option><option>Pediatric Department in General Hospital</option><option>Rural Hospital</option><option>other</option></Select></FormGroup>
+                             <FormGroup label="Previously trained on ETAT?"><Select value={trainedEtat} onChange={e => setTrainedEtat(e.target.value)}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                             {trainedEtat === 'yes' && <FormGroup label="Date of last ETAT training"><Input type="date" value={lastTrainEtat} onChange={(e) => setLastTrainEtat(e.target.value)} /></FormGroup>}
+                             <FormGroup label="Has Triage System?"><Select value={hasTriageSystem ? 'yes' : 'no'} onChange={e => setHasTriageSystem(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                             <FormGroup label="Has Malnutrition Stabilization Center?"><Select value={hasStabilizationCenter ? 'yes' : 'no'} onChange={e => setHasStabilizationCenter(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                             <FormGroup label="Has High Dependency Unit (HDU)?"><Select value={hasHdu ? 'yes' : 'no'} onChange={e => setHasHdu(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                             <FormGroup label={`# ${professionalCategory}s in ER`}><Input type="number" min="0" value={numStaffInEr} onChange={e => setNumStaffInEr(Number(e.target.value || 0))} /></FormGroup>
+                             <FormGroup label={`# ${professionalCategory}s trained in ETAT`}><Input type="number" min="0" value={numStaffTrainedInEtat} onChange={e => setNumStaffTrainedInEtat(Number(e.target.value || 0))} /></FormGroup>
+                        </>)}
 
-               {isEenc && (<>
-                        <FormGroup label="Hospital Type"><Select value={hospitalTypeEenc} onChange={e => setHospitalTypeEenc(e.target.value)}><option value="">— Select Type —</option><option>Comprehensive EmONC</option><option>Basic EmONC</option><option value="other">Other (specify)</option></Select></FormGroup>
-                        {hospitalTypeEenc === 'other' && <FormGroup label="Specify Hospital Type"><Input value={otherHospitalTypeEenc} onChange={e => setOtherHospitalTypeEenc(e.target.value)} /></FormGroup>}
-                        <FormGroup label="Previously trained on EENC?"><Select value={trainedEENC} onChange={e => setTrainedEENC(e.target.value)}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                        {trainedEENC === 'yes' && <FormGroup label="Date of last EENC training"><Input type="date" value={lastTrainEENC} onChange={(e) => setLastTrainEENC(e.target.value)} /></FormGroup>}
-                        <FormGroup label="Does hospital have a Special Newborn Care Unit (SNCU)?"><Select value={hasSncu ? 'yes' : 'no'} onChange={e => setHasSncu(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                        <FormGroup label="Does hospital have an IYCF center?"><Select value={hasIycfCenter ? 'yes' : 'no'} onChange={e => setHasIycfCenter(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                        <FormGroup label="Does hospital have a Kangaroo care room?"><Select value={hasKangaroo ? 'yes' : 'no'} onChange={e => setHasKangaroo(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                        <FormGroup label={`Number of ${professionalCategory}s working in delivery room`}><Input type="number" min="0" value={numStaffInDelivery} onChange={e => setNumStaffInDelivery(Number(e.target.value || 0))} /></FormGroup>
-                        <FormGroup label={`Number of ${professionalCategory}s trained in EENC`}><Input type="number" min="0" value={numStaffTrainedInEenc} onChange={e => setNumStaffTrainedInEenc(Number(e.target.value || 0))} /></FormGroup>
-                    </>)}
+                         {isEenc && (<>
+                            <FormGroup label="Hospital Type"><Select value={hospitalTypeEenc} onChange={e => setHospitalTypeEenc(e.target.value)}><option value="">— Select Type —</option><option>Comprehensive EmONC</option><option>Basic EmONC</option><option value="other">Other (specify)</option></Select></FormGroup>
+                            {hospitalTypeEenc === 'other' && <FormGroup label="Specify Hospital Type"><Input value={otherHospitalTypeEenc} onChange={e => setOtherHospitalTypeEenc(e.target.value)} /></FormGroup>}
+                            <FormGroup label="Previously trained on EENC?"><Select value={trainedEENC} onChange={e => setTrainedEENC(e.target.value)}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                            {trainedEENC === 'yes' && <FormGroup label="Date of last EENC training"><Input type="date" value={lastTrainEENC} onChange={(e) => setLastTrainEENC(e.target.value)} /></FormGroup>}
+                            <FormGroup label="Has Special Newborn Care Unit (SNCU)?"><Select value={hasSncu ? 'yes' : 'no'} onChange={e => setHasSncu(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                            <FormGroup label="Has IYCF Center?"><Select value={hasIycfCenter ? 'yes' : 'no'} onChange={e => setHasIycfCenter(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                            <FormGroup label="Has Kangaroo Care Room?"><Select value={hasKangaroo ? 'yes' : 'no'} onChange={e => setHasKangaroo(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                            <FormGroup label={`# ${professionalCategory}s in Delivery Room`}><Input type="number" min="0" value={numStaffInDelivery} onChange={e => setNumStaffInDelivery(Number(e.target.value || 0))} /></FormGroup>
+                            <FormGroup label={`# ${professionalCategory}s trained in EENC`}><Input type="number" min="0" value={numStaffTrainedInEenc} onChange={e => setNumStaffTrainedInEenc(Number(e.target.value || 0))} /></FormGroup>
+                        </>)}
+                    </div>
+                    {/* Submit Buttons */}
+                    <div className="flex gap-2 justify-end mt-6 border-t pt-6">
+                        <Button variant="secondary" onClick={onCancel}>Cancel</Button>
+                        <Button onClick={submit}>Save Participant</Button>
+                    </div>
                 </div>
-                <div className="flex gap-2 justify-end mt-6 border-t pt-6"><Button variant="secondary" onClick={onCancel}>Cancel</Button><Button onClick={submit}>Save Participant</Button></div>
-            </div>
-        </Card>
+            </Card>
+        </>
     );
 }
