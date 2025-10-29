@@ -649,6 +649,44 @@ const calculateScores = (formData) => {
 // --- END: calculateScores function (Corrected) ---
 
 
+// --- START: New helper function to find incomplete treatment skills ---
+const findIncompleteTreatmentSkills = (formData) => {
+    const treatmentGroup = IMNCI_FORM_STRUCTURE.find(g => g.sectionKey === 'treatment_skills');
+    if (!treatmentGroup) return [];
+
+    const incomplete = [];
+    const sectionData = formData.treatment_skills || {};
+
+    treatmentGroup.subgroups.forEach(subgroup => {
+        let isSubgroupRelevant = true;
+        if (subgroup.relevant) {
+            isSubgroupRelevant = typeof subgroup.relevant === 'function'
+                ? subgroup.relevant(formData)
+                : evaluateRelevance(subgroup.relevant, formData);
+        }
+
+        if (isSubgroupRelevant && Array.isArray(subgroup.skills)) {
+            subgroup.skills.forEach(skill => {
+                let isSkillRelevant = true; // Inherit subgroup relevance
+                if (skill.relevant) { // Only check skill relevance if subgroup is relevant
+                    isSkillRelevant = typeof skill.relevant === 'function'
+                        ? skill.relevant(formData)
+                        : evaluateRelevance(skill.relevant, formData);
+                }
+
+                // If the skill is relevant and its value is empty, it's incomplete.
+                // 'na' is a valid, complete answer.
+                if (isSkillRelevant && (!sectionData[skill.key] || sectionData[skill.key] === '')) {
+                    incomplete.push(skill.label);
+                }
+            });
+        }
+    });
+    return incomplete;
+};
+// --- END: New helper function ---
+
+
 // --- Form Component Start (MODIFIED) ---
 const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in forwardRef
     const { // MODIFIED: Destructure props
@@ -1215,29 +1253,50 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
     // --- Submit handler for final save ---
     const handleSubmit = async (e) => {
         e.preventDefault();
-        // Validation for multi-selects
-        const { assessment_skills } = formData;
-        const isMultiSelectGroupEmpty = (obj) => !obj || !Object.values(obj).some(v => v === true);
 
-        if (assessment_skills.supervisor_confirms_diarrhea === 'yes' && isMultiSelectGroupEmpty(assessment_skills.worker_diarrhea_classification)) {
-             setToast({ show: true, message: 'الرجاء تحديد تصنيف الإسهال (للعامل الصحي).', type: 'error' }); return;
+        // --- START: NEW COMPREHENSIVE VALIDATION ---
+        const validationMessages = [];
+
+        // 1. Check all assessment and decision steps
+        if (!isVitalSignsComplete(formData)) validationMessages.push('خطوة 1: القياسات الجسمانية والحيوية');
+        if (!isDangerSignsComplete(formData)) validationMessages.push('خطوة 2: علامات الخطورة العامة');
+        if (!isMainSymptomsComplete(formData)) validationMessages.push('خطوة 3: الأعراض الأساسية (بما في ذلك التصنيفات)');
+        if (!isMalnutritionComplete(formData)) validationMessages.push('خطوة 4: سوء التغذية الحاد (بما في ذلك التصنيفات)');
+        if (!isAnemiaComplete(formData)) validationMessages.push('خطوة 5: فقر الدم (بما في ذلك التصنيفات)');
+        if (!isImmunizationComplete(formData)) validationMessages.push('خطوة 6: التطعيم وفيتامين أ');
+        if (!isOtherProblemsComplete(formData)) validationMessages.push('خطوة 7: الأمراض الأخرى');
+        if (!isDecisionComplete(formData)) validationMessages.push('خطوة 8: القرار النهائي');
+
+        // 2. Check Treatment Step (Step 9)
+        // This function finds relevant skills where the answer is ''
+        const incompleteTreatment = findIncompleteTreatmentSkills(formData);
+        if (incompleteTreatment.length > 0) {
+            // To avoid a giant list, just show the first few.
+            const itemsToShow = 3;
+            const firstIncomplete = incompleteTreatment.slice(0, itemsToShow).join('، ');
+            const moreCount = incompleteTreatment.length - itemsToShow;
+            
+            let treatmentError = `خطوة 9: حقول العلاج والنصح (ناقص: ${firstIncomplete}`;
+            if (moreCount > 0) {
+                treatmentError += ` و ${moreCount} أخرى...`;
+            }
+            treatmentError += ')';
+            validationMessages.push(treatmentError);
         }
-        if (assessment_skills.supervisor_confirms_diarrhea === 'yes' && assessment_skills.skill_classify_diarrhea === 'no' && isMultiSelectGroupEmpty(assessment_skills.supervisor_correct_diarrhea_classification)) {
-             setToast({ show: true, message: 'الرجاء تحديد تصنيف الإسهال الصحيح (للمشرف).', type: 'error' }); return;
+        
+        // 3. Show Toast and block submission if any errors
+        if (validationMessages.length > 0) {
+            const errorMessage = `لا يمكن الحفظ. الرجاء إكمال الأقسام التالية: \n- ${validationMessages.join('\n- ')}`;
+            setToast({ 
+                show: true, 
+                message: errorMessage, 
+                type: 'error',
+                duration: 10000 // Give user time to read
+            });
+            // Do NOT set setIsSaving(true)
+            return; // Block submission
         }
-        if (assessment_skills.supervisor_confirms_fever === 'yes' && isMultiSelectGroupEmpty(assessment_skills.worker_fever_classification)) {
-             setToast({ show: true, message: 'الرجاء تحديد تصنيف الحمى (للعامل الصحي).', type: 'error' }); return;
-        }
-        if (assessment_skills.supervisor_confirms_fever === 'yes' && assessment_skills.skill_classify_fever === 'no' && isMultiSelectGroupEmpty(assessment_skills.supervisor_correct_fever_classification)) {
-            setToast({ show: true, message: 'الرجاء تحديد تصنيف الحمى الصحيح (للمشرف).', type: 'error' }); return;
-        }
-        // Add checks for single-select classifications if needed
-        if (assessment_skills.skill_mal_classify === 'no' && !assessment_skills.supervisor_correct_malnutrition_classification) {
-             setToast({ show: true, message: 'الرجاء تحديد تصنيف سوء التغذية الصحيح (للمشرف).', type: 'error' }); return;
-        }
-         if (assessment_skills.skill_anemia_classify === 'no' && !assessment_skills.supervisor_correct_anemia_classification) {
-             setToast({ show: true, message: 'الرجاء تحديد تصنيف فقر الدم الصحيح (للمشرف).', type: 'error' }); return;
-        }
+        // --- END: NEW COMPREHENSIVE VALIDATION ---
 
 
         setIsSaving(true);

@@ -1341,8 +1341,8 @@ export async function saveParticipantAndSubmitFacilityUpdate(participantData, fa
     const participantId = await upsertParticipant(participantData);
     if (facilityUpdateData) {
         // Assume submitterIdentifier is needed, get from auth or pass as arg
-        const auth = getAuth();
-        const user = auth.currentUser;
+        // const auth = getAuth(); // <- CORRECTED
+        const user = firebaseAuth.currentUser; // <- CORRECTED
         const submitter = user ? (user.displayName || user.email) : 'Participant Form';
         await submitFacilityDataForApproval(facilityUpdateData, submitter);
     }
@@ -1362,8 +1362,8 @@ export async function bulkMigrateFromMappings(mappings, options = { dryRun: fals
         errorDetails: [],
         previewPayloads: []
     };
-    const auth = getAuth(); // Get auth instance
-    const currentUser = auth.currentUser; // Get current user
+    // const auth = getAuth(); // Get auth instance // <- CORRECTED
+    const currentUser = firebaseAuth.currentUser; // Get current user // <- CORRECTED
     const submitterIdentifier = currentUser ? (currentUser.displayName || currentUser.email) : 'Bulk Migration'; // Set submitter
 
 
