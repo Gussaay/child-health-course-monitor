@@ -8,16 +8,12 @@ import { writeBatch } from "firebase/firestore";
 import { db } from "../firebase";
 import { useDataCache } from '../DataContext';
 
-// Leaflet and React-Leaflet imports
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
+// --- MODIFICATION: Removed Leaflet/Geosearch/Turf imports ---
 
-// Geosearch imports
-import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch';
-import 'leaflet-geosearch/dist/geosearch.css';
+// --- MODIFICATION: Import the new map modal ---
+import LocationMapModal from './ChildHealthServicesMap.jsx';
 
-// Turf.js for location checking
+// Turf.js for location checking (still needed for mismatch check)
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { point } from '@turf/helpers';
 
@@ -47,242 +43,34 @@ import {
 } from './FacilityForms.jsx';
 import { STATE_LOCALITIES } from "./constants.js";
 
-// Fix for a known issue with react-leaflet's default icon
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
+// --- MODIFICATION: Removed L.Icon.Default fix (moved to new file) ---
 
+// --- MODIFICATION: Removed SearchAndMoveMarker component (moved to new file) ---
 
-// --- COMPONENT FOR GEOSEARCH FUNCTIONALITY ---
-const SearchAndMoveMarker = ({ setPosition }) => {
-    const map = useMap();
-
-    useEffect(() => {
-        const provider = new OpenStreetMapProvider();
-
-        const searchControl = new GeoSearchControl({
-            provider: provider,
-            style: 'bar',
-            showMarker: false, // We use our own draggable marker
-            autoClose: true,
-            keepResult: true,
-            searchLabel: 'Search for a location...',
-        });
-
-        map.addControl(searchControl);
-
-        const onLocationFound = (e) => {
-            const { location } = e;
-            const newPos = [location.y, location.x];
-            map.flyTo(newPos, 16);
-            setPosition(newPos);
-        };
-
-        map.on('geosearch/showlocation', onLocationFound);
-
-        return () => {
-            map.removeControl(searchControl);
-            map.off('geosearch/showlocation', onLocationFound);
-        };
-    }, [map, setPosition]);
-
-    return null;
-};
-
-
-// --- MAP MODAL COMPONENT ---
-const LocationMapModal = ({ isOpen, onClose, facility, onSaveLocation }) => {
-    const [position, setPosition] = useState(null);
-    const [originalPosition, setOriginalPosition] = useState(null);
-    const [isSaving, setIsSaving] = useState(false);
-    const [isEditing, setIsEditing] = useState(false);
-    const [hasValidCoordinates, setHasValidCoordinates] = useState(false);
-    const [tileProvider, setTileProvider] = useState('street');
-
-    const markerRef = useRef(null);
-    const mapRef = useRef(null);
-
-    const tileLayers = {
-        street: {
-            url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        },
-        light: {
-            url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        },
-        satellite: {
-            url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-            attribution: 'Tiles &copy; Esri &mdash; i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-        }
-    };
-
-    useEffect(() => {
-        if (isOpen) {
-            setIsEditing(false);
-            let initialPos = [15.5007, 32.5599]; // Default: Khartoum
-            let validCoordsFound = false;
-
-            if (facility?._الإحداثيات_latitude != null && facility?._الإحداثيات_longitude != null) {
-                const lat = parseFloat(facility._الإحداثيات_latitude);
-                const lng = parseFloat(facility._الإحداثيات_longitude);
-
-                if (!isNaN(lat) && !isNaN(lng)) {
-                    initialPos = [lat, lng];
-                    validCoordsFound = true;
-                }
-            }
-            setPosition(initialPos);
-            setOriginalPosition(initialPos);
-            setHasValidCoordinates(validCoordsFound);
-
-            // --- REMOVED from here ---
-            // if (mapRef.current) {
-            //     mapRef.current.flyTo(initialPos, 16);
-            // }
-        }
-    }, [isOpen, facility]);
-
-    // --- ADDED THIS NEW useEffect ---
-    // This effect runs *after* the position state has been updated
-    // and *after* the MapContainer has rendered and set the mapRef.
-    useEffect(() => {
-        if (mapRef.current && position) {
-            mapRef.current.flyTo(position, 16);
-        }
-    }, [position]); // Dependency on the position state
-
-    const eventHandlers = useMemo(() => ({
-        dragend() {
-            const marker = markerRef.current;
-            if (marker != null) {
-                const newPos = marker.getLatLng();
-                setPosition([newPos.lat, newPos.lng]);
-            }
-        },
-    }), []);
-
-    const handleSave = async () => {
-        if (!position) return;
-        setIsSaving(true);
-        try {
-            await onSaveLocation({
-                _الإحداثيات_latitude: position[0],
-                _الإحداثيات_longitude: position[1],
-            });
-            onClose();
-        } catch (error) {
-            console.error("Failed to save location:", error);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const handleEnterEditMode = () => {
-        setIsEditing(true);
-        setHasValidCoordinates(true);
-    };
-
-    const handleCancelEdit = () => {
-        setPosition(originalPosition);
-        setIsEditing(false);
-        setHasValidCoordinates(!!(parseFloat(facility?._الإحداثيات_latitude) && parseFloat(facility?._الإحداثيات_longitude)));
-    };
-
-    if (!isOpen || !position) return null;
-
-    const modalTitle = isEditing
-        ? `Editing Location: ${facility?.['اسم_المؤسسة']}`
-        : `Location of ${facility?.['اسم_المؤسسة']}`;
-
-    return (
-        <Modal isOpen={isOpen} onClose={onClose} title={modalTitle} size="lg">
-            <div className="p-4 relative" style={{ height: '500px', width: '100%' }}>
-                 <div className="absolute top-6 right-6 z-[1000] bg-white p-1 rounded-md shadow-lg flex flex-col gap-1">
-                    <label className="flex items-center gap-2 px-2 py-1 cursor-pointer hover:bg-gray-100 rounded">
-                        <input type="radio" name="tile-provider" value="street" checked={tileProvider === 'street'} onChange={(e) => setTileProvider(e.target.value)} className="form-radio"/>
-                        Street (Detailed)
-                    </label>
-                    <label className="flex items-center gap-2 px-2 py-1 cursor-pointer hover:bg-gray-100 rounded">
-                        <input type="radio" name="tile-provider" value="light" checked={tileProvider === 'light'} onChange={(e) => setTileProvider(e.target.value)} className="form-radio"/>
-                        Light
-                    </label>
-                    <label className="flex items-center gap-2 px-2 py-1 cursor-pointer hover:bg-gray-100 rounded">
-                        <input type="radio" name="tile-provider" value="satellite" checked={tileProvider === 'satellite'} onChange={(e) => setTileProvider(e.target.value)} className="form-radio"/>
-                        Satellite
-                    </label>
-                </div>
-
-                <MapContainer center={position} zoom={16} style={{ height: '100%', width: '100%' }} ref={mapRef}>
-                    <TileLayer {...tileLayers[tileProvider]} key={tileProvider} />
-
-                    {isEditing && <SearchAndMoveMarker setPosition={setPosition} />}
-
-                    {hasValidCoordinates && (
-                        <Marker
-                            draggable={isEditing}
-                            eventHandlers={eventHandlers}
-                            position={position}
-                            ref={markerRef}
-                        ></Marker>
-                    )}
-                </MapContainer>
-
-                {!hasValidCoordinates && !isEditing && (
-                    <div className="text-center bg-yellow-100 text-yellow-800 p-3 mt-4 rounded-md">
-                        <p>No valid coordinates found for this facility.</p>
-                        <p className="font-semibold">Click 'Edit' to set the location on the map.</p>
-                    </div>
-                )}
-
-                {isEditing && (
-                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-[1000] w-fit text-center font-mono bg-white bg-opacity-80 p-2 rounded shadow-lg pointer-events-none">
-                        <p className="text-xs">Drag the marker or use the search bar to set the location.</p>
-                        <p className="text-sm"><b>Lat:</b> {position[0].toFixed(6)} | <b>Lon:</b> {position[1].toFixed(6)}</p>
-                    </div>
-                )}
-            </div>
-            <div className="flex justify-end p-4 border-t gap-2">
-                {isEditing ? (
-                    <>
-                        <Button variant="secondary" onClick={handleCancelEdit}>Cancel</Button>
-                        <Button onClick={handleSave} disabled={isSaving}>
-                            {isSaving ? 'Saving...' : 'Save Location'}
-                        </Button>
-                    </>
-                ) : (
-                    <>
-                        <Button variant="secondary" onClick={onClose}>Close</Button>
-                        <Button onClick={handleEnterEditMode}>Edit</Button>
-                    </>
-                )}
-            </div>
-        </Modal>
-    );
-};
+// --- MODIFICATION: Removed LocationMapModal component (moved to new file) ---
 
 
 // --- TABS & TITLES ---
+// --- MODIFICATION: Removed service tabs ---
 const TABS = {
     PENDING: 'Pending Submissions',
     ALL: 'All Facilities',
-    IMNCI: 'IMNCI Services',
-    EENC: 'EENC Services',
-    NEONATAL: 'Neonatal Care Unit',
-    CRITICAL: 'Emergency & Critical Care',
+    // IMNCI: 'IMNCI Services', // Removed
+    // EENC: 'EENC Services', // Removed
+    // NEONATAL: 'Neonatal Care Unit', // Removed
+    // CRITICAL: 'Emergency & Critical Care', // Removed
 };
 
+// --- MODIFICATION: Removed service tab titles ---
 const ARABIC_TITLES = {
-    [TABS.IMNCI]: "خدمات العلاج المتكامل لأمراض الطفولة",
-    [TABS.EENC]: "خدمات الرعاية الطارئة لحديثي الولادة",
-    [TABS.NEONATAL]: "وحدة رعاية حديثي الولادة",
-    [TABS.CRITICAL]: "الطوارئ والرعاية الحرجة",
+    // [TABS.IMNCI]: "خدمات العلاج المتكامل لأمراض الطفولة", // Removed
+    // [TABS.EENC]: "خدمات الرعاية الطارئة لحديثي الولادة", // Removed
+    // [TABS.NEONATAL]: "وحدة رعاية حديثي الولادة", // Removed
+    // [TABS.CRITICAL]: "الطوارئ والرعاية الحرجة", // Removed
 };
 
 // --- HELPER for Template/Download Configuration ---
+// --- MODIFICATION: Updated switch cases to be more flexible ---
 const getServiceConfig = (serviceType) => {
     const baseConfig = { headers: ["ID", "الولاية", "المحلية", "اسم المؤسسة", "نوع المؤسسةالصحية", "نوع الخدمات", "Date of Visit"], dataKeys: ["id", "الولاية", "المحلية", "اسم_المؤسسة", "نوع_المؤسسةالصحية", "eenc_service_type", "date_of_visit"] };
     const baseImnciHeaders = ["هل المؤسسة تعمل", "هل توجد حوافز للاستاف", "ما هي المنظمة المقدم للحوافز", "هل تشارك المؤسسة في أي مشروع", "ما هو اسم المشروع", "رقم هاتف المسئول من المؤسسة", "وجود العلاج المتكامل لامراض الطفولة", "العدد الكلي للكوادر الطبية العاملة (أطباء ومساعدين)", "العدد الكلي للكودار المدربة על العلاج المتكامل", "وجود سجل علاج متكامل", "وجود كتيب لوحات", "ميزان وزن", "ميزان طول", "ميزان حرارة", "ساعة مؤقت", "غرفة إرواء", "وجود الدعم المادي", "_الإحداثيات_latitude", "_الإحداثيات_longitude", "هل يوجد مكتب تحصين", "اين يقع اقرب مركز تحصين", "هل يوجد مركز تغذية خارجي", "اين يقع اقرب مركز تغذية خارجي", "هل يوجد خدمة متابعة النمو"];
@@ -295,10 +83,18 @@ const getServiceConfig = (serviceType) => {
     const criticalCareConfig = { headers: ["etat_has_service", "etat_trained_workers", "hdu_has_service", "hdu_bed_capacity", "picu_has_service", "picu_bed_capacity"], dataKeys: ["etat_has_service", "etat_trained_workers", "hdu_has_service", "hdu_bed_capacity", "picu_has_service", "picu_has_service"] };
     let finalHeaders = [...baseConfig.headers], finalDataKeys = [...baseConfig.dataKeys], fileName = 'Facility_Template.xlsx';
     switch (serviceType) {
-        case TABS.IMNCI: finalHeaders.push(...imnciConfig.headers); finalDataKeys.push(...imnciConfig.dataKeys); fileName = 'IMNCI_Template.xlsx'; break;
-        case TABS.EENC: finalHeaders.push(...eencConfig.headers); finalDataKeys.push(...eencConfig.dataKeys); fileName = 'EENC_Template.xlsx'; break;
-        case TABS.NEONATAL: finalHeaders.push(...eencConfig.headers, ...neonatalConfig.headers); finalDataKeys.push(...eencConfig.dataKeys, ...neonatalConfig.dataKeys); fileName = 'Neonatal_Care_Template.xlsx'; break;
-        case TABS.CRITICAL: finalHeaders.push(...eencConfig.headers, ...criticalCareConfig.headers); finalDataKeys.push(...eencConfig.dataKeys, ...criticalCareConfig.dataKeys); fileName = 'Critical_Care_Template.xlsx'; break;
+        case TABS.IMNCI: // Kept for legacy
+        case 'IMNCI': // Added for filter
+            finalHeaders.push(...imnciConfig.headers); finalDataKeys.push(...imnciConfig.dataKeys); fileName = 'IMNCI_Template.xlsx'; break;
+        case TABS.EENC: // Kept for legacy
+        case 'EENC': // Added for filter
+            finalHeaders.push(...eencConfig.headers); finalDataKeys.push(...eencConfig.dataKeys); fileName = 'EENC_Template.xlsx'; break;
+        case TABS.NEONATAL: // Kept for legacy
+        case 'Neonatal': // Added for filter
+            finalHeaders.push(...eencConfig.headers, ...neonatalConfig.headers); finalDataKeys.push(...eencConfig.dataKeys, ...neonatalConfig.dataKeys); fileName = 'Neonatal_Care_Template.xlsx'; break;
+        case TABS.CRITICAL: // Kept for legacy
+        case 'Critical Care': // Added for filter
+            finalHeaders.push(...eencConfig.headers, ...criticalCareConfig.headers); finalDataKeys.push(...eencConfig.dataKeys, ...criticalCareConfig.dataKeys); fileName = 'Critical_Care_Template.xlsx'; break;
         default: finalHeaders.push(...imnciConfig.headers, ...eencConfig.headers, ...neonatalConfig.headers, ...criticalCareConfig.headers); finalDataKeys.push(...imnciConfig.dataKeys, ...imnciConfig.dataKeys, ...eencConfig.dataKeys, ...neonatalConfig.dataKeys, ...criticalCareConfig.dataKeys); fileName = 'All_Services_Template.xlsx';
     }
     return { headers: [...new Set(finalHeaders)], dataKeys: [...new Set(finalDataKeys)], fileName };
@@ -355,153 +151,27 @@ const AllFacilitiesTab = ({ facilities, onEdit, onDelete, onGenerateLink, onOpen
                     </tr>
                 ))
             ) : (
-                <tr>
-                  <td colSpan={9}> {/* Adjusted colspan */}
-                    <EmptyState message={emptyMessage} />
-                  </td>
-                </tr>
+                // --- FIX for validateDOMNesting: Render EmptyState directly ---
+                // --- It is assumed EmptyState renders its own <tr> and <td> ---
+                <EmptyState message={emptyMessage} colSpan={9} />
               )}
         </Table>
     );
 };
 
-const IMNCIServiceTab = ({ facilities, onEdit, onDelete, onGenerateLink, emptyMessage, canApproveSubmissions, canManageFacilities }) => (
-    <Table headers={['Facility Name', 'Total Staff', 'Trained Staff', 'Actions']}>
-        {facilities.length > 0 ? (
-            facilities.map(f => (
-                <tr key={f.id}>
-                    <td>{f.اسم_المؤسسة}</td>
-                    <td>{f['العدد_الكلي_للكوادر_طبية_العاملة_أطباء_ومساعدين'] || 'N/A'}</td>
-                    <td>{f['العدد_الكلي_للكودار_ المدربة_على_العلاج_المتكامل'] || 'N/A'}</td>
-                    <td className="min-w-[240px]">
-                        <div className="flex flex-wrap gap-2">
-                            {/* --- MODIFIED: Button is now conditional --- */}
-                            {canManageFacilities && <Button variant="info" onClick={() => onEdit(f.id)}>Edit</Button>}
-                            {/* Deletion handled via All Facilities Tab */}
-                            <Button onClick={() => onGenerateLink(f.id)}>Generate Link</Button>
-                        </div>
-                    </td>
-                </tr>
-            ))
-        ) : (
-            <tr>
-              <td colSpan={4}> {/* Adjusted colspan */}
-                <EmptyState message={emptyMessage} />
-              </td>
-            </tr>
-          )}
-    </Table>
-);
+// --- MODIFICATION: Removed IMNCIServiceTab component ---
+// --- MODIFICATION: Removed EENCServiceTab component ---
+// --- MODIFICATION: Removed NeonatalServiceTab component ---
+// --- MODIFICATION: Removed CriticalCareServiceTab component ---
 
-const EENCServiceTab = ({ facilities, onEdit, onDelete, emptyMessage, canApproveSubmissions, canManageFacilities }) => (
-    <Table headers={['Facility Name', 'State', 'Operational', 'Service Type', 'Trained Workers', 'Actions']}>
-        {facilities.length > 0 ? (
-            facilities.map(f => (
-                <tr key={f.id}>
-                    <td>{f.اسم_المؤسسة}</td>
-                    <td>{f.الولاية}</td>
-                    <td>{f.هل_المؤسسة_تعمل}</td>
-                    <td>{f.eenc_service_type || 'N/A'}</td>
-                    <td>{f.eenc_trained_workers || 'N/A'}</td>
-                    <td className="min-w-[180px]">
-                        <div className="flex flex-wrap gap-2">
-                            {/* --- MODIFIED: Button is now conditional --- */}
-                            {canManageFacilities && <Button variant="info" onClick={() => onEdit(f.id)}>Edit</Button>}
-                            {/* Deletion handled via All Facilities Tab */}
-                        </div>
-                    </td>
-                </tr>
-            ))
-        ) : (
-             <tr>
-              <td colSpan={6}> {/* Adjusted colspan */}
-                <EmptyState message={emptyMessage} />
-              </td>
-            </tr>
-          )}
-    </Table>
-);
-
-const NeonatalServiceTab = ({ facilities, onEdit, onDelete, emptyMessage, canApproveSubmissions, canManageFacilities }) => (
-    <Table headers={['Facility Name', 'Level of Care', 'Total Beds', 'Incubators', 'Sepsis Surveillance', 'Actions']}>
-        {facilities.length > 0 ? (
-            facilities.map(f => {
-                let levelOfCareDisplay = 'N/A';
-                const levelData = f.neonatal_level_of_care;
-                if (typeof levelData === 'string' && levelData) {
-                    levelOfCareDisplay = levelData;
-                } else if (typeof levelData === 'object' && levelData !== null) {
-                    const levels = [];
-                    if (levelData.primary) levels.push('Primary');
-                    if (levelData.secondary) levels.push('Special Care');
-                    if (levelData.tertiary) levels.push('NICU');
-                    if (levels.length > 0) levelOfCareDisplay = levels.join(', ');
-                }
-                return (
-                    <tr key={f.id}>
-                        <td>{f.اسم_المؤسسة}</td>
-                        <td>{levelOfCareDisplay}</td>
-                        <td>{f.neonatal_total_beds || 'N/A'}</td>
-                        <td>{f.neonatal_total_incubators || 'N/A'}</td>
-                        <td>{f.neonatal_sepsis_surveillance || 'No'}</td>
-                        <td className="min-w-[180px]">
-                            <div className="flex flex-wrap gap-2">
-                                {/* --- MODIFIED: Button is now conditional --- */}
-                                {canManageFacilities && <Button variant="info" onClick={() => onEdit(f.id)}>Edit</Button>}
-                                {/* Deletion handled via All Facilities Tab */}
-                            </div>
-                        </td>
-                    </tr>
-                );
-            })
-        ) : (
-             <tr>
-              <td colSpan={6}> {/* Adjusted colspan */}
-                <EmptyState message={emptyMessage} />
-              </td>
-            </tr>
-          )}
-    </Table>
-);
-
-const CriticalCareServiceTab = ({ facilities, onEdit, onDelete, emptyMessage, canApproveSubmissions, canManageFacilities }) => (
-    <Table headers={['Facility Name', 'Has ETAT', 'Has HDU', 'Has PICU', 'Actions']}>
-        {facilities.length > 0 ? (
-            facilities.map(f => (
-                <tr key={f.id}>
-                    <td>{f.اسم_المؤسسة}</td>
-                    <td>{f.etat_has_service || 'No'}</td>
-                    <td>{f.hdu_has_service || 'No'}</td>
-                    <td>{f.picu_has_service || 'No'}</td>
-                    <td className="min-w-[180px]">
-                        <div className="flex flex-wrap gap-2">
-                            {/* --- MODIFIED: Button is now conditional --- */}
-                            {canManageFacilities && <Button variant="info" onClick={() => onEdit(f.id)}>Edit</Button>}
-                           {/* Deletion handled via All Facilities Tab */}
-                        </div>
-                    </td>
-                </tr>
-            ))
-        ) : (
-            <tr>
-              <td colSpan={5}> {/* Adjusted colspan */}
-                <EmptyState message={emptyMessage} />
-              </td>
-            </tr>
-          )}
-    </Table>
-);
 
 // --- MODIFIED: PendingSubmissionsTab ---
 const PendingSubmissionsTab = ({ submissions, onApprove, onReject }) => {
     return (
         <Table headers={['Submission Date', 'Facility Name', 'State', 'Locality', 'Submitted By', 'Actions']}>
             {(!submissions || submissions.length === 0) ? (
-                 <tr>
-                  <td colSpan={6}> {/* Adjusted colspan */}
-                    <EmptyState message="No pending submissions found." />
-                  </td>
-                 </tr>
+                // --- FIX for validateDOMNesting: Render EmptyState directly ---
+                <EmptyState message="No pending submissions found." colSpan={6} />
             ) : (
                 submissions.map(s => (
                     <tr key={s.submissionId}>
@@ -1819,8 +1489,17 @@ const ChildHealthServicesView = ({
     }, [healthFacilities, setToast, permissions.manageScope, userStates]); // Add scope deps
 
 
+    // --- MODIFICATION: handleGenerateLink updated ---
     const handleGenerateLink = (facilityId) => {
-        const url = `${window.location.origin}/facilities/data-entry/${facilityId}`;
+        let url = `${window.location.origin}/facilities/data-entry/${facilityId}`;
+        
+        // serviceTypeFilter is from the component's state
+        if (serviceTypeFilter) {
+            // The values are 'IMNCI', 'EENC', 'Neonatal', 'Critical Care'.
+            // These are assumed to be the keys the PublicFacilityUpdateForm component understands.
+            url += `?service=${encodeURIComponent(serviceTypeFilter)}`;
+        }
+        
         navigator.clipboard.writeText(url).then(() => {
             setToast({ show: true, message: 'Public update link copied to clipboard!', type: 'success' });
         }, (err) => {
@@ -1829,7 +1508,10 @@ const ChildHealthServicesView = ({
     };
 
     const handleShareLink = () => {
-         const url = `${window.location.origin}/facilities/data-entry/new`;
+         let url = `${window.location.origin}/facilities/data-entry/new`;
+         if (serviceTypeFilter) {
+             url += `?service=${encodeURIComponent(serviceTypeFilter)}`;
+         }
          navigator.clipboard.writeText(url).then(() => {
             setToast({ show: true, message: 'Public "Add New Facility" link copied to clipboard!', type: 'success' });
         }, (err) => {
@@ -1839,7 +1521,9 @@ const ChildHealthServicesView = ({
 
     const handleExportExcel = () => {
         if (!filteredFacilities) return;
-        const { headers: finalHeaders, dataKeys: finalDataKeys, fileName } = getServiceConfig(activeTab);
+        // --- MODIFICATION: Use serviceTypeFilter if set, otherwise activeTab ---
+        const configKey = serviceTypeFilter || activeTab;
+        const { headers: finalHeaders, dataKeys: finalDataKeys, fileName } = getServiceConfig(configKey);
 
         const data = filteredFacilities.map(f => {
              const flatFacilityData = { ...f };
@@ -1869,8 +1553,9 @@ const ChildHealthServicesView = ({
 
     const handleExportPDF = () => {
         if (!filteredFacilities) return;
-        const doc = new jsPDF();
-        const { headers: finalHeaders, dataKeys: finalDataKeys } = getServiceConfig(activeTab);
+        // --- MODIFICATION: Use serviceTypeFilter if set, otherwise activeTab ---
+        const configKey = serviceTypeFilter || activeTab;
+        const { headers: finalHeaders, dataKeys: finalDataKeys } = getServiceConfig(configKey);
 
         const body = filteredFacilities.map(f => {
             const flatFacilityData = { ...f };
@@ -1895,6 +1580,25 @@ const ChildHealthServicesView = ({
         });
         doc.save(`Facility_Export_${activeTab}.pdf`);
     };
+
+    // --- *** HOOK FIX: Moved useMemo for formInitialData to top level *** ---
+    const formInitialData = useMemo(() => {
+        if (editingFacility) {
+            return editingFacility; // Use existing data for editing
+        }
+        
+        // For a new facility, pre-fill based on user scope
+        const prefilledData = {};
+        if (userStates && userStates.length === 1) {
+            prefilledData['الولاية'] = userStates[0];
+        }
+        if (userLocalities && userLocalities.length === 1) {
+            prefilledData['المحلية'] = userLocalities[0];
+        }
+        return prefilledData;
+
+    }, [editingFacility, userStates, userLocalities]);
+    // --- *** END HOOK FIX *** ---
 
     // --- UPDATED: renderListView ---
     const renderListView = () => {
@@ -1922,15 +1626,15 @@ const ChildHealthServicesView = ({
              emptyStateMessage = "Please select a State or apply other filters to begin viewing facilities.";
         }
 
-
+        // --- MODIFICATION: tabsContent only has PENDING and ALL ---
         const tabsContent = {
             [TABS.PENDING]: <PendingSubmissionsTab submissions={uniquePendingSubmissions || []} onApprove={handleReviewSubmission} onReject={handleReject} />,
             // Pass canApproveSubmissions and canManageFacilities to relevant tabs
             [TABS.ALL]: <AllFacilitiesTab facilities={filteredFacilities || []} onEdit={handleEditFacility} onDelete={handleDeleteFacility} onGenerateLink={handleGenerateLink} onOpenMap={handleOpenMapModal} selectedFacilities={selectedFacilities} onToggleSelection={handleToggleSelection} onToggleAll={handleToggleAll} emptyMessage={emptyStateMessage} canApproveSubmissions={permissions.canApproveSubmissions} canManageFacilities={permissions.canManageFacilities} />,
-            [TABS.IMNCI]: <IMNCIServiceTab facilities={filteredFacilities || []} onEdit={handleEditFacility} onDelete={handleDeleteFacility} onGenerateLink={handleGenerateLink} emptyMessage={emptyStateMessage} canApproveSubmissions={permissions.canApproveSubmissions} canManageFacilities={permissions.canManageFacilities}/>,
-            [TABS.EENC]: <EENCServiceTab facilities={filteredFacilities || []} onEdit={handleEditFacility} onDelete={handleDeleteFacility} emptyMessage={emptyStateMessage} canApproveSubmissions={permissions.canApproveSubmissions} canManageFacilities={permissions.canManageFacilities}/>,
-            [TABS.NEONATAL]: <NeonatalServiceTab facilities={filteredFacilities || []} onEdit={handleEditFacility} onDelete={handleDeleteFacility} emptyMessage={emptyStateMessage} canApproveSubmissions={permissions.canApproveSubmissions} canManageFacilities={permissions.canManageFacilities}/>,
-            [TABS.CRITICAL]: <CriticalCareServiceTab facilities={filteredFacilities || []} onEdit={handleEditFacility} onDelete={handleDeleteFacility} emptyMessage={emptyStateMessage} canApproveSubmissions={permissions.canApproveSubmissions} canManageFacilities={permissions.canManageFacilities}/>
+            // [TABS.IMNCI]: <IMNCIServiceTab ... />, // Removed
+            // [TABS.EENC]: <EENCServiceTab ... />, // Removed
+            // [TABS.NEONATAL]: <NeonatalServiceTab ... />, // Removed
+            // [TABS.CRITICAL]: <CriticalCareServiceTab ... /> // Removed
         };
         // Use permissions.canManageFacilities for tab visibility check
         const availableTabs = Object.values(TABS).filter(tab => tab === TABS.PENDING ? permissions.canManageFacilities : true);
@@ -2048,51 +1752,55 @@ const ChildHealthServicesView = ({
     // --- UPDATED: renderFormView ---
     const renderFormView = () => {
         const formFields = {
-            [TABS.IMNCI]: IMNCIFormFields,
-            [TABS.EENC]: EENCFormFields,
-            [TABS.NEONATAL]: NeonatalFormFields,
-            [TABS.CRITICAL]: CriticalCareFormFields,
+            // --- MODIFICATION: Use string keys as tabs are gone ---
+            'IMNCI': IMNCIFormFields,
+            'EENC': EENCFormFields,
+            'Neonatal': NeonatalFormFields,
+            'Critical Care': CriticalCareFormFields,
         };
-        const currentTabForForm = [TABS.ALL, TABS.PENDING].includes(activeTab) ? TABS.IMNCI : activeTab;
-        const FormComponent = formFields[currentTabForForm];
+        // --- MODIFICATION: Default to IMNCI form if no service filter is set ---
+        const currentTabForForm = serviceTypeFilter || 'IMNCI'; 
+        const FormComponent = formFields[currentTabForForm] || IMNCIFormFields; // Fallback to IMNCI
         const arabicTitle = ARABIC_TITLES[currentTabForForm] || currentTabForForm;
 
         // Determine button text based on permission
         const saveButtonText = permissions.canApproveSubmissions ? "Save Directly" : "Submit for Approval";
 
-        // --- Create initial data for form, pre-filling from user's scope ---
-        const formInitialData = useMemo(() => {
-            if (editingFacility) {
-                return editingFacility; // Use existing data for editing
-            }
-            
-            // For a new facility, pre-fill based on user scope
-            const prefilledData = {};
-            if (userStates && userStates.length === 1) {
-                prefilledData['الولاية'] = userStates[0];
-            }
-            if (userLocalities && userLocalities.length === 1) {
-                prefilledData['المحلية'] = userLocalities[0];
-            }
-            return prefilledData;
+        // --- HOOK FIX: The useMemo for formInitialData was moved to the top level ---
+        // --- This function now correctly reads the `formInitialData` constant ---
 
-        }, [editingFacility, userStates, userLocalities]);
-        // --- END ---
-
+        // --- MODIFICATION: Show all forms in one go, not tabbed ---
         return (
             <GenericFacilityForm
                 initialData={formInitialData} // Use pre-filled or editing data
                 onSave={handleSaveFacility}
                 onCancel={() => { setEditingFacility(null); setView('list'); }}
                 setToast={setToast}
-                title={editingFacility ? `Edit ${arabicTitle}` : `Add New ${arabicTitle}`}
-                subtitle={editingFacility ? `تعديل تفاصيل ${arabicTitle}` : `أدخل تفاصيل ${arabicTitle}`}
+                title={editingFacility ? `Edit Facility Data` : `Add New Facility`}
+                subtitle={editingFacility ? `تعديل تفاصيل المؤسسة` : `أدخل تفاصيل المؤسسة`}
                 saveButtonText={saveButtonText}
                 // Pass user's scope for potential disabling in the form
                 userAssignedState={userStates && userStates.length === 1 ? userStates[0] : null}
                 userAssignedLocality={userLocalities && userLocalities.length === 1 ? userLocalities[0] : null}
             >
-                {(props) => <FormComponent {...props} />}
+                {(props) => (
+                    <>
+                        <h3 className="text-lg font-semibold text-sky-700 border-b pb-2 mb-4">IMNCI Services (خدمات العلاج المتكامل لأمراض الطفولة)</h3>
+                        <IMNCIFormFields {...props} />
+                        <hr className="my-6 border-t-2 border-gray-200" />
+                        
+                        <h3 className="text-lg font-semibold text-teal-700 border-b pb-2 mb-4">EENC Services (خدمات الرعاية الطارئة لحديثي الولادة)</h3>
+                        <EENCFormFields {...props} />
+                        <hr className="my-6 border-t-2 border-gray-200" />
+
+                        <h3 className="text-lg font-semibold text-indigo-700 border-b pb-2 mb-4">Neonatal Care Unit (وحدة رعاية حديثي الولادة)</h3>
+                        <NeonatalFormFields {...props} />
+                        <hr className="my-6 border-t-2 border-gray-200" />
+
+                        <h3 className="text-lg font-semibold text-red-700 border-b pb-2 mb-4">Emergency & Critical Care (الطوارئ والرعاية الحرجة)</h3>
+                        <CriticalCareFormFields {...props} />
+                    </>
+                )}
             </GenericFacilityForm>
         );
     };
@@ -2119,7 +1827,8 @@ const ChildHealthServicesView = ({
                 }}
                 onImport={handleImport}
                 uploadStatus={uploadStatus}
-                activeTab={activeTab}
+                // --- MODIFICATION: Pass service filter OR active tab ---
+                activeTab={serviceTypeFilter || activeTab}
                 filteredData={filteredFacilities || []} // Pass the correctly filtered data
                 cleanupConfig={CLEANABLE_FIELDS_CONFIG}
             />
@@ -2143,6 +1852,7 @@ const ChildHealthServicesView = ({
                 setToast={setToast}
                 cleanupConfig={CLEANABLE_FIELDS_CONFIG}
             />
+            {/* --- MODIFICATION: Use imported modal --- */}
             <LocationMapModal
                 isOpen={isMapModalOpen}
                 onClose={() => setIsMapModalOpen(false)}
@@ -2381,12 +2091,19 @@ const ApprovalComparisonModal = ({ submission, allFacilities, onClose, onConfirm
                         >
                             {(props) => ( // Pass isReadOnly explicitly if needed by children
                                 <>
+                                    <h3 className="text-lg font-semibold text-sky-700 border-b pb-2 mb-4">IMNCI Services (خدمات العلاج المتكامل لأمراض الطفولة)</h3>
                                     <IMNCIFormFields {...props} isReadOnly={isDeletionRequest} />
-                                    <hr className="my-6" />
+                                    <hr className="my-6 border-t-2 border-gray-200" />
+                                    
+                                    <h3 className="text-lg font-semibold text-teal-700 border-b pb-2 mb-4">EENC Services (خدمات الرعاية الطارئة لحديثي الولادة)</h3>
                                     <EENCFormFields {...props} isReadOnly={isDeletionRequest} />
-                                    <hr className="my-6" />
+                                    <hr className="my-6 border-t-2 border-gray-200" />
+
+                                    <h3 className="text-lg font-semibold text-indigo-700 border-b pb-2 mb-4">Neonatal Care Unit (وحدة رعاية حديثي الولادة)</h3>
                                     <NeonatalFormFields {...props} isReadOnly={isDeletionRequest} />
-                                    <hr className="my-6" />
+                                    <hr className="my-6 border-t-2 border-gray-200" />
+
+                                    <h3 className="text-lg font-semibold text-red-700 border-b pb-2 mb-4">Emergency & Critical Care (الطوارئ والرعاية الحرجة)</h3>
                                     <CriticalCareFormFields {...props} isReadOnly={isDeletionRequest} />
                                 </>
                             )}

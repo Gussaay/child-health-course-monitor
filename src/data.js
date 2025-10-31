@@ -736,29 +736,13 @@ export async function getPublicCourseReportData(courseId) {
         throw new Error("This report is not publicly accessible.");
     }
 
-    const listAllParticipantsForCourse = async (courseId) => {
-        let allParticipants = [];
-        let lastVisible = null;
-        let hasMore = true;
-
-        while(hasMore) {
-            const result = await listParticipants(courseId, lastVisible, 'server');
-            if (result.participants && result.participants.length > 0) {
-                allParticipants = allParticipants.concat(result.participants);
-            }
-            lastVisible = result.lastVisible;
-            if (!lastVisible) {
-                hasMore = false;
-            }
-        }
-        return allParticipants;
-    };
-
+    // --- MODIFICATION: Use exported listAllParticipantsForCourse ---
     const [participants, { allObs, allCases }, finalReport] = await Promise.all([
-        listAllParticipantsForCourse(courseId),
+        listAllParticipantsForCourse(courseId, 'server'), // Use exported function
         listAllDataForCourse(courseId, 'server'),
         getFinalReportByCourseId(courseId, 'server')
     ]);
+    // --- END MODIFICATION ---
 
     return {
         course,
@@ -1256,17 +1240,66 @@ export async function deleteCourse(courseId) {
     await batch.commit();
     return true;
 }
+
+// --- MODIFIED: upsertParticipant ---
 export async function upsertParticipant(payload) {
     if (payload.id) {
+        // This is an UPDATE.
         const participantRef = doc(db, "participants", payload.id);
-        await setDoc(participantRef, payload, { merge: true });
+
+        // Check if the phone number is being changed to one that already exists.
+        if (payload.phone && payload.courseId) {
+            const q = query(
+                collection(db, "participants"),
+                where("courseId", "==", payload.courseId),
+                where("phone", "==", payload.phone),
+                limit(1)
+            );
+            const snapshot = await getDocs(q); // Use wrapped getDocs
+            if (!snapshot.empty) {
+                const existingDoc = snapshot.docs[0];
+                // If a doc was found and it's NOT the one we are currently editing, it's a duplicate.
+                if (existingDoc.id !== payload.id) {
+                    throw new Error(`A participant with phone number '${payload.phone}' already exists in this course.`);
+                }
+            }
+        }
+        // No collision, or phone not changed, or it's the same doc. Proceed with update.
+        await setDoc(participantRef, payload, { merge: true }); // Uses wrapped setDoc
         return payload.id;
+
     } else {
+        // This is a CREATE.
         const { id, ...dataToSave } = payload;
-        const newParticipantRef = await addDoc(collection(db, "participants"), dataToSave);
+
+        // Phone and courseId are required for the check.
+        if (!dataToSave.phone || !dataToSave.courseId) {
+            throw new Error("Phone number and Course ID are required to check for duplicates.");
+        }
+
+        // Check for phone number collision on CREATE.
+        const q = query(
+            collection(db, "participants"),
+            where("courseId", "==", dataToSave.courseId),
+            where("phone", "==", dataToSave.phone),
+            limit(1)
+        );
+
+        const snapshot = await getDocs(q); // Use wrapped getDocs
+
+        if (!snapshot.empty) {
+            // A duplicate was found.
+            throw new Error(`A participant with phone number '${dataToSave.phone}' already exists in this course.`);
+        }
+
+        // No duplicate found, proceed to create.
+        const newParticipantRef = await addDoc(collection(db, "participants"), dataToSave); // Uses wrapped addDoc
         return newParticipantRef.id;
     }
 }
+// --- END MODIFIED: upsertParticipant ---
+
+
 export async function updateParticipantSharingSettings(participantId, settings) {
     if (!participantId) {
         throw new Error("Participant ID is required.");
@@ -1277,9 +1310,63 @@ export async function updateParticipantSharingSettings(participantId, settings) 
         sharedWith: settings.sharedWith
     });
 }
+
+// --- MODIFIED: importParticipants ---
 export async function importParticipants(participants) {
-    const batch = writeBatch(db);
-    participants.forEach(participant => {
+    if (!participants || participants.length === 0) {
+        return true; // Nothing to import
+    }
+
+    const batch = writeBatch(db); // Use wrapped writeBatch
+    const phoneCourseSet = new Set(); // To track duplicates *within the batch itself*
+
+    // Fetch existing participants for this course to check against.
+    const courseId = participants[0]?.courseId;
+    if (!courseId) {
+        throw new Error("Course ID not found on participants for import.");
+    }
+    
+    const existingParticipantsQuery = query(collection(db, "participants"), where("courseId", "==", courseId));
+    const existingSnapshot = await getDocs(existingParticipantsQuery); // Use wrapped getDocs
+    
+    // Map existing phones to their document IDs for quick lookup.
+    const existingPhones = new Map(existingSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return data.phone ? [data.phone, doc.id] : [null, doc.id];
+    }));
+
+
+    for (const participant of participants) {
+        // --- Duplicate Check Logic ---
+        if (!participant.phone) {
+            throw new Error(`Participant '${participant.name || 'N/A'}' is missing a phone number.`);
+        }
+
+        const cleanPhone = String(participant.phone).trim();
+
+        if (phoneCourseSet.has(cleanPhone)) {
+            // Duplicate within the batch
+            throw new Error(`Duplicate phone number '${cleanPhone}' (for ${participant.name}) found within the import file.`);
+        }
+        
+        const existingDocId = existingPhones.get(cleanPhone);
+        if (existingDocId) {
+            // Phone number exists in DB
+            if (participant.id && participant.id === existingDocId) {
+                // This is an update to the *correct* participant, allow it.
+            } else if (participant.id) {
+                // This is an update, but it's trying to set a phone number that *another* participant already has.
+                throw new Error(`Phone number '${cleanPhone}' (for ${participant.name}) already belongs to another participant in this course.`);
+            } else {
+                // This is a new participant, but their phone number is already in use.
+                throw new Error(`Participant '${participant.name}' has a phone number ('${cleanPhone}') that already exists in this course.`);
+            }
+        }
+        // --- END Duplicate Check Logic ---
+
+        // If we are here, it's safe to add to batch
+        phoneCourseSet.add(cleanPhone); // Add to set for intra-batch check
+
         if (participant.id) {
             const participantRef = doc(db, "participants", participant.id);
             batch.update(participantRef, participant);
@@ -1287,10 +1374,13 @@ export async function importParticipants(participants) {
             const participantRef = doc(collection(db, "participants"));
             batch.set(participantRef, participant);
         }
-    });
+    }
+    
     await batch.commit();
     return true;
 }
+// --- END MODIFIED: importParticipants ---
+
 export async function listParticipants(courseId, lastVisible = null, source = 'default') {
     if (!courseId) return { participants: [], lastVisible: null };
 
@@ -1325,6 +1415,35 @@ export async function listAllParticipants() {
         throw error;
     }
 }
+
+// --- NEW: listAllParticipantsForCourse ---
+/**
+ * Fetches all participants for a specific course, handling pagination automatically.
+ * @param {string} courseId - The ID of the course.
+ * @param {string} source - 'default', 'cache', or 'server'.
+ * @returns {Promise<Array<object>>} A promise that resolves to an array of all participant objects.
+ */
+export async function listAllParticipantsForCourse(courseId, source = 'default') {
+    if (!courseId) return [];
+    let allParticipants = [];
+    let lastVisible = null;
+    let hasMore = true;
+
+    while(hasMore) {
+        // listParticipants is the paginated function defined above
+        const result = await listParticipants(courseId, lastVisible, source); 
+        if (result.participants && result.participants.length > 0) {
+            allParticipants = allParticipants.concat(result.participants);
+        }
+        lastVisible = result.lastVisible;
+        if (!lastVisible) {
+            hasMore = false;
+        }
+    }
+    return allParticipants;
+}
+// --- END NEW FUNCTION ---
+
 export async function deleteParticipant(participantId) {
     const batch = writeBatch(db);
     batch.delete(doc(db, "participants", participantId));
@@ -1481,7 +1600,40 @@ export async function listCasesForParticipant(courseId, participantId, source = 
     const snapshot = await getDocs(q, { source });
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 }
+
+// --- MODIFICATION: Added duplicate check ---
 export async function upsertCaseAndObservations(caseData, observations, editingCaseId = null) {
+
+    // --- NEW DUPLICATE CHECK ---
+    if (!editingCaseId) {
+        // This is a new case, check for duplicates based on logical keys
+        const { courseId, participant_id, encounter_date, case_serial } = caseData;
+
+        if (!courseId || !participant_id || !encounter_date || !case_serial) {
+             throw new Error("Missing critical case data (courseId, participant_id, encounter_date, or case_serial).");
+        }
+
+        const q = query(
+            collection(db, "cases"),
+            where("courseId", "==", courseId),
+            where("participant_id", "==", participant_id),
+            where("encounter_date", "==", encounter_date),
+            where("case_serial", "==", case_serial),
+            limit(1) // We only need to know if one exists
+        );
+        
+        // --- MODIFICATION: Force server read to prevent race condition ---
+        // Use wrapped getDocs to count the operation and force server read
+        const snapshot = await getDocs(q, { source: 'server' }); 
+        // --- END MODIFICATION ---
+        
+        if (!snapshot.empty) {
+            // A duplicate was found
+            throw new Error(`A case (Serial #${case_serial}) for this participant on this date (${encounter_date}) already exists. Please refresh the page to see the latest data.`);
+        }
+    }
+    // --- END DUPLICATE CHECK ---
+
     const batch = writeBatch(db);
     const caseId = editingCaseId || doc(collection(db, 'temp')).id; // Generate ID locally
     const caseRef = doc(db, "cases", caseId);
@@ -1504,6 +1656,8 @@ export async function upsertCaseAndObservations(caseData, observations, editingC
 
     await batch.commit(); // Commit the batch
 }
+// --- END MODIFICATION ---
+
 export async function deleteCaseAndObservations(caseId) {
     const batch = writeBatch(db);
     batch.delete(doc(db, "cases", caseId));

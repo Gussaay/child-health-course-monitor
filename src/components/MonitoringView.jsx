@@ -1,3 +1,4 @@
+// MonitoringView.jsx
 import React, { useState, useEffect, useMemo } from "react";
 import {
     Card, PageHeader, Button, FormGroup, Input, Select, Table, EmptyState, Spinner
@@ -16,6 +17,52 @@ import {
     deleteCaseAndObservations,
 } from "../data.js";
 
+// --- NEW HELPER FUNCTION for Performance Optimization ---
+const generateHash = (buffer) => {
+    return Object.keys(buffer)
+        .sort()
+        .map(k => `${k}:${buffer[k]}`)
+        .join('|');
+};
+
+// --- NEW REUSABLE COMPONENT for the Segmented Control UI ---
+/**
+ * A reusable segmented control for actions.
+ * @param {Array} options - Array of [label, value, activeClassName]
+ * @param {*} currentValue - The current selected value (mark)
+ * @param {Function} onClick - The toggle function (d, cls, v)
+ */
+function ActionToggle({ options, currentValue, onClick }) {
+    return (
+        <div className="relative z-0 inline-flex shadow-sm rounded-md">
+            {options.map(([label, value, activeClass], idx) => {
+                const isSelected = currentValue === value;
+                const baseClass = "relative inline-flex items-center justify-center px-3 py-1 text-sm font-medium focus:z-10 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition";
+                const activeState = isSelected ? `${activeClass} text-white` : "bg-white text-gray-700 hover:bg-gray-50";
+                
+                let roundedClass = "";
+                if (idx === 0) roundedClass = "rounded-l-md";
+                if (idx === options.length - 1) roundedClass = "rounded-r-md";
+                if (options.length === 1) roundedClass = "rounded-md";
+                if (idx > 0) roundedClass += " -ml-px border border-gray-300";
+                else roundedClass += " border border-gray-300";
+
+                return (
+                    <button
+                        key={value}
+                        type="button"
+                        className={`${baseClass} ${activeState} ${roundedClass}`}
+                        onClick={() => onClick(value)}
+                    >
+                        {label}
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+// --- END NEW COMPONENT ---
+
 
 export function ObservationView({ course, participant, participants, onChangeParticipant, initialCaseToEdit }) {
     const [observations, setObservations] = useState([]);
@@ -31,6 +78,8 @@ export function ObservationView({ course, participant, participants, onChangePar
     const [buffer, setBuffer] = useState({});
     const [editingCase, setEditingCase] = useState(null);
     const [eencScenario, setEencScenario] = useState('breathing');
+    const [isSaving, setIsSaving] = useState(false);
+    const [showSuccess, setShowSuccess] = useState(false);
     const isImnci = course.course_type === 'IMNCI';
     const isEenc = course.course_type === 'EENC';
     const isEtat = course.course_type === 'ETAT';
@@ -67,7 +116,7 @@ export function ObservationView({ course, participant, participants, onChangePar
                 setCases(casesData);
             } catch (err) {
                 console.error("Failed to fetch monitoring data:", err);
-                setError("Could not load participant's data. A required database index may be missing. Please check the browser console for details.");
+                setError("Could not load participant's data. Please check your internet connection and try again.");
                 setObservations([]);
                 setCases([]);
             } finally {
@@ -97,6 +146,28 @@ export function ObservationView({ course, participant, participants, onChangePar
     };
 
     const submitCase = async () => {
+        if (isSaving) return; 
+
+        if (!editingCase) { 
+            const newHash = generateHash(buffer);
+            
+            if (newHash.length > 0) {
+                const duplicateCase = cases.find(c => c.contentHash === newHash);
+
+                if (duplicateCase) {
+                    const confirmSubmit = window.confirm(
+                        `WARNING: This case appears to be an exact duplicate of a case previously submitted on ${duplicateCase.encounter_date} (Serial #${duplicateCase.case_serial}).\n\nAre you sure you want to submit this duplicate case?`
+                    );
+                    
+                    if (!confirmSubmit) {
+                        return; 
+                    }
+                }
+            }
+        }
+
+        setIsSaving(true);
+
         const entries = Object.entries(buffer);
 
         if (isEenc) {
@@ -104,18 +175,24 @@ export function ObservationView({ course, participant, participants, onChangePar
             const totalSkills = Object.values(skillsMap).reduce((acc, domain) => acc + domain.length, 0);
             if (entries.length < totalSkills) {
                 alert('Please complete the form before submission');
+                setIsSaving(false);
                 return;
             }
         }
 
-        if (entries.length === 0) { alert('No skills/classifications selected.'); return; }
+        if (entries.length === 0) { 
+            alert('No skills/classifications selected.'); 
+            setIsSaving(false);
+            return; 
+        }
 
         const currentCaseSerial = editingCase ? editingCase.case_serial : caseSerial;
         const allCorrect = entries.every(([, v]) => v > 0);
         const caseData = {
             courseId: course.id, participant_id: participant.id, encounter_date: encounterDate,
             setting: isImnci ? setting : 'N/A', age_group: isImnci ? age : isEenc ? `EENC_${eencScenario}` : 'ETAT',
-            case_serial: currentCaseSerial, day_of_course: dayOfCourse, allCorrect: allCorrect
+            case_serial: currentCaseSerial, day_of_course: dayOfCourse, allCorrect: allCorrect,
+            contentHash: generateHash(buffer)
         };
 
         const newObservations = entries.map(([k, v]) => {
@@ -139,25 +216,46 @@ export function ObservationView({ course, participant, participants, onChangePar
         });
 
         try {
-            await upsertCaseAndObservations(caseData, newObservations, editingCase?.id);
-            const [obsData, casesData] = await Promise.all([listObservationsForParticipant(course.id, participant.id), listCasesForParticipant(course.id, participant.id)]);
-            setObservations(obsData);
-            setCases(casesData);
+            const { savedCase, savedObservations } = await upsertCaseAndObservations(caseData, newObservations, editingCase?.id);
+
+            if (editingCase) {
+                setCases(prevCases => prevCases.map(c => 
+                    c.id === editingCase.id ? savedCase : c
+                ));
+                setObservations(prevObs => [
+                    ...prevObs.filter(o => o.caseId !== editingCase.id),
+                    ...savedObservations
+                ]);
+            } else {
+                setCases(prevCases => [...prevCases, savedCase]);
+                setObservations(prevObs => [...prevObs, ...savedObservations]);
+            }
+
+            setShowSuccess(true);
+            setTimeout(() => setShowSuccess(false), 3000);
+            
             setBuffer({});
             setCaseAgeMonths('');
             setEditingCase(null);
         } catch (error) {
             console.error("ERROR saving to Firestore:", error);
-            alert("Failed to save case. Please check the console for errors.");
+            alert(`Failed to save case: ${error.message}`);
+        } finally {
+            setIsSaving(false);
         }
     };
 
     const handleDeleteCase = async (caseToDelete) => {
         if (!window.confirm('Delete this case and all its observations? This cannot be undone.')) return;
-        await deleteCaseAndObservations(caseToDelete.id);
-        const [obsData, casesData] = await Promise.all([listObservationsForParticipant(course.id, participant.id), listCasesForParticipant(course.id, participant.id)]);
-        setObservations(obsData);
-        setCases(casesData);
+        
+        try {
+            await deleteCaseAndObservations(caseToDelete.id);
+            setCases(prev => prev.filter(c => c.id !== caseToDelete.id));
+            setObservations(prev => prev.filter(o => o.caseId !== caseToDelete.id));
+        } catch (error) {
+            console.error("Failed to delete case:", error);
+            alert(`Failed to delete case: ${error.message}. Please refresh the page.`);
+        }
     };
 
     return (
@@ -165,8 +263,15 @@ export function ObservationView({ course, participant, participants, onChangePar
             <PageHeader title="Clinical Monitoring" subtitle={`Observing: ${participant.name}`} />
             
             {error && <Card><div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">{error}</div></Card>}
+            
+            {showSuccess && (
+                <div className="p-3 bg-green-100 border border-green-300 text-green-700 rounded-md mb-3">
+                    Case saved successfully!
+                </div>
+            )}
 
-            <Card className="-mt-3">
+            {/* --- MODIFICATION: Added p-4 --- */}
+            <Card className="-mt-3 p-4">
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
                     <FormGroup label="Select participant" className="lg:col-span-2">
                         <Select value={participant.id} onChange={(e) => onChangeParticipant(e.target.value)}>
@@ -189,7 +294,8 @@ export function ObservationView({ course, participant, participants, onChangePar
                 </div>
             </Card>
 
-            <Card>
+            {/* --- MODIFICATION: Added p-4 --- */}
+            <Card className="p-4">
                 <h3 className="text-lg font-semibold mb-2">{editingCase ? `Editing Case #${editingCase.case_serial}` : 'New Case Observation'}</h3>
                 <p className="text-sm text-gray-600 mb-3">Click a domain title to expand/collapse. Select an action for each item.</p>
                 <div className="overflow-x-auto rounded-lg border border-slate-300">
@@ -198,8 +304,12 @@ export function ObservationView({ course, participant, participants, onChangePar
                     {isEtat && <EtatMonitoringGrid buffer={buffer} toggle={toggle} />}
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 justify-end mt-4 border-t pt-4">
-                    <Button onClick={submitCase} className="w-full sm:w-auto">{editingCase ? 'Update Case' : 'Submit Case'}</Button>
-                    <Button variant="secondary" onClick={() => { setBuffer({}); setEditingCase(null); setCaseAgeMonths(''); }} className="w-full sm:w-auto">{editingCase ? 'Cancel Edit' : 'Start New Case'}</Button>
+                    <Button onClick={submitCase} className="w-full sm:w-auto" disabled={isSaving}>
+                        {isSaving ? 'Saving...' : (editingCase ? 'Update Case' : 'Submit Case')}
+                    </Button>
+                    <Button variant="secondary" onClick={() => { setBuffer({}); setEditingCase(null); setCaseAgeMonths(''); }} className="w-full sm:w-auto" disabled={isSaving}>
+                        {editingCase ? 'Cancel Edit' : 'Start New Case'}
+                    </Button>
                 </div>
             </Card>
             {loading ? <Card><Spinner /></Card> : <SubmittedCases course={course} participant={participant} observations={observations} cases={cases} onEditCase={(caseToEdit) => handleEditCase(caseToEdit, observations)} onDeleteCase={handleDeleteCase} />}
@@ -207,8 +317,10 @@ export function ObservationView({ course, participant, participants, onChangePar
     );
 }
 
+// --- MODIFICATION: Using the new ActionToggle component ---
 function ImnciMonitoringGrid({ age, buffer, toggle }) {
     const [expandedDomains, setExpandedDomains] = useState(new Set());
+    const allDomains = DOMAINS_BY_AGE_IMNCI[age]; 
 
     const toggleDomain = (domain) => {
         setExpandedDomains(prev => {
@@ -218,54 +330,70 @@ function ImnciMonitoringGrid({ age, buffer, toggle }) {
             return newSet;
         });
     };
+    
+    // Define the options for the toggle
+    const toggleOptions = [
+        ['Correct', 1, 'bg-green-600 border-green-600'],
+        ['Incorrect', 0, 'bg-red-600 border-red-600']
+    ];
 
     return (
-        <table className="text-sm border-collapse w-full">
-            <thead className="bg-slate-50 text-slate-800">
-                <tr>
-                    <th className="p-2 text-left font-semibold border border-slate-300 w-[70%]">Domain / Classification</th>
-                    <th className="p-2 text-left font-semibold border border-slate-300 w-[30%]">Action</th>
-                </tr>
-            </thead>
-            {DOMAINS_BY_AGE_IMNCI[age].map(d => {
-                const isExpanded = expandedDomains.has(d);
-                const list = getClassListImnci(age, d) || [];
-                const title = DOMAIN_LABEL_IMNCI[d] || d;
+        <>
+            <div className="flex gap-2 p-2 bg-slate-50 border-b border-slate-300">
+                <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set(allDomains))}>Expand All</Button>
+                <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set())}>Collapse All</Button>
+            </div>
 
-                return (
-                    <tbody key={d}>
-                        <tr onClick={() => toggleDomain(d)} className="cursor-pointer hover:bg-sky-100 bg-sky-50">
-                            <td className="p-2 text-base font-bold text-slate-800 border-l border-r border-b border-slate-300">
-                                <span className="inline-block w-5 text-center text-slate-500">{isExpanded ? '▼' : '►'}</span>
-                                {title}
-                            </td>
-                            <td className="border-r border-b border-slate-300"></td>
-                        </tr>
-                        {isExpanded && (list.length > 0 ? list : ["(no items)"]).map((cls, i) => {
-                            const k = `${d}|${cls}`;
-                            const mark = buffer[k];
-                            const cellClass = mark === 1 ? 'bg-green-100' : mark === 0 ? 'bg-red-100' : '';
-                            return (
-                                <tr key={`${d}-${i}`} className="hover:bg-slate-50">
-                                    <td className="p-2 pl-8 border border-slate-300 break-words">{cls}</td>
-                                    <td className={`p-2 border border-slate-300 ${cellClass}`}>
-                                        <div className="flex flex-col xl:flex-row gap-1">
-                                            <button onClick={() => toggle(d, cls, 1)} className={`px-3 py-1 w-full text-sm rounded-md border border-gray-300 transition ${mark === 1 ? 'bg-green-200 border-green-300' : 'bg-white hover:bg-gray-100'}`}>Correct</button>
-                                            <button onClick={() => toggle(d, cls, 0)} className={`px-3 py-1 w-full text-sm rounded-md border border-gray-300 transition ${mark === 0 ? 'bg-red-200 border-red-300' : 'bg-white hover:bg-gray-100'}`}>Incorrect</button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                );
-            })}
-        </table>
+            <table className="text-sm border-collapse mx-auto">
+                <thead className="bg-slate-50 text-slate-800">
+                    <tr>
+                        <th className="p-1 text-left font-semibold border border-slate-300 min-w-[320px]">Domain / Classification</th>
+                        <th className="p-1 text-left font-semibold border border-slate-300 min-w-[170px]">Action</th>
+                    </tr>
+                </thead>
+                {allDomains.map(d => {
+                    const isExpanded = expandedDomains.has(d);
+                    const list = getClassListImnci(age, d) || [];
+                    const title = DOMAIN_LABEL_IMNCI[d] || d;
+
+                    return (
+                        <tbody key={d}>
+                            <tr onClick={() => toggleDomain(d)} className="cursor-pointer hover:bg-sky-700 bg-sky-800">
+                                <td className="p-1 text-base font-bold text-white border-l border-r border-b border-slate-300">
+                                    <span className="inline-block w-5 text-center text-white">{isExpanded ? '▼' : '►'}</span>
+                                    {title}
+                                </td>
+                                <td className="border-r border-b border-slate-300"></td>
+                            </tr>
+                            {isExpanded && (list.length > 0 ? list : ["(no items)"]).map((cls, i) => {
+                                const k = `${d}|${cls}`;
+                                const mark = buffer[k];
+                                return (
+                                    <tr key={`${d}-${i}`} className="hover:bg-sky-50">
+                                        <td className="p-1 pl-6 border border-slate-300 break-words">{cls}</td>
+                                        <td className="p-1 border border-slate-300 align-middle">
+                                            {/* --- USE THE NEW COMPONENT --- */}
+                                            <ActionToggle
+                                                options={toggleOptions}
+                                                currentValue={mark}
+                                                onClick={(value) => toggle(d, cls, value)}
+                                            />
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    );
+                })}
+            </table>
+        </>
     );
 }
 
+// --- MODIFICATION: Using the new ActionToggle component ---
 function EtatMonitoringGrid({ buffer, toggle }) {
     const [expandedDomains, setExpandedDomains] = useState(new Set());
+    const allDomains = ETAT_DOMAINS; 
 
     const toggleDomain = (domain) => {
         setExpandedDomains(prev => {
@@ -276,51 +404,67 @@ function EtatMonitoringGrid({ buffer, toggle }) {
         });
     };
 
-    return (
-        <table className="text-sm border-collapse w-full">
-            <thead className="bg-slate-50 text-slate-800">
-                <tr>
-                    <th className="p-2 text-left font-semibold border border-slate-300 w-[70%]">Domain / Skill</th>
-                    <th className="p-2 text-left font-semibold border border-slate-300 w-[30%]">Action</th>
-                </tr>
-            </thead>
-            {ETAT_DOMAINS.map(d => {
-                const isExpanded = expandedDomains.has(d);
-                const skills = SKILLS_ETAT[d];
-                const title = ETAT_DOMAIN_LABEL[d] || d;
+    // Define the options for the toggle
+    const toggleOptions = [
+        ['Correct', 1, 'bg-green-600 border-green-600'],
+        ['Incorrect', 0, 'bg-red-600 border-red-600']
+    ];
 
-                return (
-                    <tbody key={d}>
-                        <tr onClick={() => toggleDomain(d)} className="cursor-pointer hover:bg-sky-100 bg-sky-50">
-                            <td className="p-2 text-base font-bold text-slate-800 border-l border-r border-b border-slate-300">
-                               <span className="inline-block w-5 text-center text-slate-500">{isExpanded ? '▼' : '►'}</span>
-                                {title}
-                            </td>
-                            <td className="border-r border-b border-slate-300"></td>
-                        </tr>
-                        {isExpanded && skills.map((skill, i) => {
-                            const k = `${d}|${skill}`;
-                            const mark = buffer[k];
-                            const cellClass = mark === 1 ? 'bg-green-100' : mark === 0 ? 'bg-red-100' : '';
-                            return (
-                                <tr key={`${d}-${i}`} className="hover:bg-slate-50">
-                                    <td className="p-2 pl-8 border border-slate-300 break-words">{skill}</td>
-                                    <td className={`p-2 border border-slate-300 ${cellClass}`}>
-                                        <div className="flex flex-col xl:flex-row gap-1">
-                                            <button onClick={() => toggle(d, skill, 1)} className={`px-3 py-1 w-full text-sm rounded-md border border-gray-300 transition ${mark === 1 ? 'bg-green-200 border-green-300' : 'bg-white hover:bg-gray-100'}`}>Correct</button>
-                                            <button onClick={() => toggle(d, skill, 0)} className={`px-3 py-1 w-full text-sm rounded-md border border-gray-300 transition ${mark === 0 ? 'bg-red-200 border-red-300' : 'bg-white hover:bg-gray-100'}`}>Incorrect</button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                );
-            })}
-        </table>
+    return (
+        <>
+            <div className="flex gap-2 p-2 bg-slate-50 border-b border-slate-300">
+                <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set(allDomains))}>Expand All</Button>
+                <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set())}>Collapse All</Button>
+            </div>
+
+            <table className="text-sm border-collapse mx-auto">
+                <thead className="bg-slate-50 text-slate-800">
+                    <tr>
+                        <th className="p-1 text-left font-semibold border border-slate-300 min-w-[320px]">Domain / Skill</th>
+                        <th className="p-1 text-left font-semibold border border-slate-300 min-w-[170px]">Action</th>
+                    </tr>
+                </thead>
+                {allDomains.map(d => {
+                    const isExpanded = expandedDomains.has(d);
+                    const skills = SKILLS_ETAT[d];
+                    const title = ETAT_DOMAIN_LABEL[d] || d;
+
+                    return (
+                        <tbody key={d}>
+                            <tr onClick={() => toggleDomain(d)} className="cursor-pointer hover:bg-sky-700 bg-sky-800">
+                                <td className="p-1 text-base font-bold text-white border-l border-r border-b border-slate-300">
+                                   <span className="inline-block w-5 text-center text-white">{isExpanded ? '▼' : '►'}</span>
+                                    {title}
+                                </td>
+                                <td className="border-r border-b border-slate-300"></td>
+                            </tr>
+                            {isExpanded && skills.map((skill, i) => {
+                                const k = `${d}|${skill}`;
+                                const mark = buffer[k];
+                                return (
+                                    <tr key={`${d}-${i}`} className="hover:bg-sky-50">
+                                        <td className="p-1 pl-6 border border-slate-300 break-words">{skill}</td>
+                                        <td className="p-1 border border-slate-300 align-middle">
+                                            {/* --- USE THE NEW COMPONENT --- */}
+                                            <ActionToggle
+                                                options={toggleOptions}
+                                                currentValue={mark}
+                                                onClick={(value) => toggle(d, skill, value)}
+                                            />
+                                        </td>
+                                    </tr>
+                                );
+
+                            })}
+                        </tbody>
+                    );
+                })}
+            </table>
+        </>
     );
 }
 
+// --- MODIFICATION: Using the new ActionToggle component ---
 function EencMonitoringGrid({ scenario, buffer, toggle }) {
     const isBreathing = scenario === 'breathing';
     const domains = isBreathing ? EENC_DOMAINS_BREATHING : EENC_DOMAINS_NOT_BREATHING;
@@ -328,6 +472,7 @@ function EencMonitoringGrid({ scenario, buffer, toggle }) {
     const labelsMap = isBreathing ? EENC_DOMAIN_LABEL_BREATHING : EENC_DOMAIN_LABEL_NOT_BREATHING;
     
     const [expandedDomains, setExpandedDomains] = useState(new Set(domains));
+    const allDomains = domains; 
 
     const toggleDomain = (domain) => {
         setExpandedDomains(prev => {
@@ -338,55 +483,63 @@ function EencMonitoringGrid({ scenario, buffer, toggle }) {
         });
     };
 
-    const getCellClass = (mark) => {
-        if (mark === 2) return 'bg-green-100';
-        if (mark === 1) return 'bg-yellow-100';
-        if (mark === 0) return 'bg-red-100';
-        return '';
-    };
+    // Define the options for the EENC toggle
+    const toggleOptions = [
+        ['Yes', 2, 'bg-green-600 border-green-600'],
+        ['Partial', 1, 'bg-yellow-500 border-yellow-500'],
+        ['No', 0, 'bg-red-600 border-red-600']
+    ];
 
     return (
-        <table className="text-sm border-collapse w-full">
-            <thead className="bg-slate-50 text-slate-800">
-                <tr>
-                    <th className="p-2 text-left font-semibold border border-slate-300 w-1/2">Domain / Skill</th>
-                    <th className="p-2 text-left font-semibold border border-slate-300 w-1/2">Action</th>
-                </tr>
-            </thead>
-            {domains.map(d => {
-                const isExpanded = expandedDomains.has(d);
-                const skills = skillsMap[d];
-                const title = labelsMap[d] || d;
+        <>
+            <div className="flex gap-2 p-2 bg-slate-50 border-b border-slate-300">
+                <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set(allDomains))}>Expand All</Button>
+                <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set())}>Collapse All</Button>
+            </div>
 
-                return (
-                    <tbody key={d}>
-                        <tr onClick={() => toggleDomain(d)} className="cursor-pointer hover:bg-sky-100 bg-sky-50">
-                            <td className="p-2 text-base font-bold text-slate-800 border-l border-r border-b border-slate-300">
-                                <span className="inline-block w-5 text-center text-slate-500">{isExpanded ? '▼' : '►'}</span>
-                                {title}
-                            </td>
-                            <td className="border-r border-b border-slate-300"></td>
-                        </tr>
-                        {isExpanded && skills.map((skill, i) => {
-                            const k = `${d}|${skill.text}`;
-                            const mark = buffer[k];
-                            return (
-                                <tr key={`${d}-${i}`} className="hover:bg-slate-50">
-                                    <td className="p-2 pl-8 border border-slate-300 break-words">{skill.text}</td>
-                                    <td className={`p-2 border border-slate-300 ${getCellClass(mark)}`}>
-                                        <div className="flex flex-wrap gap-1">
-                                            <button onClick={() => toggle(d, skill.text, 2)} className={`px-2 py-1 text-sm rounded-md border border-gray-300 transition ${mark === 2 ? 'bg-green-200 border-green-300' : 'bg-white hover:bg-gray-100'}`}>Yes</button>
-                                            <button onClick={() => toggle(d, skill.text, 1)} className={`px-2 py-1 text-sm rounded-md border border-gray-300 transition ${mark === 1 ? 'bg-yellow-200 border-yellow-300' : 'bg-white hover:bg-gray-100'}`}>Partial</button>
-                                            <button onClick={() => toggle(d, skill.text, 0)} className={`px-2 py-1 text-sm rounded-md border border-gray-300 transition ${mark === 0 ? 'bg-red-200 border-red-300' : 'bg-white hover:bg-gray-100'}`}>No</button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                );
-            })}
-        </table>
+            <table className="text-sm border-collapse mx-auto">
+                <thead className="bg-slate-50 text-slate-800">
+                    <tr>
+                        <th className="p-1 text-left font-semibold border border-slate-300 min-w-[320px]">Domain / Skill</th>
+                        <th className="p-1 text-left font-semibold border border-slate-300 min-w-[200px]">Action</th>
+                    </tr>
+                </thead>
+                {allDomains.map(d => {
+                    const isExpanded = expandedDomains.has(d);
+                    const skills = skillsMap[d];
+                    const title = labelsMap[d] || d;
+
+                    return (
+                        <tbody key={d}>
+                            <tr onClick={() => toggleDomain(d)} className="cursor-pointer hover:bg-sky-700 bg-sky-800">
+                                <td className="p-1 text-base font-bold text-white border-l border-r border-b border-slate-300">
+                                    <span className="inline-block w-5 text-center text-white">{isExpanded ? '▼' : '►'}</span>
+                                    {title}
+                                </td>
+                                <td className="border-r border-b border-slate-300"></td>
+                            </tr>
+                            {isExpanded && skills.map((skill, i) => {
+                                const k = `${d}|${skill.text}`;
+                                const mark = buffer[k];
+                                return (
+                                    <tr key={`${d}-${i}`} className="hover:bg-sky-50">
+                                        <td className="p-1 pl-6 border border-slate-300 break-words">{skill.text}</td>
+                                        <td className="p-1 border border-slate-300 align-middle">
+                                            {/* --- USE THE NEW COMPONENT --- */}
+                                            <ActionToggle
+                                                options={toggleOptions}
+                                                currentValue={mark}
+                                                onClick={(value) => toggle(d, skill.text, value)}
+                                            />
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    );
+                })}
+            </table>
+        </>
     );
 }
 
@@ -426,6 +579,8 @@ function SubmittedCases({ course, participant, observations, cases, onEditCase, 
 
         return mappedAndFiltered.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0) || b.serial - a.serial);
     }, [cases, observations, isEenc, dayFilter, settingFilter, correctnessFilter]);
+
+
 
     const getAgeLabel = (age) => {
         if (isImnci) { return age === 'LT2M' ? '0-59 d' : '2-59 m'; }
@@ -495,7 +650,8 @@ function SubmittedCases({ course, participant, observations, cases, onEditCase, 
                 }
             </div>
 
-            <div className="hidden md:block overflow-x-auto"> {/* Desktop Table View */}
+            {/* --- MODIFICATION: Added p-4 --- */}
+            <div className="hidden md:block overflow-x-auto p-4"> {/* Desktop Table View */}
                 <Table headers={headers}>
                     {caseRows.length === 0 ? <EmptyState message="No cases match the current filters." colSpan={headers.length} /> : caseRows.map((c, idx) => (
                         <tr key={idx} className="odd:bg-white even:bg-slate-50 hover:bg-sky-100 text-sm">

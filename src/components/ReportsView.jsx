@@ -362,13 +362,39 @@ function EtatReports({ course, participants, allObs, allCases }) {
         return g;
     }, [filteredCases, participants]);
 
+    // --- ADDED: classSummaryByGroup for ETAT ---
+    const classSummaryByGroup = useMemo(() => {
+        const g = {};
+        const pmap = new Map(participants.map(p => [p.id, p]));
+        for (const o of filteredObs) {
+            const p = pmap.get(o.participant_id || '');
+            if (!p) continue;
+            const k = p.group;
+            g[k] ??= {};
+            g[k][p.id] ??= { name: p.name, total_obs: 0, correct_obs: 0 };
+            const t = g[k][p.id];
+            t.total_obs++;
+            if (o.item_correct === 1) {
+                t.correct_obs++;
+            }
+        }
+        return g;
+    }, [filteredObs, participants]);
+    // --- END ADDED ---
+
     const handleExportDetailedReportPdf = () => {
         generateDetailedReportPdf(filteredObs, course.course_type, null, null, participants, dayFilter, groupFilter);
     };
 
+    // --- MODIFIED: handleExportFullReportPdf to include 'class' tab ---
     const handleExportFullReportPdf = () => {
         const doc = new jsPDF();
-        const reportTitle = `ETAT Report - ${tab === 'case' ? 'Case Summary' : 'Detailed Skills'}`;
+        const getTitle = () => {
+            if (tab === 'case') return 'Case Summary';
+            if (tab === 'class') return 'Classification Summary';
+            return 'Detailed Skills';
+        };
+        const reportTitle = `ETAT Report - ${getTitle()}`;
         doc.text(reportTitle, 14, 15);
         let startY = 25;
 
@@ -394,7 +420,11 @@ function EtatReports({ course, participants, allObs, allCases }) {
                         body.push([skill, ...participantCells]);
                     }
                 }
-            } else {
+            } else if (tab === 'class') { // <-- ADDED THIS BLOCK
+                const data = classSummaryByGroup[g] || {};
+                head = [['Participant', 'Total Class.', 'Correct Class.', '% Correct']];
+                body = Object.values(data).map(r => [r.name, r.total_obs, r.correct_obs, fmtPct(calcPct(r.correct_obs, r.total_obs))]);
+            } else { // <-- This is now just for tab === 'case'
                 const data = caseSummaryByGroup[g] || {};
                 head = [['Participant', 'Total Cases', 'Correct Cases', '% Correct']];
                 body = Object.values(data).map(r => [r.name, r.total_cases, r.correct_cases, fmtPct(calcPct(r.correct_cases, r.total_cases))]);
@@ -406,6 +436,7 @@ function EtatReports({ course, participants, allObs, allCases }) {
 
         doc.save(`ETAT_${tab}_Report_All_Groups.pdf`);
     };
+    // --- END MODIFIED ---
 
     const groupsToRender = groupFilter === 'All' ? ['Group A', 'Group B', 'Group C', 'Group D'] : [groupFilter];
 
@@ -434,6 +465,45 @@ function EtatReports({ course, participants, allObs, allCases }) {
                     </div>
                 );
             })}
+
+            {/* --- ADDED: Rendering logic for 'class' tab --- */}
+            {tab === 'class' && groupsToRender.map(g => {
+                const data = classSummaryByGroup[g] || {};
+                const ids = Object.keys(data);
+                if (ids.length === 0) return null;
+                return (
+                    <div key={g} className="grid gap-2 mb-8">
+                        <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full text-sm">
+                                <thead>
+                                    <tr className="text-left border-b">
+                                        <th className="py-2 pr-4">Participant</th>
+                                        <th className="py-2 pr-4">Total Class.</th>
+                                        <th className="py-2 pr-4">Correct Class.</th>
+                                        <th className="py-2 pr-4">% Correct Class.</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {ids.map(id => {
+                                        const r = data[id];
+                                        const pct = calcPct(r.correct_obs, r.total_obs);
+                                        return (
+                                            <tr key={id} className="border-b">
+                                                <td className="py-2 pr-4">{r.name}</td>
+                                                <td className="py-2 pr-4">{r.total_obs}</td>
+                                                <td className="py-2 pr-4">{r.correct_obs}</td>
+                                                <td className={`py-2 pr-4 ${pctBgClass(pct)}`}>{fmtPct(pct)}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                );
+            })}
+            {/* --- END ADDED --- */}
 
             {tab === 'matrix' && groupsToRender.map(g => {
                 const parts = participants.filter(p => p.group === g).sort((a, b) => a.name.localeCompare(b.name));

@@ -17,7 +17,8 @@ import {
 
 // --- PUBLIC-FACING FORMS ---
 
-export function PublicFacilityUpdateForm({ setToast }) {
+// --- MODIFIED: To accept and use the serviceType prop ---
+export function PublicFacilityUpdateForm({ setToast, serviceType }) {
     const [initialData, setInitialData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -48,6 +49,19 @@ export function PublicFacilityUpdateForm({ setToast }) {
         }
     }, []);
 
+    // --- NEW: Logic to select form component based on prop ---
+    const FORM_KEY_TO_COMPONENT = {
+        'imnci': IMNCIFormFields,
+        'eenc': EENCFormFields,
+        'neonatal': NeonatalFormFields,
+        'critical': CriticalCareFormFields,
+    };
+    
+    // Default to IMNCI if no serviceType is provided or it's invalid
+    // Use toLowerCase() to match the keys
+    const FormComponent = FORM_KEY_TO_COMPONENT[serviceType?.toLowerCase()] || IMNCIFormFields;
+    // --- END NEW ---
+
     const handleSave = async (formData) => {
         try {
             await submitFacilityDataForApproval(formData);
@@ -72,7 +86,8 @@ export function PublicFacilityUpdateForm({ setToast }) {
                     subtitle={`Please review and update the details for ${initialData?.['اسم_المؤسسة'] || 'this facility'}.`}
                     isPublicForm={true}
                 >
-                    {(props) => <IMNCIFormFields {...props} />}
+                    {/* --- MODIFIED: Render dynamic component --- */}
+                    {(props) => <FormComponent {...props} />}
                 </GenericFacilityForm>
             </div>
         </div>
@@ -185,9 +200,12 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "اختر م
 };
 
 
-export function NewFacilityEntryForm({ setToast }) {
+// --- MODIFIED: To accept serviceType prop ---
+export function NewFacilityEntryForm({ setToast, serviceType }) {
+    // --- MODIFIED: Use prop instead of searchParams for formTypeKey ---
     const [searchParams] = useState(new URLSearchParams(window.location.search));
-    const formTypeKey = searchParams.get('formType') || 'imnci';
+    const formTypeKey = serviceType?.toLowerCase() || 'imnci';
+    // --- END MODIFICATION ---
 
     const TABS = { IMNCI: 'IMNCI Services', EENC: 'EENC Services', NEONATAL: 'Neonatal Care Unit', CRITICAL: 'Emergency & Critical Care' };
     const ARABIC_TITLES = { [TABS.IMNCI]: "خدمات العلاج المتكامل لأمراض الطفولة", [TABS.EENC]: "خدمات الرعاية الطارئة لحديثي الولادة", [TABS.NEONATAL]: "وحدة رعاية حديثي الولادة", [TABS.CRITICAL]: "الطوارئ والرعاية الحرجة" };
@@ -264,6 +282,38 @@ export function NewFacilityEntryForm({ setToast }) {
         fetchAndPartitionFacilities();
     }, [selectionData.state, selectionData.locality, setToast, formTypeKey]);
 
+    // --- HOOK MOVED HERE ---
+    const facilityOptions = useMemo(() => {
+        const options = [];
+        
+        if (showOtherFacilities || facilitiesWithoutService.length === 0) {
+            options.push({
+                value: 'addNew',
+                label: '--- إضافة منشأة جديدة ---',
+                className: 'font-bold text-sky-600 bg-sky-50'
+            });
+        }
+    
+        if (facilitiesWithService.length > 0) {
+            facilitiesWithService.forEach(f => options.push({
+                value: f.id,
+                label: f['اسم_المؤسسة'],
+                group: `منشآت تقدم الخدمة (${serviceTitle})`
+            }));
+        }
+    
+        if (showOtherFacilities && facilitiesWithoutService.length > 0) {
+            facilitiesWithoutService.forEach(f => options.push({
+                value: f.id,
+                label: f['اسم_المؤسسة'],
+                group: 'منشآت أخرى في هذه المحلية'
+            }));
+        }
+        
+        return options;
+    }, [showOtherFacilities, facilitiesWithService, facilitiesWithoutService, serviceTitle]);
+    // --- END HOOK MOVE ---
+
     const handleSelectionChange = (e) => {
         const { name, value } = e.target;
         setSelectionData(prev => ({ ...prev, [name]: value }));
@@ -323,36 +373,7 @@ export function NewFacilityEntryForm({ setToast }) {
     };
 
     const renderSelectionScreen = () => {
-        const facilityOptions = useMemo(() => {
-            const options = [];
-            
-            if (showOtherFacilities || facilitiesWithoutService.length === 0) {
-                options.push({
-                    value: 'addNew',
-                    label: '--- إضافة منشأة جديدة ---',
-                    className: 'font-bold text-sky-600 bg-sky-50'
-                });
-            }
-        
-            if (facilitiesWithService.length > 0) {
-                facilitiesWithService.forEach(f => options.push({
-                    value: f.id,
-                    label: f['اسم_المؤسسة'],
-                    group: `منشآت تقدم الخدمة (${serviceTitle})`
-                }));
-            }
-        
-            if (showOtherFacilities && facilitiesWithoutService.length > 0) {
-                facilitiesWithoutService.forEach(f => options.push({
-                    value: f.id,
-                    label: f['اسم_المؤسسة'],
-                    group: 'منشآت أخرى في هذه المحلية'
-                }));
-            }
-            
-            return options;
-        }, [showOtherFacilities, facilitiesWithService, facilitiesWithoutService, serviceTitle]);
-
+        // --- The useMemo hook that was here has been moved to the top level ---
         return (
             <div dir="rtl">
                 <Card>
@@ -854,9 +875,7 @@ export const NeonatalFormFields = ({ formData, handleChange, handleCheckboxGroup
             <FormGroup label="أكياس الإنعاش (Ambu Bag)"><Input type="number" name="neonatal_ambu_bag" value={formData.neonatal_ambu_bag ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
             <FormGroup label="جهاز مراقبة التنفس والاكسجين (Pulse and oxygen Monitor)"><Input type="number" name="neonatal_respiration_monitor" value={formData.neonatal_respiration_monitor ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
             <FormGroup label="جهاز أكسجين (Oxygen concentrator)"><Input type="number" name="neonatal_oxygen_machine" value={formData.neonatal_oxygen_machine ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-            {/* --- THIS IS THE FIX --- */}
             <FormGroup label="أسطوانة الاكسجين (oxygen cylinder)"><Input type="number" name="neonatal_oxygen_cylinder" value={formData.neonatal_oxygen_cylinder ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-            {/* ---------------------- */}
             <FormGroup label="جهاز تنفس صناعي (Mechanical ventilator)"><Input type="number" name="neonatal_mechanical_ventilator" value={formData.neonatal_mechanical_ventilator ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
             <FormGroup label="حاضنة محمولة (Portable Incubator)"><Input type="number" name="neonatal_portable_incubator" value={formData.neonatal_portable_incubator ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
         </div>

@@ -5,6 +5,17 @@ import autoTable from "jspdf-autotable";
 import { Bar, Pie, Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, LineElement, PointElement } from 'chart.js';
 
+// --- NEW: Import icons from lucide-react ---
+import {
+    Home,
+    Book,
+    Users,
+    User,
+    Hospital,
+    Database,
+    ClipboardCheck
+} from 'lucide-react';
+
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, LineElement, PointElement);
 
 // --- Lazy Load View Components ---
@@ -23,6 +34,8 @@ const FacilitatorReportView = lazy(() => import('./components/Facilitator').then
 const FacilitatorApplicationForm = lazy(() => import('./components/Facilitator').then(module => ({ default: module.FacilitatorApplicationForm })));
 const CourseManagementView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.CourseManagementView })));
 const CourseForm = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.CourseForm })));
+// --- NEW: Import PublicCourseMonitoringView from Course.jsx ---
+const PublicCourseMonitoringView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicCourseMonitoringView })));
 const ProgramTeamView = lazy(() => import('./components/ProgramTeamView').then(module => ({ default: module.ProgramTeamView })));
 const TeamMemberApplicationForm = lazy(() => import('./components/ProgramTeamView').then(module => ({ default: module.TeamMemberApplicationForm })));
 const ParticipantsView = lazy(() => import('./components/Participants').then(module => ({ default: module.ParticipantsView })));
@@ -43,6 +56,8 @@ import {
     saveParticipantAndSubmitFacilityUpdate, bulkMigrateFromMappings,
     getPublicCourseReportData,
     initializeUsageTracking,
+    // --- NEW: Import listAllParticipantsForCourse ---
+    listAllParticipantsForCourse,
     listMentorshipSessions,
     saveMentorshipSession,
     importMentorshipSessions
@@ -67,38 +82,8 @@ import {
 
 // --- VIEW COMPONENTS ---
 // --- Mobile Navigation Icons & Components ---
-const HomeIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-const CoursesIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-const UsersIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-const MonitorIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
-const ReportIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>
-const AdminIcon = (props) => (
-  <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-    <circle cx="12" cy="7" r="4"></circle>
-  </svg>
-);
-const HospitalIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v2.85c-.9.17-1.72.6-2.43 1.24L4.3 11.2a1 1 0 0 0-.2 1.39l.2.2c.45.6.84 1.34 1.36 2.14L6 15l2.43-1.6c.71-.48 1.54-.74 2.43-.84V14a1 1 0 0 0 1 1h2c.7 0 1.25-.56 1.25-1.25S15.7 12.5 15 12.5V11a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v1.5a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5V9.85c-.9-.1-1.72-.36-2.43-.84L4.3 7.8a1 1 0 0 0-.2-1.39l.2-.2c.45-.6.84-1.34 1.36-2.14L6 3l2.43 1.6c.71.48 1.54-.74 2.43 .84V5a3 3 0 0 0-3-3zM12 22v-2a3 3 0 0 0-3-3h-2a3 3 0 0 0-3 3v2zM18 22v-2a3 3 0 0 0-3-3h-2a3 3 0 0 0-3 3v2z"></path><path d="M12 18.5V22"></path><path d="M12 11h-2"></path><path d="M14 11h2"></path><path d="M18 11h2"></path></svg>;
-const DatabaseIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>;
-
-const ClipboardCheckIcon = (props) => (
-  <svg
-    {...props}
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-    <path d="M15 2H9a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1z" />
-    <path d="m9 14 2 2 4-4" />
-  </svg>
-);
+// --- REMOVED: Inline SVG components (HomeIcon, CoursesIcon, etc.) ---
+// --- They are now imported from lucide-react ---
 
 
 // --- Resource Monitor Component ---
@@ -107,7 +92,8 @@ const ResourceMonitor = ({ counts, onReset }) => {
         <div className="fixed bottom-4 right-4 bg-gray-900 text-white p-3 rounded-lg shadow-lg z-50 opacity-90 w-64">
             <div className="flex justify-between items-center mb-2">
                 <div className="flex items-center gap-2">
-                    <DatabaseIcon className="w-5 h-5 text-sky-400" />
+                    {/* --- MODIFIED: Use lucide-react icon --- */}
+                    <Database className="w-5 h-5 text-sky-400" />
                     <h4 className="font-bold text-base">Session Ops</h4>
                 </div>
                 <button
@@ -134,13 +120,14 @@ const ResourceMonitor = ({ counts, onReset }) => {
 
 // --- Landing Page Component ---
 function Landing({ navigate, permissions }) {
+    // --- MODIFIED: Use lucide-react components directly ---
     const navButtons = [
-        { label: 'Dashboard', view: 'dashboard', icon: HomeIcon, permission: true },
-        { label: 'Courses', view: 'courses', icon: CoursesIcon, permission: permissions.canViewCourse },
-        { label: 'Human Resources', view: 'humanResources', icon: UsersIcon, permission: permissions.canViewHumanResource },
-        { label: 'Child Health Services', view: 'childHealthServices', icon: HospitalIcon, permission: permissions.canViewFacilities },
-        { label: 'Skills Mentorship', view: 'skillsMentorship', icon: ClipboardCheckIcon, permission: permissions.canViewSkillsMentorship },
-        { label: 'Admin', view: 'admin', icon: AdminIcon, permission: permissions.canViewAdmin },
+        { label: 'Dashboard', view: 'dashboard', icon: Home, permission: true },
+        { label: 'Courses', view: 'courses', icon: Book, permission: permissions.canViewCourse },
+        { label: 'Human Resources', view: 'humanResources', icon: Users, permission: permissions.canViewHumanResource },
+        { label: 'Child Health Services', view: 'childHealthServices', icon: Hospital, permission: permissions.canViewFacilities },
+        { label: 'Skills Mentorship', view: 'skillsMentorship', icon: ClipboardCheck, permission: permissions.canViewSkillsMentorship },
+        { label: 'Admin', view: 'admin', icon: User, permission: permissions.canViewAdmin },
     ];
 
     const accessibleButtons = navButtons.filter(btn => btn.permission);
@@ -152,7 +139,7 @@ function Landing({ navigate, permissions }) {
                 {accessibleButtons.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {accessibleButtons.map(btn => {
-                            const Icon = btn.icon;
+                            const Icon = btn.icon; // Icon is now the component itself (e.g., Home)
                             return (
                                 <button
                                     key={btn.view}
@@ -174,7 +161,8 @@ function Landing({ navigate, permissions }) {
 }
 
 const BottomNav = React.memo(function BottomNav({ navItems, navigate }) {
-    const icons = { Dashboard: HomeIcon, Home: HomeIcon, Courses: CoursesIcon, 'Human Resources': UsersIcon, 'Child Health Services': HospitalIcon, 'Skills Mentorship': ClipboardCheckIcon, Admin: AdminIcon };
+    // --- MODIFIED: Use lucide-react components directly ---
+    const icons = { Dashboard: Home, Home: Home, Courses: Book, 'Human Resources': Users, 'Child Health Services': Hospital, 'Skills Mentorship': ClipboardCheck, Admin: User };
     return (
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-800 border-t border-slate-700 flex justify-around items-center z-20">
             {navItems.map(item => {
@@ -253,6 +241,12 @@ export default function App() {
     const [itemToShare, setItemToShare] = useState(null);
     const [shareType, setShareType] = useState('course');
 
+    // --- MODIFIED: State for public monitoring view ---
+    const [isPublicMonitoringView, setIsPublicMonitoringView] = useState(false);
+    const [publicMonitorData, setPublicMonitorData] = useState({ course: null, participants: [] });
+    const [publicMonitorLoading, setPublicMonitorLoading] = useState(false);
+    const [publicMonitorError, setPublicMonitorError] = useState(null);
+
     // State for operation counts (for the real-time monitor)
     const [operationCounts, setOperationCounts] = useState({ reads: 0, writes: 0 });
 
@@ -296,7 +290,10 @@ export default function App() {
             setIsPublicSubmissionView(false);
             setIsNewFacilityView(false);
             setIsPublicFacilityUpdateView(false);
-            setPublicServiceType(null); // <-- ADD THIS
+            setPublicServiceType(null); 
+            setIsPublicMonitoringView(false); 
+            setPublicMonitorError(null); 
+            setPublicMonitorData({ course: null, participants: [] }); 
             setPublicMentorshipProps(null);
             setSubmissionType(null);
             setSharedViewError(null);
@@ -304,18 +301,50 @@ export default function App() {
             const facilityUpdateMatch = path.match(/^\/facilities\/data-entry\/([a-zA-Z0-9]+)\/?$/);
             if (path.startsWith('/facilities/data-entry/new')) {
                 setIsNewFacilityView(true);
+                // --- MODIFICATION: Read query param for 'new' route as well ---
+                const searchParams = new URLSearchParams(window.location.search);
+                const service = searchParams.get('service');
+                if (service) {
+                    setPublicServiceType(service); 
+                }
+                // --- END MODIFICATION ---
                 return;
             }
             if (facilityUpdateMatch) {
                 setIsPublicFacilityUpdateView(true);
-                // --- NEW: Check for query string ---
                 const searchParams = new URLSearchParams(window.location.search);
                 const service = searchParams.get('service');
                 if (service) {
-                    setPublicServiceType(service); // e.g., 'imnci', 'eenc'
+                    setPublicServiceType(service); 
                 }
-                // --- END NEW ---
                 return;
+            }
+
+            // --- MODIFIED: Public Monitoring Link for COURSE ---
+            const publicMonitorMatch = path.match(/^\/monitor\/course\/([a-zA-Z0-9]+)\/?$/);
+            if (publicMonitorMatch && publicMonitorMatch[1]) {
+                setIsPublicMonitoringView(true);
+                const courseId = publicMonitorMatch[1];
+                // Fetch data right here
+                setPublicMonitorLoading(true);
+                const fetchData = async () => {
+                    try {
+                        const [courseData, participantData] = await Promise.all([
+                            getCourseById(courseId, 'server'),
+                            listAllParticipantsForCourse(courseId, 'server') // Fetch all participants
+                        ]);
+                        if (!courseData) throw new Error('Course not found.');
+                        if (!participantData) throw new Error('Participants not found.'); 
+                        setPublicMonitorData({ course: courseData, participants: participantData });
+                        setPublicMonitorError(null);
+                    } catch (err) {
+                        setPublicMonitorError(err.message);
+                    } finally {
+                        setPublicMonitorLoading(false);
+                    }
+                };
+                fetchData();
+                return; // Stop processing
             }
 
             // Public Mentorship Link - path still checked, authentication check moved to render logic
@@ -508,24 +537,8 @@ export default function App() {
 
     useEffect(() => { if (view === 'humanResources' && activeHRTab === 'facilitators' && permissions.canApproveSubmissions) fetchPendingSubmissions(); }, [view, activeHRTab, permissions.canApproveSubmissions, fetchPendingSubmissions]);
 
-    const listAllParticipantsForCourse = async (courseId) => {
-        if (!courseId) return [];
-        let allParticipants = [];
-        let lastVisible = null;
-        let hasMore = true;
-
-        while(hasMore) {
-            const result = await listParticipants(courseId, lastVisible);
-            if (result.participants && result.participants.length > 0) {
-                allParticipants = allParticipants.concat(result.participants);
-            }
-            lastVisible = result.lastVisible;
-            if (!lastVisible) {
-                hasMore = false;
-            }
-        }
-        return allParticipants;
-    };
+    // Use the imported listAllParticipantsForCourse
+    // const listAllParticipantsForCourse = ... (removed, now imported)
 
     const selectedCourse = useMemo(() => (allCourses || []).find(c => c.id === selectedCourseId) || null, [allCourses, selectedCourseId]);
 
@@ -979,24 +992,48 @@ export default function App() {
     const isMentorshipPublicView = !!publicMentorshipProps; 
 
     // This checks if the user is on *any* minimal UI path (whether authenticated or not)
-    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView;
+    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView;
 
     let mainContent;
 
     if ((authLoading || permissionsLoading) && !isMinimalUILayout) {
         mainContent = <SplashScreen />;
     }
+    // --- MODIFICATION: Added authLoading check ---
     else if (isPublicFacilityUpdateView) {
-        mainContent = <PublicFacilityUpdateForm setToast={setToast} serviceType={publicServiceType} />;
+        if (authLoading) {
+            mainContent = <Card><Spinner /></Card>;
+        } else if (!user) {
+            mainContent = <SignInBox message="You must sign in to use this facility data entry form." />;
+        } else {
+            mainContent = <PublicFacilityUpdateForm setToast={setToast} serviceType={publicServiceType} />;
+        }
     }
+    // --- MODIFICATION: Added authLoading check ---
     else if (isNewFacilityView) {
-        mainContent = <NewFacilityEntryForm setToast={setToast} />;
+        if (authLoading) {
+            mainContent = <Card><Spinner /></Card>;
+        } else if (!user) {
+            mainContent = <SignInBox message="You must sign in to use this new facility entry form." />;
+        } else {
+            // --- MODIFICATION: Pass publicServiceType as a prop ---
+            mainContent = <NewFacilityEntryForm setToast={setToast} serviceType={publicServiceType} />;
+        }
     }
+    // --- END MODIFICATION ---
+    // --- MODIFICATION: Added authLoading check ---
     else if (isPublicSubmissionView) {
-        if (submissionType === 'facilitator-application') mainContent = <FacilitatorApplicationForm />;
-        else if (submissionType === 'team-member-application') mainContent = <TeamMemberApplicationForm />;
-        else mainContent = <div className="p-8 text-center">Invalid form link.</div>;
+        if (authLoading) {
+            mainContent = <Card><Spinner /></Card>;
+        } else if (!user) {
+            mainContent = <SignInBox message="You must sign in to submit an application." />;
+        } else {
+            if (submissionType === 'facilitator-application') mainContent = <FacilitatorApplicationForm />;
+            else if (submissionType === 'team-member-application') mainContent = <TeamMemberApplicationForm />;
+            else mainContent = <div className="p-8 text-center">Invalid form link.</div>;
+        }
     }
+    // --- END MODIFICATION ---
     else if (isSharedView) {
         if (sharedViewError) {
             mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">{sharedViewError}</div></Card>;
@@ -1017,9 +1054,33 @@ export default function App() {
             );
         }
     }
-    // MODIFICATION: Mentorship Public View now requires 'user'
+    // --- MODIFICATION: Added authLoading check ---
+    else if (isPublicMonitoringView) {
+        if (authLoading) {
+             mainContent = <Card><Spinner /></Card>;
+        } else if (!user) {
+            mainContent = <SignInBox message="You must sign in to access the public monitoring page." />;
+        } else if (publicMonitorLoading) {
+            mainContent = <Card><div className="flex justify-center p-8"><Spinner /></div></Card>;
+        } else if (publicMonitorError) {
+            mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">{publicMonitorError}</div></Card>;
+        } else if (publicMonitorData.course && publicMonitorData.participants) {
+            mainContent = (
+                <PublicCourseMonitoringView
+                    course={publicMonitorData.course}
+                    allParticipants={publicMonitorData.participants}
+                />
+            );
+        } else {
+             mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">Could not load monitoring session.</div></Card>;
+        }
+    }
+    // --- END MODIFICATION ---
+    // --- MODIFICATION: Added authLoading check ---
     else if (isMentorshipPublicView) {
-        if (!user) { // CRITICAL CHECK: If user is NOT authenticated, show sign-in
+        if (authLoading) {
+            mainContent = <Card><Spinner /></Card>;
+        } else if (!user) { // CRITICAL CHECK: If user is NOT authenticated, show sign-in
             mainContent = <SignInBox message="You must sign in to use the mentorship submission link." />;
         } else {
             // User IS authenticated, proceed to render the Mentorship View with minimal UI
@@ -1036,6 +1097,7 @@ export default function App() {
             );
         }
     }
+    // --- END MODIFICATION ---
     // Standard authenticated view
     else if (!user && !authLoading) {
         mainContent = <SignInBox />;

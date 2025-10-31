@@ -123,7 +123,7 @@ const generateFullCourseReportPdf = async (course, overallChartRef, dailyChartRe
 };
 
 // --- ADDED: HospitalIcon component (moved from App.jsx) ---
-const HospitalIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v2.85c-.9.17-1.72.6-2.43 1.24L4.3 11.2a1 1 0 0 0-.2 1.39l.2.2c.45.6.84 1.34 1.36 2.14L6 15l2.43-1.6c.71-.48 1.54-.74 2.43-.84V14a1 1 0 0 0 1 1h2c.7 0 1.25-.56 1.25-1.25S15.7 12.5 15 12.5V11a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v1.5a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5V9.85c-.9-.1-1.72-.36-2.43-.84L4.3 7.8a1 1 0 0 0-.2-1.39l.2-.2c.45-.6.84-1.34 1.36-2.14L6 3l2.43 1.6c.71.48 1.54.74 2.43.84V5a3 3 0 0 0-3-3zM12 22v-2a3 3 0 0 0-3-3h-2a3 3 0 0 0-3 3v2zM18 22v-2a3 3 0 0 0-3-3h-2a3 3 0 0 0-3 3v2z"></path><path d="M12 18.5V22"></path><path d="M12 11h-2"></path><path d="M14 11h2"></path><path d="M18 11h2"></path></svg>;
+const HospitalIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v2.85c-.9.17-1.72.6-2.43 1.24L4.3 11.2a1 1 0 0 0-.2 1.39l.2.2c.45.6.84 1.34 1.36 2.14L6 15l2.43-1.6c.71-.48 1.54-.74 2.43-.84V14a1 1 0 0 0 1 1h2c.7 0 1.25-.56 1.25-1.25S15.7 12.5 15 12.5V11a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v1.5a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5V9.85c-.9-.1-1.72-.36-2.43-.84L4.3 7.8a1 1 0 0 0-.2-1.39l.2-.2c.45-.6.84-1.34 1.36-2.14L6 3l2.43 1.6c.71.48 1.54-.74 2.43 .84V5a3 3 0 0 0-3-3zM12 22v-2a3 3 0 0 0-3-3h-2a3 3 0 0 0-3 3v2zM18 22v-2a3 3 0 0 0-3-3h-2a3 3 0 0 0-3 3v2z"></path><path d="M12 18.5V22"></path><path d="M12 11h-2"></path><path d="M14 11h2"></path><path d="M18 11h2"></path></svg>;
 
 // --- ADDED: Landing component (moved from App.jsx) ---
 const Landing = React.memo(function Landing({ active, onPick }) {
@@ -226,6 +226,20 @@ export function CoursesTable({ courses, onOpen, onEdit, onDelete, onOpenReport, 
                                     <div className="flex gap-2 flex-nowrap justify-end">
                                         <Button variant="primary" onClick={() => onOpen(c.id)}>Open Course</Button>
                                         <Button variant="secondary" onClick={() => onOpenReport(c.id)}>Course Reports</Button>
+                                        {/* --- NEW BUTTON --- */}
+                                        <Button
+                                            variant="secondary"
+                                            onClick={() => {
+                                                const link = `${window.location.origin}/monitor/course/${c.id}`;
+                                                navigator.clipboard.writeText(link)
+                                                    .then(() => alert('Public monitoring link copied to clipboard!'))
+                                                    .catch(() => alert('Failed to copy link.'));
+                                            }}
+                                            title="Copy public monitoring link for this course"
+                                        >
+                                            Share Monitoring
+                                        </Button>
+                                        {/* --- END NEW BUTTON --- */}
                                         <Button
                                             variant="secondary"
                                             onClick={() => onEdit(c)}
@@ -1017,5 +1031,99 @@ export function CourseForm({
                 </div>
             </div>
         </Card>
+    );
+}
+
+// --- NEWLY ADDED: PublicCourseMonitoringView ---
+
+/**
+ * A public-facing view for data entry for an entire course.
+ * Allows selecting a group, then a participant, then entering monitoring data.
+ */
+export function PublicCourseMonitoringView({ course, allParticipants }) {
+    const [selectedGroup, setSelectedGroup] = useState('All');
+    const [selectedParticipantId, setSelectedParticipantId] = useState('');
+
+    // Get a unique, sorted list of groups from the participants
+    const groups = useMemo(() => {
+        const groupSet = new Set(allParticipants.map(p => p.group || 'N/A'));
+        return ['All', ...Array.from(groupSet).sort()];
+    }, [allParticipants]);
+
+    // Filter participants based on the selected group
+    const filteredParticipants = useMemo(() => {
+        if (selectedGroup === 'All') {
+            return allParticipants.sort((a, b) => a.name.localeCompare(b.name));
+        }
+        return allParticipants
+            .filter(p => (p.group || 'N/A') === selectedGroup)
+            .sort((a, b) => a.name.localeCompare(b.name));
+    }, [allParticipants, selectedGroup]);
+
+    // Get the full participant object for the selected ID
+    const selectedParticipant = useMemo(() => {
+        if (!selectedParticipantId) {
+            return null;
+        }
+        return allParticipants.find(p => p.id === selectedParticipantId);
+    }, [allParticipants, selectedParticipantId]);
+
+    const handleGroupChange = (e) => {
+        setSelectedGroup(e.target.value);
+        setSelectedParticipantId(''); // Reset participant selection when group changes
+    };
+
+    const handleParticipantChange = (e) => {
+        setSelectedParticipantId(e.target.value);
+    };
+
+    return (
+        <div className="grid gap-4">
+            <PageHeader
+                title={`Data Entry for: ${course.course_type}`}
+                subtitle={`${course.state} / ${course.locality} (Started: ${course.start_date})`}
+            />
+
+            <Card>
+                <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormGroup label="Select Group">
+                        <Select value={selectedGroup} onChange={handleGroupChange}>
+                            {groups.map(g => (
+                                <option key={g} value={g}>{g}</option>
+                            ))}
+                        </Select>
+                    </FormGroup>
+                    <FormGroup label="Select Participant">
+                        <Select value={selectedParticipantId} onChange={handleParticipantChange} disabled={selectedGroup === ''}>
+                            <option value="">-- Select a participant --</option>
+                            {filteredParticipants.map(p => (
+                                <option key={p.id} value={p.id}>
+                                    {p.name}
+                                </option>
+                            ))}
+                        </Select>
+                    </FormGroup>
+                </div>
+            </Card>
+
+            {selectedParticipant ? (
+                <Suspense fallback={<Card><Spinner /></Card>}>
+                    <ObservationView
+                        course={course}
+                        participant={selectedParticipant}
+                        participants={filteredParticipants} // Pass this for context, though selector is hidden
+                        onChangeParticipant={handleParticipantChange} // Allow changing participant
+                        initialCaseToEdit={null} // Public view never edits
+                        isPublicView={true} // Use the public view flag
+                    />
+                </Suspense>
+            ) : (
+                <Card>
+                    <div className="p-6 text-center text-gray-500">
+                        Please select a group and participant to begin data entry.
+                    </div>
+                </Card>
+            )}
+        </div>
     );
 }

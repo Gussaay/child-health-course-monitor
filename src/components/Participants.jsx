@@ -1158,7 +1158,7 @@ export function ParticipantsView({
 
             {/* Desktop View */}
             <div className="hidden md:block">
-                <Table headers={["Name", "Group", "Job Title", "Actions"]}>
+                <Table headers={["Name", "Group", "Job Title", "Facility Name", "Locality", "Actions"]}>
                     {filtered.length > 0 && filtered.map(p => {
                         // --- NEW LOGIC for active/inactive course permissions ---
                         const canEdit = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
@@ -1169,6 +1169,8 @@ export function ParticipantsView({
                                 <td className="p-4 border border-gray-200 font-medium text-gray-800">{p.name}</td>
                                 <td className="p-4 border border-gray-200">{p.group}</td>
                                 <td className="p-4 border border-gray-200">{p.job_title}</td>
+                                <td className="p-4 border border-gray-200">{p.center_name}</td>
+                                <td className="p-4 border border-gray-200">{p.locality}</td>
                                 <td className="p-4 border border-gray-200 text-right">
                                     <div className="flex gap-2 flex-wrap justify-end">
                                         <Button variant="primary" onClick={() => onOpen(p.id)} disabled={!canAddMonitoring} title={!canAddMonitoring ? "You do not have permission to monitor" : "Monitor Participant"}>Monitor</Button>
@@ -1197,6 +1199,9 @@ export function ParticipantsView({
                                 <div>
                                     <h3 className="font-bold text-lg text-gray-800">{p.name}</h3>
                                     <p className="text-gray-600">{p.job_title}</p>
+                                    <p className="text-gray-600 text-sm">{p.center_name}
+                                        {p.locality && <span className="text-gray-500"> ({p.locality})</span>}
+                                    </p>
                                     <p className="text-sm text-gray-500 mt-1">Group: <span className="font-medium text-gray-700">{p.group}</span></p>
                                 </div>
                             </div>
@@ -1812,7 +1817,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                         )}
 
                         {/* Phone & Email */}
-                        <FormGroup label="Phone Number"><Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} disabled={isEditingExistingWorker} /></FormGroup>
+                        <FormGroup label="Phone Number"><Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} /></FormGroup>
                         <FormGroup label="Email (Optional)"><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></FormGroup>
 
                         {/* Scores */}
