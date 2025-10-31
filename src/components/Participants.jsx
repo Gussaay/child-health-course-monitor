@@ -1683,7 +1683,17 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
             const existingIndex = updatedStaffList.findIndex(staff => staff.name === staffMemberData.name || (staff.phone && staff.phone === staffMemberData.phone));
             if (existingIndex > -1) updatedStaffList[existingIndex] = staffMemberData; else updatedStaffList.push(staffMemberData);
 
+            // --- MODIFICATION START ---
+            // Check if the facility was already marked as providing IMNCI service
+            const facilityHadImnci = selectedFacility['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes';
+            if (!facilityHadImnci) {
+                // If not, mark this participant as being the one who introduced it (for reporting)
+                p.introduced_imci_to_facility = true;
+            }
+            // --- MODIFICATION END ---
+
             const baseFacilityPayload = {
+                'وجود_العلاج_المتكامل_لامراض_الطفولة': 'Yes', // Ensure IMNCI service is set to 'Yes'
                 'نوع_المؤسسةالصحية': facilityType || selectedFacility['نوع_المؤسسةالصحية'] || 'no data',
                 'nutrition_center_exists': hasNutri ? 'Yes' : 'No', 'nearest_nutrition_center': !hasNutri ? (nearestNutri || selectedFacility.nearest_nutrition_center || '') : '',
                 'immunization_office_exists': hasImm ? 'Yes' : 'No', 'nearest_immunization_center': !hasImm ? (nearestImm || selectedFacility.nearest_immunization_center || '') : '',

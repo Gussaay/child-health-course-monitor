@@ -213,7 +213,7 @@ const getStatsAndDistribution = (scores) => {
 
 export function CourseReportView({ 
     course, onBack, participants, allObs, allCases, finalReportData, onEditFinalReport, 
-    onDeletePdf, onViewParticipantReport, isSharedView = false, onShare, setToast // <-- ACCEPT setToast PROP
+    onDeletePdf, onViewParticipantReport, isSharedView = false, onShare, setToast, allHealthFacilities
 }) {
     const overallChartRef = useRef(null);
     const dailyChartRef = useRef(null);
@@ -297,7 +297,7 @@ export function CourseReportView({
 
     const isLoading = !course || !participants || !allObs || !allCases;
 
-    const { groupPerformance, overall, dailyPerformance, hasTestScores, hasCases, participantsWithStats, preTestStats, postTestStats, totalImprovement, caseCorrectnessDistribution } = useMemo(() => {
+    const { groupPerformance, overall, dailyPerformance, hasTestScores, hasCases, participantsWithStats, preTestStats, postTestStats, totalImprovement, caseCorrectnessDistribution, newImciFacilities, coverageData } = useMemo(() => {
         if (isLoading) {
             return {
                 groupPerformance: {},
@@ -313,6 +313,8 @@ export function CourseReportView({
                 hasCases: false,
                 participantsWithStats: [],
                 caseCorrectnessDistribution: {},
+                newImciFacilities: [],
+                coverageData: null,
             };
         }
 
@@ -451,6 +453,52 @@ export function CourseReportView({
             }
         });
 
+        // --- NEW: Calculate facilities with new IMCI introduction ---
+        const newImciFacilityMap = new Map();
+        participantsWithStats
+            .filter(p => p.introduced_imci_to_facility === true)
+            .forEach(p => {
+                const key = `${p.center_name}|${p.locality}|${p.state}`;
+                if (!newImciFacilityMap.has(key)) {
+                    newImciFacilityMap.set(key, { name: p.center_name, locality: p.locality, state: p.state });
+                }
+            });
+        const newImciFacilities = Array.from(newImciFacilityMap.values());
+        const newImciFacilityNames = new Set(newImciFacilities.map(f => f.name));
+
+        // --- NEW: Calculate locality coverage ---
+        let coverageData = null;
+        if (allHealthFacilities && course.locality && course.state) {
+            const facilitiesInLocality = allHealthFacilities.filter(f => 
+                f['المحلية'] === course.locality && f['الولاية'] === course.state
+            );
+            const totalFacilitiesInLocality = facilitiesInLocality.length;
+
+            if (totalFacilitiesInLocality > 0) {
+                const currentImciFacilities = facilitiesInLocality.filter(f => f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes');
+                const totalImciCount = currentImciFacilities.length;
+
+                // We assume the submission was approved, so the 'Yes' status is now in the data.
+                // We identify the "new" ones by cross-referencing with our participant-derived list.
+                const newImciCount = currentImciFacilities.filter(f => newImciFacilityNames.has(f['اسم_المؤسسة'])).length;
+                
+                // Original count is total current minus the new ones.
+                // This logic assumes that if a facility is on the 'new' list, it wasn't 'Yes' before.
+                const originalImciCount = totalImciCount - newImciCount;
+
+                coverageData = {
+                    locality: course.locality,
+                    totalFacilities: totalFacilitiesInLocality,
+                    originalImciCount: originalImciCount,
+                    newImciCount: newImciCount,
+                    totalImciCount: totalImciCount,
+                    originalCoverage: calcPct(originalImciCount, totalFacilitiesInLocality),
+                    newCoverage: calcPct(totalImciCount, totalFacilitiesInLocality),
+                };
+            }
+        }
+        // --- END NEW CALCULATIONS ---
+
         return {
             groupPerformance,
             overall,
@@ -461,9 +509,11 @@ export function CourseReportView({
             hasTestScores: hasAnyScores,
             hasCases,
             participantsWithStats,
-            caseCorrectnessDistribution
+            caseCorrectnessDistribution,
+            newImciFacilities,
+            coverageData,
         };
-    }, [participants, allObs, allCases, isLoading]);
+    }, [participants, allObs, allCases, isLoading, allHealthFacilities, course.locality, course.state]);
 
     const excludedImnciSubtypes = ["Standard 7 days course for Medical Doctors", "Standard 7 days course for Medical Assistance", "Refreshment IMNCI Course"];
     const showTestScoresOnScreen = course.course_type !== 'IMNCI' || (course.course_type === 'IMNCI' && !excludedImnciSubtypes.includes(course.imci_sub_type));
@@ -1052,11 +1102,83 @@ export function CourseReportView({
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* --- NEW: IMNCI Introduction KPIs --- */}
+                                {course.course_type === 'IMNCI' && newImciFacilities.length > 0 && (
+                                    <div>
+                                        <h4 className="text-lg font-semibold mb-2 text-gray-700">IMNCI Introduction</h4>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                                            <div className="p-4 bg-blue-100 text-blue-800 rounded-lg col-span-1">
+                                                <div className="text-sm font-semibold">Facilities w/ New IMNCI</div>
+                                                <div className="text-3xl font-bold">{newImciFacilities.length}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                                {/* --- END NEW KPIs --- */}
+
                             </div>
                         </div>
                     </Card>
                 )}
 
+                {/* --- NEW: Facilities with New IMCI Introduction --- */}
+                {course.course_type === 'IMNCI' && newImciFacilities && newImciFacilities.length > 0 && (
+                    <Card>
+                        <div id="new-imci-facilities-card" className="relative p-2">
+                            {!isSharedView && (
+                                <button
+                                    onClick={() => handleCopyAsImage('new-imci-facilities-card')}
+                                    className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors"
+                                    title="Copy as Image"
+                                >
+                                    <CopyIcon />
+                                </button>
+                            )}
+                            <h3 className="text-xl font-bold mb-4">Facilities with New IMCI Service Introduction</h3>
+                            <p className="text-sm text-gray-600 mb-4">
+                                The following facilities did not provide IMCI services before this course. Adding participants from these facilities has triggered an update to mark them as IMNCI-providing sites.
+                            </p>
+                            <Table headers={['Facility Name', 'Locality', 'State']}>
+                                {newImciFacilities.map((facility, index) => (
+                                    <tr key={index} className="hover:bg-gray-50">
+                                        <td className="p-2 border font-semibold">{facility.name}</td>
+                                        <td className="p-2 border">{facility.locality}</td>
+                                        <td className="p-2 border">{facility.state}</td>
+                                    </tr>
+                                ))}
+                            </Table>
+                        </div>
+                    </Card>
+                )}
+
+                {/* --- NEW: IMNCI Coverage Card --- */}
+                {course.course_type === 'IMNCI' && coverageData && (
+                    <Card>
+                        <div id="coverage-card" className="relative p-2">
+                             {!isSharedView && (
+                                <button
+                                    onClick={() => handleCopyAsImage('coverage-card')}
+                                    className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors"
+                                    title="Copy as Image"
+                                >
+                                    <CopyIcon />
+                                </button>
+                            )}
+                            <h3 className="text-xl font-bold mb-4">IMNCI Coverage for {coverageData.locality} Locality</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
+                                <div className="p-4 bg-gray-100 rounded-lg">
+                                    <div className="text-sm font-semibold text-gray-600">Coverage Before Course</div>
+                                    <div className="text-2xl font-bold">{coverageData.originalImciCount} / {coverageData.totalFacilities} ({fmtPct(coverageData.originalCoverage)})</div>
+                                </div>
+                                <div className="p-4 bg-green-100 text-green-800 rounded-lg">
+                                    <div className="text-sm font-semibold">New Coverage After Course</div>
+                                    <div className="text-2xl font-bold">{coverageData.totalImciCount} / {coverageData.totalFacilities} ({fmtPct(coverageData.newCoverage)})</div>
+                                </div>
+                            </div>
+                        </div>
+                    </Card>
+                )}
 
                 {/* Participant Test Scores Card */}
                 {showTestScoresOnScreen && hasTestScoreDataForKpis && (

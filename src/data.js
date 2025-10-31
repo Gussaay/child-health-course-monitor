@@ -1601,38 +1601,14 @@ export async function listCasesForParticipant(courseId, participantId, source = 
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
-// --- MODIFICATION: Added duplicate check ---
+// --- MODIFICATION: Removed server-side duplicate check ---
 export async function upsertCaseAndObservations(caseData, observations, editingCaseId = null) {
 
-    // --- NEW DUPLICATE CHECK ---
-    if (!editingCaseId) {
-        // This is a new case, check for duplicates based on logical keys
-        const { courseId, participant_id, encounter_date, case_serial } = caseData;
-
-        if (!courseId || !participant_id || !encounter_date || !case_serial) {
-             throw new Error("Missing critical case data (courseId, participant_id, encounter_date, or case_serial).");
-        }
-
-        const q = query(
-            collection(db, "cases"),
-            where("courseId", "==", courseId),
-            where("participant_id", "==", participant_id),
-            where("encounter_date", "==", encounter_date),
-            where("case_serial", "==", case_serial),
-            limit(1) // We only need to know if one exists
-        );
-        
-        // --- MODIFICATION: Force server read to prevent race condition ---
-        // Use wrapped getDocs to count the operation and force server read
-        const snapshot = await getDocs(q, { source: 'server' }); 
-        // --- END MODIFICATION ---
-        
-        if (!snapshot.empty) {
-            // A duplicate was found
-            throw new Error(`A case (Serial #${case_serial}) for this participant on this date (${encounter_date}) already exists. Please refresh the page to see the latest data.`);
-        }
-    }
-    // --- END DUPLICATE CHECK ---
+    // --- DUPLICATE CHECK REMOVED ---
+    // The client-side hash check in MonitoringView.jsx is now the primary
+    // mechanism for warning about duplicate *content*. The server-side
+    // check for case_serial collisions has been removed per request.
+    // --- END DUPLICATE CHECK REMOVED ---
 
     const batch = writeBatch(db);
     const caseId = editingCaseId || doc(collection(db, 'temp')).id; // Generate ID locally

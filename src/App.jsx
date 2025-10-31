@@ -197,6 +197,7 @@ export default function App() {
         courses: allCourses,
         facilitators: allFacilitators,
         funders, federalCoordinators, stateCoordinators, localityCoordinators,
+        healthFacilities,
         fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators,
         fetchHealthFacilities,
         fetchSkillMentorshipSubmissions,
@@ -473,6 +474,7 @@ export default function App() {
     useEffect(() => {
         if (isSharedView || !user) return;
 
+        // Fetch facilities on dashboard, human resources, and skills mentorship views
         if (view === 'dashboard') {
             fetchCourses();
             fetchParticipants();
@@ -494,6 +496,10 @@ export default function App() {
         if (view === 'skillsMentorship') {
             fetchHealthFacilities();
             fetchSkillMentorshipSubmissions();
+        }
+        // --- MODIFICATION: Also fetch facilities when opening a course report ---
+        if (view === 'courseReport') {
+            fetchHealthFacilities();
         }
     }, [view, isSharedView, user, fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchCoordinators, fetchHealthFacilities, fetchSkillMentorshipSubmissions]);
 
@@ -944,7 +950,7 @@ export default function App() {
 
             case 'participantReport': return permissions.canViewCourse ? (selectedCourse && currentParticipant && <ParticipantReportView course={selectedCourse} participant={currentParticipant} participants={courseDetails.participants} onChangeParticipant={(pid) => setSelectedParticipantId(pid)} onBack={() => navigate(previousView)} onNavigateToCase={(caseToEdit) => navigate('observe', { caseToEdit, courseId: caseToEdit.courseId, participantId: caseToEdit.participant_id })} onShare={(participant) => handleShare(participant, 'participant')} />) : null;
 
-            case 'courseReport': return permissions.canViewCourse ? (selectedCourse && <CourseReportView course={selectedCourse} participants={courseDetails.participants} allObs={courseDetails.allObs} allCases={courseDetails.allCases} finalReportData={courseDetails.finalReport} onBack={() => navigate(previousView)} onEditFinalReport={handleEditFinalReport} onDeletePdf={handleDeletePdf} onViewParticipantReport={(pid) => { setSelectedParticipantId(pid); navigate('participantReport'); }} onShare={(course) => handleShare(course, 'course')} setToast={setToast} />) : null;
+            case 'courseReport': return permissions.canViewCourse ? (selectedCourse && <CourseReportView course={selectedCourse} participants={courseDetails.participants} allObs={courseDetails.allObs} allCases={courseDetails.allCases} finalReportData={courseDetails.finalReport} onBack={() => navigate(previousView)} onEditFinalReport={handleEditFinalReport} onDeletePdf={handleDeletePdf} onViewParticipantReport={(pid) => { setSelectedParticipantId(pid); navigate('participantReport'); }} onShare={(course) => handleShare(course, 'course')} setToast={setToast} allHealthFacilities={healthFacilities} />) : null;
 
             case 'facilitatorForm':
                 return permissions.canManageHumanResource ? (<FacilitatorForm initialData={editingFacilitator} onCancel={() => navigate(previousView)} onSave={async (payload) => { try { setLoading(true); const { certificateFiles, ...data } = payload; let urls = data.certificateUrls || {}; if (certificateFiles) { for (const key in certificateFiles) { if (editingFacilitator?.certificateUrls?.[key]) await deleteFile(editingFacilitator.certificateUrls[key]); urls[key] = await uploadFile(certificateFiles[key]); } } const finalPayload = { ...data, id: editingFacilitator?.id, certificateUrls: urls }; delete finalPayload.certificateFiles; await upsertFacilitator(finalPayload); await fetchFacilitators(true); setToast({ show: true, message: 'Facilitator saved.', type: 'success' }); navigate('humanResources'); } catch (error) { setToast({ show: true, message: `Error saving: ${error.message}`, type: 'error' }); } finally { setLoading(false); } }} />) : null;
@@ -1047,6 +1053,7 @@ export default function App() {
                     allObs={sharedReportData.allObs}
                     allCases={sharedReportData.allCases}
                     finalReportData={sharedReportData.finalReport}
+                    allHealthFacilities={null} // Public reports don't have access to all facilities for coverage calculation
                     isSharedView={true}
                     onBack={() => {}}
                     onShare={() => {}}
