@@ -930,6 +930,9 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
 
         // --- Step Visibility Logic ---
         let maxStep = 1;
+        // --- START: MODIFIED Step Visibility Logic ---
+        // This logic is now only for the *inter-step* (big steps) visibility.
+        // The *intra-step* (sequential skills) is handled in the render method.
         if (isVitalSignsComplete(formData)) { maxStep = 2;
             if (isDangerSignsComplete(formData)) { maxStep = 3;
                 if (isMainSymptomsComplete(formData)) { maxStep = 4;
@@ -945,6 +948,8 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                 }
             }
         }
+        // --- END: MODIFIED Step Visibility Logic ---
+
         // Always show at least the step reached, or all if editing
         const targetVisibleStep = editingIdRef.current ? 9 : Math.max(visibleStep, maxStep); // Use ref here
         if (targetVisibleStep !== visibleStep) {
@@ -1707,11 +1712,21 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                                                      if (mainSkill.key === 'skill_ask_diarrhea') { previousAskKey = 'skill_ask_cough'; previousConfirmKey = 'supervisor_confirms_cough'; }
                                                      else if (mainSkill.key === 'skill_ask_fever') { previousAskKey = 'skill_ask_diarrhea'; previousConfirmKey = 'supervisor_confirms_diarrhea'; }
                                                      else if (mainSkill.key === 'skill_ask_ear') { previousAskKey = 'skill_ask_fever'; previousConfirmKey = 'supervisor_confirms_fever'; }
+                                                     
+                                                     // --- START: MODIFIED - Sequential logic for main symptom questions ---
+                                                     let isSymptomGroupSequentiallyVisible = true;
                                                      if (!editingIdRef.current && previousAskKey) { // Use ref here
                                                          const previousAskValue = assessment_skills[previousAskKey];
-                                                         if (previousAskValue === '') return null;
-                                                         if (previousAskValue === 'yes' && assessment_skills[previousConfirmKey] === '') return null;
+                                                         if (previousAskValue === '') {
+                                                            isSymptomGroupSequentiallyVisible = false; // Hide if previous 'ask' is unanswered
+                                                         }
+                                                         if (previousAskValue === 'yes' && assessment_skills[previousConfirmKey] === '') {
+                                                            isSymptomGroupSequentiallyVisible = false; // Hide if previous 'ask' was yes but 'confirm' is unanswered
+                                                         }
                                                      }
+                                                     if (!isSymptomGroupSequentiallyVisible) return null;
+                                                     // --- END: MODIFIED ---
+                                                     
                                                      let symptomPrefix = ''; let symptomClassifications = []; let originalCheckSkill = null; let originalClassifySkill = null; let supervisorConfirmLabel = ''; let multiSelectCols = null;
                                                      const symptomScoreData = mainSkill.scoreKey ? scores[mainSkill.scoreKey] : null;
                                                      const symptomScoreCircle = symptomScoreData ? <ScoreCircle score={symptomScoreData.score} maxScore={symptomScoreData.maxScore} /> : null;
@@ -1742,25 +1757,38 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                                                                          </div>
                                                                     </div>
 
-                                                                    {/* Check and Classify Skills */}
+                                                                    {/* --- START: MODIFIED - Sequential Check and Classify Skills --- */}
                                                                     {showClassifications && ( <>
+                                                                        {/* 1. Check Skill (e.g., skill_check_rr) */}
                                                                         {originalCheckSkill && <SkillChecklistItem key={originalCheckSkill.key} name={originalCheckSkill.key} label={originalCheckSkill.label} value={formData.assessment_skills[originalCheckSkill.key]} onChange={(key, value) => handleSkillChange(group.sectionKey, key, value)} showNaOption={false} />}
-                                                                        {originalClassifySkill && <SkillChecklistItem key={originalClassifySkill.key} name={originalClassifySkill.key} label={originalClassifySkill.label} value={formData.assessment_skills[classifySkillKey]} onChange={(key, value) => handleSkillChange(group.sectionKey, key, value)} showNaOption={false} />}
+                                                                        
+                                                                        {/* 2. Classify Skill (e.g., skill_classify_cough) - Only show if check skill is answered */}
+                                                                        {originalClassifySkill && formData.assessment_skills[originalCheckSkill.key] !== '' && (
+                                                                            <SkillChecklistItem key={originalClassifySkill.key} name={originalClassifySkill.key} label={originalClassifySkill.label} value={formData.assessment_skills[classifySkillKey]} onChange={(key, value) => handleSkillChange(group.sectionKey, key, value)} showNaOption={false} />
+                                                                        )}
 
-                                                                        {/* Worker Classification */}
-                                                                        <FormGroup label="ما هو التصنيف الذي الذي صنفه العامل الصحي؟" className="text-right">
-                                                                            {isMultiSelectClassification && multiSelectCols ? (
-                                                                                <div className="max-h-40 overflow-y-auto border rounded p-3 bg-white grid grid-cols-2 gap-x-4">
-                                                                                    <div className="space-y-1">{multiSelectCols.col1.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[workerClassKey]?.[c]} onChange={handleFormChange} /> <label htmlFor={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
-                                                                                    <div className="space-y-1">{multiSelectCols.col2.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[workerClassKey]?.[c]} onChange={handleFormChange} /> <label htmlFor={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
-                                                                                </div>
-                                                                            ) : (
-                                                                                <Select name={workerClassKey} value={formData.assessment_skills[workerClassKey]} onChange={handleFormChange}> <option value="">-- اختر التصنيف --</option> {symptomClassifications.map(c => <option key={c} value={c}>{c}</option>)} </Select>
-                                                                            )}
-                                                                        </FormGroup>
+                                                                        {/* 3. Worker Classification - Only show if classify skill is answered (and not 'na') */}
+                                                                        {formData.assessment_skills[classifySkillKey] !== '' && formData.assessment_skills[classifySkillKey] !== 'na' && (
+                                                                            <FormGroup label="ما هو التصنيف الذي الذي صنفه العامل الصحي؟" className="text-right">
+                                                                                {isMultiSelectClassification && multiSelectCols ? (
+                                                                                    <div className="max-h-40 overflow-y-auto border rounded p-3 bg-white grid grid-cols-2 gap-x-4">
+                                                                                        <div className="space-y-1">{multiSelectCols.col1.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[workerClassKey]?.[c]} onChange={handleFormChange} /> <label htmlFor={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
+                                                                                        <div className="space-y-1">{multiSelectCols.col2.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[workerClassKey]?.[c]} onChange={handleFormChange} /> <label htmlFor={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <Select name={workerClassKey} value={formData.assessment_skills[workerClassKey]} onChange={handleFormChange}> <option value="">-- اختر التصنيف --</option> {symptomClassifications.map(c => <option key={c} value={c}>{c}</option>)} </Select>
+                                                                                )}
+                                                                            </FormGroup>
+                                                                        )}
 
-                                                                        {/* Supervisor Correction */}
+                                                                        {/* 4. Supervisor Correction - Only show if:
+                                                                             - classify skill is 'no' (existing logic: showSupervisorCorrection)
+                                                                             - worker classification is filled (new logic)
+                                                                        */}
                                                                         {showSupervisorCorrection && (
+                                                                             (isMultiSelectClassification && !isMultiSelectGroupEmpty(formData.assessment_skills[workerClassKey])) ||
+                                                                             (!isMultiSelectClassification && formData.assessment_skills[workerClassKey] !== '')
+                                                                        ) && (
                                                                             <FormGroup label="ما هو التصنيف الصحيح؟" className="text-right">
                                                                                 {isMultiSelectClassification && multiSelectCols ? (
                                                                                      <div className="max-h-40 overflow-y-auto border rounded p-3 bg-white grid grid-cols-2 gap-x-4">
@@ -1773,6 +1801,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                                                                             </FormGroup>
                                                                         )}
                                                                     </> )}
+                                                                    {/* --- END: MODIFIED --- */}
                                                                 </div>
                                                             )}
                                                         </div>
@@ -1784,11 +1813,13 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                                     // Regular Subgroup Rendering
                                     else if (Array.isArray(subgroup.skills)) {
                                         const isVitalSignsGroup = subgroup.subgroupTitle === 'القياسات الجسمانية والحيوية';
-                                        const relevantSkills = subgroup.skills.filter(skill => {
-                                            if (skill.relevant) { return typeof skill.relevant === 'function' ? skill.relevant(formData) : evaluateRelevance(skill.relevant, formData); }
-                                            return true;
-                                        });
-                                        if (relevantSkills.length === 0) return null;
+                                        
+                                        // --- START: MODIFIED - Remove pre-filtering ---
+                                        // const relevantSkills = subgroup.skills.filter(skill => { ... }); // <-- This is removed
+                                        // --- END: MODIFIED ---
+                                        
+                                        // if (relevantSkills.length === 0) return null; // <-- This is removed
+                                        
                                         const isMalnutrition = subgroup.subgroupTitle === 'تحرى عن سوء التغذية الحاد'; const isAnemia = subgroup.subgroupTitle === 'تحرى عن الانيميا'; let classPrefix = ''; let classifications = []; if (isMalnutrition) { classPrefix = 'malnutrition'; classifications = MALNUTRITION_CLASSIFICATIONS; } if (isAnemia) { classPrefix = 'anemia'; classifications = ANEMIA_CLASSIFICATIONS; } const workerClassKey = `worker_${classPrefix}_classification`; const correctClassKey = `supervisor_correct_${classPrefix}_classification`; const classifySkillKey = isMalnutrition ? 'skill_mal_classify' : isAnemia ? 'skill_anemia_classify' : null;
                                         const showClassifications = (isMalnutrition || isAnemia) && classifySkillKey;
                                         const showSupervisorCorrection = showClassifications && formData.assessment_skills[classifySkillKey] === 'no';
@@ -1801,31 +1832,86 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                                                     <span className="mr-2">{subgroup.subgroupTitle}</span> {/* Margin for spacing */}
                                                 </h5>
                                                 <div className="space-y-3 p-4 text-right" dir="rtl">
-                                                    {/* Skills */}
-                                                    {relevantSkills.map(skill => (
-                                                        <SkillChecklistItem
-                                                            key={skill.key}
-                                                            name={skill.key}
-                                                            label={skill.label}
-                                                            value={formData[group.sectionKey]?.[skill.key]}
-                                                            onChange={(key, value) => handleSkillChange(group.sectionKey, key, value)}
-                                                            showNaOption={isVitalSignsGroup}
-                                                            naLabel={isVitalSignsGroup ? "لا يوجد / لا يعمل الجهاز" : "لا ينطبق"}
-                                                        />
-                                                    ))}
-                                                    {/* Classifications */}
+                                                    {/* --- START: MODIFIED - Skills mapping with sequential logic --- */}
+                                                    {subgroup.skills.map((skill, index) => {
+                                                        // 1. Check existing relevance logic (e.g., for treatment skills)
+                                                        let isConditionallyRelevant = true;
+                                                        if (skill.relevant) {
+                                                            isConditionallyRelevant = typeof skill.relevant === 'function'
+                                                                ? skill.relevant(formData)
+                                                                : evaluateRelevance(skill.relevant, formData);
+                                                        }
+                                                        if (!isConditionallyRelevant) return null; // Hide if explicitly irrelevant
+
+                                                        // 2. Check sequential logic
+                                                        let isSequentiallyVisible = true;
+                                                        if (index > 0) {
+                                                            // Find the *previous* skill in the list that was *also* conditionally relevant
+                                                            let previousRelevantSkill = null;
+                                                            for (let i = index - 1; i >= 0; i--) {
+                                                                const prevSkill = subgroup.skills[i];
+                                                                let prevSkillIsRelevant = true;
+                                                                if (prevSkill.relevant) {
+                                                                    prevSkillIsRelevant = typeof prevSkill.relevant === 'function'
+                                                                        ? prevSkill.relevant(formData)
+                                                                        : evaluateRelevance(prevSkill.relevant, formData);
+                                                                }
+                                                                if (prevSkillIsRelevant) {
+                                                                    previousRelevantSkill = prevSkill;
+                                                                    break; // Found the first preceding relevant skill
+                                                                }
+                                                            }
+
+                                                            if (previousRelevantSkill) {
+                                                                const previousValue = formData[group.sectionKey]?.[previousRelevantSkill.key];
+                                                                if (previousValue === '' || previousValue === undefined) {
+                                                                    isSequentiallyVisible = false; // Hide if previous relevant skill is not answered
+                                                                }
+                                                            }
+                                                        }
+
+                                                        if (!isSequentiallyVisible) return null; // Hide if sequentially blocked
+
+                                                        // If both checks pass, render the item
+                                                        return (
+                                                            <SkillChecklistItem
+                                                                key={skill.key}
+                                                                name={skill.key}
+                                                                label={skill.label}
+                                                                value={formData[group.sectionKey]?.[skill.key]}
+                                                                onChange={(key, value) => handleSkillChange(group.sectionKey, key, value)}
+                                                                showNaOption={isVitalSignsGroup}
+                                                                naLabel={isVitalSignsGroup ? "لا يوجد / لا يعمل الجهاز" : "لا ينطبق"}
+                                                            />
+                                                        );
+                                                    })}
+                                                    {/* --- END: MODIFIED --- */}
+                                                    
+                                                    {/* --- START: MODIFIED - Classifications with sequential logic --- */}
                                                     {showClassifications && (
                                                         <div className="pt-4 mt-4 border-t border-gray-200 space-y-4">
-                                                            <FormGroup label="ما هو التصنيف الذي الذي صنفه العامل الصحي؟" className="text-right">
-                                                                 <Select name={workerClassKey} value={formData.assessment_skills[workerClassKey]} onChange={handleFormChange}> <option value="">-- اختر التصنيف --</option> {classifications.map(c => <option key={c} value={c}>{c}</option>)} </Select>
-                                                            </FormGroup>
-                                                            {showSupervisorCorrection && (
+                                                            {/* Check if the 'classify' skill has been answered.
+                                                              (classifySkillKey holds 'skill_mal_classify' or 'skill_anemia_classify')
+                                                            */}
+                                                            {formData.assessment_skills[classifySkillKey] !== '' && formData.assessment_skills[classifySkillKey] !== 'na' && (
+                                                                <FormGroup label="ما هو التصنيف الذي الذي صنفه العامل الصحي؟" className="text-right">
+                                                                     <Select name={workerClassKey} value={formData.assessment_skills[workerClassKey]} onChange={handleFormChange}> <option value="">-- اختر التصنيف --</option> {classifications.map(c => <option key={c} value={c}>{c}</option>)} </Select>
+                                                                </FormGroup>
+                                                            )}
+                                                            
+                                                            {/* Check for supervisor correction.
+                                                              This should only show if:
+                                                              1. The main 'classify' skill is 'no' (existing logic: showSupervisorCorrection)
+                                                              2. The worker classification dropdown has been filled.
+                                                            */}
+                                                            {showSupervisorCorrection && formData.assessment_skills[workerClassKey] !== '' && (
                                                                 <FormGroup label="ما هو التصنيف الصحيح؟" className="text-right">
                                                                      <Select name={correctClassKey} value={formData.assessment_skills[correctClassKey]} onChange={handleFormChange}> <option value="">-- اختر التصنيف الصحيح --</option> {classifications.map(c => <option key={c} value={c}>{c}</option>)} </Select>
                                                                 </FormGroup>
                                                             )}
                                                         </div>
                                                     )}
+                                                    {/* --- END: MODIFIED --- */}
                                                 </div>
                                             </div>
                                         );
@@ -1846,26 +1932,24 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                     )}
                 </div>
 
-                 {/* --- Button Bar (MODIFIED) --- */}
-                 {/* *****************************************************************
-                    *** THIS IS THE CHANGE REQUESTED ***
-                    
-                    The 'div' below *still* has "hidden sm:flex".
-                    This is correct, as the mobile bar is handled in
-                    SkillsMentorshipView.jsx.
-                    
-                    The "Save" button's disabled logic is now updated.
-                    *****************************************************************
-                 */}
-                 <div className="hidden sm:flex gap-4 justify-between items-center p-4 border-t bg-gray-50 sticky bottom-0 z-10">
-                     {/* START: REMOVED Autosave Status Indicator */}
-                     <div className="flex-shrink-0">
-                        {/* Empty div to maintain spacing */}
+                 {/* --- START: Button Bar (MODIFIED for 2 rows) --- */}
+                 <div className="hidden sm:flex flex-col gap-2 items-end p-4 border-t bg-gray-50 sticky bottom-0 z-10">
+                     
+                     {/* Row 1: Action Buttons (MOVED UP) */}
+                     <div className="flex gap-2 flex-wrap justify-end">
+                        <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving || isSavingDraft}> إلغاء </Button>
+                        <Button type="button" variant="outline" onClick={handleSaveDraft} disabled={isSaving || isSavingDraft}> {isSavingDraft ? 'جاري حفظ المسودة...' : 'حفظ كمسودة'} </Button>
+                        <Button 
+                            type="submit" 
+                            disabled={isSaving || isSavingDraft || !isFormFullyComplete} 
+                            title={!isFormFullyComplete ? "يجب إكمال جميع الخطوات أولاً لحفظ الجلسة" : "حفظ وإنهاء الجلسة"}
+                        > 
+                            {isSaving ? 'جاري الحفظ...' : 'حفظ وإكمال الجلسة'} 
+                        </Button>
                      </div>
-                     {/* END: REMOVED Autosave Status Indicator */}
 
-                     {/* Button Group */}
-                     <div className="flex gap-2 justify-end">
+                     {/* Row 2: Navigation Buttons (MOVED DOWN) */}
+                     <div className="flex gap-2 flex-wrap justify-end">
                         {/* --- NEW FACILITY FORM BUTTON --- */}
                         <Button 
                             type="button" 
@@ -1901,20 +1985,9 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                             لوحة المتابعة
                         </Button>
                         {/* --- END: NEW DASHBOARD BUTTON --- */}
-                        
-                        <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving || isSavingDraft}> إلغاء </Button>
-                        <Button type="button" variant="outline" onClick={handleSaveDraft} disabled={isSaving || isSavingDraft}> {isSavingDraft ? 'جاري حفظ المسودة...' : 'حفظ كمسودة'} </Button>
-                        {/* --- START: MODIFIED SAVE BUTTON --- */}
-                        <Button 
-                            type="submit" 
-                            disabled={isSaving || isSavingDraft || !isFormFullyComplete} 
-                            title={!isFormFullyComplete ? "يجب إكمال جميع الخطوات أولاً لحفظ الجلسة" : "حفظ وإنهاء الجلسة"}
-                        > 
-                            {isSaving ? 'جاري الحفظ...' : 'حفظ وإكمال الجلسة'} 
-                        </Button>
-                        {/* --- END: MODIFIED SAVE BUTTON --- */}
                      </div>
                  </div>
+                 {/* --- END: Button Bar (MODIFIED for 2 rows) --- */}
             </form>
 
             {/* --- NEW FACILITY DATA MODAL --- */}

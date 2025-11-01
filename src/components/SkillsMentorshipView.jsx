@@ -1858,19 +1858,10 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
         // Pass the original editingSubmission data (not the processed one)
         return (
             <>
-                {/* --- NEW: Sticky Drafts Button (Square, Top Right) --- */}
-                 {publicSubmissionMode && user && (
-                    <button
-                        onClick={() => setIsDraftsModalOpen(true)}
-                        className="fixed top-4 right-4 z-30 bg-yellow-500 text-white w-16 h-16 rounded-md shadow-lg hover:bg-yellow-600 transition-colors flex flex-col items-center justify-center text-xs font-medium"
-                        title="عرض المسودات المحفوظة"
-                        dir="rtl" // Ensure text direction is correct
-                    >
-                         <span>المسودات</span>
-                         <span>({currentUserDrafts.length})</span>
-                    </button>
-                )}
-                {/* --- END Sticky Drafts Button --- */}
+                {/* --- START: REMOVED Sticky Drafts Button --- */}
+                {/* The floating draft button was here and is now removed. */}
+                {/* --- END: REMOVED Sticky Drafts Button --- */}
+
                 <SkillsAssessmentForm
                     ref={formRef} // MODIFIED: Pass the ref
                     facility={facilityData}
@@ -2016,18 +2007,9 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
 
         return (
             <>
-                {/* --- NEW: Sticky Drafts Button --- */}
-                {isSkillsAssessmentSetup && publicSubmissionMode && user && (
-                    <button
-                        onClick={() => setIsDraftsModalOpen(true)}
-                        className="fixed top-1/2 right-4 transform -translate-y-1/2 z-30 bg-yellow-500 text-white px-3 py-2 rounded-md shadow-lg hover:bg-yellow-600 transition-colors"
-                        title="عرض المسودات المحفوظة"
-                        dir="rtl" // Ensure text direction is correct
-                    >
-                         عرض المسودات ({currentUserDrafts.length})
-                    </button>
-                )}
-                {/* --- END Sticky Drafts Button --- */}
+                {/* --- START: REMOVED Sticky Drafts Button --- */}
+                {/* The floating draft button was here and is now removed. */}
+                {/* --- END: REMOVED Sticky Drafts Button --- */}
 
                 <Card dir="rtl">
                     <div className="p-6">

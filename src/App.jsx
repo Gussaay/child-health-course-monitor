@@ -204,6 +204,15 @@ export default function App() {
     } = useDataCache();
     const { user, userStates, authLoading, userLocalities } = useAuth();
 
+    // --- NEW: Check if the user profile is incomplete ---
+    const isProfileIncomplete = useMemo(() => {
+        // Only check if auth is loaded AND user exists, but displayName is missing
+        if (!authLoading && user && (!user.displayName || user.displayName.trim().length === 0)) {
+            return true;
+        }
+        return false;
+    }, [user, authLoading]); // Re-checks whenever user or authLoading changes
+
     const [view, setView] = useState("landing");
     const [activeCourseType, setActiveCourseType] = useState(null);
     const [selectedCourseId, setSelectedCourseId] = useState(null);
@@ -820,7 +829,7 @@ export default function App() {
             await importParticipants(participantsWithCourseId);
             
             // --- MODIFICATION ---
-            // handleOpenCourse no longer fetches, so we must manually refresh ParticipantsView
+            // handleOpenCourse no longer refetches, so we must manually refresh ParticipantsView
             // The best way is to just call navigate again, which will trigger ParticipantsView's refetch
             navigate('participants', { courseId: selectedCourse.id });
             // --- END MODIFICATION ---
@@ -1174,13 +1183,24 @@ export default function App() {
         }
     }
     // --- END MODIFICATION ---
+
+    // --- *** START OF CRITICAL FIX *** ---
     // Standard authenticated view
     else if (!user && !authLoading) {
+        // User is fully logged out
+        mainContent = <SignInBox />;
+    }
+    // --- NEW: Keep showing SignInBox if profile is incomplete ---
+    else if (user && isProfileIncomplete) {
+        // User is logged IN, but profile is incomplete.
+        // Keep showing SignInBox, which will handle the profile form.
         mainContent = <SignInBox />;
     }
     else {
+        // User is logged in AND profile is complete
         mainContent = renderView();
     }
+    // --- *** END OF CRITICAL FIX *** ---
 
 
     return (
@@ -1216,7 +1236,12 @@ export default function App() {
             {/* --- User/Admin Info Bar: Hidden if minimal layout OR not logged in --- */}
             {user && !isMinimalUILayout && (
                 <div className="bg-slate-700 text-slate-200 p-2 md:p-3 text-center flex items-center justify-center gap-4">
-                    <div className="flex items-center gap-2"><span>Welcome, {user.email}</span>{userRole && <span className="bg-sky-600 text-xs px-2 py-1 rounded">{userRole}</span>}</div>
+                    <div className="flex items-center gap-2">
+                        {/* --- MODIFICATION START (The requested change is here) --- */}
+                        <span>Welcome, **{user.displayName || user.email}**</span>
+                        {/* --- MODIFICATION END --- */}
+                        {userRole && <span className="bg-sky-600 text-xs px-2 py-1 rounded">{userRole}</span>}
+                    </div>
                     {permissions.canViewAdmin && (<Button onClick={() => navigate('admin')} variant="primary">Admin Dashboard</Button>)}
                     <Button onClick={handleLogout} className="px-3 py-1 text-sm font-semibold text-white bg-red-600 rounded-md hover:bg-red-700">Logout</Button>
                 </div>
