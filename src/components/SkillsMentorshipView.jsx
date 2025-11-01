@@ -908,6 +908,11 @@ const SkillsMentorshipView = ({
     // --- NEW: State for Drafts Modal ---
     const [isDraftsModalOpen, setIsDraftsModalOpen] = useState(false);
 
+    // --- START: NEW STATE FOR MODALS ---
+    const [isMothersFormModalOpen, setIsMothersFormModalOpen] = useState(false);
+    const [isDashboardModalOpen, setIsDashboardModalOpen] = useState(false);
+    // --- END: NEW STATE FOR MODALS ---
+
     // --- NEW: Ref for the SkillsAssessmentForm ---
     const formRef = useRef(null);
     
@@ -1544,9 +1549,10 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
         
         const navItems = [
             { id: 'skills_assessment', label: 'Skills Form', active: isSkillsActive, disabled: false },
-            { id: 'mothers_form', label: "Mother's Survey", active: isMothersActive, disabled: false },
+            { id: 'mothers_form', label: "Mother's Survey", active: false, disabled: false }, // MODIFIED: No longer 'active'
             { id: 'facility_update', label: 'Facility Data', active: false, disabled: !isSkillsActive },
             { id: 'drafts', label: `Drafts (${draftCount})`, active: false, disabled: !isSkillsActive },
+            { id: 'dashboard', label: 'Dashboard', active: false, disabled: false }, // <-- NEW ITEM
         ];
 
         return (
@@ -1557,7 +1563,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         type="button"
                         onClick={() => onNavClick(item.id)}
                         disabled={item.disabled}
-                        className={`flex flex-col items-center justify-center text-center p-2 w-1/4 transition-colors duration-150 h-16
+                        className={`flex flex-col items-center justify-center text-center p-2 w-1/5 transition-colors duration-150 h-16
                             ${item.active ? 'text-sky-400' : 'text-gray-300 hover:text-white'}
                             ${item.disabled ? 'text-gray-600 cursor-not-allowed' : ''}
                         `}
@@ -1583,22 +1589,9 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
             }
         } 
         else if (target === 'mothers_form') {
-            if (activeFormType === 'skills_assessment') {
-                const confirmSwitch = window.confirm("You are about to switch to the Mother's Survey. Your current skills form will be saved as a draft. Proceed?");
-                if (confirmSwitch) {
-                    try {
-                        if (formRef.current) {
-                            await formRef.current.saveDraft();
-                            await fetchSkillMentorshipSubmissions(true); // Refresh draft count
-                        }
-                        resetSelection();
-                        setActiveFormType('mothers_form');
-                    } catch (e) {
-                        console.error("Failed to save draft before switching:", e);
-                        setToast({ show: true, message: `Failed to save draft: ${e.message}`, type: 'error' });
-                    }
-                }
-            }
+            // --- MODIFIED: Open modal instead of switching form ---
+            setIsMothersFormModalOpen(true);
+            // --- END MODIFIED ---
         }
         else if (target === 'facility_update' && activeFormType === 'skills_assessment' && formRef.current) {
             formRef.current.openFacilityModal();
@@ -1606,6 +1599,11 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
         else if (target === 'drafts' && activeFormType === 'skills_assessment') {
             setIsDraftsModalOpen(true);
         }
+        // --- NEW: Case for Dashboard ---
+        else if (target === 'dashboard') {
+            setIsDashboardModalOpen(true);
+        }
+        // --- END NEW ---
     };
     // --- END: Handler for Mobile Nav Clicks ---
 
@@ -1886,6 +1884,12 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                     existingSessionData={editingSubmission} // Pass the original data
                     lastSessionDate={lastSessionDate}
                     onDraftCreated={handleDraftCreated} // <-- MODIFIED: Pass handler
+                    
+                    // --- START: NEW PROPS PASSED DOWN ---
+                    setIsMothersFormModalOpen={setIsMothersFormModalOpen}
+                    setIsDashboardModalOpen={setIsDashboardModalOpen}
+                    draftCount={currentUserDrafts.length}
+                    // --- END: NEW PROPS PASSED DOWN ---
                 />
                  {/* --- NEW: Drafts Modal --- */}
                  <MobileFormNavBar
@@ -1908,6 +1912,69 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         onClose={() => setViewingSubmission(null)}
                     />
                  )}
+            
+                 {/* --- START: NEW MOTHER'S FORM MODAL --- */}
+                 {isMothersFormModalOpen && (
+                    <Modal 
+                        isOpen={isMothersFormModalOpen} 
+                        onClose={() => setIsMothersFormModalOpen(false)} 
+                        title="استبيان الأم: رضاء ومعرفة الأمهات"
+                        size="full"
+                    >
+                        <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
+                            <MothersForm
+                                facility={facilityData} // Pass the same facility data as the skills form
+                                onCancel={() => {
+                                    setIsMothersFormModalOpen(false);
+                                    fetchSkillMentorshipSubmissions(true); // Refresh submissions list on close
+                                }}
+                                setToast={setToast}
+                            />
+                        </div>
+                    </Modal>
+                 )}
+                 {/* --- END: NEW MOTHER'S FORM MODAL --- */}
+                 
+                 {/* --- START: NEW DASHBOARD MODAL --- */}
+                 {isDashboardModalOpen && (
+                    <Modal 
+                        isOpen={isDashboardModalOpen} 
+                        onClose={() => setIsDashboardModalOpen(false)} 
+                        title="لوحة متابعة: العلاج المتكامل"
+                        size="full"
+                    >
+                        <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
+                            <MentorshipDashboard
+                                allSubmissions={processedSubmissions}
+                                STATE_LOCALITIES={STATE_LOCALITIES}
+                                activeService={activeService}
+                                
+                                // Pass dashboard filter state
+                                activeState={activeDashboardState}
+                                onStateChange={(value) => {
+                                    setActiveDashboardState(value);
+                                    setActiveDashboardLocality("");
+                                    setActiveDashboardFacilityId("");
+                                    setActiveDashboardWorkerName("");
+                                }}
+                                activeLocality={activeDashboardLocality}
+                                onLocalityChange={(value) => {
+                                    setActiveDashboardLocality(value);
+                                    setActiveDashboardFacilityId("");
+                                    setActiveDashboardWorkerName("");
+                                }}
+                                activeFacilityId={activeDashboardFacilityId}
+                                onFacilityIdChange={(value) => {
+                                    setActiveDashboardFacilityId(value);
+                                    setActiveDashboardWorkerName("");
+                                }}
+                                activeWorkerName={activeDashboardWorkerName}
+                                onWorkerNameChange={setActiveDashboardWorkerName}
+                            />
+                        </div>
+                    </Modal>
+                 )}
+                 {/* --- END: NEW DASHBOARD MODAL --- */}
             </>
         );
     }

@@ -224,7 +224,7 @@ const IMNCI_FORM_STRUCTURE = [
             {
                 subgroupTitle: 'في حالة الدسنتاريا',
                 scoreKey: 'dyst_treatment',
-                skills: [ { key: 'skill_dyst_abx', label: 'هل وصف مضاد حيوي لعلاج الدسنتاريا بصورة صحيحة' }, { key: 'skill_dyst_dose', label: 'هل أعطى الجrعة الأولى من مضاد حيوي لعلاج الدسنتاريا في العيادة بصورة صحيحة', relevant: "${skill_dyst_abx}='yes'" }, ],
+                skills: [ { key: 'skill_dyst_abx', label: 'هل وصف مضاد حيوي لعلاج الدسنتاريا بصورة صحيحة' }, { key: 'skill_dyst_dose', label: 'هل أعطى الجrعة الأولى من مضاد حيوي لعلاج الدسنتارIA في العيادة بصورة صحيحة', relevant: "${skill_dyst_abx}='yes'" }, ],
                 relevant: (formData) => { // Show if effective classification includes 'دسنتاريا'
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_diarrhea === 'yes';
                     const workerCls = formData.assessment_skills.worker_diarrhea_classification || {};
@@ -728,7 +728,12 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
         existingSessionData = null,
         visitNumber = 1, 
         lastSessionDate = null,
-        onDraftCreated // <-- DESTRUCTURED
+        onDraftCreated, // <-- DESTRUCTURED
+        // --- START NEW PROPS ---
+        setIsMothersFormModalOpen,
+        setIsDashboardModalOpen,
+        draftCount
+        // --- END NEW PROPS ---
     } = props;
     // --- END MODIFICATION ---
 
@@ -746,11 +751,11 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
     const auth = getAuth();
     const user = auth.currentUser;
 
-    // --- START: MODIFIED AUTOSAVE REFS ---
-    const [isDirty, setIsDirty] = useState(false);
-    const [isAutoSaving, setIsAutoSaving] = useState(false);
-    const autoSaveTimerRef = useRef(null);
+    // --- START: NEW STATE FOR COMPLETION ---
+    const [isFormFullyComplete, setIsFormFullyComplete] = useState(false);
+    // --- END: NEW STATE FOR COMPLETION ---
 
+    // --- START: MODIFIED AUTOSAVE REFS ---
     // Create refs to hold stable values for props and state
     // This avoids stale closures in the useCallback for silentSave
     const formDataRef = useRef(formData);
@@ -758,32 +763,24 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
         formDataRef.current = formData;
     }, [formData]);
 
-    // --- NEW: Add ref for isDirty ---
-    // This allows the useEffect([existingSessionData]) to read the *current*
-    // dirty status without needing it in its dependency array.
-    const isDirtyRef = useRef(isDirty);
-    useEffect(() => { 
-        isDirtyRef.current = isDirty; 
-    }, [isDirty]);
-    // --- END NEW REF ---
 
     // --- MODIFICATION: Add onDraftCreated to ref ---
     const allPropsRef = useRef({
         facility, healthWorkerName, user, visitNumber, existingSessionData,
-        isSaving, isSavingDraft, isAutoSaving, isDirty, setToast,
+        isSaving, isSavingDraft, setToast,
         healthWorkerJobTitle,
         onDraftCreated // <-- ADDED
     });
     useEffect(() => {
         allPropsRef.current = {
             facility, healthWorkerName, user, visitNumber, existingSessionData,
-            isSaving, isSavingDraft, isAutoSaving, isDirty, setToast,
+            isSaving, isSavingDraft, setToast,
             healthWorkerJobTitle,
             onDraftCreated // <-- ADDED
         };
     }, [
         facility, healthWorkerName, user, visitNumber, existingSessionData,
-        isSaving, isSavingDraft, isAutoSaving, isDirty, setToast,
+        isSaving, isSavingDraft, setToast,
         healthWorkerJobTitle,
         onDraftCreated // <-- ADDED
     ]);
@@ -798,7 +795,6 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
     // ================== BEGIN FIX ==================
     //
     // This effect now synchronizes the form state *only when the draft ID actually changes*
-    // AND the form is not dirty, preventing data loss from autosave race conditions.
     //
     useEffect(() => {
         const newId = existingSessionData ? existingSessionData.id : null;
@@ -807,19 +803,6 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
         // We only reload the form if the ID *changes*.
         if (newId !== oldId) {
             
-            // --- FIX: Check if form is dirty ---
-            // If the form is dirty, it means the user is typing *while*
-            // the parent component's state changed (e.g., from an autosave).
-            // We *must not* reload the form, or we will "stomp" their changes.
-            if (isDirtyRef.current) {
-                // Just update the ID we are tracking and stop.
-                // The *next* autosave will save the user's current (dirty)
-                // state to this new ID.
-                editingIdRef.current = newId;
-                return; 
-            }
-            // --- END FIX ---
-
             if (newId) {
                 // New ID is present: load/reload the draft data
                 setFormData(rehydrateDraftData(existingSessionData));
@@ -831,12 +814,6 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
             }
             // Update the ID we are tracking
             editingIdRef.current = newId;
-            
-            // Reset dirty state and timer since we just loaded fresh data
-            setIsDirty(false); 
-            if (autoSaveTimerRef.current) {
-                clearTimeout(autoSaveTimerRef.current);
-            }
         }
         // If newId === oldId, do nothing. This prevents re-hydration
         // when the parent re-renders but the draft ID is the same.
@@ -1106,6 +1083,31 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
             setFormData(newFormData);
         }
 
+        // --- START: NEW COMPLETION CHECK ---
+        const vitalSignsComplete = isVitalSignsComplete(newFormData);
+        const dangerSignsComplete = isDangerSignsComplete(newFormData);
+        const mainSymptomsComplete = isMainSymptomsComplete(newFormData);
+        const malnutritionComplete = isMalnutritionComplete(newFormData);
+        const anemiaComplete = isAnemiaComplete(newFormData);
+        const immunizationComplete = isImmunizationComplete(newFormData);
+        const otherProblemsComplete = isOtherProblemsComplete(newFormData);
+        const decisionComplete = isDecisionComplete(newFormData);
+        // Check if treatment step is complete (no empty relevant fields)
+        const treatmentComplete = findIncompleteTreatmentSkills(newFormData).length === 0;
+
+        const allStepsComplete = vitalSignsComplete &&
+                                 dangerSignsComplete &&
+                                 mainSymptomsComplete &&
+                                 malnutritionComplete &&
+                                 anemiaComplete &&
+                                 immunizationComplete &&
+                                 otherProblemsComplete &&
+                                 decisionComplete &&
+                                 treatmentComplete;
+
+        setIsFormFullyComplete(allStepsComplete);
+        // --- END: NEW COMPLETION CHECK ---
+
         // Calculate scores based on the *current* (potentially cleaned) formData
         setScores(calculateScores(newFormData)); 
 
@@ -1128,7 +1130,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
         // Don't autosave if a manual save is in progress
         if (isSaving || isSavingDraft) return;
 
-        setIsAutoSaving(true);
+        // --- REMOVED isAutoSaving state ---
         
         try {
             // Payload processing (copied from handleSaveDraft)
@@ -1194,7 +1196,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
             // --- MODIFICATION: Capture return value ---
             const savedDraft = await saveMentorshipSession(payload, sessionId);
 
-            setIsDirty(false); // Mark as clean after successful save
+            // --- REMOVED setIsDirty(false) ---
             
             // --- MODIFICATION: Call onDraftCreated if it was a new draft ---
             if (!sessionId && savedDraft && onDraftCreated) {
@@ -1210,48 +1212,28 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
             // Only show toast on error for silent save
             setToast({ show: true, message: `فشل الحفظ التلقائي: ${error.message}`, type: 'error' });
         } finally {
-            setIsAutoSaving(false);
+            // --- REMOVED setIsAutoSaving(false) ---
         }
     }, []); // MODIFIED: Empty dependency array, relies on refs
     // --- END MODIFICATION ---
     // --- END: New silentSaveDraft function for autosave ---
 
-    // --- START: New useEffect to trigger autosave ---
-    useEffect(() => {
-        // Don't autosave if not dirty, or if a manual/auto save is in progress
-        if (!isDirty || isSaving || isSavingDraft || isAutoSaving) {
-            return;
-        }
-
-        // If a timer is already running, clear it
-        if (autoSaveTimerRef.current) {
-            clearTimeout(autoSaveTimerRef.current);
-        }
-
-        // Set a new timer to trigger the silent save
-        autoSaveTimerRef.current = setTimeout(() => {
-            silentSaveDraft();
-        }, 5000); // Autosave 5 seconds after the last change
-
-        // Cleanup function to clear the timer
-        return () => {
-            if (autoSaveTimerRef.current) {
-                clearTimeout(autoSaveTimerRef.current);
-            }
-        };
-    }, [isDirty, isSaving, isSavingDraft, isAutoSaving, silentSaveDraft]); // MODIFIED: Depends on isDirty and save statuses
-    // --- END: New useEffect to trigger autosave ---
+    // --- START: REMOVED useEffect to trigger autosave ---
+    // (This entire block was removed)
+    // --- END: REMOVED useEffect to trigger autosave ---
 
     // --- START: New useImperativeHandle to expose saveDraft ---
     useImperativeHandle(ref, () => ({
         saveDraft: async () => {
             // ... (existing saveDraft logic) ...
-            const { isSaving, isSavingDraft, isAutoSaving } = allPropsRef.current;
+            // --- MODIFIED: Removed isAutoSaving ---
+            const { isSaving, isSavingDraft } = allPropsRef.current;
             
             // ================== BEGIN FIX ==================
             //
             // If a manual or auto save is already in progress, just return to avoid conflicts
-            if (isSaving || isSavingDraft || isAutoSaving) {
+            // --- MODIFIED: Removed isAutoSaving ---
+            if (isSaving || isSavingDraft) {
                 return;
             }
             //
@@ -1263,10 +1245,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
             //
             // =================== END FIX ===================
 
-            // If a timer is running, clear it because we are saving now
-            if (autoSaveTimerRef.current) {
-                clearTimeout(autoSaveTimerRef.current);
-            }
+            // --- REMOVED: Timer clear ---
 
             // Trigger the save immediately and wait for it
             await silentSaveDraft();
@@ -1332,7 +1311,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
              // Note: SkillChecklistItem uses handleSkillChange, not this one.
         }
 
-        setIsDirty(true); // MODIFIED: Mark form as dirty
+        // --- REMOVED setIsDirty(true) ---
     };
 
     const handleSkillChange = (section, key, value) => {
@@ -1343,7 +1322,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                 [key]: value,    // Update the specific skill,
             }
         }));
-        setIsDirty(true); // MODIFIED: Mark form as dirty
+        // --- REMOVED setIsDirty(true) ---
     };
 
     // --- NEW: Handler for saving facility data from modal ---
@@ -1364,46 +1343,31 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
         e.preventDefault();
 
         // --- START: NEW COMPREHENSIVE VALIDATION ---
-        const validationMessages = [];
-
-        // 1. Check all assessment and decision steps
-        if (!isVitalSignsComplete(formData)) validationMessages.push('خطوة 1: القياسات الجسمانية والحيوية');
-        if (!isDangerSignsComplete(formData)) validationMessages.push('خطوة 2: علامات الخطورة العامة');
-        if (!isMainSymptomsComplete(formData)) validationMessages.push('خطوة 3: الأعراض الأساسية (بما في ذلك التصنيفات)');
-        if (!isMalnutritionComplete(formData)) validationMessages.push('خطوة 4: سوء التغذية الحاد (بما في ذلك التصنيفات)');
-        if (!isAnemiaComplete(formData)) validationMessages.push('خطوة 5: فقر الدم (بما في ذلك التصنيفات)');
-        if (!isImmunizationComplete(formData)) validationMessages.push('خطوة 6: التطعيم وفيتامين أ');
-        if (!isOtherProblemsComplete(formData)) validationMessages.push('خطوة 7: الأمراض الأخرى');
-        if (!isDecisionComplete(formData)) validationMessages.push('خطوة 8: القرار النهائي');
-
-        // 2. Check Treatment Step (Step 9)
-        // This function finds relevant skills where the answer is ''
-        const incompleteTreatment = findIncompleteTreatmentSkills(formData);
-        if (incompleteTreatment.length > 0) {
-            // To avoid a giant list, just show the first few.
-            const itemsToShow = 3;
-            const firstIncomplete = incompleteTreatment.slice(0, itemsToShow).join('، ');
-            const moreCount = incompleteTreatment.length - itemsToShow;
-            
-            let treatmentError = `خطوة 9: حقول العلاج والنصح (ناقص: ${firstIncomplete}`;
-            if (moreCount > 0) {
-                treatmentError += ` و ${moreCount} أخرى...`;
-            }
-            treatmentError += ')';
-            validationMessages.push(treatmentError);
-        }
-        
-        // 3. Show Toast and block submission if any errors
-        if (validationMessages.length > 0) {
-            const errorMessage = `لا يمكن الحفظ. الرجاء إكمال الأقسام التالية: \n- ${validationMessages.join('\n- ')}`;
-            setToast({ 
+        // This check is now redundant because the button is disabled,
+        // but it serves as a final backend-style check in case of a race condition.
+        if (!isFormFullyComplete) {
+             const validationMessages = [];
+             if (!isVitalSignsComplete(formData)) validationMessages.push('خطوة 1: القياسات الجسمانية والحيوية');
+             if (!isDangerSignsComplete(formData)) validationMessages.push('خطوة 2: علامات الخطورة العامة');
+             if (!isMainSymptomsComplete(formData)) validationMessages.push('خطوة 3: الأعراض الأساسية (بما في ذلك التصنيفات)');
+             if (!isMalnutritionComplete(formData)) validationMessages.push('خطوة 4: سوء التغذية الحاد (بما في ذلك التصنيفات)');
+             if (!isAnemiaComplete(formData)) validationMessages.push('خطوة 5: فقر الدم (بما في ذلك التصنيفات)');
+             if (!isImmunizationComplete(formData)) validationMessages.push('خطوة 6: التطعيم وفيتامين أ');
+             if (!isOtherProblemsComplete(formData)) validationMessages.push('خطوة 7: الأمراض الأخرى');
+             if (!isDecisionComplete(formData)) validationMessages.push('خطوة 8: القرار النهائي');
+             const incompleteTreatment = findIncompleteTreatmentSkills(formData);
+             if (incompleteTreatment.length > 0) {
+                validationMessages.push(`خطوة 9: حقول العلاج والنصح (ناقص: ${incompleteTreatment[0]}...)`);
+             }
+             
+             const errorMessage = `لا يمكن الحفظ. الرجاء إكمال الأقسام التالية: \n- ${validationMessages.join('\n- ')}`;
+             setToast({ 
                 show: true, 
                 message: errorMessage, 
                 type: 'error',
                 duration: 10000 // Give user time to read
-            });
-            // Do NOT set setIsSaving(true)
-            return; // Block submission
+             });
+             return; // Block submission
         }
         // --- END: NEW COMPREHENSIVE VALIDATION ---
 
@@ -1561,7 +1525,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                  scores: scoresPayload, // Save scores even for draft
                  notes: formData.notes,
                  mentorEmail: user?.email || 'unknown', mentorName: user?.displayName || 'Unknown Mentor',
-                 status: 'draft', // Set status to draft
+                status: 'draft', // Set status to draft
                  visitNumber: visitNumber // Add visit number
              };
 
@@ -1884,34 +1848,21 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
 
                  {/* --- Button Bar (MODIFIED) --- */}
                  {/* *****************************************************************
-                    *** THIS IS THE ONLY CHANGE IN THIS FILE ***
+                    *** THIS IS THE CHANGE REQUESTED ***
                     
-                    The 'div' below now has "hidden sm:flex".
-                    This hides the *original* button bar on small (mobile) screens.
-                    The new sticky navbar is added in SkillsMentorshipView.jsx
+                    The 'div' below *still* has "hidden sm:flex".
+                    This is correct, as the mobile bar is handled in
+                    SkillsMentorshipView.jsx.
+                    
+                    The "Save" button's disabled logic is now updated.
                     *****************************************************************
                  */}
                  <div className="hidden sm:flex gap-4 justify-between items-center p-4 border-t bg-gray-50 sticky bottom-0 z-10">
-                     {/* START: New Autosave Status Indicator */}
+                     {/* START: REMOVED Autosave Status Indicator */}
                      <div className="flex-shrink-0">
-                        {isAutoSaving && (
-                            <span className="text-sm text-gray-500 italic flex items-center gap-1">
-                                <Spinner size="sm" />
-                                جاري الحفظ التلقائي...
-                            </span>
-                        )}
-                        {!isAutoSaving && !isDirty && (
-                            <span className="text-sm text-gray-500 italic">
-                                (تم حفظ كل التغييرات)
-                            </span>
-                        )}
-                        {!isAutoSaving && isDirty && (
-                            <span className="text-sm text-yellow-700 italic">
-                                (تغييرات غير محفوظة)
-                            </span>
-                        )}
+                        {/* Empty div to maintain spacing */}
                      </div>
-                     {/* END: New Autosave Status Indicator */}
+                     {/* END: REMOVED Autosave Status Indicator */}
 
                      {/* Button Group */}
                      <div className="flex gap-2 justify-end">
@@ -1926,9 +1877,42 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                             بيانات المنشأة (IMNCI)
                         </Button>
                         {/* --- END NEW BUTTON --- */}
+
+                        {/* --- START: NEW MOTHER'S FORM BUTTON --- */}
+                        <Button 
+                            type="button" 
+                            variant="info"
+                            onClick={() => setIsMothersFormModalOpen(true)} 
+                            disabled={isSaving || isSavingDraft || !facility}
+                            title={facility ? "Open Mother's Survey" : "No facility selected"}
+                        >
+                            استبيان الأم
+                        </Button>
+                        {/* --- END: NEW MOTHER'S FORM BUTTON --- */}
+                        
+                        {/* --- START: NEW DASHBOARD BUTTON --- */}
+                        <Button 
+                            type="button" 
+                            variant="info"
+                            onClick={() => setIsDashboardModalOpen(true)} 
+                            disabled={isSaving || isSavingDraft}
+                            title="Open Dashboard"
+                        >
+                            لوحة المتابعة
+                        </Button>
+                        {/* --- END: NEW DASHBOARD BUTTON --- */}
+                        
                         <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving || isSavingDraft}> إلغاء </Button>
                         <Button type="button" variant="outline" onClick={handleSaveDraft} disabled={isSaving || isSavingDraft}> {isSavingDraft ? 'جاري حفظ المسودة...' : 'حفظ كمسودة'} </Button>
-                        <Button type="submit" disabled={isSaving || isSavingDraft || visibleStep < 9} title={visibleStep < 9 ? "يجب إكمال جميع الخطوات أولاً لحفظ الجلسة" : "حفظ وإنهاء الجلسة"}> {isSaving ? 'جاري الحفظ...' : 'حفظ وإكمال الجلسة'} </Button>
+                        {/* --- START: MODIFIED SAVE BUTTON --- */}
+                        <Button 
+                            type="submit" 
+                            disabled={isSaving || isSavingDraft || !isFormFullyComplete} 
+                            title={!isFormFullyComplete ? "يجب إكمال جميع الخطوات أولاً لحفظ الجلسة" : "حفظ وإنهاء الجلسة"}
+                        > 
+                            {isSaving ? 'جاري الحفظ...' : 'حفظ وإكمال الجلسة'} 
+                        </Button>
+                        {/* --- END: MODIFIED SAVE BUTTON --- */}
                      </div>
                  </div>
             </form>

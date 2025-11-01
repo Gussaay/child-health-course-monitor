@@ -104,9 +104,8 @@ export function SignInBox() {
 
       if (methods.length === 0) {
         // 2. Case 1: No user exists.
-        // MODIFIED: Automatically switch to Sign Up mode as requested.
-        setError("Account not found. Please Sign Up to create a new account.");
-        setIsSignUpMode(true); // <-- This line switches the UI
+        // This is the error you are seeing.
+        setError("Account not found. Please check your email for typos or Sign Up to create a new account.");
         return;
       }
 
