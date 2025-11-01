@@ -68,6 +68,7 @@ export const DataProvider = ({ children }) => {
     const [lastFacilitiesFetchTime, setLastFacilitiesFetchTime] = useState(0); 
     
     const cacheRef = useRef(cache);
+    const fetchingRef = useRef({}); // <-- ADD THIS REF
     
     useEffect(() => {
         cacheRef.current = cache;
@@ -88,20 +89,43 @@ export const DataProvider = ({ children }) => {
                 // 1. Determine Fetch Type
                 if (force || !hasData) {
                     // FULL FETCH (Initial load or forced button click)
-                    fetchPromise = listHealthFacilities({}); // No timestamp filter
+                    // --- MODIFICATION: Pass empty sourceOptions to use getData default (cache) ---
+                    fetchPromise = listHealthFacilities({}); 
                     fetchTime = Date.now();
                 } else if (incremental && lastFacilitiesFetchTime > 0) {
                     // INCREMENTAL FETCH (Periodic polling)
                     const lastUpdatedAfter = new Date(lastFacilitiesFetchTime);
+                    // --- MODIFICATION: Pass empty sourceOptions to use getData (will get server) ---
                     fetchPromise = listHealthFacilities({ lastUpdatedAfter });
                     fetchTime = Date.now();
                 } else {
                     // CACHE HIT (return existing data)
                     setIsLoading(prev => ({ ...prev, [key]: false }));
+
+                    // --- NEW: Stale-while-revalidate for healthFacilities cache hits ---
+                    if (!fetchingRef.current[key]) {
+                        fetchingRef.current[key] = true;
+                        listHealthFacilities({}) // No timestamp, just get all from server
+                            .then(data => {
+                                setCache(prev => ({ ...prev, [key]: data }));
+                                setLastFacilitiesFetchTime(Date.now()); // Update timestamp
+                            })
+                            .catch(error => {
+                                console.error(`Background fetch for ${key} failed:`, error);
+                            })
+                            .finally(() => {
+                                fetchingRef.current[key] = false;
+                            });
+                    }
+                    // --- END NEW ---
                     return currentCache;
                 }
 
                 setIsLoading(prev => ({ ...prev, [key]: true }));
+                
+                if (fetchingRef.current[key]) return currentCache; // Prevent race condition
+                fetchingRef.current[key] = true;
+
                 try {
                     const newData = await fetchPromise;
                     
@@ -128,54 +152,92 @@ export const DataProvider = ({ children }) => {
                     return defaultEmpty;
                 } finally {
                     setIsLoading(prev => ({ ...prev, [key]: false }));
+                    fetchingRef.current[key] = false;
                 }
             };
         }
         
-        // Original fetcher for all other keys (courses, facilitators, etc.)
+        // --- THIS IS THE NEW "STALE-WHILE-REVALIDATE" FETCHER ---
         return async (force = false) => {
              const currentCache = cacheRef.current[key];
             const hasData = currentCache !== null;
             const isDefaultSettings = (key.includes('Settings') && currentCache?.openCount === 0);
 
-            if (hasData && !force && !isDefaultSettings) {
-                setIsLoading(prev => ({ ...prev, [key]: false }));
-                return currentCache;
+            // Path 1: Initial load (no data), forced refresh, or default settings
+            if (hasData === false || force || isDefaultSettings) {
+                // Show spinner, wait for this fetch
+                setIsLoading(prev => ({ ...prev, [key]: true }));
+
+                if (fetchingRef.current[key]) {
+                    return currentCache; // A fetch is already in progress
+                }
+
+                fetchingRef.current[key] = true;
+                try {
+                    // This fetch uses data.js's default (cache-first)
+                    // We pass {} as sourceOptions to use the default in data.js
+                    const data = await fetchFn({}); 
+                    setCache(prev => ({ ...prev, [key]: data }));
+                    return data;
+                } catch (error) {
+                    console.error(`Failed to fetch ${key}:`, error);
+                    const defaultEmpty = key.includes('Settings') ? { isActive: false, openCount: 0 } : [];
+                    setCache(prev => ({ ...prev, [key]: defaultEmpty }));
+                    return defaultEmpty;
+                } finally {
+                    setIsLoading(prev => ({ ...prev, [key]: false }));
+                    fetchingRef.current[key] = false;
+                }
             }
 
-            setIsLoading(prev => ({ ...prev, [key]: true }));
-            try {
-                const data = await fetchFn(); 
-                setCache(prev => ({ ...prev, [key]: data }));
-                return data;
-            } catch (error) {
-                console.error(`Failed to fetch ${key}:`, error);
-                const defaultEmpty = key.includes('Settings') ? { isActive: false, openCount: 0 } : [];
-                setCache(prev => ({ ...prev, [key]: defaultEmpty }));
-                return defaultEmpty;
-            } finally {
-                setIsLoading(prev => ({ ...prev, [key]: false }));
+            // Path 2: Stale-While-Revalidate (hasData and !force)
+            // We have data, so return it immediately and fetch in background.
+            // NO loading spinner.
+            
+            if (!fetchingRef.current[key]) { // Only fetch if not already fetching
+                fetchingRef.current[key] = true;
+                
+                // Fire-and-forget promise (no await)
+                // We pass { source: 'server' } to tell data.js to skip its
+                // cache and go straight to the network.
+                fetchFn({ source: 'server' })
+                    .then(data => {
+                        // Update the cache silently in the background
+                        setCache(prev => ({ ...prev, [key]: data }));
+                    })
+                    .catch(error => {
+                        // Don't bother the user, just log it
+                        console.error(`Background fetch for ${key} failed:`, error);
+                    })
+                    .finally(() => {
+                        fetchingRef.current[key] = false;
+                    });
             }
+            
+            // Return the STALE data immediately
+            setIsLoading(prev => ({ ...prev, [key]: false })); // Ensure spinner is off
+            return currentCache;
         };
-    }, [lastFacilitiesFetchTime]);
+    }, [lastFacilitiesFetchTime]); // fetchingRef is stable
 
+    // --- MODIFICATION: Update fetchers to pass `opts` to the data.js functions ---
     const fetchers = useMemo(() => ({
-        fetchCourses: createFetcher('courses', listAllCourses),
-        fetchParticipants: createFetcher('participants', listAllParticipants),
-        fetchFacilitators: createFetcher('facilitators', listFacilitators),
-        fetchFunders: createFetcher('funders', listFunders),
-        fetchFederalCoordinators: createFetcher('federalCoordinators', listFederalCoordinators),
-        fetchStateCoordinators: createFetcher('stateCoordinators', listStateCoordinators),
-        fetchLocalityCoordinators: createFetcher('localityCoordinators', listLocalityCoordinators),
-        fetchHealthFacilities: createFetcher('healthFacilities', listHealthFacilities),
-        fetchSkillMentorshipSubmissions: createFetcher('skillMentorshipSubmissions', listMentorshipSessions), // <-- ADD THIS
+        fetchCourses: createFetcher('courses', (opts) => listAllCourses(opts)),
+        fetchParticipants: createFetcher('participants', (opts) => listAllParticipants(opts)),
+        fetchFacilitators: createFetcher('facilitators', (opts) => listFacilitators(opts)),
+        fetchFunders: createFetcher('funders', (opts) => listFunders(opts)),
+        fetchFederalCoordinators: createFetcher('federalCoordinators', (opts) => listFederalCoordinators(opts)),
+        fetchStateCoordinators: createFetcher('stateCoordinators', (opts) => listStateCoordinators(opts)),
+        fetchLocalityCoordinators: createFetcher('localityCoordinators', (opts) => listLocalityCoordinators(opts)),
+        fetchHealthFacilities: createFetcher('healthFacilities', listHealthFacilities), // This one is special
+        fetchSkillMentorshipSubmissions: createFetcher('skillMentorshipSubmissions', (opts) => listMentorshipSessions(opts)), // <-- ADD THIS
         
-        fetchPendingFacilitatorSubmissions: createFetcher('pendingFacilitatorSubmissions', listPendingFacilitatorSubmissions),
-        fetchFacilitatorApplicationSettings: createFetcher('facilitatorApplicationSettings', getFacilitatorApplicationSettings),
-        fetchPendingFederalSubmissions: createFetcher('pendingFederalSubmissions', listPendingFederalSubmissions),
-        fetchPendingStateSubmissions: createFetcher('pendingStateSubmissions', listPendingCoordinatorSubmissions),
-        fetchPendingLocalitySubmissions: createFetcher('pendingLocalitySubmissions', listPendingLocalitySubmissions),
-        fetchCoordinatorApplicationSettings: createFetcher('coordinatorApplicationSettings', getCoordinatorApplicationSettings),
+        fetchPendingFacilitatorSubmissions: createFetcher('pendingFacilitatorSubmissions', (opts) => listPendingFacilitatorSubmissions(opts)),
+        fetchFacilitatorApplicationSettings: createFetcher('facilitatorApplicationSettings', (opts) => getFacilitatorApplicationSettings(opts)),
+        fetchPendingFederalSubmissions: createFetcher('pendingFederalSubmissions', (opts) => listPendingFederalSubmissions(opts)),
+        fetchPendingStateSubmissions: createFetcher('pendingStateSubmissions', (opts) => listPendingCoordinatorSubmissions(opts)),
+        fetchPendingLocalitySubmissions: createFetcher('pendingLocalitySubmissions', (opts) => listPendingLocalitySubmissions(opts)),
+        fetchCoordinatorApplicationSettings: createFetcher('coordinatorApplicationSettings', (opts) => getCoordinatorApplicationSettings(opts)),
     }), [createFetcher]);
 
     useEffect(() => {
@@ -212,6 +274,7 @@ export const DataProvider = ({ children }) => {
                 coordinatorApplicationSettings: true,
             });
             setLastFacilitiesFetchTime(0); // Reset timestamp on logout
+            fetchingRef.current = {}; // <-- ADD THIS: Reset fetching status on logout
         }
     }, [user]); 
 

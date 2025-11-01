@@ -224,6 +224,10 @@ export default function App() {
     const [activeHRTab, setActiveHRTab] = useState('facilitators');
 
     const [courseDetails, setCourseDetails] = useState({ participants: [], allObs: [], allCases: [], finalReport: null });
+    
+    // --- NEW STATE ---
+    const [courseDetailsLoading, setCourseDetailsLoading] = useState(false);
+    
     const [pendingSubmissions, setPendingSubmissions] = useState([]);
     const [isSubmissionsLoading, setIsSubmissionsLoading] = useState(true);
 
@@ -503,6 +507,42 @@ export default function App() {
         }
     }, [view, isSharedView, user, fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchCoordinators, fetchHealthFacilities, fetchSkillMentorshipSubmissions]);
 
+    // --- NEW: Background fetcher for full course details ---
+    useEffect(() => {
+        // If a course is selected, and we don't have its details, and we're not already loading...
+        if (selectedCourseId && !courseDetails.allObs && !courseDetailsLoading) {
+            
+            const fetchFullCourseDetails = async () => {
+                setCourseDetailsLoading(true);
+                try {
+                    // Fetch all the data needed for reports
+                    const [participantsData, allCourseData, finalReport] = await Promise.all([
+                        listAllParticipantsForCourse(selectedCourseId),
+                        listAllDataForCourse(selectedCourseId),
+                        getFinalReportByCourseId(selectedCourseId)
+                    ]);
+                    const { allObs, allCases } = allCourseData;
+                    
+                    // Silently update the state once data is loaded
+                    setCourseDetails({ participants: participantsData || [], allObs, allCases, finalReport });
+                    
+                } catch (error) {
+                    // Don't bother the user with a toast, just log it.
+                    // The report view will try again if the user clicks it.
+                    console.error("Background fetch of course details failed:", error);
+                    // Clear details on failure
+                    setCourseDetails({ participants: [], allObs: null, allCases: null, finalReport: null }); // <-- FIX IS HERE
+                } finally {
+                    setCourseDetailsLoading(false);
+                }
+            };
+            
+            // Start the background fetch
+            fetchFullCourseDetails();
+        }
+    }, [selectedCourseId, courseDetails.allObs, courseDetailsLoading]); // Re-run when courseId changes
+    // --- END NEW EFFECT ---
+
 
     // --- FILTERING LOGIC ---
     const canSeeAllData = useMemo(() => {
@@ -637,29 +677,40 @@ export default function App() {
     }, [view, selectedCourseId, selectedParticipantId, permissions, user, isCourseActive]);
     // --- END MODIFICATION ---
 
-    const handleOpenCourse = useCallback(async (courseId) => {
+    // --- MODIFIED: handleOpenCourse ---
+    // This is now fast. It just navigates. The useEffect above handles the slow background fetch.
+    const handleOpenCourse = useCallback((courseId) => {
         setSelectedCourseId(courseId);
-        setLoading(true);
-        try {
-            const [participantsData, allCourseData, finalReport] = await Promise.all([
-                listAllParticipantsForCourse(courseId),
-                listAllDataForCourse(courseId),
-                getFinalReportByCourseId(courseId)
-            ]);
-            const { allObs, allCases } = allCourseData;
-            setCourseDetails({ participants: participantsData, allObs, allCases, finalReport });
-            navigate('participants', { courseId });
-        } catch (error) {
-            console.error("Error loading course details:", error);
-            setToast({ show: true, message: 'Failed to load course details. Please try again.', type: 'error' });
-        } finally {
-            setLoading(false);
-        }
+        setLoading(false); // Ensure global spinner is off
+        
+        // Clear details of the *previous* course. 
+        // The new useEffect will fetch details for the *new* course.
+        setCourseDetails({ participants: [], allObs: null, allCases: null, finalReport: null }); // <-- FIX IS HERE
+        
+        navigate('participants', { courseId });
     }, [navigate]);
+    // --- END MODIFICATION ---
 
+    // --- MODIFIED: handleOpenCourseReport ---
+    // This now checks if data is already loaded/loading, or fetches it on-demand.
     const handleOpenCourseReport = useCallback(async (courseId) => {
         setSelectedCourseId(courseId);
-        setLoading(true);
+        
+        // Check if details are already loaded
+        if (courseDetails.allObs && courseDetails.participants) {
+             navigate('courseReport', { courseId });
+             return; // Data is ready, just navigate
+        }
+        
+        // Check if details are currently loading in the background
+        if (courseDetailsLoading) {
+             setToast({ show: true, message: 'Report data is still loading, please wait...', type: 'info' });
+             return; // Background fetch is in progress, ask user to wait
+        }
+
+        // Data is not present and not loading, so fetch it now (and show spinner)
+        setLoading(true); 
+        setCourseDetailsLoading(true); // Mark as loading
         try {
             const [participantsData, allCourseData, finalReport] = await Promise.all([
                 listAllParticipantsForCourse(courseId),
@@ -674,8 +725,10 @@ export default function App() {
             setToast({ show: true, message: 'Failed to load course report data. Please try again.', type: 'error' });
         } finally {
             setLoading(false);
+            setCourseDetailsLoading(false); // Mark as done
         }
-    }, [navigate]);
+    }, [navigate, courseDetails, courseDetailsLoading]);
+    // --- END MODIFICATION ---
 
     const handleApproveSubmission = useCallback(async (submission) => {
         if (window.confirm(`Approve ${submission.name}?`)) {
@@ -738,13 +791,16 @@ export default function App() {
         if (!permissions.canManageCourse) return;
         if (window.confirm('Are you sure you want to delete this participant and all their data?')) {
             await deleteParticipant(participantId);
-            if (selectedCourseId) await handleOpenCourse(selectedCourseId);
+            // --- MODIFICATION ---
+            // handleOpenCourse no longer fetches, just navigate to refresh ParticipantsView
+            if (selectedCourseId) navigate('participants', { courseId: selectedCourseId });
+            // --- END MODIFICATION ---
             if (selectedParticipantId === participantId) {
                 setSelectedParticipantId(null);
                 navigate('participants');
             }
         }
-    }, [permissions, selectedCourseId, selectedParticipantId, navigate, handleOpenCourse]);
+    }, [permissions, selectedCourseId, selectedParticipantId, navigate]);
 
     const handleDeleteFacilitator = useCallback(async (facilitatorId) => {
         if (!permissions.canManageHumanResource) return;
@@ -762,14 +818,20 @@ export default function App() {
             if (facilitiesToUpsert?.length > 0) { /* ... */ }
             const participantsWithCourseId = participantsToImport.map(p => ({ ...p, courseId: selectedCourse.id }));
             await importParticipants(participantsWithCourseId);
-            await handleOpenCourse(selectedCourse.id);
+            
+            // --- MODIFICATION ---
+            // handleOpenCourse no longer fetches, so we must manually refresh ParticipantsView
+            // The best way is to just call navigate again, which will trigger ParticipantsView's refetch
+            navigate('participants', { courseId: selectedCourse.id });
+            // --- END MODIFICATION ---
+
             setToast({ show: true, message: `Successfully imported ${participantsToImport.length} participants.`, type: 'success' });
         } catch (error) {
             setToast({ show: true, message: "Error during import: " + error.message, type: "error" });
         } finally {
             setLoading(false);
         }
-    }, [permissions, selectedCourse, handleOpenCourse]);
+    }, [permissions, selectedCourse, navigate]); // Removed handleOpenCourse dependency
 
     const handleBulkMigrate = useCallback((courseId) => { navigate('participantMigration', { courseId }); }, [navigate]);
     const handleExecuteBulkMigration = useCallback(async (mappings) => { /* Uses wrapped functions */ }, [navigate]);
@@ -879,7 +941,7 @@ export default function App() {
                 activeCoursesTab={activeCoursesTab}
                 setActiveCoursesTab={setActiveCoursesTab}
                 selectedCourse={selectedCourse}
-                participants={courseDetails.participants}
+                participants={courseDetails.participants} // This is now [] initially, ParticipantsView handles its own data
                 onAddParticipant={() => navigate('participantForm')}
                 onEditParticipant={(p) => navigate('participantForm', { editParticipant: p })}
                 onDeleteParticipant={handleDeleteParticipant}
@@ -890,7 +952,7 @@ export default function App() {
                 selectedParticipantId={selectedParticipantId}
                 onSetSelectedParticipantId={setSelectedParticipantId}
                 onBulkMigrate={handleBulkMigrate}
-                onBatchUpdate={() => handleOpenCourse(selectedCourse.id)}
+                onBatchUpdate={() => navigate('participants', { courseId: selectedCourse.id })} // Simplified this call
                 loadingDetails={loading && !!selectedCourseId}
                 canManageCourse={permissions.canManageCourse}
                 canUseSuperUserAdvancedFeatures={permissions.canUseSuperUserAdvancedFeatures}
@@ -946,7 +1008,14 @@ export default function App() {
                 localityCoordinatorsList={localityCoordinators || []}
             />) : null;
 
-            case 'participantForm': return permissions.canManageCourse ? (selectedCourse && <ParticipantForm course={selectedCourse} initialData={editingParticipant} onCancel={() => navigate(previousView)} onSave={async (participantData, facilityUpdateData) => { try { const fullPayload = { ...participantData, id: editingParticipant?.id, courseId: selectedCourse.id }; await saveParticipantAndSubmitFacilityUpdate(fullPayload, facilityUpdateData); if (facilityUpdateData) setToast({ show: true, message: 'Facility update submitted for approval.', type: 'info' }); await handleOpenCourse(selectedCourse.id); navigate('participants'); } catch (e) { setToast({ show: true, message: `Submission failed: ${e.message}`, type: 'error' }); } }} />) : null;
+            case 'participantForm': return permissions.canManageCourse ? (selectedCourse && <ParticipantForm course={selectedCourse} initialData={editingParticipant} onCancel={() => navigate(previousView)} onSave={async (participantData, facilityUpdateData) => { try { const fullPayload = { ...participantData, id: editingParticipant?.id, courseId: selectedCourse.id }; await saveParticipantAndSubmitFacilityUpdate(fullPayload, facilityUpdateData); if (facilityUpdateData) setToast({ show: true, message: 'Facility update submitted for approval.', type: 'info' }); 
+            
+            // --- MODIFICATION ---
+            // handleOpenCourse no longer refetches, so just navigate
+            navigate('participants', { courseId: selectedCourse.id });
+            // --- END MODIFICATION ---
+
+            } catch (e) { setToast({ show: true, message: `Submission failed: ${e.message}`, type: 'error' }); } }} />) : null;
 
             case 'participantReport': return permissions.canViewCourse ? (selectedCourse && currentParticipant && <ParticipantReportView course={selectedCourse} participant={currentParticipant} participants={courseDetails.participants} onChangeParticipant={(pid) => setSelectedParticipantId(pid)} onBack={() => navigate(previousView)} onNavigateToCase={(caseToEdit) => navigate('observe', { caseToEdit, courseId: caseToEdit.courseId, participantId: caseToEdit.participant_id })} onShare={(participant) => handleShare(participant, 'participant')} />) : null;
 

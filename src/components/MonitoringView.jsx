@@ -34,7 +34,8 @@ const generateHash = (buffer) => {
  */
 function ActionToggle({ options, currentValue, onClick }) {
     return (
-        <div className="relative z-0 inline-flex shadow-sm rounded-md">
+        // --- MODIFICATION: Added flex-shrink-0 to prevent shrinking in flex layouts ---
+        <div className="relative z-0 inline-flex shadow-sm rounded-md flex-shrink-0">
             {options.map(([label, value, activeClass], idx) => {
                 const isSelected = currentValue === value;
                 const baseClass = "relative inline-flex items-center justify-center px-3 py-1 text-sm font-medium focus:z-10 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition";
@@ -333,7 +334,8 @@ export function ObservationView({ course, participant, participants, onChangePar
 }
 
 function ImnciMonitoringGrid({ age, buffer, toggle }) {
-    const [expandedDomains, setExpandedDomains] = useState(new Set());
+    // --- MODIFICATION: Changed initial state to expand specific domains ---
+    const [expandedDomains, setExpandedDomains] = useState(new Set(['DANGER_SIGNS', 'COUGH_OR_DIFFICULT_BREATHING']));
     const allDomains = DOMAINS_BY_AGE_IMNCI[age]; 
 
     const toggleDomain = (domain) => {
@@ -364,11 +366,9 @@ function ImnciMonitoringGrid({ age, buffer, toggle }) {
                 {/* --- MODIFICATION: Added w-full to ensure table fills container or overflows --- */}
                 <table className="text-sm border-collapse mx-auto w-full">
                     <thead className="bg-slate-50 text-slate-800">
+                        {/* --- MODIFICATION: Changed to a single column header --- */}
                         <tr>
-                            {/* --- MODIFICATION: Removed min-w-[320px] to allow wrapping --- */}
-                            <th className="p-1 text-left font-semibold border border-slate-300">Domain / Classification</th>
-                            {/* --- MODIFICATION: Removed min-w-[170px] to allow shrinking --- */}
-                            <th className="p-1 text-left font-semibold border border-slate-300">Action</th>
+                            <th className="p-1 text-left font-semibold border border-slate-300">Domain / Classification / Action</th>
                         </tr>
                     </thead>
                     {allDomains.map(d => {
@@ -378,26 +378,31 @@ function ImnciMonitoringGrid({ age, buffer, toggle }) {
 
                         return (
                             <tbody key={d}>
-                                {/* --- MODIFICATION: Changed bg-sky-800 to bg-sky-700 --- */}
-                                <tr onClick={() => toggleDomain(d)} className="cursor-pointer hover:bg-sky-600 bg-sky-700">
-                                    <td className="p-1 text-base font-bold text-white border-l border-r border-b border-slate-300">
-                                        <span className="inline-block w-5 text-center text-white">{isExpanded ? '▼' : '►'}</span>
+                                {/* --- MODIFICATION: Changed bg to light sky blue --- */}
+                                <tr onClick={() => toggleDomain(d)} className="cursor-pointer hover:bg-sky-200 bg-sky-100">
+                                    {/* --- MODIFICATION: Changed text/border color to match new bg --- */}
+                                    <td className="p-1 text-base font-bold text-sky-900 border-l border-r border-b-2 border-sky-400">
+                                        {/* --- MODIFICATION: Removed text-white --- */}
+                                        <span className="inline-block w-5 text-center">{isExpanded ? '▼' : '►'}</span>
                                         {title}
                                     </td>
-                                    <td className="border-r border-b border-slate-300"></td>
                                 </tr>
                                 {isExpanded && (list.length > 0 ? list : ["(no items)"]).map((cls, i) => {
                                     const k = `${d}|${cls}`;
                                     const mark = buffer[k];
                                     return (
                                         <tr key={`${d}-${i}`} className="hover:bg-sky-50">
-                                            <td className="p-1 pl-6 border border-slate-300 break-words">{cls}</td>
-                                            <td className="p-1 border border-slate-300 align-middle">
-                                                <ActionToggle
-                                                    options={toggleOptions}
-                                                    currentValue={mark}
-                                                    onClick={(value) => toggle(d, cls, value)}
-                                                />
+                                            {/* --- MODIFICATION: Combined text and action into one <td> using flex --- */}
+                                            <td className="p-1 pl-6 border border-slate-300">
+                                                {/* --- MODIFICATION: Changed to flex-col/sm:flex-row for mobile responsiveness --- */}
+                                                <div className="flex flex-col sm:flex-row justify-between sm:items-center w-full gap-2">
+                                                    <span className="break-words">{cls}</span>
+                                                    <ActionToggle
+                                                        options={toggleOptions}
+                                                        currentValue={mark}
+                                                        onClick={(value) => toggle(d, cls, value)}
+                                                    />
+                                                </div>
                                             </td>
                                         </tr>
                                     );
@@ -443,11 +448,9 @@ function EtatMonitoringGrid({ buffer, toggle }) {
                 {/* --- MODIFICATION: Added w-full to ensure table fills container or overflows --- */}
                 <table className="text-sm border-collapse mx-auto w-full">
                     <thead className="bg-slate-50 text-slate-800">
+                        {/* --- MODIFICATION: Changed to a single column header --- */}
                         <tr>
-                            {/* --- MODIFICATION: Removed min-w-[320px] to allow wrapping --- */}
-                            <th className="p-1 text-left font-semibold border border-slate-300">Domain / Skill</th>
-                            {/* --- MODIFICATION: Removed min-w-[170px] to allow shrinking --- */}
-                            <th className="p-1 text-left font-semibold border border-slate-300">Action</th>
+                            <th className="p-1 text-left font-semibold border border-slate-300">Domain / Skill / Action</th>
                         </tr>
                     </thead>
                     {allDomains.map(d => {
@@ -457,26 +460,31 @@ function EtatMonitoringGrid({ buffer, toggle }) {
 
                         return (
                             <tbody key={d}>
-                                {/* --- MODIFICATION: Changed bg-sky-800 to bg-sky-700 --- */}
-                                <tr onClick={() => toggleDomain(d)} className="cursor-pointer hover:bg-sky-600 bg-sky-700">
-                                    <td className="p-1 text-base font-bold text-white border-l border-r border-b border-slate-300">
-                                       <span className="inline-block w-5 text-center text-white">{isExpanded ? '▼' : '►'}</span>
+                                {/* --- MODIFICATION: Changed bg to light sky blue --- */}
+                                <tr onClick={() => toggleDomain(d)} className="cursor-pointer hover:bg-sky-200 bg-sky-100">
+                                    {/* --- MODIFICATION: Changed text/border color to match new bg --- */}
+                                    <td className="p-1 text-base font-bold text-sky-900 border-l border-r border-b-2 border-sky-400">
+                                       {/* --- MODIFICATION: Removed text-white --- */}
+                                        <span className="inline-block w-5 text-center">{isExpanded ? '▼' : '►'}</span>
                                         {title}
                                     </td>
-                                    <td className="border-r border-b border-slate-300"></td>
                                 </tr>
                                 {isExpanded && skills.map((skill, i) => {
                                     const k = `${d}|${skill}`;
                                     const mark = buffer[k];
                                     return (
                                         <tr key={`${d}-${i}`} className="hover:bg-sky-50">
-                                            <td className="p-1 pl-6 border border-slate-300 break-words">{skill}</td>
-                                            <td className="p-1 border border-slate-300 align-middle">
-                                                <ActionToggle
-                                                    options={toggleOptions}
-                                                    currentValue={mark}
-                                                    onClick={(value) => toggle(d, skill, value)}
-                                                />
+                                            {/* --- MODIFICATION: Combined text and action into one <td> using flex --- */}
+                                            <td className="p-1 pl-6 border border-slate-300">
+                                                {/* --- MODIFICATION: Changed to flex-col/sm:flex-row for mobile responsiveness --- */}
+                                                <div className="flex flex-col sm:flex-row justify-between sm:items-center w-full gap-2">
+                                                    <span className="break-words">{skill}</span>
+                                                    <ActionToggle
+                                                        options={toggleOptions}
+                                                        currentValue={mark}
+                                                        onClick={(value) => toggle(d, skill, value)}
+                                                    />
+                                                </div>
                                             </td>
                                         </tr>
                                     );
@@ -529,11 +537,9 @@ function EencMonitoringGrid({ scenario, buffer, toggle }) {
                 {/* --- MODIFICATION: Added w-full to ensure table fills container or overflows --- */}
                 <table className="text-sm border-collapse mx-auto w-full">
                     <thead className="bg-slate-50 text-slate-800">
+                        {/* --- MODIFICATION: Changed to a single column header --- */}
                         <tr>
-                            {/* --- MODIFICATION: Removed min-w-[320px] to allow wrapping --- */}
-                            <th className="p-1 text-left font-semibold border border-slate-300">Domain / Skill</th>
-                            {/* --- MODIFICATION: Removed min-w-[200px] to allow shrinking --- */}
-                            <th className="p-1 text-left font-semibold border border-slate-300">Action</th>
+                            <th className="p-1 text-left font-semibold border border-slate-300">Domain / Skill / Action</th>
                         </tr>
                     </thead>
                     {allDomains.map(d => {
@@ -543,26 +549,31 @@ function EencMonitoringGrid({ scenario, buffer, toggle }) {
 
                         return (
                             <tbody key={d}>
-                                {/* --- MODIFICATION: Changed bg-sky-800 to bg-sky-700 --- */}
-                                <tr onClick={() => toggleDomain(d)} className="cursor-pointer hover:bg-sky-600 bg-sky-700">
-                                    <td className="p-1 text-base font-bold text-white border-l border-r border-b border-slate-300">
-                                        <span className="inline-block w-5 text-center text-white">{isExpanded ? '▼' : '►'}</span>
+                                {/* --- MODIFICATION: Changed bg to light sky blue --- */}
+                                <tr onClick={() => toggleDomain(d)} className="cursor-pointer hover:bg-sky-200 bg-sky-100">
+                                    {/* --- MODIFICATION: Changed text/border color to match new bg --- */}
+                                    <td className="p-1 text-base font-bold text-sky-900 border-l border-r border-b-2 border-sky-400">
+                                        {/* --- MODIFICATION: Removed text-white --- */}
+                                        <span className="inline-block w-5 text-center">{isExpanded ? '▼' : '►'}</span>
                                         {title}
                                     </td>
-                                    <td className="border-r border-b border-slate-300"></td>
                                 </tr>
                                 {isExpanded && skills.map((skill, i) => {
                                     const k = `${d}|${skill.text}`;
                                     const mark = buffer[k];
                                     return (
                                         <tr key={`${d}-${i}`} className="hover:bg-sky-50">
-                                            <td className="p-1 pl-6 border border-slate-300 break-words">{skill.text}</td>
-                                            <td className="p-1 border border-slate-300 align-middle">
-                                                <ActionToggle
-                                                    options={toggleOptions}
-                                                    currentValue={mark}
-                                                    onClick={(value) => toggle(d, skill.text, value)}
-                                                />
+                                            {/* --- MODIFICATION: Combined text and action into one <td> using flex --- */}
+                                            <td className="p-1 pl-6 border border-slate-300">
+                                                {/* --- MODIFICATION: Changed to flex-col/sm:flex-row for mobile responsiveness --- */}
+                                                <div className="flex flex-col sm:flex-row justify-between sm:items-center w-full gap-2">
+                                                    <span className="break-words">{skill.text}</span>
+                                                    <ActionToggle
+                                                        options={toggleOptions}
+                                                        currentValue={mark}
+                                                        onClick={(value) => toggle(d, skill.text, value)}
+                                                    />
+                                                </div>
                                             </td>
                                         </tr>
                                     );
@@ -706,7 +717,8 @@ function SubmittedCases({ course, participant, observations, cases, onEditCase, 
                             )}
                             <td className="p-2 border-b border-slate-300">
                                 <div className="flex gap-2 justify-end">
-                                    <Button size="sm" variant="secondary" onClick={() => onEditCase(c)}>Edit</LButton>
+                                    {/* --- FIX: Corrected LButton typo --- */}
+                                    <Button size="sm" variant="secondary" onClick={() => onEditCase(c)}>Edit</Button>
                                     <Button size="sm" variant="danger" onClick={() => onDeleteCase(c)}>Delete</Button>
                                 </div>
                             </td>

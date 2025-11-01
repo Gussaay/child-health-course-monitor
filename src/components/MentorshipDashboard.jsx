@@ -525,6 +525,11 @@ const MentorshipDashboard = ({
     ];
     // --- END KPI lists ---
 
+    // --- REFACTOR: Style for mobile table cells ---
+    const dataCellStyles = "block md:table-cell px-2 py-2 md:py-4 md:px-2 text-sm text-gray-700 text-right md:text-left before:content-[attr(data-label)] before:float-left before:font-bold before:text-gray-500 before:pr-4 md:before:content-none";
+    // --- END REFACTOR ---
+
+
     return (
         <div className="p-4" dir="ltr"> 
             <h3 className="text-xl font-bold text-sky-800 mb-4 text-left">
@@ -615,13 +620,14 @@ const MentorshipDashboard = ({
             {/* --- END MODIFIED KPI Layout --- */}
 
 
-            {/* State-level Table */}
+            {/* --- REFACTORED: State-level Table (Mobile-Friendly) --- */}
             <h3 className="text-xl font-bold text-sky-800 mb-4 text-left">
                 Data by State {scopeTitle}
             </h3>
+            {/* overflow-x-auto is a good fallback for medium screens that are still too narrow */}
             <div className="overflow-x-auto shadow-md rounded-lg border">
-                <table className="w-full table-fixed divide-y divide-gray-200">
-                    <thead className="bg-gray-100">
+                <table className="w-full">
+                    <thead className="bg-gray-100 hidden md:table-header-group">
                         <tr>
                             <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words w-1/6">State</th>
                             <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Total Visits</th>
@@ -635,32 +641,57 @@ const MentorshipDashboard = ({
                             <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Diarrhea Management Score</th>
                         </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="bg-white block md:table-row-group">
                         {stateKpis.length === 0 ? (
-                            <tr>
-                                <td colSpan="10" className="px-2 py-4 text-center text-gray-500">
+                            <tr className="block md:table-row">
+                                <td colSpan="10" className="px-2 py-4 text-center text-gray-500 block md:table-cell">
                                     No completed visits match the current filters.
                                 </td>
                             </tr>
                         ) : (
                             stateKpis.map(state => (
-                                <tr key={state.stateKey}>
-                                    <td className="px-2 py-4 text-sm font-medium text-gray-900 break-words">{state.stateName}</td>
-                                    <td className="px-2 py-4 text-sm text-gray-700">{state.totalVisits}</td>
-                                    <td className="px-2 py-4 text-sm"><ScoreText value={state.avgOverall} /></td>
-                                    <td className="px-2 py-4 text-sm"><ScoreText value={state.avgAssessment} /></td>
-                                    <td className="px-2 py-4 text-sm"><ScoreText value={state.avgDecision} /></td>
-                                    <td className="px-2 py-4 text-sm"><ScoreText value={state.avgTreatment} /></td>
-                                    <td className="px-2 py-4 text-sm"><ScoreText value={state.avgCoughClassification} /></td>
-                                    <td className="px-2 py-4 text-sm"><ScoreText value={state.avgPneumoniaManagement} /></td>
-                                    <td className="px-2 py-4 text-sm"><ScoreText value={state.avgDiarrheaClassification} /></td>
-                                    <td className="px-2 py-4 text-sm"><ScoreText value={state.avgDiarrheaManagement} /></td>
+                                <tr key={state.stateKey} className="block md:table-row mb-4 p-4 bg-white rounded-lg shadow border md:border-b md:border-gray-200 md:shadow-none md:p-0 md:mb-0">
+                                    
+                                    {/* Mobile "Header" Cell / Desktop First Cell */}
+                                    <td className="block md:table-cell w-full px-2 py-2 md:py-4 text-lg font-bold text-sky-800 text-left border-b mb-2 md:border-b-0 md:mb-0 md:text-sm md:font-medium md:text-gray-900 md:w-1/6 break-words">
+                                        {state.stateName}
+                                    </td>
+                                    
+                                    {/* Data Cells */}
+                                    <td data-label="Total Visits" className={dataCellStyles}>
+                                        {state.totalVisits}
+                                    </td>
+                                    <td data-label="Overall Adherence" className={dataCellStyles}>
+                                        <ScoreText value={state.avgOverall} />
+                                    </td>
+                                    <td data-label="Assess & Classify" className={dataCellStyles}>
+                                        <ScoreText value={state.avgAssessment} />
+                                    </td>
+                                    <td data-label="Final Decision" className={dataCellStyles}>
+                                        <ScoreText value={state.avgDecision} />
+                                    </td>
+                                    <td data-label="Treatment & Counsel" className={dataCellStyles}>
+                                        <ScoreText value={state.avgTreatment} />
+                                    </td>
+                                    <td data-label="Cough Class." className={dataCellStyles}>
+                                        <ScoreText value={state.avgCoughClassification} />
+                                    </td>
+                                    <td data-label="Pneumonia Mgmt." className={dataCellStyles}>
+                                        <ScoreText value={state.avgPneumoniaManagement} />
+                                    </td>
+                                    <td data-label="Diarrhea Class." className={dataCellStyles}>
+                                        <ScoreText value={state.avgDiarrheaClassification} />
+                                    </td>
+                                    <td data-label="Diarrhea Mgmt." className={dataCellStyles}>
+                                        <ScoreText value={state.avgDiarrheaManagement} />
+                                    </td>
                                 </tr>
                             ))
                         )}
                     </tbody>
                 </table>
             </div>
+            {/* --- END REFACTORED Table --- */}
         </div>
     );
 };

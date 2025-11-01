@@ -199,7 +199,7 @@ const IMNCI_FORM_STRUCTURE = [
             {
                 subgroupTitle: 'في حالة الإلتهاب الرئوي',
                 scoreKey: 'pneu_treatment',
-                skills: [ { key: 'skill_pneu_abx', label: 'هل وصف مضاد حيوي لعلاج الالتهاب الرئوي بصورة صحيحة' }, { key: 'skill_pneu_dose', label: 'هل أعطى الجرعة الأولى من مضاد حيوي لعلاج الالتهاب الرئوي بالعيادة بصورة صحيحة', relevant: "${skill_pneu_abx}='yes'" }, ],
+                skills: [ { key: 'skill_pneu_abx', label: 'هل وصف مضاد حيوي لعلاج الالتهاب الرئوي بصورة صحيحة' }, { key: 'skill_pneu_dose', label: 'هل أعطى الجrعة الأولى من مضاد حيوي لعلاج الالتهاب الرئوي بالعيادة بصورة صحيحة', relevant: "${skill_pneu_abx}='yes'" }, ],
                 relevant: (formData) => { // Show if effective classification is 'التهاب رئوي'
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_cough === 'yes';
                     const workerClassification = formData.assessment_skills.worker_cough_classification;
@@ -211,7 +211,7 @@ const IMNCI_FORM_STRUCTURE = [
             {
                 subgroupTitle: 'في حالة الإسهال',
                 scoreKey: 'diar_treatment',
-                skills: [ { key: 'skill_diar_ors', label: 'هل حدد كمية محلول الإرواء بصورة صحيحة' }, { key: 'skill_diar_counsel', label: 'هل نصح الأم بالرعاية المنزلية بإعطاء سوائل أكثر و الاستمرار في تغذية الطفل)' }, { key: 'skill_diar_zinc', label: 'هل وصف دواء الزنك بصورة صحيحة' }, { key: 'skill_diar_zinc_dose', label: 'هل أعطى الجرعة الأولى من دواء الزنك للطفل بالوحدة الصحية بطريقة صحيحة', relevant: "${skill_diar_zinc}='yes'" }, ],
+                skills: [ { key: 'skill_diar_ors', label: 'هل حدد كمية محلول الإرواء بصورة صحيحة' }, { key: 'skill_diar_counsel', label: 'هل نصح الأم بالرعاية المنزلية بإعطاء سوائل أكثر و الاستمرار في تغذية الطفل)' }, { key: 'skill_diar_zinc', label: 'هل وصف دواء الزنك بصورة صحيحة' }, { key: 'skill_diar_zinc_dose', label: 'هل أعطى الجrعة الأولى من دواء الزنك للطفل بالوحدة الصحية بطريقة صحيحة', relevant: "${skill_diar_zinc}='yes'" }, ],
                 relevant: (formData) => { // Show if effective classification includes relevant keys (including 'لا يوجد جفاف')
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_diarrhea === 'yes';
                     const workerCls = formData.assessment_skills.worker_diarrhea_classification || {};
@@ -248,7 +248,7 @@ const IMNCI_FORM_STRUCTURE = [
             {
                 subgroupTitle: 'في حالة التهاب الأذن',
                 scoreKey: 'ear_treatment',
-                skills: [ { key: 'skill_ear_abx', label: 'هل وصف مضاد حيوي لعلاج التهاب الأذن الحاد بصورة صحيحة' }, { key: 'skill_ear_dose', label: 'هل أعطى الجرعة الأولى من مضاد حيوي لعلاج التهاب الأذن الحاد بصورة صحيحة', relevant: "${skill_ear_abx}='yes'" }, { key: 'skill_ear_para', label: 'هل وصف دواء الباراسيتامول بصورة صحيحة' }, { key: 'skill_ear_para_dose', label: 'هل أعطى الجrعة الأولى من الباراسيتامول بصورة صحيحة', relevant: "${skill_ear_para}='yes'" }, ],
+                skills: [ { key: 'skill_ear_abx', label: 'هل وصف مضاد حيوي لعلاج التهاب الأذن الحاد بصورة صحيحة' }, { key: 'skill_ear_dose', label: 'هل أعطى الجrعة الأولى من مضاد حيوي لعلاج التهاب الأذن الحاد بصورة صحيحة', relevant: "${skill_ear_abx}='yes'" }, { key: 'skill_ear_para', label: 'هل وصف دواء الباراسيتامول بصورة صحيحة' }, { key: 'skill_ear_para_dose', label: 'هل أعطى الجrعة الأولى من الباراسيتامول بصورة صحيحة', relevant: "${skill_ear_para}='yes'" }, ],
                 // --- START CORRECTION: Added hamza (أ) to match classification constants ---
                 relevant: (formData) => { // Show if effective classification is 'التهاب اذن حاد' or 'التهاب اذن مزمن'
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_ear === 'yes';
@@ -1883,7 +1883,14 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                 </div>
 
                  {/* --- Button Bar (MODIFIED) --- */}
-                 {/* --- MODIFICATION: Added hidden sm:flex to hide on mobile --- */}
+                 {/* *****************************************************************
+                    *** THIS IS THE ONLY CHANGE IN THIS FILE ***
+                    
+                    The 'div' below now has "hidden sm:flex".
+                    This hides the *original* button bar on small (mobile) screens.
+                    The new sticky navbar is added in SkillsMentorshipView.jsx
+                    *****************************************************************
+                 */}
                  <div className="hidden sm:flex gap-4 justify-between items-center p-4 border-t bg-gray-50 sticky bottom-0 z-10">
                      {/* START: New Autosave Status Indicator */}
                      <div className="flex-shrink-0">

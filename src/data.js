@@ -214,6 +214,7 @@ const dispatchOpEvent = (type, count = 1) => {
 
 // --- Wrapped Firestore functions (Unchanged) ---
 export const getDocs = async (query, options) => {
+  // --- MODIFICATION: Allow options to be undefined ---
   const snapshot = await fbGetDocs(query, options);
   if (options?.source !== 'cache') {
     // Count 1 read for the query + 1 per doc
@@ -223,8 +224,9 @@ export const getDocs = async (query, options) => {
 };
 
 export const getDoc = async (docRef, options) => {
+    // --- MODIFICATION: Allow options to be undefined ---
     // Use the raw fbGetDoc to check existence without counting
-    const preliminarySnap = await fbGetDoc(docRef, { source: 'cache' });
+    const preliminarySnap = await fbGetDoc(docRef, options?.source ? { source: 'cache' } : undefined);
     let exists = preliminarySnap.exists(); // Check cache first
 
     if (!exists && options?.source !== 'cache') {
@@ -315,17 +317,28 @@ export const writeBatch = (firestore) => {
 // --- END WRAPPED FUNCTIONS ---
 
 
-// getData uses wrapped getDocs
-async function getData(query) {
+// --- MODIFIED: getData now accepts and uses sourceOptions ---
+async function getData(query, sourceOptions = {}) {
+    const defaultSource = { source: 'cache' }; // Original behavior
+    
+    // If sourceOptions is passed (e.g., { source: 'server' }), it will be used.
+    // Otherwise, it defaults to the original cache-first behavior.
+    const options = Object.keys(sourceOptions).length > 0 ? sourceOptions : defaultSource;
+
     try {
-        const snapshot = await getDocs(query, { source: 'cache' });
-        if (!snapshot.empty) {
-            return snapshot;
+        const snapshot = await getDocs(query, options); // Use modified options
+        
+        // If we tried the cache and it was empty, try the server
+        if (options.source === 'cache' && snapshot.empty) {
+            return getDocs(query, { source: 'server' });
         }
+        
+        return snapshot;
     } catch (e) {
-        console.log("Cache miss or error, fetching from server.");
+        console.log(`Cache read with options ${options.source} failed, fetching from server.`);
+        // If any getDocs fails, fall back to server
+        return getDocs(query, { source: 'server' });
     }
-    return getDocs(query, { source: 'server' });
 }
 
 // uploadFile and deleteFile don't interact with Firestore directly
@@ -533,7 +546,9 @@ export async function approveFacilitySubmission(submission, approverEmail) {
     const submissionRef = doc(db, "facilitySubmissions", submissionId);
     await updateDoc(submissionRef, { status: 'approved', approvedBy: approverEmail, approvedAt: serverTimestamp() });
 }
+
 // --- MODIFIED: listHealthFacilities now supports incremental fetching ---
+// --- NO CHANGE TO THIS FUNCTION, it's handled by a custom fetcher ---
 export async function listHealthFacilities(filters = {}) {
     let q = collection(db, "healthFacilities");
     const conditions = [];
@@ -573,7 +588,13 @@ export async function listHealthFacilities(filters = {}) {
     q = query(q, orderByClause);
 
     try {
-        const querySnapshot = await getData(q);
+        // --- MODIFICATION: Pass { source: 'server' } for incremental fetches ---
+        // The custom fetcher in DataContext determines *if* we're fetching.
+        // If we *are* fetching (i.e., this function is called), we should
+        // prioritize server data for incremental updates.
+        // The default getData logic will handle other cases.
+        const sourceOptions = filters.lastUpdatedAfter ? { source: 'server' } : {};
+        const querySnapshot = await getData(q, sourceOptions);
         let facilities = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
         // Post-query filtering (only needed for complex filters not supported by Firestore query)
@@ -712,7 +733,9 @@ export async function addHealthWorkerToFacility(facilityId, newWorkerData, mento
 // ... (Course, Participant, Facilitator, Coordinator, Funder, etc. functions remain the same) ...
 export async function getCourseById(courseId, source = 'default') {
     const courseRef = doc(db, "courses", courseId);
-    const courseSnap = await getDoc(courseRef, { source });
+    // --- MODIFICATION: Use sourceOptions object ---
+    const sourceOptions = source === 'default' ? {} : { source };
+    const courseSnap = await getDoc(courseRef, sourceOptions);
     if (!courseSnap.exists()) {
         return null;
     }
@@ -720,7 +743,9 @@ export async function getCourseById(courseId, source = 'default') {
 }
 export async function getParticipantById(participantId, source = 'default') {
     const participantRef = doc(db, "participants", participantId);
-    const participantSnap = await getDoc(participantRef, { source });
+    // --- MODIFICATION: Use sourceOptions object ---
+    const sourceOptions = source === 'default' ? {} : { source };
+    const participantSnap = await getDoc(participantRef, sourceOptions);
     if (!participantSnap.exists()) {
         return null;
     }
@@ -738,9 +763,9 @@ export async function getPublicCourseReportData(courseId) {
 
     // --- MODIFICATION: Use exported listAllParticipantsForCourse ---
     const [participants, { allObs, allCases }, finalReport] = await Promise.all([
-        listAllParticipantsForCourse(courseId, 'server'), // Use exported function
-        listAllDataForCourse(courseId, 'server'),
-        getFinalReportByCourseId(courseId, 'server')
+        listAllParticipantsForCourse(courseId, { source: 'server' }), // Use exported function
+        listAllDataForCourse(courseId, { source: 'server' }),
+        getFinalReportByCourseId(courseId, { source: 'server' })
     ]);
     // --- END MODIFICATION ---
 
@@ -752,9 +777,10 @@ export async function getPublicCourseReportData(courseId) {
         finalReport,
     };
 }
-export async function listUsers(source = 'default') {
+// --- MODIFIED: listUsers ---
+export async function listUsers(sourceOptions = {}) {
     try {
-        const querySnapshot = await getDocs(collection(db, "users"), { source });
+        const querySnapshot = await getDocs(collection(db, "users"), sourceOptions);
         return querySnapshot.docs.map(doc => {
             const data = doc.data();
             return {
@@ -841,10 +867,11 @@ export async function importFacilitators(facilitators) {
     await batch.commit();
     return true;
 }
-export async function listFacilitators() {
+// --- MODIFIED: listFacilitators ---
+export async function listFacilitators(sourceOptions = {}) {
     try {
         let q = collection(db, "facilitators");
-        const querySnapshot = await getData(q);
+        const querySnapshot = await getData(q, sourceOptions);
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
         console.error("Error in listFacilitators:", error);
@@ -888,9 +915,10 @@ export async function submitFacilitatorApplication(payload) {
     const newSubmissionRef = await addDoc(collection(db, "facilitatorSubmissions"), dataToSave);
     return newSubmissionRef.id;
 }
-export async function listPendingFacilitatorSubmissions() {
+// --- MODIFIED: listPendingFacilitatorSubmissions ---
+export async function listPendingFacilitatorSubmissions(sourceOptions = {}) {
     const q = query(collection(db, "facilitatorSubmissions"), where("status", "==", "pending"));
-    const snapshot = await getDocs(q);
+    const snapshot = await getDocs(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 export async function approveFacilitatorSubmission(submission, approverEmail) {
@@ -914,9 +942,10 @@ export async function rejectFacilitatorSubmission(submissionId, rejectorEmail) {
         rejectedAt: serverTimestamp()
     });
 }
-export async function getFacilitatorApplicationSettings() {
+// --- MODIFIED: getFacilitatorApplicationSettings ---
+export async function getFacilitatorApplicationSettings(sourceOptions = {}) {
     const settingsRef = doc(db, "settings", "facilitatorApplication");
-    const docSnap = await getDoc(settingsRef);
+    const docSnap = await getDoc(settingsRef, sourceOptions);
     if (docSnap.exists()) {
         return docSnap.data();
     }
@@ -930,9 +959,10 @@ export async function incrementFacilitatorApplicationOpenCount() {
     const settingsRef = doc(db, "settings", "facilitatorApplication");
     await setDoc(settingsRef, { openCount: increment(1) }, { merge: true });
 }
-export async function getCoordinatorApplicationSettings() {
+// --- MODIFIED: getCoordinatorApplicationSettings ---
+export async function getCoordinatorApplicationSettings(sourceOptions = {}) {
     const docRef = doc(db, 'appSettings', 'coordinatorApplication');
-    const docSnap = await getDoc(docRef);
+    const docSnap = await getDoc(docRef, sourceOptions);
     if (docSnap.exists()) {
         return docSnap.data();
     }
@@ -954,9 +984,10 @@ export async function submitCoordinatorApplication(payload) {
         submittedAt: serverTimestamp()
     });
 }
-export async function listPendingCoordinatorSubmissions() {
+// --- MODIFIED: listPendingCoordinatorSubmissions ---
+export async function listPendingCoordinatorSubmissions(sourceOptions = {}) {
     const q = query(collection(db, "coordinatorSubmissions"), where("status", "==", "pending"));
-    const snapshot = await getDocs(q);
+    const snapshot = await getDocs(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 export async function approveCoordinatorSubmission(submission, approverEmail) {
@@ -995,9 +1026,10 @@ export async function submitFederalApplication(payload) {
     const submissionsRef = collection(db, 'federalCoordinatorSubmissions');
     await addDoc(submissionsRef, { ...payload, status: 'pending', submittedAt: serverTimestamp() });
 }
-export async function listPendingFederalSubmissions() {
+// --- MODIFIED: listPendingFederalSubmissions ---
+export async function listPendingFederalSubmissions(sourceOptions = {}) {
     const q = query(collection(db, "federalCoordinatorSubmissions"), where("status", "==", "pending"));
-    const snapshot = await getDocs(q);
+    const snapshot = await getDocs(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 export async function approveFederalSubmission(submission, approverEmail) {
@@ -1025,9 +1057,10 @@ export async function submitLocalityApplication(payload) {
     const submissionsRef = collection(db, 'localityCoordinatorSubmissions');
     await addDoc(submissionsRef, { ...payload, status: 'pending', submittedAt: serverTimestamp() });
 }
-export async function listPendingLocalitySubmissions() {
+// --- MODIFIED: listPendingLocalitySubmissions ---
+export async function listPendingLocalitySubmissions(sourceOptions = {}) {
     const q = query(collection(db, "localityCoordinatorSubmissions"), where("status", "==", "pending"));
-    const snapshot = await getDocs(q);
+    const snapshot = await getDocs(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 export async function approveLocalitySubmission(submission, approverEmail) {
@@ -1070,9 +1103,10 @@ export async function upsertCoordinator(payload) { // Generic coordinator - migh
         return newRef.id;
     }
 }
-export async function listCoordinators() { // Generic coordinator - might deprecate
+// --- MODIFIED: listCoordinators ---
+export async function listCoordinators(sourceOptions = {}) { // Generic coordinator - might deprecate
     const q = query(collection(db, "coordinators"));
-    const snapshot = await getData(q);
+    const snapshot = await getData(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 export async function deleteCoordinator(coordinatorId) { // Generic coordinator - might deprecate
@@ -1090,9 +1124,10 @@ export async function upsertStateCoordinator(payload) {
         return newRef.id;
     }
 }
-export async function listStateCoordinators() {
+// --- MODIFIED: listStateCoordinators ---
+export async function listStateCoordinators(sourceOptions = {}) {
     const q = query(collection(db, "stateCoordinators"));
-    const snapshot = await getData(q);
+    const snapshot = await getData(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 export async function deleteStateCoordinator(coordinatorId) {
@@ -1110,9 +1145,10 @@ export async function upsertFederalCoordinator(payload) {
         return newRef.id;
     }
 }
-export async function listFederalCoordinators() {
+// --- MODIFIED: listFederalCoordinators ---
+export async function listFederalCoordinators(sourceOptions = {}) {
     const q = query(collection(db, "federalCoordinators"));
-    const snapshot = await getData(q);
+    const snapshot = await getData(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 export async function deleteFederalCoordinator(coordinatorId) {
@@ -1130,9 +1166,10 @@ export async function upsertLocalityCoordinator(payload) {
         return newRef.id;
     }
 }
-export async function listLocalityCoordinators() {
+// --- MODIFIED: listLocalityCoordinators ---
+export async function listLocalityCoordinators(sourceOptions = {}) {
     const q = query(collection(db, "localityCoordinators"));
-    const snapshot = await getData(q);
+    const snapshot = await getData(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 export async function deleteLocalityCoordinator(coordinatorId) {
@@ -1150,9 +1187,10 @@ export async function upsertFunder(payload) {
         return newRef.id;
     }
 }
-export async function listFunders() {
+// --- MODIFIED: listFunders ---
+export async function listFunders(sourceOptions = {}) {
     const q = query(collection(db, "funders"));
-    const snapshot = await getData(q);
+    const snapshot = await getData(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 export async function deleteFunder(funderId) {
@@ -1189,7 +1227,8 @@ export async function updateCoursePublicStatus(courseId, isPublic) {
         isPublic: isPublic
     });
 }
-export async function listCoursesByType(course_type, userStates) {
+// --- MODIFIED: listCoursesByType ---
+export async function listCoursesByType(course_type, userStates, sourceOptions = {}) {
     try {
         let conditions = [where("course_type", "==", course_type)];
         if (userStates && userStates.length > 0) {
@@ -1200,7 +1239,7 @@ export async function listCoursesByType(course_type, userStates) {
 
         let q = query(collection(db, "courses"), ...conditions);
 
-        const querySnapshot = await getData(q);
+        const querySnapshot = await getData(q, sourceOptions);
         const courses = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         return courses;
     } catch (error) {
@@ -1208,11 +1247,12 @@ export async function listCoursesByType(course_type, userStates) {
         throw error;
     }
 }
-export async function listAllCourses() {
+// --- MODIFIED: listAllCourses ---
+export async function listAllCourses(sourceOptions = {}) {
     try {
          // Add ordering for consistency
         let q = query(collection(db, "courses"), orderBy("start_date", "desc"));
-        const querySnapshot = await getData(q);
+        const querySnapshot = await getData(q, sourceOptions);
         const courses = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         return courses;
     } catch (error) {
@@ -1381,7 +1421,8 @@ export async function importParticipants(participants) {
 }
 // --- END MODIFIED: importParticipants ---
 
-export async function listParticipants(courseId, lastVisible = null, source = 'default') {
+// --- MODIFIED: listParticipants ---
+export async function listParticipants(courseId, lastVisible = null, sourceOptions = {}) {
     if (!courseId) return { participants: [], lastVisible: null };
 
     const PAGE_SIZE = 50; // Increased page size slightly
@@ -1397,17 +1438,18 @@ export async function listParticipants(courseId, lastVisible = null, source = 'd
         q = query(q, startAfter(lastVisible));
     }
 
-    const documentSnapshots = await getDocs(q, { source });
+    const documentSnapshots = await getDocs(q, sourceOptions);
 
     const participants = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     const newLastVisible = documentSnapshots.docs[documentSnapshots.docs.length - 1];
 
     return { participants, lastVisible: newLastVisible };
 }
-export async function listAllParticipants() {
+// --- MODIFIED: listAllParticipants ---
+export async function listAllParticipants(sourceOptions = {}) {
     try {
         const q = collection(db, "participants");
-        const querySnapshot = await getData(q);
+        const querySnapshot = await getData(q, sourceOptions);
         const participants = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         return participants;
     } catch (error) {
@@ -1420,10 +1462,11 @@ export async function listAllParticipants() {
 /**
  * Fetches all participants for a specific course, handling pagination automatically.
  * @param {string} courseId - The ID of the course.
- * @param {string} source - 'default', 'cache', or 'server'.
+ * @param {object} sourceOptions - 'default', 'cache', or 'server'.
  * @returns {Promise<Array<object>>} A promise that resolves to an array of all participant objects.
  */
-export async function listAllParticipantsForCourse(courseId, source = 'default') {
+// --- MODIFIED: listAllParticipantsForCourse ---
+export async function listAllParticipantsForCourse(courseId, sourceOptions = {}) {
     if (!courseId) return [];
     let allParticipants = [];
     let lastVisible = null;
@@ -1431,7 +1474,7 @@ export async function listAllParticipantsForCourse(courseId, source = 'default')
 
     while(hasMore) {
         // listParticipants is the paginated function defined above
-        const result = await listParticipants(courseId, lastVisible, source); 
+        const result = await listParticipants(courseId, lastVisible, sourceOptions); 
         if (result.participants && result.participants.length > 0) {
             allParticipants = allParticipants.concat(result.participants);
         }
@@ -1590,14 +1633,16 @@ export async function bulkMigrateFromMappings(mappings, options = { dryRun: fals
     return summary;
 }
 
-export async function listObservationsForParticipant(courseId, participantId, source = 'default') {
+// --- MODIFIED: listObservationsForParticipant ---
+export async function listObservationsForParticipant(courseId, participantId, sourceOptions = {}) {
     const q = query(collection(db, "observations"), where("courseId", "==", courseId), where("participant_id", "==", participantId));
-    const snapshot = await getDocs(q, { source });
+    const snapshot = await getDocs(q, sourceOptions);
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 }
-export async function listCasesForParticipant(courseId, participantId, source = 'default') {
+// --- MODIFIED: listCasesForParticipant ---
+export async function listCasesForParticipant(courseId, participantId, sourceOptions = {}) {
     const q = query(collection(db, "cases"), where("courseId", "==", courseId), where("participant_id", "==", participantId));
-    const snapshot = await getDocs(q, { source });
+    const snapshot = await getDocs(q, sourceOptions);
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
@@ -1653,13 +1698,14 @@ export async function deleteCaseAndObservations(caseId) {
 
     await batch.commit(); // Commit the batch
 }
-export async function listAllDataForCourse(courseId, source = 'default') {
+// --- MODIFIED: listAllDataForCourse ---
+export async function listAllDataForCourse(courseId, sourceOptions = {}) {
     const obsQuery = query(collection(db, "observations"), where("courseId", "==", courseId));
     const casesQuery = query(collection(db, "cases"), where("courseId", "==", courseId));
 
     const [obsSnap, casesSnap] = await Promise.all([
-        getDocs(obsQuery, { source }), // Use wrapped getDocs
-        getDocs(casesQuery, { source })  // Use wrapped getDocs
+        getDocs(obsQuery, sourceOptions), // Use wrapped getDocs
+        getDocs(casesQuery, sourceOptions)  // Use wrapped getDocs
     ]);
 
     const allObs = obsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -1690,19 +1736,21 @@ export async function upsertFinalReport(payload) {
         return newRef.id;
     }
 }
-export async function getFinalReportByCourseId(courseId, source = 'default') {
+// --- MODIFIED: getFinalReportByCourseId ---
+export async function getFinalReportByCourseId(courseId, sourceOptions = {}) {
     if (!courseId) return null;
     const q = query(collection(db, "finalReports"), where("courseId", "==", courseId));
-    const snapshot = await getDocs(q, { source });
+    const snapshot = await getDocs(q, sourceOptions);
     if (!snapshot.empty) {
         const doc = snapshot.docs[0];
         return { id: doc.id, ...doc.data() };
     }
     return null;
 }
-export async function listFinalReport(source = 'default') {
+// --- MODIFIED: listFinalReport ---
+export async function listFinalReport(sourceOptions = {}) {
     try {
-        const querySnapshot = await getDocs(collection(db, "finalReports"), { source });
+        const querySnapshot = await getDocs(collection(db, "finalReports"), sourceOptions);
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
         console.error("Error fetching final reports:", error);
@@ -1764,10 +1812,11 @@ export async function saveMentorshipSession(payload, sessionId = null, externalB
  * Lists all skill mentorship sessions from Firestore.
  * @returns {Array<object>} A list of mentorship session documents.
  */
-export async function listMentorshipSessions() {
+// --- MODIFIED: listMentorshipSessions ---
+export async function listMentorshipSessions(sourceOptions = {}) {
     try {
         const q = query(collection(db, "skillMentorship"), orderBy("effectiveDate", "desc"));
-        const snapshot = await getDocs(q);
+        const snapshot = await getDocs(q, sourceOptions);
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
         console.error("Error fetching mentorship sessions:", error);
