@@ -1537,6 +1537,78 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
     // --- END NEW HANDLER ---
 
 
+    // --- NEW: Mobile Bottom Nav Bar Component ---
+    const MobileFormNavBar = ({ activeFormType, draftCount, onNavClick }) => {
+        const isSkillsActive = activeFormType === 'skills_assessment';
+        const isMothersActive = activeFormType === 'mothers_form';
+        
+        const navItems = [
+            { id: 'skills_assessment', label: 'Skills Form', active: isSkillsActive, disabled: false },
+            { id: 'mothers_form', label: "Mother's Survey", active: isMothersActive, disabled: false },
+            { id: 'facility_update', label: 'Facility Data', active: false, disabled: !isSkillsActive },
+            { id: 'drafts', label: `Drafts (${draftCount})`, active: false, disabled: !isSkillsActive },
+        ];
+
+        return (
+            <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 flex justify-around items-center bg-gray-900 text-white border-t border-gray-700 shadow-lg">
+                {navItems.map(item => (
+                    <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => onNavClick(item.id)}
+                        disabled={item.disabled}
+                        className={`flex flex-col items-center justify-center text-center p-2 w-1/4 transition-colors duration-150 h-16
+                            ${item.active ? 'text-sky-400' : 'text-gray-300 hover:text-white'}
+                            ${item.disabled ? 'text-gray-600 cursor-not-allowed' : ''}
+                        `}
+                    >
+                        {/* Using text as icons */}
+                        <span className="text-xs font-medium truncate">{item.label}</span>
+                    </button>
+                ))}
+            </div>
+        );
+    };
+    // --- END: Mobile Bottom Nav Bar Component ---
+
+    // --- NEW: Handler for Mobile Nav Clicks ---
+    const handleMobileNavClick = async (target) => {
+        if (target === 'skills_assessment') {
+            if (activeFormType === 'mothers_form') {
+                const confirmSwitch = window.confirm("You are about to switch to the Skills Assessment. Your current Mother's Survey will be discarded. Proceed?");
+                if (confirmSwitch) {
+                    resetSelection(); 
+                    setActiveFormType('skills_assessment');
+                }
+            }
+        } 
+        else if (target === 'mothers_form') {
+            if (activeFormType === 'skills_assessment') {
+                const confirmSwitch = window.confirm("You are about to switch to the Mother's Survey. Your current skills form will be saved as a draft. Proceed?");
+                if (confirmSwitch) {
+                    try {
+                        if (formRef.current) {
+                            await formRef.current.saveDraft();
+                            await fetchSkillMentorshipSubmissions(true); // Refresh draft count
+                        }
+                        resetSelection();
+                        setActiveFormType('mothers_form');
+                    } catch (e) {
+                        console.error("Failed to save draft before switching:", e);
+                        setToast({ show: true, message: `Failed to save draft: ${e.message}`, type: 'error' });
+                    }
+                }
+            }
+        }
+        else if (target === 'facility_update' && activeFormType === 'skills_assessment' && formRef.current) {
+            formRef.current.openFacilityModal();
+        }
+        else if (target === 'drafts' && activeFormType === 'skills_assessment') {
+            setIsDraftsModalOpen(true);
+        }
+    };
+    // --- END: Handler for Mobile Nav Clicks ---
+
     // --- Render Logic ---
     if (currentView === 'service_selection') {
         return <ServiceSelector onSelectService={handleSelectService} />;
@@ -1816,6 +1888,11 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                     onDraftCreated={handleDraftCreated} // <-- MODIFIED: Pass handler
                 />
                  {/* --- NEW: Drafts Modal --- */}
+                 <MobileFormNavBar
+                    activeFormType={activeFormType}
+                    draftCount={currentUserDrafts.length}
+                    onNavClick={handleMobileNavClick}
+                 />
                  <DraftsModal
                     isOpen={isDraftsModalOpen}
                     onClose={() => setIsDraftsModalOpen(false)}
@@ -1840,11 +1917,18 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
      if (currentView === 'form_setup' && activeFormType === 'mothers_form' && (isReadyToStart && selectedFacility) && activeService && !isAddWorkerModalOpen && !isWorkerInfoChanged) {
         // Render the new MothersForm component
         return (
-            <MothersForm
-                facility={selectedFacility}
-                onCancel={handleFormCompletion} // Returns to history/submissions list
-                setToast={setToast}
-            />
+            <>
+                <MothersForm
+                    facility={selectedFacility}
+                    onCancel={handleFormCompletion} // Returns to history/submissions list
+                    setToast={setToast}
+                />
+                <MobileFormNavBar
+                    activeFormType={activeFormType}
+                    draftCount={currentUserDrafts.length}
+                    onNavClick={handleMobileNavClick}
+                 />
+            </>
         );
     }
 

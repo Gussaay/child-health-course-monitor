@@ -378,7 +378,8 @@ const MothersForm = ({ facility, onCancel, setToast }) => {
                 </div>
 
                  {/* --- Button Bar (Fixed bottom for mobile) --- */}
-                 <div className="flex gap-2 justify-end p-4 border-t bg-gray-50 sticky bottom-0 z-10">
+                 {/* --- MODIFICATION: Added hidden sm:flex to hide on mobile --- */}
+                 <div className="hidden sm:flex gap-2 justify-end p-4 border-t bg-gray-50 sticky bottom-0 z-10">
                     <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving}> إلغاء </Button>
                     <Button type="submit" disabled={isSaving}> {isSaving ? 'جاري الحفظ...' : 'حفظ وإكمال الاستبيان'} </Button>
                  </div>

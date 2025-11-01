@@ -224,7 +224,7 @@ const IMNCI_FORM_STRUCTURE = [
             {
                 subgroupTitle: 'في حالة الدسنتاريا',
                 scoreKey: 'dyst_treatment',
-                skills: [ { key: 'skill_dyst_abx', label: 'هل وصف مضاد حيوي لعلاج الدسنتاريا بصورة صحيحة' }, { key: 'skill_dyst_dose', label: 'هل أعطى الجرعة الأولى من مضاد حيوي لعلاج الدسنتاريا في العيادة بصورة صحيحة', relevant: "${skill_dyst_abx}='yes'" }, ],
+                skills: [ { key: 'skill_dyst_abx', label: 'هل وصف مضاد حيوي لعلاج الدسنتاريا بصورة صحيحة' }, { key: 'skill_dyst_dose', label: 'هل أعطى الجrعة الأولى من مضاد حيوي لعلاج الدسنتاريا في العيادة بصورة صحيحة', relevant: "${skill_dyst_abx}='yes'" }, ],
                 relevant: (formData) => { // Show if effective classification includes 'دسنتاريا'
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_diarrhea === 'yes';
                     const workerCls = formData.assessment_skills.worker_diarrhea_classification || {};
@@ -236,13 +236,13 @@ const IMNCI_FORM_STRUCTURE = [
             {
                 subgroupTitle: 'في حالة الملاريا',
                 scoreKey: 'mal_treatment',
-                skills: [ { key: 'skill_mal_meds', label: 'هل وصف دواء لعلاج الملاريا بصورة صحيحة' }, { key: 'skill_mal_dose', label: 'هل أعطى الجرعة الأولى من الدواء لعلاج الملاريا في العيادة بصورة صحيحة', relevant: "${skill_mal_meds}='yes'" }, ],
+                skills: [ { key: 'skill_mal_meds', label: 'هل وصف دواء لعلاج الملاريا بصورة صحيحة' }, { key: 'skill_mal_dose', label: 'هل أعطى الجrعة الأولى من الدواء لعلاج الملاريا في العيادة بصورة صحيحة', relevant: "${skill_mal_meds}='yes'" }, ],
                 relevant: (formData) => { // Show if effective classification includes 'ملاريا'
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_fever === 'yes';
                     const workerCls = formData.assessment_skills.worker_fever_classification || {};
                     const supervisorCls = formData.assessment_skills.supervisor_correct_fever_classification || {};
                     const effectiveCls = didClassifyCorrectly ? workerCls : supervisorCls;
-                    return !!effectiveCls['ملارIA']; // Strict check for 'ملاريا' only
+                    return !!effectiveCls['ملاريا']; // Strict check for 'ملاريا' only
                 }
             },
             {
@@ -288,7 +288,7 @@ const IMNCI_FORM_STRUCTURE = [
             {
                 subgroupTitle: 'في حالة فقر الدم',
                 scoreKey: 'anemia_treatment',
-                skills: [ { key: 'skill_anemia_iron', label: 'هل وصف شراب حديد بصورة صحيحة' }, { key: 'skill_anemia_iron_dose', label: 'هل أعطى الجرعة الأولى من شراب حديد بصورة صحيحة', relevant: "${skill_anemia_iron}='yes'" }, ],
+                skills: [ { key: 'skill_anemia_iron', label: 'هل وصف شراب حديد بصورة صحيحة' }, { key: 'skill_anemia_iron_dose', label: 'هل أعطى الجrعة الأولى من شراب حديد بصورة صحيحة', relevant: "${skill_anemia_iron}='yes'" }, ],
                 relevant: (formData) => { // Show if effective classification is 'فقر دم'
                     const didClassifyCorrectly = formData.assessment_skills.skill_anemia_classify === 'yes';
                     const workerCls = formData.assessment_skills.worker_anemia_classification;
@@ -1245,6 +1245,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
     // --- START: New useImperativeHandle to expose saveDraft ---
     useImperativeHandle(ref, () => ({
         saveDraft: async () => {
+            // ... (existing saveDraft logic) ...
             const { isSaving, isSavingDraft, isAutoSaving } = allPropsRef.current;
             
             // ================== BEGIN FIX ==================
@@ -1269,7 +1270,9 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
 
             // Trigger the save immediately and wait for it
             await silentSaveDraft();
-        }
+        },
+        // --- NEW: Expose function to open facility modal ---
+        openFacilityModal: () => setIsFacilityModalOpen(true)
     }));
     // --- END: New useImperativeHandle ---
 
@@ -1880,7 +1883,8 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                 </div>
 
                  {/* --- Button Bar (MODIFIED) --- */}
-                 <div className="flex gap-4 justify-between items-center p-4 border-t bg-gray-50 sticky bottom-0 z-10">
+                 {/* --- MODIFICATION: Added hidden sm:flex to hide on mobile --- */}
+                 <div className="hidden sm:flex gap-4 justify-between items-center p-4 border-t bg-gray-50 sticky bottom-0 z-10">
                      {/* START: New Autosave Status Indicator */}
                      <div className="flex-shrink-0">
                         {isAutoSaving && (

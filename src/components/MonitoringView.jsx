@@ -365,8 +365,10 @@ function ImnciMonitoringGrid({ age, buffer, toggle }) {
                 <table className="text-sm border-collapse mx-auto w-full">
                     <thead className="bg-slate-50 text-slate-800">
                         <tr>
-                            <th className="p-1 text-left font-semibold border border-slate-300 min-w-[320px]">Domain / Classification</th>
-                            <th className="p-1 text-left font-semibold border border-slate-300 min-w-[170px]">Action</th>
+                            {/* --- MODIFICATION: Removed min-w-[320px] to allow wrapping --- */}
+                            <th className="p-1 text-left font-semibold border border-slate-300">Domain / Classification</th>
+                            {/* --- MODIFICATION: Removed min-w-[170px] to allow shrinking --- */}
+                            <th className="p-1 text-left font-semibold border border-slate-300">Action</th>
                         </tr>
                     </thead>
                     {allDomains.map(d => {
@@ -376,7 +378,8 @@ function ImnciMonitoringGrid({ age, buffer, toggle }) {
 
                         return (
                             <tbody key={d}>
-                                <tr onClick={() => toggleDomain(d)} className="cursor-pointer hover:bg-sky-700 bg-sky-800">
+                                {/* --- MODIFICATION: Changed bg-sky-800 to bg-sky-700 --- */}
+                                <tr onClick={() => toggleDomain(d)} className="cursor-pointer hover:bg-sky-600 bg-sky-700">
                                     <td className="p-1 text-base font-bold text-white border-l border-r border-b border-slate-300">
                                         <span className="inline-block w-5 text-center text-white">{isExpanded ? '▼' : '►'}</span>
                                         {title}
@@ -441,8 +444,10 @@ function EtatMonitoringGrid({ buffer, toggle }) {
                 <table className="text-sm border-collapse mx-auto w-full">
                     <thead className="bg-slate-50 text-slate-800">
                         <tr>
-                            <th className="p-1 text-left font-semibold border border-slate-300 min-w-[320px]">Domain / Skill</th>
-                            <th className="p-1 text-left font-semibold border border-slate-300 min-w-[170px]">Action</th>
+                            {/* --- MODIFICATION: Removed min-w-[320px] to allow wrapping --- */}
+                            <th className="p-1 text-left font-semibold border border-slate-300">Domain / Skill</th>
+                            {/* --- MODIFICATION: Removed min-w-[170px] to allow shrinking --- */}
+                            <th className="p-1 text-left font-semibold border border-slate-300">Action</th>
                         </tr>
                     </thead>
                     {allDomains.map(d => {
@@ -452,7 +457,8 @@ function EtatMonitoringGrid({ buffer, toggle }) {
 
                         return (
                             <tbody key={d}>
-                                <tr onClick={() => toggleDomain(d)} className="cursor-pointer hover:bg-sky-700 bg-sky-800">
+                                {/* --- MODIFICATION: Changed bg-sky-800 to bg-sky-700 --- */}
+                                <tr onClick={() => toggleDomain(d)} className="cursor-pointer hover:bg-sky-600 bg-sky-700">
                                     <td className="p-1 text-base font-bold text-white border-l border-r border-b border-slate-300">
                                        <span className="inline-block w-5 text-center text-white">{isExpanded ? '▼' : '►'}</span>
                                         {title}
@@ -524,8 +530,10 @@ function EencMonitoringGrid({ scenario, buffer, toggle }) {
                 <table className="text-sm border-collapse mx-auto w-full">
                     <thead className="bg-slate-50 text-slate-800">
                         <tr>
-                            <th className="p-1 text-left font-semibold border border-slate-300 min-w-[320px]">Domain / Skill</th>
-                            <th className="p-1 text-left font-semibold border border-slate-300 min-w-[200px]">Action</th>
+                            {/* --- MODIFICATION: Removed min-w-[320px] to allow wrapping --- */}
+                            <th className="p-1 text-left font-semibold border border-slate-300">Domain / Skill</th>
+                            {/* --- MODIFICATION: Removed min-w-[200px] to allow shrinking --- */}
+                            <th className="p-1 text-left font-semibold border border-slate-300">Action</th>
                         </tr>
                     </thead>
                     {allDomains.map(d => {
@@ -535,7 +543,8 @@ function EencMonitoringGrid({ scenario, buffer, toggle }) {
 
                         return (
                             <tbody key={d}>
-                                <tr onClick={() => toggleDomain(d)} className="cursor-pointer hover:bg-sky-700 bg-sky-800">
+                                {/* --- MODIFICATION: Changed bg-sky-800 to bg-sky-700 --- */}
+                                <tr onClick={() => toggleDomain(d)} className="cursor-pointer hover:bg-sky-600 bg-sky-700">
                                     <td className="p-1 text-base font-bold text-white border-l border-r border-b border-slate-300">
                                         <span className="inline-block w-5 text-center text-white">{isExpanded ? '▼' : '►'}</span>
                                         {title}
@@ -697,7 +706,7 @@ function SubmittedCases({ course, participant, observations, cases, onEditCase, 
                             )}
                             <td className="p-2 border-b border-slate-300">
                                 <div className="flex gap-2 justify-end">
-                                    <Button size="sm" variant="secondary" onClick={() => onEditCase(c)}>Edit</Button>
+                                    <Button size="sm" variant="secondary" onClick={() => onEditCase(c)}>Edit</LButton>
                                     <Button size="sm" variant="danger" onClick={() => onDeleteCase(c)}>Delete</Button>
                                 </div>
                             </td>
