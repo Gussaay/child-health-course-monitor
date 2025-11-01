@@ -1601,7 +1601,7 @@ export async function listCasesForParticipant(courseId, participantId, source = 
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
-// --- MODIFICATION: Removed server-side duplicate check ---
+// --- MODIFICATION: Added return statement ---
 export async function upsertCaseAndObservations(caseData, observations, editingCaseId = null) {
 
     // --- DUPLICATE CHECK REMOVED ---
@@ -1622,15 +1622,24 @@ export async function upsertCaseAndObservations(caseData, observations, editingC
     }
 
     // Set/overwrite the case data
-    batch.set(caseRef, { ...caseData, id: caseId }); // Ensure ID is part of the data
+    // --- FIX: Create the object to be returned ---
+    const savedCase = { ...caseData, id: caseId };
+    batch.set(caseRef, savedCase); // Ensure ID is part of the data
 
     // Add new observations
+    // --- FIX: Create the array to be returned ---
+    const savedObservations = [];
     observations.forEach(obs => {
         const obsRef = doc(collection(db, "observations")); // Generate new ID for each observation
-        batch.set(obsRef, { ...obs, id: obsRef.id, caseId: caseId }); // Ensure obs ID and caseId link are set
+        const finalObs = { ...obs, id: obsRef.id, caseId: caseId }; // Create the full object
+        batch.set(obsRef, finalObs); // Ensure obs ID and caseId link are set
+        savedObservations.push(finalObs); // Add to the array
     });
 
     await batch.commit(); // Commit the batch
+    
+    // --- FIX: Return the saved objects so the frontend can use them ---
+    return { savedCase, savedObservations };
 }
 // --- END MODIFICATION ---
 

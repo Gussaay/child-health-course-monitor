@@ -192,7 +192,7 @@ export function CoursesTable({ courses, onOpen, onEdit, onDelete, onOpenReport, 
     const courseType = sortedCourses.length > 0 ? sortedCourses[0].course_type : 'Courses';
 
     return (
-        sortedCourses.length === 0 ? <EmptyState message="No courses have been added yet for this package." /> : (
+        sortedCourses.length === 0 ? <EmptyState message="No courses found matching the selected filters." /> : ( // MODIFIED EmptyState message
             <div>
                 <h3 className="text-xl font-bold mb-4">{courseType} Courses</h3>
                 <Table headers={["#", "State", "Locality", "Subcourses", "# Participants", "Status", "Actions"]}>
@@ -294,10 +294,67 @@ export function CourseManagementView({
     const currentParticipant = participants.find(p => p.id === selectedParticipantId);
 
     // --- NEW: Filter allCourses based on activeCourseType ---
-    const courses = useMemo(() => {
+    const coursesForActiveType = useMemo(() => {
         if (!activeCourseType) return [];
         return allCourses.filter(c => c.course_type === activeCourseType);
     }, [allCourses, activeCourseType]);
+
+    // --- NEW: State for filters ---
+    const [filterState, setFilterState] = useState('All');
+    const [filterLocality, setFilterLocality] = useState('All');
+    const [filterSubCourse, setFilterSubCourse] = useState('All');
+
+    // --- NEW: Options for filters, derived from courses for the active type ---
+    const filterStateOptions = useMemo(() => {
+        const states = new Set(coursesForActiveType.map(c => c.state));
+        return ['All', ...Array.from(states).sort()];
+    }, [coursesForActiveType]);
+
+    const filterLocalityOptions = useMemo(() => {
+        const localities = new Set();
+        coursesForActiveType.forEach(c => {
+            if (filterState === 'All' || c.state === filterState) {
+                localities.add(c.locality);
+            }
+        });
+        return ['All', ...Array.from(localities).sort()];
+    }, [coursesForActiveType, filterState]);
+
+    const filterSubCourseOptions = useMemo(() => {
+        const subCourses = new Set();
+        coursesForActiveType.forEach(c => {
+            if (c.facilitatorAssignments && c.facilitatorAssignments.length > 0) {
+                c.facilitatorAssignments.forEach(a => subCourses.add(a.imci_sub_type));
+            }
+        });
+        return ['All', ...Array.from(subCourses).sort()];
+    }, [coursesForActiveType]);
+
+    // --- NEW: Reset filters when course type changes ---
+    useEffect(() => {
+        setFilterState('All');
+        setFilterLocality('All');
+        setFilterSubCourse('All');
+    }, [activeCourseType]);
+
+    // --- NEW: Reset locality filter when state changes ---
+    useEffect(() => {
+        setFilterLocality('All');
+    }, [filterState]);
+
+    // --- MODIFIED: This now applies all filters ---
+    const courses = useMemo(() => {
+        return coursesForActiveType.filter(c => {
+            const stateMatch = filterState === 'All' || c.state === filterState;
+            const localityMatch = filterLocality === 'All' || c.locality === filterLocality;
+            
+            const subCourseMatch = filterSubCourse === 'All' || 
+                (c.facilitatorAssignments && c.facilitatorAssignments.some(a => a.imci_sub_type === filterSubCourse));
+
+            return stateMatch && localityMatch && subCourseMatch;
+        });
+    }, [coursesForActiveType, filterState, filterLocality, filterSubCourse]);
+
 
     const isCourseActive = useMemo(() => {
         if (!selectedCourse?.start_date || !selectedCourse?.course_duration || selectedCourse.course_duration <= 0) {
@@ -357,6 +414,29 @@ export function CourseManagementView({
                                         Change Course Package
                                     </Button>
                                 </div>
+                                
+                                {/* --- NEW: Filter controls --- */}
+                                <Card className="p-4 mb-4 bg-gray-50">
+                                    <h4 className="text-lg font-semibold mb-3">Filter Courses</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <FormGroup label="Filter by State">
+                                            <Select value={filterState} onChange={(e) => setFilterState(e.target.value)}>
+                                                {filterStateOptions.map(s => <option key={s} value={s}>{s}</option>)}
+                                            </Select>
+                                        </FormGroup>
+                                        <FormGroup label="Filter by Locality">
+                                            <Select value={filterLocality} onChange={(e) => setFilterLocality(e.target.value)} disabled={filterLocalityOptions.length <= 1}>
+                                                {filterLocalityOptions.map(l => <option key={l} value={l}>{l}</option>)}
+                                            </Select>
+                                        </FormGroup>
+                                        <FormGroup label="Filter by Sub-course">
+                                            <Select value={filterSubCourse} onChange={(e) => setFilterSubCourse(e.target.value)} disabled={filterSubCourseOptions.length <= 1}>
+                                                {filterSubCourseOptions.map(s => <option key={s} value={s}>{s}</option>)}
+                                            </Select>
+                                        </FormGroup>
+                                    </div>
+                                </Card>
+                                {/* --- END: Filter controls --- */}
                                 
                                 <CoursesTable
                                     courses={courses} // Use the new filtered list

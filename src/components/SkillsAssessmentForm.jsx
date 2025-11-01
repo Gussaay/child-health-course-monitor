@@ -6,9 +6,15 @@ import { Timestamp } from 'firebase/firestore';
 // --- END FIX ---
 import {
     Card, PageHeader, Button, FormGroup, Select, Spinner,
-    EmptyState, Input, Textarea, CourseIcon, Checkbox
+    EmptyState, Input, Textarea, CourseIcon, Checkbox,
+    Modal // <-- ADDED
 } from './CommonComponents';
 import { getAuth } from "firebase/auth";
+
+// --- ADD NEW IMPORTS ---
+import { GenericFacilityForm, IMNCIFormFields } from './FacilityForms.jsx';
+import { submitFacilityDataForApproval } from "../data.js";
+// --- END NEW IMPORTS ---
 
 // --- Single Skill Checklist Item (Ensure score circle has space and text wraps) ---
 const SkillChecklistItem = ({ label, value, onChange, name, showNaOption = true, naLabel = "لا ينطبق", isMainSymptom = false, scoreCircle = null }) => {
@@ -236,13 +242,13 @@ const IMNCI_FORM_STRUCTURE = [
                     const workerCls = formData.assessment_skills.worker_fever_classification || {};
                     const supervisorCls = formData.assessment_skills.supervisor_correct_fever_classification || {};
                     const effectiveCls = didClassifyCorrectly ? workerCls : supervisorCls;
-                    return !!effectiveCls['ملاريا']; // Strict check for 'ملاريا' only
+                    return !!effectiveCls['ملارIA']; // Strict check for 'ملاريا' only
                 }
             },
             {
                 subgroupTitle: 'في حالة التهاب الأذن',
                 scoreKey: 'ear_treatment',
-                skills: [ { key: 'skill_ear_abx', label: 'هل وصف مضاد حيوي لعلاج التهاب الأذن الحاد بصورة صحيحة' }, { key: 'skill_ear_dose', label: 'هل أعطى الجرعة الأولى من مضاد حيوي لعلاج التهاب الأذن الحاد بصورة صحيحة', relevant: "${skill_ear_abx}='yes'" }, { key: 'skill_ear_para', label: 'هل وصف دواء الباراسيتامول بصورة صحيحة' }, { key: 'skill_ear_para_dose', label: 'هل أعطى الجرعة الأولى من الباراسيتامول بصورة صحيحة', relevant: "${skill_ear_para}='yes'" }, ],
+                skills: [ { key: 'skill_ear_abx', label: 'هل وصف مضاد حيوي لعلاج التهاب الأذن الحاد بصورة صحيحة' }, { key: 'skill_ear_dose', label: 'هل أعطى الجرعة الأولى من مضاد حيوي لعلاج التهاب الأذن الحاد بصورة صحيحة', relevant: "${skill_ear_abx}='yes'" }, { key: 'skill_ear_para', label: 'هل وصف دواء الباراسيتامول بصورة صحيحة' }, { key: 'skill_ear_para_dose', label: 'هل أعطى الجrعة الأولى من الباراسيتامول بصورة صحيحة', relevant: "${skill_ear_para}='yes'" }, ],
                 // --- START CORRECTION: Added hamza (أ) to match classification constants ---
                 relevant: (formData) => { // Show if effective classification is 'التهاب اذن حاد' or 'التهاب اذن مزمن'
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_ear === 'yes';
@@ -334,6 +340,21 @@ const getInitialFormData = () => {
     return initialState;
 };
 
+// --- START FIX: New helper function to ensure data is an array of selected keys ---
+const ensureArrayOfKeys = (data, classifications) => {
+    if (Array.isArray(data)) {
+        return data; // Already the saved array format
+    }
+    // If it's the internal object format (keys mapped to true/false), convert it back to an array of selected keys
+    if (typeof data === 'object' && data !== null) {
+        // Filter based on the classifications list to handle cases where keys might be missing
+        return classifications.filter(c => data[c]);
+    }
+    return [];
+};
+// --- END FIX ---
+
+
 // --- Helper to rehydrate draft data into form state ---
 const rehydrateDraftData = (draft) => {
     // Start with the default structure
@@ -363,29 +384,35 @@ const rehydrateDraftData = (draft) => {
     // Use || [] to handle cases where the key might be missing in the draft
     const assessmentDraft = draft.assessmentSkills || {};
 
+    // --- START FIX: Use new helper function ---
+    const workerDiarrheaKeys = ensureArrayOfKeys(assessmentDraft.worker_diarrhea_classification, DIARRHEA_CLASSIFICATIONS);
     rehydrated.assessment_skills.worker_diarrhea_classification =
         DIARRHEA_CLASSIFICATIONS.reduce((acc, c) => {
-            acc[c] = (assessmentDraft.worker_diarrhea_classification || []).includes(c);
+            acc[c] = workerDiarrheaKeys.includes(c);
             return acc;
         }, createInitialClassificationState(DIARRHEA_CLASSIFICATIONS));
 
+    const supervisorDiarrheaKeys = ensureArrayOfKeys(assessmentDraft.supervisor_correct_diarrhea_classification, DIARRHEA_CLASSIFICATIONS);
     rehydrated.assessment_skills.supervisor_correct_diarrhea_classification =
         DIARRHEA_CLASSIFICATIONS.reduce((acc, c) => {
-            acc[c] = (assessmentDraft.supervisor_correct_diarrhea_classification || []).includes(c);
+            acc[c] = supervisorDiarrheaKeys.includes(c);
             return acc;
         }, createInitialClassificationState(DIARRHEA_CLASSIFICATIONS));
 
+    const workerFeverKeys = ensureArrayOfKeys(assessmentDraft.worker_fever_classification, FEVER_CLASSIFICATIONS);
     rehydrated.assessment_skills.worker_fever_classification =
         FEVER_CLASSIFICATIONS.reduce((acc, c) => {
-            acc[c] = (assessmentDraft.worker_fever_classification || []).includes(c);
+            acc[c] = workerFeverKeys.includes(c);
             return acc;
         }, createInitialClassificationState(FEVER_CLASSIFICATIONS));
 
+    const supervisorFeverKeys = ensureArrayOfKeys(assessmentDraft.supervisor_correct_fever_classification, FEVER_CLASSIFICATIONS);
     rehydrated.assessment_skills.supervisor_correct_fever_classification =
         FEVER_CLASSIFICATIONS.reduce((acc, c) => {
-            acc[c] = (assessmentDraft.supervisor_correct_fever_classification || []).includes(c);
+            acc[c] = supervisorFeverKeys.includes(c);
             return acc;
         }, createInitialClassificationState(FEVER_CLASSIFICATIONS));
+    // --- END FIX ---
 
     return rehydrated;
 };
@@ -689,6 +716,7 @@ const findIncompleteTreatmentSkills = (formData) => {
 
 // --- Form Component Start (MODIFIED) ---
 const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in forwardRef
+    // --- MODIFICATION: Destructure onDraftCreated ---
     const { // MODIFIED: Destructure props
         facility,
         healthWorkerName,
@@ -699,23 +727,26 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
         setToast,
         existingSessionData = null,
         visitNumber = 1, 
-        lastSessionDate = null 
+        lastSessionDate = null,
+        onDraftCreated // <-- DESTRUCTURED
     } = props;
+    // --- END MODIFICATION ---
 
-    const [formData, setFormData] = useState(
-        existingSessionData
-        ? rehydrateDraftData(existingSessionData)
-        : getInitialFormData()
-    );
+    // --- START: MODIFIED STATE INITIALIZATION ---
+    // Start with a blank form. The useEffect will populate it.
+    const [formData, setFormData] = useState(getInitialFormData());
+    // Start at step 1. The useEffect will expand it if needed.
+    const [visibleStep, setVisibleStep] = useState(1);
+    // --- END: MODIFIED STATE INITIALIZATION ---
 
     const [isSaving, setIsSaving] = useState(false);
     const [isSavingDraft, setIsSavingDraft] = useState(false);
-    const [visibleStep, setVisibleStep] = useState(existingSessionData ? 9 : 1); // Show all if editing draft
+    const [isFacilityModalOpen, setIsFacilityModalOpen] = useState(false); // <-- ADDED
     const [scores, setScores] = useState({});
     const auth = getAuth();
     const user = auth.currentUser;
 
-    // --- START: New state and refs for autosave ---
+    // --- START: MODIFIED AUTOSAVE REFS ---
     const [isDirty, setIsDirty] = useState(false);
     const [isAutoSaving, setIsAutoSaving] = useState(false);
     const autoSaveTimerRef = useRef(null);
@@ -727,52 +758,90 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
         formDataRef.current = formData;
     }, [formData]);
 
+    // --- NEW: Add ref for isDirty ---
+    // This allows the useEffect([existingSessionData]) to read the *current*
+    // dirty status without needing it in its dependency array.
+    const isDirtyRef = useRef(isDirty);
+    useEffect(() => { 
+        isDirtyRef.current = isDirty; 
+    }, [isDirty]);
+    // --- END NEW REF ---
+
+    // --- MODIFICATION: Add onDraftCreated to ref ---
     const allPropsRef = useRef({
         facility, healthWorkerName, user, visitNumber, existingSessionData,
         isSaving, isSavingDraft, isAutoSaving, isDirty, setToast,
-        healthWorkerJobTitle // <-- ADDED
+        healthWorkerJobTitle,
+        onDraftCreated // <-- ADDED
     });
     useEffect(() => {
         allPropsRef.current = {
             facility, healthWorkerName, user, visitNumber, existingSessionData,
             isSaving, isSavingDraft, isAutoSaving, isDirty, setToast,
-            healthWorkerJobTitle // <-- ADDED
+            healthWorkerJobTitle,
+            onDraftCreated // <-- ADDED
         };
     }, [
         facility, healthWorkerName, user, visitNumber, existingSessionData,
         isSaving, isSavingDraft, isAutoSaving, isDirty, setToast,
-        healthWorkerJobTitle // <-- ADDED
+        healthWorkerJobTitle,
+        onDraftCreated // <-- ADDED
     ]);
-    // --- END: New state and refs for autosave ---
+    // --- END MODIFICATION ---
+    
+    // --- NEW: Add ref to track the currently loaded draft ID ---
+    const editingIdRef = useRef(null); 
+    // --- END NEW REF ---
+    // --- END: MODIFIED AUTOSAVE REFS ---
 
 
     // ================== BEGIN FIX ==================
     //
-    // This effect synchronizes the form's internal state with the
-    // existingSessionData prop. This is crucial for when the user
-    // switches from one draft to another, or from a draft to a new form,
-    // while the form component is already mounted.
+    // This effect now synchronizes the form state *only when the draft ID actually changes*
+    // AND the form is not dirty, preventing data loss from autosave race conditions.
+    //
     useEffect(() => {
-        if (existingSessionData) {
-            // A draft is being loaded (or re-loaded).
-            // Populate the form with the draft's data.
-            setFormData(rehydrateDraftData(existingSessionData));
-            // Ensure visible step is max if editing
-            setVisibleStep(9);
-        } else {
-            // No draft is active (e.g., user clicked "Add New Visit").
-            // Reset the form to its initial blank state.
-            setFormData(getInitialFormData());
-            // Reset visible step to 1 for new form
-            setVisibleStep(1);
+        const newId = existingSessionData ? existingSessionData.id : null;
+        const oldId = editingIdRef.current;
+
+        // We only reload the form if the ID *changes*.
+        if (newId !== oldId) {
+            
+            // --- FIX: Check if form is dirty ---
+            // If the form is dirty, it means the user is typing *while*
+            // the parent component's state changed (e.g., from an autosave).
+            // We *must not* reload the form, or we will "stomp" their changes.
+            if (isDirtyRef.current) {
+                // Just update the ID we are tracking and stop.
+                // The *next* autosave will save the user's current (dirty)
+                // state to this new ID.
+                editingIdRef.current = newId;
+                return; 
+            }
+            // --- END FIX ---
+
+            if (newId) {
+                // New ID is present: load/reload the draft data
+                setFormData(rehydrateDraftData(existingSessionData));
+                setVisibleStep(9); // Always expand when loading/switching drafts
+            } else {
+                // New ID is null: reset to a blank form
+                setFormData(getInitialFormData());
+                setVisibleStep(1);
+            }
+            // Update the ID we are tracking
+            editingIdRef.current = newId;
+            
+            // Reset dirty state and timer since we just loaded fresh data
+            setIsDirty(false); 
+            if (autoSaveTimerRef.current) {
+                clearTimeout(autoSaveTimerRef.current);
+            }
         }
-        // Reset dirty state when loading/clearing a form
-        setIsDirty(false); 
-        // Reset autosave timer
-        if (autoSaveTimerRef.current) {
-            clearTimeout(autoSaveTimerRef.current);
-        }
-    }, [existingSessionData]); // Re-run this effect whenever the prop changes
+        // If newId === oldId, do nothing. This prevents re-hydration
+        // when the parent re-renders but the draft ID is the same.
+
+    }, [existingSessionData]); // Only depends on the prop
     //
     // =================== END FIX ===================
 
@@ -900,7 +969,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
             }
         }
         // Always show at least the step reached, or all if editing
-        const targetVisibleStep = existingSessionData ? 9 : Math.max(visibleStep, maxStep);
+        const targetVisibleStep = editingIdRef.current ? 9 : Math.max(visibleStep, maxStep); // Use ref here
         if (targetVisibleStep !== visibleStep) {
             setVisibleStep(targetVisibleStep);
         }
@@ -1040,15 +1109,17 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
         // Calculate scores based on the *current* (potentially cleaned) formData
         setScores(calculateScores(newFormData)); 
 
-    }, [formData, visibleStep, existingSessionData]); // Rerun on data change, step change, or if draft loaded
+    }, [formData, visibleStep]); // Rerun on data change, step change (removed existingSessionData)
 
 
     // --- START: New silentSaveDraft function for autosave ---
+    // --- MODIFICATION: Call onDraftCreated ---
     const silentSaveDraft = useCallback(async () => {
         // Get all props/state from the ref to ensure they are current
         const {
             facility, healthWorkerName, user, visitNumber, existingSessionData,
-            isSaving, isSavingDraft, setToast, healthWorkerJobTitle // <-- ADDED
+            isSaving, isSavingDraft, setToast, healthWorkerJobTitle,
+            onDraftCreated // <-- DESTRUCTURED FROM REF
         } = allPropsRef.current;
         
         // Get the latest formData from its ref
@@ -1087,15 +1158,24 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
 
             const effectiveDateTimestamp = Timestamp.fromDate(new Date(currentFormData.session_date));
 
+            // ================== BEGIN FIX ==================
+            // Apply optional chaining (?.) and null fallback (|| null)
+            // to all fields derived from the `facility` prop.
             const payload = {
-                serviceType: 'IMNCI', state: facility['الولاية'], locality: facility['المحلية'], facilityId: facility.id, facilityName: facility['اسم_المؤسسة'], healthWorkerName: healthWorkerName,
+                serviceType: 'IMNCI', 
+                state: facility?.['الولاية'] || null,
+                locality: facility?.['المحلية'] || null,
+                facilityId: facility?.id || null,
+                facilityName: facility?.['اسم_المؤسسة'] || null,
+                healthWorkerName: healthWorkerName,
                 
                 // --- START: ADDITIONS ---
-                facilityType: facility['نوع_المؤسسةالصحية'] || null,
+                facilityType: facility?.['نوع_المؤسسةالصحية'] || null,
                 workerType: healthWorkerJobTitle || null,
                 // --- END: ADDITIONS ---
 
                 sessionDate: currentFormData.session_date,
+            // =================== END FIX ===================
                 effectiveDate: effectiveDateTimestamp,
                 assessmentSkills: assessmentSkillsPayload,
                 finalDecision: currentFormData.finalDecision,
@@ -1108,10 +1188,23 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                 visitNumber: visitNumber
             };
 
-            const sessionId = existingSessionData ? existingSessionData.id : null;
-            await saveMentorshipSession(payload, sessionId);
+            // --- MODIFIED: Use the ref for the current ID ---
+            const sessionId = editingIdRef.current;
+            
+            // --- MODIFICATION: Capture return value ---
+            const savedDraft = await saveMentorshipSession(payload, sessionId);
 
             setIsDirty(false); // Mark as clean after successful save
+            
+            // --- MODIFICATION: Call onDraftCreated if it was a new draft ---
+            if (!sessionId && savedDraft && onDraftCreated) {
+                // This updates the parent's state
+                onDraftCreated(savedDraft);
+                // This updates our *internal* tracking ID to prevent re-loads
+                editingIdRef.current = savedDraft.id; 
+            }
+            // --- END MODIFICATION ---
+
         } catch (error) {
             console.error("Autosave failed:", error);
             // Only show toast on error for silent save
@@ -1120,7 +1213,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
             setIsAutoSaving(false);
         }
     }, []); // MODIFIED: Empty dependency array, relies on refs
-
+    // --- END MODIFICATION ---
     // --- END: New silentSaveDraft function for autosave ---
 
     // --- START: New useEffect to trigger autosave ---
@@ -1250,6 +1343,19 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
         setIsDirty(true); // MODIFIED: Mark form as dirty
     };
 
+    // --- NEW: Handler for saving facility data from modal ---
+    const handleSaveFacilityData = async (formData) => {
+        try {
+            // This function is used by NewFacilityEntryForm and PublicFacilityUpdateForm
+            await submitFacilityDataForApproval(formData);
+            setToast({ show: true, message: "Update submitted successfully! Your changes are pending approval.", type: 'success' });
+            setIsFacilityModalOpen(false); // Close modal on success
+        } catch (error) {
+            setToast({ show: true, message: `Submission failed: ${error.message}`, type: 'error' });
+            // Don't close modal on failure
+        }
+    };
+
     // --- Submit handler for final save ---
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -1342,15 +1448,24 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
 
             const effectiveDateTimestamp = Timestamp.fromDate(new Date(formData.session_date));
 
+            // ================== BEGIN FIX ==================
+            // Apply optional chaining (?.) and null fallback (|| null)
+            // to all fields derived from the `facility` prop.
             const payload = {
-                serviceType: 'IMNCI', state: facility['الولاية'], locality: facility['المحلية'], facilityId: facility.id, facilityName: facility['اسم_المؤسسة'], healthWorkerName: healthWorkerName,
+                serviceType: 'IMNCI', 
+                state: facility?.['الولاية'] || null,
+                locality: facility?.['المحلية'] || null,
+                facilityId: facility?.id || null,
+                facilityName: facility?.['اسم_المؤسسة'] || null,
+                healthWorkerName: healthWorkerName,
 
                 // --- START: ADDITIONS ---
-                facilityType: facility['نوع_المؤسسةالصحية'] || null,
+                facilityType: facility?.['نوع_المؤسسةالصحية'] || null,
                 workerType: healthWorkerJobTitle || null,
                 // --- END: ADDITIONS ---
 
                 sessionDate: formData.session_date, // Keep the original string
+            // =================== END FIX ===================
                 effectiveDate: effectiveDateTimestamp, // Add the Firestore Timestamp
 
                 assessmentSkills: assessmentSkillsPayload,
@@ -1364,7 +1479,8 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                 visitNumber: visitNumber // Add visit number
             };
 
-            const sessionId = existingSessionData ? existingSessionData.id : null;
+            // --- MODIFIED: Use the ref for the current ID ---
+            const sessionId = editingIdRef.current;
             await saveMentorshipSession(payload, sessionId); // Use the correct function signature (payload, optional id)
 
             setToast({ show: true, message: 'تم حفظ الجلسة بنجاح!', type: 'success' });
@@ -1416,15 +1532,24 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
 
              const effectiveDateTimestamp = Timestamp.fromDate(new Date(formData.session_date));
 
+            // ================== BEGIN FIX ==================
+            // Apply optional chaining (?.) and null fallback (|| null)
+            // to all fields derived from the `facility` prop.
              const payload = {
-                 serviceType: 'IMNCI', state: facility['الولاية'], locality: facility['المحلية'], facilityId: facility.id, facilityName: facility['اسم_المؤسسة'], healthWorkerName: healthWorkerName,
+                 serviceType: 'IMNCI', 
+                 state: facility?.['الولاية'] || null,
+                 locality: facility?.['المحلية'] || null,
+                 facilityId: facility?.id || null,
+                 facilityName: facility?.['اسم_المؤسسة'] || null,
+                 healthWorkerName: healthWorkerName,
                  
                  // --- START: ADDITIONS ---
-                 facilityType: facility['نوع_المؤسسةالصحية'] || null,
+                 facilityType: facility?.['نوع_المؤسسةالصحية'] || null,
                  workerType: healthWorkerJobTitle || null,
                  // --- END: ADDITIONS ---
 
                  sessionDate: formData.session_date,
+            // =================== END FIX ===================
                  effectiveDate: effectiveDateTimestamp,
                  assessmentSkills: assessmentSkillsPayload,
                  finalDecision: formData.finalDecision,
@@ -1437,8 +1562,19 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                  visitNumber: visitNumber // Add visit number
              };
 
-             const sessionId = existingSessionData ? existingSessionData.id : null;
-             await saveMentorshipSession(payload, sessionId);
+             // --- MODIFIED: Use the ref for the current ID ---
+             const sessionId = editingIdRef.current;
+             
+             // --- MODIFICATION: Capture return value ---
+             const savedDraft = await saveMentorshipSession(payload, sessionId);
+
+             // --- MODIFICATION: Call onDraftCreated if it was a new draft ---
+             if (!sessionId && savedDraft && onDraftCreated) {
+                 onDraftCreated(savedDraft);
+                 // Update internal tracking ID
+                 editingIdRef.current = savedDraft.id;
+             }
+             // --- END MODIFICATION ---
 
              setToast({ show: true, message: 'تم حفظ المسودة بنجاح!', type: 'success' });
              onCancel(); // Call onCancel to navigate back
@@ -1473,12 +1609,12 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                         {/* --- Compact Facility Info Card --- */}
                         <div className="p-2 border rounded-lg bg-gray-50 text-right space-y-0.5">
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-0.5" dir="rtl">
-                                <div><span className="text-sm font-medium text-gray-500">الولاية:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility['الولاية'] || 'غير محدد'}</span></div>
-                                <div><span className="text-sm font-medium text-gray-500">المحلية:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility['المحلية'] || 'غير محدد'}</span></div>
-                                <div><span className="text-sm font-medium text-gray-500">اسم المؤسسة:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility['اسم_المؤسسة'] || 'غير محدد'}</span></div>
-                                <div><span className="text-sm font-medium text-gray-500">نوع المؤسسة:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility['نوع_المؤسسةالصحية'] || 'غير محدد'}</span></div>
-                                <div><span className="text-sm font-medium text-gray-500">العدد الكلي للكوادر الطبية:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility['العدد_الكلي_للكوادر_الطبية_العاملة_أطباء_ومساعدين'] ?? 'غير محدد'}</span></div>
-                                <div><span className="text-sm font-medium text-gray-500">الكوادر المدربة (IMNCI):</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility['العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل'] ?? 'غير محدد'}</span></div>
+                                <div><span className="text-sm font-medium text-gray-500">الولاية:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility?.['الولاية'] || 'غير محدد'}</span></div>
+                                <div><span className="text-sm font-medium text-gray-500">المحلية:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility?.['المحلية'] || 'غير محدد'}</span></div>
+                                <div><span className="text-sm font-medium text-gray-500">اسم المؤسسة:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility?.['اسم_المؤسسة'] || 'غير محدد'}</span></div>
+                                <div><span className="text-sm font-medium text-gray-500">نوع المؤسسة:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility?.['نوع_المؤسسةالصحية'] || 'غير محدد'}</span></div>
+                                <div><span className="text-sm font-medium text-gray-500">العدد الكلي للكوادر الطبية:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility?.['العدد_الكلي_للكوادر_الطبية_العاملة_أطباء_ومساعدين'] ?? 'غير محدد'}</span></div>
+                                <div><span className="text-sm font-medium text-gray-500">الكوادر المدربة (IMNCI):</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility?.['العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل'] ?? 'غير محدد'}</span></div>
                             </div>
                         </div>
 
@@ -1604,7 +1740,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                                                      if (mainSkill.key === 'skill_ask_diarrhea') { previousAskKey = 'skill_ask_cough'; previousConfirmKey = 'supervisor_confirms_cough'; }
                                                      else if (mainSkill.key === 'skill_ask_fever') { previousAskKey = 'skill_ask_diarrhea'; previousConfirmKey = 'supervisor_confirms_diarrhea'; }
                                                      else if (mainSkill.key === 'skill_ask_ear') { previousAskKey = 'skill_ask_fever'; previousConfirmKey = 'supervisor_confirms_fever'; }
-                                                     if (!existingSessionData && previousAskKey) {
+                                                     if (!editingIdRef.current && previousAskKey) { // Use ref here
                                                          const previousAskValue = assessment_skills[previousAskKey];
                                                          if (previousAskValue === '') return null;
                                                          if (previousAskValue === 'yes' && assessment_skills[previousConfirmKey] === '') return null;
@@ -1734,7 +1870,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                     })}
 
                     {/* --- Notes Section --- */}
-                    {(visibleStep >= 9 || !!existingSessionData) && (
+                    {(visibleStep >= 9 || !!editingIdRef.current) && ( // Use ref here
                         <>
                            <FormGroup label="ملاحظات عامة" className="text-right">
                                 <Textarea name="notes" value={formData.notes} onChange={handleFormChange} rows={4} placeholder="أضف أي ملاحظات إضافية حول الجلسة..." className="text-right placeholder:text-right"/>
@@ -1768,12 +1904,50 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
 
                      {/* Button Group */}
                      <div className="flex gap-2 justify-end">
+                        {/* --- NEW FACILITY FORM BUTTON --- */}
+                        <Button 
+                            type="button" 
+                            variant="info"
+                            onClick={() => setIsFacilityModalOpen(true)} 
+                            disabled={isSaving || isSavingDraft || !facility} // Also disable if facility prop is null
+                            title={facility ? "Open IMNCI Facility Data Form" : "No facility selected"}
+                        >
+                            بيانات المنشأة (IMNCI)
+                        </Button>
+                        {/* --- END NEW BUTTON --- */}
                         <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving || isSavingDraft}> إلغاء </Button>
                         <Button type="button" variant="outline" onClick={handleSaveDraft} disabled={isSaving || isSavingDraft}> {isSavingDraft ? 'جاري حفظ المسودة...' : 'حفظ كمسودة'} </Button>
                         <Button type="submit" disabled={isSaving || isSavingDraft || visibleStep < 9} title={visibleStep < 9 ? "يجب إكمال جميع الخطوات أولاً لحفظ الجلسة" : "حفظ وإنهاء الجلسة"}> {isSaving ? 'جاري الحفظ...' : 'حفظ وإكمال الجلسة'} </Button>
                      </div>
                  </div>
             </form>
+
+            {/* --- NEW FACILITY DATA MODAL --- */}
+            {isFacilityModalOpen && facility && (
+                <Modal 
+                    isOpen={isFacilityModalOpen} 
+                    onClose={() => setIsFacilityModalOpen(false)} 
+                    title={`بيانات منشأة: ${facility['اسم_المؤسسة'] || ''}`}
+                    size="full"
+                >
+                    <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto"> {/* Give modal content scroll */}
+                        <GenericFacilityForm
+                            initialData={facility}
+                            onSave={handleSaveFacilityData}
+                            onCancel={() => setIsFacilityModalOpen(false)}
+                            setToast={setToast}
+                            title="بيانات خدمة IMNCI"
+                            subtitle={`تحديث البيانات للمنشأة: ${facility['اسم_المؤسسة'] || '...'}`}
+                            isPublicForm={false} // This is an internal edit
+                            saveButtonText="Submit for Approval"
+                            cancelButtonText="Close"
+                        >
+                            {(props) => <IMNCIFormFields {...props} />}
+                        </GenericFacilityForm>
+                    </div>
+                </Modal>
+            )}
+            {/* --- END NEW MODAL --- */}
         </Card>
     );
 }); // MODIFIED: Closed forwardRef

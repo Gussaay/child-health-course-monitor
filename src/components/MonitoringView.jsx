@@ -64,7 +64,8 @@ function ActionToggle({ options, currentValue, onClick }) {
 // --- END NEW COMPONENT ---
 
 
-export function ObservationView({ course, participant, participants, onChangeParticipant, initialCaseToEdit }) {
+// --- MODIFICATION: Added isPublicView prop ---
+export function ObservationView({ course, participant, participants, onChangeParticipant, initialCaseToEdit, isPublicView = false }) {
     const [observations, setObservations] = useState([]);
     const [cases, setCases] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -216,6 +217,7 @@ export function ObservationView({ course, participant, participants, onChangePar
         });
 
         try {
+            // This line was causing the error, but the fix is in data.js
             const { savedCase, savedObservations } = await upsertCaseAndObservations(caseData, newObservations, editingCase?.id);
 
             if (editingCase) {
@@ -273,12 +275,17 @@ export function ObservationView({ course, participant, participants, onChangePar
             <Card className="-mt-3 p-4">
                 {/* --- MODIFICATION: Changed grid columns for mobile-first layout --- */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                    {/* --- MODIFICATION: Adjusted col-span for new grid layout --- */}
-                    <FormGroup label="Select participant" className="sm:col-span-2 md:col-span-2 lg:col-span-3 xl:col-span-2">
-                        <Select value={participant.id} onChange={(e) => onChangeParticipant(e.target.value)}>
-                            {participants.map(p => <option key={p.id} value={p.id}>{p.name} — {p.group}</option>)}
-                        </Select>
-                    </FormGroup>
+                    
+                    {/* --- MODIFICATION: Conditionally hide participant selector --- */}
+                    {!isPublicView && (
+                        <FormGroup label="Select participant" className="sm:col-span-2 md:col-span-2 lg:col-span-3 xl:col-span-2">
+                            <Select value={participant.id} onChange={(e) => onChangeParticipant(e.target.value)}>
+                                {participants.map(p => <option key={p.id} value={p.id}>{p.name} — {p.group}</option>)}
+                            </Select>
+                        </FormGroup>
+                    )}
+                    {/* --- END MODIFICATION --- */}
+
                     {isImnci && <FormGroup label="Setting"><Select value={setting} onChange={(e) => setSetting(e.target.value)}><option value="OPD">Out-patient</option><option value="IPD">In-patient</option></Select></FormGroup>}
                     {/* --- MODIFICATION: Adjusted col-span for clarity, though not strictly needed --- */}
                     {isImnci && <FormGroup label="Age Band" className="col-span-1">
@@ -315,7 +322,12 @@ export function ObservationView({ course, participant, participants, onChangePar
                     </Button>
                 </div>
             </Card>
-            {loading ? <Card><Spinner /></Card> : <SubmittedCases course={course} participant={participant} observations={observations} cases={cases} onEditCase={(caseToEdit) => handleEditCase(caseToEdit, observations)} onDeleteCase={handleDeleteCase} />}
+            
+            {/* --- MODIFICATION: Conditionally hide submitted cases list --- */}
+            {!isPublicView && (
+                loading ? <Card><Spinner /></Card> : <SubmittedCases course={course} participant={participant} observations={observations} cases={cases} onEditCase={(caseToEdit) => handleEditCase(caseToEdit, observations)} onDeleteCase={handleDeleteCase} />
+            )}
+            {/* --- END MODIFICATION --- */}
         </div>
     );
 }
