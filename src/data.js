@@ -1816,7 +1816,11 @@ export async function saveMentorshipSession(payload, sessionId = null, externalB
 export async function listMentorshipSessions(sourceOptions = {}) {
     try {
         const q = query(collection(db, "skillMentorship"), orderBy("effectiveDate", "desc"));
-        const snapshot = await getDocs(q, sourceOptions);
+        // --- START ENHANCEMENT ---
+        // Use the getData helper to respect the cache-first logic
+        // defined in DataContext.jsx
+        const snapshot = await getData(q, sourceOptions);
+        // --- END ENHANCEMENT ---
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
         console.error("Error fetching mentorship sessions:", error);

@@ -822,99 +822,102 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
     //
     // =================== END FIX ===================
 
+    // --- START: MODIFIED Helper functions for step completion ---
+    const isMultiSelectGroupEmpty = (obj) => !obj || !Object.values(obj).some(v => v === true);
 
-    // --- Helper functions to check step completion (Unchanged) ---
     const isVitalSignsComplete = (data) => { const skills = data.assessment_skills; return skills.skill_weight !== '' && skills.skill_temp !== '' && skills.skill_height !== ''; };
     const isDangerSignsComplete = (data) => { const skills = data.assessment_skills; return skills.skill_ds_drink !== '' && skills.skill_ds_vomit !== '' && skills.skill_ds_convulsion !== '' && skills.skill_ds_conscious !== ''; };
 
-    // --- START CORRECTION: Updated isMainSymptomsComplete function ---
-    const isMultiSelectGroupEmpty = (obj) => !obj || !Object.values(obj).some(v => v === true);
-    const isMainSymptomsComplete = (data) => {
-        const skills = data.assessment_skills;
-
-        // Cough
+    // --- START: NEW helper functions for each symptom block ---
+    const isCoughBlockComplete = (skills) => {
         if (skills.skill_ask_cough === '') return false;
         if (skills.skill_ask_cough === 'yes') {
             if (skills.supervisor_confirms_cough === '') return false;
             if (skills.supervisor_confirms_cough === 'yes') {
                 if (skills.skill_check_rr === '' || skills.skill_classify_cough === '') return false;
                 if (skills.skill_classify_cough === 'yes' && skills.worker_cough_classification === '') return false;
-                if (skills.skill_classify_cough === 'no' && skills.supervisor_correct_cough_classification === '') return false;
+                if (skills.skill_classify_cough === 'no' && (skills.worker_cough_classification === '' || skills.supervisor_correct_cough_classification === '')) return false;
             }
         }
+        return true; // Complete if 'no' or if 'yes' and all sub-questions are filled
+    };
 
-        // Diarrhea
+    const isDiarrheaBlockComplete = (skills) => {
         if (skills.skill_ask_diarrhea === '') return false;
         if (skills.skill_ask_diarrhea === 'yes') {
             if (skills.supervisor_confirms_diarrhea === '') return false;
             if (skills.supervisor_confirms_diarrhea === 'yes') {
                 if (skills.skill_check_dehydration === '' || skills.skill_classify_diarrhea === '') return false;
                 if (skills.skill_classify_diarrhea === 'yes' && isMultiSelectGroupEmpty(skills.worker_diarrhea_classification)) return false;
-                if (skills.skill_classify_diarrhea === 'no' && isMultiSelectGroupEmpty(skills.supervisor_correct_diarrhea_classification)) return false;
+                if (skills.skill_classify_diarrhea === 'no' && (isMultiSelectGroupEmpty(skills.worker_diarrhea_classification) || isMultiSelectGroupEmpty(skills.supervisor_correct_diarrhea_classification))) return false;
             }
         }
-        
-        // Fever
+        return true;
+    };
+    
+    const isFeverBlockComplete = (skills) => {
         if (skills.skill_ask_fever === '') return false;
         if (skills.skill_ask_fever === 'yes') {
             if (skills.supervisor_confirms_fever === '') return false;
             if (skills.supervisor_confirms_fever === 'yes') {
                 if (skills.skill_check_rdt === '' || skills.skill_classify_fever === '') return false;
                 if (skills.skill_classify_fever === 'yes' && isMultiSelectGroupEmpty(skills.worker_fever_classification)) return false;
-                if (skills.skill_classify_fever === 'no' && isMultiSelectGroupEmpty(skills.supervisor_correct_fever_classification)) return false;
+                if (skills.skill_classify_fever === 'no' && (isMultiSelectGroupEmpty(skills.worker_fever_classification) || isMultiSelectGroupEmpty(skills.supervisor_correct_fever_classification))) return false;
             }
         }
+        return true;
+    };
 
-        // Ear
+    const isEarBlockComplete = (skills) => {
         if (skills.skill_ask_ear === '') return false;
         if (skills.skill_ask_ear === 'yes') {
             if (skills.supervisor_confirms_ear === '') return false;
             if (skills.supervisor_confirms_ear === 'yes') { 
                 if (skills.skill_check_ear === '' || skills.skill_classify_ear === '') return false;
                 if (skills.skill_classify_ear === 'yes' && skills.worker_ear_classification === '') return false;
-                if (skills.skill_classify_ear === 'no' && skills.supervisor_correct_ear_classification === '') return false;
+                if (skills.skill_classify_ear === 'no' && (skills.worker_ear_classification === '' || skills.supervisor_correct_ear_classification === '')) return false;
             }
         }
-        
         return true;
     };
-    // --- END CORRECTION ---
+    // --- END: NEW helper functions ---
 
-    // --- START CORRECTION: Updated isMalnutritionComplete and isAnemiaComplete functions ---
+    const isMainSymptomsComplete = (data) => {
+        const skills = data.assessment_skills;
+        return isCoughBlockComplete(skills) && 
+               isDiarrheaBlockComplete(skills) && 
+               isFeverBlockComplete(skills) && 
+               isEarBlockComplete(skills);
+    };
+
     const isMalnutritionComplete = (data) => {
         const skills = data.assessment_skills;
-        // 1. Check main skills
         if (skills.skill_mal_muac === '' || skills.skill_mal_wfh === '' || skills.skill_mal_classify === '') {
             return false;
         }
-        // 2. Check conditional classification fields
         if (skills.skill_mal_classify === 'yes') {
             if (skills.worker_malnutrition_classification === '') return false;
         } else if (skills.skill_mal_classify === 'no') {
             if (skills.worker_malnutrition_classification === '') return false;
             if (skills.supervisor_correct_malnutrition_classification === '') return false;
         }
-        // If skill_mal_classify is 'na', we don't need to check classification fields.
         return true;
     };
 
     const isAnemiaComplete = (data) => {
         const skills = data.assessment_skills;
-        // 1. Check main skills
         if (skills.skill_anemia_pallor === '' || skills.skill_anemia_classify === '') {
             return false;
         }
-        // 2. Check conditional classification fields
         if (skills.skill_anemia_classify === 'yes') {
             if (skills.worker_anemia_classification === '') return false;
         } else if (skills.skill_anemia_classify === 'no') {
             if (skills.worker_anemia_classification === '') return false;
             if (skills.supervisor_correct_anemia_classification === '') return false;
         }
-        // If skill_anemia_classify is 'na', we don't need to check classification fields.
         return true;
     };
-    // --- END CORRECTION ---
+    // --- END: MODIFIED Helper functions ---
 
     const isImmunizationComplete = (data) => { const skills = data.assessment_skills; return skills.skill_imm_vacc !== '' && skills.skill_imm_vita !== ''; };
     const isOtherProblemsComplete = (data) => { const skills = data.assessment_skills; return skills.skill_other !== ''; };
@@ -930,12 +933,14 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
 
         // --- Step Visibility Logic ---
         let maxStep = 1;
-        // --- START: MODIFIED Step Visibility Logic ---
-        // This logic is now only for the *inter-step* (big steps) visibility.
-        // The *intra-step* (sequential skills) is handled in the render method.
         if (isVitalSignsComplete(formData)) { maxStep = 2;
             if (isDangerSignsComplete(formData)) { maxStep = 3;
-                if (isMainSymptomsComplete(formData)) { maxStep = 4;
+                // --- MODIFICATION: Check symptom blocks sequentially ---
+                if (isCoughBlockComplete(newAssessmentSkills) &&
+                    isDiarrheaBlockComplete(newAssessmentSkills) &&
+                    isFeverBlockComplete(newAssessmentSkills) &&
+                    isEarBlockComplete(newAssessmentSkills)) { maxStep = 4;
+                // --- END MODIFICATION ---
                     if (isMalnutritionComplete(formData)) { maxStep = 5;
                         if (isAnemiaComplete(formData)) { maxStep = 6;
                             if (isImmunizationComplete(formData)) { maxStep = 7;
@@ -948,8 +953,6 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                 }
             }
         }
-        // --- END: MODIFIED Step Visibility Logic ---
-
         // Always show at least the step reached, or all if editing
         const targetVisibleStep = editingIdRef.current ? 9 : Math.max(visibleStep, maxStep); // Use ref here
         if (targetVisibleStep !== visibleStep) {
@@ -1659,13 +1662,17 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                                                     <option value="treatment">علاج ونصائح منزلية</option>
                                                 </Select>
                                             </FormGroup>
-                                            <FormGroup label="هل يتطابق قرار العامل الصحي مع المشرف؟" className="text-right flex-shrink-0">
-                                                <Select name="decisionMatches" value={formData.decisionMatches} onChange={handleFormChange} className="min-w-[100px]">
-                                                    <option value="">-- اختر --</option>
-                                                    <option value="yes">نعم</option>
-                                                    <option value="no">لا</option>
-                                                </Select>
-                                            </FormGroup>
+                                            {/* --- START: MODIFIED - Sequential logic for Decision --- */}
+                                            {formData.finalDecision !== '' && (
+                                                <FormGroup label="هل يتطابق قرار العامل الصحي مع المشرف؟" className="text-right flex-shrink-0">
+                                                    <Select name="decisionMatches" value={formData.decisionMatches} onChange={handleFormChange} className="min-w-[100px]">
+                                                        <option value="">-- اختر --</option>
+                                                        <option value="yes">نعم</option>
+                                                        <option value="no">لا</option>
+                                                    </Select>
+                                                </FormGroup>
+                                            )}
+                                            {/* --- END: MODIFIED --- */}
                                         </div>
                                     </div>
                                 </div>
@@ -1705,27 +1712,32 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                                                     <span className="mr-2">{subgroup.subgroupTitle}</span> {/* Margin for spacing */}
                                                 </h4>
                                                 {subgroup.symptomGroups.map(symptomGroup => {
-                                                    // ... logic to determine symptom prefix, etc. ...
                                                      const mainSkill = symptomGroup.mainSkill; if (!mainSkill?.key) return null;
                                                      const { assessment_skills } = formData;
-                                                     let previousAskKey = null; let previousConfirmKey = null;
-                                                     if (mainSkill.key === 'skill_ask_diarrhea') { previousAskKey = 'skill_ask_cough'; previousConfirmKey = 'supervisor_confirms_cough'; }
-                                                     else if (mainSkill.key === 'skill_ask_fever') { previousAskKey = 'skill_ask_diarrhea'; previousConfirmKey = 'supervisor_confirms_diarrhea'; }
-                                                     else if (mainSkill.key === 'skill_ask_ear') { previousAskKey = 'skill_ask_fever'; previousConfirmKey = 'supervisor_confirms_fever'; }
                                                      
-                                                     // --- START: MODIFIED - Sequential logic for main symptom questions ---
-                                                     let isSymptomGroupSequentiallyVisible = true;
-                                                     if (!editingIdRef.current && previousAskKey) { // Use ref here
-                                                         const previousAskValue = assessment_skills[previousAskKey];
-                                                         if (previousAskValue === '') {
-                                                            isSymptomGroupSequentiallyVisible = false; // Hide if previous 'ask' is unanswered
-                                                         }
-                                                         if (previousAskValue === 'yes' && assessment_skills[previousConfirmKey] === '') {
-                                                            isSymptomGroupSequentiallyVisible = false; // Hide if previous 'ask' was yes but 'confirm' is unanswered
-                                                         }
-                                                     }
-                                                     if (!isSymptomGroupSequentiallyVisible) return null;
-                                                     // --- END: MODIFIED ---
+                                                    // --- START: NEW Sequential Visibility Logic ---
+                                                    let isSymptomGroupSequentiallyVisible = true;
+                                                    if (!editingIdRef.current) { // Only apply sequential logic if NOT editing a draft
+                                                        if (mainSkill.key === 'skill_ask_diarrhea') {
+                                                            // Diarrhea only shows if Cough is complete
+                                                            isSymptomGroupSequentiallyVisible = isCoughBlockComplete(assessment_skills);
+                                                        }
+                                                        else if (mainSkill.key === 'skill_ask_fever') {
+                                                            // Fever only shows if Cough AND Diarrhea are complete
+                                                            isSymptomGroupSequentiallyVisible = isCoughBlockComplete(assessment_skills) && 
+                                                                                                isDiarrheaBlockComplete(assessment_skills);
+                                                        }
+                                                        else if (mainSkill.key === 'skill_ask_ear') {
+                                                            // Ear only shows if Cough, Diarrhea, AND Fever are complete
+                                                            isSymptomGroupSequentiallyVisible = isCoughBlockComplete(assessment_skills) && 
+                                                                                                isDiarrheaBlockComplete(assessment_skills) &&
+                                                                                                isFeverBlockComplete(assessment_skills);
+                                                        }
+                                                        // 'skill_ask_cough' always shows (isSymptomGroupSequentiallyVisible = true)
+                                                    }
+                                                    
+                                                    if (!isSymptomGroupSequentiallyVisible) return null; // Hide this symptom group
+                                                    // --- END: NEW Sequential Visibility Logic ---
                                                      
                                                      let symptomPrefix = ''; let symptomClassifications = []; let originalCheckSkill = null; let originalClassifySkill = null; let supervisorConfirmLabel = ''; let multiSelectCols = null;
                                                      const symptomScoreData = mainSkill.scoreKey ? scores[mainSkill.scoreKey] : null;
@@ -1845,7 +1857,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
 
                                                         // 2. Check sequential logic
                                                         let isSequentiallyVisible = true;
-                                                        if (index > 0) {
+                                                        if (!editingIdRef.current && index > 0) { // Only apply if NOT editing and not the first item
                                                             // Find the *previous* skill in the list that was *also* conditionally relevant
                                                             let previousRelevantSkill = null;
                                                             for (let i = index - 1; i >= 0; i--) {

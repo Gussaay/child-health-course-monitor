@@ -510,6 +510,14 @@ export default function App() {
             fetchHealthFacilities();
             fetchSkillMentorshipSubmissions();
         }
+        
+        // --- START OF FIX ---
+        // Fetch health facilities when navigating to the Child Health Services view
+        if (view === 'childHealthServices') {
+            fetchHealthFacilities();
+        }
+        // --- END OF FIX ---
+
         // --- MODIFICATION: Also fetch facilities when opening a course report ---
         if (view === 'courseReport') {
             fetchHealthFacilities();
@@ -1260,7 +1268,7 @@ export default function App() {
 
             <Suspense fallback={null}>
                 {isShareModalOpen && user && (
-                     <ShareModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} shareableItem={itemToShare} shareType={shareType} onSave={handleSaveSharingSettings} />
+                     <ShareModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} shareableItem={itemToShare} shareType={type} onSave={handleSaveSharingSettings} />
                 )}
             </Suspense>
 

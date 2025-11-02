@@ -439,7 +439,7 @@ export function SignInBox() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password (Leave blank for Google sign-in)"
+              placeholder="Password ()"
               className="w-full px-4 py-2 text-gray-700 bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               required={isSignUpMode}
               disabled={isLoading}
@@ -501,11 +501,13 @@ export function SignInBox() {
         </div>
 
 
+        {/* --- THIS IS THE FIX --- */}
         <div className="flex items-center justify-center">
           <div className="flex-grow border-t border-gray-300"></div>
           <span className="mx-4 text-xs font-bold text-gray-500">OR</span>
           <div className="flex-grow border-t border-gray-300"></div>
-        }
+        </div> 
+        {/* --- END OF FIX --- */}
         
         {/* --- Google Sign-In Button (Disabled while loading) --- */}
         <button 
