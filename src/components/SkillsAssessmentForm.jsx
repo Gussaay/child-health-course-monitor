@@ -340,7 +340,7 @@ const getInitialFormData = () => {
     return initialState;
 };
 
-// --- START FIX: New helper function to ensure data is an array of selected keys ---
+// --- START FIX: New helper function to find incomplete treatment skills ---
 const ensureArrayOfKeys = (data, classifications) => {
     if (Array.isArray(data)) {
         return data; // Already the saved array format
@@ -1203,8 +1203,6 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
             
             // --- MODIFICATION: Capture return value ---
             const savedDraft = await saveMentorshipSession(payload, sessionId);
-
-            // --- REMOVED setIsDirty(false) ---
             
             // --- MODIFICATION: Call onDraftCreated if it was a new draft ---
             if (!sessionId && savedDraft && onDraftCreated) {
@@ -1318,8 +1316,6 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
              }
              // Note: SkillChecklistItem uses handleSkillChange, not this one.
         }
-
-        // --- REMOVED setIsDirty(true) ---
     };
 
     const handleSkillChange = (section, key, value) => {
@@ -1330,7 +1326,6 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                 [key]: value,    // Update the specific skill,
             }
         }));
-        // --- REMOVED setIsDirty(true) ---
     };
 
     // --- NEW: Handler for saving facility data from modal ---
@@ -2000,6 +1995,27 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                      </div>
                  </div>
                  {/* --- END: Button Bar (MODIFIED for 2 rows) --- */}
+
+                {/* --- START: NEW Mobile Sticky Action Bar --- */}
+                {/* This bar sits on top of the MobileFormNavBar (which is in the parent) */}
+                <div className="flex sm:hidden fixed bottom-16 left-0 right-0 z-20 p-2 bg-gray-50 border-t border-gray-200 shadow-lg justify-around items-center" dir="rtl">
+                    <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving || isSavingDraft} size="sm">
+                        إلغاء
+                    </Button>
+                    <Button type="button" variant="outline" onClick={handleSaveDraft} disabled={isSaving || isSavingDraft} size="sm">
+                        {isSavingDraft ? 'جاري...' : 'حفظ مسودة'}
+                    </Button>
+                    <Button 
+                        type="submit" 
+                        disabled={isSaving || isSavingDraft || !isFormFullyComplete} 
+                        title={!isFormFullyComplete ? "يجب إكمال جميع الخطوات أولاً لحفظ الجلسة" : "حفظ وإنهاء الجلسة"}
+                        size="sm"
+                    > 
+                        {isSaving ? 'جاري...' : 'حفظ وإكمال'} 
+                    </Button>
+                </div>
+                {/* --- END: NEW Mobile Sticky Action Bar --- */}
+
             </form>
 
             {/* --- NEW FACILITY DATA MODAL --- */}

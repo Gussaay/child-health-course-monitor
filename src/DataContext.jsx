@@ -66,6 +66,7 @@ export const DataProvider = ({ children }) => {
     
     // Tracks the last successful fetch time for health facilities to enable incremental updates
     const [lastFacilitiesFetchTime, setLastFacilitiesFetchTime] = useState(0); 
+    const lastFacilitiesFetchTimeRef = useRef(lastFacilitiesFetchTime); // <-- ADD THIS REF
     
     const cacheRef = useRef(cache);
     const fetchingRef = useRef({}); // <-- ADD THIS REF
@@ -73,6 +74,12 @@ export const DataProvider = ({ children }) => {
     useEffect(() => {
         cacheRef.current = cache;
     }, [cache]);
+
+    // --- START FIX: Add useEffect to sync state to ref ---
+    useEffect(() => {
+        lastFacilitiesFetchTimeRef.current = lastFacilitiesFetchTime;
+    }, [lastFacilitiesFetchTime]);
+    // --- END FIX ---
 
     const createFetcher = useCallback((key, fetchFn) => {
         
@@ -92,9 +99,11 @@ export const DataProvider = ({ children }) => {
                     // --- MODIFICATION: Pass empty sourceOptions to use getData default (cache) ---
                     fetchPromise = listHealthFacilities({}); 
                     fetchTime = Date.now();
-                } else if (incremental && lastFacilitiesFetchTime > 0) {
+                // --- START FIX: Use ref instead of state ---
+                } else if (incremental && lastFacilitiesFetchTimeRef.current > 0) {
                     // INCREMENTAL FETCH (Periodic polling)
-                    const lastUpdatedAfter = new Date(lastFacilitiesFetchTime);
+                    const lastUpdatedAfter = new Date(lastFacilitiesFetchTimeRef.current); // <-- USE REF
+                // --- END FIX ---
                     // --- MODIFICATION: Pass empty sourceOptions to use getData (will get server) ---
                     fetchPromise = listHealthFacilities({ lastUpdatedAfter });
                     fetchTime = Date.now();
@@ -218,7 +227,9 @@ export const DataProvider = ({ children }) => {
             setIsLoading(prev => ({ ...prev, [key]: false })); // Ensure spinner is off
             return currentCache;
         };
-    }, [lastFacilitiesFetchTime]); // fetchingRef is stable
+    // --- START FIX: Remove lastFacilitiesFetchTime from dependency array ---
+    }, []); // fetchingRef is stable
+    // --- END FIX ---
 
     // --- MODIFICATION: Update fetchers to pass `opts` to the data.js functions ---
     const fetchers = useMemo(() => ({
