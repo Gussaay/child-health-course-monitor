@@ -5,6 +5,7 @@ import { Timestamp } from 'firebase/firestore';
 import {
     saveMentorshipSession,
     importMentorshipSessions,
+    submitFacilityDataForApproval, // <-- NEW IMPORT
     addHealthWorkerToFacility,
     deleteMentorshipSession
 } from '../data';
@@ -25,11 +26,18 @@ import DetailedMentorshipBulkUploadModal from './MentorshipBulkUpload';
 import MothersForm from './MothersForm'; // <-- NEW IMPORT
 // --- END NEW IMPORT ---
 
+// --- NEW IMPORTS: For Add Facility Modal ---
+import {
+    GenericFacilityForm,
+    SharedFacilityFields,
+    IMNCIFormFields
+} from './FacilityForms.jsx';
+import { onAuthStateChanged } from "firebase/auth"; // <-- NEW IMPORT
 // --- Form Structure (Copied for reference in Bulk Upload - Keep in sync with SkillsAssessmentForm.jsx) ---
 // --- Classification Constants (Copied for reference) ---
 const COUGH_CLASSIFICATIONS = ["التهاب رئوي شديد أو مرض شديد جدا", "التهاب رئوي", "كحة أو نزلة برد"]; // Note: Adjusted to match SkillsAssessmentForm
 const DIARRHEA_CLASSIFICATIONS = ["جفاف شديد", "بعض الجفاف", "لا يوجد جفاف", "إسهال مستمر شديد", "إسهال مستمر", "دسنتاريا"]; // Note: Adjusted to match SkillsAssessmentForm
-const FEVER_CLASSIFICATIONS = ["مرض حمي شديد", "ملاريا", "حمى لا توجد ملارIA", "حصبة مصحوبة بمضاعفات شديدة", "حصبة مصحوبة بمضاعفات في العين والفم", "حصبة"]; // Note: Adjusted to match SkillsAssessmentForm
+const FEVER_CLASSIFICATIONS = ["مرض حمي شديد", "ملاريا", "حمى لا توجد ملAR", "حصبة مصحوبة بمضاعفات شديدة", "حصبة مصحوبة بمضاعفات في العين والفم", "حصبة"]; // Note: Adjusted to match SkillsAssessmentForm
 const EAR_CLASSIFICATIONS = ["التهاب العظمة خلف الاذن", "التهاب أذن حاد", "التهاب أذن مزمن", "لا يوجد التهاب أذن"];
 const MALNUTRITION_CLASSIFICATIONS = ["سوء تغذية شديد مصحوب بمضاعفات", "سوء تغذية شديد غير مصحوب بمضاعفات", "سوء تغذية حاد متوسط", "لا يوجد سوء تغذية"]; // Note: Adjusted to match SkillsAssessmentForm
 const ANEMIA_CLASSIFICATIONS = ["فقر دم شديد", "فقر دم", "لا يوجد فقر دم"];
@@ -431,6 +439,151 @@ const AddHealthWorkerModal = ({ isOpen, onClose, onSave, facilityName }) => {
 };
 // --- END AddHealthWorkerModal ---
 
+// --- NEW: Copied from FacilityForms.jsx ---
+// --- Custom Searchable Select Component ---
+const SearchableSelect = ({ options, value, onChange, placeholder = "اختر من القائمة...", disabled = false }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const dropdownRef = useRef(null);
+
+    const selectedOption = options.find(option => option.value === value);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
+
+    const handleSelect = (optionValue) => {
+        // --- MODIFIED: Use 'facilityId' as name for compatibility ---
+        onChange({ target: { name: 'facilityId', value: optionValue } });
+        setIsOpen(false);
+        setSearchTerm('');
+    };
+
+    const filteredOptions = useMemo(() => {
+        if (!searchTerm) return options;
+        return options.filter(option =>
+            option.value === 'addNew' || // Always keep the "Add New" option
+            (option.label && option.label.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+    }, [searchTerm, options]);
+
+    const groupedOptions = useMemo(() => {
+        const groups = { ungrouped: [] };
+        filteredOptions.forEach(option => {
+            const groupName = option.group || 'ungrouped';
+            if (!groups[groupName]) {
+                groups[groupName] = [];
+            }
+            groups[groupName].push(option);
+        });
+        // Ensure "ungrouped" (like 'Add New') comes first
+        return { ungrouped: groups.ungrouped, ...Object.fromEntries(Object.entries(groups).filter(([key]) => key !== 'ungrouped')) };
+    }, [filteredOptions]);
+
+    return (
+        <div className="relative" ref={dropdownRef}>
+            <button
+                type="button"
+                className="w-full text-right bg-white border border-gray-300 rounded-md shadow-sm pl-3 pr-10 py-2 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                onClick={() => setIsOpen(!isOpen)}
+                disabled={disabled}
+            >
+                <span className="block truncate">
+                    {selectedOption ? selectedOption.label : <span className="text-gray-500">{placeholder}</span>}
+                </span>
+                <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                    <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fillRule="evenodd" d="M10 3a1 1 0 01.707.293l3 3a1 1 0 01-1.414 1.414L10 5.414 7.707 7.707a1 1 0 01-1.414-1.414l3-3A1 1 0 0110 3zm-3.707 9.293a1 1 0 011.414 0L10 14.586l2.293-2.293a1 1 0 011.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                </span>
+            </button>
+            {isOpen && (
+                <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                    <div className="p-2 sticky top-0 bg-white z-10">
+                        <Input
+                            type="search"
+                            placeholder="ابحث..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full"
+                            autoFocus
+                        />
+                    </div>
+                    <ul role="listbox">
+                        {Object.entries(groupedOptions).map(([groupName, opts]) => (
+                            <React.Fragment key={groupName}>
+                                {groupName !== 'ungrouped' && opts.length > 0 && (
+                                    <li className="text-gray-500 cursor-default select-none relative py-2 px-3 font-bold">{groupName}</li>
+                                )}
+                                {opts.map(option => (
+                                    <li
+                                        key={option.value}
+                                        className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-sky-100 ${option.className || ''}`}
+                                        onClick={() => handleSelect(option.value)}
+                                    >
+                                        <span className={`block truncate ${value === option.value ? 'font-semibold' : 'font-normal'}`}>
+                                            {option.label}
+                                        </span>
+                                    </li>
+                                ))}
+                            </React.Fragment>
+                        ))}
+                         {filteredOptions.length === 0 && searchTerm && (
+                            <li className="text-gray-500 cursor-default select-none relative py-2 px-3">لا توجد نتائج</li>
+                        )}
+                    </ul>
+                </div>
+            )}
+        </div>
+    );
+};
+// --- END: Copied from FacilityForms.jsx ---
+
+// --- NEW: Add Facility Modal Component ---
+const AddFacilityModal = ({ isOpen, onClose, onSaveComplete, setToast, initialState, initialLocality }) => {
+    const handleSave = async (formData) => {
+        try {
+            await submitFacilityDataForApproval(formData);
+            setToast({ show: true, message: "Submission successful! Your new facility is pending approval.", type: 'success' });
+            onSaveComplete(); // This will trigger refetch and close
+        } catch (error) {
+            setToast({ show: true, message: `Submission failed: ${error.message}`, type: 'error' });
+        }
+    };
+
+    const initialData = {
+        'الولاية': initialState,
+        'المحلية': initialLocality
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={`إضافة منشأة صحية جديدة في: ${initialLocality}`} size="3xl">
+            <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
+                <GenericFacilityForm
+                    initialData={initialData}
+                    onSave={handleSave}
+                    onCancel={onClose}
+                    setToast={setToast}
+                    title="بيانات المنشأة الصحية"
+                    subtitle="الرجاء إدخال تفاصيل المنشأة الجديدة. سيتم إرسالها للموافقة."
+                    isPublicForm={true} // Use public form logic for submitter name/email
+                >
+                    {(props) => <IMNCIFormFields {...props} />}
+                </GenericFacilityForm>
+            </div>
+        </Modal>
+    );
+};
+// --- END AddFacilityModal ---
+
 
 // --- Mentorship Table Column Component (MODIFIED to English Headers) (KEPT AS-IS) ---
 const MentorshipTableColumns = () => (
@@ -726,9 +879,7 @@ const MentorshipSubmissionsTable = ({
                                 <tr>
                                     <MentorshipTableColumns />
                                 </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">{/* <-- FIX: Removed whitespace */}
-                                {filteredSubmissions.length === 0 ? (
+                            </thead><tbody className="bg-white divide-y divide-gray-200">{/* <-- FIX: Removed whitespace */}{filteredSubmissions.length === 0 ? (
                                     <tr><td colSpan="8" className="border border-gray-300"><EmptyState title="No Records Found" message="No mentorship visits matched the current filters for this service." /></td></tr>
                                 ) : (
                                     filteredSubmissions.map((sub, index) => {
@@ -907,6 +1058,9 @@ const SkillsMentorshipView = ({
 
     // --- NEW: State for Drafts Modal ---
     const [isDraftsModalOpen, setIsDraftsModalOpen] = useState(false);
+ 
+    // --- NEW: State for Add Facility Modal ---
+    const [isAddFacilityModalOpen, setIsAddFacilityModalOpen] = useState(false);
 
     // --- START: NEW STATE FOR MODALS ---
     const [isMothersFormModalOpen, setIsMothersFormModalOpen] = useState(false);
@@ -1068,6 +1222,23 @@ const SkillsMentorshipView = ({
         return healthFacilities.filter(f => f['الولاية'] === selectedState && f['المحلية'] === selectedLocality)
                .sort((a, b) => (a['اسم_المؤسسة'] || '').localeCompare(b['اسم_المؤسسة'] || ''));
     }, [healthFacilities, selectedState, selectedLocality]);
+
+    // --- NEW: Memo for SearchableSelect options ---
+    const facilityOptions = useMemo(() => {
+        const options = [
+            {
+                value: 'addNew',
+                label: '--- إضافة منشأة جديدة ---',
+                className: 'font-bold text-sky-600 bg-sky-50'
+            }
+        ];
+        filteredFacilities.forEach(f => options.push({
+            value: f.id,
+            label: f['اسم_المؤسسة'],
+            group: ''
+        }));
+        return options;
+    }, [filteredFacilities]);
 
     const selectedFacility = useMemo(() => {
         return filteredFacilities.find(f => f.id === selectedFacilityId);
@@ -2023,49 +2194,68 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         </div>
 
                         {/* --- Selection Grid --- */}
-                        {isFacilitiesLoading ? (
-                            <div className="flex justify-center p-8"><Spinner /></div>
-                        ) : (
-                            <div className="space-y-6 mt-6">
-                                {/* GRID ALIGNMENT FIX: Use flex-row-reverse to guarantee RTL flow for grid items */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border p-4 rounded-lg bg-gray-50 flex flex-row-reverse">
-                                    {/* 1. State - الولاية (Appears Right in RTL flow) */}
-                                    <FormGroup label="الولاية" className="text-right">
-                                        <Select value={selectedState} onChange={handleStateChange} disabled={isStateFilterDisabled || !!editingSubmission}>
-                                            {availableStates.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
-                                        </Select>
-                                    </FormGroup>
-                                    
-                                    {/* 2. Locality - المحلية (Appears Center) */}
-                                    <FormGroup label="المحلية" className="text-right">
-                                        <Select value={selectedLocality} onChange={(e) => { setSelectedLocality(e.target.value); setSelectedFacilityId(''); setSelectedHealthWorkerName(''); setSelectedWorkerOriginalData(null); setWorkerJobTitle(''); setWorkerTrainingDate(''); setWorkerPhone(''); setIsWorkerInfoChanged(false); setIsReadyToStart(false); }} disabled={isLocalityFilterDisabled || !!editingSubmission}>
-                                             {(!publicSubmissionMode && permissions.manageScope === 'locality') ? (
-                                                userLocalities && userLocalities.length > 0 ? (
-                                                    userLocalities.map(locEn => {
-                                                        const locAr = selectedState && STATE_LOCALITIES[selectedState]?.localities.find(l => l.en === locEn)?.ar || locEn;
-                                                        return <option key={locEn} value={locEn}>{locAr}</option>;
-                                                    })
-                                                ) : (
-                                                    <option value="">-- لم يتم تحديد محلية --</option>
-                                                )
+                        {/* --- MODIFICATION: Spinner logic moved --- */}
+                        <div className="space-y-6 mt-6">
+                            {/* GRID ALIGNMENT FIX: Use flex-row-reverse to guarantee RTL flow for grid items */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border p-4 rounded-lg bg-gray-50 flex flex-row-reverse">
+                                {/* 1. State - الولاية (Appears Right in RTL flow) */}
+                                <FormGroup label="الولاية" className="text-right">
+                                    <Select value={selectedState} onChange={handleStateChange} disabled={isStateFilterDisabled || !!editingSubmission}>
+                                        {availableStates.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+                                    </Select>
+                                </FormGroup>
+                                
+                                {/* 2. Locality - المحلية (Appears Center) */}
+                                <FormGroup label="المحلية" className="text-right">
+                                    <Select value={selectedLocality} onChange={(e) => { setSelectedLocality(e.target.value); setSelectedFacilityId(''); setSelectedHealthWorkerName(''); setSelectedWorkerOriginalData(null); setWorkerJobTitle(''); setWorkerTrainingDate(''); setWorkerPhone(''); setIsWorkerInfoChanged(false); setIsReadyToStart(false); }} disabled={isLocalityFilterDisabled || !!editingSubmission}>
+                                         {(!publicSubmissionMode && permissions.manageScope === 'locality') ? (
+                                            userLocalities && userLocalities.length > 0 ? (
+                                                userLocalities.map(locEn => {
+                                                    const locAr = selectedState && STATE_LOCALITIES[selectedState]?.localities.find(l => l.en === locEn)?.ar || locEn;
+                                                    return <option key={locEn} value={locEn}>{locAr}</option>;
+                                                })
                                             ) : (
-                                                <>
-                                                    <option value="">-- اختر المحلية --</option>
-                                                    {selectedState && STATE_LOCALITIES[selectedState]?.localities.sort((a, b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
-                                                </>
-                                            )}
-                                        </Select>
-                                    </FormGroup>
-                                    
-                                    {/* 3. Facility - المؤسسة الصحية (Appears Left in RTL flow) */}
+                                                <option value="">-- لم يتم تحديد محلية --</option>
+                                            )
+                                        ) : (
+                                            <>
+                                                <option value="">-- اختر المحلية --</option>
+                                                {selectedState && STATE_LOCALITIES[selectedState]?.localities.sort((a, b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
+                                            </>
+                                        )}
+                                    </Select>
+                                </FormGroup>
+                                
+                                {/* 3. Facility - المؤسسة الصحية (Appears Left in RTL flow) */}
+                                {/* --- MODIFICATION: Replaced Select with SearchableSelect and added loading spinner --- */}
+                                {isFacilitiesLoading ? (
+                                    <div className="flex justify-center items-center p-4">
+                                        <Spinner />
+                                        <span className="mr-2 text-gray-500">جاري تحميل المؤسسات...</span>
+                                    </div>
+                                ) : (
                                     <FormGroup label="المؤسسة الصحية" className="text-right">
-                                        <Select value={selectedFacilityId} onChange={(e) => { setSelectedFacilityId(e.target.value); setSelectedHealthWorkerName(''); setSelectedWorkerOriginalData(null); setWorkerJobTitle(''); setWorkerTrainingDate(''); setWorkerPhone(''); setIsWorkerInfoChanged(false); setIsReadyToStart(false); }} disabled={!selectedLocality || !!editingSubmission}>
-                                            <option value="">-- اختر المؤسسة --</option>
-                                            {filteredFacilities.map(f => ( <option key={f.id} value={f.id}>{f['اسم_المؤسسة']}</option> ))}
-                                        </Select>
-                                        {selectedState && selectedLocality && filteredFacilities.length === 0 && !isFacilitiesLoading && ( <p className="text-xs text-red-600 mt-1">لا توجد مؤسسات مسجلة لهذه المحلية.</p> )}
+                                        <SearchableSelect
+                                            value={selectedFacilityId}
+                                            onChange={(e) => { // e.target.value comes from handleSelect
+                                                const newFacilityId = e.target.value;
+                                                if (newFacilityId === 'addNew') {
+                                                    setIsAddFacilityModalOpen(true);
+                                                } else {
+                                                    setSelectedFacilityId(newFacilityId);
+                                                    setSelectedHealthWorkerName('');
+                                                    setSelectedWorkerOriginalData(null); setWorkerJobTitle(''); setWorkerTrainingDate(''); setWorkerPhone(''); setIsWorkerInfoChanged(false);
+                                                    setIsReadyToStart(false);
+                                                }
+                                            }}
+                                            options={facilityOptions}
+                                            placeholder="-- اختر أو ابحث عن المؤسسة --"
+                                            disabled={!selectedLocality || !!editingSubmission}
+                                        />
+                                        {selectedState && selectedLocality && filteredFacilities.length === 0 && !isFacilitiesLoading && ( <p className="text-xs text-red-600 mt-1">لا توجد مؤسسات مسجلة. أضف واحدة جديدة.</p> )}
                                     </FormGroup>
-                                </div>
+                                )}
+                            </div>
 
                                 {/* --- Health Worker Selection & Edit Section (Conditional on form type) --- */}
                                 {isSkillsAssessmentSetup && selectedFacilityId && (
@@ -2141,8 +2331,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                         )}
                                     </div>
                                 )}
-                            </div>
-                        )}
+                        </div>
                         
                         {/* START/CONTINUE BUTTON (MODIFIED) */}
                         <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
@@ -2165,6 +2354,20 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                     </div>
                 </Card>
 
+                {/* --- NEW: Add Facility Modal Render --- */}
+                {isAddFacilityModalOpen && (
+                    <AddFacilityModal
+                        isOpen={isAddFacilityModalOpen}
+                        onClose={() => setIsAddFacilityModalOpen(false)}
+                        onSaveComplete={() => {
+                            fetchHealthFacilities(true); // Refetch all facilities
+                            setIsAddFacilityModalOpen(false);
+                        }}
+                        setToast={setToast}
+                        initialState={selectedState}
+                        initialLocality={selectedLocality}
+                    />
+                )}
                  {/* --- Modals (omitted for brevity) --- */}
                  {isAddWorkerModalOpen && (
                     <AddHealthWorkerModal

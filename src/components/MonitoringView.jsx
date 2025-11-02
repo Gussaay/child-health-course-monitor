@@ -334,9 +334,16 @@ export function ObservationView({ course, participant, participants, onChangePar
 }
 
 function ImnciMonitoringGrid({ age, buffer, toggle }) {
-    // --- MODIFICATION: Changed initial state to expand specific domains ---
-    const [expandedDomains, setExpandedDomains] = useState(new Set(['DANGER_SIGNS', 'COUGH_OR_DIFFICULT_BREATHING']));
+    // --- MODIFICATION: Use useEffect to set default expanded domains and update on age change ---
+    const [expandedDomains, setExpandedDomains] = useState(new Set());
     const allDomains = DOMAINS_BY_AGE_IMNCI[age]; 
+
+    useEffect(() => {
+        const defaultDomains = DOMAINS_BY_AGE_IMNCI[age] || [];
+        // Expand the first two domains
+        setExpandedDomains(new Set(defaultDomains.slice(0, 2)));
+    }, [age]); // Re-run when age changes
+    // --- END MODIFICATION ---
 
     const toggleDomain = (domain) => {
         setExpandedDomains(prev => {
@@ -377,11 +384,12 @@ function ImnciMonitoringGrid({ age, buffer, toggle }) {
                         const title = DOMAIN_LABEL_IMNCI[d] || d;
 
                         return (
+                            // --- MODIFICATION: Removed domain separation border ---
                             <tbody key={d}>
-                                {/* --- MODIFICATION: Changed bg to light sky blue --- */}
+                                {/* --- MODIFICATION: Changed bg/hover back to sky blue --- */}
                                 <tr onClick={() => toggleDomain(d)} className="cursor-pointer hover:bg-sky-200 bg-sky-100">
-                                    {/* --- MODIFICATION: Changed text/border color to match new bg --- */}
-                                    <td className="p-1 text-base font-bold text-sky-900 border-l border-r border-b-2 border-sky-400">
+                                    {/* --- MODIFICATION: Changed text back to sky blue --- */}
+                                    <td className="p-2 text-base font-bold text-sky-900 border border-slate-300">
                                         {/* --- MODIFICATION: Removed text-white --- */}
                                         <span className="inline-block w-5 text-center">{isExpanded ? '▼' : '►'}</span>
                                         {title}
@@ -396,7 +404,8 @@ function ImnciMonitoringGrid({ age, buffer, toggle }) {
                                             <td className="p-1 pl-6 border border-slate-300">
                                                 {/* --- MODIFICATION: Changed to flex-col/sm:flex-row for mobile responsiveness --- */}
                                                 <div className="flex flex-col sm:flex-row justify-between sm:items-center w-full gap-2">
-                                                    <span className="break-words">{cls}</span>
+                                                    {/* --- MODIFICATION: Made classification text bold --- */}
+                                                    <span className="break-words font-bold">{cls}</span>
                                                     <ActionToggle
                                                         options={toggleOptions}
                                                         currentValue={mark}
@@ -417,8 +426,10 @@ function ImnciMonitoringGrid({ age, buffer, toggle }) {
 }
 
 function EtatMonitoringGrid({ buffer, toggle }) {
-    const [expandedDomains, setExpandedDomains] = useState(new Set());
     const allDomains = ETAT_DOMAINS; 
+    // --- MODIFICATION: Changed initial state to expand first two domains ---
+    const [expandedDomains, setExpandedDomains] = useState(new Set(allDomains.slice(0, 2)));
+    // --- END MODIFICATION ---
 
     const toggleDomain = (domain) => {
         setExpandedDomains(prev => {
@@ -459,11 +470,12 @@ function EtatMonitoringGrid({ buffer, toggle }) {
                         const title = ETAT_DOMAIN_LABEL[d] || d;
 
                         return (
+                            // --- MODIFICATION: Removed domain separation border ---
                             <tbody key={d}>
-                                {/* --- MODIFICATION: Changed bg to light sky blue --- */}
+                                {/* --- MODIFICATION: Changed bg/hover back to sky blue --- */}
                                 <tr onClick={() => toggleDomain(d)} className="cursor-pointer hover:bg-sky-200 bg-sky-100">
-                                    {/* --- MODIFICATION: Changed text/border color to match new bg --- */}
-                                    <td className="p-1 text-base font-bold text-sky-900 border-l border-r border-b-2 border-sky-400">
+                                    {/* --- MODIFICATION: Changed text back to sky blue --- */}
+                                    <td className="p-2 text-base font-bold text-sky-900 border border-slate-300">
                                        {/* --- MODIFICATION: Removed text-white --- */}
                                         <span className="inline-block w-5 text-center">{isExpanded ? '▼' : '►'}</span>
                                         {title}
@@ -478,7 +490,8 @@ function EtatMonitoringGrid({ buffer, toggle }) {
                                             <td className="p-1 pl-6 border border-slate-300">
                                                 {/* --- MODIFICATION: Changed to flex-col/sm:flex-row for mobile responsiveness --- */}
                                                 <div className="flex flex-col sm:flex-row justify-between sm:items-center w-full gap-2">
-                                                    <span className="break-words">{skill}</span>
+                                                    {/* --- MODIFICATION: Made skill text bold --- */}
+                                                    <span className="break-words font-bold">{skill}</span>
                                                     <ActionToggle
                                                         options={toggleOptions}
                                                         currentValue={mark}
@@ -505,8 +518,15 @@ function EencMonitoringGrid({ scenario, buffer, toggle }) {
     const skillsMap = isBreathing ? SKILLS_EENC_BREATHING : SKILLS_EENC_NOT_BREATHING;
     const labelsMap = isBreathing ? EENC_DOMAIN_LABEL_BREATHING : EENC_DOMAIN_LABEL_NOT_BREATHING;
     
-    const [expandedDomains, setExpandedDomains] = useState(new Set(domains));
+    // --- MODIFICATION: Use useEffect to set default expanded domains and update on scenario change ---
+    const [expandedDomains, setExpandedDomains] = useState(new Set());
     const allDomains = domains; 
+
+    useEffect(() => {
+        // Expand the first two domains based on the current scenario
+        setExpandedDomains(new Set(allDomains.slice(0, 2)));
+    }, [allDomains]); // Re-run when allDomains changes (which it will when scenario changes)
+    // --- END MODIFICATION ---
 
     const toggleDomain = (domain) => {
         setExpandedDomains(prev => {
@@ -548,11 +568,12 @@ function EencMonitoringGrid({ scenario, buffer, toggle }) {
                         const title = labelsMap[d] || d;
 
                         return (
+                            // --- MODIFICATION: Removed domain separation border ---
                             <tbody key={d}>
-                                {/* --- MODIFICATION: Changed bg to light sky blue --- */}
+                                {/* --- MODIFICATION: Changed bg/hover back to sky blue --- */}
                                 <tr onClick={() => toggleDomain(d)} className="cursor-pointer hover:bg-sky-200 bg-sky-100">
-                                    {/* --- MODIFICATION: Changed text/border color to match new bg --- */}
-                                    <td className="p-1 text-base font-bold text-sky-900 border-l border-r border-b-2 border-sky-400">
+                                    {/* --- MODIFICATION: Changed text back to sky blue --- */}
+                                    <td className="p-2 text-base font-bold text-sky-900 border border-slate-300">
                                         {/* --- MODIFICATION: Removed text-white --- */}
                                         <span className="inline-block w-5 text-center">{isExpanded ? '▼' : '►'}</span>
                                         {title}
@@ -567,7 +588,8 @@ function EencMonitoringGrid({ scenario, buffer, toggle }) {
                                             <td className="p-1 pl-6 border border-slate-300">
                                                 {/* --- MODIFICATION: Changed to flex-col/sm:flex-row for mobile responsiveness --- */}
                                                 <div className="flex flex-col sm:flex-row justify-between sm:items-center w-full gap-2">
-                                                    <span className="break-words">{skill.text}</span>
+                                                    {/* --- MODIFICATION: Made skill text bold --- */}
+                                                    <span className="break-words font-bold">{skill.text}</span>
                                                     <ActionToggle
                                                         options={toggleOptions}
                                                         currentValue={mark}

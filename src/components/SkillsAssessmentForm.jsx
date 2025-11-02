@@ -439,6 +439,16 @@ const calculateScores = (formData) => {
     let totalCorrectDiarrheaMgmt = 0;
     // --- END NEW KPI VARS ---
 
+    // --- NEW HANDS-ON SKILLS VARS ---
+    let handsOnWeight_score = 0, handsOnWeight_max = 0;
+    let handsOnTemp_score = 0, handsOnTemp_max = 0;
+    let handsOnHeight_score = 0, handsOnHeight_max = 0;
+    let handsOnRR_score = 0, handsOnRR_max = 0;
+    let handsOnRDT_score = 0, handsOnRDT_max = 0;
+    let handsOnMUAC_score = 0, handsOnMUAC_max = 0;
+    let handsOnWFH_score = 0, handsOnWFH_max = 0;
+    // --- END NEW HANDS-ON SKILLS VARS ---
+
 
     IMNCI_FORM_STRUCTURE.forEach(group => {
         let groupCurrentScore = 0;
@@ -493,6 +503,19 @@ const calculateScores = (formData) => {
                                 if (sectionData[classifySkillKey] === 'yes') symptomCurrentScore += 1;
                             }
                         }
+
+                        // --- NEW HANDS-ON SKILL LOGIC (Symptoms) ---
+                        if (askValue === 'yes' && formData.assessment_skills[confirmsKey] === 'yes') {
+                            const checkValue = sectionData[checkSkillKey];
+                            if (symptomPrefix === 'cough') {
+                                if (checkValue === 'yes' || checkValue === 'no') handsOnRR_max++;
+                                if (checkValue === 'yes') handsOnRR_score++;
+                            } else if (symptomPrefix === 'fever') {
+                                if (checkValue === 'yes' || checkValue === 'no') handsOnRDT_max++;
+                                if (checkValue === 'yes') handsOnRDT_score++;
+                            }
+                        }
+                        // --- END NEW HANDS-ON SKILL LOGIC ---
 
                         mainSymptomsCurrentScore += symptomCurrentScore;
                         mainSymptomsMaxScore += symptomMaxScore;
@@ -575,6 +598,29 @@ const calculateScores = (formData) => {
                         if (isSkillRelevantForScoring) {
                             const value = sectionData[skill.key];
                             
+                            // --- NEW HANDS-ON SKILL LOGIC (Vitals & Malnutrition) ---
+                            if (subgroup.scoreKey === 'vitalSigns') {
+                                if (skill.key === 'skill_weight') {
+                                    if (value === 'yes' || value === 'no') handsOnWeight_max++;
+                                    if (value === 'yes') handsOnWeight_score++;
+                                } else if (skill.key === 'skill_temp') {
+                                    if (value === 'yes' || value === 'no') handsOnTemp_max++;
+                                    if (value === 'yes') handsOnTemp_score++;
+                                } else if (skill.key === 'skill_height') {
+                                    if (value === 'yes' || value === 'no') handsOnHeight_max++;
+                                    if (value === 'yes') handsOnHeight_score++;
+                                }
+                            } else if (subgroup.scoreKey === 'malnutrition') {
+                                if (skill.key === 'skill_mal_muac') {
+                                    if (value === 'yes' || value === 'no') handsOnMUAC_max++;
+                                    if (value === 'yes') handsOnMUAC_score++;
+                                } else if (skill.key === 'skill_mal_wfh') {
+                                    if (value === 'yes' || value === 'no') handsOnWFH_max++;
+                                    if (value === 'yes') handsOnWFH_score++;
+                                }
+                            }
+                            // --- END NEW HANDS-ON SKILL LOGIC ---
+
                             if (isTreatmentSubgroup) {
                                 // Only count 'yes'/'no' answers towards max score
                                 if (value === 'yes' || value === 'no') {
@@ -670,6 +716,16 @@ const calculateScores = (formData) => {
     scores.diarrheaClassification = { score: totalCorrectDiarrheaClassifications, maxScore: totalDiarrheaCases };
     scores.diarrheaManagement = { score: totalCorrectDiarrheaMgmt, maxScore: totalDiarrheaCases };
     // --- END NEW KPI SCORES ---
+
+    // --- NEW HANDS-ON SKILL SCORES ---
+    scores.handsOnWeight = { score: handsOnWeight_score, maxScore: handsOnWeight_max };
+    scores.handsOnTemp = { score: handsOnTemp_score, maxScore: handsOnTemp_max };
+    scores.handsOnHeight = { score: handsOnHeight_score, maxScore: handsOnHeight_max };
+    scores.handsOnRR = { score: handsOnRR_score, maxScore: handsOnRR_max };
+    scores.handsOnRDT = { score: handsOnRDT_score, maxScore: handsOnRDT_max };
+    scores.handsOnMUAC = { score: handsOnMUAC_score, maxScore: handsOnMUAC_max };
+    scores.handsOnWFH = { score: handsOnWFH_score, maxScore: handsOnWFH_max };
+    // --- END NEW HANDS-ON SKILL SCORES ---
 
     return scores;
 };

@@ -232,7 +232,8 @@ export default function App() {
     const [activeCoursesTab, setActiveCoursesTab] = useState('courses');
     const [activeHRTab, setActiveHRTab] = useState('facilitators');
 
-    const [courseDetails, setCourseDetails] = useState({ participants: [], allObs: [], allCases: [], finalReport: null });
+    // --- *** CHANGE 1 of 6: Initialize with null *** ---
+    const [courseDetails, setCourseDetails] = useState({ participants: null, allObs: null, allCases: null, finalReport: null });
     
     // --- NEW STATE ---
     const [courseDetailsLoading, setCourseDetailsLoading] = useState(false);
@@ -547,8 +548,8 @@ export default function App() {
                     // Don't bother the user with a toast, just log it.
                     // The report view will try again if the user clicks it.
                     console.error("Background fetch of course details failed:", error);
-                    // Clear details on failure
-                    setCourseDetails({ participants: [], allObs: null, allCases: null, finalReport: null }); // <-- FIX IS HERE
+                    // --- *** CHANGE 2 of 6: Clear details to null on failure *** ---
+                    setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null });
                 } finally {
                     setCourseDetailsLoading(false);
                 }
@@ -683,7 +684,8 @@ export default function App() {
             setSelectedCourseId(null);
             setSelectedParticipantId(null);
             setFinalReportCourse(null);
-            setCourseDetails({ participants: [], allObs: [], allCases: [], finalReport: null });
+            // --- *** CHANGE 3 of 6: Clear details to null on navigation *** ---
+            setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null });
             if (['dashboard', 'admin', 'landing', 'skillsMentorship'].includes(newView)) {
                 setActiveCourseType(null);
             }
@@ -700,9 +702,9 @@ export default function App() {
         setSelectedCourseId(courseId);
         setLoading(false); // Ensure global spinner is off
         
-        // Clear details of the *previous* course. 
+        // --- *** CHANGE 4 of 6: Clear details of *previous* course to null *** ---
         // The new useEffect will fetch details for the *new* course.
-        setCourseDetails({ participants: [], allObs: null, allCases: null, finalReport: null }); // <-- FIX IS HERE
+        setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null });
         
         navigate('participants', { courseId });
     }, [navigate]);
@@ -713,8 +715,9 @@ export default function App() {
     const handleOpenCourseReport = useCallback(async (courseId) => {
         setSelectedCourseId(courseId);
         
+        // --- *** CHANGE 5 of 6: Check against null instead of truthy *** ---
         // Check if details are already loaded
-        if (courseDetails.allObs && courseDetails.participants) {
+        if (courseDetails.allObs !== null && courseDetails.participants !== null) {
              navigate('courseReport', { courseId });
              return; // Data is ready, just navigate
         }
@@ -958,7 +961,7 @@ export default function App() {
                 activeCoursesTab={activeCoursesTab}
                 setActiveCoursesTab={setActiveCoursesTab}
                 selectedCourse={selectedCourse}
-                participants={courseDetails.participants} // This is now [] initially, ParticipantsView handles its own data
+                participants={courseDetails.participants || []} // This is now [] initially, ParticipantsView handles its own data
                 onAddParticipant={() => navigate('participantForm')}
                 onEditParticipant={(p) => navigate('participantForm', { editParticipant: p })}
                 onDeleteParticipant={handleDeleteParticipant}
@@ -1027,8 +1030,10 @@ export default function App() {
 
             case 'participantForm': return permissions.canManageCourse ? (selectedCourse && <ParticipantForm course={selectedCourse} initialData={editingParticipant} onCancel={() => navigate(previousView)} onSave={async (participantData, facilityUpdateData) => { try { const fullPayload = { ...participantData, id: editingParticipant?.id, courseId: selectedCourse.id }; await saveParticipantAndSubmitFacilityUpdate(fullPayload, facilityUpdateData); if (facilityUpdateData) setToast({ show: true, message: 'Facility update submitted for approval.', type: 'info' }); 
             
-            // --- MODIFICATION ---
+            // --- *** CHANGE 6 of 6: Clear details on save *** ---
             // handleOpenCourse no longer refetches, so just navigate
+            // We also clear details so the participant list is forced to refresh
+            setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null });
             navigate('participants', { courseId: selectedCourse.id });
             // --- END MODIFICATION ---
 

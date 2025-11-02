@@ -383,6 +383,22 @@ const MothersForm = ({ facility, onCancel, setToast }) => {
                     <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving}> إلغاء </Button>
                     <Button type="submit" disabled={isSaving}> {isSaving ? 'جاري الحفظ...' : 'حفظ وإكمال الاستبيان'} </Button>
                  </div>
+
+                 {/* --- START: NEW Mobile Sticky Action Bar --- */}
+                 {/* This bar is only visible on mobile (flex sm:hidden) */}
+                 <div className="flex sm:hidden fixed bottom-0 left-0 right-0 z-20 p-2 bg-gray-50 border-t border-gray-200 shadow-lg justify-around items-center" dir="rtl">
+                    <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving} size="sm">
+                        إلغاء
+                    </Button>
+                    <Button 
+                        type="submit" 
+                        disabled={isSaving} 
+                        size="sm"
+                    > 
+                        {isSaving ? 'جاري...' : 'حفظ وإكمال'} 
+                    </Button>
+                </div>
+                {/* --- END: NEW Mobile Sticky Action Bar --- */}
             </form>
         </Card>
     );

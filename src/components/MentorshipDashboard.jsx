@@ -115,6 +115,23 @@ const KpiLineChart = ({ title, chartData, kpiKeys }) => {
         'Diarrhea (Classify)': '#ec4899', // pink
         'Diarrhea (Mgmt)': '#f97316', // orange
     };
+    // --- NEW HANDS-ON SKILLS ---
+    colors['Weight'] = '#06b6d4'; // cyan
+    colors['Temp'] = '#3b82f6'; // blue
+    colors['Height'] = '#8b5cf6'; // violet
+    colors['Resp. Rate'] = '#14b8a6'; // teal
+    colors['RDT'] = '#d946ef'; // fuchsia
+    colors['MUAC'] = '#0891b2'; // cyan-dark
+    colors['WFH'] = '#0284c7'; // sky-dark
+    // --- END NEW ---
+    // --- NEW KPI ---
+    colors['Referral Mgmt'] = '#be123c'; // rose
+    colors['Malaria Class.'] = '#65a30d'; // lime
+    colors['Malaria Mgmt'] = '#84cc16'; // lime-light
+    colors['Malnutrition Mgmt'] = '#ca8a04'; // amber
+    colors['Anemia Mgmt'] = '#dc2626'; // red
+    // --- END NEW ---
+
 
     const data = {
         labels: chartData.map(d => d.name),
@@ -244,6 +261,24 @@ const MentorshipDashboard = ({
             pneumoniaManagement: [],
             diarrheaClassification: [], 
             diarrheaManagement: [], 
+            // --- NEW HANDS-ON SKILLS ---
+            handsOnWeight: [],
+            handsOnTemp: [],
+            handsOnHeight: [],
+            handsOnRR: [],
+            handsOnRDT: [],
+            handsOnMUAC: [],
+            handsOnWFH: [],
+            // --- END NEW ---
+            // --- NEW KPI ---
+            referralCaseCount: [],
+            referralManagement: [],
+            malariaClassification: [],
+            malariaManagement: [],
+            malnutritionCaseCount: [],
+            malnutritionManagement: [],
+            anemiaManagement: [],
+            // --- END NEW ---
         };
         let totalVisits = submissions.length;
 
@@ -277,6 +312,54 @@ const MentorshipDashboard = ({
             if (s.diarrheaManagement_maxScore > 0) {
                 scores.diarrheaManagement.push(s.diarrheaManagement_score / s.diarrheaManagement_maxScore);
             }
+
+            // --- NEW HANDS-ON SKILLS ---
+            if (s.handsOnWeight_maxScore > 0) {
+                scores.handsOnWeight.push(s.handsOnWeight_score / s.handsOnWeight_maxScore);
+            }
+            if (s.handsOnTemp_maxScore > 0) {
+                scores.handsOnTemp.push(s.handsOnTemp_score / s.handsOnTemp_maxScore);
+            }
+            if (s.handsOnHeight_maxScore > 0) {
+                scores.handsOnHeight.push(s.handsOnHeight_score / s.handsOnHeight_maxScore);
+            }
+            if (s.handsOnRR_maxScore > 0) {
+                scores.handsOnRR.push(s.handsOnRR_score / s.handsOnRR_maxScore);
+            }
+            if (s.handsOnRDT_maxScore > 0) {
+                scores.handsOnRDT.push(s.handsOnRDT_score / s.handsOnRDT_maxScore);
+            }
+            if (s.handsOnMUAC_maxScore > 0) {
+                scores.handsOnMUAC.push(s.handsOnMUAC_score / s.handsOnMUAC_maxScore);
+            }
+            if (s.handsOnWFH_maxScore > 0) {
+                scores.handsOnWFH.push(s.handsOnWFH_score / s.handsOnWFH_maxScore);
+            }
+            // --- END NEW ---
+            
+            // --- NEW KPI ---
+            if (s.referralCaseCount_maxScore > 0) {
+                scores.referralCaseCount.push(s.referralCaseCount_score / s.referralCaseCount_maxScore);
+            }
+            if (s.referralManagement_maxScore > 0) {
+                scores.referralManagement.push(s.referralManagement_score / s.referralManagement_maxScore);
+            }
+            if (s.malariaClassification_maxScore > 0) {
+                scores.malariaClassification.push(s.malariaClassification_score / s.malariaClassification_maxScore);
+            }
+            if (s.malariaManagement_maxScore > 0) {
+                scores.malariaManagement.push(s.malariaManagement_score / s.malariaManagement_maxScore);
+            }
+            if (s.malnutritionCaseCount_maxScore > 0) {
+                scores.malnutritionCaseCount.push(s.malnutritionCaseCount_score / s.malnutritionCaseCount_maxScore);
+            }
+            if (s.malnutritionManagement_maxScore > 0) {
+                scores.malnutritionManagement.push(s.malnutritionManagement_score / s.malnutritionManagement_maxScore);
+            }
+            if (s.anemiaManagement_maxScore > 0) {
+                scores.anemiaManagement.push(s.anemiaManagement_score / s.anemiaManagement_maxScore);
+            }
+            // --- END NEW ---
         });
 
         return {
@@ -289,6 +372,24 @@ const MentorshipDashboard = ({
             avgPneumoniaManagement: calculateAverage(scores.pneumoniaManagement),
             avgDiarrheaClassification: calculateAverage(scores.diarrheaClassification), 
             avgDiarrheaManagement: calculateAverage(scores.diarrheaManagement), 
+            // --- NEW HANDS-ON SKILLS ---
+            avgHandsOnWeight: calculateAverage(scores.handsOnWeight),
+            avgHandsOnTemp: calculateAverage(scores.handsOnTemp),
+            avgHandsOnHeight: calculateAverage(scores.handsOnHeight),
+            avgHandsOnRR: calculateAverage(scores.handsOnRR),
+            avgHandsOnRDT: calculateAverage(scores.handsOnRDT),
+            avgHandsOnMUAC: calculateAverage(scores.handsOnMUAC),
+            avgHandsOnWFH: calculateAverage(scores.handsOnWFH),
+            // --- END NEW ---
+            // --- NEW KPI ---
+            avgReferralCaseCount: calculateAverage(scores.referralCaseCount),
+            avgReferralManagement: calculateAverage(scores.referralManagement),
+            avgMalariaClassification: calculateAverage(scores.malariaClassification),
+            avgMalariaManagement: calculateAverage(scores.malariaManagement),
+            avgMalnutritionCaseCount: calculateAverage(scores.malnutritionCaseCount),
+            avgMalnutritionManagement: calculateAverage(scores.malnutritionManagement),
+            avgAnemiaManagement: calculateAverage(scores.anemiaManagement),
+            // --- END NEW ---
         };
     }, []);
 
@@ -414,6 +515,22 @@ const MentorshipDashboard = ({
                     'Pneumonia': [],
                     'Diarrhea (Classify)': [],
                     'Diarrhea (Mgmt)': [],
+                    // --- NEW HANDS-ON SKILLS ---
+                    'Weight': [],
+                    'Temp': [],
+                    'Height': [],
+                    'Resp. Rate': [],
+                    'RDT': [],
+                    'MUAC': [],
+                    'WFH': [],
+                    // --- END NEW ---
+                    // --- NEW KPI ---
+                    'Referral Mgmt': [],
+                    'Malaria Class.': [],
+                    'Malaria Mgmt': [],
+                    'Malnutrition Mgmt': [],
+                    'Anemia Mgmt': [],
+                    // --- END NEW ---
                     count: 0 // To track how many entries
                 };
             }
@@ -430,6 +547,26 @@ const MentorshipDashboard = ({
             group['Pneumonia'].push(calcPercent(s.pneumoniaManagement_score, s.pneumoniaManagement_maxScore));
             group['Diarrhea (Classify)'].push(calcPercent(s.diarrheaClassification_score, s.diarrheaClassification_maxScore));
             group['Diarrhea (Mgmt)'].push(calcPercent(s.diarrheaManagement_score, s.diarrheaManagement_maxScore));
+
+            // --- NEW HANDS-ON SKILLS ---
+            group['Weight'].push(calcPercent(s.handsOnWeight_score, s.handsOnWeight_maxScore));
+            group['Temp'].push(calcPercent(s.handsOnTemp_score, s.handsOnTemp_maxScore));
+            group['Height'].push(calcPercent(s.handsOnHeight_score, s.handsOnHeight_maxScore));
+            group['Resp. Rate'].push(calcPercent(s.handsOnRR_score, s.handsOnRR_maxScore));
+            group['RDT'].push(calcPercent(s.handsOnRDT_score, s.handsOnRDT_maxScore));
+            group['MUAC'].push(calcPercent(s.handsOnMUAC_score, s.handsOnMUAC_maxScore));
+            group['WFH'].push(calcPercent(s.handsOnWFH_score, s.handsOnWFH_maxScore));
+            // --- END NEW ---
+
+            // --- NEW KPI ---
+            // Note: CaseCount KPIs are not percentages, so they are not good for the line chart.
+            // I will only chart the *management* scores.
+            group['Referral Mgmt'].push(calcPercent(s.referralManagement_score, s.referralManagement_maxScore));
+            group['Malaria Class.'].push(calcPercent(s.malariaClassification_score, s.malariaClassification_maxScore));
+            group['Malaria Mgmt'].push(calcPercent(s.malariaManagement_score, s.malariaManagement_maxScore));
+            group['Malnutrition Mgmt'].push(calcPercent(s.malnutritionManagement_score, s.malnutritionManagement_maxScore));
+            group['Anemia Mgmt'].push(calcPercent(s.anemiaManagement_score, s.anemiaManagement_maxScore));
+            // --- END NEW ---
 
             return acc;
         }, {});
@@ -461,6 +598,22 @@ const MentorshipDashboard = ({
                     'Pneumonia': averageScores(data['Pneumonia']),
                     'Diarrhea (Classify)': averageScores(data['Diarrhea (Classify)']),
                     'Diarrhea (Mgmt)': averageScores(data['Diarrhea (Mgmt)']),
+                    // --- NEW HANDS-ON SKILLS ---
+                    'Weight': averageScores(data['Weight']),
+                    'Temp': averageScores(data['Temp']),
+                    'Height': averageScores(data['Height']),
+                    'Resp. Rate': averageScores(data['Resp. Rate']),
+                    'RDT': averageScores(data['RDT']),
+                    'MUAC': averageScores(data['MUAC']),
+                    'WFH': averageScores(data['WFH']),
+                    // --- END NEW ---
+                    // --- NEW KPI ---
+                    'Referral Mgmt': averageScores(data['Referral Mgmt']),
+                    'Malaria Class.': averageScores(data['Malaria Class.']),
+                    'Malaria Mgmt': averageScores(data['Malaria Mgmt']),
+                    'Malnutrition Mgmt': averageScores(data['Malnutrition Mgmt']),
+                    'Anemia Mgmt': averageScores(data['Anemia Mgmt']),
+                    // --- END NEW ---
                 };
             });
     }, [filteredSubmissions]);
@@ -510,19 +663,62 @@ const MentorshipDashboard = ({
         { key: 'Treatment', title: 'Treatment' },
     ];
     
-    const diseaseKpiGridList = [
+    // --- MODIFIED: Renamed from diseaseKpi... ---
+    const classificationKpiGridList = [
+        { title: "Referral Case Identification", scoreValue: overallKpis.avgReferralCaseCount },
         { title: "Cough Classification", scoreValue: overallKpis.avgCoughClassification },
-        { title: "Pneumonia Management Score", scoreValue: overallKpis.avgPneumoniaManagement },
         { title: "Diarrhea Classification Score", scoreValue: overallKpis.avgDiarrheaClassification },
-        { title: "Diarrhea Management Score", scoreValue: overallKpis.avgDiarrheaManagement },
+        { title: "Malaria Classification Score", scoreValue: overallKpis.avgMalariaClassification },
+        { title: "Malnutrition Case Identification", scoreValue: overallKpis.avgMalnutritionCaseCount },
     ];
 
-    const diseaseKpiChartKeys = [
-        { key: 'Cough', title: 'Cough Classification' },
-        { key: 'Pneumonia', title: 'Pneumonia Mgmt' },
-        { key: 'Diarrhea (Classify)', title: 'Diarrhea Classify' },
-        { key: 'Diarrhea (Mgmt)', title: 'Diarrhea Mgmt' },
+    const classificationKpiChartKeys = [
+        // { key: 'Referral Case Identification', title: 'Referral ID' }, // Omitting from chart as it's a count, not a performance score
+        { key: 'Cough', title: 'Cough Class.' },
+        { key: 'Diarrhea (Classify)', title: 'Diarrhea Class.' },
+        { key: 'Malaria Class.', title: 'Malaria Class.' },
+        // { key: 'Malnutrition Case Identification', title: 'Malnutrition ID' }, // Omitting from chart
     ];
+    // --- END MODIFICATION ---
+
+    // --- NEW: Case Management KPIs ---
+    const managementKpiGridList = [
+        { title: "Referral Management Score", scoreValue: overallKpis.avgReferralManagement },
+        { title: "Pneumonia Management Score", scoreValue: overallKpis.avgPneumoniaManagement },
+        { title: "Diarrhea Management Score", scoreValue: overallKpis.avgDiarrheaManagement },
+        { title: "Malaria Management Score", scoreValue: overallKpis.avgMalariaManagement },
+        { title: "Malnutrition Management Score", scoreValue: overallKpis.avgMalnutritionManagement },
+        { title: "Anemia Management Score", scoreValue: overallKpis.avgAnemiaManagement },
+    ];
+
+    const managementKpiChartKeys = [
+        { key: 'Referral Mgmt', title: 'Referral Mgmt' },
+        { key: 'Pneumonia', title: 'Pneumonia Mgmt' },
+        { key: 'Diarrhea (Mgmt)', title: 'Diarrhea Mgmt' },
+        { key: 'Malaria Mgmt', title: 'Malaria Mgmt' },
+        { key: 'Malnutrition Mgmt', title: 'Malnutrition Mgmt' },
+        { key: 'Anemia Mgmt', title: 'Anemia Mgmt' },
+    ];
+    // --- END NEW ---
+
+    // --- NEW: Hands-on Skills KPI lists ---
+    const handsOnKpiGridList = [
+        { title: "Weight Measured Correctly", scoreValue: overallKpis.avgHandsOnWeight },
+        { title: "Temp Measured Correctly", scoreValue: overallKpis.avgHandsOnTemp },
+        { title: "Height Measured Correctly", scoreValue: overallKpis.avgHandsOnHeight },
+        { title: "Resp. Rate Measured Correctly", scoreValue: overallKpis.avgHandsOnRR },
+        { title: "Malaria RDT Performed Correctly", scoreValue: overallKpis.avgHandsOnRDT },
+        { title: "MUAC Measured Correctly", scoreValue: overallKpis.avgHandsOnMUAC },
+        { title: "Z-Score (WFH) Measured Correctly", scoreValue: overallKpis.avgHandsOnWFH },
+    ];
+    
+    const handsOnKpiChartKeys = [
+        { key: 'Weight', title: 'Weight' }, { key: 'Temp', title: 'Temp' },
+        { key: 'Height', title: 'Height' }, { key: 'Resp. Rate', title: 'Resp. Rate' },
+        { key: 'RDT', title: 'RDT' }, { key: 'MUAC', title: 'MUAC' },
+        { key: 'WFH', title: 'WFH' },
+    ];
+    // --- END NEW KPI lists ---
     // --- END KPI lists ---
 
     // --- REFACTOR: Style for mobile table cells ---
@@ -604,18 +800,46 @@ const MentorshipDashboard = ({
                 />
             </div>
 
-            {/* Row 3: KPI Grid and Line Chart (Disease-Specific) */}
+            {/* Row 3: KPI Grid and Line Chart (Classification) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                  <KpiGridCard
-                    title="Disease-Specific Scores (Average)"
-                    kpis={diseaseKpiGridList}
+                    title="Symptom Classification Scores (Average)"
+                    kpis={classificationKpiGridList}
                 />
                 <KpiLineChart 
-                    title="Adherence Over Time (Disease-Specific)"
+                    title="Adherence Over Time (Classification)"
                     chartData={chartData}
-                    kpiKeys={diseaseKpiChartKeys}
+                    kpiKeys={classificationKpiChartKeys}
                 />
             </div>
+            
+            {/* --- NEW: Row 4: KPI Grid and Line Chart (Case Management) --- */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                 <KpiGridCard
+                    title="Case Management Scores (Average)"
+                    kpis={managementKpiGridList}
+                />
+                <KpiLineChart 
+                    title="Adherence Over Time (Case Management)"
+                    chartData={chartData}
+                    kpiKeys={managementKpiChartKeys}
+                />
+            </div>
+            {/* --- END NEW Row 4 --- */}
+
+            {/* --- MODIFIED: Row 5 (was 4): KPI Grid and Line Chart (Hands-on Skills) --- */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                 <KpiGridCard
+                    title="Hands-on Skills Scores (Average)"
+                    kpis={handsOnKpiGridList}
+                />
+                <KpiLineChart 
+                    title="Adherence Over Time (Hands-on Skills)"
+                    chartData={chartData}
+                    kpiKeys={handsOnKpiChartKeys}
+                />
+            </div>
+            {/* --- END MODIFIED Row 5 --- */}
             
             {/* --- END MODIFIED KPI Layout --- */}
 
@@ -639,12 +863,32 @@ const MentorshipDashboard = ({
                             <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Pneumonia Management Score</th>
                             <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Diarrhea Classification Score</th>
                             <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Diarrhea Management Score</th>
+                            
+                            {/* --- NEW KPI Headers --- */}
+                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Referral Identification</th>
+                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Referral Management</th>
+                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Malaria Classification</th>
+                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Malaria Management</th>
+                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Malnutrition Identification</th>
+                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Malnutrition Management</th>
+                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Anemia Management</th>
+                            {/* --- END NEW --- */}
+
+                            {/* --- NEW: Hands-on Skills Headers --- */}
+                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Weight Correct</th>
+                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Temp Correct</th>
+                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Height Correct</th>
+                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Resp. Rate Correct</th>
+                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">RDT Correct</th>
+                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">MUAC Correct</th>
+                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">WFH Correct</th>
+                            {/* --- END NEW --- */}
                         </tr>
                     </thead>
                     <tbody className="bg-white block md:table-row-group">
                         {stateKpis.length === 0 ? (
                             <tr className="block md:table-row">
-                                <td colSpan="10" className="px-2 py-4 text-center text-gray-500 block md:table-cell">
+                                <td colSpan="24" className="px-2 py-4 text-center text-gray-500 block md:table-cell">
                                     No completed visits match the current filters.
                                 </td>
                             </tr>
@@ -685,6 +929,54 @@ const MentorshipDashboard = ({
                                     <td data-label="Diarrhea Mgmt." className={dataCellStyles}>
                                         <ScoreText value={state.avgDiarrheaManagement} />
                                     </td>
+                                    
+                                    {/* --- NEW KPI Cells --- */}
+                                    <td data-label="Referral ID" className={dataCellStyles}>
+                                        <ScoreText value={state.avgReferralCaseCount} />
+                                    </td>
+                                    <td data-label="Referral Mgmt" className={dataCellStyles}>
+                                        <ScoreText value={state.avgReferralManagement} />
+                                    </td>
+                                    <td data-label="Malaria Class." className={dataCellStyles}>
+                                        <ScoreText value={state.avgMalariaClassification} />
+                                    </td>
+                                    <td data-label="Malaria Mgmt" className={dataCellStyles}>
+                                        <ScoreText value={state.avgMalariaManagement} />
+                                    </td>
+                                    <td data-label="Malnutrition ID" className={dataCellStyles}>
+                                        <ScoreText value={state.avgMalnutritionCaseCount} />
+                                    </td>
+                                    <td data-label="Malnutrition Mgmt" className={dataCellStyles}>
+                                        <ScoreText value={state.avgMalnutritionManagement} />
+                                    </td>
+                                    <td data-label="Anemia Mgmt" className={dataCellStyles}>
+                                        <ScoreText value={state.avgAnemiaManagement} />
+                                    </td>
+                                    {/* --- END NEW --- */}
+
+                                    {/* --- NEW: Hands-on Skills Cells --- */}
+                                    <td data-label="Weight" className={dataCellStyles}>
+                                        <ScoreText value={state.avgHandsOnWeight} />
+                                    </td>
+                                    <td data-label="Temp" className={dataCellStyles}>
+                                        <ScoreText value={state.avgHandsOnTemp} />
+                                    </td>
+                                    <td data-label="Height" className={dataCellStyles}>
+                                        <ScoreText value={state.avgHandsOnHeight} />
+                                    </td>
+                                    <td data-label="Resp. Rate" className={dataCellStyles}>
+                                        <ScoreText value={state.avgHandsOnRR} />
+                                    </td>
+                                    <td data-label="RDT" className={dataCellStyles}>
+                                        <ScoreText value={state.avgHandsOnRDT} />
+                                    </td>
+                                    <td data-label="MUAC" className={dataCellStyles}>
+                                        <ScoreText value={state.avgHandsOnMUAC} />
+                                    </td>
+                                    <td data-label="WFH" className={dataCellStyles}>
+                                        <ScoreText value={state.avgHandsOnWFH} />
+                                    </td>
+                                    {/* --- END NEW --- */}
                                 </tr>
                             ))
                         )}

@@ -413,7 +413,7 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
 
                                 {!showOtherFacilities && facilitiesWithoutService.length > 0 && (
                                     <button type="button" onClick={() => setShowOtherFacilities(true)} className="text-sm text-sky-600 hover:text-sky-800 hover:underline focus:outline-none">
-                                        لم تجد المنشأة؟ عرض المنشآت الأخرى ({facilitiesWithoutService.length})
+                                        لم تجد المنشأة؟ عرض المنشآt الأخرى ({facilitiesWithoutService.length})
                                     </button>
                                 )}
                                 
@@ -477,7 +477,7 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
 
 // --- REUSABLE FORM SECTION FOR SHARED FIELDS ---
 
-const SharedFacilityFields = ({ formData, handleChange, handleStateChange, isPublicForm = false, isReadOnly = false }) => {
+export const SharedFacilityFields = ({ formData, handleChange, handleStateChange, isPublicForm = false, isReadOnly = false }) => {
     return (
     <>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

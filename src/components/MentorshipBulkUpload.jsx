@@ -206,7 +206,7 @@ const IMNCI_FORM_STRUCTURE = [
             {
                 subgroupTitle: 'في حالة فقر الدم',
                 scoreKey: 'anemia_treatment',
-                skills: [ { key: 'skill_anemia_iron', label: 'هل وصف شراب حديد بصورة صحيحة' }, { key: 'skill_anemia_iron_dose', label: 'هل أعطى الجرعة الأولى من شراب حديد بصورة صحيحة', relevant: "${ts_skill_anemia_iron}='yes'" }, ],
+                skills: [ { key: 'skill_anemia_iron', label: 'هل وصف شراب حديد بصورة صحيحة' }, { key: 'skill_anemia_iron_dose', label: 'هل أعطى الجrعة الأولى من شراب حديد بصورة صحيحة', relevant: "${ts_skill_anemia_iron}='yes'" }, ],
                 relevant: (formData) => {
                     const didClassifyCorrectly = formData.assessment_skills?.skill_anemia_classify === 'yes';
                     const workerCls = formData.assessment_skills?.worker_anemia_classification;
@@ -261,6 +261,23 @@ const calculateScores = (formData) => {
     let totalMaxScore = 0;
     let totalCurrentScore = 0;
 
+    // --- NEW HANDS-ON SKILLS VARS ---
+    let handsOnWeight_score = 0, handsOnWeight_max = 0;
+    let handsOnTemp_score = 0, handsOnTemp_max = 0;
+    let handsOnHeight_score = 0, handsOnHeight_max = 0;
+    let handsOnRR_score = 0, handsOnRR_max = 0;
+    let handsOnRDT_score = 0, handsOnRDT_max = 0;
+    let handsOnMUAC_score = 0, handsOnMUAC_max = 0;
+    let handsOnWFH_score = 0, handsOnWFH_max = 0;
+    // --- END NEW HANDS-ON SKILLS VARS ---
+
+    // --- NEW KPI VARS (Referral, Malaria, Malnutrition) ---
+    let totalReferralCases_max = 0;
+    let totalFeverCases_Malaria = 0;
+    let totalCorrectFeverClassifications_Malaria = 0;
+    let totalMalnutritionCases_max = 0;
+    // --- END NEW KPI VARS ---
+
     IMNCI_FORM_STRUCTURE.forEach(group => {
         let groupCurrentScore = 0;
         let groupMaxScore = group.maxScore;
@@ -274,6 +291,38 @@ const calculateScores = (formData) => {
             totalMaxScore += groupMaxScore;
             totalCurrentScore += groupCurrentScore;
 
+            // --- NEW KPI: Calculate Effective Classifications to find Referrals ---
+            const as = formData.assessment_skills;
+            const didClassifyCough = as.skill_classify_cough === 'yes';
+            const effectiveCoughCls = didClassifyCough ? as.worker_cough_classification : as.supervisor_correct_cough_classification;
+            
+            const didClassifyDiarrhea = as.skill_classify_diarrhea === 'yes';
+            const effectiveDiarrheaCls = didClassifyDiarrhea ? as.worker_diarrhea_classification : as.supervisor_correct_diarrhea_classification;
+            
+            const didClassifyFever = as.skill_classify_fever === 'yes';
+            const effectiveFeverCls = didClassifyFever ? as.worker_fever_classification : as.supervisor_correct_fever_classification;
+            
+            const didClassifyEar = as.skill_classify_ear === 'yes';
+            const effectiveEarCls = didClassifyEar ? as.worker_ear_classification : as.supervisor_correct_ear_classification;
+            
+            const didClassifyMal = as.skill_mal_classify === 'yes';
+            const effectiveMalnutritionCls = didClassifyMal ? as.worker_malnutrition_classification : as.supervisor_correct_malnutrition_classification;
+            
+            const didClassifyAnemia = as.skill_anemia_classify === 'yes';
+            const effectiveAnemiaCls = didClassifyAnemia ? as.worker_anemia_classification : as.supervisor_correct_anemia_classification;
+
+            if (
+                effectiveCoughCls === 'التهاب رئوي شديد أو مرض شديد جدا' ||
+                (effectiveDiarrheaCls && (effectiveDiarrheaCls['جفاف شديد'] || effectiveDiarrheaCls['إسهال مستمر شديد'])) ||
+                (effectiveFeverCls && (effectiveFeverCls['مرض حمي شديد'] || effectiveFeverCls['حصبة مصحوبة بمضاعفات شديدة'])) ||
+                effectiveEarCls === 'التهاب العظمة خلف الاذن' ||
+                effectiveMalnutritionCls === 'سوء تغذية شديد مصحوب بمضاعفات' ||
+                effectiveAnemiaCls === 'فقر دم شديد'
+            ) {
+                totalReferralCases_max = 1;
+            }
+            // --- END NEW KPI ---
+
         } else if (group.sectionKey) {
             const sectionData = formData[group.sectionKey] || {};
 
@@ -284,6 +333,18 @@ const calculateScores = (formData) => {
                 let isTreatmentSubgroup = group.sectionKey === 'treatment_skills';
                 let dynamicSubgroupMaxScore = 0;
                 let isSubgroupRelevantForScoring = true;
+
+                // --- NEW KPI: Check Malnutrition Cases ---
+                if (group.sectionKey === 'assessment_skills' && subgroup.scoreKey === 'malnutrition') {
+                    const didClassifyMal = sectionData['skill_mal_classify'] === 'yes';
+                    const workerClsMal = sectionData['worker_malnutrition_classification'];
+                    const supervisorClsMal = sectionData['supervisor_correct_malnutrition_classification'];
+                    const effectiveClsMal = didClassifyMal ? workerClsMal : supervisorClsMal;
+                    if (effectiveClsMal === 'سوء تغذية شديد غير مصحوب بمضاعفات' || effectiveClsMal === 'سوء تغذية حاد متوسط') { 
+                        totalMalnutritionCases_max = 1; 
+                    }
+                }
+                // --- END NEW KPI ---
 
                 if (isTreatmentSubgroup && subgroup.relevant) {
                     if (typeof subgroup.relevant === 'function') isSubgroupRelevantForScoring = subgroup.relevant(formData);
@@ -299,152 +360,242 @@ const calculateScores = (formData) => {
 
                 if (subgroup.isSymptomGroupContainer) {
                     subgroup.symptomGroups?.forEach(sg => {
-                        const symptomPrefix = sg.mainSkill.key.split('_')[2];
-                        const askSkillKey = sg.mainSkill.key;
-                        const confirmsKey = `supervisor_confirms_${symptomPrefix}`;
-                        const checkSkillKey = `skill_check_${symptomPrefix === 'cough' ? 'rr' : symptomPrefix === 'diarrhea' ? 'dehydration' : symptomPrefix === 'fever' ? 'rdt' : 'ear'}`;
-                        const classifySkillKey = `skill_classify_${symptomPrefix}`;
-                        const askValue = sectionData[askSkillKey];
+                         const symptomPrefix = sg.mainSkill.key.split('_')[2];
+                         const askSkillKey = sg.mainSkill.key;
+                         const confirmsKey = `supervisor_confirms_${symptomPrefix}`;
+                         const checkSkillKey = `skill_check_${symptomPrefix === 'cough' ? 'rr' : symptomPrefix === 'diarrhea' ? 'dehydration' : symptomPrefix === 'fever' ? 'rdt' : 'ear'}`;
+                         const classifySkillKey = `skill_classify_${symptomPrefix}`;
+                         const askValue = sectionData[askSkillKey];
 
-                        let symptomCurrentScore = 0;
-                        let symptomMaxScore = 0;
+                         let currentSymptomScore = 0;
+                         let maxSymptomScore = 0;
 
-                        if (askValue === 'yes' || askValue === 'no') {
-                            symptomMaxScore += 1;
-                            if (askValue === 'yes') {
-                                symptomCurrentScore += 1;
-                            }
-                        }
+                         if (askValue === 'yes' || askValue === 'no') {
+                            maxSymptomScore += 1;
+                            if (askValue === 'yes') currentSymptomScore += 1;
+                         }
 
-                        if (askValue === 'yes' && formData.assessment_skills[confirmsKey] === 'yes') {
-                            if (sectionData[checkSkillKey] === 'yes' || sectionData[checkSkillKey] === 'no') {
-                                symptomMaxScore += 1;
-                                if (sectionData[checkSkillKey] === 'yes') symptomCurrentScore += 1;
-                            }
+                         if (askValue === 'yes' && formData.assessment_skills?.[confirmsKey] === 'yes') {
+                             if (sectionData[checkSkillKey] === 'yes' || sectionData[checkSkillKey] === 'no') {
+                                maxSymptomScore += 1;
+                                if (sectionData[checkSkillKey] === 'yes') currentSymptomScore += 1;
+                             }
                              if (sectionData[classifySkillKey] === 'yes' || sectionData[classifySkillKey] === 'no') {
-                                symptomMaxScore += 1;
-                                if (sectionData[classifySkillKey] === 'yes') symptomCurrentScore += 1;
+                                maxSymptomScore += 1;
+                                if (sectionData[classifySkillKey] === 'yes') currentSymptomScore += 1;
+                             }
+                         }
+
+                        // --- NEW HANDS-ON SKILL LOGIC (Symptoms) ---
+                        if (askValue === 'yes' && formData.assessment_skills[confirmsKey] === 'yes') {
+                            const checkValue = sectionData[checkSkillKey];
+                            if (symptomPrefix === 'cough') {
+                                if (checkValue === 'yes' || checkValue === 'no') handsOnRR_max++;
+                                if (checkValue === 'yes') handsOnRR_score++;
+                            } else if (symptomPrefix === 'fever') {
+                                if (checkValue === 'yes' || checkValue === 'no') handsOnRDT_max++;
+                                if (checkValue === 'yes') handsOnRDT_score++;
                             }
                         }
-
-                        mainSymptomsCurrentScore += symptomCurrentScore;
-                        mainSymptomsMaxScore += symptomMaxScore;
-
-                        if (sg.mainSkill?.scoreKey) {
-                             scores[sg.mainSkill.scoreKey] = { score: symptomCurrentScore, maxScore: symptomMaxScore };
+                        // --- END NEW HANDS-ON SKILL LOGIC ---
+                        
+                        // --- NEW KPI: Malaria Classification ---
+                        if (symptomPrefix === 'fever') {
+                            const confirmsValue = formData.assessment_skills[confirmsKey];
+                            const classifyValue = sectionData[classifySkillKey];
+                            if (askValue === 'yes' && confirmsValue === 'yes') {
+                                const didClassifyCorrectly = classifyValue === 'yes';
+                                const workerCls = formData.assessment_skills[`worker_${symptomPrefix}_classification`] || {};
+                                const supervisorCls = formData.assessment_skills[`supervisor_correct_${symptomPrefix}_classification`] || {};
+                                const effectiveCls = didClassifyCorrectly ? workerCls : supervisorCls;
+                                
+                                if (effectiveCls['ملاريا']) {
+                                    totalFeverCases_Malaria = 1;
+                                    if (didClassifyCorrectly) {
+                                        totalCorrectFeverClassifications_Malaria = 1;
+                                    }
+                                }
+                            }
                         }
+                        // --- END NEW KPI ---
+
+                         subgroupCurrentScore += currentSymptomScore;
+                         subgroupRelevantMaxScore += maxSymptomScore;
+                         if (sg.mainSkill.scoreKey) {
+                             scores[sg.mainSkill.scoreKey] = { score: currentSymptomScore, maxScore: maxSymptomScore };
+                         }
                     });
-
-                    if (isSubgroupScored) {
-                        subgroupCurrentScore = mainSymptomsCurrentScore;
-                        subgroupMaxScore = mainSymptomsMaxScore;
-                    }
-
                 } else if (Array.isArray(subgroup.skills)) {
-                    
                     subgroup.skills.forEach(skill => {
-                        let isSkillRelevantForScoring = isSubgroupRelevantForScoring;
-                        if (isSubgroupRelevantForScoring && skill.relevant) {
-                             if (typeof skill.relevant === 'function') isSkillRelevantForScoring = skill.relevant(formData);
-                             else if (typeof skill.relevant === 'string') isSkillRelevantForScoring = evaluateRelevance(skill.relevant, formData);
+                        let isSkillRelevantForScoring = true;
+                        if (skill.relevant) {
+                             if (typeof skill.relevant === 'function') {
+                                isSkillRelevantForScoring = skill.relevant(formData);
+                             } else if (typeof skill.relevant === 'string') {
+                                 const simplifiedRelevanceString = skill.relevant.replace(/\$\{(.*?)\}/g, (match, key) => {
+                                      let val = formData[key] ?? sectionData[key] ?? formData.assessment_skills?.[key] ?? formData.treatment_skills?.[key];
+                                      if (key.startsWith('as_') && val === undefined) val = formData.assessment_skills?.[key.replace('as_', '')];
+                                      if (key.startsWith('ts_') && val === undefined) val = formData.treatment_skills?.[key.replace('ts_', '')];
+                                      return `'${val || ''}'`;
+                                 });
+                                 try {
+                                      isSkillRelevantForScoring = evaluateRelevance(skill.relevant, formData); // Use the dedicated helper for consistency
+                                 } catch (e) {
+                                      console.warn("Error evaluating skill relevance:", simplifiedRelevanceString, e);
+                                      isSkillRelevantForScoring = false;
+                                 }
+                             } else {
+                                isSkillRelevantForScoring = false;
+                             }
                         }
 
                         if (isSkillRelevantForScoring) {
                             const value = sectionData[skill.key];
-                            
-                            if (isTreatmentSubgroup) {
-                                if (value === 'yes' || value === 'no') {
-                                    totalTreatmentMaxScore += 1;
-                                    if (isSubgroupScored) dynamicSubgroupMaxScore += 1;
+
+                            // --- NEW HANDS-ON SKILL LOGIC (Vitals & Malnutrition) ---
+                            if (subgroup.scoreKey === 'vitalSigns') {
+                                if (skill.key === 'skill_weight') {
+                                    if (value === 'yes' || value === 'no') handsOnWeight_max++;
+                                    if (value === 'yes') handsOnWeight_score++;
+                                } else if (skill.key === 'skill_temp') {
+                                    if (value === 'yes' || value === 'no') handsOnTemp_max++;
+                                    if (value === 'yes') handsOnTemp_score++;
+                                } else if (skill.key === 'skill_height') {
+                                    if (value === 'yes' || value === 'no') handsOnHeight_max++;
+                                    if (value === 'yes') handsOnHeight_score++;
                                 }
-                            } else {
-                                const isVitalSignsNa = (subgroup.scoreKey === 'vitalSigns' && value === 'na');
-                                if ((value === 'yes' || value === 'no') && !isVitalSignsNa) {
-                                    totalAssessmentMaxScore += 1;
+                            } else if (subgroup.scoreKey === 'malnutrition') {
+                                if (skill.key === 'skill_mal_muac') {
+                                    if (value === 'yes' || value === 'no') handsOnMUAC_max++;
+                                    if (value === 'yes') handsOnMUAC_score++;
+                                } else if (skill.key === 'skill_mal_wfh') {
+                                    if (value === 'yes' || value === 'no') handsOnWFH_max++;
+                                    if (value === 'yes') handsOnWFH_score++;
+                                }
+                            }
+                            // --- END NEW HANDS-ON SKILL LOGIC ---
+
+                            if (value === 'yes' || value === 'no') {
+                                // subgroupRelevantMaxScore is for the max score of *this* subgroup
+                                subgroupRelevantMaxScore += 1;
+                                
+                                // This is for the *group* total max score (assessment vs treatment)
+                                if (isTreatmentSubgroup) {
+                                    totalTreatmentMaxScore += 1;
+                                } else {
+                                    const isVitalSignsNa = (subgroup.scoreKey === 'vitalSigns' && value === 'na');
+                                    if (!isVitalSignsNa) { // Don't count N/A vitals
+                                        totalAssessmentMaxScore += 1;
+                                    }
                                 }
                             }
 
                             if (value === 'yes') {
-                                if (isTreatmentSubgroup) {
-                                    groupCurrentScore += 1; 
-                                }
-                                if (isSubgroupScored) {
-                                    subgroupCurrentScore += 1; 
-                                }
+                                subgroupCurrentScore += 1;
                             }
                         }
                     });
-
-                    if (isTreatmentSubgroup) {
-                        if (isSubgroupScored) subgroupMaxScore = dynamicSubgroupMaxScore;
-                    }
-
-                    if (!isTreatmentSubgroup) {
-                         groupCurrentScore += subgroupCurrentScore; 
-                    }
                 }
 
+                groupCurrentScore += subgroupCurrentScore;
+                
+                // This logic was flawed. We should use the dynamically calculated subgroupRelevantMaxScore
+                // for *all* subgroups, not just treatment ones, because assessment ones also have dynamic maxes.
                 if (isSubgroupScored) {
-                    if (subgroup.scoreKey === 'vitalSigns') {
-                        let vitalMax = 0;
-                        if (sectionData['skill_weight'] === 'yes' || sectionData['skill_weight'] === 'no') vitalMax++;
-                        if (sectionData['skill_temp'] === 'yes' || sectionData['skill_temp'] === 'no') vitalMax++;
-                        if (sectionData['skill_height'] === 'yes' || sectionData['skill_height'] === 'no') vitalMax++;
-                        subgroupMaxScore = vitalMax;
-                    } else if (subgroup.scoreKey === 'dangerSigns') {
-                        let dangerMax = 0;
-                        if (sectionData['skill_ds_drink'] === 'yes' || sectionData['skill_ds_drink'] === 'no') dangerMax++;
-                        if (sectionData['skill_ds_vomit'] === 'yes' || sectionData['skill_ds_vomit'] === 'no') dangerMax++;
-                        if (sectionData['skill_ds_convulsion'] === 'yes' || sectionData['skill_ds_convulsion'] === 'no') dangerMax++;
-                        if (sectionData['skill_ds_conscious'] === 'yes' || sectionData['skill_ds_conscious'] === 'no') dangerMax++;
-                        subgroupMaxScore = dangerMax;
-                    } else if (!isTreatmentSubgroup && !subgroup.isSymptomGroupContainer) {
-                        let subMax = 0;
-                        subgroup.skills.forEach(skill => {
-                            const skillValue = sectionData[skill.key];
-                            if(skillValue === 'yes' || skillValue === 'no') subMax++;
-                        });
-                        subgroupMaxScore = subMax;
+                    if (subgroup.isSymptomGroupContainer) {
+                        subgroupMaxScore = mainSymptomsMaxScore; // Already calculated
+                        groupRelevantMaxScore += mainSymptomsMaxScore; // Add to group total
+                    } else {
+                        subgroupMaxScore = subgroupRelevantMaxScore;
+                        // We add to groupRelevantMaxScore *outside* this loop for assessment
+                        // But for treatment, we need to add it *here*
+                        if(isTreatmentSubgroup) {
+                             groupRelevantMaxScore += subgroupRelevantMaxScore;
+                        }
                     }
-                    
                     scores[subgroup.scoreKey] = { score: subgroupCurrentScore, maxScore: subgroupMaxScore };
                 }
             });
 
-            if (group.scoreKey === 'treatment') {
-                currentTreatmentScore = groupCurrentScore;
-                groupMaxScore = totalTreatmentMaxScore;
-                scores[group.scoreKey] = { score: currentTreatmentScore, maxScore: groupMaxScore };
-                totalMaxScore += groupMaxScore;
-                totalCurrentScore += currentTreatmentScore;
-            } else if (group.sectionKey === 'assessment_skills') {
+            // This block is for the total Assessment score
+            if (group.sectionKey === 'assessment_skills') {
                 scores['assessment_total_score'] = { 
-                    score: groupCurrentScore + mainSymptomsCurrentScore, 
-                    maxScore: totalAssessmentMaxScore + mainSymptomsMaxScore 
+                    score: groupCurrentScore, // contains sum of vital, danger, mal, anemia, imm, other
+                    maxScore: totalAssessmentMaxScore // contains sum of their relevant maxes
                 };
-                totalMaxScore += totalAssessmentMaxScore + mainSymptomsMaxScore;
-                totalCurrentScore += groupCurrentScore + mainSymptomsCurrentScore;
+                 totalCurrentScore += groupCurrentScore;
+                 totalMaxScore += totalAssessmentMaxScore;
+            } 
+            // This block is for the total Treatment score
+            else if (group.scoreKey === 'treatment') {
+                groupMaxScore = totalTreatmentMaxScore; // Max score is the sum of all relevant skills
+                scores[group.scoreKey] = { score: groupCurrentScore, maxScore: groupMaxScore };
+                totalMaxScore += groupMaxScore;
+                totalCurrentScore += groupCurrentScore;
             }
         }
     });
 
-    scores.treatmentScoreForSave = currentTreatmentScore;
+    // Add back the mainSymptom scores to the total (they were separate)
+    totalCurrentScore += mainSymptomsCurrentScore;
+    totalMaxScore += mainSymptomsMaxScore;
+    
+    // Recalculate assessment_total_score to include symptoms
+    scores['assessment_total_score'].score += mainSymptomsCurrentScore;
+    scores['assessment_total_score'].maxScore += mainSymptomsMaxScore;
+    
+    // Final Overall Score
     scores.overallScore = { score: totalCurrentScore, maxScore: totalMaxScore };
 
+    // Format payload
     const scoresPayload = {};
      for (const key in scores) {
-         if (key !== 'treatmentScoreForSave' && scores[key]?.score !== undefined && scores[key]?.maxScore !== undefined) {
+         if (key !== 'treatment' && scores[key]?.score !== undefined && scores[key]?.maxScore !== undefined) {
              scoresPayload[`${key}_score`] = scores[key].score;
              scoresPayload[`${key}_maxScore`] = scores[key].maxScore;
          }
      }
-     if(scores['treatment_score']){
-        scoresPayload['treatment_score'] = scores['treatmentScoreForSave']; 
+     if(scores['treatment']){
+        scoresPayload['treatment_score'] = scores['treatment'].score;
         scoresPayload['treatment_maxScore'] = scores['treatment'].maxScore;
      } else {
         scoresPayload['treatment_score'] = 0;
         scoresPayload['treatment_maxScore'] = 0;
      }
+
+    // --- NEW HANDS-ON SKILL SCORES ---
+    scoresPayload['handsOnWeight_score'] = handsOnWeight_score;
+    scoresPayload['handsOnWeight_maxScore'] = handsOnWeight_max;
+    scoresPayload['handsOnTemp_score'] = handsOnTemp_score;
+    scoresPayload['handsOnTemp_maxScore'] = handsOnTemp_max;
+    scoresPayload['handsOnHeight_score'] = handsOnHeight_score;
+    scoresPayload['handsOnHeight_maxScore'] = handsOnHeight_max;
+    scoresPayload['handsOnRR_score'] = handsOnRR_score;
+    scoresPayload['handsOnRR_maxScore'] = handsOnRR_max;
+    scoresPayload['handsOnRDT_score'] = handsOnRDT_score;
+    scoresPayload['handsOnRDT_maxScore'] = handsOnRDT_max;
+    scoresPayload['handsOnMUAC_score'] = handsOnMUAC_score;
+    scoresPayload['handsOnMUAC_maxScore'] = handsOnMUAC_max;
+    scoresPayload['handsOnWFH_score'] = handsOnWFH_score;
+    scoresPayload['handsOnWFH_maxScore'] = handsOnWFH_max;
+    // --- END NEW HANDS-ON SKILL SCORES ---
+
+    // --- NEW KPI SCORES (Referral, Malaria, Malnutrition, Anemia) ---
+    scoresPayload['referralCaseCount_score'] = totalReferralCases_max;
+    scoresPayload['referralCaseCount_maxScore'] = 1;
+    scoresPayload['referralManagement_score'] = scores['ref_treatment']?.score || 0;
+    scoresPayload['referralManagement_maxScore'] = scores['ref_treatment']?.maxScore || 0;
+    scoresPayload['malariaClassification_score'] = totalCorrectFeverClassifications_Malaria;
+    scoresPayload['malariaClassification_maxScore'] = totalFeverCases_Malaria;
+    scoresPayload['malariaManagement_score'] = scores['mal_treatment']?.score || 0;
+    scoresPayload['malariaManagement_maxScore'] = scores['mal_treatment']?.maxScore || 0;
+    scoresPayload['malnutritionCaseCount_score'] = totalMalnutritionCases_max;
+    scoresPayload['malnutritionCaseCount_maxScore'] = 1;
+    scoresPayload['malnutritionManagement_score'] = scores['nut_treatment']?.score || 0;
+    scoresPayload['malnutritionManagement_maxScore'] = scores['nut_treatment']?.maxScore || 0;
+    scoresPayload['anemiaManagement_score'] = scores['anemia_treatment']?.score || 0;
+    scoresPayload['anemiaManagement_maxScore'] = scores['anemia_treatment']?.maxScore || 0;
+    // --- END NEW KPI SCORES ---
 
     return scoresPayload;
 };
