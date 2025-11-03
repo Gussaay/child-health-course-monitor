@@ -15,14 +15,22 @@ import {
     getFacilitatorSubmissionByEmail,
     updateFacilitatorApplicationStatus,
     incrementFacilitatorApplicationOpenCount,
-    uploadFile
+    uploadFile,
+    getFacilitatorApplicationSettings,
+    // --- ADDED: Import upload/delete/upsert ---
+    deleteFile
 } from '../data';
 import { COURSE_TYPES_FACILITATOR, STATE_LOCALITIES } from './constants.js';
-import { auth } from '../firebase';
+// --- MODIFIED: Import db, firestore functions, and permission configs ---
+import { auth, db } from '../firebase';
+import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore'; // Added imports
 import { onAuthStateChanged } from 'firebase/auth';
 import { useDataCache } from '../DataContext'; 
+import { DEFAULT_ROLE_PERMISSIONS, ALL_PERMISSIONS } from './AdminDashboard'; // Added import
+// --- END MODIFICATION ---
 
 const getCertificateName = (key) => {
+    // ... (component unchanged)
     const names = {
         IMNCI: 'IMNCI ToT Certificate',
         ETAT: 'ETAT ToT Certificate',
@@ -37,6 +45,7 @@ const getCertificateName = (key) => {
 };
 
 function ViewCertificatesModal({ isOpen, onClose, facilitator }) {
+    // ... (component unchanged)
     if (!facilitator) return null;
 
     const certs = facilitator.certificateUrls ? Object.entries(facilitator.certificateUrls) : [];
@@ -64,6 +73,7 @@ function ViewCertificatesModal({ isOpen, onClose, facilitator }) {
 }
 
 function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleStatus }) {
+    // ... (component unchanged)
     const [showLinkCopied, setShowLinkCopied] = useState(false);
     const link = `${window.location.origin}/public/facilitator-application`;
 
@@ -118,6 +128,7 @@ function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleSta
 }
 
 const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
+    // ... (component unchanged)
     const [excelData, setExcelData] = useState([]);
     const [headers, setHeaders] = useState([]);
     const [fieldMappings, setFieldMappings] = useState({});
@@ -230,6 +241,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
     };
 
     const renderPreview = () => {
+        // ... (function unchanged)
         if (excelData.length === 0) return null;
         return (
             <div className="mt-4 overflow-auto max-h-60">
@@ -309,6 +321,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
 };
 
 function SubmissionDetails({ submission }) {
+    // ... (component unchanged)
     const fieldsToShow = {
         name: "Name",
         phone: "Phone",
@@ -357,7 +370,9 @@ function SubmissionDetails({ submission }) {
 }
 
 // --- Reusable Facilitator Form Fields Component ---
-function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublicForm = false }) {
+// --- *** MODIFICATION: Added 'export' keyword *** ---
+export function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublicForm = false }) {
+    // ... (component unchanged)
     const { name, phone, email, isUserEmail, courses, totDates, certificateUrls, currentState, currentLocality, directorCourse, directorCourseDate, followUpCourse, followUpCourseDate, teamLeaderCourse, teamLeaderCourseDate, isClinicalInstructor, comments, backgroundQualification, backgroundQualificationOther } = data;
 
     const handleFieldChange = (field, value) => onDataChange({ ...data, [field]: value });
@@ -540,6 +555,7 @@ export function FacilitatorsView({
     refreshData,
     permissions
 }) {
+    // ... (component unchanged)
     const {
         facilitators,
         pendingFacilitatorSubmissions: pendingSubmissions,
@@ -574,10 +590,52 @@ export function FacilitatorsView({
         fetchFacilitatorApplicationSettings(true); // force=true
     };
 
+    // --- MODIFIED: handleApprove function ---
     const handleApprove = async (submission) => {
-        await onApproveSubmission(submission); 
-        refreshData(); 
+        try {
+            // 1. Call the original approval function (creates the facilitator profile)
+            await onApproveSubmission(submission); 
+
+            // 2. --- NEW LOGIC: Assign 'facilitator' role ---
+            if (submission.email) {
+                const facilitatorRole = 'facilitator';
+                const newPermissions = DEFAULT_ROLE_PERMISSIONS[facilitatorRole];
+
+                if (!newPermissions) {
+                    console.warn(`[RoleSync] Default permissions for role '${facilitatorRole}' not found. Skipping role assignment.`);
+                } else {
+                    // Find the user by email
+                    const usersRef = collection(db, "users");
+                    const q = query(usersRef, where("email", "==", submission.email));
+                    const querySnapshot = await getDocs(q);
+
+                    if (!querySnapshot.empty) {
+                        const userDoc = querySnapshot.docs[0];
+                        const userRef = doc(db, "users", userDoc.id);
+                        
+                        const updatePayload = {
+                            role: facilitatorRole,
+                            permissions: { ...ALL_PERMISSIONS, ...newPermissions }
+                        };
+                        
+                        await updateDoc(userRef, updatePayload);
+                        console.log(`[RoleSync] Successfully assigned 'facilitator' role to ${submission.email}`);
+                    } else {
+                        console.warn(`[RoleSync] Could not find user with email ${submission.email} to assign role.`);
+                    }
+                }
+            } else {
+                 console.warn(`[RoleSync] Submission ${submission.id} has no email. Skipping role assignment.`);
+            }
+
+            // 3. Refresh data
+            refreshData(); 
+        } catch (error) {
+             console.error("Error during approval or role assignment:", error);
+             // Optionally show an error toast to the user
+        }
     };
+    // --- END MODIFICATION ---
 
     const handleReject = async (submissionId) => {
         await onRejectSubmission(submissionId); 
@@ -585,11 +643,10 @@ export function FacilitatorsView({
     };
 
     const filteredFacilitators = useMemo(() => {
-        // --- START OF FIX: Handle null facilitators ---
+        // ... (function unchanged)
         if (!facilitators) {
             return [];
         }
-        // --- END OF FIX ---
         
         if (permissions.manageScope === 'federal') {
             return facilitators;
@@ -724,7 +781,9 @@ export function FacilitatorsView({
     );
 }
 
-export function FacilitatorForm({ initialData, onCancel, onSave }) {
+// --- MODIFICATION: Component signature changed ---
+export function FacilitatorForm({ initialData, onCancel, onSave, setToast, setLoading }) {
+// --- END MODIFICATION ---
     const [formData, setFormData] = useState({
         name: '', phone: '', email: '', courses: [], totDates: {}, certificateUrls: {}, currentState: '',
         currentLocality: '', directorCourse: 'No', directorCourseDate: '', followUpCourse: 'No', 
@@ -743,7 +802,8 @@ export function FacilitatorForm({ initialData, onCancel, onSave }) {
         }
     };
 
-    const handleSubmit = () => {
+    // --- MODIFICATION: handleSubmit now contains all save logic ---
+    const handleSubmit = async () => {
         if (!formData.name || !formData.phone) {
             setError('Facilitator Name and Phone Number are required.');
             return;
@@ -756,8 +816,67 @@ export function FacilitatorForm({ initialData, onCancel, onSave }) {
         }
         
         setError('');
-        onSave({ ...formData, certificateFiles });
+        
+        // --- START: MOVED LOGIC FROM App.jsx ---
+        try { 
+            setLoading(true); 
+            const payload = { ...formData, certificateFiles }; // Get data from state
+            const { certificateFiles: files, ...data } = payload; 
+            let urls = data.certificateUrls || {}; 
+            
+            if (files) { 
+                for (const key in files) { 
+                    // Check against initialData
+                    if (initialData?.certificateUrls?.[key]) await deleteFile(initialData.certificateUrls[key]); 
+                    urls[key] = await uploadFile(files[key]); 
+                } 
+            } 
+            
+            const finalPayload = { ...data, id: initialData?.id, certificateUrls: urls }; 
+            delete finalPayload.certificateFiles; // This key is not in the datamodel
+            
+            // 1. Save the facilitator profile
+            await upsertFacilitator(finalPayload); 
+
+            // 2. --- ROLE ASSIGNMENT LOGIC ---
+            const email = finalPayload.email;
+            if (email) {
+                const facilitatorRole = 'facilitator';
+                const newPermissions = DEFAULT_ROLE_PERMISSIONS[facilitatorRole];
+
+                if (!newPermissions) {
+                    console.warn(`[RoleSync] Default permissions for role '${facilitatorRole}' not found.`);
+                } else {
+                    const usersRef = collection(db, "users");
+                    const q = query(usersRef, where("email", "==", email));
+                    const querySnapshot = await getDocs(q);
+
+                    if (!querySnapshot.empty) {
+                        const userDoc = querySnapshot.docs[0];
+                        await updateDoc(userDoc.ref, {
+                            role: facilitatorRole,
+                            permissions: { ...ALL_PERMISSIONS, ...newPermissions }
+                        });
+                        console.log(`[RoleSync] Successfully assigned 'facilitator' role to ${email}`);
+                    } else {
+                        console.warn(`[RoleSync] Could not find user with email ${email} to assign role.`);
+                    }
+                }
+            } else {
+                console.warn(`[RoleSync] New facilitator has no email. Skipping role assignment.`);
+            }
+            
+            // 3. Call the onSave prop (which is now just for refresh/navigate)
+            onSave(); // This prop is from App.jsx
+
+        } catch (error) { 
+            setToast({ show: true, message: `Error saving: ${error.message}`, type: 'error' }); 
+        } finally { 
+            setLoading(false); 
+        } 
+        // --- END: MOVED LOGIC ---
     };
+    // --- END MODIFICATION ---
 
     return (
         <Card>
@@ -784,6 +903,7 @@ export function FacilitatorForm({ initialData, onCancel, onSave }) {
 }
 
 export function FacilitatorApplicationForm() {
+    // ... (component unchanged)
     const [formData, setFormData] = useState({
         name: '', phone: '', email: '', courses: [], totDates: {}, certificateUrls: {}, currentState: '',
         currentLocality: '', directorCourse: 'No', directorCourseDate: '', followUpCourse: 'No', 
@@ -802,7 +922,11 @@ export function FacilitatorApplicationForm() {
     useEffect(() => {
         const checkStatusAndIncrement = async () => {
             try {
-                const settings = await getFacilitatorApplicationSettings();
+                // --- *** START OF FIX *** ---
+                // Force a server read to bypass any stale cache
+                const settings = await getFacilitatorApplicationSettings(true); 
+                // --- *** END OF FIX *** ---
+
                 if (settings.isActive) {
                     await incrementFacilitatorApplicationOpenCount();
                     setIsLinkActive(true);
@@ -929,6 +1053,7 @@ export function FacilitatorApplicationForm() {
 }
 
 export function FacilitatorReportView({ facilitator, allCourses, onBack }) {
+    // ... (component unchanged)
     const combinedChartRef = useRef(null);
     const imciSubcoursePieRef = useRef(null);
     const [isCertsModalOpen, setIsCertsModalOpen] = useState(false);

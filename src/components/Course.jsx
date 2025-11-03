@@ -4,14 +4,20 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Bar, Line } from 'react-chartjs-2';
 // --- MODIFIED: Added CourseIcon ---
-import { Button, Card, EmptyState, FormGroup, Input, PageHeader, PdfIcon, Select, Spinner, Table, Textarea, CourseIcon } from './CommonComponents';
-import { listAllDataForCourse, listParticipants, listCoordinators, upsertCoordinator, deleteCoordinator, listFunders, upsertFunder, deleteFunder, listFinalReport, upsertFinalReport, deleteFinalReport } from '../data.js';
+import { Button, Card, EmptyState, FormGroup, Input, PageHeader, PdfIcon, Select, Spinner, Table, Textarea, CourseIcon, Modal, CardBody, CardFooter } from './CommonComponents'; // Added Modal, CardBody, CardFooter
+import { listAllDataForCourse, listParticipants, listCoordinators, upsertCoordinator, deleteCoordinator, listFunders, upsertFunder, deleteFunder, listFinalReport, upsertFinalReport, deleteFinalReport, uploadFile } from '../data.js'; // Added uploadFile
 // Updated imports for participant components
 import { ParticipantsView, ParticipantForm } from './Participants';
 import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES,
 } from './constants.js';
 import html2canvas from 'html2canvas';
+// --- ADDED: Import FacilitatorDataForm ---
+import { FacilitatorDataForm } from './Facilitator.jsx';
+// --- ADDED: Imports for Role-Syncing ---
+import { db } from '../firebase';
+import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { DEFAULT_ROLE_PERMISSIONS, ALL_PERMISSIONS } from './AdminDashboard';
 
 // Lazy load components that are not always visible to speed up initial load
 const ReportsView = React.lazy(() => import('./ReportsView').then(module => ({ default: module.ReportsView })));
@@ -507,27 +513,7 @@ export function CourseManagementView({
     );
 }
 
-const NewFacilitatorForm = ({ initialName, onCancel, onSave }) => {
-    const [name, setName] = useState(initialName || '');
-    const [courses, setCourses] = useState([]);
-    const [directorCourse, setDirectorCourse] = useState('No');
-    const [isClinicalInstructor, setIsClinicalInstructor] = useState('No');
-
-    const handleSave = () => {
-        onSave({ name, courses, directorCourse, isClinicalInstructor });
-    };
-
-    return (
-        <Card>
-            <h3 className="text-xl font-bold mb-4">Add New Facilitator</h3>
-            <FormGroup label="Name"><Input value={name} onChange={(e) => setName(e.target.value)} /></FormGroup>
-            <div className="flex gap-2 justify-end mt-4">
-                <Button variant="secondary" onClick={onCancel}>Cancel</Button>
-                <Button onClick={handleSave}>Save Facilitator</Button>
-            </div>
-        </Card>
-    );
-};
+// --- REMOVED: NewFacilitatorForm ---
 
 const NewCoordinatorForm = ({ initialName, onCancel, onSave }) => {
     const [name, setName] = useState(initialName || '');
@@ -679,6 +665,21 @@ export function CourseForm({
     const [courseProject, setCourseProject] = useState(initialData?.course_project || '');
     const [implementedBy, setImplementedBy] = useState(initialData?.implemented_by || '');
 
+
+    // --- NEW: State for Facilitator Modal ---
+    const [isNewFacilitatorModalOpen, setIsNewFacilitatorModalOpen] = useState(false);
+    const [newFacilitatorName, setNewFacilitatorName] = useState(''); // Kept to pre-fill name
+    const initialModalData = {
+        name: '', phone: '', email: '', courses: [], totDates: {}, certificateUrls: {}, currentState: '',
+        currentLocality: '', directorCourse: 'No', directorCourseDate: '', followUpCourse: 'No', 
+        followUpCourseDate: '', teamLeaderCourse: 'No', teamLeaderCourseDate: '', isClinicalInstructor: 'No', comments: '',
+        backgroundQualification: '', backgroundQualificationOther: '',
+    };
+    const [newFacilitatorData, setNewFacilitatorData] = useState(initialModalData);
+    const [newFacilitatorFiles, setNewFacilitatorFiles] = useState({});
+    const [modalError, setModalError] = useState('');
+    const [isModalLoading, setIsModalLoading] = useState(false);
+    // --- END NEW STATE ---
 
     const [directorImciSubType, setDirectorImciSubType] = useState(initialData?.director_imci_sub_type || IMNCI_SUBCOURSE_TYPES[0]);
     const [clinicalImciSubType, setClinicalImciSubType] = useState(initialData?.clinical_instructor_imci_sub_type || IMNCI_SUBCOURSE_TYPES[0]);
@@ -883,23 +884,111 @@ export function CourseForm({
         onSave(payload);
     };
 
-    const [showNewFacilitatorForm, setShowNewFacilitatorForm] = useState(false);
-    const [newFacilitatorName, setNewFacilitatorName] = useState('');
+    // --- REMOVED: const [showNewFacilitatorForm, setShowNewFacilitatorForm] = useState(false); ---
     const [showNewCoordinatorForm, setShowNewCoordinatorForm] = useState(false);
     const [newCoordinatorName, setNewCoordinatorName] = useState('');
     const [showNewFunderForm, setShowNewFunderForm] = useState(false);
     const [newFunderOrgName, setNewFunderOrgName] = useState('');
 
+    // --- MODIFIED: This now opens the modal ---
     const handleOpenNewFacilitatorForm = (name) => {
-        setNewFacilitatorName(name);
-        setShowNewFacilitatorForm(true);
+        setNewFacilitatorName(name); // Store name
+        setNewFacilitatorData({ ...initialModalData, name: name }); // Pre-fill form data
+        setNewFacilitatorFiles({});
+        setModalError('');
+        setIsNewFacilitatorModalOpen(true); // Open modal
     }
-    const handleSaveNewFacilitator = async (facilitatorData) => {
-        await onAddNewFacilitator(facilitatorData);
-        setShowNewFacilitatorForm(false);
-        setDirector(facilitatorData.name);
-        setClinical(facilitatorData.name);
-    }
+
+    // --- REMOVED: handleSaveNewFacilitator ---
+
+    // --- NEW: Handlers for the facilitator modal ---
+    const handleModalFileChange = (certKey, file) => {
+        if (file) {
+            setNewFacilitatorFiles(prev => ({ ...prev, [certKey]: file }));
+        }
+    };
+
+    const handleSaveModalFacilitator = async () => {
+        const formData = newFacilitatorData;
+        const files = newFacilitatorFiles;
+
+        // Validation (from FacilitatorForm)
+        if (!formData.name || !formData.phone) {
+            setModalError('Facilitator Name and Phone Number are required.');
+            return;
+        }
+        const missingDates = formData.courses.filter(course => !formData.totDates[course]);
+        if (missingDates.length > 0) {
+            setModalError(`Please provide a ToT date for the following selected course(s): ${missingDates.join(', ')}.`);
+            return;
+        }
+        
+        setModalError('');
+        setIsModalLoading(true);
+
+        try {
+            // 1. File upload logic (from FacilitatorForm)
+            let urls = {}; 
+            if (files) { 
+                for (const key in files) { 
+                    urls[key] = await uploadFile(files[key]); 
+                } 
+            } 
+            
+            const finalPayload = { ...formData, certificateUrls: urls };
+            
+            // 2. Call the prop to save the facilitator profile
+            await onAddNewFacilitator(finalPayload); 
+
+            // --- START: NEWLY ADDED ROLE SYNC LOGIC ---
+            // (Copied from FacilitatorForm's handleSubmit)
+            const email = finalPayload.email;
+            if (email) {
+                const facilitatorRole = 'facilitator';
+                const newPermissions = DEFAULT_ROLE_PERMISSIONS[facilitatorRole];
+
+                if (!newPermissions) {
+                    console.warn(`[RoleSync] Default permissions for role '${facilitatorRole}' not found.`);
+                } else {
+                    const usersRef = collection(db, "users");
+                    const q = query(usersRef, where("email", "==", email));
+                    const querySnapshot = await getDocs(q);
+
+                    if (!querySnapshot.empty) {
+                        const userDoc = querySnapshot.docs[0];
+                        await updateDoc(userDoc.ref, {
+                            role: facilitatorRole,
+                            permissions: { ...ALL_PERMISSIONS, ...newPermissions }
+                        });
+                        console.log(`[RoleSync] Successfully assigned 'facilitator' role to ${email}`);
+                    } else {
+                        console.warn(`[RoleSync] Could not find user with email ${email} to assign role.`);
+                    }
+                }
+            } else {
+                console.warn(`[RoleSync] New facilitator has no email. Skipping role assignment.`);
+            }
+            // --- END: NEWLY ADDED ROLE SYNC LOGIC ---
+
+            // 3. Success
+            setIsNewFacilitatorModalOpen(false);
+            
+            // Set the facilitator in the CourseForm fields
+            setDirector(finalPayload.name);
+            setClinical(finalPayload.name);
+            
+        } catch (error) {
+            setModalError(`Error saving: ${error.message}`);
+        } finally {
+            setIsModalLoading(false);
+        }
+    };
+    
+    const handleCloseModal = () => {
+        if (isModalLoading) return;
+        setIsNewFacilitatorModalOpen(false);
+    };
+    // --- END NEW HANDLERS ---
 
     const handleOpenNewCoordinatorForm = (name) => {
         setNewCoordinatorName(name);
@@ -921,9 +1010,7 @@ export function CourseForm({
         setSupporter(funderData.orgName);
     }
 
-    if (showNewFacilitatorForm) {
-        return <NewFacilitatorForm initialName={newFacilitatorName} onCancel={() => setShowNewFacilitatorForm(false)} onSave={handleSaveNewFacilitator} />;
-    }
+    // --- REMOVED: if (showNewFacilitatorForm) ... ---
     if (showNewCoordinatorForm) {
         return <NewCoordinatorForm initialName={newCoordinatorName} onCancel={() => setShowNewCoordinatorForm(false)} onSave={handleSaveNewCoordinator} />;
     }
@@ -1109,6 +1196,31 @@ export function CourseForm({
                     <Button variant="secondary" onClick={onCancel}>Cancel</Button>
                     <Button onClick={submit}>Save Course</Button>
                 </div>
+
+                {/* --- NEW: Modal for adding a full facilitator --- */}
+                <Modal isOpen={isNewFacilitatorModalOpen} onClose={handleCloseModal} title="Add New Facilitator" size="2xl">
+                    {isModalLoading && <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-20"><Spinner /></div>}
+                    <CardBody>
+                        <p className="mb-4 text-sm text-gray-600">
+                            Fill in the full details for the new facilitator. This will create a new facilitator profile and add them to the list.
+                        </p>
+                        {modalError && <div className="p-3 mb-4 rounded-md bg-red-50 text-red-800">{modalError}</div>}
+                        
+                        <div className="max-h-[60vh] overflow-y-auto p-1">
+                            <FacilitatorDataForm 
+                                data={newFacilitatorData} 
+                                onDataChange={setNewFacilitatorData}
+                                onFileChange={handleModalFileChange}
+                            />
+                        </div>
+                    </CardBody>
+                    <CardFooter>
+                        <Button variant="secondary" onClick={handleCloseModal} disabled={isModalLoading}>Cancel</Button>
+                        <Button onClick={handleSaveModalFacilitator} disabled={isModalLoading}>
+                            {isModalLoading ? 'Saving...' : 'Save Facilitator'}
+                        </Button>
+                    </CardFooter>
+                </Modal>
             </div>
         </Card>
     );

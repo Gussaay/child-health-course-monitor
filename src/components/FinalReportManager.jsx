@@ -86,11 +86,26 @@ export function FinalReportManager({
     };
 
     const handleSave = async () => {
+        
+        // Enrich the potentialFacilitators array with participant names before saving
+        // This ensures the name is saved even if the user didn't change the dropdown
+        const finalPotentialFacilitators = potentialFacilitators
+            .filter(f => f.participant_id)
+            .map(fac => {
+                // Find the participant from the main list
+                const participant = participants.find(p => p.id === fac.participant_id);
+                return {
+                    participant_id: fac.participant_id,
+                    // Ensure participant_name is saved
+                    participant_name: participant ? participant.name : (fac.participant_name || 'N/A') 
+                };
+            });
+
         const finalReportData = {
             courseId: course.id,
             summary,
             recommendations: recommendations.filter(r => r.recommendation),
-            potentialFacilitators: potentialFacilitators.filter(f => f.participant_id),
+            potentialFacilitators: finalPotentialFacilitators, // <-- Use the enriched array
             pdfFile,
             existingPdfUrl: existingPdfUrl,
             // Pass new data for processing in App.jsx
@@ -273,21 +288,57 @@ export function FinalReportManager({
     }
 
     // --- Conditional Rendering: VIEW MODE ---
+    
+    // Read directly from initialData prop for view mode
     const finalGalleryUrls = initialData?.galleryImageUrls?.filter(url => url) || [];
     const finalFollowUpList = initialData?.participantsForFollowUp?.filter(p => p.participant_id) || [];
+    const finalSummary = initialData?.summary || 'No summary provided.';
+    const finalRecommendations = initialData?.recommendations?.filter(r => r.recommendation) || [];
+    const finalFacilitatorList = initialData?.potentialFacilitators?.filter(f => f.participant_id) || [];
+
     return (
         <Card>
-            {/* --- PERMISSION CHECK UPDATED --- */}
             <PageHeader 
                 title={`Final Report for ${course.course_type} - ${course.state}`} 
                 subtitle="Review the summary, recommendations, and documents for this course." 
                 actions={canUseFederalManagerAdvancedFeatures && <Button onClick={() => setIsEditing(true)}>Edit Report</Button>} 
             />
             <div className="space-y-8 mt-6 p-6">
-                <div><h3 className="text-xl font-bold mb-2 text-gray-800">Course Summary</h3><p className="text-gray-700 whitespace-pre-wrap">{summary || 'No summary provided.'}</p></div>
-                <div><h3 className="text-xl font-bold mb-2 text-gray-800">Course Recommendations</h3><Table headers={['#', 'Recommendation', 'Responsible', 'Status']}>{recommendations && recommendations.length > 0 && recommendations[0].recommendation ? (recommendations.map((rec, index) => (<tr key={index}><td className="p-2 border">{index + 1}</td><td className="p-2 border">{rec.recommendation}</td><td className="p-2 border">{rec.responsible}</td><td className="p-2 border capitalize">{rec.status}</td></tr>))) : (<tr><td colSpan="4" className="p-4 text-center text-gray-500">No recommendations were made.</td></tr>)}</Table></div>
-                <div><h3 className="text-xl font-bold mb-2 text-gray-800">Potential Facilitators</h3><Table headers={['#', 'Participant Name']}>{potentialFacilitators && potentialFacilitators.length > 0 ? (potentialFacilitators.map((fac, index) => (<tr key={index}><td className="p-2 border">{index + 1}</td><td className="p-2 border">{fac.participant_name || 'N/A'}</td></tr>))) : (<tr><td colSpan="2" className="p-4 text-center text-gray-500">No potential facilitators were identified.</td></tr>)}</Table></div>
+                <div><h3 className="text-xl font-bold mb-2 text-gray-800">Course Summary</h3><p className="text-gray-700 whitespace-pre-wrap">{finalSummary}</p></div>
+                
+                <div><h3 className="text-xl font-bold mb-2 text-gray-800">Course Recommendations</h3><Table headers={['#', 'Recommendation', 'Responsible', 'Status']}>{finalRecommendations.length > 0 ? (finalRecommendations.map((rec, index) => (<tr key={index}><td className="p-2 border">{index + 1}</td><td className="p-2 border">{rec.recommendation}</td><td className="p-2 border">{rec.responsible}</td><td className="p-2 border capitalize">{rec.status}</td></tr>))) : (<tr><td colSpan="4" className="p-4 text-center text-gray-500">No recommendations were made.</td></tr>)}</Table></div>
+                
+                {/* --- THIS IS THE FIX --- */}
+                <div>
+                    <h3 className="text-xl font-bold mb-2 text-gray-800">Potential Facilitators</h3>
+                    {/* Updated headers */}
+                    <Table headers={['#', 'Participant Name', 'Phone Number', 'Responsible Facilitator']}>
+                        {finalFacilitatorList.length > 0 ? (
+                            finalFacilitatorList.map((fac, index) => {
+                                // Added lookup logic, same as in Edit Mode
+                                const participant = participants.find(p => p.id === fac.participant_id);
+                                const responsibleFacilitator = course.facilitatorAssignments?.find(f => f.group === participant?.group);
+                                
+                                return (
+                                    <tr key={index}>
+                                        <td className="p-2 border">{index + 1}</td>
+                                        <td className="p-2 border">{fac.participant_name || 'N/A'}</td>
+                                        {/* Added new columns */}
+                                        <td className="p-2 border">{participant?.phone || 'N/A'}</td>
+                                        <td className="p-2 border">{responsibleFacilitator?.name || 'N/A'}</td>
+                                    </tr>
+                                );
+                            })
+                        ) : (
+                            // Updated colspan
+                            <tr><td colSpan="4" className="p-4 text-center text-gray-500">No potential facilitators were identified.</td></tr>
+                        )}
+                    </Table>
+                </div>
+                {/* --- END FIX --- */}
+                
                 <div><h3 className="text-xl font-bold mb-2 text-gray-800">Participants Requiring Follow-up</h3><Table headers={['#', 'Participant Name', 'Phone', 'Comment / Action Required']}>{finalFollowUpList.length > 0 ? (finalFollowUpList.map((p, index) => (<tr key={index}><td className="p-2 border">{index + 1}</td><td className="p-2 border">{p.participant_name}</td><td className="p-2 border">{p.phone}</td><td className="p-2 border">{p.comment}</td></tr>))) : (<tr><td colSpan="4" className="p-4 text-center text-gray-500">No participants were marked for follow-up.</td></tr>)}</Table></div>
+                
                 <div>
                     <h3 className="text-xl font-bold mb-2 text-gray-800">Course Gallery</h3>
                     {finalGalleryUrls.length > 0 ? (<div className="grid grid-cols-1 md:grid-cols-3 gap-4">{finalGalleryUrls.map((url, index) => (<a key={index} href={url} target="_blank" rel="noopener noreferrer"><img src={url} alt={`Gallery item ${index + 1}`} className="w-full h-48 object-cover rounded-lg shadow-md hover:shadow-xl transition-shadow" /></a>))}</div>) : (<p className="text-gray-500">No images were added to the gallery.</p>)}

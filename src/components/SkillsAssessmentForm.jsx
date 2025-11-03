@@ -201,6 +201,9 @@ const IMNCI_FORM_STRUCTURE = [
                 scoreKey: 'pneu_treatment',
                 skills: [ { key: 'skill_pneu_abx', label: 'هل وصف مضاد حيوي لعلاج الالتهاب الرئوي بصورة صحيحة' }, { key: 'skill_pneu_dose', label: 'هل أعطى الجrعة الأولى من مضاد حيوي لعلاج الالتهاب الرئوي بالعيادة بصورة صحيحة', relevant: "${skill_pneu_abx}='yes'" }, ],
                 relevant: (formData) => { // Show if effective classification is 'التهاب رئوي'
+                    // --- START FIX ---
+                    if (formData.finalDecision !== 'treatment') return false;
+                    // --- END FIX ---
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_cough === 'yes';
                     const workerClassification = formData.assessment_skills.worker_cough_classification;
                     const supervisorClassification = formData.assessment_skills.supervisor_correct_cough_classification;
@@ -213,6 +216,9 @@ const IMNCI_FORM_STRUCTURE = [
                 scoreKey: 'diar_treatment',
                 skills: [ { key: 'skill_diar_ors', label: 'هل حدد كمية محلول الإرواء بصورة صحيحة' }, { key: 'skill_diar_counsel', label: 'هل نصح الأم بالرعاية المنزلية بإعطاء سوائل أكثر و الاستمرار في تغذية الطفل)' }, { key: 'skill_diar_zinc', label: 'هل وصف دواء الزنك بصورة صحيحة' }, { key: 'skill_diar_zinc_dose', label: 'هل أعطى الجrعة الأولى من دواء الزنك للطفل بالوحدة الصحية بطريقة صحيحة', relevant: "${skill_diar_zinc}='yes'" }, ],
                 relevant: (formData) => { // Show if effective classification includes relevant keys (including 'لا يوجد جفاف')
+                    // --- START FIX ---
+                    if (formData.finalDecision !== 'treatment') return false;
+                    // --- END FIX ---
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_diarrhea === 'yes';
                     const workerCls = formData.assessment_skills.worker_diarrhea_classification || {};
                     const supervisorCls = formData.assessment_skills.supervisor_correct_diarrhea_classification || {};
@@ -226,6 +232,9 @@ const IMNCI_FORM_STRUCTURE = [
                 scoreKey: 'dyst_treatment',
                 skills: [ { key: 'skill_dyst_abx', label: 'هل وصف مضاد حيوي لعلاج الدسنتاريا بصورة صحيحة' }, { key: 'skill_dyst_dose', label: 'هل أعطى الجrعة الأولى من مضاد حيوي لعلاج الدسنتارIA في العيادة بصورة صحيحة', relevant: "${skill_dyst_abx}='yes'" }, ],
                 relevant: (formData) => { // Show if effective classification includes 'دسنتاريا'
+                    // --- START FIX ---
+                    if (formData.finalDecision !== 'treatment') return false;
+                    // --- END FIX ---
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_diarrhea === 'yes';
                     const workerCls = formData.assessment_skills.worker_diarrhea_classification || {};
                     const supervisorCls = formData.assessment_skills.supervisor_correct_diarrhea_classification || {};
@@ -238,6 +247,9 @@ const IMNCI_FORM_STRUCTURE = [
                 scoreKey: 'mal_treatment',
                 skills: [ { key: 'skill_mal_meds', label: 'هل وصف دواء لعلاج الملاريا بصورة صحيحة' }, { key: 'skill_mal_dose', label: 'هل أعطى الجrعة الأولى من الدواء لعلاج الملاريا في العيادة بصورة صحيحة', relevant: "${skill_mal_meds}='yes'" }, ],
                 relevant: (formData) => { // Show if effective classification includes 'ملاريا'
+                    // --- START FIX ---
+                    if (formData.finalDecision !== 'treatment') return false;
+                    // --- END FIX ---
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_fever === 'yes';
                     const workerCls = formData.assessment_skills.worker_fever_classification || {};
                     const supervisorCls = formData.assessment_skills.supervisor_correct_fever_classification || {};
@@ -251,6 +263,9 @@ const IMNCI_FORM_STRUCTURE = [
                 skills: [ { key: 'skill_ear_abx', label: 'هل وصف مضاد حيوي لعلاج التهاب الأذن الحاد بصورة صحيحة' }, { key: 'skill_ear_dose', label: 'هل أعطى الجrعة الأولى من مضاد حيوي لعلاج التهاب الأذن الحاد بصورة صحيحة', relevant: "${skill_ear_abx}='yes'" }, { key: 'skill_ear_para', label: 'هل وصف دواء الباراسيتامول بصورة صحيحة' }, { key: 'skill_ear_para_dose', label: 'هل أعطى الجrعة الأولى من الباراسيتامول بصورة صحيحة', relevant: "${skill_ear_para}='yes'" }, ],
                 // --- START CORRECTION: Added hamza (أ) to match classification constants ---
                 relevant: (formData) => { // Show if effective classification is 'التهاب اذن حاد' or 'التهاب اذن مزمن'
+                    // --- START FIX ---
+                    if (formData.finalDecision !== 'treatment') return false;
+                    // --- END FIX ---
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_ear === 'yes';
                     const workerCls = formData.assessment_skills.worker_ear_classification;
                     const supervisorCls = formData.assessment_skills.supervisor_correct_ear_classification;
@@ -278,6 +293,9 @@ const IMNCI_FORM_STRUCTURE = [
                     { key: 'skill_nut_assess', label: 'قيم تغذية الطفل بما في ذلك مشاكل الرضاعة (لأقل من عمر سنتين)' }, { key: 'skill_nut_counsel', label: 'أرشد الأم عن تغذية الطفل بما في ذلك مشاكل الرضاعة الأقل من عمر سنتين)' },
                 ],
                 relevant: (formData) => { // Show if effective classification is SAM or MAM
+                    // --- START FIX ---
+                    if (formData.finalDecision !== 'treatment') return false;
+                    // --- END FIX ---
                     const didClassifyCorrectly = formData.assessment_skills.skill_mal_classify === 'yes';
                     const workerCls = formData.assessment_skills.worker_malnutrition_classification;
                     const supervisorCls = formData.assessment_skills.supervisor_correct_malnutrition_classification;
@@ -290,6 +308,9 @@ const IMNCI_FORM_STRUCTURE = [
                 scoreKey: 'anemia_treatment',
                 skills: [ { key: 'skill_anemia_iron', label: 'هل وصف شراب حديد بصورة صحيحة' }, { key: 'skill_anemia_iron_dose', label: 'هل أعطى الجrعة الأولى من شراب حديد بصورة صحيحة', relevant: "${skill_anemia_iron}='yes'" }, ],
                 relevant: (formData) => { // Show if effective classification is 'فقر دم'
+                    // --- START FIX ---
+                    if (formData.finalDecision !== 'treatment') return false;
+                    // --- END FIX ---
                     const didClassifyCorrectly = formData.assessment_skills.skill_anemia_classify === 'yes';
                     const workerCls = formData.assessment_skills.worker_anemia_classification;
                     const supervisorCls = formData.assessment_skills.supervisor_correct_anemia_classification;
@@ -299,7 +320,14 @@ const IMNCI_FORM_STRUCTURE = [
             },
             { subgroupTitle: 'نصح الأم متى تعود للمتابعة',
                 scoreKey: 'fu_treatment',
-                skills: [ { key: 'skill_fu_when', label: 'هل ذكر لها علامتين علي الأقل إذا ظهرت على الطفل يجب أن تعود به فورا للوحدة الصحية' }, { key: 'skill_fu_return', label: 'هل حدد للام متى تعود بالطفل' }, ] }
+                skills: [ { key: 'skill_fu_when', label: 'هل ذكر لها علامتين علي الأقل إذا ظهرت على الطفل يجب أن تعود به فورا للوحدة الصحية' }, { key: 'skill_fu_return', label: 'هل حدد للام متى تعود بالطفل' }, ]
+                // --- START FIX ---
+                ,
+                relevant: (formData) => {
+                    return formData.finalDecision === 'treatment';
+                }
+                // --- END FIX ---
+            }
         ]
     }
 ];
@@ -779,7 +807,8 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
         healthWorkerJobTitle,
         healthWorkerTrainingDate,
         healthWorkerPhone, 
-        onCancel,
+        onExit, // Renamed from onCancel
+        onSaveComplete, // New prop for successful save
         setToast,
         existingSessionData = null,
         visitNumber = 1, 
@@ -1507,10 +1536,11 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
 
             // --- MODIFIED: Use the ref for the current ID ---
             const sessionId = editingIdRef.current;
-            await saveMentorshipSession(payload, sessionId); // Use the correct function signature (payload, optional id)
+            const savedSession = await saveMentorshipSession(payload, sessionId); // Use the correct function signature (payload, optional id)
 
             setToast({ show: true, message: 'تم حفظ الجلسة بنجاح!', type: 'success' });
-            onCancel();
+            // onCancel(); // <-- REMOVED
+            if (onSaveComplete) onSaveComplete('complete', payload); // <-- ADDED: Pass status and saved data
         } catch (error) {
             console.error("Error saving mentorship session:", error);
             setToast({ show: true, message: `فشل الحفظ: ${error.message}`, type: 'error' });
@@ -1603,7 +1633,8 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
              // --- END MODIFICATION ---
 
              setToast({ show: true, message: 'تم حفظ المسودة بنجاح!', type: 'success' });
-             onCancel(); // Call onCancel to navigate back
+             // onCancel(); // <-- REMOVED
+             if (onSaveComplete) onSaveComplete('draft', payload); // <-- ADDED: Pass status and saved data
          } catch (error) {
             console.error("Error saving draft session:", error);
             setToast({ show: true, message: `فشل حفظ المسودة: ${error.message}` });
@@ -2000,7 +2031,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                      
                      {/* Row 1: Action Buttons (MOVED UP) */}
                      <div className="flex gap-2 flex-wrap justify-end">
-                        <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving || isSavingDraft}> إلغاء </Button>
+                        <Button type="button" variant="secondary" onClick={onExit} disabled={isSaving || isSavingDraft}> إلغاء </Button>
                         <Button type="button" variant="outline" onClick={handleSaveDraft} disabled={isSaving || isSavingDraft}> {isSavingDraft ? 'جاري حفظ المسودة...' : 'حفظ كمسودة'} </Button>
                         <Button 
                             type="submit" 
@@ -2055,7 +2086,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => { // MODIFIED: Wrap in f
                 {/* --- START: NEW Mobile Sticky Action Bar --- */}
                 {/* This bar sits on top of the MobileFormNavBar (which is in the parent) */}
                 <div className="flex sm:hidden fixed bottom-16 left-0 right-0 z-20 p-2 bg-gray-50 border-t border-gray-200 shadow-lg justify-around items-center" dir="rtl">
-                    <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving || isSavingDraft} size="sm">
+                    <Button type="button" variant="secondary" onClick={onExit} disabled={isSaving || isSavingDraft} size="sm">
                         إلغاء
                     </Button>
                     <Button type="button" variant="outline" onClick={handleSaveDraft} disabled={isSaving || isSavingDraft} size="sm">

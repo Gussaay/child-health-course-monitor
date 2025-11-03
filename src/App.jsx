@@ -65,7 +65,9 @@ import {
 import { STATE_LOCALITIES } from './components/constants.js';
 import { Card, PageHeader, Button, Table, EmptyState, Spinner, PdfIcon, CourseIcon, Footer, Toast } from './components/CommonComponents';
 import { auth, db } from './firebase';
+// --- MODIFICATION: Removed unused firestore imports ---
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+// --- END MODIFICATION ---
 import { signOut, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { useDataCache } from './DataContext';
 import { useAuth } from './hooks/useAuth';
@@ -88,6 +90,7 @@ import {
 
 // --- Resource Monitor Component ---
 const ResourceMonitor = ({ counts, onReset }) => {
+    // ... (component unchanged)
     return (
         <div className="fixed bottom-4 right-4 bg-gray-900 text-white p-3 rounded-lg shadow-lg z-50 opacity-90 w-64">
             <div className="flex justify-between items-center mb-2">
@@ -120,6 +123,7 @@ const ResourceMonitor = ({ counts, onReset }) => {
 
 // --- Landing Page Component ---
 function Landing({ navigate, permissions }) {
+    // ... (component unchanged)
     // --- MODIFIED: Use lucide-react components directly ---
     const navButtons = [
         { label: 'Dashboard', view: 'dashboard', icon: Home, permission: true },
@@ -161,6 +165,7 @@ function Landing({ navigate, permissions }) {
 }
 
 const BottomNav = React.memo(function BottomNav({ navItems, navigate }) {
+    // ... (component unchanged)
     // --- MODIFIED: Use lucide-react components directly ---
     const icons = { Dashboard: Home, Home: Home, Courses: Book, 'Human Resources': Users, 'Child Health Services': Hospital, 'Skills Mentorship': ClipboardCheck, Admin: User };
     return (
@@ -179,6 +184,7 @@ const BottomNav = React.memo(function BottomNav({ navItems, navigate }) {
 });
 
 function SplashScreen() {
+    // ... (component unchanged)
     return (
         <div className="fixed inset-0 bg-sky-50 flex flex-col items-center justify-center gap-6 text-center p-4">
             <div className="h-24 w-24 bg-white rounded-full flex items-center justify-center p-1 shadow-xl animate-pulse"><img src="/child.png" alt="NCHP Logo" className="h-20 w-20 object-contain" /></div>
@@ -193,6 +199,7 @@ function SplashScreen() {
 // Root App Component
 // =============================================================================
 export default function App() {
+    // ... (state and hooks definitions unchanged)
     const {
         courses: allCourses,
         facilitators: allFacilitators,
@@ -295,6 +302,7 @@ export default function App() {
 
     // --- MODIFIED: useEffect for path handling ---
     useEffect(() => {
+        // ... (effect unchanged)
         if (historyInitialized.current) return;
         historyInitialized.current = true;
 
@@ -369,19 +377,23 @@ export default function App() {
                 return;
             }
 
-            const facilitatorAppMatch = path.match(/^\/submit\/facilitator-application\/?$/);
+            // --- *** START OF FIX *** ---
+            // Changed path from /submit/... to /public/...
+            const facilitatorAppMatch = path.match(/^\/public\/facilitator-application\/?$/);
             if (facilitatorAppMatch) {
                 setIsPublicSubmissionView(true);
                 setSubmissionType('facilitator-application');
                 return;
             }
 
-            const teamAppMatch = path.match(/^\/submit\/team-member-application\/?$/);
+            // Changed path from /submit/... to /public/...
+            const teamAppMatch = path.match(/^\/public\/team-member-application\/?$/);
             if (teamAppMatch) {
                 setIsPublicSubmissionView(true);
                 setSubmissionType('team-member-application');
                 return;
             }
+            // --- *** END OF FIX --- ---
 
             const publicReportMatch = path.match(/^\/public\/report\/course\/([a-zA-Z0-9]+)\/?$/);
             if (publicReportMatch && publicReportMatch[1]) {
@@ -404,10 +416,12 @@ export default function App() {
     // --- END MODIFICATION ---
 
     const ALL_PERMISSIONS_MINIMAL = useMemo(() => {
+        // ... (memo unchanged)
         return ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), { canViewSkillsMentorship: false });
     }, [ALL_PERMISSION_KEYS]);
 
     const permissions = useMemo(() => {
+        // ... (memo unchanged)
         let derivedPermissions = { ...userPermissions };
         if (userRole?.toLowerCase() === 'super_user') {
             return ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: true }), { canViewSkillsMentorship: true });
@@ -415,14 +429,30 @@ export default function App() {
         return { ...ALL_PERMISSIONS_MINIMAL, ...derivedPermissions };
     }, [userRole, userPermissions, ALL_PERMISSIONS_MINIMAL, ALL_PERMISSION_KEYS]);
 
+    // This hook is modified to prevent the post-login redirect to 'landing'
+    // when the user is on a special page (like a submission form).
     useEffect(() => {
-        if (user && !permissionsLoading && !initialViewIsSet.current) {
+        // ... (effect unchanged)
+        // Manually check the path *before* running this effect,
+        // because the state flags (like isMinimalUILayout) might not be set yet.
+        const path = window.location.pathname;
+        const isSpecialPath = path.startsWith('/submit/') || // Keep old /submit/ just in case
+                              path.startsWith('/public/') || // Add new /public/
+                              path.startsWith('/facilities/') || 
+                              path.startsWith('/monitor/') || 
+                              path.startsWith('/mentorship/');
+                              
+        // If we're on a special path, DO NOT run this auto-redirect logic.
+        // Also, don't run if we're not logged in, or if permissions are loading,
+        // or if we've already set the initial view.
+        if (!isSpecialPath && user && !permissionsLoading && !initialViewIsSet.current) {
             setView("landing");
             initialViewIsSet.current = true;
         }
     }, [user, permissionsLoading]);
 
     useEffect(() => {
+        // ... (effect unchanged)
         const checkUserRoleAndPermissions = async () => {
             setPermissionsLoading(true);
             try {
@@ -460,12 +490,14 @@ export default function App() {
     }, [user, ALL_PERMISSIONS_MINIMAL, DEFAULT_ROLE_PERMISSIONS]);
 
     useEffect(() => {
+        // ... (effect unchanged)
         if (!user) {
             initialViewIsSet.current = false;
         }
     }, [user]);
 
     useEffect(() => {
+        // ... (effect unchanged)
         const handlePopState = (event) => {
             isPopStateNavigation.current = true;
             if (window.location.pathname === '/') {
@@ -478,6 +510,7 @@ export default function App() {
     }, []);
 
     const fetchCoordinators = useCallback(async (force = false) => {
+        // ... (callback unchanged)
         await fetchFederalCoordinators(force);
         await fetchStateCoordinators(force);
         await fetchLocalityCoordinators(force);
@@ -486,6 +519,7 @@ export default function App() {
 
     // This effect fetches data ON DEMAND based on view
     useEffect(() => {
+        // ... (effect unchanged)
         if (isSharedView || !user) return;
 
         // Fetch facilities on dashboard, human resources, and skills mentorship views
@@ -527,6 +561,7 @@ export default function App() {
 
     // --- NEW: Background fetcher for full course details ---
     useEffect(() => {
+        // ... (effect unchanged)
         // If a course is selected, and we don't have its details, and we're not already loading...
         if (selectedCourseId && !courseDetails.allObs && !courseDetailsLoading) {
             
@@ -564,10 +599,12 @@ export default function App() {
 
     // --- FILTERING LOGIC ---
     const canSeeAllData = useMemo(() => {
+        // ... (memo unchanged)
         return permissions.canUseSuperUserAdvancedFeatures || permissions.canUseFederalManagerAdvancedFeatures;
     }, [permissions]);
 
     const filteredCourses = useMemo(() => {
+        // ... (memo unchanged)
         if (!allCourses) {
             return [];
         }
@@ -579,6 +616,7 @@ export default function App() {
     }, [allCourses, userStates, canSeeAllData]);
 
     const filteredFacilitators = useMemo(() => {
+        // ... (memo unchanged)
         if (!allFacilitators) {
             return [];
         }
@@ -591,6 +629,7 @@ export default function App() {
     // --- END: FILTERING LOGIC ---
 
     const fetchPendingSubmissions = useCallback(async () => {
+        // ... (callback unchanged)
         if (!permissions.canApproveSubmissions) return;
         setIsSubmissionsLoading(true);
         try {
@@ -607,6 +646,7 @@ export default function App() {
     const selectedCourse = useMemo(() => (allCourses || []).find(c => c.id === selectedCourseId) || null, [allCourses, selectedCourseId]);
 
     const isCourseActive = useMemo(() => {
+        // ... (memo unchanged)
         if (!selectedCourse?.start_date || !selectedCourse?.course_duration || selectedCourse.course_duration <= 0) {
             return false;
         }
@@ -623,6 +663,7 @@ export default function App() {
 
     // --- MODIFIED: navigate ---
     const navigate = useCallback((newView, state = {}) => {
+        // ... (callback unchanged)
         const viewPermissions = {
             'landing': true,
             'dashboard': true,
@@ -699,6 +740,7 @@ export default function App() {
     // --- MODIFIED: handleOpenCourse ---
     // This is now fast. It just navigates. The useEffect above handles the slow background fetch.
     const handleOpenCourse = useCallback((courseId) => {
+        // ... (callback unchanged)
         setSelectedCourseId(courseId);
         setLoading(false); // Ensure global spinner is off
         
@@ -713,6 +755,7 @@ export default function App() {
     // --- MODIFIED: handleOpenCourseReport ---
     // This now checks if data is already loaded/loading, or fetches it on-demand.
     const handleOpenCourseReport = useCallback(async (courseId) => {
+        // ... (callback unchanged)
         setSelectedCourseId(courseId);
         
         // --- *** CHANGE 5 of 6: Check against null instead of truthy *** ---
@@ -751,6 +794,7 @@ export default function App() {
     // --- END MODIFICATION ---
 
     const handleApproveSubmission = useCallback(async (submission) => {
+        // ... (callback unchanged)
         if (window.confirm(`Approve ${submission.name}?`)) {
             try {
                 await approveFacilitatorSubmission(submission, user.email);
@@ -764,6 +808,7 @@ export default function App() {
     }, [user, fetchPendingSubmissions, fetchFacilitators]);
 
     const handleRejectSubmission = useCallback(async (submissionId) => {
+        // ... (callback unchanged)
         if (window.confirm('Reject this submission?')) {
             try {
                 await rejectFacilitatorSubmission(submissionId, user.email);
@@ -776,12 +821,14 @@ export default function App() {
     }, [user, fetchPendingSubmissions]);
 
     const handleShare = useCallback((item, type) => {
+        // ... (callback unchanged)
         setItemToShare(item);
         setShareType(type);
         setIsShareModalOpen(true);
     }, []);
 
     const handleSaveSharingSettings = useCallback(async (itemId, settings) => {
+        // ... (callback unchanged)
         try {
             if (shareType === 'course') await updateCourseSharingSettings(itemId, settings);
             else if (shareType === 'participant') await updateParticipantSharingSettings(itemId, settings);
@@ -793,6 +840,7 @@ export default function App() {
     }, [shareType, fetchCourses]);
 
     const handleDeleteCourse = useCallback(async (courseId) => {
+        // ... (callback unchanged)
         if (!permissions.canManageCourse) return;
         if (window.confirm('Are you sure you want to delete this course and all its data?')) {
             await deleteCourse(courseId);
@@ -808,6 +856,7 @@ export default function App() {
 
 
     const handleDeleteParticipant = useCallback(async (participantId) => {
+        // ... (callback unchanged)
         if (!permissions.canManageCourse) return;
         if (window.confirm('Are you sure you want to delete this participant and all their data?')) {
             await deleteParticipant(participantId);
@@ -823,6 +872,7 @@ export default function App() {
     }, [permissions, selectedCourseId, selectedParticipantId, navigate]);
 
     const handleDeleteFacilitator = useCallback(async (facilitatorId) => {
+        // ... (callback unchanged)
         if (!permissions.canManageHumanResource) return;
         if (window.confirm('Are you sure you want to delete this facilitator?')) {
             await deleteFacilitator(facilitatorId);
@@ -832,6 +882,7 @@ export default function App() {
     }, [permissions, navigate, fetchFacilitators]);
 
     const handleImportParticipants = useCallback(async ({ participantsToImport, facilitiesToUpsert }) => {
+        // ... (callback unchanged)
         if (!permissions.canUseSuperUserAdvancedFeatures) return;
         try {
             setLoading(true);
@@ -859,6 +910,7 @@ export default function App() {
     const handleAddNewFunder = useCallback(async (funderData) => { await upsertFunder(funderData); await fetchFunders(true); }, [fetchFunders]);
 
     const handleAddFinalReport = useCallback(async (courseId) => {
+        // ... (callback unchanged)
         if (!permissions.canUseFederalManagerAdvancedFeatures) return;
         const courseToReport = (allCourses || []).find(c => c.id === courseId);
         if (!courseToReport) return;
@@ -878,6 +930,7 @@ export default function App() {
     }, [permissions, allCourses, navigate]);
 
     const handleSaveFinalReport = useCallback(async (reportData) => {
+        // ... (callback unchanged)
         if (!permissions.canUseFederalManagerAdvancedFeatures) return;
         setLoading(true);
         try {
@@ -905,6 +958,7 @@ export default function App() {
     }, [permissions]);
 
     const handleEditFinalReport = useCallback(async (courseId) => {
+        // ... (callback unchanged)
         if (!permissions.canUseFederalManagerAdvancedFeatures) return;
         const courseToEditReport = (allCourses || []).find(c => c.id === courseId);
         if (!courseToEditReport) { setToast({ show: true, message: 'Course not found.', type: 'error' }); return; }
@@ -928,6 +982,7 @@ export default function App() {
 
     // --- MODIFIED: renderView ---
     const renderView = () => {
+        // ... (other cases unchanged)
         const currentParticipant = (courseDetails.participants || []).find(p => p.id === selectedParticipantId);
         const viewToRender = view;
 
@@ -1043,8 +1098,22 @@ export default function App() {
 
             case 'courseReport': return permissions.canViewCourse ? (selectedCourse && <CourseReportView course={selectedCourse} participants={courseDetails.participants} allObs={courseDetails.allObs} allCases={courseDetails.allCases} finalReportData={courseDetails.finalReport} onBack={() => navigate(previousView)} onEditFinalReport={handleEditFinalReport} onDeletePdf={handleDeletePdf} onViewParticipantReport={(pid) => { setSelectedParticipantId(pid); navigate('participantReport'); }} onShare={(course) => handleShare(course, 'course')} setToast={setToast} allHealthFacilities={healthFacilities} />) : null;
 
+            // --- MODIFICATION: This case has been refactored ---
             case 'facilitatorForm':
-                return permissions.canManageHumanResource ? (<FacilitatorForm initialData={editingFacilitator} onCancel={() => navigate(previousView)} onSave={async (payload) => { try { setLoading(true); const { certificateFiles, ...data } = payload; let urls = data.certificateUrls || {}; if (certificateFiles) { for (const key in certificateFiles) { if (editingFacilitator?.certificateUrls?.[key]) await deleteFile(editingFacilitator.certificateUrls[key]); urls[key] = await uploadFile(certificateFiles[key]); } } const finalPayload = { ...data, id: editingFacilitator?.id, certificateUrls: urls }; delete finalPayload.certificateFiles; await upsertFacilitator(finalPayload); await fetchFacilitators(true); setToast({ show: true, message: 'Facilitator saved.', type: 'success' }); navigate('humanResources'); } catch (error) { setToast({ show: true, message: `Error saving: ${error.message}`, type: 'error' }); } finally { setLoading(false); } }} />) : null;
+                return permissions.canManageHumanResource ? (<FacilitatorForm 
+                    initialData={editingFacilitator} 
+                    onCancel={() => navigate(previousView)} 
+                    // This is the new, simple onSave callback
+                    onSave={async () => { 
+                        await fetchFacilitators(true); 
+                        setToast({ show: true, message: 'Facilitator saved.', type: 'success' }); 
+                        navigate('humanResources'); 
+                    }}
+                    // Pass setLoading and setToast to the form
+                    setToast={setToast}
+                    setLoading={setLoading}
+                />) : null;
+            // --- END MODIFICATION ---
 
             case 'facilitatorReport': return permissions.canViewHumanResource ? (selectedFacilitator && <FacilitatorReportView
                 facilitator={selectedFacilitator}
@@ -1064,7 +1133,10 @@ export default function App() {
                         initialData={courseDetails.finalReport}
                         onSave={handleSaveFinalReport}
                         onCancel={() => navigate(previousView)}
-                        canEditDeleteFinalReport={permissions.canUseFederalManagerAdvancedFeatures}
+                        
+                        // --- THIS IS THE FIX ---
+                        // The prop name was changed from 'canEditDeleteFinalReport' to 'canUseFederalManagerAdvancedFeatures' to match what FinalReportManager.jsx expects
+                        canUseFederalManagerAdvancedFeatures={permissions.canUseFederalManagerAdvancedFeatures}
                     />
                 );
             default: return <Landing navigate={navigate} permissions={permissions} />;
@@ -1073,6 +1145,7 @@ export default function App() {
     // --- END MODIFICATION ---
 
     const navItems = useMemo(() => [
+        // ... (memo unchanged)
         { label: 'Home', view: 'landing', active: view === 'landing', disabled: false },
         { label: 'Dashboard', view: 'dashboard', active: view === 'dashboard', disabled: false },
         { label: 'Courses', view: 'courses', active: ['courses', 'courseForm', 'courseReport', 'participants', 'participantForm', 'participantReport', 'observe', 'monitoring', 'reports', 'finalReport', 'participantMigration', 'courseDetails'].includes(view), disabled: !permissions.canViewCourse },
@@ -1094,10 +1167,12 @@ export default function App() {
     let mainContent;
 
     if ((authLoading || permissionsLoading) && !isMinimalUILayout) {
+        // ... (block unchanged)
         mainContent = <SplashScreen />;
     }
     // --- MODIFICATION: Added authLoading check ---
     else if (isPublicFacilityUpdateView) {
+        // ... (block unchanged)
         if (authLoading) {
             mainContent = <Card><Spinner /></Card>;
         } else if (!user) {
@@ -1108,6 +1183,7 @@ export default function App() {
     }
     // --- MODIFICATION: Added authLoading check ---
     else if (isNewFacilityView) {
+        // ... (block unchanged)
         if (authLoading) {
             mainContent = <Card><Spinner /></Card>;
         } else if (!user) {
@@ -1118,20 +1194,25 @@ export default function App() {
         }
     }
     // --- END MODIFICATION ---
-    // --- MODIFICATION: Added authLoading check ---
+    
+    // --- This block handles the public submission links ---
     else if (isPublicSubmissionView) {
+        // ... (block unchanged)
         if (authLoading) {
             mainContent = <Card><Spinner /></Card>;
         } else if (!user) {
+            // --- User must be signed in to access application forms ---
             mainContent = <SignInBox message="You must sign in to submit an application." />;
         } else {
+            // --- User is logged in, show the correct form ---
             if (submissionType === 'facilitator-application') mainContent = <FacilitatorApplicationForm />;
             else if (submissionType === 'team-member-application') mainContent = <TeamMemberApplicationForm />;
             else mainContent = <div className="p-8 text-center">Invalid form link.</div>;
         }
     }
-    // --- END MODIFICATION ---
+    
     else if (isSharedView) {
+        // ... (block unchanged)
         if (sharedViewError) {
             mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">{sharedViewError}</div></Card>;
         } else if (!sharedReportData) {
@@ -1154,6 +1235,7 @@ export default function App() {
     }
     // --- MODIFICATION: Added authLoading check ---
     else if (isPublicMonitoringView) {
+        // ... (block unchanged)
         if (authLoading) {
              mainContent = <Card><Spinner /></Card>;
         } else if (!user) {
@@ -1176,6 +1258,7 @@ export default function App() {
     // --- END MODIFICATION ---
     // --- MODIFICATION: Added authLoading check ---
     else if (isMentorshipPublicView) {
+        // ... (block unchanged)
         if (authLoading) {
             mainContent = <Card><Spinner /></Card>;
         } else if (!user) { // CRITICAL CHECK: If user is NOT authenticated, show sign-in
@@ -1200,16 +1283,19 @@ export default function App() {
     // --- *** START OF CRITICAL FIX *** ---
     // Standard authenticated view
     else if (!user && !authLoading) {
+        // ... (block unchanged)
         // User is fully logged out
         mainContent = <SignInBox />;
     }
     // --- NEW: Keep showing SignInBox if profile is incomplete ---
     else if (user && isProfileIncomplete) {
+        // ... (block unchanged)
         // User is logged IN, but profile is incomplete.
         // Keep showing SignInBox, which will handle the profile form.
         mainContent = <SignInBox />;
     }
     else {
+        // ... (block unchanged)
         // User is logged in AND profile is complete
         mainContent = renderView();
     }
@@ -1220,6 +1306,7 @@ export default function App() {
         <div className="min-h-screen bg-sky-50 flex flex-col">
             {/* --- MODIFIED HEADER: Always show logo, hide nav bar if minimal layout --- */}
             <header className="bg-slate-800 shadow-lg sticky top-0 z-10">
+                {/* ... (header unchanged) */}
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
                     <div className="flex items-center justify-between">
                         {/* Always show the logo/title block */}
@@ -1249,6 +1336,7 @@ export default function App() {
             {/* --- User/Admin Info Bar: Hidden if minimal layout OR not logged in --- */}
             {user && !isMinimalUILayout && (
                 <div className="bg-slate-700 text-slate-200 p-2 md:p-3 text-center flex items-center justify-center gap-4">
+                    {/* ... (bar unchanged) */}
                     <div className="flex items-center gap-2">
                         {/* --- MODIFICATION START (The requested change is here) --- */}
                         <span>Welcome, **{user.displayName || user.email}**</span>

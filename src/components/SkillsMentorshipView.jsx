@@ -584,6 +584,41 @@ const AddFacilityModal = ({ isOpen, onClose, onSaveComplete, setToast, initialSt
 };
 // --- END AddFacilityModal ---
 
+// --- NEW: Post-Save Modal Component ---
+const PostSaveModal = ({ isOpen, onClose, onSelect }) => {
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="الجلسة حفظت بنجاح!" size="lg">
+            <div className="p-6 text-right" dir="rtl">
+                <p className="text-lg mb-6">ماذا تريد أن تفعل الآن؟</p>
+                <div className="flex flex-col gap-4">
+                    <Button
+                        variant="primary"
+                        onClick={() => onSelect('skills_assessment')}
+                        className="w-full justify-center"
+                    >
+                        بدء جلسة إشراف فني جديدة (لنفس المنشأة)
+                    </Button>
+                    <Button
+                        variant="info"
+                        onClick={() => onSelect('mothers_form')}
+                        className="w-full justify-center"
+                    >
+                        بدء استبيان أم جديد (لنفس المنشأة)
+                    </Button>
+                    <hr className="my-2" />
+                    <Button
+                        variant="secondary"
+                        onClick={onClose} // This will just close the modal and run the default "go to history"
+                        className="w-full justify-center"
+                    >
+                        العودة إلى القائمة الرئيسية
+                    </Button>
+                </div>
+            </div>
+        </Modal>
+    );
+};
+// --- END Post-Save Modal ---
 
 // --- Mentorship Table Column Component (MODIFIED to English Headers) (KEPT AS-IS) ---
 const MentorshipTableColumns = () => (
@@ -1007,7 +1042,7 @@ const SkillsMentorshipView = ({
     const [selectedHealthWorkerName, setSelectedHealthWorkerName] = useState('');
 
     // --- MODIFICATION: Set activeTab default to 'skills_list' ---
-    const [activeTab, setActiveTab] = useState('skills_list'); // MODIFIED: Default to skills_list
+    const [activeTab, setActiveTab] = useState('skills_list'); // MODIFIED: Default to skills_list tab
 
     // --- NEW STATE ADDITIONS ---
     const [activeFormType, setActiveFormType] = useState('skills_assessment'); // 'skills_assessment' or 'mothers_form'
@@ -1065,6 +1100,9 @@ const SkillsMentorshipView = ({
     // --- START: NEW STATE FOR MODALS ---
     const [isMothersFormModalOpen, setIsMothersFormModalOpen] = useState(false);
     const [isDashboardModalOpen, setIsDashboardModalOpen] = useState(false);
+    const [isPostSaveModalOpen, setIsPostSaveModalOpen] = useState(false);
+    const [lastSavedFacilityInfo, setLastSavedFacilityInfo] = useState(null); // To store { state, locality, facilityId }
+ 
     // --- END: NEW STATE FOR MODALS ---
 
     // --- NEW: Ref for the SkillsAssessmentForm ---
@@ -1424,31 +1462,73 @@ const SkillsMentorshipView = ({
         resetSelection();
     };
 
-    const handleFormCompletion = async () => {
-        const wasEditing = !!editingSubmission;
+    // This function handles "Cancel" button clicks or non-save exits from forms
+    const handleExitForm = () => {
+        const completedFormType = activeFormType; // Capture type before reset
+        resetSelection(); 
 
-        const completedFormType = activeFormType; // Capture the type before reset
-        resetSelection(); // This now also clears editingSubmission, resets activeFormType, and isReadyToStart
-
-        if (completedFormType === 'skills_assessment') {
-             if (publicSubmissionMode) {
-                setToast({ show: true, message: 'Submission successful! Thank you.', type: 'success' });
-                 setCurrentView('form_setup'); // Go back to setup in public mode
-             } else {
-                 // If coming from setup OR finishing an edit, refresh history
-                 if (previousViewRef.current === 'form_setup' || wasEditing) {
-                    await fetchSkillMentorshipSubmissions(true);
-                 }
-                setCurrentView('history'); // Go back to history in normal mode
-                setActiveTab('skills_list'); // MODIFIED: Go to skills list after saving
-             }
+        if (publicSubmissionMode) {
+             setCurrentView('form_setup'); // Go back to setup in public mode
+        } else {
+            setCurrentView('history'); // Go back to history in normal mode
+            if (completedFormType === 'mothers_form') {
+                setActiveTab('mothers_list');
+            } else {
+                setActiveTab('skills_list');
+            }
         }
-        // NEW: If it was the Mother's Form, go back to history without editing flag
-        else if (completedFormType === 'mothers_form') {
-             await fetchSkillMentorshipSubmissions(true); 
-             setToast({ show: true, message: 'استبيان الأم تم حفظه بنجاح!', type: 'success' });
-             setCurrentView('history'); 
-             setActiveTab('mothers_list'); // MODIFIED: Go to mothers list after saving
+    };
+
+    // This function handles successful saves from SkillsAssessmentForm
+    const handleSaveSuccess = async (status, savedData) => {
+        const wasEditing = !!editingSubmission;
+        const completedFormType = activeFormType; // This will be 'skills_assessment'
+
+        const lastFacilityInfo = {
+            state: savedData.state,
+            locality: savedData.locality,
+            facilityId: savedData.facilityId
+        };
+
+        resetSelection(); 
+
+        if (previousViewRef.current === 'form_setup' || wasEditing) {
+            await fetchSkillMentorshipSubmissions(true);
+        }
+        
+        if (status === 'complete' && !publicSubmissionMode) {
+            // Completed save in auth mode: Show popup
+            setLastSavedFacilityInfo(lastFacilityInfo);
+            setIsPostSaveModalOpen(true);
+        } else {
+            // This handles 'draft' saves or public 'complete' saves
+            if (publicSubmissionMode) {
+                if (status === 'complete') {
+                    setToast({ show: true, message: 'Submission successful! Thank you.', type: 'success' });
+                }
+                setCurrentView('form_setup');
+            } else {
+                // This handles 'draft' saves
+                setCurrentView('history');
+                setActiveTab('skills_list');
+            }
+        }
+    };
+
+    // This function handles exits from MothersForm (which doesn't support onSaveSuccess)
+    const handleMothersFormExit = async () => {
+        const wasEditing = !!editingSubmission;
+        const completedFormType = activeFormType; // Will be 'mothers_form'
+        resetSelection(); 
+
+        // We assume any exit from mothers form (save or cancel) should refresh the list
+        await fetchSkillMentorshipSubmissions(true); 
+
+        if (publicSubmissionMode) {
+             setCurrentView('form_setup');
+        } else {
+            setCurrentView('history'); 
+            setActiveTab('mothers_list');
         }
     };
 
@@ -1463,6 +1543,35 @@ const SkillsMentorshipView = ({
          resetSelection(); // <-- This now also resets isReadyToStart
          // editingSubmission is cleared in resetSelection
     };
+
+    // --- NEW: Handlers for Post-Save Modal ---
+    const handlePostSaveSelect = (formType) => {
+        if (!lastSavedFacilityInfo) return;
+
+        // Pre-fill state, locality, facility
+        setSelectedState(lastSavedFacilityInfo.state);
+        setSelectedLocality(lastSavedFacilityInfo.locality);
+        setSelectedFacilityId(lastSavedFacilityInfo.facilityId);
+        
+        // Set form type and view
+        setActiveFormType(formType);
+        setCurrentView('form_setup');
+        
+        // Clear worker and modal state
+        setSelectedHealthWorkerName('');
+        setIsPostSaveModalOpen(false);
+        setLastSavedFacilityInfo(null);
+        setIsReadyToStart(false); // Let the setup screen show, user must click "Start"
+    };
+
+    const handlePostSaveClose = () => {
+        setIsPostSaveModalOpen(false);
+        setLastSavedFacilityInfo(null);
+        // Exit to history (the default "cancel" behavior)
+        setCurrentView('history');
+        setActiveTab('skills_list'); // Default to skills list
+    };
+    // --- END NEW HANDLERS ---
 
     // --- NEW: Handler for the "Start Session" button ---
     const handleProceedToForm = () => {
@@ -2040,7 +2149,8 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                     healthWorkerJobTitle={editingSubmission ? editingSubmission.workerType : workerJobTitle} // <-- MODIFIED: Use editing data if available
                     healthWorkerTrainingDate={workerTrainingDate}
                     healthWorkerPhone={workerPhone}
-                    onCancel={handleFormCompletion}
+                    onExit={handleExitForm} // Renamed from onCancel
+                    onSaveComplete={handleSaveSuccess} // New prop for save
                     setToast={setToast}
                     visitNumber={visitNumber}
                     existingSessionData={editingSubmission} // Pass the original data
@@ -2086,7 +2196,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
                             <MothersForm
                                 facility={facilityData} // Pass the same facility data as the skills form
-                                onCancel={() => {
+                                onCancel={() => { // This handles both Save and Cancel from the modal form
                                     setIsMothersFormModalOpen(false);
                                     fetchSkillMentorshipSubmissions(true); // Refresh submissions list on close
                                 }}
@@ -2149,7 +2259,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
             <>
                 <MothersForm
                     facility={selectedFacility}
-                    onCancel={handleFormCompletion} // Returns to history/submissions list
+                    onCancel={handleMothersFormExit} // Use the dedicated exit handler for mothers form
                     setToast={setToast}
                 />
                 <MobileFormNavBar
@@ -2391,6 +2501,12 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         onClose={() => setViewingSubmission(null)}
                     />
                  )}
+                {/* --- NEW: Post-Save Modal --- */}
+                <PostSaveModal
+                    isOpen={isPostSaveModalOpen}
+                    onClose={handlePostSaveClose}
+                    onSelect={handlePostSaveSelect}
+                />
             </>
         );
     }

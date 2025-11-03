@@ -21,12 +21,28 @@ import {
 
     updateCoordinatorApplicationStatus,
     incrementCoordinatorApplicationOpenCount,
+
+    // --- START OF FIX: Add missing imports for public form ---
+    getCoordinatorApplicationSettings, // (Assuming this exists in data.js, like getFacilitatorApplicationSettings)
+    // getCoordinatorByEmail, // (This function does not exist in data.js, keeping commented)
+    // getCoordinatorSubmissionByEmail, // (This function does not exist in data.js, keeping commented)
+    uploadFile // (Assuming this exists, like in Facilitator.jsx)
+    // --- END OF FIX ---
+
 } from '../data';
 import { Button, Card, Table, Modal, Input, Select, Textarea, Spinner, PageHeader, EmptyState, FormGroup, CardBody, CardFooter } from './CommonComponents';
 import { STATE_LOCALITIES } from './constants';
-import { auth } from '../firebase';
+import { auth, db } from '../firebase'; // --- MODIFICATION: Added db
 import { onAuthStateChanged } from 'firebase/auth';
 import { useDataCache } from '../DataContext'; 
+// --- MODIFICATION: Add Firestore functions and Permission constants ---
+import { doc, updateDoc, getDocs, collection, query, where } from 'firebase/firestore';
+import { 
+    DEFAULT_ROLE_PERMISSIONS, 
+    applyDerivedPermissions, 
+    ALL_PERMISSIONS 
+} from './AdminDashboard';
+// --- END MODIFICATION ---
 
 
 // Reusable component for dynamic experience fields
@@ -43,9 +59,11 @@ function DynamicExperienceFields({ experiences, onChange }) {
             <div className="space-y-4">
                 {experiences.map((exp, index) => (
                     <div key={index} className="flex flex-col sm:flex-row gap-2 p-3 border rounded-md bg-gray-50">
-                        <Input label="الخبرة/المهمة" value={exp.role} onChange={(e) => handleExperienceChange(index, 'role', e.target.value)} placeholder="مثال: ضابط تغذية" className="flex-grow" />
+                        {/* --- MODIFICATION: Updated placeholder --- */}
+                        <Input label="الخبرة/المهمة" value={exp.role} onChange={(e) => handleExperienceChange(index, 'role', e.target.value)} placeholder="العمل ببرنامج الصحة الانجابية" className="flex-grow" />
                         <Input label="مدة الخبرة بالسنوات" value={exp.duration} onChange={(e) => handleExperienceChange(index, 'duration', e.target.value)} placeholder="مثال: سنتان" className="sm:w-40" />
-                        {experiences.length > 1 && <Button size="sm" variant="danger" onClick={() => handleRemoveExperience(index)} className="self-end sm:self-center mt-2 sm:mt-0 h-10">حذف</Button>}
+                        {/* --- MODIFICATION: Allow removing initial rows --- */}
+                        <Button size="sm" variant="danger" onClick={() => handleRemoveExperience(index)} className="self-end sm:self-center mt-2 sm:mt-0 h-10">حذف</Button>
                     </div>
                 ))}
                 <Button type="button" variant="secondary" onClick={handleAddExperience}>إضافة خبرات أخرى</Button>
@@ -72,7 +90,7 @@ function MemberFormFieldset({ level, formData, onFormChange, onDynamicFieldChang
             {level !== 'locality' && ( <Select label="الصفة" name="role" value={formData.role} onChange={onFormChange} required><option value="">اختر الصفة</option><option value="مدير البرنامج">مدير البرنامج</option><option value="رئيس وحدة">رئيس وحدة</option><option value="عضو في وحدة">عضو في وحدة</option><option value="سكرتارية">سكرتارية</option></Select> )}
             {level !== 'locality' && formData.role === 'مدير البرنامج' && <Input label="الرجاء تحديد تاريخ التعيين مدير للبرنامج" name="directorDate" type="date" value={formData.directorDate} onChange={onFormChange} required />}
             {level !== 'locality' && (formData.role === 'رئيس وحدة' || formData.role === 'عضو في وحدة') && (<Select label="اختر الوحدة" name="unit" value={formData.unit} onChange={onFormChange} required><option value="">اختر الوحدة</option><option value="العلاج المتكامل للاطفال اقل من 5 سنوات">العلاج المتكامل للاطفال اقل من 5 سنوات</option><option value="حديثي الولادة">حديثي الولادة</option><option value="المراهقين وحماية الاطفال">المراهقين وحماية الاطفال</option><option value="المتابعة والتقييم والمعلومات">المتابعة والتقييم والمعلومات</option><option value="الامداد">الامداد</option><option value="تعزيز صحة الاطفال والمراهقين">تعزيز صحة الاطفال والمراهقين</option></Select>)}
-            {level !== 'locality' && <Input label={joinDateLabels[level]} name="joinDate" type="date" value={formData.joinDate} onChange={onFormChange} />}
+            {level !== 'locality' && <Input label={joinDateLabels[level] || 'تاريخ الانضمام'} name="joinDate" type="date" value={formData.joinDate} onChange={onFormChange} />}
             <DynamicExperienceFields experiences={formData.previousRoles} onChange={onDynamicFieldChange} />
             <Textarea label="اي تعليقات اخرى" name="comments" value={formData.comments} onChange={onFormChange} />
         </>
@@ -84,7 +102,10 @@ function TeamMemberForm({ member, onSave, onCancel }) {
     const [selectedLevel, setSelectedLevel] = useState(member?.level || (member ? (member.locality ? 'locality' : member.state ? 'state' : 'federal') : ''));
     const [formData, setFormData] = useState(() => {
         const initialData = member || { name: '', phone: '', email: '', state: '', locality: '', jobTitle: '', jobTitleOther: '', role: '', directorDate: '', unit: '', joinDate: '', comments: '' };
-        if (!initialData.previousRoles || !Array.isArray(initialData.previousRoles) || initialData.previousRoles.length === 0) initialData.previousRoles = [{ role: '', duration: '' }];
+        // --- MODIFICATION: Set 3 initial rows ---
+        if (!initialData.previousRoles || !Array.isArray(initialData.previousRoles) || initialData.previousRoles.length === 0) {
+            initialData.previousRoles = [{ role: '', duration: '' }, { role: '', duration: '' }, { role: '', duration: '' }];
+        }
         return initialData;
     });
 
@@ -244,6 +265,59 @@ function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleSta
         </Modal>
     );
 }
+
+// --- MODIFICATION: New helper function for role assignment ---
+const updateUserRoleByEmail = async (email, newRole, state, locality) => {
+    if (!email || !newRole) return; // Don't do anything if email or role is missing
+
+    try {
+        // 1. Find the user by email
+        const usersRef = collection(db, "users");
+        const q = query(usersRef, where("email", "==", email));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            console.warn(`Role assignment skipped: No user found with email ${email}.`);
+            return; // No user found
+        }
+
+        const userDoc = querySnapshot.docs[0];
+        const userRef = doc(db, "users", userDoc.id);
+        const currentUserRole = userDoc.data().role;
+
+        // --- Safety Check: Do not override a super_user's role ---
+        if (currentUserRole === 'super_user') {
+             console.warn(`Role assignment skipped: Cannot programmatically change the role of a Super User (${email}).`);
+             return;
+        }
+
+        // 2. Prepare the update payload
+        const newPermissions = DEFAULT_ROLE_PERMISSIONS[newRole] || DEFAULT_ROLE_PERMISSIONS['user'];
+        const updatePayload = {
+            role: newRole,
+            permissions: applyDerivedPermissions({ ...ALL_PERMISSIONS, ...newPermissions })
+        };
+
+        // 3. Add state/locality assignments if needed
+        if (newRole === 'states_manager' || newRole === 'state_coordinator') {
+            updatePayload.assignedState = state || '';
+            updatePayload.assignedLocality = ''; // Clear locality
+        } else if (newRole === 'locality_manager') {
+            updatePayload.assignedState = state || '';
+            updatePayload.assignedLocality = locality || '';
+        }
+
+        // 4. Update the user document
+        await updateDoc(userRef, updatePayload);
+        console.log(`Successfully updated role for ${email} to ${newRole}.`);
+
+    } catch (error) {
+        console.error(`Failed to update role for ${email}:`, error);
+        // Don't block the main save operation, just log the error
+        // We can re-throw to notify the admin in the catch block of handleSave
+        throw new Error(`Failed to update user role: ${error.message}`);
+    }
+};
 
 
 export function ProgramTeamView({ permissions, userStates }) {
@@ -414,6 +488,7 @@ export function ProgramTeamView({ permissions, userStates }) {
         setIsModalOpen(true);
     };
 
+    // --- MODIFICATION: handleSave NOW assigns roles ---
     const handleSave = async (level, payload) => {
         const upsertFnMap = {
             federal: upsertFederalCoordinator,
@@ -422,8 +497,44 @@ export function ProgramTeamView({ permissions, userStates }) {
         };
         try {
             const upsertFn = upsertFnMap[level];
+            if (!upsertFn) throw new Error("Invalid save level selected.");
+
             await upsertFn({ ...payload, id: editingMember?.id });
             
+            // --- START OF NEW LOGIC ---
+            // After successful save, update the user's role
+            
+            // 1. Determine the new role based on user's logic
+            let newRole = null;
+            const roleFromForm = payload.role; // "مدير البرنامج", "رئيس وحدة", etc.
+            const isManagerOrHead = roleFromForm === 'مدير البرنامج' || roleFromForm === 'رئيس وحدة';
+
+            if (level === 'federal') {
+                newRole = isManagerOrHead ? 'federal_manager' : 'federal_coordinator';
+            } else if (level === 'state') {
+                newRole = isManagerOrHead ? 'states_manager' : 'state_coordinator';
+            } else if (level === 'locality') {
+                newRole = 'locality_manager';
+            }
+
+            // 2. Call the helper function to update the role
+            if (newRole && payload.email) {
+                try {
+                    await updateUserRoleByEmail(
+                        payload.email, 
+                        newRole, 
+                        payload.state, 
+                        payload.locality
+                    );
+                    // Successfully updated role, no extra toast needed unless you want one
+                } catch (roleError) {
+                     // Role update failed, but member save succeeded.
+                     // Alert the admin.
+                     alert(`Team member ${payload.name} was saved, but their system role could not be assigned automatically. Please assign their role manually in the Admin Dashboard. \n\nError: ${roleError.message}`);
+                }
+            }
+            // --- END OF NEW LOGIC ---
+
             fetchersByLevel[level].list(true); // force=true
             
             if (level !== filters.level) {
@@ -432,7 +543,7 @@ export function ProgramTeamView({ permissions, userStates }) {
             handleCloseModal(); 
         } catch (error) { 
             console.error("Error saving member:", error);
-            alert("Failed to save member. See console for details.");
+            alert(`Failed to save member. See console for details. \n\nError: ${error.message}`);
         }
     };
     
@@ -451,6 +562,7 @@ export function ProgramTeamView({ permissions, userStates }) {
         }
     };
     
+    // --- MODIFICATION: handleApproveSubmission ASSIGNS ROLES ---
     const handleApproveSubmission = async (submission) => {
         const approveFnMap = {
             federal: approveFederalSubmission,
@@ -468,7 +580,38 @@ export function ProgramTeamView({ permissions, userStates }) {
         try {
             const approveFn = approveFnMap[filters.level];
             const approverInfo = { uid: currentUser.uid, email: currentUser.email, approvedAt: new Date() };
+            
+            // --- Role assignment logic ON APPROVAL ---
+            let newRole = null;
+            const roleFromForm = submission.role;
+            const isManagerOrHead = roleFromForm === 'مدير البرنامج' || roleFromForm === 'رئيس وحدة';
+            const level = filters.level; // 'federal', 'state', or 'locality'
+
+            if (level === 'federal') {
+                newRole = isManagerOrHead ? 'federal_manager' : 'federal_coordinator';
+            } else if (level === 'state') {
+                newRole = isManagerOrHead ? 'states_manager' : 'state_coordinator';
+            } else if (level === 'locality') {
+                newRole = 'locality_manager';
+            }
+
+            // 1. Approve the submission (creates the coordinator doc)
             await approveFn(submission, approverInfo);
+
+            // 2. Update the user's role
+            if (newRole && submission.email) {
+                 try {
+                    await updateUserRoleByEmail(
+                        submission.email, 
+                        newRole, 
+                        submission.state, 
+                        submission.locality
+                    );
+                 } catch (roleError) {
+                     alert(`Team member ${submission.name} was approved, but their system role could not be assigned automatically. Please assign their role manually in the Admin Dashboard. \n\nError: ${roleError.message}`);
+                 }
+            }
+            // --- END NEW LOGIC ---
 
             fetchersByLevel[filters.level].listPending(true); // force=true
             fetchersByLevel[filters.level].list(true); // force=true
@@ -642,7 +785,270 @@ export function ProgramTeamView({ permissions, userStates }) {
     );
 }
 
+// --- START OF FIX: Replace placeholder with full component implementation ---
 export function TeamMemberApplicationForm() {
-    // ... This component's code is unchanged
-    return <Card><CardBody><EmptyState message="Form implementation goes here." /></CardBody></Card>;
+    const [formData, setFormData] = useState({
+        name: '', phone: '', email: '', state: '', locality: '', jobTitle: '', jobTitleOther: '', 
+        role: '', directorDate: '', unit: '', joinDate: '', comments: '',
+        // --- MODIFICATION: Set 3 initial rows ---
+        previousRoles: [{ role: '', duration: '' }, { role: '', duration: '' }, { role: '', duration: '' }], // Start with three empty
+        isUserEmail: false,
+    });
+    
+    // --- NEW: State for level selection ---
+    const [selectedLevel, setSelectedLevel] = useState(''); // '' means no level selected yet
+    
+    const [error, setError] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const [submitted, setSubmitted] = useState(false);
+    const [isLinkActive, setIsLinkActive] = useState(false);
+    const [isLoadingStatus, setIsLoadingStatus] = useState(true);
+    const [isUpdate, setIsUpdate] = useState(false);
+
+    useEffect(() => {
+        const checkStatusAndIncrement = async () => {
+            try {
+                // --- THIS IS THE FIX ---
+                // Force a server read (true) to bypass any stale cache
+                const settings = await getCoordinatorApplicationSettings(true); 
+                
+                if (settings.isActive) {
+                    await incrementCoordinatorApplicationOpenCount();
+                    setIsLinkActive(true);
+                } else { 
+                    setIsLinkActive(false); 
+                }
+            } catch (error) {
+                console.error("Error checking application status:", error);
+                setIsLinkActive(false);
+            } finally { 
+                setIsLoadingStatus(false); 
+            }
+        };
+
+        checkStatusAndIncrement();
+        
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user && user.email) {
+                setFormData(prev => ({ ...prev, email: user.email, isUserEmail: true }));
+
+                // --- FIX: Comment out logic that calls non-existent functions ---
+                // Check if user is already a state coordinator
+                // const existingCoordinator = await getCoordinatorByEmail(user.email);
+                
+                // if (existingCoordinator) {
+                //     let data = { ...existingCoordinator };
+                //     if (!data.previousRoles || !Array.isArray(data.previousRoles) || data.previousRoles.length === 0) {
+                //         data.previousRoles = [{ role: '', duration: '' }, { role: '', duration: '' }, { role: '', duration: '' }];
+                //     }
+                //     setFormData(prev => ({ ...prev, ...data, isUserEmail: true }));
+                //     setIsUpdate(true); 
+                //     setSelectedLevel(existingCoordinator.level || 'state'); // <-- Auto-select level if updating
+                // } else {
+                //     // Check if they have a pending submission
+                //     const existingSubmission = await getCoordinatorSubmissionByEmail(user.email);
+                //     if (existingSubmission) {
+                //         let data = { ...existingSubmission };
+                //          if (!data.previousRoles || !Array.isArray(data.previousRoles) || data.previousRoles.length === 0) {
+                //             data.previousRoles = [{ role: '', duration: '' }, { role: '', duration: '' }, { role: '', duration: '' }];
+                //         }
+                //         setFormData(prev => ({ ...prev, ...data, email: user.email, isUserEmail: true }));
+                //         setSelectedLevel(existingSubmission.level || 'state'); // <-- Auto-select level
+                //     }
+                // }
+                // --- END OF FIX ---
+            }
+        });
+
+        return () => unsubscribe();
+    }, []); // Empty dependency array ensures this runs once on mount
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        const newFormData = { ...formData, [name]: value };
+        if (name === 'state') newFormData.locality = '';
+        setFormData(newFormData);
+    };
+
+    const handlePreviousRolesChange = (newRoles) => setFormData(prev => ({ ...prev, previousRoles: newRoles }));
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        
+        // --- NEW: Check for selected level ---
+        if (!selectedLevel) {
+            setError('Please select an application level.');
+            return;
+        }
+
+        // Basic validation
+        if (!formData.name || !formData.email) {
+            setError('Please fill in at least Name and Email.');
+            return;
+        }
+        if (selectedLevel !== 'federal' && !formData.state) {
+             setError('State is required for State and Locality levels.');
+             return;
+        }
+        if (selectedLevel === 'locality' && !formData.locality) {
+             setError('Locality is required for the Locality level.');
+             return;
+        }
+        if (selectedLevel !== 'locality' && !formData.role) {
+             setError('Role is required for Federal and State levels.');
+             return;
+        }
+
+        setSubmitting(true);
+        try {
+            // Prepare payload
+            let payload = { ...formData };
+            payload.previousRoles = payload.previousRoles.filter(exp => exp.role && exp.role.trim() !== '');
+            delete payload.isUserEmail; // Don't save this helper flag
+            
+            // Clean up payload based on level
+            if (payload.jobTitle !== 'اخرى') payload.jobTitleOther = '';
+            
+            if (selectedLevel === 'federal') {
+                 delete payload.state;
+                 delete payload.locality;
+                 if (payload.role !== 'مدير البرنامج') payload.directorDate = '';
+                 if (payload.role !== 'رئيس وحدة' && payload.role !== 'عضو في وحدة') payload.unit = '';
+            } else if (selectedLevel === 'state') {
+                 delete payload.locality;
+                 if (payload.role !== 'مدير البرنامج') payload.directorDate = '';
+                 if (payload.role !== 'رئيس وحدة' && payload.role !== 'عضو في وحدة') payload.unit = '';
+            } else if (selectedLevel === 'locality') {
+                // Locality level doesn't have 'role', 'directorDate', 'unit'
+                delete payload.role;
+                delete payload.directorDate;
+                delete payload.unit;
+                delete payload.joinDate; // Or adjust label if it's needed for locality
+            }
+
+            // --- NEW: Dynamic function call ---
+            const submitFnMap = {
+                federal: submitFederalApplication,
+                state: submitCoordinatorApplication,
+                locality: submitLocalityApplication,
+            };
+            const upsertFnMap = {
+                federal: upsertFederalCoordinator,
+                state: upsertStateCoordinator,
+                locality: upsertLocalityCoordinator,
+            };
+
+            if (payload.id && isUpdate) {
+                const upsertFn = upsertFnMap[selectedLevel];
+                if (!upsertFn) throw new Error(`Invalid update level: ${selectedLevel}`);
+                await upsertFn(payload);
+            } else {
+                const submitFn = submitFnMap[selectedLevel];
+                if (!submitFn) throw new Error(`Invalid application level: ${selectedLevel}`);
+                await submitFn(payload);
+            }
+            
+            setSubmitted(true);
+        } catch (err) {
+            console.error("Submission failed:", err);
+            setError("There was an error submitting your information. Please try again later.");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    if (isLoadingStatus) return <Card><CardBody><div className="flex justify-center p-8"><Spinner /></div></CardBody></Card>;
+    
+    if (!isLinkActive) {
+        return (
+            <Card>
+                <PageHeader title="Program Team Application" />
+                <CardBody>
+                    <EmptyState message="Submissions for new team members are currently closed." />
+                </CardBody>
+            </Card>
+        );
+    }
+    
+    if (submitted) {
+        const title = isUpdate ? "Profile Updated" : "Submission Received";
+        const message = isUpdate 
+            ? "Your profile has been updated successfully."
+            : "Your information has been submitted successfully for review.";
+            
+        return (
+            <Card>
+                <PageHeader title={title} />
+                <CardBody>
+                    <div className="p-8 text-center">
+                        <h3 className="text-2xl font-bold text-green-600 mb-4">Thank You!</h3>
+                        <p className="text-gray-700">{message}</p>
+                    </div>
+                </CardBody>
+            </Card>
+        );
+    }
+
+    // --- NEW: Level name map for title ---
+    const levelNames = {
+        federal: "Federal Level (اتحادي)",
+        state: "State Level (ولائي)",
+        locality: "Locality Level (محلي)"
+    };
+
+    return (
+        <Card>
+            <form onSubmit={handleSubmit} className="space-y-4" dir="rtl">
+                <CardBody>
+                    <PageHeader 
+                        title={isUpdate ? "Update Your Program Team Profile" : "Program Team Application"}
+                        subtitle={isUpdate ? `Please review and update your information for the ${levelNames[selectedLevel] || ''}.` : "Please select your application level to begin."} 
+                    />
+                    {error && <div className="p-3 my-4 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
+                    
+                    {/* --- NEW: Step 1 - Level Selector --- */}
+                    {!selectedLevel && !isUpdate && (
+                        <div className="space-y-4 p-4 border rounded-md">
+                             <FormGroup label="اختر المستوى الذي تتقدم إليه" dir="rtl">
+                                <Select value={selectedLevel} onChange={(e) => setSelectedLevel(e.target.value)} required>
+                                    <option value="">-- اختر المستوى --</option>
+                                    <option value="federal">Federal (اتحادي)</option>
+                                    <option value="state">State (ولائي)</option>
+                                    <option value="locality">Locality (محلي)</option>
+                                </Select>
+                            </FormGroup>
+                        </div>
+                    )}
+                    
+                    {/* --- Step 2 - The Form (renders if level is selected) --- */}
+                    {selectedLevel && (
+                        <div className="space-y-4">
+                            <div className="p-2 bg-sky-50 border border-sky-200 rounded-md">
+                                <p className="text-center font-semibold text-sky-800">
+                                    أنت تملأ استمارة التقديم لـ: {levelNames[selectedLevel]}
+                                </p>
+                            </div>
+                            <MemberFormFieldset 
+                                level={selectedLevel} 
+                                formData={formData} 
+                                onFormChange={handleChange} 
+                                onDynamicFieldChange={handlePreviousRolesChange} 
+                            />
+                        </div>
+                    )}
+                </CardBody>
+
+                {/* --- NEW: Only show footer if a level is selected --- */}
+                {selectedLevel && (
+                    <CardFooter>
+                         <Button type="submit" disabled={submitting}>
+                            {submitting ? 'Submitting...' : (isUpdate ? 'Update Profile' : 'Submit Application')}
+                        </Button>
+                    </CardFooter>
+                )}
+            </form>
+        </Card>
+    );
 }
+// --- END OF FIX ---

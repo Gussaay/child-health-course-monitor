@@ -183,9 +183,9 @@ export const DataProvider = ({ children }) => {
 
                 fetchingRef.current[key] = true;
                 try {
-                    // This fetch uses data.js's default (cache-first)
-                    // We pass {} as sourceOptions to use the default in data.js
-                    const data = await fetchFn({}); 
+                    // --- FIX: Pass { source: 'server' } ---
+                    // We must force a server fetch if force=true
+                    const data = await fetchFn({ source: 'server' }); 
                     setCache(prev => ({ ...prev, [key]: data }));
                     return data;
                 } catch (error) {
