@@ -37,6 +37,8 @@ const CourseForm = lazy(() => import('./components/Course.jsx').then(module => (
 // --- NEW: Import PublicCourseMonitoringView from Course.jsx ---
 const PublicCourseMonitoringView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicCourseMonitoringView })));
 const ProgramTeamView = lazy(() => import('./components/ProgramTeamView').then(module => ({ default: module.ProgramTeamView })));
+// --- NEW: Import PublicTeamMemberProfileView ---
+const PublicTeamMemberProfileView = lazy(() => import('./components/ProgramTeamView').then(module => ({ default: module.PublicTeamMemberProfileView })));
 const TeamMemberApplicationForm = lazy(() => import('./components/ProgramTeamView').then(module => ({ default: module.TeamMemberApplicationForm })));
 const ParticipantsView = lazy(() => import('./components/Participants').then(module => ({ default: module.ParticipantsView })));
 const ParticipantForm = lazy(() => import('./components/Participants').then(module => ({ default: module.ParticipantForm })));
@@ -54,7 +56,12 @@ import {
     getCourseById, getParticipantById, updateCourseSharingSettings, updateParticipantSharingSettings,
     listPendingFacilitatorSubmissions, approveFacilitatorSubmission, rejectFacilitatorSubmission,
     saveParticipantAndSubmitFacilityUpdate, bulkMigrateFromMappings,
+    
+    // --- NEW: Import public data functions ---
     getPublicCourseReportData,
+    getPublicFacilitatorReportData,
+    getPublicTeamMemberProfileData,
+    
     initializeUsageTracking,
     // --- NEW: Import listAllParticipantsForCourse ---
     listAllParticipantsForCourse,
@@ -262,6 +269,11 @@ export default function App() {
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const [itemToShare, setItemToShare] = useState(null);
     const [shareType, setShareType] = useState('course');
+    
+    // --- NEW: State for generic public views ---
+    const [publicViewData, setPublicViewData] = useState(null);
+    const [publicViewType, setPublicViewType] = useState(null); // e.g., 'facilitatorReport', 'teamMemberProfile'
+    const [publicViewLoading, setPublicViewLoading] = useState(false);
 
     // --- MODIFIED: State for public monitoring view ---
     const [isPublicMonitoringView, setIsPublicMonitoringView] = useState(false);
@@ -306,9 +318,10 @@ export default function App() {
         if (historyInitialized.current) return;
         historyInitialized.current = true;
 
-        const handlePathChange = () => {
+        const handlePathChange = async () => { // Make async
             const path = window.location.pathname;
 
+            // Reset all public/shared view states
             setIsSharedView(false);
             setIsPublicSubmissionView(false);
             setIsNewFacilityView(false);
@@ -320,6 +333,12 @@ export default function App() {
             setPublicMentorshipProps(null);
             setSubmissionType(null);
             setSharedViewError(null);
+            
+            // --- NEW: Reset generic public view state ---
+            setPublicViewData(null);
+            setPublicViewType(null);
+            setPublicViewLoading(false);
+
 
             const facilityUpdateMatch = path.match(/^\/facilities\/data-entry\/([a-zA-Z0-9]+)\/?$/);
             if (path.startsWith('/facilities/data-entry/new')) {
@@ -395,24 +414,63 @@ export default function App() {
             }
             // --- *** END OF FIX --- ---
 
-            const publicReportMatch = path.match(/^\/public\/report\/course\/([a-zA-Z0-9]+)\/?$/);
-            if (publicReportMatch && publicReportMatch[1]) {
-                const courseId = publicReportMatch[1];
-                setIsSharedView(true);
-                const fetchReport = async () => {
-                    try {
-                        const data = await getPublicCourseReportData(courseId);
-                        setSharedReportData(data);
-                    } catch (error) {
-                        setSharedViewError(error.message);
-                    }
-                };
-                fetchReport();
+            // --- MODIFIED: publicReportMatch (Course) ---
+            const publicCourseReportMatch = path.match(/^\/public\/report\/course\/([a-zA-Z0-9]+)\/?$/);
+            if (publicCourseReportMatch && publicCourseReportMatch[1]) {
+                const courseId = publicCourseReportMatch[1];
+                setIsSharedView(true); // Keep this for legacy
+                setPublicViewType('courseReport'); // Set new type
+                setPublicViewLoading(true);
+                try {
+                    const data = await getPublicCourseReportData(courseId);
+                    setSharedReportData(data); // Keep setting legacy state
+                    setPublicViewData(data); // Set new generic state
+                } catch (error) {
+                    setSharedViewError(error.message);
+                } finally {
+                    setPublicViewLoading(false);
+                }
+                return; // Stop processing
+            }
+
+            // --- NEW: Public Facilitator Report Match ---
+            const publicFacilitatorReportMatch = path.match(/^\/public\/report\/facilitator\/([a-zA-Z0-9]+)\/?$/);
+            if (publicFacilitatorReportMatch && publicFacilitatorReportMatch[1]) {
+                const facilitatorId = publicFacilitatorReportMatch[1];
+                setPublicViewType('facilitatorReport');
+                setPublicViewLoading(true);
+                try {
+                    const data = await getPublicFacilitatorReportData(facilitatorId);
+                    setPublicViewData(data);
+                } catch (error) {
+                    setSharedViewError(error.message); // Use sharedViewError for simplicity
+                } finally {
+                    setPublicViewLoading(false);
+                }
+                return; // Stop processing
+            }
+
+            // --- NEW: Public Team Member Profile Match ---
+            const publicTeamMemberMatch = path.match(/^\/public\/profile\/team\/(federal|state|locality)\/([a-zA-Z0-9]+)\/?$/);
+            if (publicTeamMemberMatch && publicTeamMemberMatch[1] && publicTeamMemberMatch[2]) {
+                const level = publicTeamMemberMatch[1];
+                const memberId = publicTeamMemberMatch[2];
+                setPublicViewType('teamMemberProfile');
+                setPublicViewLoading(true);
+                try {
+                    const data = await getPublicTeamMemberProfileData(level, memberId);
+                    setPublicViewData(data);
+                } catch (error) {
+                    setSharedViewError(error.message); // Use sharedViewError for simplicity
+                } finally {
+                    setPublicViewLoading(false);
+                }
+                return; // Stop processing
             }
         };
 
         handlePathChange();
-    }, []);
+    }, []); // Empty dependency array
     // --- END MODIFICATION ---
 
     const ALL_PERMISSIONS_MINIMAL = useMemo(() => {
@@ -538,9 +596,12 @@ export default function App() {
         if (['courseForm'].includes(view)) {
             fetchCoordinators();
         }
-        if (view === 'courses') {
+        // --- THIS IS THE FIX ---
+        // Added 'facilitatorReport' to this condition
+        if (view === 'courses' || view === 'facilitatorReport') {
             fetchCourses();
         }
+        // --- END OF FIX ---
         if (view === 'skillsMentorship') {
             fetchHealthFacilities();
             fetchSkillMentorshipSubmissions();
@@ -1156,13 +1217,17 @@ export default function App() {
 
     const visibleNavItems = useMemo(() => navItems.filter(item => !item.disabled), [navItems]);
 
-    // isApplicationPublicView includes forms that ARE public (like application forms, facility updates, and shared reports)
-    const isApplicationPublicView = isPublicSubmissionView || isNewFacilityView || isPublicFacilityUpdateView || isSharedView;
+    // --- MODIFIED: isMinimalUILayout logic ---
+    // isApplicationPublicView includes forms that ARE public (like application forms, facility updates)
+    const isApplicationPublicView = isPublicSubmissionView || isNewFacilityView || isPublicFacilityUpdateView;
     // isMentorshipPublicView is a specific path, but access is now restricted to logged-in users.
     const isMentorshipPublicView = !!publicMentorshipProps; 
+    
+    // --- NEW: Check for any public report/profile view ---
+    const isPublicReportView = !!publicViewType; // This is true for course, facilitator, or team reports
 
     // This checks if the user is on *any* minimal UI path (whether authenticated or not)
-    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView;
+    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView;
 
     let mainContent;
 
@@ -1211,28 +1276,60 @@ export default function App() {
         }
     }
     
-    else if (isSharedView) {
-        // ... (block unchanged)
-        if (sharedViewError) {
-            mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">{sharedViewError}</div></Card>;
-        } else if (!sharedReportData) {
+    // --- MODIFIED: This block now handles ALL public views ---
+    else if (isPublicReportView) { // This replaces `isSharedView`
+        if (publicViewLoading) {
             mainContent = <Card><div className="flex justify-center p-8"><Spinner /></div></Card>;
-        } else {
-            mainContent = (
-                <CourseReportView
-                    course={sharedReportData.course}
-                    participants={sharedReportData.participants}
-                    allObs={sharedReportData.allObs}
-                    allCases={sharedReportData.allCases}
-                    finalReportData={sharedReportData.finalReport}
-                    allHealthFacilities={null} // Public reports don't have access to all facilities for coverage calculation
-                    isSharedView={true}
-                    onBack={() => {}}
-                    onShare={() => {}}
-                />
-            );
+        }
+        else if (sharedViewError) { // We still use sharedViewError for all errors
+            mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">{sharedViewError}</div></Card>;
+        } 
+        else if (publicViewData) {
+            // Render based on the type
+            switch (publicViewType) {
+                case 'courseReport':
+                    mainContent = (
+                        <CourseReportView
+                            course={publicViewData.course}
+                            participants={publicViewData.participants}
+                            allObs={publicViewData.allObs}
+                            allCases={publicViewData.allCases}
+                            finalReportData={publicViewData.finalReport}
+                            allHealthFacilities={null} // Public reports don't have access to all facilities
+                            isSharedView={true}
+                            onBack={() => {}}
+                            onShare={() => {}} // Share button is handled internally
+                        />
+                    );
+                    break;
+                case 'facilitatorReport':
+                    mainContent = (
+                        <FacilitatorReportView
+                            facilitator={publicViewData.facilitator}
+                            allCourses={publicViewData.allCourses}
+                            isSharedView={true}
+                            onBack={() => {}}
+                        />
+                    );
+                    break;
+                case 'teamMemberProfile':
+                    mainContent = (
+                        <PublicTeamMemberProfileView
+                            member={publicViewData.member}
+                            level={publicViewData.level}
+                        />
+                    );
+                    break;
+                default:
+                    mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">Invalid report type.</div></Card>;
+            }
+        }
+        else {
+             mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">Could not load report data.</div></Card>;
         }
     }
+    // --- END MODIFICATION ---
+    
     // --- MODIFICATION: Added authLoading check ---
     else if (isPublicMonitoringView) {
         // ... (block unchanged)

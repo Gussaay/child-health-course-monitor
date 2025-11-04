@@ -4,6 +4,9 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Bar, Pie } from 'react-chartjs-2';
 import * as XLSX from 'xlsx';
+// --- NEW: Import QRCode from the correct library ---
+import { QRCodeCanvas } from 'qrcode.react'; // Use this component
+// --- END NEW ---
 import { Button, Card, EmptyState, FormGroup, Input, PageHeader, Select, Spinner, Table, Textarea, Modal, CardBody, CardFooter, CardHeader } from './CommonComponents';
 import {
     listAllCourses,
@@ -20,7 +23,7 @@ import {
     // --- ADDED: Import upload/delete/upsert ---
     deleteFile
 } from '../data';
-import { COURSE_TYPES_FACILITATOR, STATE_LOCALITIES } from './constants.js';
+import { COURSE_TYPES_FACILITATOR, STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES } from './constants.js'; // --- MODIFIED: Added IMNCI_SUBCOURSE_TYPES ---
 // --- MODIFIED: Import db, firestore functions, and permission configs ---
 import { auth, db } from '../firebase';
 import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore'; // Added imports
@@ -30,7 +33,6 @@ import { DEFAULT_ROLE_PERMISSIONS, ALL_PERMISSIONS } from './AdminDashboard'; //
 // --- END MODIFICATION ---
 
 const getCertificateName = (key) => {
-    // ... (component unchanged)
     const names = {
         IMNCI: 'IMNCI ToT Certificate',
         ETAT: 'ETAT ToT Certificate',
@@ -45,7 +47,6 @@ const getCertificateName = (key) => {
 };
 
 function ViewCertificatesModal({ isOpen, onClose, facilitator }) {
-    // ... (component unchanged)
     if (!facilitator) return null;
 
     const certs = facilitator.certificateUrls ? Object.entries(facilitator.certificateUrls) : [];
@@ -73,7 +74,6 @@ function ViewCertificatesModal({ isOpen, onClose, facilitator }) {
 }
 
 function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleStatus }) {
-    // ... (component unchanged)
     const [showLinkCopied, setShowLinkCopied] = useState(false);
     const link = `${window.location.origin}/public/facilitator-application`;
 
@@ -128,7 +128,6 @@ function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleSta
 }
 
 const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
-    // ... (component unchanged)
     const [excelData, setExcelData] = useState([]);
     const [headers, setHeaders] = useState([]);
     const [fieldMappings, setFieldMappings] = useState({});
@@ -241,7 +240,6 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
     };
 
     const renderPreview = () => {
-        // ... (function unchanged)
         if (excelData.length === 0) return null;
         return (
             <div className="mt-4 overflow-auto max-h-60">
@@ -321,7 +319,6 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
 };
 
 function SubmissionDetails({ submission }) {
-    // ... (component unchanged)
     const fieldsToShow = {
         name: "Name",
         phone: "Phone",
@@ -372,7 +369,6 @@ function SubmissionDetails({ submission }) {
 // --- Reusable Facilitator Form Fields Component ---
 // --- *** MODIFICATION: Added 'export' keyword *** ---
 export function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublicForm = false }) {
-    // ... (component unchanged)
     const { name, phone, email, isUserEmail, courses, totDates, certificateUrls, currentState, currentLocality, directorCourse, directorCourseDate, followUpCourse, followUpCourseDate, teamLeaderCourse, teamLeaderCourseDate, isClinicalInstructor, comments, backgroundQualification, backgroundQualificationOther } = data;
 
     const handleFieldChange = (field, value) => onDataChange({ ...data, [field]: value });
@@ -543,6 +539,47 @@ export function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublic
     );
 }
 
+// --- MODIFIED: Reusable Share Link Modal ---
+function ShareLinkModal({ isOpen, onClose, title, link }) {
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(link);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={title}>
+            <p className="text-sm text-gray-600 mb-4">Share this public link with anyone. They will be able to view a read-only version of the profile.</p>
+            
+            <FormGroup label="Public Link">
+                <div className="flex gap-2">
+                    <Input type="text" value={link} readOnly />
+                    <Button onClick={handleCopy} variant="secondary" className="w-24">
+                        {copied ? 'Copied!' : 'Copy'}
+                    </Button>
+                </div>
+            </FormGroup>
+
+            <FormGroup label="QR Code">
+                <div className="flex justify-center p-4 bg-white rounded-md border">
+                    {/* --- MODIFICATION: Use the QRCode component --- */}
+                    <QRCodeCanvas
+                        value={link}
+                        size={256} // Specify size
+                        bgColor={"#ffffff"}
+                        fgColor={"#000000"}
+                        level={"Q"} // Error correction level
+                    />
+                    {/* --- END MODIFICATION --- */}
+                </div>
+            </FormGroup>
+        </Modal>
+    );
+}
+// --- END MODIFICATION ---
+
 export function FacilitatorsView({ 
     onAdd, 
     onEdit, 
@@ -555,7 +592,6 @@ export function FacilitatorsView({
     refreshData,
     permissions
 }) {
-    // ... (component unchanged)
     const {
         facilitators,
         pendingFacilitatorSubmissions: pendingSubmissions,
@@ -574,6 +610,9 @@ export function FacilitatorsView({
     const [viewingSubmission, setViewingSubmission] = useState(null);
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [viewingCertsFor, setViewingCertsFor] = useState(null);
+    
+    // --- NEW: State for share modal ---
+    const [shareModalInfo, setShareModalInfo] = useState({ isOpen: false, link: '' });
 
     useEffect(() => {
         fetchFacilitators(); // This will only fetch if cache is null
@@ -641,9 +680,14 @@ export function FacilitatorsView({
         await onRejectSubmission(submissionId); 
         refreshData(); 
     };
+    
+    // --- NEW: Handler to open the share modal ---
+    const handleShare = (facilitator) => {
+        const link = `${window.location.origin}/public/report/facilitator/${facilitator.id}`;
+        setShareModalInfo({ isOpen: true, link: link });
+    };
 
     const filteredFacilitators = useMemo(() => {
-        // ... (function unchanged)
         if (!facilitators) {
             return [];
         }
@@ -693,6 +737,14 @@ export function FacilitatorsView({
                     onClose={() => setViewingCertsFor(null)}
                     facilitator={viewingCertsFor}
                 />
+                
+                {/* --- NEW: Share Modal Instance --- */}
+                <ShareLinkModal
+                    isOpen={shareModalInfo.isOpen}
+                    onClose={() => setShareModalInfo({ isOpen: false, link: '' })}
+                    title="Share Facilitator Report"
+                    link={shareModalInfo.link}
+                />
 
                 <div className="mt-6">
                     <div className="border-b border-gray-200">
@@ -728,7 +780,11 @@ export function FacilitatorsView({
                                                 <td className="p-4">
                                                     <div className="flex gap-2 flex-wrap justify-end">
                                                         <Button size="sm" onClick={() => onOpenReport(f.id)}>Report</Button>
-                                                        <Button size="sm" variant="secondary" onClick={() => setViewingCertsFor(f)} disabled={!hasCerts} title={hasCerts ? "View Certificates" : "No certificates available"}>Certificates</Button>
+                                                        
+                                                        {/* --- NEW: Share Button --- */}
+                                                        <Button size="sm" variant="secondary" onClick={() => handleShare(f)}>Share</Button>
+                                                        
+                                                        <Button size="sm" variant="secondary" onClick={() => setViewingCertsFor(f)} disabled={!hasCerts} title={hasCerts ? "View Certificates" : "No certificates available"}>Certs</Button>
                                                         {permissions.canManageHumanResource && <Button size="sm" variant="secondary" onClick={() => onEdit(f)}>Edit</Button>}
                                                         {permissions.canManageHumanResource && <Button size="sm" variant="danger" onClick={() => onDelete(f.id)}>Delete</Button>}
                                                     </div>
@@ -903,7 +959,6 @@ export function FacilitatorForm({ initialData, onCancel, onSave, setToast, setLo
 }
 
 export function FacilitatorApplicationForm() {
-    // ... (component unchanged)
     const [formData, setFormData] = useState({
         name: '', phone: '', email: '', courses: [], totDates: {}, certificateUrls: {}, currentState: '',
         currentLocality: '', directorCourse: 'No', directorCourseDate: '', followUpCourse: 'No', 
@@ -1052,17 +1107,35 @@ export function FacilitatorApplicationForm() {
     );
 }
 
-export function FacilitatorReportView({ facilitator, allCourses, onBack }) {
-    // ... (component unchanged)
+// --- START: MODIFICATIONS TO FacilitatorReportView ---
+export function FacilitatorReportView({ 
+    facilitator, 
+    allCourses, 
+    onBack, 
+    isSharedView = false
+}) {
     const combinedChartRef = useRef(null);
     const imciSubcoursePieRef = useRef(null);
     const [isCertsModalOpen, setIsCertsModalOpen] = useState(false);
     const hasCerts = facilitator?.certificateUrls && Object.keys(facilitator.certificateUrls).length > 0;
     
-    const { directedCourses, facilitatedCourses, totalDays, combinedChartData, imciSubcourseData, courseSummary } = useMemo(() => {
+    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+    const publicLink = isSharedView ? window.location.href : `${window.location.origin}/public/report/facilitator/${facilitator?.id}`;
+    
+    // --- MODIFIED: Expanded useMemo hook ---
+    const { 
+        directedCourses, 
+        facilitatedCourses, 
+        combinedChartData, 
+        imciSubcourseData, 
+        courseSummary,
+        totalInstructed,
+        totalDirected
+    } = useMemo(() => {
         if (!facilitator || !allCourses) {
             return {
-                directedCourses: [], facilitatedCourses: [], totalDays: 0, combinedChartData: { labels: [], datasets: [] }, imciSubcourseData: null, courseSummary: []
+                directedCourses: [], facilitatedCourses: [], combinedChartData: { labels: [], datasets: [] }, 
+                imciSubcourseData: null, courseSummary: [], totalInstructed: 0, totalDirected: 0
             };
         }
 
@@ -1070,16 +1143,46 @@ export function FacilitatorReportView({ facilitator, allCourses, onBack }) {
         const facilitated = allCourses.filter(c => Array.isArray(c.facilitators) && c.facilitators.includes(facilitator.name));
         
         const summary = {};
+        const imciCounts = {};
+
         allCourses.forEach(course => {
             const courseType = course.course_type;
             summary[courseType] = summary[courseType] || { directed: 0, instructed: 0, daysDirected: 0, daysInstructed: 0, };
-            if (course.director === facilitator.name) {
+
+            const isDirector = course.director === facilitator.name;
+            const isClinical = course.clinical_instructor === facilitator.name;
+            const isFacilitator = Array.isArray(course.facilitators) && course.facilitators.includes(facilitator.name);
+
+            if (isDirector) {
                 summary[courseType].directed++;
                 summary[courseType].daysDirected += (course.course_duration || 0);
             }
-            if (Array.isArray(course.facilitators) && course.facilitators.includes(facilitator.name)) {
+            if (isFacilitator) {
                 summary[courseType].instructed++;
                 summary[courseType].daysInstructed += (course.course_duration || 0);
+            }
+
+            // IMNCI Sub-course logic
+            if (courseType === 'IMNCI' && (isDirector || isClinical || isFacilitator)) {
+                const involvedSubTypes = new Set();
+                
+                if (isDirector && course.director_imci_sub_type) {
+                    involvedSubTypes.add(course.director_imci_sub_type);
+                }
+                if (isClinical && course.clinical_instructor_imci_sub_type) {
+                    involvedSubTypes.add(course.clinical_instructor_imci_sub_type);
+                }
+                if (isFacilitator && Array.isArray(course.facilitatorAssignments)) {
+                    course.facilitatorAssignments.forEach(ass => {
+                        if (ass.name === facilitator.name && ass.imci_sub_type) {
+                            involvedSubTypes.add(ass.imci_sub_type);
+                        }
+                    });
+                }
+                
+                involvedSubTypes.forEach(subType => {
+                    imciCounts[subType] = (imciCounts[subType] || 0) + 1;
+                });
             }
         });
 
@@ -1099,67 +1202,128 @@ export function FacilitatorReportView({ facilitator, allCourses, onBack }) {
             ],
         };
         
-        const finalImciSubcourseData = null; 
+        let finalImciSubcourseData = null;
+        if (Object.keys(imciCounts).length > 0) {
+            const backgroundColors = IMNCI_SUBCOURSE_TYPES.map((_, index) => {
+                const colors = [
+                    'rgba(255, 99, 132, 0.7)',
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(255, 206, 86, 0.7)',
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(153, 102, 255, 0.7)',
+                ];
+                return colors[index % colors.length];
+            });
+
+            finalImciSubcourseData = {
+                labels: Object.keys(imciCounts),
+                datasets: [{
+                    data: Object.values(imciCounts),
+                    backgroundColor: backgroundColors.slice(0, Object.keys(imciCounts).length),
+                }]
+            };
+        }
         
         return {
             directedCourses: directed,
             facilitatedCourses: facilitated,
             courseSummary: Object.entries(summary),
             combinedChartData: finalCombinedChartData,
-            imciSubcourseData: finalImciSubcourseData
+            imciSubcourseData: finalImciSubcourseData,
+            totalInstructed: facilitated.length,
+            totalDirected: directed.length
         };
     }, [facilitator, allCourses]);
+    // --- END MODIFIED useMemo ---
     
     const generateFacilitatorPdf = () => {
-        // ... PDF generation logic
+        // ... PDF generation logic ...
+        // (This function is unchanged)
     };
     
     if (!facilitator) {
         return <Card><CardBody><EmptyState message="Facilitator not found." /></CardBody></Card>;
     }
     
+    // --- START: MODIFIED JSX LAYOUT ---
     return (
         <div className="space-y-6">
             <ViewCertificatesModal isOpen={isCertsModalOpen} onClose={() => setIsCertsModalOpen(false)} facilitator={facilitator} />
             
+            <ShareLinkModal
+                isOpen={isShareModalOpen}
+                onClose={() => setIsShareModalOpen(false)}
+                title="Share Facilitator Report"
+                link={publicLink}
+            />
+            
             <PageHeader title="Facilitator Report" subtitle={facilitator.name} actions={<>
                 <Button onClick={generateFacilitatorPdf} variant="secondary">Export as PDF</Button>
                 <Button variant="secondary" onClick={() => setIsCertsModalOpen(true)} disabled={!hasCerts}>View Certificates</Button>
-                <Button onClick={onBack}>Back to List</Button>
+                
+                {isSharedView ? (
+                    <Button variant="secondary" onClick={() => setIsShareModalOpen(true)}>Share</Button>
+                ) : (
+                    <Button onClick={onBack}>Back to List</Button>
+                )}
             </>} />
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card className="lg:col-span-1">
-                    <CardHeader>Facilitator Details</CardHeader>
-                    <CardBody>
-                        <dl className="divide-y divide-gray-200">
-                           <div className="py-2 grid grid-cols-2 gap-4"><dt className="font-medium text-gray-500">Name</dt><dd>{facilitator.name}</dd></div>
-                           <div className="py-2 grid grid-cols-2 gap-4"><dt className="font-medium text-gray-500">Phone</dt><dd>{facilitator.phone}</dd></div>
-                           <div className="py-2 grid grid-cols-2 gap-4"><dt className="font-medium text-gray-500">Email</dt><dd>{facilitator.email || 'N/A'}</dd></div>
-                           <div className="py-2 grid grid-cols-2 gap-4"><dt className="font-medium text-gray-500">Location</dt><dd>{facilitator.currentState || 'N/A'}</dd></div>
-                           <div className="py-2 grid grid-cols-2 gap-4"><dt className="font-medium text-gray-500">Courses</dt><dd>{(Array.isArray(facilitator.courses) ? facilitator.courses : []).join(', ')}</dd></div>
-                        </dl>
+            {/* 1. Full Facilitator Details */}
+            <Card>
+                <CardHeader>Facilitator Details</CardHeader>
+                <CardBody>
+                    <dl className="divide-y divide-gray-200">
+                       <div className="py-2 grid grid-cols-1 md:grid-cols-3 gap-4"><dt className="font-medium text-gray-500">Name</dt><dd className="md:col-span-2">{facilitator.name}</dd></div>
+                       <div className="py-2 grid grid-cols-1 md:grid-cols-3 gap-4"><dt className="font-medium text-gray-500">Phone</dt><dd className="md:col-span-2">{facilitator.phone}</dd></div>
+                       <div className="py-2 grid grid-cols-1 md:grid-cols-3 gap-4"><dt className="font-medium text-gray-500">Email</dt><dd className="md:col-span-2">{facilitator.email || 'N/A'}</dd></div>
+                       <div className="py-2 grid grid-cols-1 md:grid-cols-3 gap-4"><dt className="font-medium text-gray-500">Location</dt><dd className="md:col-span-2">{facilitator.currentState ? `${facilitator.currentState}${facilitator.currentLocality ? `, ${facilitator.currentLocality}` : ''}` : 'N/A'}</dd></div>
+                       <div className="py-2 grid grid-cols-1 md:grid-cols-3 gap-4"><dt className="font-medium text-gray-500">Background</dt><dd className="md:col-span-2">{facilitator.backgroundQualification === 'Other' ? facilitator.backgroundQualificationOther : facilitator.backgroundQualification || 'N/A'}</dd></div>
+                       <div className="py-2 grid grid-cols-1 md:grid-cols-3 gap-4"><dt className="font-medium text-gray-500">Courses (ToT)</dt><dd className="md:col-span-2">{(Array.isArray(facilitator.courses) ? facilitator.courses : []).join(', ')}</dd></div>
+                       <div className="py-2 grid grid-cols-1 md:grid-cols-3 gap-4"><dt className="font-medium text-gray-500">IMNCI Director</dt><dd className="md:col-span-2">{facilitator.directorCourse || 'No'}</dd></div>
+                       <div className="py-2 grid grid-cols-1 md:grid-cols-3 gap-4"><dt className="font-medium text-gray-500">IMNCI Follow-up</dt><dd className="md:col-span-2">{facilitator.followUpCourse || 'No'}</dd></div>
+                       <div className="py-2 grid grid-cols-1 md:grid-cols-3 gap-4"><dt className="font-medium text-gray-500">IMNCI Team Leader</dt><dd className="md:col-span-2">{facilitator.teamLeaderCourse || 'No'}</dd></div>
+                       <div className="py-2 grid grid-cols-1 md:grid-cols-3 gap-4"><dt className="font-medium text-gray-500">Clinical Instructor</dt><dd className="md:col-span-2">{facilitator.isClinicalInstructor || 'No'}</dd></div>
+                       <div className="py-2 grid grid-cols-1 md:grid-cols-3 gap-4"><dt className="font-medium text-gray-500">Comments</dt><dd className="md:col-span-2">{facilitator.comments || 'N/A'}</dd></div>
+                    </dl>
+                </CardBody>
+            </Card>
+
+            {/* 2. KPIs */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                    <CardHeader>Total Courses Instructed</CardHeader>
+                    <CardBody className="flex items-center justify-center">
+                        <div className="text-5xl font-bold text-indigo-600">{totalInstructed}</div>
                     </CardBody>
                 </Card>
-
-                <Card className="lg:col-span-2">
-                    <CardHeader>Course Involvement Summary</CardHeader>
-                    <CardBody>
-                        <Table headers={["Course Type", "Instructed", "Directed", "Total Days"]}>
-                            {courseSummary.map(([type, data]) => (
-                                <tr key={type}>
-                                    <td className="p-2 border">{type}</td>
-                                    <td className="p-2 border text-center">{data.instructed}</td>
-                                    <td className="p-2 border text-center">{data.directed}</td>
-                                    <td className="p-2 border text-center">{data.daysInstructed + data.daysDirected}</td>
-                                </tr>
-                            ))}
-                        </Table>
+                <Card>
+                    <CardHeader>Total Courses Directed</CardHeader>
+                    <CardBody className="flex items-center justify-center">
+                        <div className="text-5xl font-bold text-pink-600">{totalDirected}</div>
                     </CardBody>
                 </Card>
             </div>
+
+            {/* 3. Course Involvement Summary Table */}
+            <Card>
+                <CardHeader>Course Involvement Summary</CardHeader>
+                <CardBody>
+                    <Table headers={["Course Type", "Instructed", "Directed", "Total Days"]}>
+                        {courseSummary.map(([type, data]) => (
+                            <tr key={type}>
+                                <td className="p-2 border">{type}</td>
+                                <td className="p-2 border text-center">{data.instructed}</td>
+                                <td className="p-2 border text-center">{data.directed}</td>
+                                <td className="p-2 border text-center">{data.daysInstructed + data.daysDirected}</td>
+                            </tr>
+                        ))}
+                    </Table>
+                </CardBody>
+            </Card>
             
+            {/* 4. Graphs */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* 5. IMNCI Pie Chart */}
                 {imciSubcourseData && (
                     <Card>
                         <CardHeader>IMNCI Sub-course Distribution</CardHeader>
@@ -1167,15 +1331,18 @@ export function FacilitatorReportView({ facilitator, allCourses, onBack }) {
                     </Card>
                 )}
                  <Card>
-                    <CardHeader>Course Overview</CardHeader>
+                    <CardHeader>Course Overview (All Types)</CardHeader>
                     <CardBody><div className="h-64 flex justify-center"><Bar data={combinedChartData} options={{ responsive: true, maintainAspectRatio: false }} ref={combinedChartRef} /></div></CardBody>
                 </Card>
             </div>
 
+            {/* 6. Directed and Facilitated Lists */}
             <div className="grid md:grid-cols-2 gap-6">
                  <Card><CardHeader>Directed Courses</CardHeader><CardBody><Table headers={["Course", "Date", "Location"]}>{directedCourses.length > 0 ? directedCourses.map(c => <tr key={c.id}><td className="p-2">{c.course_type}</td><td className="p-2">{c.start_date}</td><td className="p-2">{c.state}</td></tr>) : <EmptyState message="No courses directed." colSpan={3} />}</Table></CardBody></Card>
                  <Card><CardHeader>Facilitated Courses</CardHeader><CardBody><Table headers={["Course", "Date", "Location"]}>{facilitatedCourses.length > 0 ? facilitatedCourses.map(c => <tr key={c.id}><td className="p-2">{c.course_type}</td><td className="p-2">{c.start_date}</td><td className="p-2">{c.state}</td></tr>) : <EmptyState message="No courses facilitated." colSpan={3} />}</Table></CardBody></Card>
             </div>
         </div>
     );
+    // --- END: MODIFIED JSX LAYOUT ---
 }
+// --- END: MODIFICATIONS TO FacilitatorReportView ---

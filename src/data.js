@@ -1927,3 +1927,118 @@ export async function deleteMentorshipSession(sessionId) {
 }
 // --- END NEW FUNCTION ---
 // --- END NEW MENTORSHIP FUNCTIONS ---
+
+
+// --- NEW FUNCTIONS FOR PUBLIC PROFILES/REPORTS ---
+
+/**
+ * Fetches a single facilitator by ID. (Helper for public report)
+ * Uses the wrapped getDoc.
+ */
+async function getFacilitatorById(facilitatorId, sourceOptions = {}) {
+    if (!facilitatorId) return null;
+    const docRef = doc(db, "facilitators", facilitatorId);
+    const docSnap = await getDoc(docRef, sourceOptions);
+    if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() };
+    }
+    return null;
+}
+
+/**
+ * Fetches all data needed for a public facilitator report.
+ * @param {string} facilitatorId - The ID of the facilitator.
+ * @returns {Promise<object>} An object containing { facilitator, allCourses }.
+ */
+export async function getPublicFacilitatorReportData(facilitatorId) {
+    const sourceOptions = { source: 'server' }; // Always fetch fresh data for public links
+
+    const facilitator = await getFacilitatorById(facilitatorId, sourceOptions);
+    if (!facilitator) {
+        throw new Error("Facilitator report not found.");
+    }
+
+    // Fetch all courses to calculate stats (matches internal report logic)
+    const courses = await listAllCourses(sourceOptions);
+
+    return {
+        facilitator,
+        allCourses: courses || []
+    };
+}
+
+/**
+ * Fetches a single state coordinator by ID. (Helper for public profile)
+ * Uses the wrapped getDoc.
+ */
+async function getStateCoordinatorById(id, sourceOptions = {}) {
+    if (!id) return null;
+    const docRef = doc(db, "stateCoordinators", id);
+    const docSnap = await getDoc(docRef, sourceOptions);
+    if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() };
+    }
+    return null;
+}
+
+/**
+ * Fetches a single federal coordinator by ID. (Helper for public profile)
+ * Uses the wrapped getDoc.
+ */
+async function getFederalCoordinatorById(id, sourceOptions = {}) {
+    if (!id) return null;
+    const docRef = doc(db, "federalCoordinators", id);
+    const docSnap = await getDoc(docRef, sourceOptions);
+    if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() };
+    }
+    return null;
+}
+
+/**
+ * Fetches a single locality coordinator by ID. (Helper for public profile)
+ * Uses the wrapped getDoc.
+ */
+async function getLocalityCoordinatorById(id, sourceOptions = {}) {
+    if (!id) return null;
+    const docRef = doc(db, "localityCoordinators", id);
+    const docSnap = await getDoc(docRef, sourceOptions);
+    if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() };
+    }
+    return null;
+}
+
+/**
+ * Fetches the data for a public team member profile.
+ * @param {string} level - 'federal', 'state', or 'locality'.
+ * @param {string} memberId - The ID of the team member.
+ * @returns {Promise<object>} An object containing { member, level }.
+ */
+export async function getPublicTeamMemberProfileData(level, memberId) {
+    const sourceOptions = { source: 'server' }; // Always fetch fresh
+    let member = null;
+
+    try {
+        if (level === 'federal') {
+            member = await getFederalCoordinatorById(memberId, sourceOptions);
+        } else if (level === 'state') {
+            member = await getStateCoordinatorById(memberId, sourceOptions);
+        } else if (level === 'locality') {
+            member = await getLocalityCoordinatorById(memberId, sourceOptions);
+        } else {
+            throw new Error("Invalid team member level.");
+        }
+
+        if (!member) {
+            throw new Error("Team member profile not found.");
+        }
+
+        return { member, level };
+    } catch (error) {
+        console.error("Error fetching public team member data:", error);
+        throw error;
+    }
+}
+
+// --- END NEW FUNCTIONS ---

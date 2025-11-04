@@ -1,5 +1,8 @@
 // src/components/ProgramTeamView.jsx
 import React, { useState, useEffect, useMemo } from 'react';
+// --- NEW: Import QRCode from the correct library ---
+import { QRCodeCanvas } from 'qrcode.react'; // Use this component
+// --- END NEW ---
 import {
     upsertStateCoordinator,
     deleteStateCoordinator,
@@ -42,6 +45,47 @@ import {
     applyDerivedPermissions, 
     ALL_PERMISSIONS 
 } from './AdminDashboard';
+// --- END MODIFICATION ---
+
+// --- MODIFIED: Reusable Share Link Modal ---
+function ShareLinkModal({ isOpen, onClose, title, link }) {
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(link);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={title}>
+            <p className="text-sm text-gray-600 mb-4">Share this public link with anyone. They will be able to view a read-only version of the profile.</p>
+            
+            <FormGroup label="Public Link">
+                <div className="flex gap-2">
+                    <Input type="text" value={link} readOnly />
+                    <Button onClick={handleCopy} variant="secondary" className="w-24">
+                        {copied ? 'Copied!' : 'Copy'}
+                    </Button>
+                </div>
+            </FormGroup>
+
+            <FormGroup label="QR Code">
+                <div className="flex justify-center p-4 bg-white rounded-md border">
+                    {/* --- MODIFICATION: Use the QRCode component --- */}
+                    <QRCodeCanvas
+                        value={link}
+                        size={256} // Specify size
+                        bgColor={"#ffffff"}
+                        fgColor={"#000000"}
+                        level={"Q"} // Error correction level
+                    />
+                    {/* --- END MODIFICATION --- */}
+                </div>
+            </FormGroup>
+        </Modal>
+    );
+}
 // --- END MODIFICATION ---
 
 
@@ -362,6 +406,9 @@ export function ProgramTeamView({ permissions, userStates }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState(null); 
     const [editingMember, setEditingMember] = useState(null);
+    
+    // --- NEW: State for share modal ---
+    const [shareModalInfo, setShareModalInfo] = useState({ isOpen: false, link: '' });
 
     const fetchersByLevel = useMemo(() => ({
         federal: {
@@ -486,6 +533,12 @@ export function ProgramTeamView({ permissions, userStates }) {
         setEditingMember(member);
         setModalMode('view');
         setIsModalOpen(true);
+    };
+    
+    // --- NEW: Handler to open the share modal ---
+    const handleShare = (level, member) => {
+        const link = `${window.location.origin}/public/profile/team/${level}/${member.id}`;
+        setShareModalInfo({ isOpen: true, link: link });
     };
 
     // --- MODIFICATION: handleSave NOW assigns roles ---
@@ -731,6 +784,10 @@ export function ProgramTeamView({ permissions, userStates }) {
                                         <td className="p-4 text-sm">
                                             <div className="flex gap-2">
                                                 <Button variant="secondary" onClick={() => handleView(c)}>View</Button>
+                                                
+                                                {/* --- NEW: Share Button --- */}
+                                                <Button variant="secondary" onClick={() => handleShare(filters.level, c)}>Share</Button>
+                                                
                                                 {permissions.canManageHumanResource && <Button onClick={() => handleEdit(c)}>Edit</Button>}
                                                 {permissions.canManageHumanResource && <Button variant="danger" onClick={() => {}}>Delete</Button>}
                                             </div>
@@ -763,6 +820,14 @@ export function ProgramTeamView({ permissions, userStates }) {
                 settings={coordinatorApplicationSettings}
                 isLoading={isLoading.coordinatorApplicationSettings}
                 onToggleStatus={handleToggleLinkStatus}
+            />
+            
+            {/* --- NEW: Share Modal Instance --- */}
+            <ShareLinkModal
+                isOpen={shareModalInfo.isOpen}
+                onClose={() => setShareModalInfo({ isOpen: false, link: '' })}
+                title="Share Team Member Profile"
+                link={shareModalInfo.link}
             />
 
             <Modal isOpen={isModalOpen} onClose={handleCloseModal} size={modalMode === 'view' ? '2xl' : '3xl'}>
@@ -1052,3 +1117,72 @@ export function TeamMemberApplicationForm() {
     );
 }
 // --- END OF FIX ---
+
+// --- NEW: Public Profile View Component ---
+export function PublicTeamMemberProfileView({ member, level }) {
+    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+    const publicLink = window.location.href;
+
+    const renderDetail = (label, value) => {
+        if (!value) return null;
+        return (
+            <div className="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:py-5">
+                <dt className="text-sm font-medium text-gray-600">{label}</dt>
+                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{value}</dd>
+            </div>
+        );
+    };
+
+    const levelName = level.charAt(0).toUpperCase() + level.slice(1);
+
+    return (
+        <Card>
+            <ShareLinkModal
+                isOpen={isShareModalOpen}
+                onClose={() => setIsShareModalOpen(false)}
+                title="Share Team Member Profile"
+                link={publicLink}
+            />
+
+            <PageHeader 
+                title={`${levelName} Team Member Profile`} 
+                subtitle={member.name}
+                actions={
+                    <Button variant="secondary" onClick={() => setIsShareModalOpen(true)}>
+                        Share
+                    </Button>
+                }
+            />
+            <CardBody>
+                <div className="border-t border-gray-200">
+                    <dl className="divide-y divide-gray-200">
+                        {renderDetail('الإسم', member.name)}
+                        {renderDetail('رقم الهاتف', member.phone)}
+                        {renderDetail('الايميل', member.email)}
+                        {level !== 'federal' && renderDetail('الولاية', member.state)}
+                        {level === 'locality' && renderDetail('المحلية', member.locality)}
+                        {renderDetail('المسمى الوظيفي', member.jobTitle === 'اخرى' ? member.jobTitleOther : member.jobTitle)}
+                        {level !== 'locality' && renderDetail('الصفة', member.role)}
+                        {level !== 'locality' && member.role === 'مدير البرنامج' && renderDetail('تاريخ التعيين مدير للبرنامج', member.directorDate)}
+                        {level !== 'locality' && (member.role === 'رئيس وحدة' || member.role === 'عضو في وحدة') && renderDetail('الوحدة', member.unit)}
+                        {level !== 'locality' && renderDetail(level === 'federal' ? 'تاريخ الانضمام للبرنامج الاتحادي' : 'تاريخ الانضمام لبرنامج الولاية', member.joinDate)}
+                        <div className="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:py-5">
+                            <dt className="text-sm font-medium text-gray-600">المهام الوظيفية والخبرات الاخرى</dt>
+                            <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                                {Array.isArray(member.previousRoles) && member.previousRoles.some(e => e.role) ? (
+                                    <ul className="list-disc pl-5 space-y-1">
+                                        {member.previousRoles.map((exp, index) => (
+                                            exp.role && <li key={index}><strong>{exp.role}</strong> ({exp.duration || 'N/A'})</li>
+                                        ))}
+                                    </ul>
+                                ) : 'N/A'}
+                            </dd>
+                        </div>
+                        {renderDetail('اي تعليقات اخرى', member.comments)}
+                    </dl>
+                </div>
+            </CardBody>
+        </Card>
+    );
+}
+// --- END NEW COMPONENT ---

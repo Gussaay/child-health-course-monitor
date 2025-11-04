@@ -1,33 +1,33 @@
 // MentorshipDashboard.jsx
-import React, { useMemo, useCallback } from 'react';
-// --- NEW: Import Chart.js components ---
-import { Line } from 'react-chartjs-2';
+import React, { useMemo, useCallback, useState } from 'react';
+// --- MODIFICATION: Import Bar ---
+import { Line, Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
   PointElement,
   LineElement,
+  BarElement, // <-- NEW IMPORT
   Title,
   Tooltip,
   Legend,
 } from 'chart.js';
-// --- END NEW ---
 
-// --- NEW: Register Chart.js components ---
+import { IMNCI_FORM_STRUCTURE, evaluateRelevance } from './IMNCIFormPart.jsx';
+
+// --- MODIFICATION: Register BarElement ---
 ChartJS.register(
   CategoryScale,
   LinearScale,
   PointElement,
   LineElement,
+  BarElement, // <-- NEW
   Title,
   Tooltip,
   Legend
 );
-// --- END NEW ---
 
-
-// Copied from SkillsMentorshipView.jsx
 const SERVICE_TITLES = {
     'IMNCI': 'Integrated Management of Newborn and Childhood Illnesses (IMNCI)',
     'EENC': 'Early Essential Newborn Care (EENC)',
@@ -35,7 +35,6 @@ const SERVICE_TITLES = {
     'IPC': 'Infection Prevention and Control in Neonatal Units (IPC)'
 };
 
-// --- Dashboard Helper Components ---
 const ScoreText = ({ value, showPercentage = true }) => {
     let colorClass = 'text-gray-700';
     let text = 'N/A';
@@ -53,7 +52,7 @@ const ScoreText = ({ value, showPercentage = true }) => {
     }
 
     return (
-        <span className={`font-bold text-lg ${colorClass}`}>
+        <span className={`font-bold text-sm ${colorClass}`}>
             {text}
         </span>
     );
@@ -77,7 +76,6 @@ const KpiCard = ({ title, value, unit = '', scoreValue = null }) => {
     );
 };
 
-// --- KPI Grid Component ---
 const KpiGridItem = ({ title, scoreValue }) => (
     <div className="bg-gray-50 p-3 rounded-lg border text-center shadow-inner">
         <h5 className="text-xs font-medium text-gray-500 mb-1 h-8 flex items-center justify-center" title={title}>
@@ -87,22 +85,45 @@ const KpiGridItem = ({ title, scoreValue }) => (
     </div>
 );
 
-const KpiGridCard = ({ title, kpis }) => (
+const KpiGridCard = ({ title, kpis, cols = 2 }) => (
     <div className="bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200">
         <h4 className="text-base font-bold text-sky-800 mb-3 text-center" title={title}>
             {title}
         </h4>
-        <div className="grid grid-cols-2 gap-3">
+        <div className={`grid grid-cols-${cols} gap-3`}>
             {kpis.map(kpi => (
                 <KpiGridItem key={kpi.title} title={kpi.title} scoreValue={kpi.scoreValue} />
             ))}
         </div>
     </div>
 );
-// --- END KPI Grid Component ---
 
+// --- START: NEW DetailedKpiCard Component ---
+const DetailedKpiCard = ({ title, overallScore, kpis }) => (
+    <div className="bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200">
+        <div className="flex justify-between items-center mb-3">
+            <h4 className="text-base font-bold text-sky-800 text-left" title={title}>
+                {title}
+            </h4>
+            {overallScore !== null && (
+                <div className="bg-gray-100 rounded-md px-2 py-0.5">
+                    <ScoreText value={overallScore} />
+                </div>
+            )}
+        </div>
+        <div className="space-y-2">
+            {kpis.map(kpi => (
+                <div key={kpi.title} className="flex justify-between items-center bg-gray-50 p-2 rounded-lg border shadow-inner">
+                    <h5 className="text-xs font-medium text-gray-600 text-left">{kpi.title}</h5>
+                    <ScoreText value={kpi.scoreValue} />
+                </div>
+            ))}
+        </div>
+    </div>
+);
+// --- END: NEW DetailedKpiCard Component ---
 
-// --- KpiLineChart Component ---
+// --- START: Restored KpiLineChart Component ---
 const KpiLineChart = ({ title, chartData, kpiKeys }) => {
     
     const colors = {
@@ -114,24 +135,23 @@ const KpiLineChart = ({ title, chartData, kpiKeys }) => {
         'Pneumonia': '#a855f7', // purple
         'Diarrhea (Classify)': '#ec4899', // pink
         'Diarrhea (Mgmt)': '#f97316', // orange
+        'Weight': '#06b6d4', // cyan
+        'Temp': '#3b82f6', // blue
+        'Height': '#8b5cf6', // violet
+        'Resp. Rate': '#14b8a6', // teal
+        'RDT': '#d946ef', // fuchsia
+        'MUAC': '#0891b2', // cyan-dark
+        'WFH': '#0284c7', // sky-dark
+        'Pallor': '#78716c', // stone
+        'Referral Mgmt': '#be123c', // rose
+        'Malaria Class.': '#65a30d', // lime
+        'Malaria Mgmt': '#84cc16', // lime-light
+        'Malnutrition Mgmt': '#ca8a04', // amber
+        'Anemia Mgmt': '#dc2626', // red
+        'Referral ID': '#f43f5e', // rose-dark
+        'Malnutrition ID': '#eab308', // yellow-dark
+        'DangerSigns': '#f97316', // orange
     };
-    // --- NEW HANDS-ON SKILLS ---
-    colors['Weight'] = '#06b6d4'; // cyan
-    colors['Temp'] = '#3b82f6'; // blue
-    colors['Height'] = '#8b5cf6'; // violet
-    colors['Resp. Rate'] = '#14b8a6'; // teal
-    colors['RDT'] = '#d946ef'; // fuchsia
-    colors['MUAC'] = '#0891b2'; // cyan-dark
-    colors['WFH'] = '#0284c7'; // sky-dark
-    // --- END NEW ---
-    // --- NEW KPI ---
-    colors['Referral Mgmt'] = '#be123c'; // rose
-    colors['Malaria Class.'] = '#65a30d'; // lime
-    colors['Malaria Mgmt'] = '#84cc16'; // lime-light
-    colors['Malnutrition Mgmt'] = '#ca8a04'; // amber
-    colors['Anemia Mgmt'] = '#dc2626'; // red
-    // --- END NEW ---
-
 
     const data = {
         labels: chartData.map(d => d.name),
@@ -199,7 +219,389 @@ const KpiLineChart = ({ title, chartData, kpiKeys }) => {
         </div>
     );
 };
-// --- END KpiLineChart Component ---
+// --- END: Restored KpiLineChart Component ---
+
+
+// --- START: NEW KpiCardWithChart Component ---
+const KpiCardWithChart = ({ title, kpis, chartData, kpiKeys, cols = 2 }) => {
+    
+    // Color mapping for all possible chart keys
+    const colors = {
+        'Overall': '#0ea5e9', // sky
+        'Assessment': '#10b981', // green
+        'Decision': '#f59e0b', // yellow
+        'Treatment': '#ef4444', // red
+        'Cough': '#6366f1', // indigo
+        'Pneumonia': '#a855f7', // purple
+        'Diarrhea (Classify)': '#ec4899', // pink
+        'Diarrhea (Mgmt)': '#f97316', // orange
+        'Weight': '#06b6d4', // cyan
+        'Temp': '#3b82f6', // blue
+        'Height': '#8b5cf6', // violet
+        'Resp. Rate': '#14b8a6', // teal
+        'RDT': '#d946ef', // fuchsia
+        'MUAC': '#0891b2', // cyan-dark
+        'WFH': '#0284c7', // sky-dark
+        'Pallor': '#78716c', // stone
+        'Referral Mgmt': '#be123c', // rose
+        'Malaria Class.': '#65a30d', // lime
+        'Malaria Mgmt': '#84cc16', // lime-light
+        'Malnutrition Mgmt': '#ca8a04', // amber
+        'Anemia Mgmt': '#dc2626', // red
+        'Referral ID': '#f43f5e', // rose-dark
+        'Malnutrition ID': '#eab308', // yellow-dark
+        'Danger Signs': '#f97316', // orange
+    };
+
+    const data = {
+        labels: chartData.map(d => d.name),
+        datasets: kpiKeys.map(kpi => ({
+            label: kpi.title,
+            data: chartData.map(d => d[kpi.key]),
+            borderColor: colors[kpi.key] || '#6b7280',
+            backgroundColor: (colors[kpi.key] || '#6b7280') + '33', // Add alpha
+            fill: false,
+            tension: 0.1,
+            pointRadius: 1,
+            borderWidth: 2,
+        })),
+    };
+
+    const options = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    boxWidth: 12,
+                    fontSize: 10,
+                }
+            },
+            tooltip: {
+                mode: 'index',
+                intersect: false,
+            },
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                max: 100,
+                ticks: {
+                    callback: (value) => `${value}%`, // Add percent sign
+                },
+            },
+            x: {
+                ticks: {
+                    maxTicksLimit: 10, 
+                    autoSkip: true,
+                    maxRotation: 45, 
+                    minRotation: 0,
+                }
+            }
+        },
+    };
+
+    return (
+        <div className="bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200">
+            {/* 1. Title */}
+            <h4 className="text-base font-bold text-sky-800 mb-3 text-center" title={title}>
+                {title}
+            </h4>
+            {/* 2. KPI Grid */}
+            <div className={`grid grid-cols-${cols} gap-3 mb-4`}>
+                {kpis.map(kpi => (
+                    <KpiGridItem key={kpi.title} title={kpi.title} scoreValue={kpi.scoreValue} />
+                ))}
+            </div>
+            {/* 3. Line Chart */}
+            <div className="relative h-[250px]">
+                {chartData.length > 0 ? (
+                    <Line options={options} data={data} />
+                ) : (
+                    <div className="flex items-center justify-center h-full text-gray-500">
+                        No data available for this period.
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+// --- END: NEW KpiCardWithChart Component ---
+
+const KpiBarChart = ({ title, chartData }) => {
+    
+    const getBarColor = (value) => {
+        if (value >= 80) return '#10b981'; // green
+        if (value >= 50) return '#f59e0b'; // yellow
+        if (value < 50) return '#ef4444'; // red
+        return '#6b7280'; // gray
+    };
+
+    const data = {
+        labels: chartData.map(d => d.stateName),
+        datasets: [
+            {
+                label: 'Overall IMNCI Adherence',
+                data: chartData.map(d => d.avgOverall ? Math.round(d.avgOverall * 100) : null),
+                backgroundColor: chartData.map(d => getBarColor(d.avgOverall ? d.avgOverall * 100 : 0)),
+                borderColor: '#ffffff',
+                borderWidth: 1,
+            }
+        ],
+    };
+
+    const options = {
+        indexAxis: 'y', // <-- Makes it a horizontal bar chart
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false, // Hide legend since there's only one dataset
+            },
+            tooltip: {
+                callbacks: {
+                    label: (context) => `${context.dataset.label}: ${context.raw}%`
+                }
+            },
+        },
+        scales: {
+            x: { // <-- Horizontal axis is now 'x'
+                beginAtZero: true,
+                max: 100,
+                ticks: {
+                    callback: (value) => `${value}%`, // Add percent sign
+                },
+            },
+            y: { // <-- Vertical axis is now 'y'
+                ticks: {
+                    autoSkip: false,
+                    font: {
+                        size: 10
+                    }
+                }
+            }
+        },
+    };
+
+    // Calculate dynamic height
+    const chartHeight = Math.max(280, chartData.length * 25); // 25px per bar, min 280px
+
+    return (
+        <div className="bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200">
+            <h4 className="text-base font-bold text-sky-800 mb-3 text-center">
+                {title}
+            </h4>
+            <div className="relative" style={{ height: `${chartHeight}px` }}>
+                {chartData.length > 0 ? (
+                    <Bar options={options} data={data} />
+                ) : (
+                    <div className="flex items-center justify-center h-full text-gray-500">
+                        No data available for this period.
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+// --- END: NEW KpiBarChart Component ---
+
+
+// --- START: NEW Compact Skills Table Component ---
+
+const SKILL_LABEL_MAP = {
+    'skill_ask_cough': 'هل سأل عن وجود الكحة أو ضيق التنفس',
+    'skill_check_rr': 'هل قاس معدل التنفس بصورة صحيحة',
+    'skill_classify_cough': 'هل صنف الكحة بصورة صحيحة',
+    'skill_ask_diarrhea': 'هل سأل عن وجود الاسهال',
+    'skill_check_dehydration': 'هل قيم فقدان السوائل بصورة صحيحة',
+    'skill_classify_diarrhea': 'هل صنف الاسهال بصورة صحيحة',
+    'skill_ask_fever': 'هل سأل عن وجود الحمى',
+    'skill_check_rdt': 'هل أجرى فحص الملاريا السريع بصورة صحيحة',
+    'skill_classify_fever': 'هل صنف الحمى بصورة صحيحة',
+    'skill_ask_ear': 'هل سأل عن وجود مشكلة في الأذن',
+    'skill_check_ear': 'هل فحص الفحص ورم مؤلم خلف الأذن',
+    'skill_classify_ear': 'هل صنف مشكلة الأذن بصورة صحيحة',
+};
+
+const CompactSkillRow = ({ label, stats }) => {
+    const yes = stats?.yes || 0;
+    const no = stats?.no || 0;
+    const total = yes + no;
+    const percentage = total > 0 ? (yes / total) : null;
+
+    return (
+        <tr className="bg-white hover:bg-gray-50">
+            <td className="p-1.5 text-xs font-medium text-gray-700 border border-gray-300 w-3/5">{label}</td>
+            <td className="p-1.5 text-xs font-semibold text-gray-800 border border-gray-300 w-1/5 text-center">{yes} / {total}</td>
+            <td className="p-1.5 border border-gray-300 w-1/5 text-center">
+                <ScoreText value={percentage} />
+            </td>
+        </tr>
+    );
+};
+
+const CompactSkillsTable = ({ overallKpis }) => {
+    const skillStats = overallKpis?.skillStats;
+
+    // Map scoreKeys to their average values from overallKpis
+    const subgroupScoreMap = {
+        vitalSigns: overallKpis.avgVitalSigns,
+        dangerSigns: overallKpis.avgDangerSigns,
+        mainSymptoms: overallKpis.avgMainSymptoms,
+        malnutrition: overallKpis.avgMalnutrition,
+        anemia: overallKpis.avgAnemia,
+        immunization: overallKpis.avgImmunization,
+        otherProblems: overallKpis.avgOtherProblems,
+        symptom_cough: overallKpis.avgSymptomCough,
+        symptom_diarrhea: overallKpis.avgSymptomDiarrhea,
+        symptom_fever: overallKpis.avgSymptomFever,
+        symptom_ear: overallKpis.avgSymptomEar,
+        ref_treatment: overallKpis.avgReferralManagement,
+        pneu_treatment: overallKpis.avgPneumoniaManagement,
+        diar_treatment: overallKpis.avgDiarrheaManagement,
+        mal_treatment: overallKpis.avgMalariaManagement,
+        nut_treatment: overallKpis.avgMalnutritionManagement,
+        anemia_treatment: overallKpis.avgAnemiaManagement,
+        dyst_treatment: overallKpis.avgDystTreatment,
+        ear_treatment: overallKpis.avgEarTreatment,
+        fu_treatment: overallKpis.avgFuTreatment,
+    };
+
+    if (!overallKpis || !skillStats || Object.keys(skillStats).length === 0) {
+        return (
+            <div className="bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200 text-center text-gray-500">
+                No detailed skill data available for the current filters.
+            </div>
+        );
+    }
+
+    return (
+        <div className="bg-white rounded-lg shadow-lg border-2 border-gray-200" dir="rtl">
+            <table className="w-full border-collapse">
+                <thead className="sticky top-0 z-10">
+                    <tr className="bg-gray-50">
+                        <th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-3/5 text-right">المهارة</th>
+                        <th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-1/5 text-center">العدد (نعم / الإجمالي)</th>
+                        <th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-1/5 text-center">النسبة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {IMNCI_FORM_STRUCTURE.map(group => {
+                        let groupAggregateScore = null;
+                        if (group.group.includes('التقييم والتصنيف')) {
+                            groupAggregateScore = overallKpis.avgAssessment;
+                        } else if (group.isDecisionSection) {
+                            groupAggregateScore = overallKpis.avgDecision;
+                        } else if (group.group.includes('العلاج والنصح')) {
+                            groupAggregateScore = overallKpis.avgTreatment;
+                        }
+
+                        return (
+                            <React.Fragment key={group.group}>
+                                <tr className="bg-sky-900 text-white">
+                                    <td className="p-1 text-sm font-bold text-right border border-gray-300" colSpan="2">
+                                        {group.group}
+                                    </td>
+                                    <td className="p-1 border border-gray-300 text-center">
+                                        {groupAggregateScore !== null && (
+                                            <div className="bg-white rounded-md px-2 py-0.5 inline-block">
+                                                <ScoreText value={groupAggregateScore} />
+                                            </div>
+                                        )}
+                                    </td>
+                                </tr>
+                                
+                                {/* Subgroup Rows and Skill Rows */}
+                                {group.subgroups?.map(subgroup => {
+                                    
+                                    if (subgroup.isSymptomGroupContainer) {
+                                        return subgroup.symptomGroups.map(symptomGroup => {
+                                            const symptomKey = symptomGroup.mainSkill.scoreKey; // e.g., 'symptom_cough'
+                                            const symptomScore = subgroupScoreMap[symptomKey];
+                                            const symptomLabel = symptomGroup.mainSkill.label; // e.g., 'هل سأل عن وجود الكحة...'
+
+                                            let skillsToRender = [];
+                                            if (symptomKey === 'symptom_cough') {
+                                                skillsToRender = ['skill_ask_cough', 'skill_check_rr', 'skill_classify_cough'];
+                                            } else if (symptomKey === 'symptom_diarrhea') {
+                                                skillsToRender = ['skill_ask_diarrhea', 'skill_check_dehydration', 'skill_classify_diarrhea'];
+                                            } else if (symptomKey === 'symptom_fever') {
+                                                skillsToRender = ['skill_ask_fever', 'skill_check_rdt', 'skill_classify_fever'];
+                                            } else if (symptomKey === 'symptom_ear') {
+                                                skillsToRender = ['skill_ask_ear', 'skill_check_ear', 'skill_classify_ear'];
+                                            }
+
+                                            return (
+                                                <React.Fragment key={symptomKey}>
+                                                    <tr className="bg-sky-700 text-white">
+                                                        <td className="p-1.5 text-xs font-bold text-right border border-gray-300" colSpan="2">
+                                                            {symptomLabel}
+                                                        </td>
+                                                        <td className="p-1.5 border border-gray-300 text-center">
+                                                            {symptomScore !== null && (
+                                                                <div className="bg-white rounded-md px-2 py-0.5 inline-block">
+                                                                    <ScoreText value={symptomScore} />
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                    {skillsToRender.map(skillKey => (
+                                                        <CompactSkillRow
+                                                            key={skillKey}
+                                                            label={SKILL_LABEL_MAP[skillKey]}
+                                                            stats={skillStats[skillKey]}
+                                                        />
+                                                    ))}
+                                                </React.Fragment>
+                                            );
+                                        });
+                                    }
+
+                                    const subgroupKey = subgroup.scoreKey || subgroup.subgroupTitle;
+                                    const subgroupScore = subgroup.scoreKey ? subgroupScoreMap[subgroupKey] : null;
+
+                                    return (
+                                        <React.Fragment key={subgroup.subgroupTitle}>
+                                            <tr className="bg-sky-700 text-white">
+                                                <td className="p-1.5 text-xs font-bold text-right border border-gray-300" colSpan="2">
+                                                    {subgroup.subgroupTitle}
+                                                </td>
+                                                <td className="p-1.5 border border-gray-300 text-center">
+                                                    {subgroupScore !== null && (
+                                                        <div className="bg-white rounded-md px-2 py-0.5 inline-block">
+                                                            <ScoreText value={subgroupScore} />
+                                                        </div>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                            
+                                            {subgroup.skills?.map(skill => (
+                                                <CompactSkillRow
+                                                    key={skill.key}
+                                                    label={skill.label}
+                                                    stats={skillStats[skill.key]}
+                                                />
+                                            ))}
+                                        </React.Fragment>
+                                    );
+                                })}
+                                
+                                {group.isDecisionSection && (
+                                    <CompactSkillRow
+                                        label="هل يتطابق قرار العامل الصحي مع المشرف؟"
+                                        stats={skillStats['decisionMatches']}
+                                    />
+                                )}
+                            </React.Fragment>
+                        );
+                    })}
+                </tbody>
+            </table>
+        </div>
+    );
+};
+// --- END: Compact Skills Table Component ---
 
 
 // --- Filter Helper Component ---
@@ -250,129 +652,200 @@ const MentorshipDashboard = ({
         return sum / validScores.length;
     };
 
-    // 2. Helper function to process a list of submissions
+    // 2. --- MODIFIED: kpiHelper now calculates all subgroup averages ---
     const kpiHelper = useCallback((submissions) => {
+        // This object will hold arrays of scores for averaging
         const scores = {
-            overall: [],
-            assessment: [],
-            decision: [],
-            treatment: [],
-            coughClassification: [],
-            pneumoniaManagement: [],
-            diarrheaClassification: [], 
-            diarrheaManagement: [], 
-            // --- NEW HANDS-ON SKILLS ---
-            handsOnWeight: [],
-            handsOnTemp: [],
-            handsOnHeight: [],
-            handsOnRR: [],
-            handsOnRDT: [],
-            handsOnMUAC: [],
-            handsOnWFH: [],
-            // --- END NEW ---
-            // --- NEW KPI ---
-            referralCaseCount: [],
-            referralManagement: [],
-            malariaClassification: [],
-            malariaManagement: [],
-            malnutritionCaseCount: [],
-            malnutritionManagement: [],
-            anemiaManagement: [],
-            // --- END NEW ---
+            overall: [], assessment: [], decision: [], treatment: [],
+            coughClassification: [], pneumoniaManagement: [], diarrheaClassification: [], diarrheaManagement: [],
+            handsOnWeight: [], handsOnTemp: [], handsOnHeight: [], handsOnRR: [], handsOnRDT: [], handsOnMUAC: [], handsOnWFH: [],
+            referralCaseCount: [], referralManagement: [], malariaClassification: [], malariaManagement: [],
+            malnutritionCaseCount: [], malnutritionManagement: [], anemiaManagement: [],
+            
+            vitalSigns: [], dangerSigns: [], mainSymptoms: [], malnutrition: [], anemia: [], immunization: [], otherProblems: [],
+            symptom_cough: [], symptom_diarrhea: [], symptom_fever: [], symptom_ear: [],
+            ref_treatment: [], pneu_treatment: [], diar_treatment: [], dyst_treatment: [], mal_treatment: [],
+            ear_treatment: [], nut_treatment: [], anemia_treatment: [], fu_treatment: [],
+            handsOnPallor: [],
+            // --- NEW: Add aggregate arrays ---
+            measurementSkills: [],
+            malnutritionAnemiaSkills: [],
         };
         let totalVisits = submissions.length;
+        const skillStats = {};
 
         submissions.forEach(sub => {
-            const s = sub.scores;
-            if (!s) {
-                return;
-            }
+            const s = sub.scores; // This is the scoresPayload from the database
+            if (!s) return;
             
-            if (s.overallScore_maxScore > 0) {
-                scores.overall.push(s.overallScore_score / s.overallScore_maxScore);
-            }
-            if (s.assessment_total_score_maxScore > 0) {
-                scores.assessment.push(s.assessment_total_score_score / s.assessment_total_score_maxScore);
-            }
-            if (s.finalDecision_maxScore > 0) {
-                scores.decision.push(s.finalDecision_score / s.finalDecision_maxScore);
-            }
-            if (s.treatment_maxScore > 0) {
-                scores.treatment.push(s.treatment_score / s.treatment_maxScore);
-            }
-            if (s.coughClassification_maxScore > 0) {
-                scores.coughClassification.push(s.coughClassification_score / s.coughClassification_maxScore);
-            }
-            if (s.pneumoniaManagement_maxScore > 0) {
-                scores.pneumoniaManagement.push(s.pneumoniaManagement_score / s.pneumoniaManagement_maxScore);
-            }
-            if (s.diarrheaClassification_maxScore > 0) {
-                scores.diarrheaClassification.push(s.diarrheaClassification_score / s.diarrheaClassification_maxScore);
-            }
-            if (s.diarrheaManagement_maxScore > 0) {
-                scores.diarrheaManagement.push(s.diarrheaManagement_score / s.diarrheaManagement_maxScore);
-            }
+            // --- Aggregate KPIs ---
+            if (s.overallScore_maxScore > 0) scores.overall.push(s.overallScore_score / s.overallScore_maxScore);
+            if (s.assessment_total_score_maxScore > 0) scores.assessment.push(s.assessment_total_score_score / s.assessment_total_score_maxScore);
+            if (s.finalDecision_maxScore > 0) scores.decision.push(s.finalDecision_score / s.finalDecision_maxScore);
+            if (s.treatment_maxScore > 0) scores.treatment.push(s.treatment_score / s.treatment_maxScore);
+            if (s.coughClassification_maxScore > 0) scores.coughClassification.push(s.coughClassification_score / s.coughClassification_maxScore);
+            if (s.pneumoniaManagement_maxScore > 0) scores.pneumoniaManagement.push(s.pneumoniaManagement_score / s.pneumoniaManagement_maxScore);
+            if (s.diarrheaClassification_maxScore > 0) scores.diarrheaClassification.push(s.diarrheaClassification_score / s.diarrheaClassification_maxScore);
+            if (s.diarrheaManagement_maxScore > 0) scores.diarrheaManagement.push(s.diarrheaManagement_score / s.diarrheaManagement_maxScore);
+            if (s.handsOnWeight_maxScore > 0) scores.handsOnWeight.push(s.handsOnWeight_score / s.handsOnWeight_maxScore);
+            if (s.handsOnTemp_maxScore > 0) scores.handsOnTemp.push(s.handsOnTemp_score / s.handsOnTemp_maxScore);
+            if (s.handsOnHeight_maxScore > 0) scores.handsOnHeight.push(s.handsOnHeight_score / s.handsOnHeight_maxScore);
+            if (s.handsOnRR_maxScore > 0) scores.handsOnRR.push(s.handsOnRR_score / s.handsOnRR_maxScore);
+            if (s.handsOnRDT_maxScore > 0) scores.handsOnRDT.push(s.handsOnRDT_score / s.handsOnRDT_maxScore);
+            if (s.handsOnMUAC_maxScore > 0) scores.handsOnMUAC.push(s.handsOnMUAC_score / s.handsOnMUAC_maxScore);
+            if (s.handsOnWFH_maxScore > 0) scores.handsOnWFH.push(s.handsOnWFH_score / s.handsOnWFH_maxScore);
+            if (s.referralCaseCount_maxScore > 0) scores.referralCaseCount.push(s.referralCaseCount_score / s.referralCaseCount_maxScore);
+            if (s.referralManagement_maxScore > 0) scores.referralManagement.push(s.referralManagement_score / s.referralManagement_maxScore);
+            if (s.malariaClassification_maxScore > 0) scores.malariaClassification.push(s.malariaClassification_score / s.malariaClassification_maxScore);
+            if (s.malariaManagement_maxScore > 0) scores.malariaManagement.push(s.malariaManagement_score / s.malariaManagement_maxScore);
+            if (s.malnutritionCaseCount_maxScore > 0) scores.malnutritionCaseCount.push(s.malnutritionCaseCount_score / s.malnutritionCaseCount_maxScore);
+            if (s.malnutritionManagement_maxScore > 0) scores.malnutritionManagement.push(s.malnutritionManagement_score / s.malnutritionManagement_maxScore);
+            if (s.anemiaManagement_maxScore > 0) scores.anemiaManagement.push(s.anemiaManagement_score / s.anemiaManagement_maxScore);
+            
+            // --- NEW: Subgroup KPIs ---
+            Object.keys(scores).forEach(key => {
+                const maxScoreKey = `${key}_maxScore`;
+                const scoreKey = `${key}_score`;
+                if (s[maxScoreKey] !== undefined && s[scoreKey] !== undefined && s[maxScoreKey] > 0) {
+                    if (!['overall', 'assessment', 'decision', 'treatment', 'coughClassification', 'pneumoniaManagement', 'diarrheaClassification', 'diarrheaManagement', 'handsOnWeight', 'handsOnTemp', 'handsOnHeight', 'handsOnRR', 'handsOnRDT', 'handsOnMUAC', 'handsOnWFH', 'referralCaseCount', 'referralManagement', 'malariaClassification', 'malariaManagement', 'malnutritionCaseCount', 'malnutritionManagement', 'anemiaManagement', 'handsOnPallor', 'measurementSkills', 'malnutritionAnemiaSkills'].includes(key)) {
+                        scores[key].push(s[scoreKey] / s[maxScoreKey]);
+                    }
+                }
+            });
 
-            // --- NEW HANDS-ON SKILLS ---
-            if (s.handsOnWeight_maxScore > 0) {
-                scores.handsOnWeight.push(s.handsOnWeight_score / s.handsOnWeight_maxScore);
-            }
-            if (s.handsOnTemp_maxScore > 0) {
-                scores.handsOnTemp.push(s.handsOnTemp_score / s.handsOnTemp_maxScore);
-            }
-            if (s.handsOnHeight_maxScore > 0) {
-                scores.handsOnHeight.push(s.handsOnHeight_score / s.handsOnHeight_maxScore);
-            }
-            if (s.handsOnRR_maxScore > 0) {
-                scores.handsOnRR.push(s.handsOnRR_score / s.handsOnRR_maxScore);
-            }
-            if (s.handsOnRDT_maxScore > 0) {
-                scores.handsOnRDT.push(s.handsOnRDT_score / s.handsOnRDT_maxScore);
-            }
-            if (s.handsOnMUAC_maxScore > 0) {
-                scores.handsOnMUAC.push(s.handsOnMUAC_score / s.handsOnMUAC_maxScore);
-            }
-            if (s.handsOnWFH_maxScore > 0) {
-                scores.handsOnWFH.push(s.handsOnWFH_score / s.handsOnWFH_maxScore);
-            }
-            // --- END NEW ---
+            // --- Detailed Skill Stats ---
+            const as = sub.fullData?.assessmentSkills;
+            const ts = sub.fullData?.treatmentSkills;
             
-            // --- NEW KPI ---
-            if (s.referralCaseCount_maxScore > 0) {
-                scores.referralCaseCount.push(s.referralCaseCount_score / s.referralCaseCount_maxScore);
+            const rehydrateMultiSelect = (classifications, savedData) => {
+                if (!savedData) return {};
+                if (Array.isArray(savedData)) {
+                    return classifications.reduce((acc, c) => {
+                        acc[c] = savedData.includes(c);
+                        return acc;
+                    }, {});
+                }
+                return savedData; 
+            };
+
+            const formData = {
+                ...sub.fullData,
+                assessment_skills: {
+                    ...as,
+                    worker_diarrhea_classification: rehydrateMultiSelect(
+                        ['جفاف شديد', 'بعض الجفاف', 'لا يوجد جفاف', 'إسهال مستمر شديد', 'إسهال مستمر', 'دسنتاريا'],
+                        as?.worker_diarrhea_classification
+                    ),
+                    supervisor_correct_diarrhea_classification: rehydrateMultiSelect(
+                        ['جفاف شديد', 'بعض الجفاف', 'لا يوجد جفاف', 'إسهال مستمر شديد', 'إسهال مستمر', 'دسنتاريا'],
+                        as?.supervisor_correct_diarrhea_classification
+                    ),
+                    worker_fever_classification: rehydrateMultiSelect(
+                        ['مرض حمي شديد', 'ملاريا', 'حمى لا توجد ملAR', 'حصبة مصحوبة بمضاعفات شديدة', 'حصبة مصحوبة بمضاعفات في العين والفم', 'حصبة'],
+                        as?.worker_fever_classification
+                    ),
+                    supervisor_correct_fever_classification: rehydrateMultiSelect(
+                        ['مرض حمي شديد', 'ملارIA', 'حمى لا توجد ملAR', 'حصبة مصحوبة بمضاعفات شديدة', 'حصبة مصحوبة بمضاعفات في العين والفم', 'حصبة'],
+                        as?.supervisor_correct_fever_classification
+                    ),
+                },
+                treatment_skills: ts
+            };
+
+            if (as && ts) {
+                if (as['skill_anemia_pallor'] === 'yes') scores.handsOnPallor.push(1);
+                if (as['skill_anemia_pallor'] === 'no') scores.handsOnPallor.push(0);
+
+                // --- NEW: Populate aggregate skill arrays ---
+                if (s.handsOnWeight_maxScore > 0) scores.measurementSkills.push(s.handsOnWeight_score / s.handsOnWeight_maxScore);
+                if (s.handsOnTemp_maxScore > 0) scores.measurementSkills.push(s.handsOnTemp_score / s.handsOnTemp_maxScore);
+                if (s.handsOnHeight_maxScore > 0) scores.measurementSkills.push(s.handsOnHeight_score / s.handsOnHeight_maxScore);
+                if (s.handsOnRR_maxScore > 0) scores.measurementSkills.push(s.handsOnRR_score / s.handsOnRR_maxScore);
+
+                if (s.handsOnMUAC_maxScore > 0) scores.malnutritionAnemiaSkills.push(s.handsOnMUAC_score / s.handsOnMUAC_maxScore);
+                if (s.handsOnWFH_maxScore > 0) scores.malnutritionAnemiaSkills.push(s.handsOnWFH_score / s.handsOnWFH_maxScore);
+                if (as['skill_anemia_pallor'] === 'yes') scores.malnutritionAnemiaSkills.push(1);
+                if (as['skill_anemia_pallor'] === 'no') scores.malnutritionAnemiaSkills.push(0);
+                // --- END NEW ---
+
+                IMNCI_FORM_STRUCTURE.forEach(group => {
+                    if (group.sectionKey === 'assessment_skills') {
+                        group.subgroups?.forEach(subgroup => {
+                            subgroup.skills?.forEach(skill => {
+                                const key = skill.key;
+                                const value = as[key];
+                                if (!skillStats[key]) skillStats[key] = { yes: 0, no: 0 };
+                                if (value === 'yes') skillStats[key].yes++;
+                                if (value === 'no') skillStats[key].no++;
+                            });
+                            if (subgroup.isSymptomGroupContainer) {
+                                subgroup.symptomGroups.forEach(sg => {
+                                    const prefix = sg.mainSkill.key.split('_')[2];
+                                    const askKey = `skill_ask_${prefix}`;
+                                    const checkKey = `skill_check_${prefix === 'cough' ? 'rr' : prefix === 'diarrhea' ? 'dehydration' : prefix === 'fever' ? 'rdt' : 'ear'}`;
+                                    const classifyKey = `skill_classify_${prefix}`;
+                                    [askKey, checkKey, classifyKey].forEach(key => {
+                                        const value = as[key];
+                                        if (!skillStats[key]) skillStats[key] = { yes: 0, no: 0 };
+                                        if (value === 'yes') skillStats[key].yes++;
+                                        if (value === 'no') skillStats[key].no++;
+                                    });
+                                });
+                            }
+                        });
+                    } else if (group.sectionKey === 'treatment_skills') {
+                        group.subgroups?.forEach(subgroup => {
+                            let isSubgroupRelevant = true;
+                            if (subgroup.relevant) {
+                                if (typeof subgroup.relevant === 'function') {
+                                    isSubgroupRelevant = subgroup.relevant(formData);
+                                } else if (typeof subgroup.relevant === 'string') {
+                                    isSubgroupRelevant = evaluateRelevance(subgroup.relevant, formData);
+                                }
+                            }
+                            subgroup.skills?.forEach(skill => {
+                                let isSkillRelevant = isSubgroupRelevant;
+                                if (isSkillRelevant && skill.relevant) {
+                                    if (typeof skill.relevant === 'function') {
+                                        isSkillRelevant = skill.relevant(formData);
+                                    } else if (typeof skill.relevant === 'string') {
+                                        isSkillRelevant = evaluateRelevance(skill.relevant, formData);
+                                    }
+                                }
+                                const key = skill.key;
+                                if (isSkillRelevant) {
+                                    const value = ts[key];
+                                    if (!skillStats[key]) skillStats[key] = { yes: 0, no: 0 };
+                                    if (value === 'yes') skillStats[key].yes++;
+                                    if (value === 'no') skillStats[key].no++;
+                                } else {
+                                    if (!skillStats[key]) skillStats[key] = { yes: 0, no: 0 };
+                                }
+                            });
+                        });
+                    } else if (group.isDecisionSection) {
+                        const key = 'decisionMatches';
+                        const value = sub.fullData?.[key];
+                        if (!skillStats[key]) skillStats[key] = { yes: 0, no: 0 };
+                        if (value === 'yes') skillStats[key].yes++;
+                        if (value === 'no') skillStats[key].no++;
+                    }
+                });
             }
-            if (s.referralManagement_maxScore > 0) {
-                scores.referralManagement.push(s.referralManagement_score / s.referralManagement_maxScore);
-            }
-            if (s.malariaClassification_maxScore > 0) {
-                scores.malariaClassification.push(s.malariaClassification_score / s.malariaClassification_maxScore);
-            }
-            if (s.malariaManagement_maxScore > 0) {
-                scores.malariaManagement.push(s.malariaManagement_score / s.malariaManagement_maxScore);
-            }
-            if (s.malnutritionCaseCount_maxScore > 0) {
-                scores.malnutritionCaseCount.push(s.malnutritionCaseCount_score / s.malnutritionCaseCount_maxScore);
-            }
-            if (s.malnutritionManagement_maxScore > 0) {
-                scores.malnutritionManagement.push(s.malnutritionManagement_score / s.malnutritionManagement_maxScore);
-            }
-            if (s.anemiaManagement_maxScore > 0) {
-                scores.anemiaManagement.push(s.anemiaManagement_score / s.anemiaManagement_maxScore);
-            }
-            // --- END NEW ---
         });
 
-        return {
+        // --- Calculate Averages ---
+        const averages = {
             totalVisits,
+            skillStats,
             avgOverall: calculateAverage(scores.overall),
             avgAssessment: calculateAverage(scores.assessment),
             avgDecision: calculateAverage(scores.decision),
             avgTreatment: calculateAverage(scores.treatment),
             avgCoughClassification: calculateAverage(scores.coughClassification),
             avgPneumoniaManagement: calculateAverage(scores.pneumoniaManagement),
-            avgDiarrheaClassification: calculateAverage(scores.diarrheaClassification), 
-            avgDiarrheaManagement: calculateAverage(scores.diarrheaManagement), 
-            // --- NEW HANDS-ON SKILLS ---
+            avgDiarrheaClassification: calculateAverage(scores.diarrheaClassification),
+            avgDiarrheaManagement: calculateAverage(scores.diarrheaManagement),
             avgHandsOnWeight: calculateAverage(scores.handsOnWeight),
             avgHandsOnTemp: calculateAverage(scores.handsOnTemp),
             avgHandsOnHeight: calculateAverage(scores.handsOnHeight),
@@ -380,8 +853,6 @@ const MentorshipDashboard = ({
             avgHandsOnRDT: calculateAverage(scores.handsOnRDT),
             avgHandsOnMUAC: calculateAverage(scores.handsOnMUAC),
             avgHandsOnWFH: calculateAverage(scores.handsOnWFH),
-            // --- END NEW ---
-            // --- NEW KPI ---
             avgReferralCaseCount: calculateAverage(scores.referralCaseCount),
             avgReferralManagement: calculateAverage(scores.referralManagement),
             avgMalariaClassification: calculateAverage(scores.malariaClassification),
@@ -389,9 +860,37 @@ const MentorshipDashboard = ({
             avgMalnutritionCaseCount: calculateAverage(scores.malnutritionCaseCount),
             avgMalnutritionManagement: calculateAverage(scores.malnutritionManagement),
             avgAnemiaManagement: calculateAverage(scores.anemiaManagement),
-            // --- END NEW ---
+            avgVitalSigns: calculateAverage(scores.vitalSigns),
+            avgDangerSigns: calculateAverage(scores.dangerSigns),
+            avgMainSymptoms: calculateAverage(scores.mainSymptoms),
+            avgMalnutrition: calculateAverage(scores.malnutrition),
+            avgAnemia: calculateAverage(scores.anemia),
+            avgImmunization: calculateAverage(scores.immunization),
+            avgOtherProblems: calculateAverage(scores.otherProblems),
+            avgSymptomCough: calculateAverage(scores.symptom_cough),
+            avgSymptomDiarrhea: calculateAverage(scores.symptom_diarrhea),
+            avgSymptomFever: calculateAverage(scores.symptom_fever),
+            avgSymptomEar: calculateAverage(scores.symptom_ear),
+            avgRefTreatment: calculateAverage(scores.ref_treatment),
+            avgPneuTreatment: calculateAverage(scores.pneu_treatment),
+            avgDiarTreatment: calculateAverage(scores.diar_treatment),
+            avgDystTreatment: calculateAverage(scores.dyst_treatment),
+            avgMalTreatment: calculateAverage(scores.mal_treatment),
+            avgEarTreatment: calculateAverage(scores.ear_treatment),
+            avgNutTreatment: calculateAverage(scores.nut_treatment),
+            avgAnemiaTreatment: calculateAverage(scores.anemia_treatment),
+            avgFuTreatment: calculateAverage(scores.fu_treatment),
+            avgHandsOnPallor: calculateAverage(scores.handsOnPallor),
+            
+            // --- NEW: Add aggregate skill averages ---
+            avgMeasurementSkills: calculateAverage(scores.measurementSkills),
+            avgMalnutritionAnemiaSkills: calculateAverage(scores.malnutritionAnemiaSkills),
         };
-    }, []);
+        
+        return averages;
+    }, [calculateAverage]);
+    // --- END: kpiHelper modification ---
+
 
     // 3. Get base completed submissions for this service
     const serviceCompletedSubmissions = useMemo(() => {
@@ -490,55 +989,31 @@ const MentorshipDashboard = ({
         return kpiHelper(filteredSubmissions);
     }, [filteredSubmissions, kpiHelper]);
 
-    // 7. --- MODIFIED: Calculate Chart Data by averaging per visit number ---
+    // 7. Calculate Chart Data by averaging per visit number
     const chartData = useMemo(() => {
         
-        // Helper to calculate percentage
         const calcPercent = (score, max) => (max > 0) ? (score / max) * 100 : null;
 
-        // 1. Group all scores by visit number
         const visitGroups = filteredSubmissions.reduce((acc, sub) => {
             const s = sub.scores;
-            // Use index + 1 if visitNumber is missing, but prioritize visitNumber
             const visitNum = sub.visitNumber || 'N/A'; 
-            
-            // Skip submissions without scores or visit numbers
             if (!s || visitNum === 'N/A') return acc;
 
             if (!acc[visitNum]) {
                 acc[visitNum] = {
-                    'Overall': [],
-                    'Assessment': [],
-                    'Decision': [],
-                    'Treatment': [],
-                    'Cough': [],
-                    'Pneumonia': [],
-                    'Diarrhea (Classify)': [],
-                    'Diarrhea (Mgmt)': [],
-                    // --- NEW HANDS-ON SKILLS ---
-                    'Weight': [],
-                    'Temp': [],
-                    'Height': [],
-                    'Resp. Rate': [],
-                    'RDT': [],
-                    'MUAC': [],
-                    'WFH': [],
-                    // --- END NEW ---
-                    // --- NEW KPI ---
-                    'Referral Mgmt': [],
-                    'Malaria Class.': [],
-                    'Malaria Mgmt': [],
-                    'Malnutrition Mgmt': [],
-                    'Anemia Mgmt': [],
-                    // --- END NEW ---
-                    count: 0 // To track how many entries
+                    'Overall': [], 'Assessment': [], 'Decision': [], 'Treatment': [],
+                    'Cough': [], 'Pneumonia': [], 'Diarrhea (Classify)': [], 'Diarrhea (Mgmt)': [],
+                    'Weight': [], 'Temp': [], 'Height': [], 'Resp. Rate': [], 'RDT': [], 'MUAC': [], 'WFH': [],
+                    'Referral Mgmt': [], 'Malaria Class.': [], 'Malaria Mgmt': [], 'Malnutrition Mgmt': [], 'Anemia Mgmt': [],
+                    'Pallor': [], 'Referral ID': [], 'Malnutrition ID': [],
+                    'DangerSigns': [], // <-- NEW
+                    count: 0
                 };
             }
             
             const group = acc[visitNum];
             group.count++;
             
-            // Add scores to arrays for averaging
             group['Overall'].push(calcPercent(s.overallScore_score, s.overallScore_maxScore));
             group['Assessment'].push(calcPercent(s.assessment_total_score_score, s.assessment_total_score_maxScore));
             group['Decision'].push(calcPercent(s.finalDecision_score, s.finalDecision_maxScore));
@@ -547,8 +1022,6 @@ const MentorshipDashboard = ({
             group['Pneumonia'].push(calcPercent(s.pneumoniaManagement_score, s.pneumoniaManagement_maxScore));
             group['Diarrhea (Classify)'].push(calcPercent(s.diarrheaClassification_score, s.diarrheaClassification_maxScore));
             group['Diarrhea (Mgmt)'].push(calcPercent(s.diarrheaManagement_score, s.diarrheaManagement_maxScore));
-
-            // --- NEW HANDS-ON SKILLS ---
             group['Weight'].push(calcPercent(s.handsOnWeight_score, s.handsOnWeight_maxScore));
             group['Temp'].push(calcPercent(s.handsOnTemp_score, s.handsOnTemp_maxScore));
             group['Height'].push(calcPercent(s.handsOnHeight_score, s.handsOnHeight_maxScore));
@@ -556,17 +1029,22 @@ const MentorshipDashboard = ({
             group['RDT'].push(calcPercent(s.handsOnRDT_score, s.handsOnRDT_maxScore));
             group['MUAC'].push(calcPercent(s.handsOnMUAC_score, s.handsOnMUAC_maxScore));
             group['WFH'].push(calcPercent(s.handsOnWFH_score, s.handsOnWFH_maxScore));
-            // --- END NEW ---
-
-            // --- NEW KPI ---
-            // Note: CaseCount KPIs are not percentages, so they are not good for the line chart.
-            // I will only chart the *management* scores.
             group['Referral Mgmt'].push(calcPercent(s.referralManagement_score, s.referralManagement_maxScore));
             group['Malaria Class.'].push(calcPercent(s.malariaClassification_score, s.malariaClassification_maxScore));
             group['Malaria Mgmt'].push(calcPercent(s.malariaManagement_score, s.malariaManagement_maxScore));
             group['Malnutrition Mgmt'].push(calcPercent(s.malnutritionManagement_score, s.malnutritionManagement_maxScore));
             group['Anemia Mgmt'].push(calcPercent(s.anemiaManagement_score, s.anemiaManagement_maxScore));
-            // --- END NEW ---
+            group['Referral ID'].push(calcPercent(s.referralCaseCount_score, s.referralCaseCount_maxScore));
+            group['Malnutrition ID'].push(calcPercent(s.malnutritionCaseCount_score, s.malnutritionCaseCount_maxScore));
+            
+            // --- NEW: Add DangerSigns score ---
+            group['DangerSigns'].push(calcPercent(s.dangerSigns_score, s.dangerSigns_maxScore));
+
+            const as = sub.fullData?.assessmentSkills;
+            if (as) {
+                if (as['skill_anemia_pallor'] === 'yes') group['Pallor'].push(100);
+                if (as['skill_anemia_pallor'] === 'no') group['Pallor'].push(0);
+            }
 
             return acc;
         }, {});
@@ -577,15 +1055,14 @@ const MentorshipDashboard = ({
                 visitNumber: parseInt(visitNumStr, 10),
                 data: visitGroups[visitNumStr]
             }))
-            .sort((a, b) => a.visitNumber - b.visitNumber) // Sort by visit number
+            .sort((a, b) => a.visitNumber - b.visitNumber)
             .map(({ visitNumber, data }) => {
                 
-                // Helper to average an array of scores
                 const averageScores = (scores) => {
                     const validScores = scores.filter(s => s !== null && !isNaN(s));
                     if (validScores.length === 0) return null;
                     const sum = validScores.reduce((a, b) => a + b, 0);
-                    return Math.round(sum / validScores.length); // Return rounded percentage
+                    return Math.round(sum / validScores.length);
                 };
 
                 return {
@@ -598,7 +1075,6 @@ const MentorshipDashboard = ({
                     'Pneumonia': averageScores(data['Pneumonia']),
                     'Diarrhea (Classify)': averageScores(data['Diarrhea (Classify)']),
                     'Diarrhea (Mgmt)': averageScores(data['Diarrhea (Mgmt)']),
-                    // --- NEW HANDS-ON SKILLS ---
                     'Weight': averageScores(data['Weight']),
                     'Temp': averageScores(data['Temp']),
                     'Height': averageScores(data['Height']),
@@ -606,14 +1082,15 @@ const MentorshipDashboard = ({
                     'RDT': averageScores(data['RDT']),
                     'MUAC': averageScores(data['MUAC']),
                     'WFH': averageScores(data['WFH']),
-                    // --- END NEW ---
-                    // --- NEW KPI ---
                     'Referral Mgmt': averageScores(data['Referral Mgmt']),
                     'Malaria Class.': averageScores(data['Malaria Class.']),
                     'Malaria Mgmt': averageScores(data['Malaria Mgmt']),
                     'Malnutrition Mgmt': averageScores(data['Malnutrition Mgmt']),
                     'Anemia Mgmt': averageScores(data['Anemia Mgmt']),
-                    // --- END NEW ---
+                    'Pallor': averageScores(data['Pallor']),
+                    'Referral ID': averageScores(data['Referral ID']),
+                    'Malnutrition ID': averageScores(data['Malnutrition ID']),
+                    'DangerSigns': averageScores(data['DangerSigns']), // <-- NEW
                 };
             });
     }, [filteredSubmissions]);
@@ -637,9 +1114,9 @@ const MentorshipDashboard = ({
             return {
                 stateKey,
                 stateName,
-                ...kpis
+                ...kpis // This includes avgOverall
             };
-        }).sort((a, b) => a.stateName.localeCompare(b.stateName, 'ar'));
+        }).sort((a, b) => a.stateName.localeCompare(b.name, 'ar'));
     }, [filteredSubmissions, kpiHelper, STATE_LOCALITIES]);
 
 
@@ -650,7 +1127,7 @@ const MentorshipDashboard = ({
 
     // --- KPI lists for the new layout ---
     const mainKpiGridList = [
-        { title: "Overall IMNCI Assessment Adherence", scoreValue: overallKpis.avgOverall },
+        { title: "Overall IMNCI Adherence", scoreValue: overallKpis.avgOverall },
         { title: "Assess & Classify Score", scoreValue: overallKpis.avgAssessment },
         { title: "Final Decision Score", scoreValue: overallKpis.avgDecision },
         { title: "Treatment & Counsel Score", scoreValue: overallKpis.avgTreatment },
@@ -663,69 +1140,103 @@ const MentorshipDashboard = ({
         { key: 'Treatment', title: 'Treatment' },
     ];
     
-    // --- MODIFIED: Renamed from diseaseKpi... ---
-    const classificationKpiGridList = [
-        { title: "Referral Case Identification", scoreValue: overallKpis.avgReferralCaseCount },
-        { title: "Cough Classification", scoreValue: overallKpis.avgCoughClassification },
-        { title: "Diarrhea Classification Score", scoreValue: overallKpis.avgDiarrheaClassification },
-        { title: "Malaria Classification Score", scoreValue: overallKpis.avgMalariaClassification },
-        { title: "Malnutrition Case Identification", scoreValue: overallKpis.avgMalnutritionCaseCount },
+    // --- NEW: Danger Signs KPI List ---
+    const dangerSignsKpiList = [
+        { title: "Asked/Checked: Cannot Drink/Breastfeed", scoreValue: calculateAverage(overallKpis.skillStats['skill_ds_drink'] ? [overallKpis.skillStats['skill_ds_drink'].yes / (overallKpis.skillStats['skill_ds_drink'].yes + overallKpis.skillStats['skill_ds_drink'].no)] : []) },
+        { title: "Asked/Checked: Vomits Everything", scoreValue: calculateAverage(overallKpis.skillStats['skill_ds_vomit'] ? [overallKpis.skillStats['skill_ds_vomit'].yes / (overallKpis.skillStats['skill_ds_vomit'].yes + overallKpis.skillStats['skill_ds_vomit'].no)] : []) },
+        { title: "Asked/Checked: Convulsions", scoreValue: calculateAverage(overallKpis.skillStats['skill_ds_convulsion'] ? [overallKpis.skillStats['skill_ds_convulsion'].yes / (overallKpis.skillStats['skill_ds_convulsion'].yes + overallKpis.skillStats['skill_ds_convulsion'].no)] : []) },
+        { title: "Checked: Lethargic/Unconscious", scoreValue: calculateAverage(overallKpis.skillStats['skill_ds_conscious'] ? [overallKpis.skillStats['skill_ds_conscious'].yes / (overallKpis.skillStats['skill_ds_conscious'].yes + overallKpis.skillStats['skill_ds_conscious'].no)] : []) },
+    ];
+    const dangerSignsChartKeys = [
+        { key: 'DangerSigns', title: 'Danger Signs Score' },
     ];
 
-    const classificationKpiChartKeys = [
-        // { key: 'Referral Case Identification', title: 'Referral ID' }, // Omitting from chart as it's a count, not a performance score
-        { key: 'Cough', title: 'Cough Class.' },
-        { key: 'Diarrhea (Classify)', title: 'Diarrhea Class.' },
-        { key: 'Malaria Class.', title: 'Malaria Class.' },
-        // { key: 'Malnutrition Case Identification', title: 'Malnutrition ID' }, // Omitting from chart
-    ];
-    // --- END MODIFICATION ---
-
-    // --- NEW: Case Management KPIs ---
-    const managementKpiGridList = [
+    // --- NEW: Referral KPI Lists ---
+    const referralKpiList = [
+        { title: "Referral Cases Correctly Identified", scoreValue: overallKpis.avgReferralCaseCount },
         { title: "Referral Management Score", scoreValue: overallKpis.avgReferralManagement },
+    ];
+    const referralChartKeys = [
+        { key: 'Referral ID', title: 'Referral ID' },
+        { key: 'Referral Mgmt', title: 'Referral Mgmt' },
+    ];
+
+    // --- NEW: Pneumonia KPI Lists ---
+    const pneumoniaKpiList = [
+        { title: "Cough Classification Score", scoreValue: overallKpis.avgCoughClassification },
         { title: "Pneumonia Management Score", scoreValue: overallKpis.avgPneumoniaManagement },
+    ];
+    const pneumoniaChartKeys = [
+        { key: 'Cough', title: 'Cough Class.' },
+        { key: 'Pneumonia', title: 'Pneumonia Mgmt' },
+    ];
+
+    // --- NEW: Diarrhea KPI Lists ---
+    const diarrheaKpiList = [
+        { title: "Diarrhea Classification Score", scoreValue: overallKpis.avgDiarrheaClassification },
         { title: "Diarrhea Management Score", scoreValue: overallKpis.avgDiarrheaManagement },
+    ];
+    const diarrheaChartKeys = [
+        { key: 'Diarrhea (Classify)', title: 'Diarrhea Class.' },
+        { key: 'Diarrhea (Mgmt)', title: 'Diarrhea Mgmt' },
+    ];
+
+    // --- NEW: Malaria KPI Lists ---
+    const malariaKpiList = [
+        { title: "Malaria Classification Score", scoreValue: overallKpis.avgMalariaClassification },
         { title: "Malaria Management Score", scoreValue: overallKpis.avgMalariaManagement },
+    ];
+    const malariaChartKeys = [
+        { key: 'Malaria Class.', title: 'Malaria Class.' },
+        { key: 'Malaria Mgmt', title: 'Malaria Mgmt' },
+    ];
+
+    // --- NEW: Malnutrition KPI Lists ---
+    const malnutritionKpiList = [
+        { title: "Malnutrition Case Identification", scoreValue: overallKpis.avgMalnutritionCaseCount },
         { title: "Malnutrition Management Score", scoreValue: overallKpis.avgMalnutritionManagement },
+    ];
+    const malnutritionChartKeys = [
+        { key: 'Malnutrition ID', title: 'Malnutrition ID' },
+        { key: 'Malnutrition Mgmt', title: 'Malnutrition Mgmt' },
+    ];
+
+    // --- NEW: Anemia KPI Lists ---
+    const anemiaKpiList = [
+        { title: "Anemia Assessment (Pallor)", scoreValue: overallKpis.avgHandsOnPallor },
         { title: "Anemia Management Score", scoreValue: overallKpis.avgAnemiaManagement },
     ];
-
-    const managementKpiChartKeys = [
-        { key: 'Referral Mgmt', title: 'Referral Mgmt' },
-        { key: 'Pneumonia', title: 'Pneumonia Mgmt' },
-        { key: 'Diarrhea (Mgmt)', title: 'Diarrhea Mgmt' },
-        { key: 'Malaria Mgmt', title: 'Malaria Mgmt' },
-        { key: 'Malnutrition Mgmt', title: 'Malnutrition Mgmt' },
+    const anemiaChartKeys = [
+        { key: 'Pallor', title: 'Anemia Assess' },
         { key: 'Anemia Mgmt', title: 'Anemia Mgmt' },
     ];
-    // --- END NEW ---
 
-    // --- NEW: Hands-on Skills KPI lists ---
-    const handsOnKpiGridList = [
+    // --- NEW: Measurement Skills KPI List ---
+    const measurementKpiGridList = [
         { title: "Weight Measured Correctly", scoreValue: overallKpis.avgHandsOnWeight },
         { title: "Temp Measured Correctly", scoreValue: overallKpis.avgHandsOnTemp },
         { title: "Height Measured Correctly", scoreValue: overallKpis.avgHandsOnHeight },
         { title: "Resp. Rate Measured Correctly", scoreValue: overallKpis.avgHandsOnRR },
-        { title: "Malaria RDT Performed Correctly", scoreValue: overallKpis.avgHandsOnRDT },
-        { title: "MUAC Measured Correctly", scoreValue: overallKpis.avgHandsOnMUAC },
-        { title: "Z-Score (WFH) Measured Correctly", scoreValue: overallKpis.avgHandsOnWFH },
     ];
     
-    const handsOnKpiChartKeys = [
+    const measurementKpiChartKeys = [
         { key: 'Weight', title: 'Weight' }, { key: 'Temp', title: 'Temp' },
         { key: 'Height', title: 'Height' }, { key: 'Resp. Rate', title: 'Resp. Rate' },
-        { key: 'RDT', title: 'RDT' }, { key: 'MUAC', title: 'MUAC' },
-        { key: 'WFH', title: 'WFH' },
     ];
-    // --- END NEW KPI lists ---
-    // --- END KPI lists ---
 
-    // --- REFACTOR: Style for mobile table cells ---
-    const dataCellStyles = "block md:table-cell px-2 py-2 md:py-4 md:px-2 text-sm text-gray-700 text-right md:text-left before:content-[attr(data-label)] before:float-left before:font-bold before:text-gray-500 before:pr-4 md:before:content-none";
-    // --- END REFACTOR ---
+    // --- NEW: Malnutrition & Anemia Skills KPI List ---
+    const malnutritionAnemiaSkillsKpiGridList = [
+        { title: "MUAC Measured Correctly", scoreValue: overallKpis.avgHandsOnMUAC },
+        { title: "Z-Score (WFH) Measured Correctly", scoreValue: overallKpis.avgHandsOnWFH },
+        { title: "Pallor Checked Correctly", scoreValue: overallKpis.avgHandsOnPallor },
+    ];
 
-
+    const malnutritionAnemiaSkillsKpiChartKeys = [
+        { key: 'MUAC', title: 'MUAC' },
+        { key: 'WFH', title: 'WFH' },
+        { key: 'Pallor', title: 'Pallor' },
+    ];
+    
     return (
         <div className="p-4" dir="ltr"> 
             <h3 className="text-xl font-bold text-sky-800 mb-4 text-left">
@@ -787,11 +1298,12 @@ const MentorshipDashboard = ({
                 <KpiCard title="Total Completed Visits" value={overallKpis.totalVisits} />
             </div>
 
-            {/* Row 2: KPI Grid and Line Chart (Main) */}
+            {/* Row 2: Main KPIs & Danger Signs */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                 <KpiGridCard
                     title="Overall Adherence Scores (Average)"
                     kpis={mainKpiGridList}
+                    cols={2}
                 />
                 <KpiLineChart 
                     title="Adherence Over Time (Main KPIs)"
@@ -800,190 +1312,123 @@ const MentorshipDashboard = ({
                 />
             </div>
 
-            {/* Row 3: KPI Grid and Line Chart (Classification) */}
+            {/* --- NEW: Row 3: Danger Signs --- */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                 <KpiGridCard
-                    title="Symptom Classification Scores (Average)"
-                    kpis={classificationKpiGridList}
+                <DetailedKpiCard
+                    title="Danger Signs Assessment"
+                    overallScore={overallKpis.avgDangerSigns}
+                    kpis={dangerSignsKpiList}
                 />
                 <KpiLineChart 
-                    title="Adherence Over Time (Classification)"
+                    title="Adherence Over Time (Danger Signs)"
                     chartData={chartData}
-                    kpiKeys={classificationKpiChartKeys}
+                    kpiKeys={dangerSignsChartKeys}
+                />
+            </div>
+
+            {/* --- NEW: Row 4: Referral & Pneumonia KPIs --- */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <KpiCardWithChart
+                    title="Referral KPIs"
+                    kpis={referralKpiList}
+                    chartData={chartData}
+                    kpiKeys={referralChartKeys}
+                    cols={2}
+                />
+                <KpiCardWithChart
+                    title="Cough & Pneumonia KPIs"
+                    kpis={pneumoniaKpiList}
+                    chartData={chartData}
+                    kpiKeys={pneumoniaChartKeys}
+                    cols={2}
+                />
+            </div>
+
+            {/* --- NEW: Row 5: Diarrhea & Malaria KPIs --- */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <KpiCardWithChart
+                    title="Diarrhea KPIs"
+                    kpis={diarrheaKpiList}
+                    chartData={chartData}
+                    kpiKeys={diarrheaChartKeys}
+                    cols={2}
+                />
+                <KpiCardWithChart
+                    title="Malaria KPIs"
+                    kpis={malariaKpiList}
+                    chartData={chartData}
+                    kpiKeys={malariaChartKeys}
+                    cols={2}
+                />
+            </div>
+
+            {/* --- NEW: Row 6: Malnutrition & Anemia KPIs --- */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <KpiCardWithChart
+                    title="Malnutrition KPIs"
+                    kpis={malnutritionKpiList}
+                    chartData={chartData}
+                    kpiKeys={malnutritionChartKeys}
+                    cols={2}
+                />
+                <KpiCardWithChart
+                    title="Anemia KPIs"
+                    kpis={anemiaKpiList}
+                    chartData={chartData}
+                    kpiKeys={anemiaChartKeys}
+                    cols={2}
+                />
+            </div>
+
+            {/* --- NEW: Row 7: Hands-on Skills --- */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                 <DetailedKpiCard
+                    title="Measurement Skills (Average)"
+                    overallScore={overallKpis.avgMeasurementSkills}
+                    kpis={measurementKpiGridList}
+                />
+                <KpiLineChart 
+                    title="Adherence Over Time (Measurement Skills)"
+                    chartData={chartData}
+                    kpiKeys={measurementKpiChartKeys}
+                />
+            </div>
+
+            {/* --- NEW: Row 8: Malnutrition/Anemia Skills --- */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                 <DetailedKpiCard
+                    title="Malnutrition and Anemia Signs"
+                    overallScore={overallKpis.avgMalnutritionAnemiaSkills}
+                    kpis={malnutritionAnemiaSkillsKpiGridList}
+                />
+                <KpiLineChart 
+                    title="Adherence Over Time (Malnutrition & Anemia Signs)"
+                    chartData={chartData}
+                    kpiKeys={malnutritionAnemiaSkillsKpiChartKeys}
                 />
             </div>
             
-            {/* --- NEW: Row 4: KPI Grid and Line Chart (Case Management) --- */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                 <KpiGridCard
-                    title="Case Management Scores (Average)"
-                    kpis={managementKpiGridList}
-                />
-                <KpiLineChart 
-                    title="Adherence Over Time (Case Management)"
-                    chartData={chartData}
-                    kpiKeys={managementKpiChartKeys}
-                />
-            </div>
-            {/* --- END NEW Row 4 --- */}
-
-            {/* --- MODIFIED: Row 5 (was 4): KPI Grid and Line Chart (Hands-on Skills) --- */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                 <KpiGridCard
-                    title="Hands-on Skills Scores (Average)"
-                    kpis={handsOnKpiGridList}
-                />
-                <KpiLineChart 
-                    title="Adherence Over Time (Hands-on Skills)"
-                    chartData={chartData}
-                    kpiKeys={handsOnKpiChartKeys}
-                />
-            </div>
-            {/* --- END MODIFIED Row 5 --- */}
-            
-            {/* --- END MODIFIED KPI Layout --- */}
-
-
-            {/* --- REFACTORED: State-level Table (Mobile-Friendly) --- */}
+            {/* --- NEW: Bar Chart by State --- */}
             <h3 className="text-xl font-bold text-sky-800 mb-4 text-left">
-                Data by State {scopeTitle}
+                Overall Adherence by State {scopeTitle}
             </h3>
-            {/* overflow-x-auto is a good fallback for medium screens that are still too narrow */}
-            <div className="overflow-x-auto shadow-md rounded-lg border">
-                <table className="w-full">
-                    <thead className="bg-gray-100 hidden md:table-header-group">
-                        <tr>
-                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words w-1/6">State</th>
-                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Total Visits</th>
-                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Overall IMNCI Assessment Adherence</th>
-                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Assess & Classify Score</th>
-                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Final Decision Score</th>
-                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Treatment & Counsel Score</th>
-                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Cough Classification</th>
-                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Pneumonia Management Score</th>
-                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Diarrhea Classification Score</th>
-                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Diarrhea Management Score</th>
-                            
-                            {/* --- NEW KPI Headers --- */}
-                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Referral Identification</th>
-                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Referral Management</th>
-                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Malaria Classification</th>
-                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Malaria Management</th>
-                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Malnutrition Identification</th>
-                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Malnutrition Management</th>
-                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Anemia Management</th>
-                            {/* --- END NEW --- */}
-
-                            {/* --- NEW: Hands-on Skills Headers --- */}
-                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Weight Correct</th>
-                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Temp Correct</th>
-                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Height Correct</th>
-                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">Resp. Rate Correct</th>
-                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">RDT Correct</th>
-                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">MUAC Correct</th>
-                            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 tracking-wider break-words">WFH Correct</th>
-                            {/* --- END NEW --- */}
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white block md:table-row-group">
-                        {stateKpis.length === 0 ? (
-                            <tr className="block md:table-row">
-                                <td colSpan="24" className="px-2 py-4 text-center text-gray-500 block md:table-cell">
-                                    No completed visits match the current filters.
-                                </td>
-                            </tr>
-                        ) : (
-                            stateKpis.map(state => (
-                                <tr key={state.stateKey} className="block md:table-row mb-4 p-4 bg-white rounded-lg shadow border md:border-b md:border-gray-200 md:shadow-none md:p-0 md:mb-0">
-                                    
-                                    {/* Mobile "Header" Cell / Desktop First Cell */}
-                                    <td className="block md:table-cell w-full px-2 py-2 md:py-4 text-lg font-bold text-sky-800 text-left border-b mb-2 md:border-b-0 md:mb-0 md:text-sm md:font-medium md:text-gray-900 md:w-1/6 break-words">
-                                        {state.stateName}
-                                    </td>
-                                    
-                                    {/* Data Cells */}
-                                    <td data-label="Total Visits" className={dataCellStyles}>
-                                        {state.totalVisits}
-                                    </td>
-                                    <td data-label="Overall Adherence" className={dataCellStyles}>
-                                        <ScoreText value={state.avgOverall} />
-                                    </td>
-                                    <td data-label="Assess & Classify" className={dataCellStyles}>
-                                        <ScoreText value={state.avgAssessment} />
-                                    </td>
-                                    <td data-label="Final Decision" className={dataCellStyles}>
-                                        <ScoreText value={state.avgDecision} />
-                                    </td>
-                                    <td data-label="Treatment & Counsel" className={dataCellStyles}>
-                                        <ScoreText value={state.avgTreatment} />
-                                    </td>
-                                    <td data-label="Cough Class." className={dataCellStyles}>
-                                        <ScoreText value={state.avgCoughClassification} />
-                                    </td>
-                                    <td data-label="Pneumonia Mgmt." className={dataCellStyles}>
-                                        <ScoreText value={state.avgPneumoniaManagement} />
-                                    </td>
-                                    <td data-label="Diarrhea Class." className={dataCellStyles}>
-                                        <ScoreText value={state.avgDiarrheaClassification} />
-                                    </td>
-                                    <td data-label="Diarrhea Mgmt." className={dataCellStyles}>
-                                        <ScoreText value={state.avgDiarrheaManagement} />
-                                    </td>
-                                    
-                                    {/* --- NEW KPI Cells --- */}
-                                    <td data-label="Referral ID" className={dataCellStyles}>
-                                        <ScoreText value={state.avgReferralCaseCount} />
-                                    </td>
-                                    <td data-label="Referral Mgmt" className={dataCellStyles}>
-                                        <ScoreText value={state.avgReferralManagement} />
-                                    </td>
-                                    <td data-label="Malaria Class." className={dataCellStyles}>
-                                        <ScoreText value={state.avgMalariaClassification} />
-                                    </td>
-                                    <td data-label="Malaria Mgmt" className={dataCellStyles}>
-                                        <ScoreText value={state.avgMalariaManagement} />
-                                    </td>
-                                    <td data-label="Malnutrition ID" className={dataCellStyles}>
-                                        <ScoreText value={state.avgMalnutritionCaseCount} />
-                                    </td>
-                                    <td data-label="Malnutrition Mgmt" className={dataCellStyles}>
-                                        <ScoreText value={state.avgMalnutritionManagement} />
-                                    </td>
-                                    <td data-label="Anemia Mgmt" className={dataCellStyles}>
-                                        <ScoreText value={state.avgAnemiaManagement} />
-                                    </td>
-                                    {/* --- END NEW --- */}
-
-                                    {/* --- NEW: Hands-on Skills Cells --- */}
-                                    <td data-label="Weight" className={dataCellStyles}>
-                                        <ScoreText value={state.avgHandsOnWeight} />
-                                    </td>
-                                    <td data-label="Temp" className={dataCellStyles}>
-                                        <ScoreText value={state.avgHandsOnTemp} />
-                                    </td>
-                                    <td data-label="Height" className={dataCellStyles}>
-                                        <ScoreText value={state.avgHandsOnHeight} />
-                                    </td>
-                                    <td data-label="Resp. Rate" className={dataCellStyles}>
-                                        <ScoreText value={state.avgHandsOnRR} />
-                                    </td>
-                                    <td data-label="RDT" className={dataCellStyles}>
-                                        <ScoreText value={state.avgHandsOnRDT} />
-                                    </td>
-                                    <td data-label="MUAC" className={dataCellStyles}>
-                                        <ScoreText value={state.avgHandsOnMUAC} />
-                                    </td>
-                                    <td data-label="WFH" className={dataCellStyles}>
-                                        <ScoreText value={state.avgHandsOnWFH} />
-                                    </td>
-                                    {/* --- END NEW --- */}
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+            <div className="mb-8">
+                <KpiBarChart
+                    title="Overall IMNCI Adherence by State"
+                    chartData={stateKpis}
+                />
             </div>
-            {/* --- END REFACTORED Table --- */}
+            {/* --- END: NEW Bar Chart by State --- */}
+
+
+            {/* --- NEW: Detailed Skills Table --- */}
+            <h3 className="text-xl font-bold text-sky-800 mb-4 text-left">
+                Detailed Skill Performance {scopeTitle}
+            </h3>
+            <div className="mb-8">
+                <CompactSkillsTable overallKpis={overallKpis} />
+            </div>
+            {/* --- END NEW: Detailed Skills Table --- */}
         </div>
     );
 };

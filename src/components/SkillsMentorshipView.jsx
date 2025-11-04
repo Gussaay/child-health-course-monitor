@@ -75,311 +75,6 @@ const evaluateRelevance = (relevanceString, formData) => {
 };
 
 
-// --- Function to calculate scores (Copied & adapted from SkillsAssessmentForm) ---
-const calculateScores = (formData) => {
-    // ... (Implementation unchanged) ...
-    const IMNCI_FORM_STRUCTURE = [
-        {
-            group: 'تقييم مهارات التقييم والتصنيف',
-            sectionKey: 'assessment_skills',
-            subgroups: [
-                { subgroupTitle: 'القياسات الجسمانية والحيوية', step: 1, scoreKey: 'vitalSigns', maxScore: 3, skills: [ { key: 'skill_weight', label: 'وزن الطفل بصورة صحيحة' }, { key: 'skill_temp', label: 'قياس درجة الطفل بصورة صحيحة' }, { key: 'skill_height', label: 'قياس طول / ارتفاع الطفل بصورة صحيحة' }, ] },
-                { subgroupTitle: 'قيم علامات الخطورة العامة بصورة صحيحة', step: 2, scoreKey: 'dangerSigns', maxScore: 4, skills: [ { key: 'skill_ds_drink', label: 'هل سأل وتأكد من علامة الخطورة : لا يستطيع ان يرضع أو يشرب' }, { key: 'skill_ds_vomit', label: 'هل سأل وتأكد من علامة الخطورة : يتقيأ كل شئ' }, { key: 'skill_ds_convulsion', label: 'هل سأل وتأكد من علامة الخطورة : تشنجات أثناء المرض الحالي' }, { key: 'skill_ds_conscious', label: 'هل تأكد من علامة الخطورة : حامل أو فاقد للوعي' }, ] },
-                { subgroupTitle: 'قيم الطفل بصورة صحيحة لوجود كل الأعراض الأساسية', step: 3, scoreKey: 'mainSymptoms', maxScore: 12, isSymptomGroupContainer: true, symptomGroups: [
-                    { mainSkill: { key: 'skill_ask_cough', label: 'هل سأل عن وجود الكحة', scoreKey: 'symptom_cough' } },
-                    { mainSkill: { key: 'skill_ask_diarrhea', label: 'هل سأل عن وجود الاسهال', scoreKey: 'symptom_diarrhea' } },
-                    { mainSkill: { key: 'skill_ask_fever', label: 'هل سأل عن وجود الحمى', scoreKey: 'symptom_fever' } },
-                    { mainSkill: { key: 'skill_ask_ear', label: 'هل سأل عن وجود مشكلة في الأذن', scoreKey: 'symptom_ear' } },
-                ] },
-                { subgroupTitle: 'تحرى عن سوء التغذية الحاد', step: 4, scoreKey: 'malnutrition', maxScore: 3, skills: [ { key: 'skill_mal_muac', label: 'هل قاس المواك بصورة صحيحة' }, { key: 'skill_mal_wfh', label: 'هل قاس نسبة الوزن للطول أو الارتفاع بصورة صحيحة' }, { key: 'skill_mal_classify', label: 'هل صنف الحالة التغذوية بصورة صحيحة' }, ] },
-                { subgroupTitle: 'تحرى عن الانيميا', step: 5, scoreKey: 'anemia', maxScore: 2, skills: [ { key: 'skill_anemia_pallor', label: 'هل فحص شحوب الكف بصورة صحيحة' }, { key: 'skill_anemia_classify', label: 'هل صنف الانيميا بصورة صحيحة' }, ] },
-                { subgroupTitle: 'تحرى عن التطعيم وفيتامين أ بصورة صحيحة', step: 6, scoreKey: 'immunization', maxScore: 2, skills: [ { key: 'skill_imm_vacc', label: 'هل تحرى عن التطعيمات بصورة صحيحة' }, { key: 'skill_imm_vita', label: 'هل تحرى عن فيتامين أ بصورة صحيحة' }, ] },
-                { subgroupTitle: 'تحرى عن الأمراض الأخرى', step: 7, scoreKey: 'otherProblems', maxScore: 1, skills: [ { key: 'skill_other', label: 'هل تحرى عن الأمراض الأخرى' }, ] }
-            ]
-        },
-        { group: 'القرار النهائي', step: 8, scoreKey: 'finalDecision', maxScore: 1, isDecisionSection: true, sectionKey: null, subgroups: [] },
-        {
-            group: 'تقييم مهارات العلاج والنصح', step: 9, scoreKey: 'treatment', maxScore: null,
-            sectionKey: 'treatment_skills',
-            subgroups: [
-                 {
-                    subgroupTitle: 'الحالات التي تحتاج لتحويل ، تم تحويلها',
-                    scoreKey: 'ref_treatment',
-                    // Note: maxScore is null in SkillsAssessmentForm, dynamically calculated
-                    skills: [
-                        { key: 'skill_ref_abx', label: 'في حالة التحويل : هل أعطى الجرعة الاولى من المضاد الحيوي المناسب قبل تحويل الطفل' },
-                        { key: 'skill_ref_quinine', label: 'في حالة التحويل : أعطى الكينيين بالعضل قبل التحويل', 
-                            relevant: (formData) => { // Use function for accurate check
-                                const didClassifyCorrectly = formData.assessment_skills?.skill_classify_fever === 'yes';
-                                const workerCls = formData.assessment_skills?.worker_fever_classification || {};
-                                const supervisorCls = formData.assessment_skills?.supervisor_correct_fever_classification || {};
-                                const effectiveCls = didClassifyCorrectly ? workerCls : supervisorCls;
-                                return effectiveCls && effectiveCls['مرض حمي شديد'];
-                            }
-                        },
-                    ],
-                    relevant: (formData) => formData.finalDecision === 'referral' && formData.decisionMatches === 'yes'
-                },
-                 {
-                    subgroupTitle: 'في حالة الإلتهاب الرئوي',
-                    scoreKey: 'pneu_treatment',
-                    skills: [ { key: 'skill_pneu_abx', label: 'هل وصف مضاد حيوي لعلاج الالتهاب الرئوي بصورة صحيحة' }, { key: 'skill_pneu_dose', label: 'هل أعطى الجrعة الأولى من مضاد حيوي لعلاج الالتهاب الرئوي بالعيادة بصورة صحيحة', relevant: "${ts_skill_pneu_abx}='yes'" }, ],
-                    relevant: (formData) => {
-                         const didClassifyCorrectly = formData.assessment_skills?.skill_classify_cough === 'yes';
-                         const workerClassification = formData.assessment_skills?.worker_cough_classification;
-                         const supervisorClassification = formData.assessment_skills?.supervisor_correct_cough_classification;
-                         const effectiveCls = didClassifyCorrectly ? workerClassification : supervisorClassification;
-                         return effectiveCls === 'التهاب رئوي';
-                    }
-                },
-                 {
-                    subgroupTitle: 'في حالة الإسهال',
-                    scoreKey: 'diar_treatment',
-                    skills: [ { key: 'skill_diar_ors', label: 'هل حدد كمية محلول الإرواء بصورة صحيحة' }, { key: 'skill_diar_counsel', label: 'هل نصح الأم بالRعاية المنزلية بإعطاء سوائل أكثر و الاستمرار في تغذية الطفل)' }, { key: 'skill_diar_zinc', label: 'هل وصف دواء الزنك بصورة صحيحة' }, { key: 'skill_diar_zinc_dose', label: 'هل أعطى الجrعة الأولى من دواء الزنك للطفل بالوحدة الصحية بطريقة صحيحة', relevant: "${ts_skill_diar_zinc}='yes'" }, ],
-                    relevant: (formData) => {
-                        const didClassifyCorrectly = formData.assessment_skills?.skill_classify_diarrhea === 'yes';
-                        const workerCls = formData.assessment_skills?.worker_diarrhea_classification || {};
-                        const supervisorCls = formData.assessment_skills?.supervisor_correct_diarrhea_classification || {};
-                        const effectiveCls = didClassifyCorrectly ? workerCls : supervisorCls;
-                        const relevantKeys = ['جفاف شديد', 'بعض الجفاف', 'إسهال مستمر شديد', 'إسهال مستمر', 'دسنتاريا', 'لا يوجد جفاف'];
-                        return relevantKeys.some(key => effectiveCls[key]);
-                    }
-                },
-                 {
-                    subgroupTitle: 'في حالة الدسنتاريا',
-                    scoreKey: 'dyst_treatment',
-                    skills: [ { key: 'skill_dyst_abx', label: 'هل وصف مضاد حيوي لعلاج الدسنتاريا بصورة صحيحة' }, { key: 'skill_dyst_dose', label: 'هل أعطى الجrعة الأولى من مضاد حيوي لعلاج الدسنتاريا في العيادة بصورة صحيحة', relevant: "${ts_skill_dyst_abx}='yes'" }, ],
-                    relevant: (formData) => {
-                        const didClassifyCorrectly = formData.assessment_skills?.skill_classify_diarrhea === 'yes';
-                        const workerCls = formData.assessment_skills?.worker_diarrhea_classification || {};
-                        const supervisorCls = formData.assessment_skills?.supervisor_correct_diarrhea_classification || {};
-                        const effectiveCls = didClassifyCorrectly ? workerCls : supervisorCls;
-                        return !!effectiveCls['دسنتاريا'];
-                    }
-                },
-                 {
-                    subgroupTitle: 'في حالة الملاريا',
-                    scoreKey: 'mal_treatment',
-                    skills: [ { key: 'skill_mal_meds', label: 'هل وصف دواء لعلاج الملاريا بصورة صحيحة' }, { key: 'skill_mal_dose', label: 'هل أعطى الجrعة الأولى من الدواء لعلاج الملاريا في العيادة بصورة صحيحة', relevant: "${ts_skill_mal_meds}='yes'" }, ],
-                    relevant: (formData) => {
-                        const didClassifyCorrectly = formData.assessment_skills?.skill_classify_fever === 'yes';
-                        const workerCls = formData.assessment_skills?.worker_fever_classification || {};
-                        const supervisorCls = formData.assessment_skills?.supervisor_correct_fever_classification || {};
-                        const effectiveCls = didClassifyCorrectly ? workerCls : supervisorCls;
-                        return !!effectiveCls['ملاريا'];
-                    }
-                },
-                {
-                    subgroupTitle: 'في حالة التهاب الأذن',
-                    scoreKey: 'ear_treatment',
-                    skills: [ { key: 'skill_ear_abx', label: 'هل وصف مضاد حيوي لعلاج التهاب الأذن الحاد بصورة صحيحة' }, { key: 'skill_ear_dose', label: 'هل أعطى الجrعة الأولى من مضاد حيوي لعلاج التهاب الأذن الحاد بصورة صحيحة', relevant: "${ts_skill_ear_abx}='yes'" }, { key: 'skill_ear_para', label: 'هل وصف دواء الباراسيتامول بصورة صحيحة' }, { key: 'skill_ear_para_dose', label: 'هل أعطى الجrعة الأولى من الباراسيتامول بصورة صحيحة', relevant: "${ts_skill_ear_para}='yes'" }, ],
-                    relevant: (formData) => {
-                         const didClassifyCorrectly = formData.assessment_skills?.skill_classify_ear === 'yes';
-                         const workerCls = formData.assessment_skills?.worker_ear_classification;
-                         const supervisorCls = formData.assessment_skills?.supervisor_correct_ear_classification;
-                         const effectiveCls = didClassifyCorrectly ? workerCls : supervisorCls;
-                         return ['التهاب العظمة خلف الاذن', 'التهاب أذن حاد', 'التهاب أذن مزمن'].includes(effectiveCls);
-                    }
-                },
-                {
-                    subgroupTitle: 'في حالة سوء التغذية',
-                    scoreKey: 'nut_treatment',
-                    skills: [ 
-                        { key: 'skill_nut_assess', label: 'قيم تغذية الطفل بما في ذلك مشاكل الرضاعة (لأقل من عمر سنتين)' }, 
-                        { key: 'skill_nut_counsel', label: 'أرشد الأم عن تغذية الطفل بما في ذلك مشاكل الرضاعة الأقل من عمر سنتين)' }, 
-                    ], // Bulk upload fields differ slightly here (no skill_nut_refer_otp)
-                    relevant: (formData) => {
-                        const didClassifyCorrectly = formData.assessment_skills?.skill_mal_classify === 'yes';
-                        const workerCls = formData.assessment_skills?.worker_malnutrition_classification;
-                        const supervisorCls = formData.assessment_skills?.supervisor_correct_malnutrition_classification;
-                        const effectiveCls = didClassifyCorrectly ? workerCls : supervisorCls;
-                        return ['سوء تغذية شديد غير مصحوب بمضاعفات', 'سوء تغذية حاد متوسط'].includes(effectiveCls); // Use correct constants
-                    }
-                },
-                {
-                    subgroupTitle: 'في حالة فقر الدم',
-                    scoreKey: 'anemia_treatment',
-                    skills: [ { key: 'skill_anemia_iron', label: 'هل وصف شراب حديد بصورة صحيحة' }, { key: 'skill_anemia_iron_dose', label: 'هل أعطى الجrعة الأولى من شراب حديد بصورة صحيحة', relevant: "${ts_skill_anemia_iron}='yes'" }, ],
-                    relevant: (formData) => {
-                        const didClassifyCorrectly = formData.assessment_skills?.skill_anemia_classify === 'yes';
-                        const workerCls = formData.assessment_skills?.worker_anemia_classification;
-                        const supervisorCls = formData.assessment_skills?.supervisor_correct_anemia_classification;
-                        const effectiveCls = didClassifyCorrectly ? workerCls : supervisorCls;
-                        return effectiveCls === 'فقر دم';
-                    }
-                },
-                 { subgroupTitle: 'نصح الأم متى تعود للمتابعة',
-                    scoreKey: 'fu_treatment',
-                    skills: [ { key: 'skill_fu_when', label: 'هل ذكر لها علامتين علي الأقل إذا ظهرت على الطفل يجب أن تعود به فورا للوحدة الصحية' }, { key: 'skill_fu_return', label: 'هل حدد للام متى تعود بالطفل' }, ] }
-            ]
-        }
-    ];
-
-    const scores = {};
-    let totalMaxScore = 0;
-    let totalCurrentScore = 0;
-
-    IMNCI_FORM_STRUCTURE.forEach(group => {
-        let groupCurrentScore = 0;
-        let groupMaxScore = 0;
-
-        if (group.isDecisionSection) {
-            groupMaxScore = 1;
-            groupCurrentScore = formData.decisionMatches === 'yes' ? 1 : 0;
-            totalMaxScore += groupMaxScore;
-            totalCurrentScore += groupCurrentScore;
-            if (group.scoreKey) {
-                scores[group.scoreKey] = { score: groupCurrentScore, maxScore: groupMaxScore };
-            }
-        } else if (group.sectionKey) {
-            const sectionData = formData[group.sectionKey] || {};
-            let groupRelevantMaxScore = 0;
-
-            group.subgroups?.forEach(subgroup => {
-                let subgroupCurrentScore = 0;
-                let subgroupMaxScore = 0;
-                let subgroupRelevantMaxScore = 0;
-                let isSubgroupRelevantForScoring = true;
-
-                if (subgroup.relevant) {
-                    if (typeof subgroup.relevant === 'function') {
-                        isSubgroupRelevantForScoring = subgroup.relevant(formData);
-                    } else if (typeof subgroup.relevant === 'string') {
-                        const simplifiedRelevanceString = subgroup.relevant.replace(/\$\{(.*?)\}/g, (match, key) => {
-                            let val = formData[key] ?? sectionData[key] ?? formData.assessment_skills?.[key] ?? formData.treatment_skills?.[key];
-                             if (key.startsWith('as_') && val === undefined) val = formData.assessment_skills?.[key.replace('as_', '')];
-                             if (key.startsWith('ts_') && val === undefined) val = formData.treatment_skills?.[key.replace('ts_', '')];
-                            return `'${val || ''}'`;
-                        });
-                        try {
-                           isSubgroupRelevantForScoring = eval(simplifiedRelevanceString.replace(/='(.*?)'/g, '===\'$1\''));
-                        } catch (e) {
-                            console.warn("Error evaluating subgroup relevance:", simplifiedRelevanceString, e);
-                            isSubgroupRelevantForScoring = false;
-                        }
-                    } else {
-                         isSubgroupRelevantForScoring = false;
-                    }
-                }
-
-                if (!isSubgroupRelevantForScoring) {
-                   if (subgroup.scoreKey) {
-                        scores[subgroup.scoreKey] = { score: 0, maxScore: 0 };
-                   }
-                   return;
-                }
-
-                if (subgroup.isSymptomGroupContainer) {
-                    subgroup.symptomGroups?.forEach(sg => {
-                         const askSkillKey = sg.mainSkill.key;
-                         const symptomPrefix = askSkillKey.split('_')[2];
-                         const confirmsKey = `supervisor_confirms_${symptomPrefix}`;
-                         const checkSkillKey = `skill_check_${symptomPrefix === 'cough' ? 'rr' : symptomPrefix === 'diarrhea' ? 'dehydration' : symptomPrefix === 'fever' ? 'rdt' : 'ear'}`;
-                         const classifySkillKey = `skill_classify_${symptomPrefix}`;
-
-                         let currentSymptomScore = 0;
-                         let maxSymptomScore = 0;
-
-                         if (sectionData[askSkillKey] === 'yes' || sectionData[askSkillKey] === 'no') {
-                            maxSymptomScore += 1;
-                            if (sectionData[askSkillKey] === 'yes') currentSymptomScore += 1;
-                         }
-
-                         if (sectionData[askSkillKey] === 'yes' && formData.assessment_skills?.[confirmsKey] === 'yes') {
-                             if (sectionData[checkSkillKey] === 'yes' || sectionData[checkSkillKey] === 'no') {
-                                maxSymptomScore += 1;
-                                if (sectionData[checkSkillKey] === 'yes') currentSymptomScore += 1;
-                             }
-                             if (sectionData[classifySkillKey] === 'yes' || sectionData[classifySkillKey] === 'no') {
-                                maxSymptomScore += 1;
-                                if (sectionData[classifySkillKey] === 'yes') currentSymptomScore += 1;
-                             }
-                         }
-                         subgroupCurrentScore += currentSymptomScore;
-                         subgroupRelevantMaxScore += maxSymptomScore;
-                         if (sg.mainSkill.scoreKey) {
-                             scores[sg.mainSkill.scoreKey] = { score: currentSymptomScore, maxScore: maxSymptomScore };
-                         }
-                    });
-                } else if (Array.isArray(subgroup.skills)) {
-                    subgroup.skills.forEach(skill => {
-                        let isSkillRelevantForScoring = true;
-                        if (skill.relevant) {
-                             if (typeof skill.relevant === 'function') {
-                                isSkillRelevantForScoring = skill.relevant(formData);
-                             } else if (typeof skill.relevant === 'string') {
-                                 const simplifiedRelevanceString = skill.relevant.replace(/\$\{(.*?)\}/g, (match, key) => {
-                                      let val = formData[key] ?? sectionData[key] ?? formData.assessment_skills?.[key] ?? formData.treatment_skills?.[key];
-                                      if (key.startsWith('as_') && val === undefined) val = formData.assessment_skills?.[key.replace('as_', '')];
-                                      if (key.startsWith('ts_') && val === undefined) val = formData.treatment_skills?.[key.replace('ts_', '')];
-                                      return `'${val || ''}'`;
-                                 });
-                                 try {
-                                      isSkillRelevantForScoring = evaluateRelevance(skill.relevant, formData); // Use the dedicated helper for consistency
-                                 } catch (e) {
-                                      console.warn("Error evaluating skill relevance:", simplifiedRelevanceString, e);
-                                      isSkillRelevantForScoring = false;
-                                 }
-                             } else {
-                                isSkillRelevantForScoring = false;
-                             }
-                        }
-
-                        if (isSkillRelevantForScoring) {
-                            const value = sectionData[skill.key];
-                            if (value === 'yes' || value === 'no') {
-                                subgroupRelevantMaxScore += 1;
-                                if (value === 'yes') {
-                                    subgroupCurrentScore += 1;
-                                }
-                            }
-                        }
-                    });
-                }
-
-                groupCurrentScore += subgroupCurrentScore;
-                groupRelevantMaxScore += subgroupRelevantMaxScore;
-
-                if (subgroup.scoreKey) {
-                    scores[subgroup.scoreKey] = { score: subgroupCurrentScore, maxScore: subgroupRelevantMaxScore };
-                }
-            });
-
-            totalCurrentScore += groupCurrentScore;
-            totalMaxScore += groupRelevantMaxScore;
-
-            if (group.scoreKey) {
-                 scores[group.scoreKey] = { score: groupCurrentScore, maxScore: groupRelevantMaxScore };
-            }
-             if (group.sectionKey === 'assessment_skills') {
-                scores['assessment_total_score'] = { score: groupCurrentScore, maxScore: groupRelevantMaxScore };
-             }
-             if (group.sectionKey === 'treatment_skills') {
-                 scores['treatment_score'] = { score: groupCurrentScore, maxScore: groupRelevantMaxScore };
-             }
-        }
-    });
-
-    scores.overallScore = { score: totalCurrentScore, maxScore: totalMaxScore };
-    const scoresPayload = {};
-     for (const key in scores) {
-         if (key !== 'treatment_score' && scores[key]?.score !== undefined && scores[key]?.maxScore !== undefined) {
-             scoresPayload[`${key}_score`] = scores[key].score;
-             scoresPayload[`${key}_maxScore`] = scores[key].maxScore;
-         }
-     }
-     if(scores['treatment_score']){
-        scoresPayload['treatment_score'] = scores['treatment_score'].score;
-        scoresPayload['treatment_maxScore'] = scores['treatment_score'].maxScore;
-     } else {
-        scoresPayload['treatment_score'] = 0;
-        scoresPayload['treatment_maxScore'] = 0;
-     }
-
-    return scoresPayload;
-};
-// --- END calculateScores ---
-
 
 // --- AddHealthWorkerModal Component (with job title dropdown) (KEPT AS-IS) ---
 const IMNCI_JOB_TITLES = [
@@ -1155,6 +850,10 @@ const SkillsMentorshipView = ({
             visitNumber: sub.visitNumber || null, // <-- MODIFICATION: ADDED THIS LINE
             // --- END: ADDITIONS (MODIFIED) ---
 
+            // --- START: MODIFICATION (Add sessionDate for visit counting) ---
+            sessionDate: sub.sessionDate || (sub.effectiveDate ? new Date(sub.effectiveDate.seconds * 1000).toISOString().split('T')[0] : null),
+            // --- END: MODIFICATION ---
+
             fullData: sub // Store the original data for editing drafts
         }));
     }, [skillMentorshipSubmissions]);
@@ -1313,54 +1012,73 @@ const SkillsMentorshipView = ({
         }
     }, [selectedFacility]);
 
-    // --- Visit Number Logic MODIFICATION ---
+    // --- START: MODIFIED Visit Number Logic ---
     const visitNumber = useMemo(() => {
         if (!Array.isArray(processedSubmissions) || !selectedFacilityId || !selectedHealthWorkerName || !activeService) {
             return 1;
         }
 
-        // Authenticated Logic (unchanged)
-        const existingVisitsCount = processedSubmissions.filter(sub =>
+        // 1. If we are editing a submission, just use its stored visit number.
+        if (editingSubmission) {
+             return editingSubmission.visitNumber || 1; 
+        }
+
+        // 2. If creating a new session, calculate based on unique visit days.
+        const workerSessions = processedSubmissions.filter(sub =>
             sub.facilityId === selectedFacilityId &&
             sub.staff === selectedHealthWorkerName &&
             sub.service === activeService &&
-            sub.status !== 'draft' // Only count completed visits
-        ).length;
+            sub.status !== 'draft' && // Only count completed visits
+            sub.sessionDate // Ensure it has a date
+        );
 
-        // If editing a COMPLETED session, keep its original visit number
-        if (editingSubmission && editingSubmission.status === 'complete') {
-             return editingSubmission.visitNumber || 1; 
+        // Get all unique dates
+        const uniqueDateSet = new Set(workerSessions.map(s => s.sessionDate));
+        const baseVisitCount = uniqueDateSet.size;
+
+        if (baseVisitCount === 0) {
+            return 1; // This is the first visit
         }
-        // If editing a DRAFT, calculate as if it's a new visit (count completed ones + 1)
-        else if (editingSubmission && editingSubmission.status === 'draft') {
-            return existingVisitsCount + 1;
+        
+        // Find the latest date string from the set
+        const sortedDates = Array.from(uniqueDateSet).sort();
+        const lastVisitDateStr = sortedDates[sortedDates.length - 1];
+
+        // Compare last visit date to *today's date* (for a new session)
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        if (todayStr === lastVisitDateStr) {
+            // New session on the same day as the last visit. Use the same number.
+            return baseVisitCount;
+        } else {
+            // New session on a new day. Increment the number.
+            return baseVisitCount + 1;
         }
-        // If creating a new visit, count completed ones + 1
-        return existingVisitsCount + 1;
 
-    }, [processedSubmissions, selectedFacilityId, selectedHealthWorkerName, activeService, editingSubmission]); // <-- MODIFICATION: Removed publicSubmissionMode from deps
+    }, [processedSubmissions, selectedFacilityId, selectedHealthWorkerName, activeService, editingSubmission]);
+    // --- END: MODIFIED Visit Number Logic ---
 
-    // --- Last Session Date Logic MODIFICATION ---
+    // --- START: MODIFIED Last Session Date Logic ---
     const lastSessionDate = useMemo(() => {
         if (!Array.isArray(processedSubmissions) || !selectedFacilityId || !selectedHealthWorkerName || !activeService) {
             return null;
         }
 
-        // Authenticated Logic (unchanged)
+        // Get all completed, non-draft sessions for this worker, sorted by date
         const workerSessions = processedSubmissions
             .filter(sub =>
                 sub.facilityId === selectedFacilityId &&
                 sub.staff === selectedHealthWorkerName &&
                 sub.service === activeService &&
-                sub.status !== 'draft' // Only consider completed sessions for 'last session'
+                sub.status !== 'draft' // Only consider completed sessions
             )
-            .sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort completed sessions
+            .sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        // If editing, find the latest COMPLETED session *before* the one being edited
+        // If editing, find the latest completed session *before* the one being edited
         if (editingSubmission) {
+            // Find sessions that are not this one
             const sessionsBeforeThisOne = workerSessions.filter(s =>
-                s.id !== editingSubmission.id && // Exclude the current draft/session
-                new Date(s.date) < new Date(editingSubmission.date) // Only consider sessions strictly before
+                s.id !== editingSubmission.id
             );
              return sessionsBeforeThisOne.length > 0 ? sessionsBeforeThisOne[0].date : null;
         }
@@ -1368,7 +1086,8 @@ const SkillsMentorshipView = ({
         else {
             return workerSessions.length > 0 ? workerSessions[0].date : null;
         }
-    }, [processedSubmissions, selectedFacilityId, selectedHealthWorkerName, activeService, editingSubmission]); // <-- MODIFICATION: Removed publicSubmissionMode from deps
+    }, [processedSubmissions, selectedFacilityId, selectedHealthWorkerName, activeService, editingSubmission]);
+    // --- END: MODIFIED Last Session Date Logic ---
 
 
     useEffect(() => {

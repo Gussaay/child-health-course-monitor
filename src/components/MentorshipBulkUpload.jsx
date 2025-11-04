@@ -20,7 +20,7 @@ const YES_NO_NA_VALUES = ['yes', 'no', 'na'];
 const FINAL_DECISION_VALUES = ['referral', 'treatment'];
 const COUGH_CLASSIFICATIONS = ["التهاب رئوي شديد أو مرض شديد جدا", "التهاب رئوي", "كحة أو نزلة برد"];
 const DIARRHEA_CLASSIFICATIONS = ["جفاف شديد", "بعض الجفاف", "لا يوجد جفاف", "إسهال مستمر شديد", "إسهال مستمر", "دسنتاريا"];
-const FEVER_CLASSIFICATIONS = ["مرض حمي شديد", "ملاريا", "حمى لا توجد ملارIA", "حصبة مصحوبة بمضاعفات شديدة", "حصبة مصحوبة بمضاعفات في العين والفم", "حصبة"];
+const FEVER_CLASSIFICATIONS = ["مرض حمي شديد", "ملاريا", "حمى لا توجد ملAR", "حصبة مصحوبة بمضاعفات شديدة", "حصبة مصحوبة بمضاعفات في العين والفم", "حصبة"];
 const EAR_CLASSIFICATIONS = ["التهاب العظمة خلف الاذن", "التهاب أذن حاد", "التهاب أذن مزمن", "لا يوجد التهاب أذن"];
 const MALNUTRITION_CLASSIFICATIONS = ["سوء تغذية شديد مصحوب بمضاعفات", "سوء تغذية شديد غير مصحوب بمضاعفات", "سوء تغذية حاد متوسط", "لا يوجد سوء تغذية"];
 const ANEMIA_CLASSIFICATIONS = ["فقر دم شديد", "فقر دم", "لا يوجد فقر دم"];
@@ -42,9 +42,7 @@ const DIARRHEA_CLASSIFICATION_MAP = createStandardizationMap(DIARRHEA_CLASSIFICA
 const FEVER_CLASSIFICATION_MAP = createStandardizationMap(FEVER_CLASSIFICATIONS);
 const EAR_CLASSIFICATION_MAP = createStandardizationMap(EAR_CLASSIFICATIONS);
 const MALNUTRITION_CLASSIFICATION_MAP = createStandardizationMap(MALNUTRITION_CLASSIFICATIONS);
-// --- THIS IS THE FIX ---
 const ANEMIA_CLASSIFICATION_MAP = createStandardizationMap(ANEMIA_CLASSIFICATIONS);
-// --- END THE FIX ---
 
 
 const standardizeValue = (inputValue, standardizationMap) => {
@@ -420,12 +418,23 @@ const calculateScores = (formData) => {
                         // --- END NEW KPI ---
 
                          subgroupCurrentScore += currentSymptomScore;
-                         subgroupRelevantMaxScore += maxSymptomScore;
+                         mainSymptomsMaxScore += maxSymptomScore; // <-- MODIFIED: was subgroupRelevantMaxScore
                          if (sg.mainSkill.scoreKey) {
                              scores[sg.mainSkill.scoreKey] = { score: currentSymptomScore, maxScore: maxSymptomScore };
                          }
                     });
+                    // --- START: MODIFICATION (Corrected Symptom Score) ---
+                    mainSymptomsCurrentScore = subgroupCurrentScore; 
+                    // mainSymptomsMaxScore is already calculated in the loop
+                    if (subgroup.scoreKey) {
+                        scores[subgroup.scoreKey] = { score: mainSymptomsCurrentScore, maxScore: mainSymptomsMaxScore };
+                    }
+                    // --- END: MODIFICATION ---
+
                 } else if (Array.isArray(subgroup.skills)) {
+                    // --- START: MODIFICATION (Clearer subgroup max) ---
+                    let subgroupRelevantMaxScore = 0;
+                    // --- END: MODIFICATION ---
                     subgroup.skills.forEach(skill => {
                         let isSkillRelevantForScoring = true;
                         if (skill.relevant) {
@@ -495,32 +504,23 @@ const calculateScores = (formData) => {
                             }
                         }
                     });
+                    // --- START: MODIFICATION (Assign dynamic score) ---
+                    if (isSubgroupScored) {
+                        subgroupMaxScore = subgroupRelevantMaxScore;
+                        scores[subgroup.scoreKey] = { score: subgroupCurrentScore, maxScore: subgroupMaxScore };
+                    }
+                    // --- END: MODIFICATION ---
                 }
 
                 groupCurrentScore += subgroupCurrentScore;
                 
-                // This logic was flawed. We should use the dynamically calculated subgroupRelevantMaxScore
-                // for *all* subgroups, not just treatment ones, because assessment ones also have dynamic maxes.
-                if (isSubgroupScored) {
-                    if (subgroup.isSymptomGroupContainer) {
-                        subgroupMaxScore = mainSymptomsMaxScore; // Already calculated
-                        groupRelevantMaxScore += mainSymptomsMaxScore; // Add to group total
-                    } else {
-                        subgroupMaxScore = subgroupRelevantMaxScore;
-                        // We add to groupRelevantMaxScore *outside* this loop for assessment
-                        // But for treatment, we need to add it *here*
-                        if(isTreatmentSubgroup) {
-                             groupRelevantMaxScore += subgroupRelevantMaxScore;
-                        }
-                    }
-                    scores[subgroup.scoreKey] = { score: subgroupCurrentScore, maxScore: subgroupMaxScore };
-                }
+                // --- REMOVED: Flawed logic block ---
             });
 
             // This block is for the total Assessment score
             if (group.sectionKey === 'assessment_skills') {
                 scores['assessment_total_score'] = { 
-                    score: groupCurrentScore, // contains sum of vital, danger, mal, anemia, imm, other
+                    score: groupCurrentScore, // contains sum of vital, danger, mal, anemia, imm, other (BUT NOT SYMPTOMS)
                     maxScore: totalAssessmentMaxScore // contains sum of their relevant maxes
                 };
                  totalCurrentScore += groupCurrentScore;
@@ -843,22 +843,37 @@ const DetailedMentorshipBulkUploadModal = ({
             return;
         }
 
-        // --- START: Visit Number Logic ---
+        // --- START: MODIFIED Visit Number Logic ---
             
-        // 1. Create map of existing completed visits from DB to get the baseline count
-        const existingVisitCounts = new Map();
+        // 1. Create map of existing *unique visit days* from DB to get the baseline count and last date
+        const existingVisitDates = new Map();
         if (allSubmissions) {
             allSubmissions.forEach(sub => {
                 // Only count completed sessions to establish the baseline
-                if (sub.status === 'complete' && sub.facilityId && sub.staff) {
+                if (sub.status === 'complete' && sub.facilityId && sub.staff && sub.sessionDate) {
                      const key = `${sub.facilityId}-${sub.staff}`;
-                     const count = (existingVisitCounts.get(key) || 0) + 1;
-                     existingVisitCounts.set(key, count);
+                     if (!existingVisitDates.has(key)) {
+                         existingVisitDates.set(key, new Set());
+                     }
+                     // Add the date string (e.g., "2025-11-01") to the Set
+                     existingVisitDates.get(key).add(sub.sessionDate);
                 }
             });
         }
 
-        // 2. Find header indices for fields needed for sorting and counting
+        // 2. Convert the date Sets into the final baseline count map
+        const existingVisitCounts = new Map();
+        existingVisitDates.forEach((dateSet, key) => {
+            const sortedDates = Array.from(dateSet).sort();
+            const count = sortedDates.length;
+            const lastDate = sortedDates[count - 1] || null;
+            existingVisitCounts.set(key, { count, lastDate });
+        });
+        
+        // --- END: DB Baseline Logic ---
+
+
+        // 3. Find header indices for fields needed for sorting and counting
         const dateHdr = fieldMappings['session_date'];
         const workerHdr = fieldMappings['health_worker_name'];
         const facilityHdr = fieldMappings['facility_name'];
@@ -871,9 +886,10 @@ const DetailedMentorshipBulkUploadModal = ({
         const stateIdx = headers.indexOf(stateHdr);
         const localityIdx = headers.indexOf(localityHdr);
 
-        // 3. Pre-process and sort the *current* Excel data by date
+        // 4. Pre-process and sort the *current* Excel data by date
         const preProcessedData = dataForProcessing.map((row, rowIndex) => {
             let dateObj = null;
+            let dateStr = null; // YYYY-MM-DD string
             const dateVal = row[dateIdx];
             try {
                  if (dateVal instanceof Date) {
@@ -882,6 +898,10 @@ const DetailedMentorshipBulkUploadModal = ({
                     // Handle Excel dates (numbers) or string dates
                     const parsedDate = new Date(dateVal);
                     if (!isNaN(parsedDate.getTime())) dateObj = parsedDate;
+                 }
+                 // Convert valid date object to YYYY-MM-DD string
+                 if(dateObj) {
+                     dateStr = dateObj.toISOString().split('T')[0];
                  }
             } catch (e) { /* dateObj remains null */ }
 
@@ -900,6 +920,7 @@ const DetailedMentorshipBulkUploadModal = ({
                 row,
                 originalRowIndex: rowIndex, // Keep for potential error mapping
                 dateObj,
+                dateStr, // Store the YYYY-MM-DD string
                 workerName,
                 facilityId,
                 key: `${facilityId}-${workerName}` // Worker-Facility key
@@ -912,15 +933,15 @@ const DetailedMentorshipBulkUploadModal = ({
             return 0; // neither has a date
         });
         
-        // This map will track visit numbers *within this upload*
-        const internalVisitCounts = new Map();
+        // This map will track visit numbers { count, lastDate } *within this upload*
+        const internalVisitTracker = new Map();
 
-        // --- END: Visit Number Logic ---
+        // --- END: MODIFIED Visit Number Logic ---
         
         const processedSessions = [];
 
-        // 4. Iterate over the *sorted* data
-        preProcessedData.forEach(({ row, originalRowIndex, key: workerFacilityKey }) => {
+        // 5. Iterate over the *sorted* data
+        preProcessedData.forEach(({ row, originalRowIndex, key: workerFacilityKey, dateStr: currentSessionDate }) => {
             const sessionFromRow = {};
             let hasError = false;
 
@@ -1027,16 +1048,19 @@ const DetailedMentorshipBulkUploadModal = ({
                 let effectiveDate;
                 if (sessionFromRow.session_date instanceof Date) {
                     effectiveDate = Timestamp.fromDate(sessionFromRow.session_date);
-                    payload.sessionDate = sessionFromRow.session_date.toISOString().split('T')[0];
+                    // Use the pre-calculated dateStr
+                    payload.sessionDate = currentSessionDate || sessionFromRow.session_date.toISOString().split('T')[0];
                 } else {
                     const parsedDate = new Date(sessionFromRow.session_date);
                     if (isNaN(parsedDate.getTime())) throw new Error('Invalid date format');
                     effectiveDate = Timestamp.fromDate(parsedDate);
-                    payload.sessionDate = parsedDate.toISOString().split('T')[0];
+                     // Use the pre-calculated dateStr
+                    payload.sessionDate = currentSessionDate || parsedDate.toISOString().split('T')[0];
                 }
                 payload.effectiveDate = effectiveDate;
             } catch (e) {
                  payload.effectiveDate = null;
+                 payload.sessionDate = null; // Set sessionDate to null also
                  hasError = true;
             }
             
@@ -1051,24 +1075,48 @@ const DetailedMentorshipBulkUploadModal = ({
             const lookupKey = `${stateKey}-${localityKey}-${facilityNameLower}`;
             payload.facilityId = facilityLookup.get(lookupKey) || null;
 
-            // --- 5. ADDED: Visit Number Calculation ---
-            // We use the pre-calculated workerFacilityKey from the sorted loop
+            // --- 5. START: MODIFIED Visit Number Calculation ---
+            let visitNumber = null;
             
-            // 1. Get the baseline count from the DB
-            const baseCount = existingVisitCounts.get(workerFacilityKey) || 0;
+            // Only proceed if we have a valid date and key
+            if (currentSessionDate && workerFacilityKey) {
+                // 1. Get the baseline data from the DB map
+                const baseData = existingVisitCounts.get(workerFacilityKey) || { count: 0, lastDate: null };
+                
+                // 2. Get the current tracking data for this worker *from this file*
+                const trackerData = internalVisitTracker.get(workerFacilityKey);
+                
+                if (!trackerData) {
+                    // This is the first row for this worker *in this file*.
+                    // Compare to the baseline from the DB.
+                    if (currentSessionDate === baseData.lastDate) {
+                        // This session is on the *same day* as their last DB visit. Use the same count.
+                        visitNumber = baseData.count;
+                        // Start tracking based on this baseline
+                        internalVisitTracker.set(workerFacilityKey, { count: baseData.count, lastDate: baseData.lastDate });
+                    } else {
+                        // This session is on a *new day* (or it's their first-ever visit). Increment.
+                        visitNumber = baseData.count + 1;
+                        // Start tracking with the new incremented count and date
+                        internalVisitTracker.set(workerFacilityKey, { count: baseData.count + 1, lastDate: currentSessionDate });
+                    }
+                } else {
+                    // We *have* seen this worker in a previous row *in this file*. Use the tracker.
+                    if (currentSessionDate === trackerData.lastDate) {
+                        // This session is on the *same day* as a previous row. Use the same count.
+                        visitNumber = trackerData.count;
+                        // No need to update the tracker, it's correct.
+                    } else {
+                        // This session is on a *new day* compared to the previous row. Increment.
+                        visitNumber = trackerData.count + 1;
+                        // Update the tracker with the new incremented count and date
+                        internalVisitTracker.set(workerFacilityKey, { count: trackerData.count + 1, lastDate: currentSessionDate });
+                    }
+                }
+            }
             
-            // 2. Get the increment count from *this file* (rows processed *before* this one)
-            const internalIncrement = internalVisitCounts.get(workerFacilityKey) || 0;
-            
-            // 3. Total visit number is baseline + internal increment + 1 (for this row)
-            const visitNumber = baseCount + internalIncrement + 1; 
-            
-            // 4. Store it in the payload
             payload.visitNumber = visitNumber;
-            
-            // 5. Update the internal counter for the *next* iteration for this worker
-            internalVisitCounts.set(workerFacilityKey, internalIncrement + 1);
-            // --- END: Visit Number Calculation ---
+            // --- END: MODIFIED Visit Number Calculation ---
 
 
              // Score calculation - must convert multi-select arrays back to objects for the function
