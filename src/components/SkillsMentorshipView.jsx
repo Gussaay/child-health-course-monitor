@@ -549,11 +549,11 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "اختر م
 
 // --- NEW: Add Facility Modal Component ---
 const AddFacilityModal = ({ isOpen, onClose, onSaveComplete, setToast, initialState, initialLocality }) => {
-    const handleSave = async (formData) => {
+   const handleSave = async (formData) => {
         try {
             await submitFacilityDataForApproval(formData);
             setToast({ show: true, message: "Submission successful! Your new facility is pending approval.", type: 'success' });
-            onSaveComplete(); // This will trigger refetch and close
+            onSaveComplete(); // <-- FIX: Call without formData
         } catch (error) {
             setToast({ show: true, message: `Submission failed: ${error.message}`, type: 'error' });
         }
@@ -1069,6 +1069,17 @@ const SkillsMentorshipView = ({
         isFacilitiesLoading, // Use this directly for form setup
     } = useDataCache();
     // --- END MODIFICATION ---
+
+// --- START: NEW LOCAL STATE FOR OPTIMISTIC UPDATES ---
+    const [localHealthFacilities, setLocalHealthFacilities] = useState(healthFacilities || []);
+
+    useEffect(() => {
+        // Sync local state when the global cache updates
+        if (healthFacilities) {
+            setLocalHealthFacilities(healthFacilities);
+        }
+    }, [healthFacilities]);
+    // --- END: NEW LOCAL STATE ---
 
     const [viewingSubmission, setViewingSubmission] = useState(null);
     const [editingSubmission, setEditingSubmission] = useState(null);
@@ -1657,66 +1668,114 @@ const SkillsMentorshipView = ({
     // --- END handleImportMentorships ---
     
     const handleSaveNewHealthWorker = async (workerData) => {
-        // ... (Implementation unchanged) ...
         const user = auth.currentUser;
-        if (!selectedFacilityId || !workerData.name) {
-             setToast({ show: true, message: 'خطأ: لم يتم تحديد المؤسسة أو اسم العامل الصحي.', type: 'error' });
+        
+        if (!selectedFacility || !workerData.name) {
+            setToast({ show: true, message: 'خطأ: لم يتم تحديد المؤسسة أو اسم العامل الصحي.', type: 'error' });
             return;
         }
+
         try {
-            const mentorIdentifier = user ? (user.displayName || user.email) : (publicSubmissionMode ? 'PublicMentorshipForm' : 'SkillsMentorshipForm');
-            await addHealthWorkerToFacility(selectedFacilityId, workerData, mentorIdentifier);
-            await fetchHealthFacilities(true);
-            setToast({ show: true, message: 'تمت إضافة العامل الصحي بنجاح!', type: 'success' });
-            setWorkerJobTitle('');
-            setWorkerTrainingDate('');
-            setWorkerPhone('');
-            setIsWorkerInfoChanged(false);
-            setSelectedWorkerOriginalData(null);
+            const currentStaff = (typeof selectedFacility.imnci_staff === 'string'
+                ? JSON.parse(selectedFacility.imnci_staff)
+                : selectedFacility.imnci_staff) || [];
+            
+            const newStaffList = [...currentStaff, workerData];
+
+            const payload = {
+                ...selectedFacility, // All existing facility data
+                imnci_staff: newStaffList, // The updated staff list
+                updated_by: user ? (user.displayName || user.email) : (publicSubmissionMode ? 'PublicMentorshipForm' : 'SkillsMentorshipForm'),
+                'اخر تحديث': new Date().toISOString() 
+            };
+            
+            // 1. Submit for approval
+            await submitFacilityDataForApproval(payload, user?.email || (publicSubmissionMode ? 'PublicMentorshipForm' : 'SkillsMentorshipForm'));
+
+            setToast({ show: true, message: 'تم إرسال طلب إضافة العامل الصحي للموافقة.', type: 'info' });
+
+            // 2. --- FIX: Optimistically update local state ---
+            // This line adds the worker to your local list.
+            setLocalHealthFacilities(prevFacilities => 
+                prevFacilities.map(f => f.id === payload.id ? payload : f)
+            );
+            // DO NOT add fetchHealthFacilities(true) here
+
+            // 3. Select the new worker
             setSelectedHealthWorkerName(workerData.name);
             setIsAddWorkerModalOpen(false);
+
         } catch (error) {
-            console.error("Error saving new health worker:", error);
+            console.error("Error submitting new health worker for approval:", error);
             setToast({ show: true, message: `فشل الحفظ: ${error.message}`, type: 'error' });
         }
     };
+
+
+
+
     const handleUpdateHealthWorkerInfo = async () => {
-        // ... (Implementation unchanged) ...
-        if (!selectedHealthWorkerName || !selectedFacilityId || !isWorkerInfoChanged) {
+        if (!selectedHealthWorkerName || !selectedFacility || !isWorkerInfoChanged) {
             return;
         }
         setIsUpdatingWorker(true);
         const user = auth.currentUser;
         try {
-             // Use default identifier for public mode, otherwise use current user
-             const mentorIdentifier = publicSubmissionMode
-                 ? 'PublicMentorshipForm'
-                 : (user ? (user.displayName || user.email) : 'SkillsMentorshipForm');
+            const currentStaff = (typeof selectedFacility.imnci_staff === 'string'
+                ? JSON.parse(selectedFacility.imnci_staff)
+                : selectedFacility.imnci_staff) || [];
 
-             const updatedData = {
-                name: selectedHealthWorkerName,
-                job_title: workerJobTitle,
-                training_date: workerTrainingDate,
-                phone: workerPhone
-             };
-             await addHealthWorkerToFacility(selectedFacilityId, updatedData, mentorIdentifier);
-             await fetchHealthFacilities(true);
-             setToast({ show: true, message: 'تم تحديث بيانات العامل الصحي بنجاح!', type: 'success' });
-             setIsWorkerInfoChanged(false);
-             // Re-fetch worker data after update to reset original data baseline
-             const updatedFacility = await fetchHealthFacilities(true).then(() => healthFacilities.find(f => f.id === selectedFacilityId)); // Re-fetch might be needed
-             if (updatedFacility?.imnci_staff) {
-                 const staffList = typeof updatedFacility.imnci_staff === 'string' ? JSON.parse(updatedFacility.imnci_staff) : updatedFacility.imnci_staff;
-                 const freshWorkerData = Array.isArray(staffList) ? staffList.find(w => w.name === selectedHealthWorkerName) : null;
-                 setSelectedWorkerOriginalData(freshWorkerData);
-             }
+            const newStaffList = currentStaff.map(worker => {
+                if (worker.name === selectedHealthWorkerName) {
+                    return {
+                        name: selectedHealthWorkerName,
+                        job_title: workerJobTitle,
+                        training_date: workerTrainingDate,
+                        phone: workerPhone
+                    };
+                }
+                return worker;
+            });
+
+            const payload = {
+                ...selectedFacility, // All existing facility data
+                imnci_staff: newStaffList, // The updated staff list
+                updated_by: user ? (user.displayName || user.email) : (publicSubmissionMode ? 'PublicMentorshipForm' : 'SkillsMentorshipForm'),
+                'اخر تحديث': new Date().toISOString()
+            };
+
+            // 1. Submit for approval
+            await submitFacilityDataForApproval(payload, user?.email || (publicSubmissionMode ? 'PublicMentorshipForm' : 'SkillsMentorshipForm'));
+            
+            setToast({ show: true, message: 'تم إرسال طلب تحديث بيانات العامل للموافقة.', type: 'info' });
+
+            // 2. --- FIX: Optimistically update local state ---
+            // This line updates the worker in your local list.
+            setLocalHealthFacilities(prevFacilities => 
+                prevFacilities.map(f => f.id === payload.id ? payload : f)
+            );
+            // DO NOT add fetchHealthFacilities(true) here
+            
+            // 3. Update the "original data" baseline
+            const updatedOriginalData = {
+                 name: selectedHealthWorkerName,
+                 job_title: workerJobTitle,
+                 training_date: workerTrainingDate,
+                 phone: workerPhone
+            };
+            setSelectedWorkerOriginalData(updatedOriginalData);
+            setIsWorkerInfoChanged(false); // This will hide the update button
+
         } catch (error) {
-             console.error("Error updating health worker info:", error);
+             console.error("Error submitting health worker update for approval:", error);
              setToast({ show: true, message: `فشل تحديث بيانات العامل: ${error.message}`, type: 'error' });
         } finally {
             setIsUpdatingWorker(false);
         }
     };
+
+
+
 
     // --- MODIFIED: View, Edit, Delete Handlers (KEPT AS-IS) ---
     const handleViewSubmission = (submissionId) => {
@@ -2465,19 +2524,31 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                 </Card>
 
                 {/* --- NEW: Add Facility Modal Render --- */}
-                {isAddFacilityModalOpen && (
+       {isAddFacilityModalOpen && (
                     <AddFacilityModal
                         isOpen={isAddFacilityModalOpen}
                         onClose={() => setIsAddFacilityModalOpen(false)}
                         onSaveComplete={() => {
-                            fetchHealthFacilities(true); // Refetch all facilities
+                            // --- START: REVERTED LOGIC ---
+                            
+                            // 1. Refresh the main list from the server.
+                            // This will NOT include the pending facility.
+                            fetchHealthFacilities(true); 
+
+                            // 2. Just close the modal.
                             setIsAddFacilityModalOpen(false);
+                            
+                            // --- END: REVERTED LOGIC ---
                         }}
                         setToast={setToast}
                         initialState={selectedState}
                         initialLocality={selectedLocality}
                     />
                 )}
+
+
+
+
                  {/* --- Modals (omitted for brevity) --- */}
                  {isAddWorkerModalOpen && (
                     <AddHealthWorkerModal
