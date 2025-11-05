@@ -306,6 +306,7 @@ export const ensureArrayOfKeys = (data, classifications) => {
         return data;
     }
     if (typeof data === 'object' && data !== null) {
+        // MODIFICATION: Filter out 'did_not_classify' if it exists as a key
         return classifications.filter(c => data[c]);
     }
     return [];
@@ -342,6 +343,11 @@ export const rehydrateDraftData = (draft, DIARRHEA_CLASSIFICATIONS, FEVER_CLASSI
             acc[c] = workerDiarrheaKeys.includes(c);
             return acc;
         }, createInitialClassificationState(DIARRHEA_CLASSIFICATIONS));
+    // Handle 'did_not_classify' separately
+    if (assessmentDraft.worker_diarrhea_classification && assessmentDraft.worker_diarrhea_classification.did_not_classify) {
+        rehydrated.assessment_skills.worker_diarrhea_classification.did_not_classify = true;
+    }
+
 
     const supervisorDiarrheaKeys = ensureArrayOfKeys(assessmentDraft.supervisor_correct_diarrhea_classification, DIARRHEA_CLASSIFICATIONS);
     rehydrated.assessment_skills.supervisor_correct_diarrhea_classification =
@@ -356,6 +362,10 @@ export const rehydrateDraftData = (draft, DIARRHEA_CLASSIFICATIONS, FEVER_CLASSI
             acc[c] = workerFeverKeys.includes(c);
             return acc;
         }, createInitialClassificationState(FEVER_CLASSIFICATIONS));
+    // Handle 'did_not_classify' separately
+     if (assessmentDraft.worker_fever_classification && assessmentDraft.worker_fever_classification.did_not_classify) {
+        rehydrated.assessment_skills.worker_fever_classification.did_not_classify = true;
+    }
 
     const supervisorFeverKeys = ensureArrayOfKeys(assessmentDraft.supervisor_correct_fever_classification, FEVER_CLASSIFICATIONS);
     rehydrated.assessment_skills.supervisor_correct_fever_classification =
@@ -684,7 +694,9 @@ export const calculateScores = (formData) => {
     // --- LEGACY KPI SCORES (for cough/diarrhea, which were already present) ---
     const totalCoughCases = scores['symptom_cough']?.maxScore > 0 ? 1 : 0;
     const totalCorrectCoughClassifications = scores['symptom_cough']?.score === 3 ? 1 : 0; // Assuming 3/3 is correct
+    // --- FIX IS HERE ---
     scores.coughClassification = { score: totalCorrectCoughClassifications, maxScore: totalCoughCases };
+    // --- END FIX ---
     scores.pneumoniaManagement = { score: scores['pneu_treatment']?.score || 0, maxScore: scores['pneu_treatment']?.maxScore || 0 };
     
     const totalDiarrheaCases = scores['symptom_diarrhea']?.maxScore > 0 ? 1 : 0;
@@ -832,7 +844,7 @@ export const isDecisionComplete = (data) => { return data.finalDecision !== '' &
 
 
 // --- NEW: The IMNCI-specific rendering component ---
-export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormChange, handleSkillChange, isEditing }) => {
+export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormChange, handleSkillChange, handleMultiClassificationChange, isEditing }) => {
     return (
         <>
             {/* Form Structure Mapping */}
@@ -962,12 +974,34 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                                                 {formData.assessment_skills[classifySkillKey] !== '' && formData.assessment_skills[classifySkillKey] !== 'na' && (
                                                                     <FormGroup label="ما هو التصنيف الذي الذي صنفه العامل الصحي؟" className="text-right">
                                                                         {isMultiSelectClassification && multiSelectCols ? (
-                                                                            <div className="max-h-40 overflow-y-auto border rounded p-3 bg-white grid grid-cols-2 gap-x-4">
-                                                                                <div className="space-y-1">{multiSelectCols.col1.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[workerClassKey]?.[c]} onChange={handleFormChange} /> <label htmlFor={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
-                                                                                <div className="space-y-1">{multiSelectCols.col2.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[workerClassKey]?.[c]} onChange={handleFormChange} /> <label htmlFor={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
-                                                                            </div>
+                                                                            <>
+                                                                                {formData.assessment_skills[classifySkillKey] === 'no' && (
+                                                                                    <div className="flex items-center gap-2 mb-2 p-2 border border-red-200 rounded bg-red-50">
+                                                                                        <Checkbox 
+                                                                                            label="" 
+                                                                                            id={`${workerClassKey}-did_not_classify`} 
+                                                                                            name="did_not_classify" 
+                                                                                            checked={!!formData.assessment_skills[workerClassKey]?.['did_not_classify']} 
+                                                                                            onChange={(e) => handleMultiClassificationChange(workerClassKey, 'did_not_classify', e.target.checked)} 
+                                                                                        />
+                                                                                        <label htmlFor={`${workerClassKey}-did_not_classify`} className="cursor-pointer text-sm font-medium" style={{ color: 'red' }}>
+                                                                                            لم يتم التصنيف
+                                                                                        </label>
+                                                                                    </div>
+                                                                                )}
+                                                                                <div className="max-h-40 overflow-y-auto border rounded p-3 bg-white grid grid-cols-2 gap-x-4">
+                                                                                    <div className="space-y-1">{multiSelectCols.col1.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[workerClassKey]?.[c]} onChange={(e) => handleMultiClassificationChange(workerClassKey, c, e.target.checked)} /> <label htmlFor={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
+                                                                                    <div className="space-y-1">{multiSelectCols.col2.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[workerClassKey]?.[c]} onChange={(e) => handleMultiClassificationChange(workerClassKey, c, e.target.checked)} /> <label htmlFor={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
+                                                                                </div>
+                                                                            </>
                                                                         ) : (
-                                                                            <Select name={workerClassKey} value={formData.assessment_skills[workerClassKey]} onChange={handleFormChange}> <option value="">-- اختر التصنيف --</option> {symptomClassifications.map(c => <option key={c} value={c}>{c}</option>)} </Select>
+                                                                            <Select name={workerClassKey} value={formData.assessment_skills[workerClassKey]} onChange={handleFormChange}>
+                                                                                <option value="">-- اختر التصنيف --</option>
+                                                                                {formData.assessment_skills[classifySkillKey] === 'no' && (
+                                                                                    <option value="did_not_classify" style={{ color: 'red' }}>لم يتم التصنيف</option>
+                                                                                )}
+                                                                                {symptomClassifications.map(c => <option key={c} value={c}>{c}</option>)}
+                                                                            </Select>
                                                                         )}
                                                                     </FormGroup>
                                                                 )}
@@ -979,8 +1013,8 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                                                     <FormGroup label="ما هو التصنيف الصحيح؟" className="text-right">
                                                                         {isMultiSelectClassification && multiSelectCols ? (
                                                                             <div className="max-h-40 overflow-y-auto border rounded p-3 bg-white grid grid-cols-2 gap-x-4">
-                                                                                <div className="space-y-1">{multiSelectCols.col1.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${correctClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[correctClassKey]?.[c]} onChange={handleFormChange} /> <label htmlFor={`${correctClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
-                                                                                <div className="space-y-1">{multiSelectCols.col2.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${correctClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[correctClassKey]?.[c]} onChange={handleFormChange} /> <label htmlFor={`${correctClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
+                                                                                <div className="space-y-1">{multiSelectCols.col1.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${correctClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[correctClassKey]?.[c]} onChange={(e) => handleMultiClassificationChange(correctClassKey, c, e.target.checked)} /> <label htmlFor={`${correctClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
+                                                                                <div className="space-y-1">{multiSelectCols.col2.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${correctClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[correctClassKey]?.[c]} onChange={(e) => handleMultiClassificationChange(correctClassKey, c, e.target.checked)} /> <label htmlFor={`${correctClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
                                                                             </div>
                                                                         ) : (
                                                                             <Select name={correctClassKey} value={formData.assessment_skills[correctClassKey]} onChange={handleFormChange}> <option value="">-- اختر التصنيف الصحيح --</option> {symptomClassifications.map(c => <option key={c} value={c}>{c}</option>)} </Select>
@@ -1062,7 +1096,13 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                                 <div className="pt-4 mt-4 border-t border-gray-200 space-y-4">
                                                     {formData.assessment_skills[classifySkillKey] !== '' && formData.assessment_skills[classifySkillKey] !== 'na' && (
                                                         <FormGroup label="ما هو التصنيف الذي الذي صنفه العامل الصحي؟" className="text-right">
-                                                            <Select name={workerClassKey} value={formData.assessment_skills[workerClassKey]} onChange={handleFormChange}> <option value="">-- اختر التصنيف --</option> {classifications.map(c => <option key={c} value={c}>{c}</option>)} </Select>
+                                                            <Select name={workerClassKey} value={formData.assessment_skills[workerClassKey]} onChange={handleFormChange}>
+                                                                <option value="">-- اختر التصنيف --</option>
+                                                                {formData.assessment_skills[classifySkillKey] === 'no' && (
+                                                                    <option value="did_not_classify" style={{ color: 'red' }}>لم يتم التصنيف</option>
+                                                                )}
+                                                                {classifications.map(c => <option key={c} value={c}>{c}</option>)}
+                                                            </Select>
                                                         </FormGroup>
                                                     )}
                                                     

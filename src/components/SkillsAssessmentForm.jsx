@@ -500,55 +500,46 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
 
 
     // --- Handlers (Stay in Shell) ---
+    
+    // --- NEW HANDLER (FIX) ---
+    const handleMultiClassificationChange = (stateKey, classificationName, isChecked) => {
+        setFormData(prev => ({
+            ...prev,
+            assessment_skills: {
+                ...prev.assessment_skills,
+                [stateKey]: {
+                    ...(prev.assessment_skills[stateKey] || {}),
+                    [classificationName]: isChecked
+                }
+            }
+        }));
+    };
+    // --- END NEW HANDLER (FIX) ---
+
+    // --- MODIFIED HANDLER (FIX) ---
     const handleFormChange = (e) => {
         const { name, value, type, checked } = e.target;
-        // (This logic is complex but is tied to setFormData, so it stays)
-        const assessmentFieldsConfig = {
-            worker_diarrhea_classification: DIARRHEA_CLASSIFICATIONS, supervisor_correct_diarrhea_classification: DIARRHEA_CLASSIFICATIONS,
-            worker_fever_classification: FEVER_CLASSIFICATIONS, supervisor_correct_fever_classification: FEVER_CLASSIFICATIONS,
-        };
-        let isMultiClassification = false;
-        let targetObjectKey = null;
-        let classificationValue = null;
-        for (const key in assessmentFieldsConfig) {
-            if (assessmentFieldsConfig[key].includes(name)) {
-                isMultiClassification = true;
-                targetObjectKey = key;
-                classificationValue = name;
-                break;
-            }
-        }
-
-        if (isMultiClassification && targetObjectKey && classificationValue) {
+        
+        // This list contains all simple form fields (Selects)
+        const simpleAssessmentFields = [
+            'supervisor_confirms_cough', 'worker_cough_classification', 'supervisor_correct_cough_classification',
+            'supervisor_confirms_diarrhea',
+            'supervisor_confirms_fever',
+            'supervisor_confirms_ear', 'worker_ear_classification', 'supervisor_correct_ear_classification',
+            'worker_malnutrition_classification', 'supervisor_correct_malnutrition_classification',
+            'worker_anemia_classification', 'supervisor_correct_anemia_classification'
+        ];
+        
+         if (simpleAssessmentFields.includes(name)) {
             setFormData(prev => ({
                 ...prev,
-                assessment_skills: {
-                    ...prev.assessment_skills,
-                    [targetObjectKey]: {
-                        ...(prev.assessment_skills[targetObjectKey] || {}),
-                        [classificationValue]: checked
-                    }
-                }
+                assessment_skills: { ...prev.assessment_skills, [name]: value }
             }));
-        } else {
-            const simpleAssessmentFields = [
-                'supervisor_confirms_cough', 'worker_cough_classification', 'supervisor_correct_cough_classification',
-                'supervisor_confirms_diarrhea',
-                'supervisor_confirms_fever',
-                'supervisor_confirms_ear', 'worker_ear_classification', 'supervisor_correct_ear_classification',
-                'worker_malnutrition_classification', 'supervisor_correct_malnutrition_classification',
-                'worker_anemia_classification', 'supervisor_correct_anemia_classification'
-            ];
-             if (simpleAssessmentFields.includes(name)) {
-                setFormData(prev => ({
-                    ...prev,
-                    assessment_skills: { ...prev.assessment_skills, [name]: value }
-                }));
-            } else if (name === 'finalDecision' || name === 'decisionMatches' || name === 'notes' || name === 'session_date') {
-                 setFormData(prev => ({ ...prev, [name]: value }));
-             }
-        }
+        } else if (name === 'finalDecision' || name === 'decisionMatches' || name === 'notes' || name === 'session_date') {
+             setFormData(prev => ({ ...prev, [name]: value }));
+         }
     };
+    // --- END MODIFIED HANDLER (FIX) ---
 
     const handleSkillChange = (section, key, value) => {
         setFormData(prev => ({
@@ -809,8 +800,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                         {/* Mentor/Session Info */}
                         <div className="p-2 border rounded-lg bg-gray-50 text-right">
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-3 gap-y-0.5 items-end" dir="rtl">
-                                <div className="text-sm"><span className="font-medium text-gray-500">اسم المشرف:</span><span className="font-semibold text-gray-900 mr-2">{user?.displayName || user?.email || '...'}</span></div>
-                                <div className="text-sm"><span className="font-medium text-gray-500">تاريخ الجلسة:</span>
+                                <div className="text-sm"><span className="font-medium text-gray-500">اسم المشرف:</span><span className="font-semibold text-gray-900 mr-2">{user?.displayName || user?.email || '...'}</span></div>                                <div className="text-sm"><span className="font-medium text-gray-500">تاريخ الجلسة:</span>
                                     <Input 
                                         type="date" 
                                         name="session_date" 
@@ -840,6 +830,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                         scores={scores}
                         handleFormChange={handleFormChange}
                         handleSkillChange={handleSkillChange}
+                        handleMultiClassificationChange={handleMultiClassificationChange} 
                         isEditing={!!editingIdRef.current} // Pass isEditing flag
                     />
                     {/* --- END: Form Structure Mapping --- */}
