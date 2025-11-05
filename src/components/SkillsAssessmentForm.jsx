@@ -105,6 +105,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
         onDraftCreated,
         setIsMothersFormModalOpen,
         setIsDashboardModalOpen,
+        setIsVisitReportModalOpen, // <-- ADD THIS
         draftCount
     } = props;
 
@@ -883,6 +884,15 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                         <Button 
                             type="button" 
                             variant="info"
+                            onClick={() => setIsVisitReportModalOpen(true)} // <-- ADD THIS
+                            disabled={isSaving || isSavingDraft || !facility}
+                            title={facility ? "Open IMNCI Visit Report" : "No facility selected"}
+                        >
+                            تقرير الزيارة
+                        </Button>
+                        <Button 
+                            type="button" 
+                            variant="info"
                             onClick={() => setIsDashboardModalOpen(true)} 
                             disabled={isSaving || isSavingDraft}
                             title="Open Dashboard"
@@ -893,7 +903,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                  </div>
 
                 {/* --- Mobile Bar (Generic) --- */}
-                <div className="flex sm:hidden fixed bottom-16 left-0 right-0 z-20 p-2 bg-gray-50 border-t border-gray-200 shadow-lg justify-around items-center" dir="rtl">
+                <div className="flex sm:hidden fixed bottom-16 left-0 right-0 z-20 h-16 justify-around items-center bg-gray-900 text-white border-t border-gray-700 shadow-lg" dir="rtl">
                     <Button type="button" variant="secondary" onClick={onExit} disabled={isSaving || isSavingDraft} size="sm">
                         إلغاء
                     </Button>

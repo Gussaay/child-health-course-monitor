@@ -1572,6 +1572,9 @@ const ChildHealthServicesView = ({
             });
         });
 
+        // --- FIX: Add this line to create the PDF document ---
+        const doc = new jsPDF();
+
         autoTable(doc, {
             head: [finalHeaders],
             body: body,

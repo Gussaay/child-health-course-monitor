@@ -1,5 +1,5 @@
 // SkillsMentorshipView.jsx
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useDataCache } from '../DataContext';
 import { Timestamp } from 'firebase/firestore';
 import {
@@ -7,7 +7,12 @@ import {
     importMentorshipSessions,
     submitFacilityDataForApproval, // <-- NEW IMPORT
     addHealthWorkerToFacility,
-    deleteMentorshipSession
+    deleteMentorshipSession,
+    uploadFile, 
+    deleteFile, 
+    saveIMNCIVisitReport,
+    deleteIMNCIVisitReport,
+    listIMNCIVisitReports
 } from '../data';
 import {
     Card, PageHeader, Button, FormGroup, Select, Spinner,
@@ -17,6 +22,7 @@ import { STATE_LOCALITIES } from "./constants.js";
 import SkillsAssessmentForm from './SkillsAssessmentForm';
 import MentorshipDashboard from './MentorshipDashboard'; // <-- IMPORT ADDED
 import { getAuth } from "firebase/auth";
+import { PlusCircle, Trash2 } from 'lucide-react';
 
 // --- NEW IMPORT: Bulk Upload Modal ---
 import DetailedMentorshipBulkUploadModal from './MentorshipBulkUpload';
@@ -26,6 +32,9 @@ import DetailedMentorshipBulkUploadModal from './MentorshipBulkUpload';
 import MothersForm from './MothersForm'; // <-- NEW IMPORT
 // --- END NEW IMPORT ---
 
+// --- NEW: Lazy load Visit Report ---
+const IMNCIVisitReport = lazy(() => import('./IMNCIVisitReport'));
+
 // --- NEW IMPORTS: For Add Facility Modal ---
 import {
     GenericFacilityForm,
@@ -33,48 +42,6 @@ import {
     IMNCIFormFields
 } from './FacilityForms.jsx';
 import { onAuthStateChanged } from "firebase/auth"; // <-- NEW IMPORT
-// --- Form Structure (Copied for reference in Bulk Upload - Keep in sync with SkillsAssessmentForm.jsx) ---
-// --- Classification Constants (Copied for reference) ---
-const COUGH_CLASSIFICATIONS = ["التهاب رئوي شديد أو مرض شديد جدا", "التهاب رئوي", "كحة أو نزلة برد"]; // Note: Adjusted to match SkillsAssessmentForm
-const DIARRHEA_CLASSIFICATIONS = ["جفاف شديد", "بعض الجفاف", "لا يوجد جفاف", "إسهال مستمر شديد", "إسهال مستمر", "دسنتاريا"]; // Note: Adjusted to match SkillsAssessmentForm
-const FEVER_CLASSIFICATIONS = ["مرض حمي شديد", "ملاريا", "حمى لا توجد ملAR", "حصبة مصحوبة بمضاعفات شديدة", "حصبة مصحوبة بمضاعفات في العين والفم", "حصبة"]; // Note: Adjusted to match SkillsAssessmentForm
-const EAR_CLASSIFICATIONS = ["التهاب العظمة خلف الاذن", "التهاب أذن حاد", "التهاب أذن مزمن", "لا يوجد التهاب أذن"];
-const MALNUTRITION_CLASSIFICATIONS = ["سوء تغذية شديد مصحوب بمضاعفات", "سوء تغذية شديد غير مصحوب بمضاعفات", "سوء تغذية حاد متوسط", "لا يوجد سوء تغذية"]; // Note: Adjusted to match SkillsAssessmentForm
-const ANEMIA_CLASSIFICATIONS = ["فقر دم شديد", "فقر دم", "لا يوجد فقر دم"];
-const createInitialClassificationState = (classifications) => classifications.reduce((acc, c) => { acc[c] = false; return acc; }, {});
-
-// --- Helper function to evaluate the relevance logic (Copied from SkillsAssessmentForm) ---
-const evaluateRelevance = (relevanceString, formData) => {
-    // ... (Implementation unchanged) ...
-    if (!relevanceString) return true;
-    const logicRegex = /\$\{(.*?)\}='(.*?)'/;
-    const match = relevanceString.match(logicRegex);
-    if (!match) {
-        console.warn("Could not parse relevance string:", relevanceString);
-        return true;
-    }
-    const [, varName, expectedValue] = match;
-    let actualValue = formData[varName];
-    if (actualValue === undefined && formData.assessment_skills) {
-        actualValue = formData.assessment_skills[varName];
-    }
-     if (actualValue === undefined && formData.treatment_skills) {
-        actualValue = formData.treatment_skills[varName];
-    }
-     if (actualValue === undefined && varName === 'decisionMatches') {
-         actualValue = formData.decisionMatches;
-     }
-     // Specific lookups if still undefined (Copied from SkillsAssessmentForm)
-    if (actualValue === undefined && varName.startsWith('as_')) actualValue = formData.assessment_skills?.[varName.replace('as_','')];
-    if (actualValue === undefined && varName.startsWith('ts_')) actualValue = formData.treatment_skills?.[varName.replace('ts_','')];
-
-    if (expectedValue.toLowerCase() === 'yes') return actualValue === 'yes';
-    if (expectedValue.toLowerCase() === 'no') return actualValue === 'no';
-    if (expectedValue.toLowerCase() === 'na') return actualValue === 'na';
-    return actualValue === expectedValue;
-};
-
-
 
 // --- AddHealthWorkerModal Component (with job title dropdown) (KEPT AS-IS) ---
 const IMNCI_JOB_TITLES = [
@@ -314,6 +281,49 @@ const PostSaveModal = ({ isOpen, onClose, onSelect }) => {
     );
 };
 // --- END Post-Save Modal ---
+
+// --- NEW: Visit Reports Table Component ---
+const VisitReportsTable = ({ reports, onEdit, onDelete }) => {
+    return (
+        <div dir="ltr" className="p-4 overflow-x-auto">
+            <table className="min-w-full border-collapse border border-gray-300">
+                <thead className="bg-gray-50">
+                    <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Facility</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">State</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Locality</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Visit Date</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Supervisor</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Action</th>
+                    </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                    {reports.length === 0 ? (
+                        <tr><td colSpan="6" className="border border-gray-300"><EmptyState title="No Records Found" message="No visit reports found for this service." /></td></tr>
+                    ) : (
+                        reports.map(rep => (
+                            <tr key={rep.id}>
+                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-left border border-gray-300">{rep.facilityName}</td>
+                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-left border border-gray-300">{STATE_LOCALITIES[rep.state]?.ar || rep.state}</td>
+                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-left border border-gray-300">{STATE_LOCALITIES[rep.state]?.localities.find(l => l.en === rep.locality)?.ar || rep.locality}</td>
+                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-left border border-gray-300">{rep.visitDate}</td>
+                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-left border border-gray-300">{rep.mentorDisplay}</td>
+                                <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-left border border-gray-300">
+                                    <div className="flex gap-2">
+                                        <Button size="sm" variant="warning" onClick={() => onEdit(rep.id)}>Edit</Button>
+                                        <Button size="sm" variant="danger" onClick={() => onDelete(rep.id)}>Delete</Button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))
+                    )}
+                </tbody>
+            </table>
+        </div>
+    );
+};
+// --- END: Visit Reports Table Component ---
+
 
 // --- Mentorship Table Column Component (MODIFIED to English Headers) (KEPT AS-IS) ---
 const MentorshipTableColumns = () => (
@@ -740,7 +750,7 @@ const SkillsMentorshipView = ({
     const [activeTab, setActiveTab] = useState('skills_list'); // MODIFIED: Default to skills_list tab
 
     // --- NEW STATE ADDITIONS ---
-    const [activeFormType, setActiveFormType] = useState('skills_assessment'); // 'skills_assessment' or 'mothers_form'
+    const [activeFormType, setActiveFormType] = useState('skills_assessment'); // 'skills_assessment', 'mothers_form', or 'visit_report'
     // --- END NEW STATE ADDITIONS ---
 
     // --- NEW: State to control form rendering after selection ---
@@ -761,6 +771,8 @@ const SkillsMentorshipView = ({
         isLoading: isDataCacheLoading,
         skillMentorshipSubmissions,
         fetchSkillMentorshipSubmissions,
+        imnciVisitReports, // <-- NEW
+        fetchIMNCIVisitReports, // <-- NEW
         isFacilitiesLoading, // Use this directly for form setup
     } = useDataCache();
     // --- END MODIFICATION ---
@@ -806,6 +818,7 @@ const SkillsMentorshipView = ({
     // --- START: NEW STATE FOR MODALS ---
     const [isMothersFormModalOpen, setIsMothersFormModalOpen] = useState(false);
     const [isDashboardModalOpen, setIsDashboardModalOpen] = useState(false);
+    const [isVisitReportModalOpen, setIsVisitReportModalOpen] = useState(false); // <-- NEW
     const [isPostSaveModalOpen, setIsPostSaveModalOpen] = useState(false);
     const [lastSavedFacilityInfo, setLastSavedFacilityInfo] = useState(null); // To store { state, locality, facilityId }
  
@@ -870,6 +883,48 @@ const SkillsMentorshipView = ({
     }, [processedSubmissions, user, activeService]);
 
 
+    // --- NEW: Memoized list of visit reports ---
+    const processedVisitReports = useMemo(() => {
+        if (!imnciVisitReports) return [];
+        return imnciVisitReports.map(rep => ({
+            id: rep.id,
+            facilityId: rep.facilityId || null,
+            facilityName: rep.facilityName || 'N/A',
+            state: rep.state || 'N/A',
+            locality: rep.locality || 'N/A',
+            visitDate: rep.visit_date || 'N/A', // <-- FIX: use visit_date
+            mentorEmail: rep.mentorEmail || null,
+            mentorName: rep.mentorName || null,
+            mentorDisplay: rep.mentorName || rep.mentorEmail || 'N/A',
+            fullData: rep // Store original for editing
+        }));
+    }, [imnciVisitReports]);
+
+    // --- NEW: Handlers for Visit Reports ---
+    const handleEditVisitReport = (reportId) => {
+        const report = imnciVisitReports.find(r => r.id === reportId);
+        if (!report) return;
+        setSelectedState(report.state);
+        setSelectedLocality(report.locality);
+        setSelectedFacilityId(report.facilityId);
+        setEditingSubmission(report); // Re-use editingSubmission state
+        setActiveFormType('visit_report');
+        setCurrentView('form_setup');
+        setIsReadyToStart(true); 
+    };
+
+    const handleDeleteVisitReport = async (reportId) => {
+        if (window.confirm('Are you sure you want to delete this visit report?')) {
+            try {
+                await deleteIMNCIVisitReport(reportId);
+                setToast({ show: true, message: 'Report deleted.', type: 'success' });
+                await fetchIMNCIVisitReports(true);
+            } catch (error) {
+                setToast({ show: true, message: `Delete failed: ${error.message}`, type: 'error' });
+            }
+        }
+    };
+
      // --- MODIFICATION START ---
      useEffect(() => {
         fetchHealthFacilities();
@@ -879,9 +934,10 @@ const SkillsMentorshipView = ({
         // fetch here. We need this data for visit number calculation and drafts.
         if (publicSubmissionMode) {
             fetchSkillMentorshipSubmissions();
+            fetchIMNCIVisitReports(); // <-- NEW
         }
 
-    }, [fetchHealthFacilities, fetchSkillMentorshipSubmissions, publicSubmissionMode]); // Add fetchSkillMentorshipSubmissions to deps array
+    }, [fetchHealthFacilities, fetchSkillMentorshipSubmissions, fetchIMNCIVisitReports, publicSubmissionMode]); // Add fetchers
     // --- MODIFICATION END ---
     
     // --- NEW: Effect to reset filters on tab change ---
@@ -966,10 +1022,10 @@ const SkillsMentorshipView = ({
 
 
     const filteredFacilities = useMemo(() => {
-        if (!healthFacilities || !selectedState || !selectedLocality) return [];
-        return healthFacilities.filter(f => f['الولاية'] === selectedState && f['المحلية'] === selectedLocality)
+        if (!localHealthFacilities || !selectedState || !selectedLocality) return [];
+        return localHealthFacilities.filter(f => f['الولاية'] === selectedState && f['المحلية'] === selectedLocality)
                .sort((a, b) => (a['اسم_المؤسسة'] || '').localeCompare(b['اسم_المؤسسة'] || ''));
-    }, [healthFacilities, selectedState, selectedLocality]);
+    }, [localHealthFacilities, selectedState, selectedLocality]);
 
     // --- NEW: Memo for SearchableSelect options ---
     const facilityOptions = useMemo(() => {
@@ -1186,6 +1242,14 @@ const SkillsMentorshipView = ({
     };
     // --- END NEW HANDLER ---
 
+    // --- NEW HANDLER: For starting Visit Report ---
+    const handleStartNewVisitReport = () => {
+        resetSelection();
+        setActiveFormType('visit_report');
+        setCurrentView('form_setup');
+    };
+    // --- END NEW HANDLER ---
+
     const handleReturnToServiceSelection = () => {
         setActiveService(null);
         setCurrentView('service_selection');
@@ -1203,6 +1267,8 @@ const SkillsMentorshipView = ({
             setCurrentView('history'); // Go back to history in normal mode
             if (completedFormType === 'mothers_form') {
                 setActiveTab('mothers_list');
+            } else if (completedFormType === 'visit_report') {
+                setActiveTab('visit_reports');
             } else {
                 setActiveTab('skills_list');
             }
@@ -1211,15 +1277,19 @@ const SkillsMentorshipView = ({
 
     // This function handles successful saves from SkillsAssessmentForm
     const handleSaveSuccess = async (status, savedData) => {
+        // This handler is ONLY for SkillsAssessmentForm
         const wasEditing = !!editingSubmission;
         const completedFormType = activeFormType; // This will be 'skills_assessment'
 
-        const lastFacilityInfo = {
-            state: savedData.state,
-            locality: savedData.locality,
-            facilityId: savedData.facilityId
-        };
-
+        let lastFacilityInfo = null;
+        if (savedData) {
+            lastFacilityInfo = {
+                state: savedData.state,
+                locality: savedData.locality,
+                facilityId: savedData.facilityId
+            };
+        }
+ 
         resetSelection(); 
 
         if (previousViewRef.current === 'form_setup' || wasEditing) {
@@ -1245,20 +1315,21 @@ const SkillsMentorshipView = ({
         }
     };
 
-    // This function handles exits from MothersForm (which doesn't support onSaveSuccess)
-    const handleMothersFormExit = async () => {
-        const wasEditing = !!editingSubmission;
-        const completedFormType = activeFormType; // Will be 'mothers_form'
+    // This function handles exits from MothersForm and VisitReport
+    const handleGenericFormExit = async (returnTab = 'skills_list') => {
         resetSelection(); 
 
-        // We assume any exit from mothers form (save or cancel) should refresh the list
+        // We assume any exit from these forms (save or cancel) should refresh lists
+        // (Skills form has its own save handler 'handleSaveSuccess')
         await fetchSkillMentorshipSubmissions(true); 
+        await fetchIMNCIVisitReports(true); // Also refresh visit reports
+
 
         if (publicSubmissionMode) {
              setCurrentView('form_setup');
         } else {
             setCurrentView('history'); 
-            setActiveTab('mothers_list');
+            setActiveTab(returnTab);
         }
     };
 
@@ -1334,8 +1405,8 @@ const SkillsMentorshipView = ({
                 setEditingSubmission(null);
                 setIsReadyToStart(true);
             }
-        } else if (activeFormType === 'mothers_form') {
-            // Mother's form doesn't have drafts, just proceed.
+        } else if (activeFormType === 'mothers_form' || activeFormType === 'visit_report') {
+            // Mother's form & Visit Report don't have drafts, just proceed.
             setEditingSubmission(null);
             setIsReadyToStart(true);
         }
@@ -1603,15 +1674,15 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
     // --- NEW: Mobile Bottom Nav Bar Component ---
     const MobileFormNavBar = ({ activeFormType, draftCount, onNavClick }) => {
         const isSkillsActive = activeFormType === 'skills_assessment';
-        const isMothersActive = activeFormType === 'mothers_form';
         
         const navItems = [
-            { id: 'skills_assessment', label: 'Skills Form', active: isSkillsActive, disabled: false },
-            { id: 'mothers_form', label: "Mother's Survey", active: false, disabled: false }, // MODIFIED: No longer 'active'
-            { id: 'facility_update', label: 'Facility Data', active: false, disabled: !isSkillsActive },
-            { id: 'drafts', label: `Drafts (${draftCount})`, active: false, disabled: !isSkillsActive },
-            { id: 'dashboard', label: 'Dashboard', active: false, disabled: false }, // <-- NEW ITEM
+            { id: 'skills_assessment', label: 'Skills Form', active: activeFormType === 'skills_assessment', disabled: false },
+            { id: 'mothers_form', label: "Mother's Survey", active: activeFormType === 'mothers_form', disabled: false },
+            { id: 'visit_report', label: 'Visit Report', active: activeFormType === 'visit_report', disabled: false }, // <-- NEW
+            { id: 'drafts', label: `Drafts (${draftCount})`, active: false, disabled: !isSkillsActive }, // Drafts only for skills
+            { id: 'dashboard', label: 'Dashboard', active: false, disabled: false },
         ];
+        const itemWidth = `${100 / navItems.length}%`; // Dynamic width
 
         return (
             <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 flex justify-around items-center bg-gray-900 text-white border-t border-gray-700 shadow-lg">
@@ -1621,7 +1692,8 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         type="button"
                         onClick={() => onNavClick(item.id)}
                         disabled={item.disabled}
-                        className={`flex flex-col items-center justify-center text-center p-2 w-1/5 transition-colors duration-150 h-16
+                        style={{ width: itemWidth }}
+                        className={`flex flex-col items-center justify-center text-center p-2 transition-colors duration-150 h-16
                             ${item.active ? 'text-sky-400' : 'text-gray-300 hover:text-white'}
                             ${item.disabled ? 'text-gray-600 cursor-not-allowed' : ''}
                         `}
@@ -1638,18 +1710,19 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
     // --- NEW: Handler for Mobile Nav Clicks ---
     const handleMobileNavClick = async (target) => {
         if (target === 'skills_assessment') {
-            if (activeFormType === 'mothers_form') {
-                const confirmSwitch = window.confirm("You are about to switch to the Skills Assessment. Your current Mother's Survey will be discarded. Proceed?");
-                if (confirmSwitch) {
-                    resetSelection(); 
-                    setActiveFormType('skills_assessment');
-                }
+            if (activeFormType !== 'skills_assessment') {
+                 // Just switch. Drafts are handled on the form itself.
+                 resetSelection(); // This resets form type to default 'skills_assessment'
+                 // setActiveFormType('skills_assessment');
             }
         } 
         else if (target === 'mothers_form') {
             // --- MODIFIED: Open modal instead of switching form ---
             setIsMothersFormModalOpen(true);
             // --- END MODIFIED ---
+        }
+        else if (target === 'visit_report') {
+             setIsVisitReportModalOpen(true);
         }
         else if (target === 'facility_update' && activeFormType === 'skills_assessment' && formRef.current) {
             formRef.current.openFacilityModal();
@@ -1703,6 +1776,16 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                         }`}
                                 >
                                     Mother's Surveys
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('visit_reports')}
+                                    className={`whitespace-nowrap py-2 px-4 rounded-md font-medium text-sm
+                                        ${activeTab === 'visit_reports'
+                                            ? 'bg-sky-600 text-white'
+                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                        }`}
+                                >
+                                    Visit Reports
                                 </button>
                                 <button
                                     onClick={() => setActiveTab('dashboard')}
@@ -1775,6 +1858,11 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                             <Button variant="primary" onClick={handleStartMothersForm}>Add Mother's Knowledge & Satisfaction Form</Button>
                                         )}
 
+                                        {/* --- NEW: Show "Add Visit Report" only on visit reports tab --- */}
+                                        {activeTab === 'visit_reports' && (
+                                            <Button variant="primary" onClick={handleStartNewVisitReport}>Add New Visit Report</Button>
+                                        )}
+
                                         {/* --- MODIFICATION: Show "Bulk Upload" only on skills tab --- */}
                                         {activeTab === 'skills_list' && canBulkUploadMentorships && (
                                             <Button onClick={() => setIsBulkUploadModalOpen(true)}>Bulk Upload</Button>
@@ -1831,6 +1919,15 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     statusFilter={statusFilter}
                                 />
                             )}
+                            {/* --- NEW CONTENT BLOCK: For Visit Reports --- */}
+                            {activeTab === 'visit_reports' && (
+                                <VisitReportsTable
+                                    reports={processedVisitReports}
+                                    onEdit={handleEditVisitReport}
+                                    onDelete={handleDeleteVisitReport}
+                                />
+                            )}
+
                             {/* --- MODIFIED: Dashboard props --- */}
                             {activeTab === 'dashboard' && (
                                 <MentorshipDashboard
@@ -1896,10 +1993,9 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
     // --- 1. Render SkillsAssessmentForm (MODIFIED) ---
     //
     // This logic now finds the *full* facility object from the cache
-    // when editing, ensuring all fields are passed to the form,
-    // not just the ones saved in the draft.
+    // when editing, or uses the selectedFacility.
     const facilityData = editingSubmission 
-        ? (healthFacilities.find(f => f.id === editingSubmission.facilityId) || {
+        ? (localHealthFacilities.find(f => f.id === editingSubmission.facilityId) || {
             // Fallback object if not found in cache (e.g., facility deleted)
             'الولاية': editingSubmission.state,
             'المحلية': editingSubmission.locality,
@@ -1938,6 +2034,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                     // --- START: NEW PROPS PASSED DOWN ---
                     setIsMothersFormModalOpen={setIsMothersFormModalOpen}
                     setIsDashboardModalOpen={setIsDashboardModalOpen}
+                    setIsVisitReportModalOpen={setIsVisitReportModalOpen} // <-- NEW
                     draftCount={currentUserDrafts.length}
                     // --- END: NEW PROPS PASSED DOWN ---
                 />
@@ -1984,6 +2081,33 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                     </Modal>
                  )}
                  {/* --- END: NEW MOTHER'S FORM MODAL --- */}
+
+                 {/* --- START: NEW VISIT REPORT MODAL --- */}
+                 {isVisitReportModalOpen && (
+                    <Modal 
+                        isOpen={isVisitReportModalOpen} 
+                        onClose={() => setIsVisitReportModalOpen(false)} 
+                        title="تقرير زيارة العلاج المتكامل"
+                        size="full"
+                    >
+                        <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
+                            <Suspense fallback={<div className="p-8"><Spinner /></div>}>
+                                <IMNCIVisitReport
+                                    facility={facilityData} // Pass the same facility data as the skills form
+                                    onCancel={() => { // This handles both Save and Cancel from the modal form
+                                        setIsVisitReportModalOpen(false);
+                                        fetchSkillMentorshipSubmissions(true); // Refresh submissions list on close
+                                        fetchIMNCIVisitReports(true); // <-- NEW
+                                    }}
+                                    setToast={setToast}
+                                    allSubmissions={processedSubmissions}
+                                    existingReportData={null} // Modal always creates new
+                                />
+                            </Suspense>
+                        </div>
+                    </Modal>
+                 )}
+                 {/* --- END: NEW VISIT REPORT MODAL --- */}
                  
                  {/* --- START: NEW DASHBOARD MODAL --- */}
                  {isDashboardModalOpen && (
@@ -2037,9 +2161,40 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
             <>
                 <MothersForm
                     facility={selectedFacility}
-                    onCancel={handleMothersFormExit} // Use the dedicated exit handler for mothers form
+                    onCancel={() => handleGenericFormExit('mothers_list')} // Use the dedicated exit handler
                     setToast={setToast}
                 />
+                <MobileFormNavBar
+                    activeFormType={activeFormType}
+                    draftCount={currentUserDrafts.length}
+                    onNavClick={handleMobileNavClick}
+                 />
+            </>
+        );
+    }
+
+    // --- 4. Render IMNCIVisitReport (NEW) ---
+     if (currentView === 'form_setup' && activeFormType === 'visit_report' && (editingSubmission || (isReadyToStart && selectedFacility)) && activeService) {
+        return (
+            <>
+                <Suspense fallback={<div className="p-8"><Spinner /></div>}>
+                    <IMNCIVisitReport
+                        facility={facilityData} // Use the same facilityData logic from Skills form
+                        onCancel={() => handleGenericFormExit('visit_reports')}
+                        setToast={setToast}
+                        allSubmissions={processedSubmissions}
+                        existingReportData={editingSubmission} // Pass editing data
+                    />
+                </Suspense>
+                {/* --- NEW: Visit Report Modal (for nav) --- */}
+                {isVisitReportModalOpen && (
+                    <Modal isOpen={isVisitReportModalOpen} onClose={() => setIsVisitReportModalOpen(false)}>
+                        <div className="p-4">Visit Report is already open.</div>
+                    </Modal>
+                )}
+                {/* --- NEW: Mothers Form Modal (for nav) --- */}
+                {/* (Need to add this here too for nav to work) */}
+                {isMothersFormModalOpen && facilityData && <Modal isOpen={isMothersFormModalOpen} onClose={() => setIsMothersFormModalOpen(false)} title="استبيان الأم" size="full"><div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto"><MothersForm facility={facilityData} onCancel={() => { setIsMothersFormModalOpen(false); fetchSkillMentorshipSubmissions(true); }} setToast={setToast} /></div></Modal>}
                 <MobileFormNavBar
                     activeFormType={activeFormType}
                     draftCount={currentUserDrafts.length}
@@ -2057,9 +2212,10 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
     if (currentView === 'form_setup') {
         const serviceTitleArabic = "الاشراف التدريبي الداعم على تطبيق العلاج المتكامل للاطفال اقل من 5 سنوات";
         const isSkillsAssessmentSetup = activeFormType === 'skills_assessment'; // Flag for worker requirement
+        const isVisitReportSetup = activeFormType === 'visit_report'; // <-- NEW
         const setupTitle = isSkillsAssessmentSetup 
             ? (editingSubmission ? `تعديل جلسة: ${serviceTitleArabic}` : `إدخال بيانات: ${serviceTitleArabic}`) 
-            : 'نموذج استبيان الأم: رضاء ومعرفة الأمهات';
+            : (isVisitReportSetup ? (editingSubmission ? 'تعديل تقرير الزيارة' : 'إدخال تقرير زيارة جديد') : 'نموذج استبيان الأم');
         const setupSubtitle = isSkillsAssessmentSetup 
             ? "الرجاء اختيار الولاية والمحلية والمنشأة والعامل الصحي للمتابعة." 
             : "الرجاء اختيار الولاية والمحلية والمنشأة للمتابعة.";
@@ -2232,10 +2388,10 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                             </Button>
                              <Button
                                 onClick={handleProceedToForm} // <-- MODIFIED: Calls new handler
-                                disabled={!selectedFacilityId || (isSkillsAssessmentSetup && !selectedHealthWorkerName) || isFacilitiesLoading}
+                                disabled={!selectedFacilityId || (isSkillsAssessmentSetup && !selectedHealthWorkerName) || isFacilitiesLoading || isWorkerInfoChanged}
                                 variant="primary"
                             >
-                                {isSkillsAssessmentSetup ? 'بدء جلسة الاشراف' : 'بدء استبيان الأم'}
+                                {isSkillsAssessmentSetup ? 'بدء جلسة الاشراف' : (isVisitReportSetup ? 'بدء تقرير الزيارة' : 'بدء استبيان الأم')}
                             </Button>
                         </div>
                         {/* END START/CONTINUE BUTTON */}

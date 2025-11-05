@@ -1929,6 +1929,67 @@ export async function deleteMentorshipSession(sessionId) {
 // --- END NEW MENTORSHIP FUNCTIONS ---
 
 
+// --- NEW IMNCI VISIT REPORT FUNCTIONS ---
+
+/**
+ * Saves a new IMNCI visit report or updates an existing one.
+ * @param {object} payload - The report data.
+ * @param {string|null} reportId - The ID of the report to update, or null to create new.
+ * @returns {string} The ID of the created or updated document.
+ */
+export async function saveIMNCIVisitReport(payload, reportId = null) {
+    try {
+        const sessionData = {
+            ...payload,
+            // Add createdAt only if it's a new document
+            ...( !reportId ? { createdAt: serverTimestamp() } : { lastUpdatedAt: serverTimestamp() } ),
+        };
+
+        const docRef = reportId 
+            ? doc(db, "imnciVisitReports", reportId) // Get ref to existing doc
+            : doc(collection(db, "imnciVisitReports")); // Create ref for new doc
+
+        // Use the wrapped setDoc
+        await setDoc(docRef, sessionData, { merge: !!reportId });
+        return docRef.id;
+    } catch (error) {
+        console.error("Error saving IMNCI visit report:", error);
+        throw error;
+    }
+}
+
+/**
+ * Lists all IMNCI visit reports from Firestore.
+ * @returns {Array<object>} A list of visit report documents.
+ */
+export async function listIMNCIVisitReports(sourceOptions = {}) {
+    try {
+        const q = query(collection(db, "imnciVisitReports"), orderBy("visit_date", "desc"));
+        // Use the getData helper
+        const snapshot = await getData(q, sourceOptions);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error fetching IMNCI visit reports:", error);
+        throw error;
+    }
+}
+
+/**
+ * Deletes an IMNCI visit report from Firestore.
+ * @param {string} reportId - The ID of the report to delete.
+ * @returns {Promise<boolean>} True on success.
+ */
+export async function deleteIMNCIVisitReport(reportId) {
+    if (!reportId) {
+        throw new Error("Report ID is required to delete.");
+    }
+    const sessionRef = doc(db, "imnciVisitReports", reportId);
+    await deleteDoc(sessionRef); // Use the wrapped deleteDoc
+    return true;
+}
+// --- END IMNCI VISIT REPORT FUNCTIONS ---
+
+
 // --- NEW FUNCTIONS FOR PUBLIC PROFILES/REPORTS ---
 
 /**
