@@ -23,7 +23,11 @@ export const ALL_PERMISSIONS = {
     canViewHumanResource: false, // NEW: Replaces 3 view permissions
     canManageHumanResource: false, // NEW: Replaces 3 manage permissions
 
-    // --- D. System / Advanced / Scope ---
+    // --- NEW: D. Skills Mentorship ---
+    canViewSkillsMentorship: false,
+    canManageSkillsMentorship: false,
+
+    // --- E. System / Advanced / Scope ---
     canApproveSubmissions: false,   // DERIVED: Now tied to canUseFederalManagerAdvancedFeatures
     canUseSuperUserAdvancedFeatures: false,    // REVERTED: Back in System category
     canUseFederalManagerAdvancedFeatures: false, // REVERTED: Back in System category
@@ -47,6 +51,11 @@ export const applyDerivedPermissions = (basePermissions) => {
     if (basePermissions.canManageHumanResource) {
         basePermissions.canViewHumanResource = true;
     }
+    // --- START MODIFICATION ---
+    if (basePermissions.canManageSkillsMentorship) {
+        basePermissions.canViewSkillsMentorship = true;
+    }
+    // --- END MODIFICATION ---
     if (basePermissions.canUseFederalManagerAdvancedFeatures) {
         basePermissions.canApproveSubmissions = true;
     }
@@ -62,16 +71,21 @@ const FACILITY_MGMT_STANDARD = { ...FACILITY_MGMT_NONE, canViewFacilities: true,
 const HR_MGMT_NONE = { canViewHumanResource: false, canManageHumanResource: false };
 const HR_MGMT_VIEW_ONLY = { ...HR_MGMT_NONE, canViewHumanResource: true };
 const HR_MGMT_STANDARD = { canViewHumanResource: true, canManageHumanResource: true };
+// --- START MODIFICATION ---
+const MENTORSHIP_MGMT_NONE = { canViewSkillsMentorship: false, canManageSkillsMentorship: false };
+const MENTORSHIP_MGMT_VIEW_ONLY = { ...MENTORSHIP_MGMT_NONE, canViewSkillsMentorship: true };
+const MENTORSHIP_MGMT_STANDARD = { ...MENTORSHIP_MGMT_NONE, canViewSkillsMentorship: true, canManageSkillsMentorship: true };
+// --- END MODIFICATION ---
 const ADVANCED_PERMS_NONE = { canApproveSubmissions: false, canUseSuperUserAdvancedFeatures: false, canUseFederalManagerAdvancedFeatures: false, canViewAdmin: false };
-const SUPER_USER_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_STANDARD, ...HR_MGMT_STANDARD, ...ADVANCED_PERMS_NONE, canViewAdmin: true, canUseSuperUserAdvancedFeatures: true, canUseFederalManagerAdvancedFeatures: true, manageScope: 'federal', manageTimePeriod: 'anytime' };
-const FEDERAL_MANAGER_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_STANDARD, ...HR_MGMT_STANDARD, ...ADVANCED_PERMS_NONE, canUseFederalManagerAdvancedFeatures: true, manageScope: 'federal', manageTimePeriod: 'anytime' };
-const STATES_MANAGER_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_STANDARD, ...HR_MGMT_STANDARD, ...ADVANCED_PERMS_NONE, manageScope: 'state', manageLocation: 'user_state', manageTimePeriod: 'course_period_only' };
-const LOCALITY_MANAGER_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_STANDARD, ...HR_MGMT_STANDARD, ...ADVANCED_PERMS_NONE, manageScope: 'locality', manageLocation: 'user_locality', manageTimePeriod: 'course_period_only' };
-const FEDERAL_COORDINATOR_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_VIEW_ONLY, ...HR_MGMT_VIEW_ONLY, ...ADVANCED_PERMS_NONE, manageScope: 'course', manageLocation: 'federal_level', manageTimePeriod: 'course_period_plus_3_days' };
+const SUPER_USER_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_STANDARD, ...HR_MGMT_STANDARD, ...MENTORSHIP_MGMT_STANDARD, ...ADVANCED_PERMS_NONE, canViewAdmin: true, canUseSuperUserAdvancedFeatures: true, canUseFederalManagerAdvancedFeatures: true, manageScope: 'federal', manageTimePeriod: 'anytime' };
+const FEDERAL_MANAGER_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_STANDARD, ...HR_MGMT_STANDARD, ...MENTORSHIP_MGMT_STANDARD, ...ADVANCED_PERMS_NONE, canUseFederalManagerAdvancedFeatures: true, manageScope: 'federal', manageTimePeriod: 'anytime' };
+const STATES_MANAGER_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_STANDARD, ...HR_MGMT_STANDARD, ...MENTORSHIP_MGMT_STANDARD, ...ADVANCED_PERMS_NONE, manageScope: 'state', manageLocation: 'user_state', manageTimePeriod: 'course_period_only' };
+const LOCALITY_MANAGER_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_STANDARD, ...HR_MGMT_STANDARD, ...MENTORSHIP_MGMT_STANDARD, ...ADVANCED_PERMS_NONE, manageScope: 'locality', manageLocation: 'user_locality', manageTimePeriod: 'course_period_only' };
+const FEDERAL_COORDINATOR_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_VIEW_ONLY, ...HR_MGMT_VIEW_ONLY, ...MENTORSHIP_MGMT_VIEW_ONLY, ...ADVANCED_PERMS_NONE, manageScope: 'course', manageLocation: 'federal_level', manageTimePeriod: 'course_period_plus_3_days' };
 const FACILITATOR_PERMS = { ...FEDERAL_COORDINATOR_PERMS };
-const STATE_COORDINATOR_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_VIEW_ONLY, ...HR_MGMT_VIEW_ONLY, ...ADVANCED_PERMS_NONE, manageScope: 'course', manageLocation: 'user_state', manageTimePeriod: 'course_period_only' };
-const COURSE_COORDINATOR_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_VIEW_ONLY, ...HR_MGMT_NONE, ...ADVANCED_PERMS_NONE, manageScope: 'course', manageTimePeriod: 'course_period_only' };
-const USER_PERMS = { ...BASE_PERMS, canViewCourse: true, canViewFacilities: true, canViewDashboard: true };
+const STATE_COORDINATOR_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_VIEW_ONLY, ...HR_MGMT_VIEW_ONLY, ...MENTORSHIP_MGMT_VIEW_ONLY, ...ADVANCED_PERMS_NONE, manageScope: 'course', manageLocation: 'user_state', manageTimePeriod: 'course_period_only' };
+const COURSE_COORDINATOR_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_VIEW_ONLY, ...HR_MGMT_NONE, ...MENTORSHIP_MGMT_VIEW_ONLY, ...ADVANCED_PERMS_NONE, manageScope: 'course', manageTimePeriod: 'course_period_only' };
+const USER_PERMS = { ...BASE_PERMS, canViewCourse: true, canViewFacilities: true, canViewSkillsMentorship: true, canViewDashboard: true };
 export const DEFAULT_ROLE_PERMISSIONS = {
     'super_user': applyDerivedPermissions(SUPER_USER_PERMS),
     'federal_manager': applyDerivedPermissions(FEDERAL_MANAGER_PERMS),
@@ -113,6 +127,10 @@ const PERMISSION_DESCRIPTIONS = {
     canManageFacilities: "Add, Edit, and Delete facility records within assigned scope.",
     canViewHumanResource: "Allow viewing lists for Facilitators, Program Teams, and Partners.",
     canManageHumanResource: "Allow add/edit/delete for Facilitators, Program Teams, and Partners within the user's assigned scope (federal, state, or locality).",
+    // --- START MODIFICATION ---
+    canViewSkillsMentorship: "Allow user to view the Skills Mentorship module, dashboard, and history.",
+    canManageSkillsMentorship: "Allow user to share public submission links for mentorship.",
+    // --- END MODIFICATION ---
     canApproveSubmissions: "Derived: Approve/Reject submissions for Facilitators and Health Facilities. (Granted by Federal/Super advanced features).",
     canUseSuperUserAdvancedFeatures: "ADVANCED (Super User): Allows bulk participant/facility operations (import, clean, migrate, duplicates, location check).", 
     canUseFederalManagerAdvancedFeatures: "ADVANCED (Federal/Super): Allows managing inactive items (courses, participants, monitoring), Final Reports, *enables* ALL Human Resources Management, and *grants* submission approval rights.", 
@@ -165,7 +183,10 @@ const PermissionsDropdown = ({ role, currentPermissions, allPermissions, onPermi
         { title: 'A. Course Management', keys: ['canViewCourse', 'canManageCourse'] },
         { title: 'B. Child Health Service Facility Management', keys: ['canViewFacilities', 'canManageFacilities'] },
         { title: 'C. Human Resource (HR) Management', keys: ['canViewHumanResource', 'canManageHumanResource'] },
-        { title: 'D. System / Advanced / Scope', keys: ['canUseSuperUserAdvancedFeatures', 'canUseFederalManagerAdvancedFeatures', 'manageLocation', 'manageTimePeriod', 'canViewAdmin', 'canViewDashboard'] }
+        // --- START MODIFICATION ---
+        { title: 'D. Skills Mentorship', keys: ['canViewSkillsMentorship', 'canManageSkillsMentorship'] },
+        { title: 'E. System / Advanced / Scope', keys: ['canUseSuperUserAdvancedFeatures', 'canUseFederalManagerAdvancedFeatures', 'manageLocation', 'manageTimePeriod', 'canViewAdmin', 'canViewDashboard'] }
+        // --- END MODIFICATION ---
     ], []);
     const booleanPermissionKeys = useMemo(() => {
         return PERMISSION_CATEGORIES.flatMap(category => 
@@ -199,7 +220,7 @@ const PermissionsDropdown = ({ role, currentPermissions, allPermissions, onPermi
         <div className="relative w-full">
             <Button type="button" onClick={() => setIsOpen(!isOpen)} disabled={disabled} variant="secondary" className="w-full justify-between flex items-center bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50">
                 {buttonLabel}
-                <svg className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : 'rotate-0'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                <svg className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : 'rotate-0'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
             </Button>
             {isOpen && (
                 <div className="absolute z-30 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-96 overflow-y-auto">
@@ -453,6 +474,11 @@ export function AdminDashboard() {
             if (permission !== 'canViewFacilities') {
                 baseRole.canViewFacilities = prev[role].canViewFacilities;
             } 
+            // --- START MODIFICATION ---
+            if (permission !== 'canViewSkillsMentorship') {
+                baseRole.canViewSkillsMentorship = prev[role].canViewSkillsMentorship;
+            }
+            // --- END MODIFICATION ---
             if (baseRole.canManageFacilities) {
                  baseRole.canViewFacilities = true;
             }

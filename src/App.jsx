@@ -475,14 +475,20 @@ export default function App() {
 
     const ALL_PERMISSIONS_MINIMAL = useMemo(() => {
         // ... (memo unchanged)
-        return ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), { canViewSkillsMentorship: false });
+        // --- START MODIFICATION ---
+        // Removed the hardcoded { canViewSkillsMentorship: false }
+        return ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
+        // --- END MODIFICATION ---
     }, [ALL_PERMISSION_KEYS]);
 
     const permissions = useMemo(() => {
         // ... (memo unchanged)
         let derivedPermissions = { ...userPermissions };
         if (userRole?.toLowerCase() === 'super_user') {
-            return ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: true }), { canViewSkillsMentorship: true });
+            // --- START MODIFICATION ---
+            // Removed the hardcoded { canViewSkillsMentorship: true }
+            return ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: true }), {});
+            // --- END MODIFICATION ---
         }
         return { ...ALL_PERMISSIONS_MINIMAL, ...derivedPermissions };
     }, [userRole, userPermissions, ALL_PERMISSIONS_MINIMAL, ALL_PERMISSION_KEYS]);

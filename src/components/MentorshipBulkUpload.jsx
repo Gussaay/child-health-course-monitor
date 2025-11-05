@@ -803,15 +803,110 @@ const DetailedMentorshipBulkUploadModal = ({
         reader.readAsArrayBuffer(file);
     };
     
+    // --- START: MODIFIED handleDownloadTemplate ---
     const handleDownloadTemplate = () => {
-        // ... (handleDownloadTemplate implementation unchanged) ...
-        const fileName = `Mentorship_Upload_Template_Detailed_${activeService}.xlsx`;
+        const fileName = `Mentorship_Data_Template_${activeService}.xlsx`;
+
+        // --- Reverse Lookups ---
+        const stateKeyToAr = Object.entries(STATE_LOCALITIES).reduce((acc, [key, value]) => {
+            acc[key] = value.ar;
+            return acc;
+        }, {});
+        
+        const getLocalityAr = (stateKey, localityKey) => {
+            if (!stateKey || !localityKey || !STATE_LOCALITIES[stateKey]) return localityKey; // fallback to key
+            const loc = STATE_LOCALITIES[stateKey].localities.find(l => l.en === localityKey);
+            return loc ? loc.ar : localityKey;
+        };
+        // --- End Reverse Lookups ---
+
+        // Start with the headers
         const worksheetData = [ALL_TEMPLATE_HEADERS];
+
+        // Check if there is data to add
+        if (allSubmissions && allSubmissions.length > 0) {
+            
+            // Filter submissions by activeService and ensure fullData exists
+            const filteredSubmissions = allSubmissions.filter(
+                sub => sub.service === activeService && sub.fullData
+            );
+
+            // Iterate over filteredSubmissions
+            filteredSubmissions.forEach(submission => {
+                const data = submission.fullData; // Use the original fullData object
+
+                const rowData = ALL_TEMPLATE_HEADERS.map(header => {
+                    let value = '';
+                    
+                    // 1. Base Fields
+                    if (header === 'session_date') {
+                        value = data.sessionDate || '';
+                    } else if (header === 'state') {
+                        value = stateKeyToAr[data.state] || data.state || '';
+                    } else if (header === 'locality') {
+                        value = getLocalityAr(data.state, data.locality) || data.locality || '';
+                    } else if (header === 'facility_name') {
+                        value = data.facilityName || '';
+                    } else if (header === 'health_worker_name') {
+                        value = data.healthWorkerName || '';
+                    } else if (header === 'notes') {
+                        value = data.notes || '';
+                    } else if (header === 'mentor_email') {
+                        value = data.mentorEmail || '';
+                    } else if (header === 'worker_job_title') {
+                        value = data.workerType || ''; // Map workerType to worker_job_title
+                    } else if (header === 'facility_type') {
+                        value = data.facilityType || ''; // Map facilityType to facility_type
+                    } 
+                    
+                    // 2. Assessment Skills (as_...)
+                    else if (header.startsWith('as_')) {
+                        const key = header.replace('as_', '');
+                        if (data.assessmentSkills) {
+                            const rawValue = data.assessmentSkills[key];
+                            if (Array.isArray(rawValue)) {
+                                value = rawValue.join(','); // Convert multi-select arrays to comma-sep string
+                            } else if (rawValue !== undefined && rawValue !== null) {
+                                value = String(rawValue); // Ensure it's a string
+                            }
+                        }
+                    } 
+                    
+                    // 3. Treatment Skills (ts_...)
+                    else if (header.startsWith('ts_')) {
+                         const key = header.replace('ts_', '');
+                         if (data.treatmentSkills) {
+                             const rawValue = data.treatmentSkills[key];
+                             if (rawValue !== undefined && rawValue !== null) {
+                                value = String(rawValue); // Ensure it's a string
+                             }
+                         }
+                    } 
+                    
+                    // 4. Decision Fields
+                    else if (header === 'finalDecision') {
+                        value = data.finalDecision || '';
+                    } else if (header === 'decisionMatches') {
+                        value = data.decisionMatches || '';
+                    }
+
+                    // Return the found value (or empty string)
+                    return value;
+                });
+                
+                worksheetData.push(rowData);
+            });
+        }
+        // If allSubmissions was empty, or no data matched the filter, 
+        // worksheetData will just be [ALL_TEMPLATE_HEADERS].
+        // This downloads an empty template as a fallback.
+
         const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Mentorships");
         XLSX.writeFile(workbook, fileName);
     };
+    // --- END: MODIFIED handleDownloadTemplate ---
     
     const handleMappingChange = useCallback((appField, excelHeader) => {
         // ... (handleMappingChange implementation unchanged) ...
@@ -1285,8 +1380,8 @@ const DetailedMentorshipBulkUploadModal = ({
                 {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
                 {currentPage === 0 && (
                     <div>
-                        <p className="mb-4">Download the detailed template for {activeService}. Use Arabic or English names for State. Use Arabic names for Locality. Use 'yes', 'no', 'na' for skill checks. Use comma-separated values for multi-select classifications (e.g., "بعض الجفاف,دسنتاريا").</p>
-                        <Button variant="secondary" onClick={handleDownloadTemplate} className="mb-4">Download Template</Button>
+                        <p className="mb-4">Download the detailed template for {activeService}. If data exists, it will be pre-filled. Use Arabic or English names for State. Use Arabic names for Locality. Use 'yes', 'no', 'na' for skill checks. Use comma-separated values for multi-select classifications (e.g., "بعض الجفاف,دسنتاريا").</p>
+                        <Button variant="secondary" onClick={handleDownloadTemplate} className="mb-4">Download Template / Data</Button>
                         <hr className="my-4" />
                         <p className="mb-2">Or, upload your completed Excel file (first row must be headers).</p>
                         <input type="file" accept=".xlsx,.xls" onChange={handleFileUpload} ref={fileInputRef} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
