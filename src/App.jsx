@@ -13,7 +13,8 @@ import {
     User,
     Hospital,
     Database,
-    ClipboardCheck
+    ClipboardCheck,
+    X // --- NEW: Import X icon for dismiss ---
 } from 'lucide-react';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, LineElement, PointElement);
@@ -96,32 +97,43 @@ import {
 
 
 // --- Resource Monitor Component ---
-const ResourceMonitor = ({ counts, onReset }) => {
+const ResourceMonitor = ({ counts, onReset, onDismiss }) => {
     // ... (component unchanged)
     return (
-        <div className="fixed bottom-4 right-4 bg-gray-900 text-white p-3 rounded-lg shadow-lg z-50 opacity-90 w-64">
-            <div className="flex justify-between items-center mb-2">
-                <div className="flex items-center gap-2">
+        // --- MODIFICATION: Make smaller (p-2, w-56) and move to top-right on mobile (top-4) and bottom-right on desktop (md:bottom-4, md:top-auto) ---
+        <div className="fixed top-4 right-4 md:bottom-4 md:top-auto bg-gray-900 text-white p-2 rounded-lg shadow-lg z-50 opacity-90 w-56">
+            <div className="flex justify-between items-center mb-1.5">
+                <div className="flex items-center gap-1.5">
                     {/* --- MODIFIED: Use lucide-react icon --- */}
-                    <Database className="w-5 h-5 text-sky-400" />
-                    <h4 className="font-bold text-base">Session Ops</h4>
+                    <Database className="w-4 h-4 text-sky-400" />
+                    <h4 className="font-bold text-sm">Session Ops</h4>
                 </div>
-                <button
-                    onClick={onReset}
-                    className="text-xs text-gray-400 hover:text-white transition-colors"
-                    title="Reset Counts"
-                >
-                    Reset
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={onReset}
+                        className="text-xs text-gray-400 hover:text-white transition-colors"
+                        title="Reset Counts"
+                    >
+                        Reset
+                    </button>
+                    {/* --- NEW: Dismiss Button --- */}
+                    <button
+                        onClick={onDismiss}
+                        className="text-gray-400 hover:text-white transition-colors"
+                        title="Dismiss Monitor"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
             </div>
             <div className="grid grid-cols-2 gap-2 text-center">
                 <div>
-                    <div className="text-xs text-gray-400 uppercase">Reads</div>
-                    <div className="text-2xl font-mono font-bold text-green-400">{counts.reads}</div>
+                    <div className="text-[10px] text-gray-400 uppercase">Reads</div>
+                    <div className="text-xl font-mono font-bold text-green-400">{counts.reads}</div>
                 </div>
                 <div>
-                    <div className="text-xs text-gray-400 uppercase">Writes</div>
-                    <div className="text-2xl font-mono font-bold text-yellow-400">{counts.writes}</div>
+                    <div className="text-[10px] text-gray-400 uppercase">Writes</div>
+                    <div className="text-xl font-mono font-bold text-yellow-400">{counts.writes}</div>
                 </div>
             </div>
         </div>
@@ -283,6 +295,8 @@ export default function App() {
 
     // State for operation counts (for the real-time monitor)
     const [operationCounts, setOperationCounts] = useState({ reads: 0, writes: 0 });
+    // --- NEW: State for monitor visibility ---
+    const [isMonitorVisible, setIsMonitorVisible] = useState(true);
 
     const historyInitialized = useRef(false);
     const isPopStateNavigation = useRef(false);
@@ -1046,6 +1060,11 @@ export default function App() {
     const handleResetMonitor = useCallback(() => {
         setOperationCounts({ reads: 0, writes: 0 });
     }, []);
+    
+    // --- NEW: Dismiss function for the monitor ---
+    const handleDismissMonitor = useCallback(() => {
+        setIsMonitorVisible(false);
+    }, []);
 
     // --- MODIFIED: renderView ---
     const renderView = () => {
@@ -1469,10 +1488,11 @@ export default function App() {
             </Suspense>
 
             {/* --- Conditionally render the Resource Monitor for Super Users --- */}
-            {permissions.canUseSuperUserAdvancedFeatures && (
+            {permissions.canUseSuperUserAdvancedFeatures && isMonitorVisible && (
                 <ResourceMonitor
                     counts={operationCounts}
                     onReset={handleResetMonitor}
+                    onDismiss={handleDismissMonitor}
                 />
             )}
         </div>

@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useDataCache } from '../DataContext';
 import { Timestamp } from 'firebase/firestore';
+import { PlusCircle, Trash2, FileText, Users, Building, ClipboardCheck, Archive, LayoutDashboard } from 'lucide-react';
 import {
     saveMentorshipSession,
     importMentorshipSessions,
@@ -22,7 +23,7 @@ import { STATE_LOCALITIES } from "./constants.js";
 import SkillsAssessmentForm from './SkillsAssessmentForm';
 import MentorshipDashboard from './MentorshipDashboard'; // <-- IMPORT ADDED
 import { getAuth } from "firebase/auth";
-import { PlusCircle, Trash2 } from 'lucide-react';
+
 
 // --- NEW IMPORT: Bulk Upload Modal ---
 import DetailedMentorshipBulkUploadModal from './MentorshipBulkUpload';
@@ -267,6 +268,31 @@ const PostSaveModal = ({ isOpen, onClose, onSelect }) => {
                     >
                         بدء استبيان أم جديد (لنفس المنشأة)
                     </Button>
+                    <Button
+                        variant="info"
+                        onClick={() => onSelect('visit_report')}
+                        className="w-full justify-center"
+                    >
+                        بدء تقرير زيارة جديد (لنفس المنشأة)
+                    </Button>
+                    
+                    {/* --- NEW BUTTONS ADDED --- */}
+                    <Button
+                        variant="secondary"
+                        onClick={() => onSelect('dashboard')}
+                        className="w-full justify-center"
+                    >
+                        عرض المنصة (Dashboard)
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        onClick={() => onSelect('drafts')}
+                        className="w-full justify-center"
+                    >
+                        عرض المسودات
+                    </Button>
+                    {/* --- END NEW BUTTONS --- */}
+
                     <hr className="my-2" />
                     <Button
                         variant="secondary"
@@ -281,6 +307,9 @@ const PostSaveModal = ({ isOpen, onClose, onSelect }) => {
     );
 };
 // --- END Post-Save Modal ---
+
+
+
 
 // --- NEW: Visit Reports Table Component ---
 const VisitReportsTable = ({ reports, onEdit, onDelete }) => {
@@ -1345,24 +1374,53 @@ const SkillsMentorshipView = ({
          // editingSubmission is cleared in resetSelection
     };
 
-    // --- NEW: Handlers for Post-Save Modal ---
-    const handlePostSaveSelect = (formType) => {
+   // --- NEW: Handlers for Post-Save Modal ---
+    const handlePostSaveSelect = (actionType) => {
         if (!lastSavedFacilityInfo) return;
 
-        // Pre-fill state, locality, facility
-        setSelectedState(lastSavedFacilityInfo.state);
-        setSelectedLocality(lastSavedFacilityInfo.locality);
-        setSelectedFacilityId(lastSavedFacilityInfo.facilityId);
-        
-        // Set form type and view
-        setActiveFormType(formType);
-        setCurrentView('form_setup');
-        
-        // Clear worker and modal state
-        setSelectedHealthWorkerName('');
+        // Close the post-save modal immediately
         setIsPostSaveModalOpen(false);
-        setLastSavedFacilityInfo(null);
-        setIsReadyToStart(false); // Let the setup screen show, user must click "Start"
+
+        // Pre-fill state, locality, facility (needed for ALL actions)
+        const savedInfo = lastSavedFacilityInfo; // Copy info before clearing
+        setLastSavedFacilityInfo(null); // Clear this now
+
+        setSelectedState(savedInfo.state);
+        setSelectedLocality(savedInfo.locality);
+        setSelectedFacilityId(savedInfo.facilityId);
+
+        if (actionType === 'skills_assessment' || actionType === 'mothers_form' || actionType === 'visit_report') {
+            // --- ACTION: Start a new form ---
+            
+            // Set form type and view
+            setActiveFormType(actionType);
+            setCurrentView('form_setup');
+            
+            // Clear worker and reset flags
+            setSelectedHealthWorkerName('');
+            setIsReadyToStart(false); // Let the setup screen show
+
+        } else if (actionType === 'dashboard') {
+            // --- ACTION: Open Dashboard Modal ---
+            
+            // Pre-filter the dashboard to this facility
+            setActiveDashboardState(savedInfo.state);
+            setActiveDashboardLocality(savedInfo.locality);
+            setActiveDashboardFacilityId(savedInfo.facilityId);
+            setIsDashboardModalOpen(true);
+            
+            // Go back to the history view in the background
+            setCurrentView('history');
+            setActiveTab('skills_list');
+
+        } else if (actionType === 'drafts') {
+            // --- ACTION: Open Drafts Modal ---
+            setIsDraftsModalOpen(true);
+
+            // Go back to the history view in the background
+            setCurrentView('history');
+            setActiveTab('skills_list');
+        }
     };
 
     const handlePostSaveClose = () => {
@@ -1675,39 +1733,51 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
     const MobileFormNavBar = ({ activeFormType, draftCount, onNavClick }) => {
         const isSkillsActive = activeFormType === 'skills_assessment';
         
+        // --- MODIFIED: Added icons, labels are already Arabic ---
         const navItems = [
-            { id: 'skills_assessment', label: 'Skills Form', active: activeFormType === 'skills_assessment', disabled: false },
-            { id: 'mothers_form', label: "Mother's Survey", active: activeFormType === 'mothers_form', disabled: false },
-            { id: 'visit_report', label: 'Visit Report', active: activeFormType === 'visit_report', disabled: false }, // <-- NEW
-            { id: 'drafts', label: `Drafts (${draftCount})`, active: false, disabled: !isSkillsActive }, // Drafts only for skills
-            { id: 'dashboard', label: 'Dashboard', active: false, disabled: false },
+            { id: 'skills_assessment', label: 'استمارة المهارات', icon: FileText, active: activeFormType === 'skills_assessment', disabled: false },
+            { id: 'mothers_form', label: 'استبيان الامهات', icon: Users, active: false, disabled: false },
+            { id: 'facility_info', label: 'معلومات المؤسسة', icon: Building, active: false, disabled: !isSkillsActive },
+            { id: 'visit_report', label: 'تقرير الزيارة', icon: ClipboardCheck, active: false, disabled: false },
+            { id: 'drafts', label: `مسودات (${draftCount})`, icon: Archive, active: false, disabled: !isSkillsActive },
+            { id: 'dashboard', label: 'المنصة', icon: LayoutDashboard, active: false, disabled: false },
         ];
+        
         const itemWidth = `${100 / navItems.length}%`; // Dynamic width
 
         return (
-            <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 flex justify-around items-center bg-gray-900 text-white border-t border-gray-700 shadow-lg">
-                {navItems.map(item => (
-                    <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => onNavClick(item.id)}
-                        disabled={item.disabled}
-                        style={{ width: itemWidth }}
-                        className={`flex flex-col items-center justify-center text-center p-2 transition-colors duration-150 h-16
-                            ${item.active ? 'text-sky-400' : 'text-gray-300 hover:text-white'}
-                            ${item.disabled ? 'text-gray-600 cursor-not-allowed' : ''}
-                        `}
-                    >
-                        {/* Using text as icons */}
-                        <span className="text-xs font-medium truncate">{item.label}</span>
-                    </button>
-                ))}
+            // --- MODIFIED: Added dir="rtl" to the container ---
+            <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 flex justify-around items-center bg-gray-900 text-white border-t border-gray-700 shadow-lg" dir="rtl">
+                {navItems.map(item => {
+                    const IconComponent = item.icon; // Get the icon component
+                    return (
+                        <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => onNavClick(item.id)}
+                            disabled={item.disabled}
+                            style={{ width: itemWidth }}
+                            className={`flex flex-col items-center justify-center text-center p-2 transition-colors duration-150 h-16
+                                ${item.active ? 'text-sky-400' : 'text-gray-300 hover:text-white'}
+                                ${item.disabled ? 'text-gray-600 cursor-not-allowed' : ''}
+                            `}
+                        >
+                            {/* --- ADDED: Icon rendering --- */}
+                            <IconComponent className="h-5 w-5 mb-0.5" />
+                            
+                            {/* --- MODIFIED: Removed 'truncate', added 'leading-tight' for wrapping --- */}
+                            <span className="text-xs font-medium leading-tight">
+                                {item.label}
+                            </span>
+                        </button>
+                    );
+                })}
             </div>
         );
     };
     // --- END: Mobile Bottom Nav Bar Component ---
 
-    // --- NEW: Handler for Mobile Nav Clicks ---
+   // --- NEW: Handler for Mobile Nav Clicks ---
     const handleMobileNavClick = async (target) => {
         if (target === 'skills_assessment') {
             if (activeFormType !== 'skills_assessment') {
@@ -1724,7 +1794,11 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
         else if (target === 'visit_report') {
              setIsVisitReportModalOpen(true);
         }
-        else if (target === 'facility_update' && activeFormType === 'skills_assessment' && formRef.current) {
+        // --- NEW: Handle Facility Info button click ---
+        else if (target === 'facility_info' && activeFormType === 'skills_assessment' && formRef.current) {
+            formRef.current.openFacilityModal();
+        }
+        else if (target === 'facility_update' && activeFormType === 'skills_assessment' && formRef.current) { // Keep old one just in case
             formRef.current.openFacilityModal();
         }
         else if (target === 'drafts' && activeFormType === 'skills_assessment') {
