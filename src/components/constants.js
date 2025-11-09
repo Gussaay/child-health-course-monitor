@@ -303,7 +303,8 @@ export const STATE_LOCALITIES = {
     ]
   }
 };
-export const COURSE_TYPES_FACILITATOR = ["IMNCI", "ETAT", "EENC", "IPC"];
+// --- MODIFICATION: Added ICCM ---
+export const COURSE_TYPES_FACILITATOR = ["IMNCI", "ETAT", "EENC", "IPC", "ICCM"];
 export const IMNCI_SUBCOURSE_TYPES = ["Standard 7 days course for medical assistants", "Standard 7 days course for medical doctor", "Refreshment course", "IMNCI in humanitarian setting", "online IMCI course", "preservice Course"];
 
 // EENC SKILLS UPDATED WITH SCORING TYPE
@@ -324,6 +325,54 @@ export const getClassListImnci = (age, d) => (age === "GE2M_LE5Y" ? CLASS_2_59M[
 export const JOB_TITLES_IMNCI = ["Pediatric Doctor", "Family Medicine Doctor", "General Practioner", "Medical Assistance", "Treating Nurse", "Other"];
 export const JOB_TITLES_ETAT = ["Pediatric Specialist", "Pediatric registrar", "Family Medicine Doctor", "Emergency doctor", "General Practioner", "Nurse Diploma", "Nurse Bachelor", "Other"];
 export const JOB_TITLES_EENC = ["Pediatric doctor", "Obstetric Doctor", "Emergency doctor", "General Practioner", "Nurse Diploma", "Nurse Bachelor", "Sister Midwife", "Midwife", "Other"];
+
+// --- NEW: ICCM Constants based on CSV ---
+export const SKILLS_ICCM = {
+    danger: [
+        "Not able to drink or breastfeed",
+        "Vomits everything",
+        "Convulsions",
+        "Lethargic or unconscious",
+        "Chest Indrawing"
+    ],
+    cough: [
+        "Cough for more than 2 weeks",
+        "Pneumonia",
+        "Cough/cold"
+    ],
+    diarrhoea: [
+        "Diarrhea more than 2 weeks",
+        "Dysentery"
+    ],
+    fever: [
+        "Fever more than 1 week",
+        "Malaria",
+        "Fever - malaria unlikely"
+    ],
+    malnutrition: [
+        "Severe Acute Malnutrition",
+        "Moderate Acute Malnutrition",
+        "No Acute Malnutrition"
+    ],
+    treatment: [
+        "Give pre-referral treatment",
+        "Oral amoxicillin",
+        "ORS",
+        "Oral zinc",
+        "Counselling"
+    ]
+};
+export const ICCM_DOMAIN_LABEL = {
+    danger: "Danger Signs",
+    cough: "COUGH:",
+    diarrhoea: "DIARRHOEA:",
+    fever: "FEVER:",
+    malnutrition: "MALNUTRITION",
+    treatment: "TREATMENTS Given"
+};
+export const ICCM_DOMAINS = Object.keys(SKILLS_ICCM);
+// --- END ICCM Constants ---
+
 
 // ----------------------------- HELPER FUNCTIONS --------------------------------
 export const calcPct = (c, s) => (!s ? NaN : (c * 100) / s);

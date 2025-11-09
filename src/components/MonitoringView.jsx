@@ -9,6 +9,8 @@ import {
     EENC_DOMAIN_LABEL_BREATHING, EENC_DOMAIN_LABEL_NOT_BREATHING,
     SKILLS_ETAT, ETAT_DOMAINS, ETAT_DOMAIN_LABEL,
     DOMAINS_BY_AGE_IMNCI, DOMAIN_LABEL_IMNCI, getClassListImnci,
+    // --- MODIFICATION: Import new ICCM constants ---
+    SKILLS_ICCM, ICCM_DOMAINS, ICCM_DOMAIN_LABEL,
 } from './constants.js';
 import {
     listObservationsForParticipant,
@@ -85,6 +87,8 @@ export function ObservationView({ course, participant, participants, onChangePar
     const isImnci = course.course_type === 'IMNCI';
     const isEenc = course.course_type === 'EENC';
     const isEtat = course.course_type === 'ETAT';
+    // --- MODIFICATION: Add isIccm flag ---
+    const isIccm = course.course_type === 'ICCM';
 
     const handleEditCase = (caseToEdit, allObservations) => {
         if (!caseToEdit || !allObservations) return;
@@ -190,9 +194,20 @@ export function ObservationView({ course, participant, participants, onChangePar
 
         const currentCaseSerial = editingCase ? editingCase.case_serial : caseSerial;
         const allCorrect = entries.every(([, v]) => v > 0);
+
+        // --- MODIFICATION: Determine age_group based on all course types ---
+        let ageGroup;
+        if (isImnci) ageGroup = age;
+        else if (isEenc) ageGroup = `EENC_${eencScenario}`;
+        else if (isEtat) ageGroup = 'ETAT';
+        else if (isIccm) ageGroup = 'ICCM';
+        else ageGroup = 'N/A';
+        // --- END MODIFICATION ---
+
         const caseData = {
             courseId: course.id, participant_id: participant.id, encounter_date: encounterDate,
-            setting: isImnci ? setting : 'N/A', age_group: isImnci ? age : isEenc ? `EENC_${eencScenario}` : 'ETAT',
+            setting: isImnci ? setting : 'N/A', 
+            age_group: ageGroup, // <-- Use new ageGroup variable
             case_serial: currentCaseSerial, day_of_course: dayOfCourse, allCorrect: allCorrect,
             contentHash: generateHash(buffer)
         };
@@ -312,6 +327,8 @@ export function ObservationView({ course, participant, participants, onChangePar
                     {isImnci && <ImnciMonitoringGrid age={age} buffer={buffer} toggle={toggle} />}
                     {isEenc && <EencMonitoringGrid scenario={eencScenario} buffer={buffer} toggle={toggle} />}
                     {isEtat && <EtatMonitoringGrid buffer={buffer} toggle={toggle} />}
+                    {/* --- MODIFICATION: Add ICCM monitoring grid --- */}
+                    {isIccm && <IccmMonitoringGrid buffer={buffer} toggle={toggle} />}
                 </div>
                 {/* This button layout is already mobile-friendly (flex-col -> sm:flex-row) */}
                 <div className="flex flex-col sm:flex-row gap-3 justify-end mt-4 border-t pt-4">
@@ -609,9 +626,93 @@ function EencMonitoringGrid({ scenario, buffer, toggle }) {
     );
 }
 
+// --- NEW COMPONENT: IccmMonitoringGrid (copied from EtatMonitoringGrid) ---
+function IccmMonitoringGrid({ buffer, toggle }) {
+    const allDomains = ICCM_DOMAINS; 
+    const [expandedDomains, setExpandedDomains] = useState(new Set(allDomains.slice(0, 2)));
+
+    const toggleDomain = (domain) => {
+        setExpandedDomains(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(domain)) newSet.delete(domain);
+            else newSet.add(domain);
+            return newSet;
+        });
+    };
+
+    // Define the options for the toggle
+    const toggleOptions = [
+        ['Correct', 1, 'bg-green-600 border-green-600'],
+        ['Incorrect', 0, 'bg-red-600 border-red-600']
+    ];
+
+    return (
+        <>
+            {/* This header is now outside the scrollable area */}
+            <div className="flex gap-2 p-2 bg-slate-50 border-b border-slate-300">
+                <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set(allDomains))}>Expand All</Button>
+                <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set())}>Collapse All</Button>
+            </div>
+
+            {/* Added wrapper with overflow-x-auto to make only the table scroll */}
+            <div className="overflow-x-auto">
+                {/* Added w-full to ensure table fills container or overflows */}
+                <table className="text-sm border-collapse mx-auto w-full">
+                    <thead className="bg-slate-50 text-slate-800">
+                        {/* Changed to a single column header */}
+                        <tr>
+                            <th className="p-1 text-left font-semibold border border-slate-300">Domain / Skill / Action</th>
+                        </tr>
+                    </thead>
+                    {allDomains.map(d => {
+                        const isExpanded = expandedDomains.has(d);
+                        const skills = SKILLS_ICCM[d]; // <-- Use ICCM Skills
+                        const title = ICCM_DOMAIN_LABEL[d] || d; // <-- Use ICCM Labels
+
+                        return (
+                            <tbody key={d}>
+                                <tr onClick={() => toggleDomain(d)} className="cursor-pointer hover:bg-sky-200 bg-sky-100">
+                                    <td className="p-2 text-base font-bold text-sky-900 border border-slate-300">
+                                        <span className="inline-block w-5 text-center">{isExpanded ? '▼' : '►'}</span>
+                                        {title}
+                                    </td>
+                                </tr>
+                                {isExpanded && skills.map((skill, i) => {
+                                    const k = `${d}|${skill}`;
+                                    const mark = buffer[k];
+                                    return (
+                                        <tr key={`${d}-${i}`} className="hover:bg-sky-50">
+                                            <td className="p-1 pl-6 border border-slate-300">
+                                                {/* Changed to flex-col/sm:flex-row for mobile responsiveness */}
+                                                <div className="flex flex-col sm:flex-row justify-between sm:items-center w-full gap-2">
+                                                    {/* Made skill text bold */}
+                                                    <span className="break-words font-bold">{skill}</span>
+                                                    <ActionToggle
+                                                        options={toggleOptions}
+                                                        currentValue={mark}
+                                                        onClick={(value) => toggle(d, skill, value)}
+                                                    />
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+
+                                })}
+                            </tbody>
+                        );
+                    })}
+                </table>
+            </div>
+        </>
+    );
+}
+// --- END NEW COMPONENT ---
+
+
 function SubmittedCases({ course, participant, observations, cases, onEditCase, onDeleteCase }) {
     const isImnci = course.course_type === 'IMNCI';
     const isEenc = course.course_type === 'EENC';
+    // NOTE: No isIccm needed here; logic defaults correctly
 
     const [dayFilter, setDayFilter] = useState('all');
     const [settingFilter, setSettingFilter] = useState('all');
@@ -628,6 +729,7 @@ function SubmittedCases({ course, participant, observations, cases, onEditCase, 
                 const percentage = calcPct(score, maxScore);
                 rowData = { ...rowData, score, percentage };
             } else {
+                // This block works for IMNCI, ETAT, and ICCM
                 const total = relatedObs.length;
                 const correct = relatedObs.filter(o => o.item_correct > 0).length;
                 const pct = calcPct(correct, total);
@@ -651,7 +753,7 @@ function SubmittedCases({ course, participant, observations, cases, onEditCase, 
     const getAgeLabel = (age) => {
         if (isImnci) { return age === 'LT2M' ? '0-59 d' : '2-59 m'; }
         if (isEenc) { return age?.includes('breathing') ? (age.includes('not_breathing') ? 'Not Breathing' : 'Breathing') : age; }
-        return age;
+        return age; // This will return 'ETAT' or 'ICCM'
     };
 
     const headers = isEenc

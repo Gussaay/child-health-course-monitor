@@ -131,10 +131,17 @@ const generateFullCourseReportPdf = async (course, overallChartRef, dailyChartRe
 // --- ADDED: HospitalIcon component (moved from App.jsx) ---
 const HospitalIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v2.85c-.9.17-1.72.6-2.43 1.24L4.3 11.2a1 1 0 0 0-.2 1.39l.2.2c.45.6.84 1.34 1.36 2.14L6 15l2.43-1.6c.71-.48 1.54-.74 2.43-.84V14a1 1 0 0 0 1 1h2c.7 0 1.25-.56 1.25-1.25S15.7 12.5 15 12.5V11a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v1.5a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5V9.85c-.9-.1-1.72-.36-2.43-.84L4.3 7.8a1 1 0 0 0-.2-1.39l.2-.2c.45-.6.84-1.34 1.36-2.14L6 3l2.43 1.6c.71.48 1.54-.74 2.43 .84V5a3 3 0 0 0-3-3zM12 22v-2a3 3 0 0 0-3-3h-2a3 3 0 0 0-3 3v2zM18 22v-2a3 3 0 0 0-3-3h-2a3 3 0 0 0-3 3v2z"></path><path d="M12 18.5V22"></path><path d="M12 11h-2"></path><path d="M14 11h2"></path><path d="M18 11h2"></path></svg>;
 
+// --- ADDED: New Icons for Course Packages ---
+const IccmIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline><path d="M12 9v6"></path><path d="M9 12h6"></path></svg>;
+const IpcIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M12 11v4"></path><path d="M10 13h4"></path></svg>;
+const NewbornIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 9c0-2-1.5-3.5-4-3.5C7.5 5.5 6 7 6 9c0 1.5.5 2.5 1 3.5h0l-1 4.5h10L17 17l-1-4.5h0c.5-1 1-2.5 1-3.5z"></path><path d="M12 18h.01"></path><path d="M10.5 21v-1.5h3V21"></path></svg>;
+
 // --- ADDED: Landing component (moved from App.jsx) ---
 const Landing = React.memo(function Landing({ active, onPick }) {
     const items = [
         { key: 'IMNCI', title: 'Integrated Management of Newborn and Childhood Illnesses (IMNCI)', enabled: true },
+        // --- NEW COURSE TYPE ---
+        { key: 'ICCM', title: 'Integrated Community case management for under 5 children (iCCM)', enabled: true },
         { key: 'ETAT', title: 'Emergency Triage, Assessment & Treatment (ETAT)', enabled: true },
         { key: 'EENC', title: 'Early Essential Newborn Care (EENC)', enabled: true },
         { key: 'IPC', title: 'Infection Prevention & Control (Neonatal Unit)', enabled: true },
@@ -148,10 +155,12 @@ const Landing = React.memo(function Landing({ active, onPick }) {
                 {items.map(it => (
                     <button key={it.key} disabled={!it.enabled} className={`border rounded-lg p-6 text-left transition-all duration-200 ${active === it.key ? 'ring-2 ring-sky-500 shadow-lg' : ''} ${it.enabled ? 'hover:shadow-md hover:scale-105' : 'opacity-60 cursor-not-allowed bg-gray-50'}`} onClick={() => it.enabled && onPick(it.key)}>
                         <div className="flex items-center gap-4">
-                            {(it.key === 'IPC' || it.key === 'Small & Sick Newborn')
-                                ? <HospitalIcon className="w-10 h-10 text-slate-500 flex-shrink-0" />
-                                : <CourseIcon course={it.key} />
-                            }
+                            {/* --- MODIFIED: Use specific icons for ICCM, IPC, and Newborn --- */}
+                            {it.key === 'ICCM' ? <IccmIcon className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
+                             it.key === 'IPC' ? <IpcIcon className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
+                             it.key === 'Small & Sick Newborn' ? <NewbornIcon className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
+                                <CourseIcon course={it.key} />
+                             }
                             <div>
                                 <div className="font-semibold text-gray-800">{it.title}</div>
                                 <div className="text-xs text-gray-500 mt-1">{it.enabled ? 'Click to manage courses' : 'Coming Soon'}</div>
@@ -681,6 +690,7 @@ export function CourseForm({
     const [isModalLoading, setIsModalLoading] = useState(false);
     // --- END NEW STATE ---
 
+    // --- MODIFIED: Default to first type for IMNCI, but will be overridden for ICCM ---
     const [directorImciSubType, setDirectorImciSubType] = useState(initialData?.director_imci_sub_type || IMNCI_SUBCOURSE_TYPES[0]);
     const [clinicalImciSubType, setClinicalImciSubType] = useState(initialData?.clinical_instructor_imci_sub_type || IMNCI_SUBCOURSE_TYPES[0]);
 
@@ -690,11 +700,21 @@ export function CourseForm({
         'Neonatal Sepsis Surveillance',
     ];
 
+    // --- NEW: Default subcourse for ICCM (used internally) ---
+    const ICCM_SUBCOURSE_TYPES = ['ICCM Community Module'];
+
     const COURSE_GROUPS = ['Group A', 'Group B', 'Group C', 'Group D'];
+
+    // --- MODIFIED: Check for ICCM type ---
+    const isImnci = courseType === 'IMNCI';
+    const isInfectionControl = courseType === 'IPC';
+    const isIccm = courseType === 'ICCM';
 
     const [groups, setGroups] = useState(initialData?.facilitatorAssignments ? [...new Set(initialData.facilitatorAssignments.map(a => a.group))] : ['Group A']);
 
     const [facilitatorGroups, setFacilitatorGroups] = useState(() => {
+        // --- MODIFIED: Set default subcourse for ICCM ---
+        const defaultSubcourse = isIccm ? ICCM_SUBCOURSE_TYPES[0] : '';
         if (initialData?.facilitatorAssignments?.length > 0) {
             const groups = {};
             initialData.facilitatorAssignments.forEach(assignment => {
@@ -714,13 +734,11 @@ export function CourseForm({
             });
             return groups;
         }
-        return { 'Group A': [{ imci_sub_type: '', name: '' }] };
+        // --- MODIFIED: Set default subcourse for ICCM ---
+        return { 'Group A': [{ imci_sub_type: defaultSubcourse, name: '' }] };
     });
 
     const [error, setError] = useState('');
-
-    const isImnci = courseType === 'IMNCI';
-    const isInfectionControl = courseType === 'IPC';
 
     const directorOptions = useMemo(() => {
         return facilitatorsList
@@ -738,10 +756,23 @@ export function CourseForm({
         return facilitatorsList
             .filter(f => {
                 const fCourses = Array.isArray(f.courses) ? f.courses : [];
-                return fCourses.includes(isInfectionControl ? 'IPC' : courseType);
+                
+                // --- MODIFIED: Implement new ICCM/IMNCI rule ---
+                if (isIccm) {
+                    // For ICCM, accept facilitators trained in ICCM OR IMNCI
+                    return fCourses.includes('ICCM') || fCourses.includes('IMNCI');
+                }
+                // --- END MODIFICATION ---
+
+                if (isInfectionControl) {
+                    return fCourses.includes('IPC');
+                }
+                
+                // Default for IMNCI, ETAT, EENC, etc.
+                return fCourses.includes(courseType);
             })
             .sort((a, b) => a.name.localeCompare(b.name));
-    }, [facilitatorsList, courseType, isInfectionControl]);
+    }, [facilitatorsList, courseType, isInfectionControl, isIccm]); // Added isIccm dependency
 
     const federalCoordinatorOptions = useMemo(() => {
         return federalCoordinatorsList.map(c => ({ id: c.id, name: c.name }));
@@ -787,9 +818,11 @@ export function CourseForm({
     }, [fundersList]);
 
     const addFacilitatorToGroup = (groupName) => {
+        // --- MODIFIED: Set default subcourse for ICCM ---
+        const defaultSubcourse = isIccm ? ICCM_SUBCOURSE_TYPES[0] : '';
         setFacilitatorGroups(prev => ({
             ...prev,
-            [groupName]: [...prev[groupName], { imci_sub_type: '', name: '' }]
+            [groupName]: [...prev[groupName], { imci_sub_type: defaultSubcourse, name: '' }]
         }));
     };
 
@@ -810,11 +843,13 @@ export function CourseForm({
     const addGroup = () => {
         const nextGroupIndex = groups.length;
         if (nextGroupIndex < COURSE_GROUPS.length) {
+            // --- MODIFIED: Set default subcourse for ICCM ---
+            const defaultSubcourse = isIccm ? ICCM_SUBCOURSE_TYPES[0] : '';
             const newGroup = COURSE_GROUPS[nextGroupIndex];
             setGroups(prev => [...prev, newGroup]);
             setFacilitatorGroups(prev => ({
                 ...prev,
-                [newGroup]: [{ imci_sub_type: '', name: '' }]
+                [newGroup]: [{ imci_sub_type: defaultSubcourse, name: '' }]
             }));
         }
     };
@@ -833,7 +868,14 @@ export function CourseForm({
             const groupAssignments = facilitatorGroups[group].map(assignment => ({
                 ...assignment,
                 group: group
-            })).filter(assignment => assignment.name && assignment.imci_sub_type);
+                // --- MODIFIED: Ensure sub-type is set for ICCM ---
+            })).filter(assignment => assignment.name && (assignment.imci_sub_type || isIccm));
+            
+            // --- MODIFIED: Auto-assign sub-type if ICCM ---
+            if (isIccm) {
+                groupAssignments.forEach(a => a.imci_sub_type = ICCM_SUBCOURSE_TYPES[0]);
+            }
+            
             return [...acc, ...groupAssignments];
         }, []);
 
@@ -875,10 +917,12 @@ export function CourseForm({
             course_type: courseType, 
         };
 
-        if (isImnci) {
+        // --- MODIFIED: Include ICCM in leadership logic ---
+        if (isImnci || isIccm) {
             payload.clinical_instructor = clinical;
-            payload.director_imci_sub_type = directorImciSubType;
-            payload.clinical_instructor_imci_sub_type = clinicalImciSubType;
+            // --- MODIFIED: Set default for ICCM, use state for IMNCI ---
+            payload.director_imci_sub_type = isIccm ? ICCM_SUBCOURSE_TYPES[0] : directorImciSubType;
+            payload.clinical_instructor_imci_sub_type = isIccm ? ICCM_SUBCOURSE_TYPES[0] : clinicalImciSubType;
         }
 
         onSave(payload);
@@ -1112,6 +1156,7 @@ export function CourseForm({
                                             label="Course Director"
                                         />
                                     </FormGroup>
+                                    {/* --- MODIFIED: Show only for IMNCI --- */}
                                     {isImnci && (
                                         <FormGroup label="IMNCI Subcourse for Director">
                                             <Select value={directorImciSubType} onChange={(e) => setDirectorImciSubType(e.target.value)} className="w-full">
@@ -1121,7 +1166,8 @@ export function CourseForm({
                                     )}
                                 </div>
 
-                                {isImnci && (
+                                {/* --- MODIFIED: Show for IMNCI and ICCM --- */}
+                                {(isImnci || isIccm) && (
                                     <div className="space-y-2">
                                         <FormGroup label="Clinical Instructor (Optional)">
                                             <SearchableSelect
@@ -1133,11 +1179,14 @@ export function CourseForm({
                                                 label="Clinical Instructor"
                                             />
                                         </FormGroup>
-                                        <FormGroup label="IMNCI Subcourse for Clinical Instructor (Optional)">
-                                            <Select value={clinicalImciSubType} onChange={(e) => setClinicalImciSubType(e.target.value)} className="w-full">
-                                                {IMNCI_SUBCOURSE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
-                                            </Select>
-                                        </FormGroup>
+                                        {/* --- MODIFIED: Show only for IMNCI --- */}
+                                        {isImnci && (
+                                            <FormGroup label="IMNCI Subcourse for Clinical Instructor (Optional)">
+                                                <Select value={clinicalImciSubType} onChange={(e) => setClinicalImciSubType(e.target.value)} className="w-full">
+                                                    {IMNCI_SUBCOURSE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
+                                                </Select>
+                                            </FormGroup>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -1152,19 +1201,24 @@ export function CourseForm({
                                     <h4 className="text-md font-semibold mb-2">{groupName}</h4>
                                     {facilitatorGroups[groupName]?.map((assignment, index) => (
                                         <div key={index} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                                            <FormGroup label="Subcourse Type">
-                                                <Select
-                                                    value={assignment.imci_sub_type || ''}
-                                                    onChange={(e) => updateFacilitatorAssignment(groupName, index, 'imci_sub_type', e.target.value)}
-                                                    className="w-full"
-                                                >
-                                                    <option value="">— Select Subcourse —</option>
-                                                    {(isImnci ? IMNCI_SUBCOURSE_TYPES : INFECTION_CONTROL_SUBCOURSE_TYPES).map(type => (
-                                                        <option key={type} value={type}>{type}</option>
-                                                    ))}
-                                                </Select>
-                                            </FormGroup>
-                                            <FormGroup label="Facilitator Name">
+                                            {/* --- MODIFIED: Hide Subcourse selection for ICCM --- */}
+                                            {!isIccm && (
+                                                <FormGroup label="Subcourse Type">
+                                                    <Select
+                                                        value={assignment.imci_sub_type || ''}
+                                                        onChange={(e) => updateFacilitatorAssignment(groupName, index, 'imci_sub_type', e.target.value)}
+                                                        className="w-full"
+                                                    >
+                                                        <option value="">— Select Subcourse —</option>
+                                                        {/* --- MODIFIED: Handle subcourse types --- */}
+                                                        {(isImnci ? IMNCI_SUBCOURSE_TYPES : (isIccm ? ICCM_SUBCOURSE_TYPES : INFECTION_CONTROL_SUBCOURSE_TYPES)).map(type => (
+                                                            <option key={type} value={type}>{type}</option>
+                                                        ))}
+                                                    </Select>
+                                                </FormGroup>
+                                            )}
+                                            {/* --- MODIFIED: Adjust grid for ICCM --- */}
+                                            <FormGroup label="Facilitator Name" className={isIccm ? "lg:col-span-2" : ""}>
                                                 <SearchableSelect
                                                     value={assignment.name}
                                                     onChange={(value) => updateFacilitatorAssignment(groupName, index, 'name', value)}
@@ -1266,7 +1320,7 @@ export function PublicCourseMonitoringView({ course, allParticipants }) {
     };
 
     const handleParticipantChange = (e) => {
-        setSelectedParticipantId(e.target.value);
+        setSelectedParticipantId(e.g.value);
     };
 
     return (

@@ -134,7 +134,8 @@ export function ParticipantReportView({ course, participant, participants, onCha
     }, [casesWithCorrectness]);
 
     const detailedPerformance = useMemo(() => {
-        if (observations.length === 0) return course.course_type === 'IMNCI' ? { LT2M: [], GE2M_LE5Y: [] } : [];
+        // --- MODIFIED: Added ICCM ---
+        if (observations.length === 0) return (course.course_type === 'IMNCI' || course.course_type === 'ICCM') ? { LT2M: [], GE2M_LE5Y: [] } : [];
 
         const processSkills = (obs, isEenc) => {
             const skills = {};
@@ -153,7 +154,8 @@ export function ParticipantReportView({ course, participant, participants, onCha
             return skills;
         };
 
-        if (course.course_type === 'IMNCI') {
+        // --- MODIFIED: Added ICCM ---
+        if (course.course_type === 'IMNCI' || course.course_type === 'ICCM') {
             const performanceByAge = { LT2M: [], GE2M_LE5Y: [] };
             for (const ageGroup in DOMAINS_BY_AGE_IMNCI) {
                 const ageGroupDomains = DOMAINS_BY_AGE_IMNCI[ageGroup];
@@ -302,7 +304,9 @@ export function ParticipantReportView({ course, participant, participants, onCha
     };
 
     const excludedImnciSubtypes = ["Standard 7 days course for Medical Doctors", "Standard 7 days course for Medical Assistance", "Refreshment IMNCI Course"];
-    const showTestScores = course.course_type !== 'IMNCI' || (course.course_type === 'IMNCI' && !excludedImnciSubtypes.includes(participant.imci_sub_type));
+    // --- MODIFIED: Added ICCM ---
+    const showTestScores = (course.course_type !== 'IMNCI' && course.course_type !== 'ICCM') || 
+                           ((course.course_type === 'IMNCI' || course.course_type === 'ICCM') && !excludedImnciSubtypes.includes(participant.imci_sub_type));
 
     if (loading) return <Card><Spinner /></Card>;
 
@@ -328,9 +332,15 @@ export function ParticipantReportView({ course, participant, participants, onCha
 
     const hasKpiData = kpiStats.totalSkills > 0;
     const hasTestScores = showTestScores && (participant.pre_test_score != null || participant.post_test_score != null);
+    // --- MODIFIED: Only show chart for IMNCI ---
     const hasChartData = course.course_type === 'IMNCI' && casePerformanceByDay.length > 0;
-    const hasDomainData = (course.course_type === 'IMNCI' && (detailedPerformance.LT2M.length > 0 || detailedPerformance.GE2M_LE5Y.length > 0)) || (course.course_type !== 'IMNCI' && detailedPerformance.length > 0);
+    // --- MODIFIED: Added ICCM ---
+    const hasDomainData = ((course.course_type === 'IMNCI' || course.course_type === 'ICCM') && (detailedPerformance.LT2M.length > 0 || detailedPerformance.GE2M_LE5Y.length > 0)) || 
+                          (!['IMNCI', 'ICCM'].includes(course.course_type) && detailedPerformance.length > 0);
     const hasCaseData = casesWithCorrectness.length > 0;
+    
+    // --- NEW: Label for center_name column ---
+    const centerNameLabel = course.course_type === 'ICCM' ? 'Village' : 'Setting';
 
     return (
         <div className="space-y-6">
@@ -466,7 +476,8 @@ export function ParticipantReportView({ course, participant, participants, onCha
                     <Card>
                         <h3 className="text-xl font-bold mb-4">Detailed Skill Performance by Domain</h3>
                         <div className="space-y-4">
-                        {course.course_type === 'IMNCI' ? (
+                        {/* --- MODIFIED: Added ICCM --- */}
+                        {(course.course_type === 'IMNCI' || course.course_type === 'ICCM') ? (
                             Object.entries(detailedPerformance).map(([ageGroup, domains]) => (
                                 (domains.length > 0 &&
                                 <div key={ageGroup} className="p-4 border rounded-lg bg-white space-y-3 shadow-sm">
@@ -539,40 +550,71 @@ export function ParticipantReportView({ course, participant, participants, onCha
                     <Card>
                         <h3 className="text-xl font-bold mb-4">All Cases Summary</h3>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 p-4 border rounded-lg bg-gray-50">
-                            <FormGroup label="Filter by Setting">
-                                <Select value={settingFilter} onChange={e => setSettingFilter(e.target.value)}>
-                                    <option value="all">All Settings</option>
-                                    <option value="OPD">Out-Patient (OPD)</option>
-                                    <option value="IPD">In-Patient (IPD)</option>
-                                </Select>
-                            </FormGroup>
-                            <FormGroup label="Filter by Day">
-                                <Select value={dayFilter} onChange={e => setDayFilter(e.target.value)}>
-                                    <option value="all">All Days</option>
-                                    {uniqueCourseDays.map(day => (
-                                        <option key={day} value={day}>Day {day}</option>
-                                    ))}
-                                </Select>
-                            </FormGroup>
-                            <FormGroup label="Filter by Status">
-                                <Select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-                                    <option value="all">All Cases</option>
-                                    <option value="correct">Correct Only</option>
-                                    <option value="incorrect">Incorrect Only</option>
-                                </Select>
-                            </FormGroup>
-                            <div className="flex items-end">
-                                <Button variant="secondary" onClick={() => {
-                                    setSettingFilter('all');
-                                    setDayFilter('all');
-                                    setStatusFilter('all');
-                                }}>Reset Filters</Button>
+                        {/* --- MODIFIED: Hide setting filter for ICCM --- */}
+                        {course.course_type !== 'ICCM' && (
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 p-4 border rounded-lg bg-gray-50">
+                                <FormGroup label="Filter by Setting">
+                                    <Select value={settingFilter} onChange={e => setSettingFilter(e.target.value)}>
+                                        <option value="all">All Settings</option>
+                                        <option value="OPD">Out-Patient (OPD)</option>
+                                        <option value="IPD">In-Patient (IPD)</option>
+                                    </Select>
+                                </FormGroup>
+                                <FormGroup label="Filter by Day">
+                                    <Select value={dayFilter} onChange={e => setDayFilter(e.target.value)}>
+                                        <option value="all">All Days</option>
+                                        {uniqueCourseDays.map(day => (
+                                            <option key={day} value={day}>Day {day}</option>
+                                        ))}
+                                    </Select>
+                                </FormGroup>
+                                <FormGroup label="Filter by Status">
+                                    <Select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+                                        <option value="all">All Cases</option>
+                                        <option value="correct">Correct Only</option>
+                                        <option value="incorrect">Incorrect Only</option>
+                                    </Select>
+                                </FormGroup>
+                                <div className="flex items-end">
+                                    <Button variant="secondary" onClick={() => {
+                                        setSettingFilter('all');
+                                        setDayFilter('all');
+                                        setStatusFilter('all');
+                                    }}>Reset Filters</Button>
+                                </div>
                             </div>
-                        </div>
+                        )}
+                        {/* --- MODIFIED: Show simplified filters for ICCM --- */}
+                        {course.course_type === 'ICCM' && (
+                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 p-4 border rounded-lg bg-gray-50">
+                                <FormGroup label="Filter by Day">
+                                    <Select value={dayFilter} onChange={e => setDayFilter(e.target.value)}>
+                                        <option value="all">All Days</option>
+                                        {uniqueCourseDays.map(day => (
+                                            <option key={day} value={day}>Day {day}</option>
+                                        ))}
+                                    </Select>
+                                </FormGroup>
+                                <FormGroup label="Filter by Status">
+                                    <Select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+                                        <option value="all">All Cases</option>
+                                        <option value="correct">Correct Only</option>
+                                        <option value="incorrect">Incorrect Only</option>
+                                    </Select>
+                                </FormGroup>
+                                <div className="flex items-end">
+                                    <Button variant="secondary" onClick={() => {
+                                        setDayFilter('all');
+                                        setStatusFilter('all');
+                                    }}>Reset Filters</Button>
+                                </div>
+                            </div>
+                        )}
+
 
                         <div className="overflow-x-auto">
-                            <Table headers={["Case #", "Age Group", "Setting", "Day of Course", "Overall Status", "Classifications"]}>
+                            {/* --- MODIFIED: Use new centerNameLabel and hide setting column for ICCM --- */}
+                            <Table headers={["Case #", "Age Group", ...(course.course_type !== 'ICCM' ? [centerNameLabel] : []), "Day of Course", "Overall Status", "Classifications"]}>
                                 {filteredCases.length > 0 ? (
                                     filteredCases.map((c, index) => {
                                         const caseObservations = observations.filter(obs => obs.caseId === c.id);
@@ -584,7 +626,7 @@ export function ParticipantReportView({ course, participant, participants, onCha
                                             <tr key={c.id} className="hover:bg-gray-100 cursor-pointer" onClick={() => handleCaseClick(c)}>
                                                 <td className="p-2 border align-top font-medium">{index + 1}</td>
                                                 <td className="p-2 border align-top">{ageGroupLabel}</td>
-                                                <td className="p-2 border align-top">{c.setting || 'N/A'}</td>
+                                                {course.course_type !== 'ICCM' && <td className="p-2 border align-top">{c.setting || 'N/A'}</td>}
                                                 <td className="p-2 border align-top">{c.day_of_course || '1'}</td>
                                                 <td className={`p-2 border align-top font-semibold ${c.is_correct ? 'text-green-600' : 'text-red-600'}`}>
                                                     {c.is_correct ? 'Correct' : 'Incorrect'}
@@ -605,7 +647,7 @@ export function ParticipantReportView({ course, participant, participants, onCha
                                     })
                                 ) : (
                                     <tr>
-                                        <td colSpan="6" className="text-center p-4">
+                                        <td colSpan={course.course_type !== 'ICCM' ? 6 : 5} className="text-center p-4">
                                             <EmptyState message="No cases match the current filters." />
                                         </td>
                                     </tr>

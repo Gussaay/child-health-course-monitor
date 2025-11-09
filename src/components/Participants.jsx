@@ -184,9 +184,11 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, co
     const [nonStandardValues, setNonStandardValues] = useState([]);
     const [mappings, setMappings] = useState({});
 
+    // --- MODIFIED: Added ICCM ---
     const jobTitleOptions = useMemo(() => {
         if (courseType === 'ETAT') return JOB_TITLES_ETAT;
         if (courseType === 'EENC') return JOB_TITLES_EENC;
+        // Default to IMNCI/ICCM titles
         return ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
     }, [courseType]);
 
@@ -221,7 +223,8 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, co
             },
         };
 
-        if (courseType === 'IMNCI') {
+        // --- MODIFIED: Added ICCM ---
+        if (courseType === 'IMNCI' || courseType === 'ICCM') {
             config['imci_sub_type'] = {
                 label: 'IMCI Sub-type',
                 standardValues: IMNCI_SUBCOURSE_TYPES,
@@ -390,9 +393,11 @@ const BulkChangeModal = ({ isOpen, onClose, participants, onSave, courseType }) 
     const [fromValue, setFromValue] = useState('');
     const [toValue, setToValue] = useState('');
 
+    // --- MODIFIED: Added ICCM ---
     const jobTitleOptions = useMemo(() => {
         if (courseType === 'ETAT') return JOB_TITLES_ETAT;
         if (courseType === 'EENC') return JOB_TITLES_EENC;
+        // Default to IMNCI/ICCM titles
         return ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
     }, [courseType]);
 
@@ -516,9 +521,11 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
     const [validationIssues, setValidationIssues] = useState([]);
     const [userCorrections, setUserCorrections] = useState({});
 
+    // --- MODIFIED: Added ICCM ---
     const jobTitleOptions = useMemo(() => {
         if (course.course_type === 'ETAT') return JOB_TITLES_ETAT;
         if (course.course_type === 'EENC') return JOB_TITLES_EENC;
+        // Default to IMNCI/ICCM titles
         return ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
     }, [course.course_type]);
 
@@ -538,6 +545,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
         }
     }, [isOpen]);
 
+    // --- MODIFIED: Added ICCM logic ---
     const allFields = useMemo(() => [
         { key: 'id', label: 'ID (for updates)' },
         { key: 'name', label: 'Name', required: true },
@@ -545,7 +553,8 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
         { key: 'email', label: 'Email' },
         { key: 'state', label: 'State', required: true },
         { key: 'locality', label: 'Locality', required: true },
-        { key: 'center_name', label: 'Health Facility Name', required: true },
+        // --- MODIFIED: Label changes for ICCM ---
+        { key: 'center_name', label: course.course_type === 'ICCM' ? 'Village Name' : 'Health Facility Name', required: true },
         { key: 'job_title', label: 'Job Title', required: true },
         { key: 'phone', label: 'Phone Number' },
         { key: 'pre_test_score', label: 'Pre-Test Score' },
@@ -563,6 +572,13 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
             { key: 'nearest_immunization_center', label: 'Nearest immunization center?' },
             { key: 'has_ors_room', label: 'Has ORS corner service?' },
             { key: 'has_growth_monitoring', label: 'Has Growth Monitoring Service?' }
+        ] : []),
+        // --- NEW: ICCM specific fields ---
+        ...(course.course_type === 'ICCM' ? [
+            { key: 'trained_before', label: 'Previously trained in IMCI/ICCM?' },
+            { key: 'last_imci_training', label: 'Date of last training' },
+            { key: 'nearest_health_facility', label: 'Nearest Health Facility' },
+            { key: 'hours_to_facility', label: 'Hours to Facility (on foot)' },
         ] : []),
         ...(course.course_type === 'ETAT' ? [ { key: 'hospital_type', label: 'Hospital Type' }, { key: 'trained_etat_before', label: 'Previously trained on ETAT?' }, ] : []),
         ...(course.course_type === 'EENC' ? [ { key: 'hospital_type', label: 'Hospital Type' }, { key: 'trained_eenc_before', label: 'Previously trained on EENC?' }, ] : [])
@@ -692,12 +708,28 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
                 }
             });
 
+            // --- MODIFIED: Use new label for ICCM ---
+            const centerNameLabel = course.course_type === 'ICCM' ? 'Village Name' : 'Health Facility Name';
             if (!participant.name || !participant.state || !participant.locality || !participant.center_name) {
+                // Check if all required fields are present
+                const missing = [];
+                if (!participant.name) missing.push("Name");
+                if (!participant.state) missing.push("State");
+                if (!participant.locality) missing.push("Locality");
+                if (!participant.center_name) missing.push(centerNameLabel);
+                
+                console.warn(`Skipping row due to missing required fields: ${missing.join(', ')}`, row);
                 return;
             }
 
             participantsToImport.push(participant);
 
+            // --- MODIFIED: Skip facility updates for ICCM ---
+            if (course.course_type === 'ICCM') {
+                return; // Don't create facility update payloads for ICCM
+            }
+
+            // --- Facility Update Logic (IMNCI only) ---
             const facilityKey = `${participant.state}-${participant.locality}-${participant.center_name}`;
             const existingPayload = facilityUpdatesMap.get(facilityKey) || {};
 
@@ -751,7 +783,8 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
             <div>
                 <h3 className="text-lg font-semibold mb-2">Review & Confirm Import</h3>
                 <p className="text-sm text-gray-600 mb-4">
-                    Found <strong>{excelData.length}</strong> participants to import. This will create or update facility records accordingly.
+                    Found <strong>{excelData.length}</strong> participants to import.
+                    {course.course_type === 'IMNCI' && " This will create or update facility records accordingly."}
                 </p>
                 {validationIssues.length > 0 && (
                     <div className="mb-4">
@@ -907,12 +940,19 @@ export function ParticipantMigrationMappingView({ course, participants, onCancel
                 // Fetch the selected facility to get its name for the payload
                 const facility = (facilityOptions[participantId] || []).find(f => f.id === mapping.targetFacilityId);
                 if (facility) {
+                     // --- MODIFICATION: Check if this migration will introduce IMNCI ---
+                     // Check if the target facility already provides IMNCI service
+                     const facilityHadImnci = facility['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes';
+                     const introducedImnci = !facilityHadImnci; // Set flag if it did NOT have IMNCI
+                     // --- END MODIFICATION ---
+
                      payload.push({
                         participantId,
                         targetFacilityId: mapping.targetFacilityId,
                         targetState: mapping.targetState,
                         targetLocality: mapping.targetLocality,
                         targetFacilityName: facility['اسم_المؤسسة'],
+                        introduced_imci_to_facility: introducedImnci // Pass this flag
                     });
                 }
             }
@@ -1082,6 +1122,9 @@ export function ParticipantsView({
             console.error("Cleanup failed", err);
         }
     };
+    
+    // --- NEW: Label for center_name column ---
+    const centerNameLabel = course.course_type === 'ICCM' ? 'Village Name' : 'Facility Name';
 
     return (
         <Card>
@@ -1158,7 +1201,8 @@ export function ParticipantsView({
 
             {/* Desktop View */}
             <div className="hidden md:block">
-                <Table headers={["Name", "Group", "Job Title", "Facility Name", "Locality", "Actions"]}>
+                {/* --- MODIFIED: Use centerNameLabel --- */}
+                <Table headers={["Name", "Group", "Job Title", centerNameLabel, "Locality", "Actions"]}>
                     {filtered.length > 0 && filtered.map(p => {
                         // --- NEW LOGIC for active/inactive course permissions ---
                         const canEdit = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
@@ -1199,6 +1243,7 @@ export function ParticipantsView({
                                 <div>
                                     <h3 className="font-bold text-lg text-gray-800">{p.name}</h3>
                                     <p className="text-gray-600">{p.job_title}</p>
+                                    {/* --- MODIFIED: Use center_name --- */}
                                     <p className="text-gray-600 text-sm">{p.center_name}
                                         {p.locality && <span className="text-gray-500"> ({p.locality})</span>}
                                     </p>
@@ -1374,24 +1419,30 @@ const AddFacilityModal = ({ isOpen, onClose, onSaveSuccess, initialState, initia
 
 // --- Participant Form Component (Main logic) ---
 export function ParticipantForm({ course, initialData, onCancel, onSave }) {
+    // --- MODIFIED: Added isIccm ---
     const isImnci = course.course_type === 'IMNCI';
+    const isIccm = course.course_type === 'ICCM';
     const isEtat = course.course_type === 'ETAT';
     const isEenc = course.course_type === 'EENC';
 
     const excludedImnciSubtypes = ["Standard 7 days course for Medical Doctors", "Standard 7 days course for Medical Assistance", "Refreshment IMNCI Course"];
-    const showTestScores = !isImnci || (isImnci && !excludedImnciSubtypes.includes(initialData?.imci_sub_type));
+    // --- MODIFIED: Added ICCM ---
+    const showTestScores = !(isImnci || isIccm) || ((isImnci || isIccm) && !excludedImnciSubtypes.includes(initialData?.imci_sub_type));
 
+    // --- MODIFIED: Added ICCM ---
     const jobTitleOptions = useMemo(() => {
         if (isEtat) return JOB_TITLES_ETAT;
         if (isEenc) return JOB_TITLES_EENC;
+        // Default to IMNCI/ICCM titles
         return ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
-    }, [isImnci, isEtat, isEenc]);
+    }, [isIccm, isImnci, isEtat, isEenc]);
 
     // Participant States
     const [name, setName] = useState(initialData?.name || '');
     const [email, setEmail] = useState(initialData?.email || '');
     const [state, setState] = useState(initialData?.state || course?.state || ''); // Default to course state
     const [locality, setLocality] = useState(initialData?.locality || course?.locality || ''); // Default to course locality
+    // --- MODIFIED: This now holds Facility Name or Village Name ---
     const [center, setCenter] = useState(initialData?.center_name || ''); // This holds the facility *name*
     const [phone, setPhone] = useState(initialData?.phone || '');
     const [group, setGroup] = useState(initialData?.group || 'Group A');
@@ -1433,6 +1484,10 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
     const [hasThermometer, setHasThermometer] = useState(initialData?.['ميزان_حرارة'] === 'Yes');
     const [hasTimer, setHasTimer] = useState(initialData?.['ساعة_مؤقت'] === 'Yes');
     const [hasGrowthMonitoring, setHasGrowthMonitoring] = useState(initialData?.has_growth_monitoring || false);
+    // --- NEW ICCM States ---
+    const [nearestHealthFacility, setNearestHealthFacility] = useState(initialData?.nearest_health_facility || '');
+    const [hoursToFacility, setHoursToFacility] = useState(initialData?.hours_to_facility || '');
+    // --- ETAT States ---
     const [hospitalTypeEtat, setHospitalTypeEtat] = useState(initialData?.hospital_type || '');
     const [trainedEtat, setTrainedEtat] = useState(initialData?.trained_etat_before ? 'yes' : 'no');
     const [lastTrainEtat, setLastTrainEtat] = useState(initialData?.last_etat_training || '');
@@ -1441,6 +1496,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
     const [hasHdu, setHasHdu] = useState(initialData?.has_hdu || false);
     const [numStaffInEr, setNumStaffInEr] = useState(initialData?.num_staff_in_er || 0);
     const [numStaffTrainedInEtat, setNumStaffTrainedInEtat] = useState(initialData?.num_staff_trained_in_etat || 0);
+    // --- EENC States ---
     const [hospitalTypeEenc, setHospitalTypeEenc] = useState(initialData?.hospital_type || '');
     const [otherHospitalTypeEenc, setOtherHospitalTypeEenc] = useState(initialData?.other_hospital_type || '');
     const [trainedEENC, setTrainedEENC] = useState(initialData?.trained_eenc_before ? 'yes' : 'no');
@@ -1458,7 +1514,8 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
     useEffect(() => {
         const fetchFacilities = async () => {
             setError('');
-            if (state && locality) {
+            // --- MODIFIED: Don't fetch for ICCM ---
+            if (state && locality && !isIccm) {
                 setIsLoadingFacilities(true);
                 try {
                     const facilities = await listHealthFacilities({ state, locality });
@@ -1501,7 +1558,8 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
             }
         };
         // Only fetch if state and locality are set
-        if (state && locality) {
+        // --- MODIFIED: Added !isIccm ---
+        if (state && locality && !isIccm) {
              fetchFacilities();
         } else {
              setFacilitiesInLocality([]); // Clear list if state/locality not set
@@ -1509,7 +1567,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
              isInitialLoad.current = false;
         }
 
-    }, [state, locality, initialData?.facilityId, initialData?.center_name]); // Re-run if initial data changes too
+    }, [state, locality, initialData?.facilityId, initialData?.center_name, isIccm]); // Re-run if initial data or isIccm changes
 
 
     // Handle Facility Selection or "Add New"
@@ -1596,7 +1654,8 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                 setJob('Other'); setOtherJobTitle(staffJob);
             }
             setPhone(worker.phone || '');
-            if (isImnci) {
+            // --- MODIFIED: Added ICCM ---
+            if (isImnci || isIccm) {
                 setTrainedIMNCI(String(worker.is_trained || '').trim().toLowerCase() === 'yes' ? 'yes' : 'no');
                 setLastTrainIMNCI(worker.training_date || '');
             }
@@ -1636,14 +1695,16 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
         if (!name.trim()) { setError('Participant Name is required.'); return; }
         if (!state) { setError('State is required.'); return; }
         if (!locality) { setError('Locality is required.'); return; }
-        if (!center.trim()) { setError('Health Facility Name is required.'); return; }
+        // --- MODIFIED: Use new label for ICCM ---
+        if (!center.trim()) { setError(isIccm ? 'Village Name is required.' : 'Health Facility Name is required.'); return; }
         if (!finalJobTitle) { setError('Job Title is required.'); return; }
         if (!phone.trim()) { setError('Phone Number is required.'); return; }
 
         let p = {
             name: name.trim(), group, state, locality,
             center_name: center.trim(),
-            facilityId: selectedFacility?.id.startsWith('pending_') ? null : selectedFacility?.id || null, // Don't save pending IDs
+            // --- MODIFIED: Don't save facilityId for ICCM ---
+            facilityId: (isIccm || selectedFacility?.id.startsWith('pending_')) ? null : selectedFacility?.id || null, // Don't save pending IDs
             job_title: finalJobTitle, phone: phone.trim(), email: email ? email.trim() : null
         };
 
@@ -1652,13 +1713,21 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
         }
 
         // Add service-specific data and perform validation
-        if (isImnci) {
-            if (!imciSubType) { setError('IMCI Course Sub-type is required.'); return; }
-            const currentFacilityType = facilityType || selectedFacility?.['نوع_المؤسسةالصحية'];
-            if (!currentFacilityType) { setError('Facility Type is required.'); return; }
-            if (numProv === null || numProv < 1) { setError('Number of providers must be 1 or more.'); return; }
-            if (numProvIMNCI === null || numProvIMNCI < 0) { setError('Number of trained providers cannot be negative.'); return; }
-            p = { ...p, imci_sub_type: imciSubType, facility_type: currentFacilityType, trained_before: trainedIMNCI === 'yes', last_imci_training: trainedIMNCI === 'yes' ? (lastTrainIMNCI || null) : null, num_other_providers: numProv, num_other_providers_imci: numProvIMNCI, has_nutrition_service: hasNutri, has_immunization_service: hasImm, has_ors_room: hasORS, nearest_nutrition_center: !hasNutri ? (nearestNutri || null) : null, nearest_immunization_center: !hasImm ? (nearestImm || null) : null, has_growth_monitoring: hasGrowthMonitoring };
+        // --- MODIFIED: Added isIccm ---
+        if (isImnci || isIccm) {
+             p = { ...p, trained_before: trainedIMNCI === 'yes', last_imci_training: trainedIMNCI === 'yes' ? (lastTrainIMNCI || null) : null };
+            
+            if (isImnci) {
+                if (!imciSubType) { setError('IMCI Course Sub-type is required.'); return; }
+                const currentFacilityType = facilityType || selectedFacility?.['نوع_المؤسسةالصحية'];
+                if (!currentFacilityType) { setError('Facility Type is required.'); return; }
+                if (numProv === null || numProv < 1) { setError('Number of providers must be 1 or more.'); return; }
+                if (numProvIMNCI === null || numProvIMNCI < 0) { setError('Number of trained providers cannot be negative.'); return; }
+                p = { ...p, imci_sub_type: imciSubType, facility_type: currentFacilityType, num_other_providers: numProv, num_other_providers_imci: numProvIMNCI, has_nutrition_service: hasNutri, has_immunization_service: hasImm, has_ors_room: hasORS, nearest_nutrition_center: !hasNutri ? (nearestNutri || null) : null, nearest_immunization_center: !hasImm ? (nearestImm || null) : null, has_growth_monitoring: hasGrowthMonitoring };
+            } else if (isIccm) {
+                // Add ICCM specific fields
+                p = { ...p, nearest_health_facility: nearestHealthFacility || null, hours_to_facility: hoursToFacility || null };
+            }
         } else if (isEtat) {
             if (!hospitalTypeEtat) { setError('Hospital Type is required for ETAT.'); return; }
             p = { ...p, hospital_type: hospitalTypeEtat, trained_etat_before: trainedEtat === 'yes', last_etat_training: trainedEtat === 'yes' ? (lastTrainEtat || null) : null, has_triage_system: hasTriageSystem, has_stabilization_center: hasStabilizationCenter, has_hdu: hasHdu, num_staff_in_er: numStaffInEr || 0, num_staff_trained_in_etat: numStaffTrainedInEtat || 0 };
@@ -1670,6 +1739,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
 
         // Facility Update Payload Generation
         let facilityUpdatePayload = null;
+        // --- MODIFIED: Only run for IMNCI ---
         // Only trigger if IMNCI, a *real* facility is selected, and it's not a pending one
         if (isImnci && selectedFacility && !selectedFacility.id.startsWith('pending_')) {
             const staffMemberData = { name: name.trim(), job_title: finalJobTitle, phone: phone.trim(), is_trained: 'Yes', training_date: course.start_date || '' };
@@ -1683,7 +1753,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
             const existingIndex = updatedStaffList.findIndex(staff => staff.name === staffMemberData.name || (staff.phone && staff.phone === staffMemberData.phone));
             if (existingIndex > -1) updatedStaffList[existingIndex] = staffMemberData; else updatedStaffList.push(staffMemberData);
 
-            // --- MODIFICATION START ---
+            // --- MODIFICATION START (RE-ADDED) ---
             // Check if the facility was already marked as providing IMNCI service
             const facilityHadImnci = selectedFacility['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes';
             if (!facilityHadImnci) {
@@ -1779,38 +1849,60 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                 {(STATE_LOCALITIES[state]?.localities || []).sort((a,b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
                             </Select>
                         </FormGroup>
-
-                        {/* Facility Name */}
-                        <FormGroup label={isEtat ? "Hospital Name" : "Health Facility Name"}>
-                            <SearchableSelect
-                                value={selectedFacility?.id || ''}
-                                onChange={handleFacilitySelect}
-                                options={facilityOptionsForSelect}
-                                placeholder={isLoadingFacilities ? "Loading..." : (!locality ? "Select Locality first" : "Search or Add New Facility...")}
-                                disabled={isLoadingFacilities || !locality}
-                            />
-                        </FormGroup>
-
-                        {/* Participant Name */}
-                        <FormGroup label="Participant Name">
-                            <CreatableNameInput
-                                value={name}
-                                onChange={setName}
-                                onSelect={handleHealthWorkerSelect}
-                                options={useMemo(() => {
-                                     if (!selectedFacility?.imnci_staff) return [];
-                                     try {
-                                         let staff = typeof selectedFacility.imnci_staff === 'string'
-                                             ? JSON.parse(selectedFacility.imnci_staff)
-                                             : selectedFacility.imnci_staff;
-                                        return Array.isArray(staff) ? staff : [];
-                                     } catch (e) { return []; }
-                                 }, [selectedFacility?.imnci_staff])}
-                                disabled={!selectedFacility || selectedFacility.id.startsWith('pending_')} // Disable if pending facility selected
-                            />
-                             {isEditingExistingWorker && <p className="text-sm text-blue-600 mt-1">Editing staff member info.</p>}
-                             {!selectedFacility && !isLoadingFacilities && locality && <p className="text-sm text-orange-600 mt-1">Select or add a facility to search existing staff.</p>}
-                        </FormGroup>
+                        
+                        {/* --- MODIFIED: Conditional Facility/Village Input --- */}
+                        {isIccm ? (
+                            <FormGroup label="Village Name">
+                                <Input
+                                    value={center}
+                                    onChange={(e) => setCenter(e.target.value)}
+                                    placeholder="Enter village name"
+                                    disabled={!locality}
+                                />
+                            </FormGroup>
+                        ) : (
+                            <FormGroup label={isEtat ? "Hospital Name" : "Health Facility Name"}>
+                                <SearchableSelect
+                                    value={selectedFacility?.id || ''}
+                                    onChange={handleFacilitySelect}
+                                    options={facilityOptionsForSelect}
+                                    placeholder={isLoadingFacilities ? "Loading..." : (!locality ? "Select Locality first" : "Search or Add New Facility...")}
+                                    disabled={isLoadingFacilities || !locality}
+                                />
+                            </FormGroup>
+                        )}
+                        
+                        {/* --- MODIFIED: Conditional Participant Name Input --- */}
+                        {isIccm ? (
+                             <FormGroup label="Participant Name">
+                                <Input
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    placeholder="Enter participant's full name"
+                                    disabled={!locality}
+                                />
+                            </FormGroup>
+                        ) : (
+                            <FormGroup label="Participant Name">
+                                <CreatableNameInput
+                                    value={name}
+                                    onChange={setName}
+                                    onSelect={handleHealthWorkerSelect}
+                                    options={useMemo(() => {
+                                         if (!selectedFacility?.imnci_staff) return [];
+                                         try {
+                                             let staff = typeof selectedFacility.imnci_staff === 'string'
+                                                 ? JSON.parse(selectedFacility.imnci_staff)
+                                                 : selectedFacility.imnci_staff;
+                                            return Array.isArray(staff) ? staff : [];
+                                         } catch (e) { return []; }
+                                     }, [selectedFacility?.imnci_staff])}
+                                    disabled={!selectedFacility || selectedFacility.id.startsWith('pending_')} // Disable if pending facility selected
+                                />
+                                 {isEditingExistingWorker && <p className="text-sm text-blue-600 mt-1">Editing staff member info.</p>}
+                                 {!selectedFacility && !isLoadingFacilities && locality && <p className="text-sm text-orange-600 mt-1">Select or add a facility to search existing staff.</p>}
+                            </FormGroup>
+                        )}
 
                         {/* Job Title */}
                         <FormGroup label="Job Title">
@@ -1839,50 +1931,78 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                         )}
 
                         {/* --- Service Specific Sections --- */}
-                        {isImnci && (<>
-                            <FormGroup label="IMCI Course Sub-type">
-                                <Select value={imciSubType} onChange={(e) => setImciSubType(e.target.value)}>
-                                    {IMNCI_SUBCOURSE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
-                                </Select>
-                            </FormGroup>
-                            <FormGroup label="Facility Type">
-                                <Select value={facilityType} onChange={(e) => setFacilityType(e.target.value)} disabled={!!selectedFacility /* Disable if facility selected, let it auto-fill */}>
-                                     <option value="">— Select Type —</option>
-                                     <option value="مركز صحة الاسرة">مركز صحة الاسرة</option>
-                                     <option value="مستشفى ريفي">مستشفى ريفي</option>
-                                     <option value="وحدة صحة الاسرة">وحدة صحة الاسرة</option>
-                                     <option value="مستشفى">مستشفى</option>
-                                </Select>
-                            </FormGroup>
-                            <FormGroup label="Previously trained in IMNCI?">
+                        {/* --- MODIFIED: Wrapper now includes ICCM --- */}
+                        {(isImnci || isIccm) && (<>
+                            {/* --- MODIFIED: Show only for IMNCI --- */}
+                            {isImnci && (
+                                <>
+                                    <FormGroup label="IMCI Course Sub-type">
+                                        <Select value={imciSubType} onChange={(e) => setImciSubType(e.target.value)}>
+                                            {IMNCI_SUBCOURSE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
+                                        </Select>
+                                    </FormGroup>
+                                    <FormGroup label="Facility Type">
+                                        <Select value={facilityType} onChange={(e) => setFacilityType(e.target.value)} disabled={!!selectedFacility /* Disable if facility selected, let it auto-fill */}>
+                                             <option value="">— Select Type —</option>
+                                             <option value="مركز صحة الاسرة">مركز صحة الاسرة</option>
+                                             <option value="مستشفى ريفي">مستشفى ريفي</option>
+                                             <option value="وحدة صحة الاسرة">وحدة صحة الاسرة</option>
+                                             <option value="مستشفى">مستشفى</option>
+                                        </Select>
+                                    </FormGroup>
+                                </>
+                            )}
+                            
+                            {/* --- MODIFIED: Show for IMNCI and ICCM --- */}
+                            <FormGroup label={`Previously trained in ${isIccm ? 'IMNCI/ICCM' : 'IMNCI'}?`}>
                                 <Select value={trainedIMNCI} onChange={(e) => setTrainedIMNCI(e.target.value)} disabled={isEditingExistingWorker}>
                                     <option value="no">No</option><option value="yes">Yes</option>
                                 </Select>
                             </FormGroup>
                             {trainedIMNCI === 'yes' && <FormGroup label="Date of last training"><Input type="date" value={lastTrainIMNCI} onChange={(e) => setLastTrainIMNCI(e.target.value)} disabled={isEditingExistingWorker}/></FormGroup>}
-                            <FormGroup label="Total Providers at Facility (incl. this participant)">
-                                <Input type="number" min="1" value={numProv} onChange={(e) => setNumProv(Number(e.target.value || 1))} />
-                            </FormGroup>
-                            <FormGroup label="IMCI Trained Providers at Facility (excl. current course)">
-                                <Input type="number" min="0" value={numProvIMNCI} onChange={(e) => setNumProvIMNCI(Number(e.target.value || 0))} />
-                            </FormGroup>
+                            
+                            {/* --- MODIFIED: Show only for IMNCI --- */}
+                            {isImnci && (
+                                <>
+                                    <FormGroup label="Total Providers at Facility (incl. this participant)">
+                                        <Input type="number" min="1" value={numProv} onChange={(e) => setNumProv(Number(e.target.value || 1))} />
+                                    </FormGroup>
+                                    <FormGroup label="IMCI Trained Providers at Facility (excl. current course)">
+                                        <Input type="number" min="0" value={numProvIMNCI} onChange={(e) => setNumProvIMNCI(Number(e.target.value || 0))} />
+                                    </FormGroup>
+                                </>
+                            )}
+                            
+                            {/* --- NEW: Show only for ICCM --- */}
+                            {isIccm && (
+                                <>
+                                    <FormGroup label="Nearest Health Facility">
+                                        <Input value={nearestHealthFacility} onChange={(e) => setNearestHealthFacility(e.target.value)} placeholder="Name of nearest facility" />
+                                    </FormGroup>
+                                    <FormGroup label="Hours to Facility (on foot)">
+                                        <Input type="number" min="0" value={hoursToFacility} onChange={(e) => setHoursToFacility(e.target.value)} placeholder="e.g., 2.5" />
+                                    </FormGroup>
+                                </>
+                            )}
 
-                            {/* Facility Services Sub-section */}
-                            <div className="md:col-span-2 lg:col-span-3 my-4 p-4 border rounded-md bg-gray-50">
-                                <h3 className="text-lg font-semibold mb-3 border-b pb-2">Facility Services & Equipment (IMNCI Related)</h3>
-                                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    <FormGroup label="Has therapeutic nutrition service?"><Select value={hasNutri ? 'yes' : 'no'} onChange={e => setHasNutri(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                                    {!hasNutri && <FormGroup label="Nearest therapeutic nutrition center?"><Input value={nearestNutri} onChange={e => setNearestNutri(e.target.value)} /></FormGroup>}
-                                    <FormGroup label="Has immunization service?"><Select value={hasImm ? 'yes' : 'no'} onChange={e => setHasImm(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                                    {!hasImm && <FormGroup label="Nearest immunization center?"><Input value={nearestImm} onChange={e => setNearestImm(e.target.value)} /></FormGroup>}
-                                    <FormGroup label="Has ORS corner service?"><Select value={hasORS ? 'yes' : 'no'} onChange={e => setHasORS(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                                    <FormGroup label="Growth Monitoring Service"><Select value={hasGrowthMonitoring ? 'yes' : 'no'} onChange={e => setHasGrowthMonitoring(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                                    <FormGroup label="Weighting scale"><Select value={hasWeightScale ? 'yes' : 'no'} onChange={e => setHasWeightScale(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                                    <FormGroup label="Height scale"><Select value={hasHeightScale ? 'yes' : 'no'} onChange={e => setHasHeightScale(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                                    <FormGroup label="Thermometer"><Select value={hasThermometer ? 'yes' : 'no'} onChange={e => setHasThermometer(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                                    <FormGroup label="Timer"><Select value={hasTimer ? 'yes' : 'no'} onChange={e => setHasTimer(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                            {/* --- MODIFIED: Show only for IMNCI --- */}
+                            {isImnci && (
+                                <div className="md:col-span-2 lg:col-span-3 my-4 p-4 border rounded-md bg-gray-50">
+                                    <h3 className="text-lg font-semibold mb-3 border-b pb-2">Facility Services & Equipment (IMNCI Related)</h3>
+                                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        <FormGroup label="Has therapeutic nutrition service?"><Select value={hasNutri ? 'yes' : 'no'} onChange={e => setHasNutri(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                                        {!hasNutri && <FormGroup label="Nearest therapeutic nutrition center?"><Input value={nearestNutri} onChange={e => setNearestNutri(e.target.value)} /></FormGroup>}
+                                        <FormGroup label="Has immunization service?"><Select value={hasImm ? 'yes' : 'no'} onChange={e => setHasImm(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                                        {!hasImm && <FormGroup label="Nearest immunization center?"><Input value={nearestImm} onChange={e => setNearestImm(e.target.value)} /></FormGroup>}
+                                        <FormGroup label="Has ORS corner service?"><Select value={hasORS ? 'yes' : 'no'} onChange={e => setHasORS(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                                        <FormGroup label="Growth Monitoring Service"><Select value={hasGrowthMonitoring ? 'yes' : 'no'} onChange={e => setHasGrowthMonitoring(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                                        <FormGroup label="Weighting scale"><Select value={hasWeightScale ? 'yes' : 'no'} onChange={e => setHasWeightScale(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                                        <FormGroup label="Height scale"><Select value={hasHeightScale ? 'yes' : 'no'} onChange={e => setHasHeightScale(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                                        <FormGroup label="Thermometer"><Select value={hasThermometer ? 'yes' : 'no'} onChange={e => setHasThermometer(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                                        <FormGroup label="Timer"><Select value={hasTimer ? 'yes' : 'no'} onChange={e => setHasTimer(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </>)}
 
                          {isEtat && (<>

@@ -986,7 +986,44 @@ export default function App() {
     }, [permissions, selectedCourse, navigate]); // Removed handleOpenCourse dependency
 
     const handleBulkMigrate = useCallback((courseId) => { navigate('participantMigration', { courseId }); }, [navigate]);
-    const handleExecuteBulkMigration = useCallback(async (mappings) => { /* Uses wrapped functions */ }, [navigate]);
+    const handleExecuteBulkMigration = useCallback(async (mappings) => {
+        if (!mappings || mappings.length === 0) {
+            setToast({ show: true, message: 'No mappings were provided.', type: 'info' });
+            return;
+        }
+
+        setLoading(true); // Use the global loading spinner
+        try {
+            // This is the function from data.js that does the work
+            const result = await bulkMigrateFromMappings(mappings, { dryRun: false });
+
+            // Show a summary toast based on the result
+            let summaryMessage = `${result.submitted} participants submitted for migration.`;
+            if (result.errors > 0) {
+                summaryMessage += ` ${result.errors} failed.`;
+            }
+            if (result.skipped > 0) {
+                summaryMessage += ` ${result.skipped} skipped.`;
+            }
+
+            setToast({
+                show: true,
+                message: summaryMessage,
+                type: result.errors > 0 ? 'warning' : 'success'
+            });
+
+            // On success, navigate back to the participants list and force a refresh
+            // by clearing the course details (which ParticipantsView depends on).
+            setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null });
+            navigate('participants', { courseId: selectedCourseId });
+
+        } catch (error) {
+            console.error("Bulk migration failed:", error);
+            setToast({ show: true, message: `Migration failed: ${error.message}`, type: 'error' });
+        } finally {
+            setLoading(false); // Turn off global spinner
+        }
+    }, [navigate, selectedCourseId, setToast]); // Make sure dependencies are updated
     const handleAddNewCoordinator = useCallback(async (coordinatorData) => { await upsertCoordinator(coordinatorData); await fetchCoordinators(true); }, [fetchCoordinators]);
     const handleAddNewFunder = useCallback(async (funderData) => { await upsertFunder(funderData); await fetchFunders(true); }, [fetchFunders]);
 

@@ -1,6 +1,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+// autoTable is no longer used for generation, but kept for potential future use or reference
+import autoTable from "jspdf-autotable"; 
+// --- ADDED: Imports for html2canvas and native saving ---
+import html2canvas from 'html2canvas';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { FileOpener } from '@capacitor-community/file-opener';
+// --- END ADDED ---
 import {
     Card, PageHeader, Button, FormGroup, Select, Table, EmptyState, Spinner, PdfIcon
 } from "./CommonComponents";
@@ -9,147 +16,153 @@ import {
     EENC_DOMAIN_LABEL_BREATHING, EENC_DOMAIN_LABEL_NOT_BREATHING,
     SKILLS_ETAT, ETAT_DOMAINS, ETAT_DOMAIN_LABEL,
     DOMAINS_BY_AGE_IMNCI, DOMAIN_LABEL_IMNCI, getClassListImnci,
-    pctBgClass, fmtPct, calcPct, formatAsPercentageAndCount, formatAsPercentageAndScore
+    pctBgClass, fmtPct, calcPct, formatAsPercentageAndCount, formatAsPercentageAndScore,
+    // --- ADDED: Import ICCM constants ---
+    SKILLS_ICCM, ICCM_DOMAINS, ICCM_DOMAIN_LABEL
 } from './constants.js';
 import {
     listAllDataForCourse
 } from "../data.js";
 
+// --- ADDED: Print Icon Component ---
+const PrintIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm7-8V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+    </svg>
+);
+// --- END ADDED ---
 
-// --- PDF Export Helper ---
 
-const exportToPdf = (title, head, body, fileName, orientation = 'portrait') => {
-    const doc = new jsPDF({ orientation });
-    doc.text(title, 14, 15);
-    autoTable(doc, {
-        startY: 20,
-        head: head,
-        body: body,
-        theme: 'grid',
-        headStyles: { fillColor: [8, 145, 178] },
-    });
-    doc.save(`${fileName}.pdf`);
+// --- NEW: Notification helper ---
+const notify = (message, type = 'info') => {
+    // Fallback to alert() since setToast is not available in this component
+    alert(message);
 };
 
-// MODIFIED: Generates a portrait PDF for detailed reports
-const generateDetailedReportPdf = (reportData, courseType, age, scenario, participants, dayFilter, groupFilter) => {
-    const doc = new jsPDF('portrait');
-    doc.setFontSize(10);
-
-    const isEENC = courseType === 'EENC';
-
-    const getAgeLabel = () => {
-        if (courseType === 'IMNCI') return `Age Group: ${age === 'LT2M' ? '0-59 days' : '2-59 months'}`;
-        if (courseType === 'ETAT') return `Report Type: ETAT`;
-        if (courseType === 'EENC') return `Scenario: ${scenario === 'breathing' ? 'Breathing Baby' : 'Not Breathing Baby'}`;
-        return '';
-    };
-
-    const generateTable = (groupName, tableHead, tableBody, pageTitle, startY = 15) => {
-        if (tableBody.length === 0) return startY;
-
-        if (startY + 30 > doc.internal.pageSize.height) { // Check for space for title and table
-            doc.addPage();
-            startY = 15;
-        }
-
-        doc.setFontSize(10);
-        doc.text(pageTitle, 14, startY);
-        doc.setFontSize(8);
-        doc.text(`Group: ${groupName} | Filters: Day ${dayFilter}, Group ${groupFilter}`, 14, startY + 5);
-
-        autoTable(doc, {
-            head: tableHead,
-            body: tableBody,
-            startY: startY + 10,
-            theme: 'grid',
-            headStyles: { fillColor: [8, 145, 178], fontStyle: 'bold' },
-            styles: { fontSize: 6, cellPadding: 1, overflow: 'linebreak' },
-            columnStyles: {
-                0: { cellWidth: 40 }, // Classification column
-            },
-            didDrawCell: (data) => {
-                if (data.column.index > 0 && data.cell.text.toString().includes('(')) {
-                    const percentage = parseFloat(data.cell.text.toString().match(/\((\d+)\s*%\)/)?.[1]);
-                    let color = [255, 255, 255];
-                    if (percentage < 50) color = [254, 226, 226]; // bg-red-100
-                    else if (percentage <= 80) color = [254, 243, 199]; // bg-yellow-100
-                    else color = [220, 252, 231]; // bg-green-100
-                    doc.setFillColor(...color);
-                    doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
-                    doc.setTextColor(51);
-                    doc.text(data.cell.text, data.cell.x + data.cell.padding('left'), data.cell.y + data.cell.height / 2, { align: 'left', baseline: 'middle' });
-                }
-            }
-        });
-        return doc.lastAutoTable.finalY + 15;
-    };
-
-    const groupsToRender = groupFilter === 'All' ? ['Group A', 'Group B', 'Group C', 'Group D'] : [groupFilter];
-
-    let finalY = 15;
-    groupsToRender.forEach(g => {
-        const parts = participants.filter(p => p.group === g).sort((a, b) => a.name.localeCompare(b.name));
-        if (parts.length === 0) return;
-
-        let tableHead = [['Classification', ...parts.map(p => p.name)]];
-        let tableBody = [];
-
-        if (isEENC) {
-            const scenariosToRender = (scenario === 'All') ? ['breathing', 'not_breathing'] : [scenario];
-            scenariosToRender.forEach(s => {
-                const skillsMap = s === 'breathing' ? SKILLS_EENC_BREATHING : SKILLS_EENC_NOT_BREATHING;
-                const labelsMap = s === 'breathing' ? EENC_DOMAIN_LABEL_BREATHING : EENC_DOMAIN_LABEL_NOT_BREATHING;
-
-                tableBody.push([{ content: `${s === 'breathing' ? 'Breathing Baby' : 'Not Breathing Baby'}`, colSpan: parts.length + 1, styles: { fontStyle: 'bold', fillColor: '#e0e0e0' } }]);
-
-                Object.keys(skillsMap).forEach(domain => {
-                    tableBody.push([{ content: labelsMap[domain], colSpan: parts.length + 1, styles: { fontStyle: 'bold', fillColor: '#f0f0f0' } }]);
-                    skillsMap[domain].forEach(skill => {
-                        const participantCells = parts.map(p => {
-                            const skillObs = reportData.filter(o => o.participant_id === p.id && o.item_recorded === skill.text && o.age_group === `EENC_${s}`);
-                            const totalScore = skillObs.reduce((acc, o) => acc + o.item_correct, 0);
-                            const maxScore = skillObs.length * 2;
-                            return formatAsPercentageAndScore(totalScore, maxScore);
-                        });
-                        tableBody.push([skill.text, ...participantCells]);
-                    });
-                });
+// --- NEW: Helper to save jsPDF doc objects (for autoTable reports) ---
+const saveJsPdfDoc = async (doc, fileName, onSuccess, onError) => {
+    try {
+        if (Capacitor.isNativePlatform()) {
+            const base64Data = doc.output('datauristring').split('base64,')[1];
+            
+            const writeResult = await Filesystem.writeFile({
+                path: fileName,
+                data: base64Data,
+                directory: Directory.Downloads,
             });
-        } else if (courseType === 'IMNCI') {
-            const domains = DOMAINS_BY_AGE_IMNCI[age];
-            for (const d of domains) {
-                tableBody.push([{ content: DOMAIN_LABEL_IMNCI[d], colSpan: parts.length + 1, styles: { fontStyle: 'bold', fillColor: '#f0f0f0' } }]);
-                const items = getClassListImnci(age, d) || [];
-                for (const item of items) {
-                    const participantCells = parts.map(p => {
-                        const allObsForSkill = reportData.filter(o => o.participant_id === p.id && o.item_recorded === item);
-                        const correctCount = allObsForSkill.filter(o => o.item_correct === 1).length;
-                        return formatAsPercentageAndCount(correctCount, allObsForSkill.length);
-                    });
-                    tableBody.push([item, ...participantCells]);
-                }
-            }
-        } else if (courseType === 'ETAT') {
-            for (const domain in SKILLS_ETAT) {
-                tableBody.push([{ content: ETAT_DOMAIN_LABEL[domain], colSpan: parts.length + 1, styles: { fontStyle: 'bold', fillColor: '#f0f0f0' } }]);
-                for (const skill of SKILLS_ETAT[domain]) {
-                    const participantCells = parts.map(p => {
-                        const allObsForSkill = reportData.filter(o => o.participant_id === p.id && o.item_recorded === skill);
-                        const correctCount = allObsForSkill.filter(o => o.item_correct === 1).length;
-                        return formatAsPercentageAndCount(correctCount, allObsForSkill.length);
-                    });
-                    tableBody.push([skill, ...participantCells]);
-                }
-            }
+
+            await FileOpener.open({
+                filePath: writeResult.uri,
+                contentType: 'application/pdf',
+            });
+            onSuccess(`PDF saved to Downloads folder: ${fileName}`);
+        } else {
+            doc.save(fileName);
+            onSuccess("PDF download initiated.");
         }
-
-        if (finalY + 20 > doc.internal.pageSize.height) { doc.addPage(); finalY = 15; }
-        finalY = generateTable(g, tableHead, tableBody, getAgeLabel(), finalY);
-    });
-
-    doc.save(`Detailed_Report_${courseType}.pdf`);
+    } catch (e) {
+        console.error("Error saving PDF:", e);
+        onError(`Failed to save PDF: ${e.message || 'Unknown error'}`);
+    }
 };
+
+
+// --- CONSTANTS MOVED HERE ---
+const qualityProfiles = {
+    print: {
+        scale: 3, // Higher scale for better print quality
+        imageType: 'image/jpeg',
+        imageQuality: 0.95,
+        imageFormat: 'JPEG',
+        compression: 'MEDIUM',
+        fileSuffix: '_Print_Quality'
+    },
+    screen: {
+        scale: 2, // Good scale for screen viewing
+        // --- MODIFIED: Changed from PNG to JPEG to avoid PNG signature errors ---
+        imageType: 'image/jpeg',
+        imageQuality: 0.9,
+        imageFormat: 'JPEG',
+        // --- END MODIFICATION ---
+        compression: 'FAST',
+        fileSuffix: '_Screen_Quality'
+    }
+};
+
+/**
+ * --- MODIFIED HELPER: addCanvasToPdfOnePage ---
+ * Added validation to prevent errors from 0-dimension canvases.
+ */
+const addCanvasToPdfOnePage = (doc, headerCanvas, groupCanvas, profile, margin) => {
+    const A4_WIDTH = 210;
+    const A4_HEIGHT = 297;
+    const contentWidth = A4_WIDTH - (margin * 2); 
+    const contentHeight = A4_HEIGHT - (margin * 2);
+    const PADDING = 5; 
+
+    // 1. Add Header
+    // --- VALIDATION ---
+    if (!headerCanvas.width || !headerCanvas.height) {
+        console.error("Header canvas has zero dimensions.");
+        throw new Error("Failed to capture report header.");
+    }
+    const headerImgData = headerCanvas.toDataURL(profile.imageType, profile.imageQuality);
+    const headerImgHeight = (headerCanvas.height * contentWidth) / headerCanvas.width;
+    
+    // --- VALIDATION ---
+    if (!isFinite(headerImgHeight) || headerImgHeight <= 0) {
+        console.error("Invalid header image height calculated:", headerImgHeight);
+        throw new Error("Failed to calculate header dimensions.");
+    }
+    doc.addImage(headerImgData, profile.imageFormat, margin, margin, contentWidth, headerImgHeight, undefined, profile.compression);
+
+    // 2. Add Group Content (scaled to fit)
+    const availableHeight = contentHeight - headerImgHeight - PADDING;
+    if (availableHeight <= 0) {
+        console.error("Header is too tall for the page.");
+        return; // Not enough space
+    }
+    
+    // --- VALIDATION ---
+    if (!groupCanvas.width || !groupCanvas.height) {
+        console.warn("Skipping group: canvas has zero dimensions.");
+        return; // Skip this group, it's empty or failed to render
+    }
+
+    const groupImgData = groupCanvas.toDataURL(profile.imageType, profile.imageQuality);
+    const groupImgRatio = groupCanvas.width / groupCanvas.height;
+
+    // --- VALIDATION ---
+    if (!isFinite(groupImgRatio) || groupImgRatio <= 0) {
+        console.warn("Skipping group: Invalid image ratio calculated.");
+        return;
+    }
+
+    const availableRatio = contentWidth / availableHeight;
+
+    let finalWidth, finalHeight;
+
+    if (groupImgRatio > availableRatio) {
+        finalWidth = contentWidth;
+        finalHeight = contentWidth / groupImgRatio;
+    } else {
+        finalHeight = availableHeight;
+        finalWidth = availableHeight * groupImgRatio;
+    }
+
+    // --- FINAL VALIDATION ---
+    if (!isFinite(finalWidth) || finalWidth <= 0 || !isFinite(finalHeight) || finalHeight <= 0) {
+        console.warn("Skipping group: Final calculated dimensions are invalid.", {finalWidth, finalHeight});
+        return;
+    }
+    
+    const xOffset = margin + ((contentWidth - finalWidth) / 2);
+    const yOffset = margin + headerImgHeight + PADDING;
+
+    doc.addImage(groupImgData, profile.imageFormat, xOffset, yOffset, finalWidth, finalHeight, undefined, profile.compression);
+};
+// --- END MODIFIED HELPER ---
+
 
 export function ReportsView({ course, participants }) {
     const [allObs, setAllObs] = useState([]);
@@ -170,11 +183,71 @@ export function ReportsView({ course, participants }) {
 
     if (loading) { return <Card><Spinner /></Card>; }
 
-    const ReportComponent = { 'IMNCI': ImnciReports, 'ETAT': EtatReports, 'EENC': EencReports }[course.course_type] || (() => <p>No report available for this course type.</p>);
+    // --- MODIFIED THIS LINE ---
+    const ReportComponent = { 'IMNCI': ImnciReports, 'ETAT': EtatReports, 'EENC': EencReports, 'ICCM': IccmReports }[course.course_type] || (() => <p>No report available for this course type.</p>);
+    // --- END MODIFICATION ---
 
     return (
         <Card>
-            <PageHeader title={`${course.course_type} Reports`} subtitle={`${course.state} / ${course.locality}`} />
+            {/* --- MODIFIED: Print Styles --- */}
+            <style type="text/css">
+            {`
+                /* * STYLES FOR SCREEN & HTML2CANVAS 
+                 * These styles apply to the header when it is temporarily
+                 * made visible for PDF capture.
+                */
+                .report-header {
+                    display: none; /* Hidden on screen by default */
+                    flex-wrap: wrap;
+                    align-items: baseline;
+                    gap: 0 1rem;
+                }
+                .report-header h2, .report-header h3, .report-header h4 {
+                    margin: 0 !important;
+                }
+
+                /* * STYLES FOR PRINT DIALOG 
+                 */
+                @media print {
+                    @page {
+                        size: A4 portrait;
+                        margin: 0.5in;
+                    }
+                    body * {
+                        visibility: hidden;
+                    }
+                    .printable-area, .printable-area * {
+                        visibility: visible;
+                    }
+                    .printable-area {
+                        position: absolute;
+                        left: 0;
+                        top: 0;
+                        width: 100%;
+                    }
+                    .pdf-hide, .print-hide {
+                        display: none !important;
+                    }
+                    /* Show report header in print */
+                    .report-header {
+                        display: flex !important; /* Override inline 'display: none' for printing */
+                    }
+                    .report-group-wrapper {
+                        break-before: page;
+                        page-break-before: always;
+                        break-inside: avoid;
+                        page-break-inside: avoid;
+                    }
+                    .report-header {
+                        break-after: avoid;
+                        page-break-after: avoid;
+                    }
+                }
+            `}
+            </style>
+            {/* --- END MODIFIED --- */}
+
+            <PageHeader title={`${course.course_type} Reports`} subtitle={`${course.state} / ${course.locality}`} className="print-hide" />
             <ReportComponent course={course} participants={participants} allObs={allObs} allCases={allCases} />
         </Card>
     );
@@ -186,6 +259,7 @@ function ImnciReports({ course, participants, allObs, allCases }) {
     const [dayFilter, setDayFilter] = useState('All');
     const [groupFilter, setGroupFilter] = useState('All');
     const [tab, setTab] = useState('matrix');
+    const [isPdfGenerating, setIsPdfGenerating] = useState(false);
 
     const filteredParticipants = useMemo(() => participants.filter(p => groupFilter === 'All' || p.group === groupFilter), [participants, groupFilter]);
 
@@ -212,84 +286,134 @@ function ImnciReports({ course, participants, allObs, allCases }) {
         return g;
     }, [filteredObs, participants]);
 
-    const handleExportDetailedReportPdf = () => {
-        generateDetailedReportPdf(filteredObs, course.course_type, age, null, participants, dayFilter, groupFilter);
-    };
+    // --- MODIFIED: New PDF Export Logic ---
+    const handleExportPdf = async (quality = 'print') => {
+        setIsPdfGenerating(true);
+        const profile = qualityProfiles[quality] || qualityProfiles.print;
+        const doc = new jsPDF('portrait', 'mm', 'a4');
+        const reportName = `IMCI_${tab}_Report${profile.fileSuffix}.pdf`;
+        const margin = 15; // 15mm margin
+        const canvasOptions = { 
+            scale: profile.scale, 
+            useCORS: true, 
+            allowTaint: true, 
+            backgroundColor: '#ffffff' 
+        };
 
-    const handleExportFullReportPdf = () => {
-        const doc = new jsPDF();
-        const reportTitle = `IMCI Report - ${tab.replace(/^\w/, c => c.toUpperCase())}`;
-        doc.text(reportTitle, 14, 15);
-        let startY = 25;
+        const headerEl = document.getElementById('imnci-report-header'); // Get header element
 
-        ['Group A', 'Group B', 'Group C', 'Group D'].forEach(g => {
-            const parts = participants.filter(p => p.group === g);
-            if (parts.length === 0) return;
-            if (startY > 250) { doc.addPage(); startY = 20; }
-            if (startY > 20) doc.text(`Group: ${g}`, 14, startY);
+        try {
+            // 1. Capture Header
+            if (!headerEl) throw new Error("Report header not found");
+            
+            // --- FIX: Temporarily show header for capture ---
+            headerEl.style.display = 'flex'; // Use 'flex' as defined in print styles
+            
+            const headerCanvas = await html2canvas(headerEl, canvasOptions);
 
-            let head, body;
-            if (tab === 'matrix') {
-                head = [['Classification', ...parts.map(p => p.name)]];
-                body = [];
-                const domains = DOMAINS_BY_AGE_IMNCI[age];
-                for (const d of domains) {
-                    body.push([{ content: DOMAIN_LABEL_IMNCI[d], colSpan: parts.length + 1, styles: { fontStyle: 'bold', fillColor: '#f0f0f0' } }]);
-                    const items = getClassListImnci(age, d) || [];
-                    for (const item of items) {
-                        const participantCells = parts.map(p => {
-                            const allObsForSkill = filteredObs.filter(o => o.participant_id === p.id && o.item_recorded === item);
-                            if (allObsForSkill.length === 0) return "N/A";
-                            const correctCount = allObsForSkill.filter(o => o.item_correct === 1).length;
-                            return `${correctCount}/${allObsForSkill.length} (${fmtPct(calcPct(correctCount, allObsForSkill.length))})`;
-                        });
-                        body.push([item, ...participantCells]);
-                    }
-                }
-            } else {
-                const data = (tab === 'case' ? caseSummaryByGroup : classSummaryByGroup)[g] || {};
-                head = tab === 'case'
-                    ? [['Participant', 'IPD Cases', '% IPD', 'OPD Cases', '% OPD', 'Total', '% Overall']]
-                    : [['Participant', 'IPD Class.', '% IPD', 'OPD Class.', '% OPD', 'Total', '% Overall']];
-                body = Object.values(data).map(r => {
-                    const inSeen = tab === 'case' ? r.inp_seen : r.inp_total; const inCor = r.inp_correct;
-                    const outSeen = tab === 'case' ? r.op_seen : r.op_total; const outCor = r.op_correct;
-                    return [r.name, inSeen, fmtPct(calcPct(inCor, inSeen)), outSeen, fmtPct(calcPct(outCor, outSeen)), inSeen + outSeen, fmtPct(calcPct(inCor + outCor, inSeen + outSeen))];
-                });
+            // --- FIX: Re-hide header after capture ---
+            headerEl.style.display = 'none';
+
+            // 2. Get group elements to render
+            const groupElements = [];
+            groupsToRender.forEach(g => {
+                const id = `group-${tab}-${g.replace(/\s+/g, '-')}`;
+                const el = document.getElementById(id);
+                if (el) groupElements.push(el);
+            });
+            
+            if (groupElements.length === 0) {
+                notify("No data to export.", "error");
+                setIsPdfGenerating(false);
+                return;
             }
 
-            autoTable(doc, { head, body, startY: startY + 5 });
-            startY = doc.lastAutoTable.finalY + 15;
-        });
+            // 3. Loop, capture, and add each group to a new page
+            for (let i = 0; i < groupElements.length; i++) {
+                const el = groupElements[i];
+                if (i > 0) {
+                    doc.addPage();
+                }
+                
+                // Capture group content
+                const groupCanvas = await html2canvas(el, canvasOptions);
+                
+                // Add header and scaled group content to the same page
+                addCanvasToPdfOnePage(doc, headerCanvas, groupCanvas, profile, margin);
+            }
 
-        doc.save(`IMCI_${tab}_Report_All_Groups.pdf`);
+            // 4. Save the doc
+            await saveJsPdfDoc(
+                doc, 
+                reportName,
+                (msg) => notify(msg, 'success'),
+                (msg) => notify(msg, 'error')
+            );
+
+        } catch (e) {
+            console.error("Error generating PDF:", e);
+            notify(`Failed to save PDF: ${e.message || 'Unknown error'}`, 'error');
+        } finally {
+            // --- FIX: Ensure header is hidden even if error occurs ---
+            if (headerEl) {
+                headerEl.style.display = 'none';
+            }
+            setIsPdfGenerating(false);
+        }
     };
+    // --- END MODIFIED ---
+
+    // --- ADDED: handlePrint function ---
+    const handlePrint = () => {
+        window.print();
+    };
+    // --- END ADDED ---
 
     const groupsToRender = groupFilter === 'All' ? ['Group A', 'Group B', 'Group C', 'Group D'] : [groupFilter];
 
 
     return (
-        <div className="mt-6">
-            <div className="flex flex-wrap gap-3 mb-4"><Button variant={tab === 'case' ? 'primary' : 'secondary'} onClick={() => setTab('case')}>Case Summary</Button><Button variant={tab === 'class' ? 'primary' : 'secondary'} onClick={() => setTab('class')}>Classification Summary</Button><Button variant={tab === 'matrix' ? 'primary' : 'secondary'} onClick={() => setTab('matrix')}>Detailed Report</Button></div>
-            <div className="flex flex-wrap gap-4 items-center justify-between p-4 bg-gray-50 rounded-md mb-6">
+        // --- MODIFIED: Added printable-area class ---
+        <div className="mt-6 printable-area" id="imnci-report-container">
+            {/* --- MODIFIED: Report Header (now print-only via CSS) --- */}
+            <div className="report-header mb-4 px-1" id="imnci-report-header">
+                <h2 className="text-2xl font-bold">{course.course_type} Report</h2>
+                <h3 className="text-lg text-gray-700">{course.state} / {course.locality}</h3>
+                <h4 className="text-md text-gray-600">Age Group: {age === 'LT2M' ? '0-2 months' : '2-59 months'}</h4>
+            </div>
+            {/* --- END MODIFIED --- */}
+
+            <div className="flex flex-wrap gap-3 mb-4 print-hide"><Button variant={tab === 'case' ? 'primary' : 'secondary'} onClick={() => setTab('case')}>Case Summary</Button><Button variant={tab === 'class' ? 'primary' : 'secondary'} onClick={() => setTab('class')}>Classification Summary</Button><Button variant={tab === 'matrix' ? 'primary' : 'secondary'} onClick={() => setTab('matrix')}>Detailed Report</Button></div>
+            {/* --- MODIFIED: Added print-hide class --- */}
+            <div className="flex flex-wrap gap-4 items-center justify-between p-4 bg-gray-50 rounded-md mb-6 pdf-hide print-hide">
                 <div className="flex flex-wrap gap-4 items-center">
                     <FormGroup label="Age group"><Select value={age} onChange={(e) => setAge(e.target.value)}><option value="LT2M">0-2 months</option><option value="GE2M_LE5Y">2-59 months</option></Select></FormGroup>
                     <FormGroup label="Setting"><Select value={settingFilter} onChange={(e) => setSettingFilter(e.target.value)}><option value="All">All</option><option value="OPD">Out-patient</option><option value="IPD">In-patient</option></Select></FormGroup>
                     <FormGroup label="Day of Training"><Select value={dayFilter} onChange={(e) => setDayFilter(e.target.value)}><option value="All">All Days</option>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>Day {d}</option>)}</Select></FormGroup>
                     <FormGroup label="Group"><Select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}><option value="All">All Groups</option><option>Group A</option><option>Group B</option><option>Group C</option><option>Group D</option></Select></FormGroup>
                 </div>
-                {tab === 'matrix' ? (
-                    <Button onClick={handleExportDetailedReportPdf}><PdfIcon /> Save Detailed Report as PDF</Button>
-                ) : (
-                    <Button onClick={handleExportFullReportPdf}><PdfIcon /> Save Summary Report as PDF</Button>
-                )}
+                {/* --- MODIFIED: Spinner moved outside button --- */}
+                <div className="flex items-center gap-2">
+                    {isPdfGenerating && <Spinner />} {/* <-- Spinner outside buttons */}
+                    {/* --- ADDED: Print Button --- */}
+                    <Button onClick={handlePrint} variant="secondary" disabled={isPdfGenerating}>
+                        <PrintIcon /> Print
+                    </Button>
+                    <Button onClick={() => handleExportPdf('print')} variant="secondary" disabled={isPdfGenerating}>
+                        <PdfIcon /> Export for Print
+                    </Button>
+                    <Button onClick={() => handleExportPdf('screen')} variant="secondary" disabled={isPdfGenerating}>
+                        <PdfIcon /> Export for Sharing
+                    </Button>
+                </div>
             </div>
 
             {tab !== 'matrix' && groupsToRender.map(g => {
                 const data = (tab === 'case' ? caseSummaryByGroup : classSummaryByGroup)[g] || {};
                 const ids = Object.keys(data); if (ids.length === 0) return null;
                 return (
-                    <div key={g} className="grid gap-2 mb-8">
+                    // --- MODIFIED: Added ID and page-break class ---
+                    <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
                         <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
                         <div className="overflow-x-auto"><table className="min-w-full text-sm"><thead>{tab === 'case' ? (<tr className="text-left border-b"><th className="py-2 pr-4">Participant</th><th className="py-2 pr-4">IPD Cases</th><th className="py-2 pr-4">% IPD</th><th className="py-2 pr-4">OPD Cases</th><th className="py-2 pr-4">% OPD</th><th className="py-2 pr-4">Total</th><th className="py-2 pr-4">% Overall</th></tr>) : (<tr className="text-left border-b"><th className="py-2 pr-4">Participant</th><th className="py-2 pr-4">IPD Class.</th><th className="py-2 pr-4">% IPD</th><th className="py-2 pr-4">OPD Class.</th><th className="py-2 pr-4">% OPD</th><th className="py-2 pr-4">Total</th><th className="py-2 pr-4">% Overall</th></tr>)}</thead><tbody>{ids.map(id => { const r = data[id]; const inSeen = tab === 'case' ? r.inp_seen : r.inp_total; const inCor = r.inp_correct; const outSeen = tab === 'case' ? r.op_seen : r.op_total; const outCor = r.op_correct; const pctIn = calcPct(inCor, inSeen), pctOut = calcPct(outCor, outSeen), pctAll = calcPct(inCor + outCor, inSeen + outSeen); return (<tr key={id} className="border-b"><td className="py-2 pr-4">{r.name}</td><td className="py-2 pr-4">{inSeen}</td><td className={`py-2 pr-4 ${pctBgClass(pctIn)}`}>{fmtPct(pctIn)}</td><td className="py-2 pr-4">{outSeen}</td><td className={`py-2 pr-4 ${pctBgClass(pctOut)}`}>{fmtPct(pctOut)}</td><td className="py-2 pr-4">{inSeen + outSeen}</td><td className={`py-2 pr-4 ${pctBgClass(pctAll)}`}>{fmtPct(pctAll)}</td></tr>); })}</tbody></table></div>
                     </div>
@@ -300,9 +424,11 @@ function ImnciReports({ course, participants, allObs, allCases }) {
                 const parts = participants.filter(p => p.group === g).sort((a, b) => a.name.localeCompare(b.name));
                 if (parts.length === 0) return null;
                 return (
-                    <div key={g} className="grid gap-2 mb-8">
+                    // --- MODIFIED: Added ID and page-break class ---
+                    <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
                         <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
-                        <div className="max-h-[70vh] overflow-y-auto">
+                        {/* --- MODIFIED: Removed max-h-[70vh] and overflow-y-auto --- */}
+                        <div className="overflow-x-auto">
                             <table className="w-full text-xs table-fixed">
                                 <thead>
                                     <tr className="text-left border-b bg-gray-50 sticky top-0">
@@ -343,6 +469,7 @@ function EtatReports({ course, participants, allObs, allCases }) {
     const [tab, setTab] = useState('matrix');
     const [dayFilter, setDayFilter] = useState('All');
     const [groupFilter, setGroupFilter] = useState('All');
+    const [isPdfGenerating, setIsPdfGenerating] = useState(false);
 
     const filteredParticipants = useMemo(() => participants.filter(p => groupFilter === 'All' || p.group === groupFilter), [participants, groupFilter]);
 
@@ -382,84 +509,130 @@ function EtatReports({ course, participants, allObs, allCases }) {
     }, [filteredObs, participants]);
     // --- END ADDED ---
 
-    const handleExportDetailedReportPdf = () => {
-        generateDetailedReportPdf(filteredObs, course.course_type, null, null, participants, dayFilter, groupFilter);
-    };
-
-    // --- MODIFIED: handleExportFullReportPdf to include 'class' tab ---
-    const handleExportFullReportPdf = () => {
-        const doc = new jsPDF();
-        const getTitle = () => {
-            if (tab === 'case') return 'Case Summary';
-            if (tab === 'class') return 'Classification Summary';
-            return 'Detailed Skills';
+    // --- MODIFIED: New PDF Export Logic ---
+    const handleExportPdf = async (quality = 'print') => {
+        setIsPdfGenerating(true);
+        const profile = qualityProfiles[quality] || qualityProfiles.print;
+        const doc = new jsPDF('portrait', 'mm', 'a4');
+        const reportName = `ETAT_${tab}_Report${profile.fileSuffix}.pdf`;
+        const margin = 15; // 15mm margin
+        const canvasOptions = { 
+            scale: profile.scale, 
+            useCORS: true, 
+            allowTaint: true, 
+            backgroundColor: '#ffffff' 
         };
-        const reportTitle = `ETAT Report - ${getTitle()}`;
-        doc.text(reportTitle, 14, 15);
-        let startY = 25;
 
-        ['Group A', 'Group B', 'Group C', 'Group D'].forEach(g => {
-            const parts = participants.filter(p => p.group === g);
-            if (parts.length === 0) return;
-            if (startY > 250) { doc.addPage(); startY = 20; }
-            if (startY > 20) doc.text(`Group: ${g}`, 14, startY);
+        const headerEl = document.getElementById('etat-report-header'); // Get header element
 
-            let head, body;
-            if (tab === 'matrix') {
-                head = [['Skill', ...parts.map(p => p.name)]];
-                body = [];
-                for (const domain in SKILLS_ETAT) {
-                    body.push([{ content: ETAT_DOMAIN_LABEL[domain], colSpan: parts.length + 1, styles: { fontStyle: 'bold', fillColor: '#f0f0f0' } }]);
-                    for (const skill of SKILLS_ETAT[domain]) {
-                        const participantCells = parts.map(p => {
-                            const allObsForSkill = filteredObs.filter(o => o.participant_id === p.id && o.item_recorded === skill);
-                            if (allObsForSkill.length === 0) return "N/A";
-                            const correctCount = allObsForSkill.filter(o => o.item_correct === 1).length;
-                            return `${correctCount}/${allObsForSkill.length} (${fmtPct(calcPct(correctCount, allObsForSkill.length))})`;
-                        });
-                        body.push([skill, ...participantCells]);
-                    }
-                }
-            } else if (tab === 'class') { // <-- ADDED THIS BLOCK
-                const data = classSummaryByGroup[g] || {};
-                head = [['Participant', 'Total Class.', 'Correct Class.', '% Correct']];
-                body = Object.values(data).map(r => [r.name, r.total_obs, r.correct_obs, fmtPct(calcPct(r.correct_obs, r.total_obs))]);
-            } else { // <-- This is now just for tab === 'case'
-                const data = caseSummaryByGroup[g] || {};
-                head = [['Participant', 'Total Cases', 'Correct Cases', '% Correct']];
-                body = Object.values(data).map(r => [r.name, r.total_cases, r.correct_cases, fmtPct(calcPct(r.correct_cases, r.total_cases))]);
+        try {
+            // 1. Capture Header
+            if (!headerEl) throw new Error("Report header not found");
+            
+            // --- FIX: Temporarily show header for capture ---
+            headerEl.style.display = 'flex'; // Use 'flex' as defined in print styles
+            
+            const headerCanvas = await html2canvas(headerEl, canvasOptions);
+
+            // --- FIX: Re-hide header after capture ---
+            headerEl.style.display = 'none';
+
+            // 2. Get group elements to render
+            const groupElements = [];
+            groupsToRender.forEach(g => {
+                const id = `group-${tab}-${g.replace(/\s+/g, '-')}`;
+                const el = document.getElementById(id);
+                if (el) groupElements.push(el);
+            });
+            
+            if (groupElements.length === 0) {
+                notify("No data to export.", "error");
+                setIsPdfGenerating(false);
+                return;
             }
 
-            autoTable(doc, { head, body, startY: startY + 5 });
-            startY = doc.lastAutoTable.finalY + 15;
-        });
+            // 3. Loop, capture, and add each group to a new page
+            for (let i = 0; i < groupElements.length; i++) {
+                const el = groupElements[i];
+                if (i > 0) {
+                    doc.addPage();
+                }
+                
+                // Capture group content
+                const groupCanvas = await html2canvas(el, canvasOptions);
+                
+                // Add header and scaled group content to the same page
+                addCanvasToPdfOnePage(doc, headerCanvas, groupCanvas, profile, margin);
+            }
 
-        doc.save(`ETAT_${tab}_Report_All_Groups.pdf`);
+            // 4. Save the doc
+            await saveJsPdfDoc(
+                doc, 
+                reportName,
+                (msg) => notify(msg, 'success'),
+                (msg) => notify(msg, 'error')
+            );
+
+        } catch (e) {
+            console.error("Error generating PDF:", e);
+            notify(`Failed to save PDF: ${e.message || 'Unknown error'}`, 'error');
+        } finally {
+            // --- FIX: Ensure header is hidden even if error occurs ---
+            if (headerEl) {
+                headerEl.style.display = 'none';
+            }
+            setIsPdfGenerating(false);
+        }
     };
     // --- END MODIFIED ---
+
+    // --- ADDED: handlePrint function ---
+    const handlePrint = () => {
+        window.print();
+    };
+    // --- END ADDED ---
 
     const groupsToRender = groupFilter === 'All' ? ['Group A', 'Group B', 'Group C', 'Group D'] : [groupFilter];
 
     return (
-        <div className="mt-6">
-            <div className="flex flex-wrap gap-3 mb-4"><Button variant={tab === 'case' ? 'primary' : 'secondary'} onClick={() => setTab('case')}>Case Summary</Button><Button variant={tab === 'class' ? 'primary' : 'secondary'} onClick={() => setTab('class')}>Classification Summary</Button><Button variant={tab === 'matrix' ? 'primary' : 'secondary'} onClick={() => setTab('matrix')}>Detailed Report</Button></div>
+        // --- MODIFIED: Added printable-area class ---
+        <div className="mt-6 printable-area" id="etat-report-container">
+            {/* --- MODIFIED: Report Header (now print-only via CSS) --- */}
+            <div className="report-header mb-4 px-1" id="etat-report-header">
+                <h2 className="text-2xl font-bold">{course.course_type} Report</h2>
+                <h3 className="text-lg text-gray-700">{course.state} / {course.locality}</h3>
+            </div>
+            {/* --- END MODIFIED --- */}
 
-            <div className="flex flex-wrap gap-4 items-center justify-between p-4 bg-gray-50 rounded-md mb-6">
+            <div className="flex flex-wrap gap-3 mb-4 print-hide"><Button variant={tab === 'case' ? 'primary' : 'secondary'} onClick={() => setTab('case')}>Case Summary</Button><Button variant={tab === 'class' ? 'primary' : 'secondary'} onClick={() => setTab('class')}>Classification Summary</Button><Button variant={tab === 'matrix' ? 'primary' : 'secondary'} onClick={() => setTab('matrix')}>Detailed Report</Button></div>
+
+            {/* --- MODIFIED: Added print-hide class --- */}
+            <div className="flex flex-wrap gap-4 items-center justify-between p-4 bg-gray-50 rounded-md mb-6 pdf-hide print-hide">
                 <div className="flex gap-4 items-center">
                     <FormGroup label="Day of Training"><Select value={dayFilter} onChange={(e) => setDayFilter(e.target.value)}><option value="All">All Days</option>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>Day {d}</option>)}</Select></FormGroup>
                     <FormGroup label="Group"><Select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}><option value="All">All Groups</option><option>Group A</option><option>Group B</option><option>Group C</option><option>Group D</option></Select></FormGroup>
                 </div>
-                {tab === 'matrix' ? (
-                    <Button onClick={handleExportDetailedReportPdf}><PdfIcon /> Save Detailed Report as PDF</Button>
-                ) : (
-                    <Button onClick={handleExportFullReportPdf}><PdfIcon /> Save Summary Report as PDF</Button>
-                )}
+                {/* --- MODIFIED: Spinner moved outside button --- */}
+                <div className="flex items-center gap-2">
+                    {isPdfGenerating && <Spinner />} {/* <-- Spinner outside buttons */}
+                    {/* --- ADDED: Print Button --- */}
+                    <Button onClick={handlePrint} variant="secondary" disabled={isPdfGenerating}>
+                        <PrintIcon /> Print
+                    </Button>
+                    <Button onClick={() => handleExportPdf('print')} variant="secondary" disabled={isPdfGenerating}>
+                        <PdfIcon /> Export for Print
+                    </Button>
+                    <Button onClick={() => handleExportPdf('screen')} variant="secondary" disabled={isPdfGenerating}>
+                        <PdfIcon /> Export for Sharing
+                    </Button>
+                </div>
             </div>
 
             {tab === 'case' && groupsToRender.map(g => {
                 const data = caseSummaryByGroup[g] || {}; const ids = Object.keys(data); if (ids.length === 0) return null;
                 return (
-                    <div key={g} className="grid gap-2 mb-8">
+                    // --- MODIFIED: Added ID and page-break class ---
+                    <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
                         <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
                         <div className="overflow-x-auto"><table className="min-w-full text-sm"><thead><tr className="text-left border-b"><th className="py-2 pr-4">Participant</th><th className="py-2 pr-4">Total Cases</th><th className="py-2 pr-4">Correct Cases</th><th className="py-2 pr-4">% Correct Cases</th></tr></thead><tbody>{ids.map(id => { const r = data[id]; const pct = calcPct(r.correct_cases, r.total_cases); return (<tr key={id} className="border-b"><td className="py-2 pr-4">{r.name}</td><td className="py-2 pr-4">{r.total_cases}</td><td className="py-2 pr-4">{r.correct_cases}</td><td className={`py-2 pr-4 ${pctBgClass(pct)}`}>{fmtPct(pct)}</td></tr>); })}</tbody></table></div>
                     </div>
@@ -472,7 +645,8 @@ function EtatReports({ course, participants, allObs, allCases }) {
                 const ids = Object.keys(data);
                 if (ids.length === 0) return null;
                 return (
-                    <div key={g} className="grid gap-2 mb-8">
+                    // --- MODIFIED: Added ID and page-break class ---
+                    <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
                         <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
                         <div className="overflow-x-auto">
                             <table className="min-w-full text-sm">
@@ -509,9 +683,11 @@ function EtatReports({ course, participants, allObs, allCases }) {
                 const parts = participants.filter(p => p.group === g).sort((a, b) => a.name.localeCompare(b.name));
                 if (parts.length === 0) return null;
                 return (
-                    <div key={g} className="grid gap-2 mb-8">
+                    // --- MODIFIED: Added ID and page-break class ---
+                    <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
                         <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
-                        <div className="max-h-[70vh] overflow-y-auto">
+                        {/* --- MODIFIED: Removed max-h-[70vh] and overflow-y-auto --- */}
+                        <div className="overflow-x-auto">
                             <table className="w-full text-xs table-fixed">
                                 <thead>
                                     <tr className="text-left border-b bg-gray-50 sticky top-0">
@@ -547,11 +723,271 @@ function EtatReports({ course, participants, allObs, allCases }) {
     );
 }
 
+// --- ADDED ICCM REPORTS COMPONENT (Copied from ETAT) ---
+function IccmReports({ course, participants, allObs, allCases }) {
+    const [tab, setTab] = useState('matrix');
+    const [dayFilter, setDayFilter] = useState('All');
+    const [groupFilter, setGroupFilter] = useState('All');
+    const [isPdfGenerating, setIsPdfGenerating] = useState(false);
+
+    const filteredParticipants = useMemo(() => participants.filter(p => groupFilter === 'All' || p.group === groupFilter), [participants, groupFilter]);
+
+    const filteredCases = useMemo(() => allCases.filter(c => {
+        const participant = filteredParticipants.find(p => p.id === c.participant_id);
+        return participant && (dayFilter === 'All' || c.day_of_course === Number(dayFilter));
+    }), [allCases, dayFilter, filteredParticipants]);
+
+    const filteredObs = useMemo(() => allObs.filter(o => {
+        const participant = filteredParticipants.find(p => p.id === o.participant_id);
+        return participant && (dayFilter === 'All' || o.day_of_course === Number(dayFilter));
+    }), [allObs, dayFilter, filteredParticipants]);
+
+    const caseSummaryByGroup = useMemo(() => {
+        const g = {}; const pmap = new Map(); participants.forEach(p => pmap.set(p.id, p));
+        for (const c of filteredCases) { const p = pmap.get(c.participant_id || ''); if (!p) continue; const k = p.group; g[k] ??= {}; g[k][p.id] ??= { name: p.name, total_cases: 0, correct_cases: 0 }; const t = g[k][p.id]; t.total_cases++; if (c.allCorrect) t.correct_cases++; }
+        return g;
+    }, [filteredCases, participants]);
+
+    const classSummaryByGroup = useMemo(() => {
+        const g = {};
+        const pmap = new Map(participants.map(p => [p.id, p]));
+        for (const o of filteredObs) {
+            const p = pmap.get(o.participant_id || '');
+            if (!p) continue;
+            const k = p.group;
+            g[k] ??= {};
+            g[k][p.id] ??= { name: p.name, total_obs: 0, correct_obs: 0 };
+            const t = g[k][p.id];
+            t.total_obs++;
+            if (o.item_correct === 1) {
+                t.correct_obs++;
+            }
+        }
+        return g;
+    }, [filteredObs, participants]);
+
+    // --- MODIFIED: New PDF Export Logic ---
+    const handleExportPdf = async (quality = 'print') => {
+        setIsPdfGenerating(true);
+        const profile = qualityProfiles[quality] || qualityProfiles.print;
+        const doc = new jsPDF('portrait', 'mm', 'a4');
+        const reportName = `ICCM_${tab}_Report${profile.fileSuffix}.pdf`;
+        const margin = 15; // 15mm margin
+        const canvasOptions = { 
+            scale: profile.scale, 
+            useCORS: true, 
+            allowTaint: true, 
+            backgroundColor: '#ffffff' 
+        };
+        
+        const headerEl = document.getElementById('iccm-report-header'); // Get header element
+
+        try {
+            // 1. Capture Header
+            if (!headerEl) throw new Error("Report header not found");
+            
+            // --- FIX: Temporarily show header for capture ---
+            headerEl.style.display = 'flex'; // Use 'flex' as defined in print styles
+            
+            const headerCanvas = await html2canvas(headerEl, canvasOptions);
+
+            // --- FIX: Re-hide header after capture ---
+            headerEl.style.display = 'none';
+
+            // 2. Get group elements to render
+            const groupElements = [];
+            groupsToRender.forEach(g => {
+                const id = `group-${tab}-${g.replace(/\s+/g, '-')}`;
+                const el = document.getElementById(id);
+                if (el) groupElements.push(el);
+            });
+            
+            if (groupElements.length === 0) {
+                notify("No data to export.", "error");
+                setIsPdfGenerating(false);
+                return;
+            }
+
+            // 3. Loop, capture, and add each group to a new page
+            for (let i = 0; i < groupElements.length; i++) {
+                const el = groupElements[i];
+                if (i > 0) {
+                    doc.addPage();
+                }
+                
+                // Capture group content
+                const groupCanvas = await html2canvas(el, canvasOptions);
+                
+                // Add header and scaled group content to the same page
+                addCanvasToPdfOnePage(doc, headerCanvas, groupCanvas, profile, margin);
+            }
+
+            // 4. Save the doc
+            await saveJsPdfDoc(
+                doc, 
+                reportName,
+                (msg) => notify(msg, 'success'),
+                (msg) => notify(msg, 'error')
+            );
+
+        } catch (e) {
+            console.error("Error generating PDF:", e);
+            notify(`Failed to save PDF: ${e.message || 'Unknown error'}`, 'error');
+        } finally {
+            // --- FIX: Ensure header is hidden even if error occurs ---
+            if (headerEl) {
+                headerEl.style.display = 'none';
+            }
+            setIsPdfGenerating(false);
+        }
+    };
+    // --- END MODIFIED ---
+
+    // --- ADDED: handlePrint function ---
+    const handlePrint = () => {
+        window.print();
+    };
+    // --- END ADDED ---
+
+    const groupsToRender = groupFilter === 'All' ? ['Group A', 'Group B', 'Group C', 'Group D'] : [groupFilter];
+
+    return (
+        // --- MODIFIED: Added printable-area class ---
+        <div className="mt-6 printable-area" id="iccm-report-container">
+            {/* --- MODIFIED: Report Header (now print-only via CSS) --- */}
+            <div className="report-header mb-4 px-1" id="iccm-report-header">
+                <h2 className="text-2xl font-bold">{course.course_type} Report</h2>
+                <h3 className="text-lg text-gray-700">{course.state} / {course.locality}</h3>
+            </div>
+            {/* --- END MODIFIED --- */}
+
+            <div className="flex flex-wrap gap-3 mb-4 print-hide"><Button variant={tab === 'case' ? 'primary' : 'secondary'} onClick={() => setTab('case')}>Case Summary</Button><Button variant={tab === 'class' ? 'primary' : 'secondary'} onClick={() => setTab('class')}>Classification Summary</Button><Button variant={tab === 'matrix' ? 'primary' : 'secondary'} onClick={() => setTab('matrix')}>Detailed Report</Button></div>
+
+            {/* --- MODIFIED: Added print-hide class --- */}
+            <div className="flex flex-wrap gap-4 items-center justify-between p-4 bg-gray-50 rounded-md mb-6 pdf-hide print-hide">
+                <div className="flex gap-4 items-center">
+                    <FormGroup label="Day of Training"><Select value={dayFilter} onChange={(e) => setDayFilter(e.target.value)}><option value="All">All Days</option>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>Day {d}</option>)}</Select></FormGroup>
+                    <FormGroup label="Group"><Select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}><option value="All">All Groups</option><option>Group A</option><option>Group B</option><option>Group C</option><option>Group D</option></Select></FormGroup>
+                </div>
+                {/* --- MODIFIED: Spinner moved outside button --- */}
+                <div className="flex items-center gap-2">
+                    {isPdfGenerating && <Spinner />} {/* <-- Spinner outside buttons */}
+                    {/* --- ADDED: Print Button --- */}
+                    <Button onClick={handlePrint} variant="secondary" disabled={isPdfGenerating}>
+                        <PrintIcon /> Print
+                    </Button>
+                    <Button onClick={() => handleExportPdf('print')} variant="secondary" disabled={isPdfGenerating}>
+                        <PdfIcon /> Export for Print
+                    </Button>
+                    <Button onClick={() => handleExportPdf('screen')} variant="secondary" disabled={isPdfGenerating}>
+                        <PdfIcon /> Export for Sharing
+                    </Button>
+                </div>
+            </div>
+
+            {tab === 'case' && groupsToRender.map(g => {
+                const data = caseSummaryByGroup[g] || {}; const ids = Object.keys(data); if (ids.length === 0) return null;
+                return (
+                    // --- MODIFIED: Added ID and page-break class ---
+                    <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
+                        <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
+                        <div className="overflow-x-auto"><table className="min-w-full text-sm"><thead><tr className="text-left border-b"><th className="py-2 pr-4">Participant</th><th className="py-2 pr-4">Total Cases</th><th className="py-2 pr-4">Correct Cases</th><th className="py-2 pr-4">% Correct Cases</th></tr></thead><tbody>{ids.map(id => { const r = data[id]; const pct = calcPct(r.correct_cases, r.total_cases); return (<tr key={id} className="border-b"><td className="py-2 pr-4">{r.name}</td><td className="py-2 pr-4">{r.total_cases}</td><td className="py-2 pr-4">{r.correct_cases}</td><td className={`py-2 pr-4 ${pctBgClass(pct)}`}>{fmtPct(pct)}</td></tr>); })}</tbody></table></div>
+                    </div>
+                );
+            })}
+
+            {tab === 'class' && groupsToRender.map(g => {
+                const data = classSummaryByGroup[g] || {};
+                const ids = Object.keys(data);
+                if (ids.length === 0) return null;
+                return (
+                    // --- MODIFIED: Added ID and page-break class ---
+                    <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
+                        <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full text-sm">
+                                <thead>
+                                    <tr className="text-left border-b">
+                                        <th className="py-2 pr-4">Participant</th>
+                                        <th className="py-2 pr-4">Total Class.</th>
+                                        <th className="py-2 pr-4">Correct Class.</th>
+                                        <th className="py-2 pr-4">% Correct Class.</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {ids.map(id => {
+                                        const r = data[id];
+                                        const pct = calcPct(r.correct_obs, r.total_obs);
+                                        return (
+                                            <tr key={id} className="border-b">
+                                                <td className="py-2 pr-4">{r.name}</td>
+                                                <td className="py-2 pr-4">{r.total_obs}</td>
+                                                <td className="py-2 pr-4">{r.correct_obs}</td>
+                                                <td className={`py-2 pr-4 ${pctBgClass(pct)}`}>{fmtPct(pct)}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                );
+            })}
+
+            {tab === 'matrix' && groupsToRender.map(g => {
+                const parts = participants.filter(p => p.group === g).sort((a, b) => a.name.localeCompare(b.name));
+                if (parts.length === 0) return null;
+                return (
+                    // --- MODIFIED: Added ID and page-break class ---
+                    <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
+                        <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
+                        {/* --- MODIFIED: Removed max-h-[70vh] and overflow-y-auto --- */}
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-xs table-fixed">
+                                <thead>
+                                    <tr className="text-left border-b bg-gray-50 sticky top-0">
+                                        <th className="py-2 pr-4 w-80">Skill</th>
+                                        {parts.map(p => <th key={p.id} className="py-2 pr-4 whitespace-nowrap text-center">{p.name}</th>)}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {/* --- MODIFIED FOR ICCM --- */}
+                                    {ICCM_DOMAINS.map(domain => (
+                                        <React.Fragment key={domain}>
+                                            <tr className="border-b">
+                                                <td colSpan={parts.length + 1} className="py-2 px-2 font-semibold bg-gray-100">{ICCM_DOMAIN_LABEL[domain] || domain}</td>
+                                            </tr>
+                                            {(SKILLS_ICCM[domain] || []).map(skill => {
+                                    {/* --- END MODIFICATION --- */}
+                                                const participantCells = parts.map(p => {
+                                                    const allObsForSkill = filteredObs.filter(o => o.participant_id === p.id && o.item_recorded === skill);
+                                                    if (allObsForSkill.length === 0) return <td key={p.id} className="py-2 pr-4 text-center">N/A</td>;
+                                                    const correctCount = allObsForSkill.filter(o => o.item_correct === 1).length;
+                                                    const totalCount = allObsForSkill.length;
+                                                    const percentage = calcPct(correctCount, totalCount);
+                                                    return <td key={p.id} className={`py-2 pr-4 text-center ${pctBgClass(percentage)}`}>{`${correctCount}/${totalCount} (${fmtPct(percentage)})`}</td>;
+                                                });
+                                                return <tr key={skill} className="border-b"><td className="py-2 pl-4">{skill}</td>{participantCells}</tr>;
+                                            })}
+                                        </React.Fragment>
+                                    ))}
+                            </tbody>
+                        </table></div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+// --- END ADDED COMPONENT ---
+
+
 function EencReports({ course, participants, allObs, allCases }) {
     const [tab, setTab] = useState('summary');
     const [scenarioFilter, setScenarioFilter] = useState('All');
     const [dayFilter, setDayFilter] = useState('All');
     const [groupFilter, setGroupFilter] = useState('All');
+    const [isPdfGenerating, setIsPdfGenerating] = useState(false);
 
     const filteredParticipants = useMemo(() => participants.filter(p => groupFilter === 'All' || p.group === groupFilter), [participants, groupFilter]);
 
@@ -607,74 +1043,88 @@ function EencReports({ course, participants, allObs, allCases }) {
         return g;
     }, [filteredCases, filteredObs, participants]);
 
-    const handleExportDetailedReportPdf = () => {
-        generateDetailedReportPdf(filteredObs, course.course_type, null, scenarioFilter, participants, dayFilter, groupFilter);
-    };
+    // --- MODIFIED: New PDF Export Logic ---
+    const handleExportPdf = async (quality = 'print') => {
+        setIsPdfGenerating(true);
+        const profile = qualityProfiles[quality] || qualityProfiles.print;
+        const doc = new jsPDF('portrait', 'mm', 'a4');
+        const reportName = `EENC_${tab}_Report${profile.fileSuffix}.pdf`;
+        const margin = 15; // 15mm margin
+        const canvasOptions = { 
+            scale: profile.scale, 
+            useCORS: true, 
+            allowTaint: true, 
+            backgroundColor: '#ffffff' 
+        };
 
-    const handleExportFullReportPdf = () => {
-        const doc = new jsPDF('landscape');
-        const reportTitle = `EENC Report - ${tab === 'summary' ? 'Score Summary' : 'Detailed Skills'}`;
-        doc.text(reportTitle, 14, 15);
-        let startY = 25;
+        const headerEl = document.getElementById('eenc-report-header'); // Get header element
+        
+        try {
+            // 1. Capture Header
+            if (!headerEl) throw new Error("Report header not found");
+            
+            // --- FIX: Temporarily show header for capture ---
+            headerEl.style.display = 'flex'; // Use 'flex' as defined in print styles
+            
+            const headerCanvas = await html2canvas(headerEl, canvasOptions);
 
-        ['Group A', 'Group B', 'Group C', 'Group D'].forEach(g => {
-            const parts = participants.filter(p => p.group === g);
-            if (parts.length === 0) return;
-            if (startY > 180) { doc.addPage(); startY = 20; }
-            if (startY > 20) doc.text(`Group: ${g}`, 14, startY);
+            // --- FIX: Re-hide header after capture ---
+            headerEl.style.display = 'none';
 
-            if (tab === 'summary') {
-                const groupData = scoreSummaryByGroup[g];
-                if (!groupData) return;
-                const head = [[
-                    { content: 'Participant', rowSpan: 2 },
-                    { content: 'Total', colSpan: 3, styles: { halign: 'center' } },
-                    { content: 'Breathing', colSpan: 3, styles: { halign: 'center' } },
-                    { content: 'Not Breathing', colSpan: 3, styles: { halign: 'center' } }
-                ], ['Cases', 'Score', '%', 'Cases', 'Score', '%', 'Cases', 'Score', '%']];
-                const body = Object.values(groupData).map(r => [
-                    r.name, r.total_cases, r.total_score, fmtPct(calcPct(r.total_score, r.total_max_score)),
-                    r.breathing_cases, r.breathing_score, fmtPct(calcPct(r.breathing_score, r.breathing_max_score)),
-                    r.not_breathing_cases, r.not_breathing_score, fmtPct(calcPct(r.not_breathing_score, r.not_breathing_max_score))
-                ]);
-                autoTable(doc, { head, body, startY: startY + 5 });
-                startY = doc.lastAutoTable.finalY + 15;
-            } else { // Detailed Matrix
-                const scenariosToRender = (scenarioFilter === 'All') ? ['breathing', 'not_breathing'] : [scenarioFilter];
-                scenariosToRender.forEach(scenario => {
-                    const hasData = parts.some(p => filteredObs.some(o => o.participant_id === p.id && o.age_group === `EENC_${scenario}`));
-                    if (!hasData) return;
-                    if (startY > 180) { doc.addPage(); startY = 20; }
-                    doc.text(`${scenario === 'breathing' ? 'Breathing Baby' : 'Not Breathing Baby'}`, 14, startY);
-
-                    const skillsMap = scenario === 'breathing' ? SKILLS_EENC_BREATHING : SKILLS_EENC_NOT_BREATHING;
-                    const domains = Object.keys(skillsMap);
-                    const head = [['Skill', ...parts.map(p => p.name)]];
-                    const body = [];
-
-                    domains.forEach(domain => {
-                        body.push([{ content: (scenario === 'breathing' ? EENC_DOMAIN_LABEL_BREATHING : EENC_DOMAIN_LABEL_NOT_BREATHING)[domain], colSpan: parts.length + 1, styles: { fontStyle: 'bold', fillColor: '#f0f0f0' } }]);
-                        skillsMap[domain].forEach(skill => {
-                            const participantCells = parts.map(p => {
-                                const skillObservations = filteredObs.filter(o => o.participant_id === p.id && o.item_recorded === skill.text && o.age_group === `EENC_${scenario}`);
-                                if (skillObservations.length === 0) return "N/A";
-                                const totalScore = skillObservations.reduce((acc, o) => acc + o.item_correct, 0);
-                                const maxPossibleScore = skillObservations.length * 2;
-                                const percentage = calcPct(totalScore, maxPossibleScore);
-                                const avgScore = (totalScore / skillObservations.length).toFixed(1);
-                                return `${avgScore} (${fmtPct(percentage)})`;
-                            });
-                            body.push([skill.text, ...participantCells]);
-                        });
-                    });
-                    autoTable(doc, { head, body, startY: startY + 5 });
-                    startY = doc.lastAutoTable.finalY + 15;
-                });
+            // 2. Get group elements to render
+            const groupElements = [];
+            groupsToRender.forEach(g => {
+                const id = `group-${tab}-${g.replace(/\s+/g, '-')}`;
+                const el = document.getElementById(id);
+                if (el) groupElements.push(el);
+            });
+            
+            if (groupElements.length === 0) {
+                notify("No data to export.", "error");
+                setIsPdfGenerating(false);
+                return;
             }
-        });
 
-        doc.save(`EENC_${tab}_Report_All_Groups.pdf`);
+            // 3. Loop, capture, and add each group to a new page
+            for (let i = 0; i < groupElements.length; i++) {
+                const el = groupElements[i];
+                if (i > 0) {
+                    doc.addPage();
+                }
+                
+                // Capture group content
+                const groupCanvas = await html2canvas(el, canvasOptions);
+                
+                // Add header and scaled group content to the same page
+                addCanvasToPdfOnePage(doc, headerCanvas, groupCanvas, profile, margin);
+            }
+
+            // 4. Save the doc
+            await saveJsPdfDoc(
+                doc, 
+                reportName,
+                (msg) => notify(msg, 'success'),
+                (msg) => notify(msg, 'error')
+            );
+
+        } catch (e) {
+            console.error("Error generating PDF:", e);
+            notify(`Failed to save PDF: ${e.message || 'Unknown error'}`, 'error');
+        } finally {
+            // --- FIX: Ensure header is hidden even if error occurs ---
+            if (headerEl) {
+                headerEl.style.display = 'none';
+            }
+            setIsPdfGenerating(false);
+        }
     };
+    // --- END MODIFIED ---
+
+    // --- ADDED: handlePrint function ---
+    const handlePrint = () => {
+        window.print();
+    };
+    // --- END ADDED ---
 
     const EencDetailedMatrix = ({ group, scenario }) => {
         const parts = participants.filter(p => p.group === group).sort((a, b) => a.name.localeCompare(b.name));
@@ -725,19 +1175,37 @@ function EencReports({ course, participants, allObs, allCases }) {
     const groupsToRender = groupFilter === 'All' ? ['Group A', 'Group B', 'Group C', 'Group D'] : [groupFilter];
 
     return (
-        <div className="mt-6">
-            <div className="flex flex-wrap gap-3 mb-4"><Button variant={tab === 'summary' ? 'primary' : 'secondary'} onClick={() => setTab('summary')}>Score Summary</Button><Button variant={tab === 'matrix' ? 'primary' : 'secondary'} onClick={() => setTab('matrix')}>Detailed Skill Report</Button></div>
-            <div className="flex flex-wrap gap-4 items-center justify-between p-4 bg-gray-50 rounded-md mb-6">
+        // --- MODIFIED: Added printable-area class ---
+        <div className="mt-6 printable-area" id="eenc-report-container">
+            {/* --- MODIFIED: Report Header (now print-only via CSS) --- */}
+            <div className="report-header mb-4 px-1" id="eenc-report-header">
+                <h2 className="text-2xl font-bold">{course.course_type} Report</h2>
+                <h3 className="text-lg text-gray-700">{course.state} / {course.locality}</h3>
+            </div>
+            {/* --- END MODIFIED --- */}
+
+            <div className="flex flex-wrap gap-3 mb-4 print-hide"><Button variant={tab === 'summary' ? 'primary' : 'secondary'} onClick={() => setTab('summary')}>Score Summary</Button><Button variant={tab === 'matrix' ? 'primary' : 'secondary'} onClick={() => setTab('matrix')}>Detailed Skill Report</Button></div>
+            {/* --- MODIFIED: Added print-hide class --- */}
+            <div className="flex flex-wrap gap-4 items-center justify-between p-4 bg-gray-50 rounded-md mb-6 pdf-hide print-hide">
                 <div className="flex gap-4 items-center">
                     {tab === 'matrix' && <FormGroup label="Scenario"><Select value={scenarioFilter} onChange={(e) => setScenarioFilter(e.target.value)}><option value="All">All (Combined)</option><option value="breathing">Breathing Baby</option><option value="not_breathing">Not Breathing Baby</option></Select></FormGroup>}
                     <FormGroup label="Day of Training"><Select value={dayFilter} onChange={(e) => setDayFilter(e.target.value)}><option value="All">All Days</option>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>Day {d}</option>)}</Select></FormGroup>
                     <FormGroup label="Group"><Select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}><option value="All">All Groups</option><option>Group A</option><option>Group B</option><option>Group C</option><option>Group D</option></Select></FormGroup>
                 </div>
-                {tab === 'matrix' ? (
-                    <Button onClick={handleExportDetailedReportPdf}><PdfIcon /> Save Detailed Report as PDF</Button>
-                ) : (
-                    <Button onClick={handleExportFullReportPdf}><PdfIcon /> Save Summary Report as PDF</Button>
-                )}
+                {/* --- MODIFIED: Spinner moved outside button --- */}
+                <div className="flex items-center gap-2">
+                    {isPdfGenerating && <Spinner />} {/* <-- Spinner outside buttons */}
+                    {/* --- ADDED: Print Button --- */}
+                    <Button onClick={handlePrint} variant="secondary" disabled={isPdfGenerating}>
+                        <PrintIcon /> Print
+                    </Button>
+                    <Button onClick={() => handleExportPdf('print')} variant="secondary" disabled={isPdfGenerating}>
+                        <PdfIcon /> Export for Print
+                    </Button>
+                    <Button onClick={() => handleExportPdf('screen')} variant="secondary" disabled={isPdfGenerating}>
+                        <PdfIcon /> Export for Sharing
+                    </Button>
+                </div>
             </div>
 
             {tab === 'summary' && groupsToRender.map(g => {
@@ -746,7 +1214,8 @@ function EencReports({ course, participants, allObs, allCases }) {
                 const ids = Object.keys(data);
                 if (ids.length === 0) return null;
                 return (
-                    <div key={g} className="grid gap-2 mb-8">
+                    // --- MODIFIED: Added ID and page-break class ---
+                    <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
                         <h3 className="text-xl font-semibold">{g}</h3>
                         <div className="overflow-x-auto">
                             <table className="min-w-full text-sm">
@@ -787,16 +1256,18 @@ function EencReports({ course, participants, allObs, allCases }) {
             })}
 
             {tab === 'matrix' && groupsToRender.map(g => (
-                <React.Fragment key={g}>
+                // --- MODIFIED: Added ID and page-break class ---
+                <div key={g} className="report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
                     {(scenarioFilter === 'All' || scenarioFilter === 'breathing') && <EencDetailedMatrix group={g} scenario="breathing" />}
                     {(scenarioFilter === 'All' || scenarioFilter === 'not_breathing') && <EencDetailedMatrix group={g} scenario="not_breathing" />}
-                </React.Fragment>
+                </div>
             ))}
         </div>
     );
 }
 
 // Sub-component for EENC detailed matrix, local to this file
+// This component is NOT wrapped in a page-break div, its PARENT is.
 const EencDetailedMatrix = ({ group, scenario, participants, filteredObs, scenarioFilter }) => {
     const parts = participants.filter(p => p.group === group).sort((a, b) => a.name.localeCompare(b.name));
     const skillsMap = scenario === 'breathing' ? SKILLS_EENC_BREATHING : SKILLS_EENC_NOT_BREATHING;
@@ -833,6 +1304,7 @@ const EencDetailedMatrix = ({ group, scenario, participants, filteredObs, scenar
                                         return <td key={p.id} className={`py-2 pr-4 text-center ${pctBgClass(percentage)}`}>{`${avgScore} (${fmtPct(percentage)})`}</td>;
                                     });
                                     return <tr key={skill.text} className="border-b"><td className="py-2 pl-4">{skill.text}</td>{participantCells}</tr>;
+                               
                                 })}
                             </React.Fragment>
                         ))}
