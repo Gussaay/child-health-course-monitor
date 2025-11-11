@@ -353,9 +353,12 @@ export function AdminDashboard() {
             const usersSnapshot = await getDocs(usersQuery);
             const userList = usersSnapshot.docs.map(doc => ({
                 id: doc.id,
-                name: doc.data().name || '',
+                ...doc.data(), // Spread data first
+                // --- START MODIFICATION ---
+                // Ensure displayName is prioritized, falling back to name
+                displayName: doc.data().displayName || doc.data().name || '', 
+                // --- END MODIFICATION ---
                 assignedLocality: doc.data().assignedLocality || '',
-                ...doc.data()
             }));
 
             // Fetch Role Permissions
@@ -419,7 +422,11 @@ export function AdminDashboard() {
                     user.id === userId ? { ...user, ...updatePayload } : user
                 );
                 setUsers(updatedUsers);
-                setToast({ show: true, message: `Successfully updated ${userToUpdate.email}'s role.`, type: "success" });
+                // --- START MODIFICATION ---
+                // Use displayName in toast message
+                const userName = userToUpdate.displayName || userToUpdate.email;
+                setToast({ show: true, message: `Successfully updated ${userName}'s role.`, type: "success" });
+                // --- END MODIFICATION ---
             } catch (error) {
                 console.error("Error updating user role:", error);
                 setToast({ show: true, message: "Failed to update user role. Please try again.", type: "error" });
@@ -532,9 +539,12 @@ export function AdminDashboard() {
             const roleMatch = !filterRole || user.role === filterRole;
             const stateMatch = !filterState || user.assignedState === filterState;
             const localityMatch = !filterLocality || user.assignedLocality === filterLocality;
+            // --- START MODIFICATION ---
+            // Search displayName instead of name
             const searchMatch = !searchQuery ||
-                                String(user.name || '').toLowerCase().includes(queryLower) ||
+                                String(user.displayName || '').toLowerCase().includes(queryLower) ||
                                 String(user.email || '').toLowerCase().includes(queryLower);
+            // --- END MODIFICATION ---
             return roleMatch && stateMatch && localityMatch && searchMatch;
         });
         return filtered;
@@ -596,7 +606,10 @@ export function AdminDashboard() {
                 </FormGroup>
             </div>
             {filteredUsers.length > 0 ? (
-                <Table headers={["#", "Name", "Email", "Current Role", "Change Role", "Assigned State", "Assigned Locality"]}>
+                // --- START MODIFICATION ---
+                // Change header from "Name" to "Display Name"
+                <Table headers={["#", "Display Name", "Email", "Current Role", "Change Role", "Assigned State", "Assigned Locality"]}>
+                {/* --- END MODIFICATION --- */}
                     {filteredUsers.map((user, index) => {
                         const isStateAssignable = ['states_manager', 'state_coordinator', 'locality_manager'].includes(user.role);
                         const isLocalityAssignable = user.role === 'locality_manager';
@@ -604,7 +617,10 @@ export function AdminDashboard() {
                         return (
                             <tr key={user.id}>
                                 <td>{index + 1}</td>
-                                <td>{user.name || 'N/A'}</td>
+                                {/* --- START MODIFICATION --- */}
+                                {/* Render displayName instead of name */}
+                                <td>{user.displayName || 'N/A'}</td>
+                                {/* --- END MODIFICATION --- */}
                                 <td>{user.email}</td>
                                 <td><span className="bg-slate-200 text-slate-800 text-xs font-medium px-2 py-1 rounded-full">{ROLES[user.role] || 'N/A'}</span></td>
                                 <td>

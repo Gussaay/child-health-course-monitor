@@ -7,7 +7,9 @@ import { Bar, Line } from 'react-chartjs-2';
 import { Button, Card, EmptyState, FormGroup, Input, PageHeader, PdfIcon, Select, Spinner, Table, Textarea, CourseIcon, Modal, CardBody, CardFooter } from './CommonComponents'; // Added Modal, CardBody, CardFooter
 import { listAllDataForCourse, listParticipants, listCoordinators, upsertCoordinator, deleteCoordinator, listFunders, upsertFunder, deleteFunder, listFinalReport, upsertFinalReport, deleteFinalReport, uploadFile } from '../data.js'; // Added uploadFile
 // Updated imports for participant components
+// --- MODIFIED: Import from separate files ---
 import { ParticipantsView, ParticipantForm } from './Participants';
+import { CourseTestForm } from './CourseTestForm'; // --- NEW: Import from its own file
 import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES,
 } from './constants.js';
@@ -174,7 +176,11 @@ const Landing = React.memo(function Landing({ active, onPick }) {
 });
 
 
-export function CoursesTable({ courses, onOpen, onEdit, onDelete, onOpenReport, canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates, onAddFinalReport, canManageFinalReport }) {
+// --- MODIFIED: Added onOpenTestForm prop ---
+export function CoursesTable({ 
+    courses, onOpen, onEdit, onDelete, onOpenReport, onOpenTestForm, 
+    canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates, onAddFinalReport, canManageFinalReport 
+}) {
     const isCourseActive = (course) => {
         if (!course.start_date || !course.course_duration || course.course_duration <= 0) {
             return false;
@@ -241,7 +247,13 @@ export function CoursesTable({ courses, onOpen, onEdit, onDelete, onOpenReport, 
                                     <div className="flex gap-2 flex-nowrap justify-end">
                                         <Button variant="primary" onClick={() => onOpen(c.id)}>Open Course</Button>
                                         <Button variant="secondary" onClick={() => onOpenReport(c.id)}>Course Reports</Button>
-                                        {/* --- NEW BUTTON --- */}
+                                        {/* --- NEW BUTTON: Test Scores --- */}
+                                        {c.course_type === 'ICCM' && (
+                                            <Button variant="secondary" onClick={() => onOpenTestForm(c.id)}>
+                                                Test Scores
+                                            </Button>
+                                        )}
+                                        {/* --- END NEW BUTTON --- */}
                                         <Button
                                             variant="secondary"
                                             onClick={() => {
@@ -254,7 +266,6 @@ export function CoursesTable({ courses, onOpen, onEdit, onDelete, onOpenReport, 
                                         >
                                             Share Monitoring
                                         </Button>
-                                        {/* --- END NEW BUTTON --- */}
                                         <Button
                                             variant="secondary"
                                             onClick={() => onEdit(c)}
@@ -290,8 +301,11 @@ export function CoursesTable({ courses, onOpen, onEdit, onDelete, onOpenReport, 
 export function CourseManagementView({
     // --- MODIFIED: 'courses' prop is now 'allCourses' ---
     allCourses, onAdd, onOpen, onEdit, onDelete, onOpenReport,
+    onOpenTestForm, // <-- ADD THIS
     /* canAddCourse, */ canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates,
-    activeCoursesTab, setActiveCoursesTab, selectedCourse, participants,
+    activeCoursesTab, setActiveCoursesTab, selectedCourse, 
+    participants, 
+    participantTests, // <-- ADD THIS
     onAddParticipant, onEditParticipant, onDeleteParticipant,
     onOpenParticipantReport, onImportParticipants, onAddFinalReport, onEditFinalReport,
     selectedParticipantId, onSetSelectedParticipantId, onBulkMigrate, onBatchUpdate,
@@ -304,7 +318,10 @@ export function CourseManagementView({
 
     // --- NEW PROPS to manage course type selection ---
     activeCourseType,
-    setActiveCourseType
+    setActiveCourseType,
+
+    // --- NEW PROP: Pass in the test save function ---
+    onSaveParticipantTest 
 }) {
     const currentParticipant = participants.find(p => p.id === selectedParticipantId);
 
@@ -390,6 +407,17 @@ export function CourseManagementView({
                 onSetSelectedParticipantId(null); // Clear participant selection when opening a new course
     };
 
+    // --- MODIFIED: This handler now uses the prop from App.jsx ---
+    const handleOpenTestForm = (courseId) => {
+        onOpenTestForm(courseId); // <-- This now calls the App.jsx function
+    };
+
+    // --- NEW: Handler for opening Test Form from Participant List ---
+    const handleOpenTestFormForParticipant = (participantId) => {
+        onSetSelectedParticipantId(participantId); // Pre-select this participant
+        setActiveCoursesTab('enter-test-scores');
+    };
+
     return (
         <Card>
             <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-4">
@@ -401,6 +429,12 @@ export function CourseManagementView({
                         <Button variant="tab" isActive={activeCoursesTab === 'participants'} onClick={() => { setActiveCoursesTab('participants'); onSetSelectedParticipantId(null); }}>Participants</Button>
                         <Button variant="tab" isActive={activeCoursesTab === 'monitoring'} onClick={() => setActiveCoursesTab('monitoring')} disabled={!currentParticipant}>Monitoring</Button>
                         <Button variant="tab" isActive={activeCoursesTab === 'reports'} onClick={() => setActiveCoursesTab('reports')}>Reports</Button>
+                        {/* --- NEW: Test Scores Tab --- */}
+                        {selectedCourse.course_type === 'ICCM' && (
+                            <Button variant="tab" isActive={activeCoursesTab === 'enter-test-scores'} onClick={() => { setActiveCoursesTab('enter-test-scores'); }}>
+                                Test Scores
+                            </Button>
+                        )}
                     </>
                 )}
             </div>
@@ -459,6 +493,7 @@ export function CourseManagementView({
                                     onEdit={onEdit}
                                     onDelete={onDelete}
                                     onOpenReport={onOpenReport}
+                                    onOpenTestForm={handleOpenTestForm} // --- NEW: Pass handler
                                     canEditDeleteActiveCourse={canEditDeleteActiveCourse}
                                     canEditDeleteInactiveCourse={canEditDeleteInactiveCourse}
                                     userStates={userStates}
@@ -471,8 +506,8 @@ export function CourseManagementView({
                 )}
                 
                 {/* --- OTHER TABS LOGIC --- */}
-                {/* Show spinner *only* if not on courses tab and loading details */}
-                {loadingDetails && activeCoursesTab !== 'courses' ? <div className="flex justify-center p-8"><Spinner /></div> : (
+                {/* --- MODIFIED: Include 'enter-test-scores' in loading check --- */}
+                {loadingDetails && (activeCoursesTab !== 'courses') ? <div className="flex justify-center p-8"><Spinner /></div> : (
                     <>
                         {/* --- REMOVED: Course Details Content --- */}
                         {activeCoursesTab === 'participants' && selectedCourse && (
@@ -487,6 +522,7 @@ export function CourseManagementView({
                                 onImport={onImportParticipants}
                                 onBatchUpdate={onBatchUpdate}
                                 onBulkMigrate={onBulkMigrate}
+                                onOpenTestFormForParticipant={handleOpenTestFormForParticipant} // --- NEW: Pass handler
                                 // --- PASS ALL THE CORRECT PERMISSION PROPS ---
                                 isCourseActive={isCourseActive}
                                 canAddParticipant={canManageCourse}
@@ -513,6 +549,23 @@ export function CourseManagementView({
                         )}
                         {activeCoursesTab === 'reports' && selectedCourse && (
                             <Suspense fallback={<Spinner />}><ReportsView course={selectedCourse} participants={participants} /></Suspense>
+                        )}
+                        {/* --- NEW: Render CourseTestForm --- */}
+                        {activeCoursesTab === 'enter-test-scores' && selectedCourse && (
+                            <CourseTestForm
+                                course={selectedCourse}
+                                participants={participants}
+                                participantTests={participantTests} // <-- PASS THE DATA
+                                initialParticipantId={selectedParticipantId}
+                                onSaveTest={onSaveParticipantTest} // This prop must be passed in from App.jsx
+                                onCancel={() => setActiveCoursesTab(selectedParticipantId ? 'participants' : 'courses')} // Go back
+                                onSave={() => {
+                                    // On save, go back to participants list
+                                    setActiveCoursesTab('participants');
+                                    // --- NEW: Clear test data to force a refetch next time ---
+                                    onBatchUpdate(); // This is the prop that refreshes course details
+                                }}
+                            />
                         )}
                     </>
                 )}
@@ -1320,7 +1373,7 @@ export function PublicCourseMonitoringView({ course, allParticipants }) {
     };
 
     const handleParticipantChange = (e) => {
-        setSelectedParticipantId(e.g.value);
+        setSelectedParticipantId(e.target.value);
     };
 
     return (

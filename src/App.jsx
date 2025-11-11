@@ -37,10 +37,10 @@ const CourseManagementView = lazy(() => import('./components/Course.jsx').then(m
 const CourseForm = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.CourseForm })));
 // --- NEW: Import PublicCourseMonitoringView from Course.jsx ---
 const PublicCourseMonitoringView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicCourseMonitoringView })));
-const ProgramTeamView = lazy(() => import('./components/ProgramTeamView').then(module => ({ default: module.ProgramTeamView })));
+const ProgramTeamView = lazy(() => import('./components/ProgramTeamView.jsx'));
 // --- NEW: Import PublicTeamMemberProfileView ---
-const PublicTeamMemberProfileView = lazy(() => import('./components/ProgramTeamView').then(module => ({ default: module.PublicTeamMemberProfileView })));
-const TeamMemberApplicationForm = lazy(() => import('./components/ProgramTeamView').then(module => ({ default: module.TeamMemberApplicationForm })));
+const PublicTeamMemberProfileView = lazy(() => import('./components/ProgramTeamView.jsx').then(module => ({ default: module.PublicTeamMemberProfileView })));
+const TeamMemberApplicationForm = lazy(() => import('./components/ProgramTeamView.jsx').then(module => ({ default: module.TeamMemberApplicationForm })));
 const ParticipantsView = lazy(() => import('./components/Participants').then(module => ({ default: module.ParticipantsView })));
 const ParticipantForm = lazy(() => import('./components/Participants').then(module => ({ default: module.ParticipantForm })));
 const ParticipantMigrationMappingView = lazy(() => import('./components/Participants').then(module => ({ default: module.ParticipantMigrationMappingView })));
@@ -66,9 +66,12 @@ import {
     initializeUsageTracking,
     // --- NEW: Import listAllParticipantsForCourse ---
     listAllParticipantsForCourse,
+    listParticipantTestsForCourse, // <-- ADD THIS
     listMentorshipSessions,
     saveMentorshipSession,
-    importMentorshipSessions
+    importMentorshipSessions,
+    // --- NEW: Import upsertParticipantTest ---
+    upsertParticipantTest
 } from './data.js';
 import { STATE_LOCALITIES } from './components/constants.js';
 import { Card, PageHeader, Button, Table, EmptyState, Spinner, PdfIcon, CourseIcon, Footer, Toast } from './components/CommonComponents';
@@ -224,9 +227,11 @@ export default function App() {
         facilitators: allFacilitators,
         funders, federalCoordinators, stateCoordinators, localityCoordinators,
         healthFacilities,
+        participantTests, // <-- ADD THIS
         fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators,
         fetchHealthFacilities,
         fetchSkillMentorshipSubmissions,
+        fetchParticipantTests // <-- ADD THIS
     } = useDataCache();
     const { user, userStates, authLoading, userLocalities } = useAuth();
 
@@ -258,8 +263,8 @@ export default function App() {
     const [activeCoursesTab, setActiveCoursesTab] = useState('courses');
     const [activeHRTab, setActiveHRTab] = useState('facilitators');
 
-    // --- *** CHANGE 1 of 6: Initialize with null *** ---
-    const [courseDetails, setCourseDetails] = useState({ participants: null, allObs: null, allCases: null, finalReport: null });
+    // --- *** MODIFICATION: Add participantTests: null *** ---
+    const [courseDetails, setCourseDetails] = useState({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null });
     
     // --- NEW STATE ---
     const [courseDetailsLoading, setCourseDetailsLoading] = useState(false);
@@ -650,22 +655,24 @@ export default function App() {
                 setCourseDetailsLoading(true);
                 try {
                     // Fetch all the data needed for reports
-                    const [participantsData, allCourseData, finalReport] = await Promise.all([
+                    // --- MODIFICATION: Added participantTests ---
+                    const [participantsData, allCourseData, finalReport, testData] = await Promise.all([
                         listAllParticipantsForCourse(selectedCourseId),
                         listAllDataForCourse(selectedCourseId),
-                        getFinalReportByCourseId(selectedCourseId)
+                        getFinalReportByCourseId(selectedCourseId),
+                        listParticipantTestsForCourse(selectedCourseId) // <-- ADD THIS
                     ]);
                     const { allObs, allCases } = allCourseData;
                     
                     // Silently update the state once data is loaded
-                    setCourseDetails({ participants: participantsData || [], allObs, allCases, finalReport });
+                    setCourseDetails({ participants: participantsData || [], allObs, allCases, finalReport, participantTests: testData || [] }); // <-- ADD THIS
                     
                 } catch (error) {
                     // Don't bother the user with a toast, just log it.
                     // The report view will try again if the user clicks it.
                     console.error("Background fetch of course details failed:", error);
-                    // --- *** CHANGE 2 of 6: Clear details to null on failure *** ---
-                    setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null });
+                    // --- *** MODIFICATION: Clear all fields *** ---
+                    setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null }); // <-- ADD THIS
                 } finally {
                     setCourseDetailsLoading(false);
                 }
@@ -806,8 +813,8 @@ export default function App() {
             setSelectedCourseId(null);
             setSelectedParticipantId(null);
             setFinalReportCourse(null);
-            // --- *** CHANGE 3 of 6: Clear details to null on navigation *** ---
-            setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null });
+            // --- *** MODIFICATION: Clear participantTests *** ---
+            setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null }); // <-- ADD THIS
             if (['dashboard', 'admin', 'landing', 'skillsMentorship'].includes(newView)) {
                 setActiveCourseType(null);
             }
@@ -825,9 +832,8 @@ export default function App() {
         setSelectedCourseId(courseId);
         setLoading(false); // Ensure global spinner is off
         
-        // --- *** CHANGE 4 of 6: Clear details of *previous* course to null *** ---
-        // The new useEffect will fetch details for the *new* course.
-        setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null });
+        // --- *** MODIFICATION: Clear participantTests *** ---
+        setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null }); // <-- ADD THIS
         
         navigate('participants', { courseId });
     }, [navigate]);
@@ -839,9 +845,8 @@ export default function App() {
         // ... (callback unchanged)
         setSelectedCourseId(courseId);
         
-        // --- *** CHANGE 5 of 6: Check against null instead of truthy *** ---
-        // Check if details are already loaded
-        if (courseDetails.allObs !== null && courseDetails.participants !== null) {
+        // --- *** MODIFICATION: Check for participantTests *** ---
+        if (courseDetails.allObs !== null && courseDetails.participants !== null && courseDetails.participantTests !== null) { // <-- ADD THIS
              navigate('courseReport', { courseId });
              return; // Data is ready, just navigate
         }
@@ -856,13 +861,15 @@ export default function App() {
         setLoading(true); 
         setCourseDetailsLoading(true); // Mark as loading
         try {
-            const [participantsData, allCourseData, finalReport] = await Promise.all([
+            // --- MODIFICATION: Fetch participantTests ---
+            const [participantsData, allCourseData, finalReport, testData] = await Promise.all([
                 listAllParticipantsForCourse(courseId),
                 listAllDataForCourse(courseId),
-                getFinalReportByCourseId(courseId)
+                getFinalReportByCourseId(courseId),
+                listParticipantTestsForCourse(courseId) // <-- ADD THIS
             ]);
             const { allObs, allCases } = allCourseData;
-            setCourseDetails({ participants: participantsData, allObs, allCases, finalReport });
+            setCourseDetails({ participants: participantsData, allObs, allCases, finalReport, participantTests: testData || [] }); // <-- ADD THIS
             navigate('courseReport', { courseId });
         } catch (error) {
             console.error("Error loading course report data:", error);
@@ -873,6 +880,45 @@ export default function App() {
         }
     }, [navigate, courseDetails, courseDetailsLoading]);
     // --- END MODIFICATION ---
+
+    // --- *** MODIFIED HANDLER *** ---
+    const handleOpenCourseForTestForm = useCallback(async (courseId) => {
+        setLoading(true);
+        setSelectedCourseId(courseId);
+        setSelectedParticipantId(null); // Clear any old participant
+
+        try {
+            // Fetch all data needed for the test form
+            const [participantsData, testData] = await Promise.all([
+                listAllParticipantsForCourse(courseId, { source: 'server' }), // Get fresh participant list
+                listParticipantTestsForCourse(courseId, { source: 'server' }) // Get fresh test results
+            ]);
+            
+            // Set the details
+            setCourseDetails({
+                participants: participantsData || [],
+                participantTests: testData || [],
+                allObs: null, // Not needed for this view
+                allCases: null, // Not needed for this view
+                finalReport: null // Not needed for this view
+            });
+
+            // --- THIS IS THE FIX ---
+            // Navigate to the dashboard, not the entry form
+            setActiveCoursesTab('test-dashboard'); 
+            setView('courses');
+            // --- END OF FIX ---
+
+        } catch (error) {
+            console.error("Error loading data for test form:", error);
+            setToast({ show: true, message: 'Failed to load test form data. Please try again.', type: 'error' });
+            navigate('courses'); // Go back to course list on failure
+        } finally {
+            setLoading(false);
+        }
+    }, [navigate]); // Add dependencies
+    // --- *** END MODIFIED HANDLER *** ---
+
 
     const handleApproveSubmission = useCallback(async (submission) => {
         // ... (callback unchanged)
@@ -1014,7 +1060,8 @@ export default function App() {
 
             // On success, navigate back to the participants list and force a refresh
             // by clearing the course details (which ParticipantsView depends on).
-            setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null });
+            // --- MODIFICATION: Clear participantTests ---
+            setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null }); // <-- ADD THIS
             navigate('participants', { courseId: selectedCourseId });
 
         } catch (error) {
@@ -1135,11 +1182,13 @@ export default function App() {
                 onEdit={(c) => navigate('courseForm', { editCourse: c })}
                 onDelete={handleDeleteCourse}
                 onOpenReport={handleOpenCourseReport}
+                onOpenTestForm={handleOpenCourseForTestForm} // <-- MODIFIED
                 userStates={userStates}
                 activeCoursesTab={activeCoursesTab}
                 setActiveCoursesTab={setActiveCoursesTab}
                 selectedCourse={selectedCourse}
-                participants={courseDetails.participants || []} // This is now [] initially, ParticipantsView handles its own data
+                participants={courseDetails.participants || []} 
+                participantTests={courseDetails.participantTests || []} // <-- ADD THIS
                 onAddParticipant={() => navigate('participantForm')}
                 onEditParticipant={(p) => navigate('participantForm', { editParticipant: p })}
                 onDeleteParticipant={handleDeleteParticipant}
@@ -1150,13 +1199,19 @@ export default function App() {
                 selectedParticipantId={selectedParticipantId}
                 onSetSelectedParticipantId={setSelectedParticipantId}
                 onBulkMigrate={handleBulkMigrate}
-                onBatchUpdate={() => navigate('participants', { courseId: selectedCourse.id })} // Simplified this call
-                loadingDetails={loading && !!selectedCourseId}
+                onBatchUpdate={() => {
+                    // This is the prop to refresh data. We must clear the state to trigger the refetch.
+                    setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null });
+                    setSelectedCourseId(null); // Clear selected course ID...
+                    setSelectedCourseId(selectedCourse.id); // ...and re-set it to trigger the useEffect
+                }}
+                loadingDetails={loading || (selectedCourseId && courseDetailsLoading)} // <-- MODIFIED
                 canManageCourse={permissions.canManageCourse}
                 canUseSuperUserAdvancedFeatures={permissions.canUseSuperUserAdvancedFeatures}
                 canUseFederalManagerAdvancedFeatures={permissions.canUseFederalManagerAdvancedFeatures}
                 canEditDeleteActiveCourse={permissions.canManageCourse}
                 canEditDeleteInactiveCourse={permissions.canUseFederalManagerAdvancedFeatures}
+                onSaveParticipantTest={upsertParticipantTest}
             />;
 
             case 'participantMigration': return selectedCourse && (permissions.canUseSuperUserAdvancedFeatures ? <ParticipantMigrationMappingView course={selectedCourse} participants={courseDetails.participants} onCancel={() => navigate('participants')} onSave={handleExecuteBulkMigration} setToast={setToast} /> : null);
@@ -1208,10 +1263,8 @@ export default function App() {
 
             case 'participantForm': return permissions.canManageCourse ? (selectedCourse && <ParticipantForm course={selectedCourse} initialData={editingParticipant} onCancel={() => navigate(previousView)} onSave={async (participantData, facilityUpdateData) => { try { const fullPayload = { ...participantData, id: editingParticipant?.id, courseId: selectedCourse.id }; await saveParticipantAndSubmitFacilityUpdate(fullPayload, facilityUpdateData); if (facilityUpdateData) setToast({ show: true, message: 'Facility update submitted for approval.', type: 'info' }); 
             
-            // --- *** CHANGE 6 of 6: Clear details on save *** ---
-            // handleOpenCourse no longer refetches, so just navigate
-            // We also clear details so the participant list is forced to refresh
-            setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null });
+            // --- *** MODIFICATION: Clear participantTests *** ---
+            setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null }); // <-- ADD THIS
             navigate('participants', { courseId: selectedCourse.id });
             // --- END MODIFICATION ---
 

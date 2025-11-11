@@ -156,6 +156,7 @@ export const NeonatalCoverageDashboard = () => {
     // Local state for filters and UI remains
     const [stateFilter, setStateFilter] = useState(''); 
     const [localityFilter, setLocalityFilter] = useState(''); 
+    const [equipmentFilter, setEquipmentFilter] = useState('');
     const [sortConfig, setSortConfig] = useState({ key: 'coverage', direction: 'descending' }); 
     const [isMapFullscreen, setIsMapFullscreen] = useState(false); 
     const [mapViewLevel, setMapViewLevel] = useState('locality');
@@ -167,21 +168,18 @@ export const NeonatalCoverageDashboard = () => {
     const fullscreenMapContainerRef = useRef(null);
     const dashboardSectionRef = useRef(null);
     
-    // --- NEW: Polling useEffect for Incremental Facility Fetch (15 minutes) ---
+    // --- Polling useEffect for Incremental Facility Fetch (15 minutes) ---
     useEffect(() => {
-        // Only start polling once the initial full data fetch is complete and data is present
         if (allFacilities !== null && allFacilities.length > 0) {
-            // Set polling interval to 15 minutes (900,000 milliseconds)
             const intervalId = setInterval(() => {
                 console.log("Polling for new facility data (Neonatal Dashboard)...");
-                // Call fetcher with force=false, incremental=true to trigger the timestamp-based update
                 fetchHealthFacilities(false, true); 
             }, 15 * 60 * 1000); 
 
             return () => clearInterval(intervalId);
         }
     }, [allFacilities, fetchHealthFacilities]);
-    // --- END NEW Polling ---
+    // --- END Polling ---
 
     const filteredNationalFacilities = useMemo(() => allFacilities?.filter(f => f['الولاية'] !== 'إتحادي') || [], [allFacilities]);
 
@@ -193,17 +191,33 @@ export const NeonatalCoverageDashboard = () => {
 
     const hasFunctioningSCNU = useCallback((f) => f['هل_المؤسسة_تعمل'] === 'Yes' && f.neonatal_level_of_care?.secondary, []);
 
-    const filteredFacilities = useMemo(() => {
+    // --- MODIFICATION: Create DENOMINATOR base list (location filter only) ---
+    const locationFilteredFacilities = useMemo(() => {
         return (allFacilities || []).filter(f => {
             if(f['الولاية'] === 'إتحادي') return false;
             if (stateFilter && f['الولاية'] !== stateFilter) return false;
             if (localityFilter && f['المحلية'] !== localityFilter) return false;
             return true;
         });
-    }, [allFacilities, stateFilter, localityFilter]);
+    }, [allFacilities, stateFilter, localityFilter]); // <-- No equipmentFilter
+    // --- END MODIFICATION ---
+
+    // --- MODIFICATION: Create NUMERATOR base list (location + equipment filter) ---
+    const filteredFacilities = useMemo(() => {
+        if (!equipmentFilter) {
+            return locationFilteredFacilities; // No filter, so lists are identical
+        }
+        return locationFilteredFacilities.filter(f => {
+            // Apply equipment filter
+            return (Number(f[equipmentFilter]) || 0) > 0;
+        });
+    }, [locationFilteredFacilities, equipmentFilter]); // <-- Depends on base list and equipment filter
+    // --- END MODIFICATION ---
+
 
     const hospitalsWithSCNU = useMemo(() => filteredFacilities.filter(hasFunctioningSCNU), [filteredFacilities, hasFunctioningSCNU]);
 
+    // --- MODIFICATION: Update kpiData to use correct lists ---
     const kpiData = useMemo(() => {
         let totalLocalitiesCount;
         if (stateFilter) {
@@ -214,9 +228,13 @@ export const NeonatalCoverageDashboard = () => {
                 .reduce((a, [, s]) => a + s.localities.length, 0);
         }
 
+        // NUMERATOR (uses equipment-filtered list)
         const functioningScnus = filteredFacilities.filter(hasFunctioningSCNU);
         const localitiesWithScnuSet = new Set(functioningScnus.map(f => `${f['الولاية']}-${f['المحلية']}`));
-        const totalSupposedFacilities = filteredFacilities.filter(isFacilitySupposedToProvideCare).length;
+        
+        // DENOMINATOR (uses location-filtered list)
+        const totalSupposedFacilities = locationFilteredFacilities.filter(isFacilitySupposedToProvideCare).length;
+        
         const totalFunctioningScnusCount = functioningScnus.length;
         const facilitiesWithCpapCount = functioningScnus.filter(f => (Number(f['neonatal_cpap']) || 0) > 0).length;
         const cpapPercentage = totalFunctioningScnusCount > 0 ? Math.round((facilitiesWithCpapCount / totalFunctioningScnusCount) * 100) : 0;
@@ -224,8 +242,8 @@ export const NeonatalCoverageDashboard = () => {
         const localityCoveragePercentage = totalLocalitiesCount > 0 ? Math.round((localitiesWithScnuCount / totalLocalitiesCount) * 100) : 0;
 
         return {
-            totalSupposed: totalSupposedFacilities,
-            totalWithSCNU: totalFunctioningScnusCount,
+            totalSupposed: totalSupposedFacilities, // <-- DENOMINATOR
+            totalWithSCNU: totalFunctioningScnusCount, // <-- NUMERATOR
             scnuCoveragePercentage: totalSupposedFacilities > 0 ? Math.round((totalFunctioningScnusCount / totalSupposedFacilities) * 100) : 0,
             totalLocalitiesCount: totalLocalitiesCount,
             totalLocalitiesWithSCNU: localitiesWithScnuCount,
@@ -233,15 +251,17 @@ export const NeonatalCoverageDashboard = () => {
             totalWithCPAP: facilitiesWithCpapCount,
             cpapPercentage: cpapPercentage,
         };
-    }, [filteredFacilities, stateFilter, hasFunctioningSCNU, isFacilitySupposedToProvideCare]);
+    }, [filteredFacilities, locationFilteredFacilities, stateFilter, hasFunctioningSCNU, isFacilitySupposedToProvideCare]); // <-- Added locationFilteredFacilities
+    // --- END MODIFICATION ---
 
     const allLocalitiesCoverageData = useMemo(() => { const s={};Object.entries(STATE_LOCALITIES).forEach(([sK,sD])=>{if(sK==='إتحادي')return;sD.localities.forEach(l=>{const k=l.en;s[k]={key:k,name:l.ar,state:sK,totalSupposed:0,totalWithSCNU:0};});});filteredNationalFacilities.forEach(f=>{const k=f['المحلية'];if(!k||!s[k])return;if(isFacilitySupposedToProvideCare(f))s[k].totalSupposed++;if(hasFunctioningSCNU(f))s[k].totalWithSCNU++;});return Object.values(s).map(l=>({...l,coverage:l.totalSupposed>0?Math.round((l.totalWithSCNU/l.totalSupposed)*100):0,})); }, [filteredNationalFacilities, isFacilitySupposedToProvideCare, hasFunctioningSCNU]);
 
     const isLocalityView = !!stateFilter;
     const aggregationLevelName = isLocalityView ? 'Locality' : 'State';
 
+    // --- MODIFICATION: Update stateData to use correct lists ---
     const { nationalAverageRow, stateData } = useMemo(() => {
-        // National Calculations
+        // National Calculations (Unaffected by equipment filter, this is correct)
         const allFunctioningScnusNational = filteredNationalFacilities.filter(hasFunctioningSCNU);
         const natLS = new Set(allFunctioningScnusNational.map(f => `${f['الولاية']}-${f['المحلية']}`));
         const totNL = Object.entries(STATE_LOCALITIES)
@@ -251,10 +271,12 @@ export const NeonatalCoverageDashboard = () => {
         const natTW = allFunctioningScnusNational.length;
         const natAR = { name: 'National Average', key: 'national', totalSupposed: natTS, totalWithSCNU: natTW, coverage: natTS > 0 ? Math.round((natTW / natTS) * 100) : 0, localitiesWithSCNUCount: natLS.size, totalLocalities: totNL, localityCoverage: totNL > 0 ? Math.round((natLS.size / totNL) * 100) : 0, };
 
-        // State/Locality Data (based on current filters reflected in filteredFacilities)
+        // State/Locality Data
         const sum = {};
         const aggF = isLocalityView ? 'المحلية' : 'الولاية';
-        filteredFacilities.forEach(f => { // Use filteredFacilities here
+
+        // DENOMINATOR loop (using locationFilteredFacilities)
+        locationFilteredFacilities.forEach(f => {
             const key = f[aggF];
             if (!key || key === 'إتحادي') return;
             if (!sum[key]) {
@@ -263,14 +285,23 @@ export const NeonatalCoverageDashboard = () => {
                 sum[key] = { name, key, totalSupposed: 0, totalWithSCNU: 0, localitiesWithSCNUSet: new Set(), totalLocalities: totL };
             }
             if (isFacilitySupposedToProvideCare(f)) sum[key].totalSupposed++;
+        });
+
+        // NUMERATOR loop (using equipment-filtered 'filteredFacilities')
+        filteredFacilities.forEach(f => { 
+            const key = f[aggF];
+            if (!key || key === 'إتحادي' || !sum[key]) return; // Make sure key exists from loop above
+
             if (hasFunctioningSCNU(f)) {
                 sum[key].totalWithSCNU++;
                 if (!isLocalityView) sum[key].localitiesWithSCNUSet.add(f['المحلية']);
             }
         });
+
         const sD = Object.values(sum).map(s => { const lC = isLocalityView ? (s.totalWithSCNU > 0 ? 1 : 0) : s.localitiesWithSCNUSet.size; return { ...s, coverage: s.totalSupposed > 0 ? Math.round((s.totalWithSCNU / s.totalSupposed) * 100) : 0, localitiesWithSCNUCount: lC, localityCoverage: s.totalLocalities > 0 ? Math.round((lC / s.totalLocalities) * 100) : 0 }; });
         return { nationalAverageRow: natAR, stateData: sD };
-    }, [filteredNationalFacilities, filteredFacilities, stateFilter, isLocalityView, hasFunctioningSCNU, isFacilitySupposedToProvideCare]);
+    }, [filteredNationalFacilities, locationFilteredFacilities, filteredFacilities, stateFilter, isLocalityView, hasFunctioningSCNU, isFacilitySupposedToProvideCare]); // <-- Added locationFilteredFacilities
+    // --- END MODIFICATION ---
 
 
     const handleSort = (key) => { let d=(sortConfig.key===key&&sortConfig.direction==='descending')?'ascending':'descending';setSortConfig({key,direction:d}); };
@@ -278,6 +309,7 @@ export const NeonatalCoverageDashboard = () => {
     const getEquipmentSummary = useCallback((stateKey) => { if(isLocalityView)return null;const rel=filteredNationalFacilities.filter(f=>f['الولاية']===stateKey&&hasFunctioningSCNU(f));const sum={};NEONATAL_EQUIPMENT_KEYS.forEach(k=>{sum[NEONATAL_EQUIPMENT_SPEC[k]]=0;});rel.forEach(f=>{NEONATAL_EQUIPMENT_KEYS.forEach(k=>{sum[NEONATAL_EQUIPMENT_SPEC[k]]+=(Number(f[k])||0);});});return{totalUnits:rel.length,summary:sum}; }, [filteredNationalFacilities, isLocalityView, hasFunctioningSCNU]);
     const getLocalityEquipmentSummary = useCallback((localityKey, stateKey) => { if(!stateKey||!localityKey){return{totalUnits:0,summary:Object.fromEntries(NEONATAL_EQUIPMENT_KEYS.map(k=>[NEONATAL_EQUIPMENT_SPEC[k],0]))};} const rel=filteredNationalFacilities.filter(f=>f['الولاية']===stateKey&&f['المحلية']===localityKey&&hasFunctioningSCNU(f));const sum={};NEONATAL_EQUIPMENT_KEYS.forEach(k=>{sum[NEONATAL_EQUIPMENT_SPEC[k]]=0;});rel.forEach(f=>{NEONATAL_EQUIPMENT_KEYS.forEach(k=>{sum[NEONATAL_EQUIPMENT_SPEC[k]]+=(Number(f[k])||0);});});return{totalUnits:rel.length,summary:sum}; }, [filteredNationalFacilities, hasFunctioningSCNU]);
 
+    // This is correct: Equipment table should be based on the filtered list (numerator)
     const equipmentTableData = useMemo(() => {
         const isH = !!stateFilter;
         const aggK = isH ? 'اسم_المؤسسة' : 'الولاية';
@@ -303,17 +335,19 @@ export const NeonatalCoverageDashboard = () => {
         const rWoD = allR.filter(r => !r.hasData);
         const fRWd = rWd.slice(0, dL);
         const rL = oL - fRWd.length;
-        const fRWoD = rWoD.slice(0, rL);
+        const fRWoD = rWoD.slice(0, rL); // Corrected typo from 'rWD'
         return [...fRWd, ...fRWoD];
     }, [filteredFacilities, stateFilter, hasFunctioningSCNU]);
 
+    // This is correct: Map markers should be based on the filtered list (numerator)
     const facilityLocationMarkers = useMemo(() => hospitalsWithSCNU.filter(f=>f['_الإحداثيات_longitude']&&f['_الإحداثيات_latitude']).map(f=>({key:f.id,name:f['اسم_المؤسسة'],coordinates:[f['_الإحداثيات_longitude'],f['_الإحداثيات_latitude']]})), [hospitalsWithSCNU]);
+    
     const mapViewConfig = useMemo(() => { const sC=stateFilter?mapCoordinates[stateFilter]:null;if(sC)return{center:[sC.lng,sC.lat],scale:sC.scale,focusedState:stateFilter};return{center:[30,15.5],scale:2000,focusedState:null}; }, [stateFilter]);
     const fullscreenMapViewConfig = useMemo(() => ({ ...mapViewConfig }), [mapViewConfig]);
     const nationalMapData = useMemo(() => { const s={};filteredNationalFacilities.forEach(f=>{const k=f['الولاية'];if(!k||k==='إتحادي')return;if(!s[k])s[k]={totalSupposed:0,totalWithSCNU:0};if(isFacilitySupposedToProvideCare(f))s[k].totalSupposed++;if(hasFunctioningSCNU(f))s[k].totalWithSCNU++;});return Object.entries(s).map(([sK,c])=>({state:sK,percentage:c.totalSupposed>0?Math.round((c.totalWithSCNU/c.totalSupposed)*100):0,coordinates:mapCoordinates[sK]?[mapCoordinates[sK].lng,mapCoordinates[sK].lat]:[0,0]})); }, [filteredNationalFacilities, isFacilitySupposedToProvideCare, hasFunctioningSCNU]);
     const handleStateChange = (e) => { setStateFilter(e.target.value); setLocalityFilter(''); };
 
-    const coverageTableHeaders = [
+     const coverageTableHeaders = [
         {key:'name',label:aggregationLevelName,class:'w-[25%]'},
         {key:'totalSupposed',label:'total pediatric and Comperhensive EmONC',class:'w-[15%] text-center'},
         {key:'totalWithSCNU',label:'Facilities with SCNU',class:'w-[15%] text-center'},
@@ -403,7 +437,7 @@ export const NeonatalCoverageDashboard = () => {
 
                 <div className="flex flex-col gap-6 lg:col-span-1">
                     <Card>
-                        <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="p-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <FormGroup label="State">
                                 <Select value={stateFilter} onChange={handleStateChange}>
                                     <option value="">All States</option>
@@ -414,6 +448,14 @@ export const NeonatalCoverageDashboard = () => {
                                 <Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}>
                                     <option value="">All Localities</option>
                                     {stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
+                                </Select>
+                            </FormGroup>
+                            <FormGroup label="Has Equipment">
+                                <Select value={equipmentFilter} onChange={(e) => setEquipmentFilter(e.target.value)}>
+                                    <option value="">Any</option>
+                                    {Object.entries(NEONATAL_EQUIPMENT_SPEC).map(([key, label]) => (
+                                        <option key={key} value={key}>{label}</option>
+                                    ))}
                                 </Select>
                             </FormGroup>
                         </div>
@@ -443,7 +485,7 @@ export const NeonatalCoverageDashboard = () => {
                         </>
                     )}
                 </div>
-
+                
                  {loading ? <div className="lg:col-span-2 flex justify-center items-center h-64"><Spinner/></div> : (
                     <Card className="p-0 flex flex-col flex-grow lg:col-span-2">
                          <div className="p-4 border-b flex flex-col sm:flex-row sm:justify-between sm:items-center flex-shrink-0 gap-2 sm:gap-0">
@@ -613,6 +655,7 @@ export const EENCCoverageDashboard = () => {
     // Local state for filters and UI remains
     const [stateFilter, setStateFilter] = useState(''); 
     const [localityFilter, setLocalityFilter] = useState(''); 
+    const [equipmentFilter, setEquipmentFilter] = useState('');
     const [mapViewLevel, setMapViewLevel] = useState('state');
     const [copyStatus, setCopyStatus] = useState('');
     const [tooltipData, setTooltipData] = useState(null); 
@@ -623,7 +666,7 @@ export const EENCCoverageDashboard = () => {
     const fullscreenMapContainerRef = useRef(null);
     const dashboardSectionRef = useRef(null);
     
-    // --- NEW: Polling useEffect for Incremental Facility Fetch (15 minutes) ---
+    // --- Polling useEffect for Incremental Facility Fetch (15 minutes) ---
     useEffect(() => {
         if (allFacilities !== null && allFacilities.length > 0) {
             const intervalId = setInterval(() => {
@@ -634,25 +677,44 @@ export const EENCCoverageDashboard = () => {
             return () => clearInterval(intervalId);
         }
     }, [allFacilities, fetchHealthFacilities]);
-    // --- END NEW Polling ---
+    // --- END Polling ---
 
     const filteredNationalFacilities = useMemo(() => allFacilities?.filter(f => f['الولاية'] !== 'إتحادي') || [], [allFacilities]);
     const isEmONCFacility = useCallback((f) => { const s = f['eenc_service_type']; return s === 'BEmONC' || s === 'CEmONC'; }, []);
     const isEmONCFunctional = useCallback((f) => isEmONCFacility(f) && f['هل_المؤسسة_تعمل'] === 'Yes', [isEmONCFacility]);
     const providesEENC = useCallback((f) => isEmONCFacility(f) && f['eenc_provides_essential_care'] === 'Yes', [isEmONCFacility]);
-    const facilitiesByFilter = useMemo(() => {
+    
+    // --- MODIFICATION: Create DENOMINATOR base list (location filter only) ---
+    const locationFilteredFacilities = useMemo(() => {
         return (allFacilities || []).filter(f => {
             if(f['الولاية'] === 'إتحادي') return false;
             if (stateFilter && f['الولاية'] !== stateFilter) return false;
             if (localityFilter && f['المحلية'] !== localityFilter) return false;
             return true;
         });
-    }, [allFacilities, stateFilter, localityFilter]);
+    }, [allFacilities, stateFilter, localityFilter]); // <-- No equipmentFilter
+    // --- END MODIFICATION ---
+    
+    // --- MODIFICATION: Rename old 'facilitiesByFilter' to 'facilitiesByFilter' (NUMERATOR)
+    const facilitiesByFilter = useMemo(() => {
+        if (!equipmentFilter) {
+            return locationFilteredFacilities; // No filter, so lists are identical
+        }
+        return locationFilteredFacilities.filter(f => {
+            // Apply equipment filter
+            return (Number(f[equipmentFilter]) || 0) > 0;
+        });
+    }, [locationFilteredFacilities, equipmentFilter]); // <-- Depends on base list and equipment filter
+    // --- END MODIFICATION ---
 
+    // --- MODIFICATION: Update kpiData to use correct lists ---
     const kpiData = useMemo(() => {
-        const relevantFacilities = facilitiesByFilter.filter(isEmONCFacility);
+        // DENOMINATOR (uses location-filtered list)
+        const relevantFacilities = locationFilteredFacilities.filter(isEmONCFacility);
         const functionalFacilities = relevantFacilities.filter(isEmONCFunctional);
-        const eencProviders = functionalFacilities.filter(providesEENC);
+
+        // NUMERATOR (uses equipment-filtered list)
+        const eencProviders = facilitiesByFilter.filter(isEmONCFunctional).filter(providesEENC);
 
         const totalEmONC = relevantFacilities.length;
         const totalFunctionalEmONC = functionalFacilities.length;
@@ -660,19 +722,23 @@ export const EENCCoverageDashboard = () => {
         const eencCoveragePercentage = totalFunctionalEmONC > 0 ? Math.round((totalEENCProviders / totalFunctionalEmONC) * 100) : 0;
 
         return {
-            totalEmONC: totalEmONC,
-            totalFunctionalEmONC: totalFunctionalEmONC,
-            totalEENCProviders: totalEENCProviders,
+            totalEmONC: totalEmONC, // <-- DENOMINATOR
+            totalFunctionalEmONC: totalFunctionalEmONC, // <-- DENOMINATOR
+            totalEENCProviders: totalEENCProviders, // <-- NUMERATOR
             eencCoveragePercentage: eencCoveragePercentage
         };
-    }, [facilitiesByFilter, isEmONCFacility, isEmONCFunctional, providesEENC]);
+    }, [facilitiesByFilter, locationFilteredFacilities, isEmONCFacility, isEmONCFunctional, providesEENC]); // <-- Added locationFilteredFacilities
+    // --- END MODIFICATION ---
 
     const allLocalitiesCoverageDataEENC = useMemo(() => { const s={};Object.entries(STATE_LOCALITIES).forEach(([sK,sD])=>{if(sK==='إتحادي')return;sD.localities.forEach(l=>{s[l.en]={key:l.en,name:l.ar,state:sK,totalEmONC:0, functionalEmONC: 0, eencProviders:0};});});filteredNationalFacilities.forEach(f=>{const key=f['المحلية'];if(!key||!s[key])return;if(isEmONCFacility(f)){s[key].totalEmONC++; if(isEmONCFunctional(f)){ s[key].functionalEmONC++; if(providesEENC(f)){s[key].eencProviders++;} } }});return Object.values(s).map(l=>({...l,coverage:l.functionalEmONC>0?Math.round((l.eencProviders/l.functionalEmONC)*100):0})); }, [filteredNationalFacilities, isEmONCFacility, isEmONCFunctional, providesEENC]);
 
+    // --- MODIFICATION: Update tableData to use correct lists ---
     const { tableData, mapData } = useMemo(() => {
         const s = {};
         const aggF = stateFilter ? 'المحلية' : 'الولاية';
-        facilitiesByFilter.forEach(f => {
+
+        // DENOMINATOR loop (using locationFilteredFacilities)
+        locationFilteredFacilities.forEach(f => {
             const key = f[aggF];
             if (!key || key === 'إتحادي') return;
             if (!s[key]) {
@@ -683,14 +749,23 @@ export const EENCCoverageDashboard = () => {
                 s[key].totalEmONC++;
                 if (isEmONCFunctional(f)) {
                     s[key].functionalEmONC++;
-                    if (providesEENC(f)) {
-                        s[key].eencProviders++;
-                    }
                 }
             }
         });
+
+        // NUMERATOR loop (using equipment-filtered 'facilitiesByFilter')
+        facilitiesByFilter.forEach(f => {
+            const key = f[aggF];
+            if (!key || key === 'إتحادي' || !s[key]) return; // Make sure key exists
+
+            if (isEmONCFunctional(f) && providesEENC(f)) {
+                s[key].eencProviders++;
+            }
+        });
+        
         const tD = Object.values(s).map(st => ({ ...st, eencCoverage: st.functionalEmONC > 0 ? Math.round((st.eencProviders / st.functionalEmONC) * 100) : 0 })).sort((a, b) => a.name.localeCompare(b.name));
 
+        // Map data (Unaffected by equipment filter, this is correct)
         const mapDataSource = stateFilter ? [] : filteredNationalFacilities;
         const mapS = {};
          mapDataSource.filter(isEmONCFacility).forEach(f => {
@@ -709,8 +784,10 @@ export const EENCCoverageDashboard = () => {
          }));
 
         return { tableData: tD, mapData: mD };
-    }, [facilitiesByFilter, filteredNationalFacilities, stateFilter, isEmONCFacility, isEmONCFunctional, providesEENC]);
+    }, [facilitiesByFilter, locationFilteredFacilities, filteredNationalFacilities, stateFilter, isEmONCFacility, isEmONCFunctional, providesEENC]); // <-- Added locationFilteredFacilities
+    // --- END MODIFICATION ---
 
+    // This is correct: Equipment table should be based on the filtered list (numerator)
     const equipmentTableData = useMemo(() => {
         const aggK=stateFilter?'اسم_المؤسسة':'الولاية';
         const facP=facilitiesByFilter.filter(f => isEmONCFunctional(f) && providesEENC(f)); // Use facilitiesByFilter
@@ -729,10 +806,13 @@ export const EENCCoverageDashboard = () => {
         return allR;
     }, [facilitiesByFilter, stateFilter, isEmONCFunctional, providesEENC]);
 
+    // This is correct: Map markers should be based on the filtered list (numerator)
     const facilityLocationMarkers = useMemo(() => facilitiesByFilter.filter(f=> isEmONCFunctional(f) && providesEENC(f) &&f['_الإحداثيات_longitude']&&f['_الإحداثيات_latitude']).map(f=>({key:f.id,name:f['اسم_المؤسسة'],coordinates:[f['_الإحداثيات_longitude'],f['_الإحداثيات_latitude']]})), [facilitiesByFilter, isEmONCFunctional, providesEENC]);
+    
     const mapViewConfig = useMemo(() => { const sC=stateFilter?mapCoordinates[stateFilter]:null;if(sC)return{center:[sC.lng,sC.lat],scale:sC.scale,focusedState:stateFilter};return{center:[30,15.5],scale:2000,focusedState:null}; }, [stateFilter]);
     const fullscreenMapViewConfig = useMemo(() => ({ ...mapViewConfig }), [mapViewConfig]);
     const handleStateChange = (e) => { setStateFilter(e.target.value); setLocalityFilter(''); };
+    
     const getEENCStateEquipmentSummary = useCallback((stateKey)=>{ const rel=filteredNationalFacilities.filter(f=>f['الولاية']===stateKey&& isEmONCFunctional(f) &&providesEENC(f));const sum={};EENC_EQUIPMENT_KEYS.forEach(k=>{sum[EENC_EQUIPMENT_SPEC[k]]=0;});rel.forEach(f=>{EENC_EQUIPMENT_KEYS.forEach(k=>{sum[EENC_EQUIPMENT_SPEC[k]]+=(Number(f[k])||0);});});return{totalUnits:rel.length,summary:sum}; }, [filteredNationalFacilities, isEmONCFunctional, providesEENC]);
     const getEENCLocalityEquipmentSummary = useCallback((localityKey, stateKey)=>{ const rel=filteredNationalFacilities.filter(f=>f['الولاية']===stateKey&&f['المحلية']===localityKey&&isEmONCFunctional(f)&&providesEENC(f));const sum={};EENC_EQUIPMENT_KEYS.forEach(k=>{sum[EENC_EQUIPMENT_SPEC[k]]=0;});rel.forEach(f=>{EENC_EQUIPMENT_KEYS.forEach(k=>{sum[EENC_EQUIPMENT_SPEC[k]]+=(Number(f[k])||0);});});return{totalUnits:rel.length,summary:sum}; }, [filteredNationalFacilities, isEmONCFunctional, providesEENC]);
     const handleStateHover = useCallback((stateKey, event)=>{ if(stateFilter||mapViewLevel==='locality')return; const rowData=tableData.find(d=>d.key===stateKey); if(!rowData) return; const eqSum=getEENCStateEquipmentSummary(stateKey);setTooltipData({title:`${rowData.name} (${rowData.key})`,dataRows:[{label:"EENC Coverage",value:`${rowData.eencCoverage}% (${rowData.eencProviders} / ${rowData.functionalEmONC})`}],equipmentSummary:{...eqSum,title:"EENC Equipment Summary"}});setHoverPosition({x:event.clientX,y:event.clientY}); }, [tableData, stateFilter, mapViewLevel, getEENCStateEquipmentSummary]);
@@ -775,7 +855,7 @@ export const EENCCoverageDashboard = () => {
 
                  <div className="flex flex-col gap-6 lg:col-span-1">
                     <Card>
-                        <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="p-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <FormGroup label="State">
                                 <Select value={stateFilter} onChange={handleStateChange}>
                                     <option value="">All States</option>
@@ -786,6 +866,14 @@ export const EENCCoverageDashboard = () => {
                                 <Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}>
                                     <option value="">All Localities</option>
                                     {stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
+                                </Select>
+                            </FormGroup>
+                            <FormGroup label="Has Equipment">
+                                <Select value={equipmentFilter} onChange={(e) => setEquipmentFilter(e.target.value)}>
+                                    <option value="">Any</option>
+                                    {Object.entries(EENC_EQUIPMENT_SPEC).map(([key, label]) => (
+                                        <option key={key} value={key}>{label}</option>
+                                    ))}
                                 </Select>
                             </FormGroup>
                         </div>
@@ -939,6 +1027,16 @@ const IMNCI_TOOLS_SPEC = { /* ... (unchanged) ... */
 };
 const IMNCI_TOOLS_KEYS = Object.keys(IMNCI_TOOLS_SPEC);
 
+// --- NEW: Define a mapping from data key to label for the filter dropdown ---
+// This is needed because IMNCI uses 'Yes'/'No' strings, not counts.
+const IMNCI_FILTER_SPEC = {
+    'وجود_سجل_علاج_متكامل': 'سجلات (Registers)',
+    'وجود_كتيب_لوحات': 'كتيبات (Chart Booklets)',
+    'ميزان_وزن': 'ميزان وزن (Weight Scales)',
+    'غرفة_إرواء': 'غرفة ارواء (ORT Corners)'
+};
+// --- END NEW ---
+
 
 export const IMNCICoverageDashboard = () => {
     // --- MODIFICATION: Use DataContext and fetcher, adding fetchHealthFacilities ---
@@ -949,6 +1047,7 @@ export const IMNCICoverageDashboard = () => {
     // Local state for filters and UI remains
     const [stateFilter, setStateFilter] = useState('');
     const [localityFilter, setLocalityFilter] = useState('');
+    const [equipmentFilter, setEquipmentFilter] = useState('');
     const [mapViewLevel, setMapViewLevel] = useState('state');
     const [copyStatus, setCopyStatus] = useState('');
     const [tooltipData, setTooltipData] = useState(null);
@@ -959,7 +1058,7 @@ export const IMNCICoverageDashboard = () => {
     const dashboardSectionRef = useRef(null);
     
 
-    // --- NEW: Polling useEffect for Incremental Facility Fetch (15 minutes) ---
+    // --- Polling useEffect for Incremental Facility Fetch (15 minutes) ---
     useEffect(() => {
         if (allFacilities !== null && allFacilities.length > 0) {
             const intervalId = setInterval(() => {
@@ -970,20 +1069,45 @@ export const IMNCICoverageDashboard = () => {
             return () => clearInterval(intervalId);
         }
     }, [allFacilities, fetchHealthFacilities]);
-    // --- END NEW Polling ---
+    // --- END Polling ---
 
-    const filteredFacilities = useMemo(() => {
+    // --- MODIFICATION: Create DENOMINATOR base list (location filter only) ---
+    const locationFilteredFacilities = useMemo(() => {
         return (allFacilities || []).filter(f => {
              if(f['الولاية'] === 'إتحادي') return false;
             if (stateFilter && f['الولاية'] !== stateFilter) return false;
             if (localityFilter && f['المحلية'] !== localityFilter) return false;
             return true;
         });
-    }, [allFacilities, stateFilter, localityFilter]);
+    }, [allFacilities, stateFilter, localityFilter]); // <-- No equipmentFilter
+    // --- END MODIFICATION ---
 
-    const functioningPhcs = useMemo(() => filteredFacilities.filter(f => f['هل_المؤسسة_تعمل'] === 'Yes' && (f['نوع_المؤسسةالصحية'] === 'وحدة صحة الاسرة' || f['نوع_المؤسسةالصحية'] === 'مركز صحة الاسرة')), [filteredFacilities]);
-    const imnciInPhcs = useMemo(() => functioningPhcs.filter(f => f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes'), [functioningPhcs]);
+    // --- MODIFICATION: Create NUMERATOR base list (location + equipment filter) ---
+    const filteredFacilities = useMemo(() => {
+        if (!equipmentFilter) {
+            return locationFilteredFacilities; // No filter, so lists are identical
+        }
+        return locationFilteredFacilities.filter(f => {
+            // Apply equipment/tool filter (uses 'Yes' logic)
+            return f[equipmentFilter] === 'Yes';
+        });
+    }, [locationFilteredFacilities, equipmentFilter]); // <-- Depends on base list and equipment filter
+    // --- END MODIFICATION ---
+
+    // --- MODIFICATION: Update KPI hooks to use correct lists ---
+    // DENOMINATOR for KPI
+    const functioningPhcs = useMemo(() => locationFilteredFacilities.filter(f => f['هل_المؤسسة_تعمل'] === 'Yes' && (f['نوع_المؤسسةالصحية'] === 'وحدة صحة الاسرة' || f['نوع_المؤسسةالصحية'] === 'مركز صحة الاسرة')), [locationFilteredFacilities]);
+    
+    // NUMERATOR for KPI (filters by location, equipment, *and* service)
+    const imnciInPhcs = useMemo(() => filteredFacilities.filter(f => 
+        f['هل_المؤسسة_تعمل'] === 'Yes' && 
+        (f['نوع_المؤسسةالصحية'] === 'وحدة صحة الاسرة' || f['نوع_المؤسسةالصحية'] === 'مركز صحة الاسرة') && 
+        f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes'
+    ), [filteredFacilities]);
+
+    // KPI Percentage (Numerator / Denominator)
     const imnciCoveragePercentage = useMemo(() => functioningPhcs.length > 0 ? Math.round((imnciInPhcs.length / functioningPhcs.length) * 100) : 0, [imnciInPhcs, functioningPhcs]);
+    // --- END MODIFICATION ---
 
     const isLocalityView = !!stateFilter;
     const aggregationLevelName = isLocalityView ? 'Locality' : 'State';
@@ -1007,12 +1131,13 @@ export const IMNCICoverageDashboard = () => {
         return Object.values(s).map(l=>({...l,coverage:l.totalFunctioningPhc>0?Math.round((l.totalPhcWithImnci/l.totalFunctioningPhc)*100):0,}));
     }, [allFacilities]);
 
-
+    // --- MODIFICATION: Update tableCoverageData to use correct lists ---
     const tableCoverageData = useMemo(() => {
         const s={};
         const aggKey=isLocalityView?'المحلية':'الولاية';
-        const facProc = filteredFacilities;
-        facProc.forEach(f=>{
+
+        // DENOMINATOR loop (use locationFilteredFacilities)
+        locationFilteredFacilities.forEach(f=>{
             const key=f[aggKey];
             if(!key || key === 'إتحادي')return;
             if(!s[key]){
@@ -1028,13 +1153,26 @@ export const IMNCICoverageDashboard = () => {
             const isPhc=f['نوع_المؤسسةالصحية']==='وحدة صحة الاسرة'||f['نوع_المؤسسةالصحية']==='مركز صحة الاسرة';
             if(isPhc&&f['هل_المؤسسة_تعمل']==='Yes'){
                 s[key].totalFunctioningPhc++;
-                if(f['وجود_العلاج_المتكامل_لامراض_الطفولة']==='Yes'){s[key].totalPhcWithImnci++;}
             }
         });
+
+        // NUMERATOR loop (use filteredFacilities)
+        filteredFacilities.forEach(f => {
+            const key=f[aggKey];
+            if(!key || key === 'إتحادي' || !s[key]) return; // Skip if no key or no matching denominator entry
+            
+            const isPhc=f['نوع_المؤسسةالصحية']==='وحدة صحة الاسرة'||f['نوع_المؤسسةالصحية']==='مركز صحة الاسرة';
+            if(isPhc && f['هل_المؤسسة_تعمل']==='Yes' && f['وجود_العلاج_المتكامل_لامراض_الطفولة']==='Yes'){
+                s[key].totalPhcWithImnci++;
+            }
+        });
+
         return Object.values(s).map(st=>({...st,coverage:st.totalFunctioningPhc>0?Math.round((st.totalPhcWithImnci/st.totalFunctioningPhc)*100):0})).sort((a,b)=>a.name.localeCompare(b.name));
-    }, [filteredFacilities, stateFilter, isLocalityView]);
+    }, [locationFilteredFacilities, filteredFacilities, stateFilter, isLocalityView]); // <-- Update dependencies
+    // --- END MODIFICATION ---
 
 
+    // This is correct: Tools table is based on `imnciInPhcs` (the numerator list)
     const tableToolsData = useMemo(() => {
         const s={};
         const aggKey=isLocalityView?'المحلية':'الولاية';
@@ -1061,6 +1199,7 @@ export const IMNCICoverageDashboard = () => {
         return Object.values(s).map(st=>{const total=st.totalImnciPhcs;return{...st,percentageWithRegister:total>0?Math.round((st.countWithRegister/total)*100):0,percentageWithChartbooklet:total>0?Math.round((st.countWithChartbooklet/total)*100):0,percentageWithWeightScale:total>0?Math.round((st.countWithWeightScale/total)*100):0,percentageWithOrtCorner:total>0?Math.round((st.countWithOrtCorner/total)*100):0};}).sort((a,b)=>a.name.localeCompare(b.name));
     }, [imnciInPhcs, stateFilter, isLocalityView]);
 
+    // This is correct: Map markers are based on `imnciInPhcs` (the numerator list)
     const facilityLocationMarkers = useMemo(() =>
         imnciInPhcs.filter(f => f['_الإحداثيات_longitude'] && f['_الإحداثيات_latitude'])
                    .map(f => ({
@@ -1070,6 +1209,8 @@ export const IMNCICoverageDashboard = () => {
                    })),
         [imnciInPhcs]
     );
+    
+    // This is correct: National map is not filtered by equipment
     const nationalMapData = useMemo(() => {
         if (!(allFacilities || []).length) return [];
         const s = {};
@@ -1129,9 +1270,17 @@ export const IMNCICoverageDashboard = () => {
 
                  <div className="flex flex-col gap-6 lg:col-span-1">
                     <Card>
-                        <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="p-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <FormGroup label="State"><Select value={stateFilter} onChange={handleStateChange}><option value="">All States</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort((a,b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar)).map(sKey => <option key={sKey} value={sKey}>{STATE_LOCALITIES[sKey].ar}</option>)}</Select></FormGroup>
                             <FormGroup label="Locality"><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">All Localities</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}</Select></FormGroup>
+                            <FormGroup label="Has Tool">
+                                <Select value={equipmentFilter} onChange={(e) => setEquipmentFilter(e.target.value)}>
+                                    <option value="">Any</option>
+                                    {Object.entries(IMNCI_FILTER_SPEC).map(([key, label]) => (
+                                        <option key={key} value={key}>{label}</option>
+                                    ))}
+                                </Select>
+                            </FormGroup>
                         </div>
                     </Card>
 

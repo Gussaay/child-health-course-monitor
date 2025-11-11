@@ -2101,5 +2101,76 @@ export async function getPublicTeamMemberProfileData(level, memberId) {
         throw error;
     }
 }
-
 // --- END NEW FUNCTIONS ---
+
+// --- *** MODIFICATION: `upsertParticipantTest` *** ---
+/**
+ * Saves a participant's test results.
+ * This function performs two writes in a batch:
+ * 1. Saves the full test record (answers, score, etc.) to the root `participantTests` collection.
+ * 2. Updates the `pre_test_score` or `post_test_score` field on the main participant document.
+ * @param {object} payload - The test data payload from CourseTestForm.
+ * (Requires: participantId, testType, score, total, percentage)
+ */
+export async function upsertParticipantTest(payload) {
+    const { participantId, testType, percentage } = payload;
+
+    if (!participantId || !testType) {
+        throw new Error("Participant ID and Test Type are required.");
+    }
+
+    // Determine which field to update on the main participant doc
+    const scoreFieldToUpdate = testType === 'pre-test' ? 'pre_test_score' : 'post_test_score';
+
+    // 1. Create a ref to the main participant document
+    const participantRef = doc(db, "participants", participantId);
+    
+    // 2. Create a ref for the detailed test result.
+    // We will save this in the root `participantTests` collection
+    // with a predictable ID for easy retrieval and duplicate prevention.
+    const testRecordId = `${participantId}_${testType}`;
+    const testRecordRef = doc(db, "participantTests", testRecordId);
+
+    // 3. Use a batch to ensure both writes succeed or fail together
+    const batch = writeBatch(db); // Uses wrapped batch for op counting
+
+    // Write 1: Update the main participant document with the percentage
+    batch.update(participantRef, {
+        [scoreFieldToUpdate]: percentage // e.g., { pre_test_score: 80 }
+    });
+
+    // Write 2: Set the full test result in the root collection
+    // We use `set` (not merge) to overwrite any previous attempt for this test.
+    batch.set(testRecordRef, payload);
+
+    // 4. Commit the batch
+    await batch.commit();
+}
+// --- *** END MODIFICATION *** ---
+
+// --- *** NEW FUNCTION: `listParticipantTestsForCourse` *** ---
+/**
+ * Fetches all participant test results for a specific course.
+ * @param {string} courseId - The ID of the course.
+ * @param {object} sourceOptions - Firestore source options (e.g., { source: 'server' }).
+ * @returns {Promise<Array<object>>} A promise that resolves to an array of test result objects.
+ */
+export async function listParticipantTestsForCourse(courseId, sourceOptions = {}) {
+    if (!courseId) return [];
+    
+    try {
+        const q = query(
+            collection(db, "participantTests"), 
+            where("courseId", "==", courseId)
+        );
+        
+        // Use getData to respect cache policy (defaults to cache-first)
+        const snapshot = await getData(q, sourceOptions);
+        
+        return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (error) {
+        console.error("Error fetching participant tests for course:", error);
+        throw error;
+    }
+}
+// --- *** END NEW FUNCTION *** ---

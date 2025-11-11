@@ -1039,6 +1039,8 @@ export function ParticipantMigrationMappingView({ course, participants, onCancel
 export function ParticipantsView({
     course, onAdd, onOpen, onEdit, onDelete, onOpenReport,
     onImport, onBatchUpdate, onBulkMigrate,
+    // --- NEW: Prop for opening test form ---
+    onOpenTestFormForParticipant, 
     // --- NEW PERMISSION PROPS ---
     isCourseActive,
     canAddParticipant,
@@ -1219,6 +1221,12 @@ export function ParticipantsView({
                                     <div className="flex gap-2 flex-wrap justify-end">
                                         <Button variant="primary" onClick={() => onOpen(p.id)} disabled={!canAddMonitoring} title={!canAddMonitoring ? "You do not have permission to monitor" : "Monitor Participant"}>Monitor</Button>
                                         <Button variant="secondary" onClick={() => onOpenReport(p.id)}>Report</Button>
+                                        {/* --- NEW: Button to open test form for ICCM --- */}
+                                        {course.course_type === 'ICCM' && (
+                                            <Button variant="secondary" onClick={() => onOpenTestFormForParticipant(p.id)}>
+                                                Test Score
+                                            </Button>
+                                        )}
                                         <Button variant="secondary" onClick={() => onEdit(p)} disabled={!canEdit} title={!canEdit ? "Permission denied" : "Edit Participant"}>Edit</Button>
                                         <Button variant="danger" onClick={() => onDelete(p.id)} disabled={!canDelete} title={!canDelete ? "Permission denied" : "Delete Participant"}>Delete</Button>
                                     </div>
@@ -1253,6 +1261,12 @@ export function ParticipantsView({
                             <div className="mt-4 pt-4 border-t border-gray-200 flex flex-wrap gap-2 justify-end">
                                 <Button variant="secondary" onClick={() => onOpen(p.id)} disabled={!canAddMonitoring} title={!canAddMonitoring ? "You do not have permission to monitor" : "Monitor Participant"}>Monitor</Button>
                                 <Button variant="secondary" onClick={() => onOpenReport(p.id)}>Report</Button>
+                                {/* --- NEW: Button to open test form for ICCM --- */}
+                                {course.course_type === 'ICCM' && (
+                                    <Button variant="secondary" onClick={() => onOpenTestFormForParticipant(p.id)}>
+                                        Test Score
+                                    </Button>
+                                )}
                                 <Button variant="secondary" onClick={() => onEdit(p)} disabled={!canEdit} title={!canEdit ? "Permission denied" : "Edit Participant"}>Edit</Button>
                                 <Button variant="danger" onClick={() => onDelete(p.id)} disabled={!canDelete} title={!canDelete ? "Permission denied" : "Delete Participant"}>Delete</Button>
                             </div>
@@ -1342,7 +1356,7 @@ const CreatableNameInput = ({ value, onChange, options, onSelect, disabled }) =>
 
 // --- Add Facility Modal Component ---
 const AddFacilityModal = ({ isOpen, onClose, onSaveSuccess, initialState, initialLocality, initialName = '', setToast }) => {
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isSubmitting, setIsSubmitting] =useState(false);
 
     const facilityInitialData = useMemo(() => ({
         'الولاية': initialState || '',

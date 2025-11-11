@@ -11,6 +11,7 @@ import {
     listHealthFacilities, // Now supports incremental fetch
     listMentorshipSessions, // <-- ADD THIS IMPORT
     listIMNCIVisitReports, // <-- ADD THIS IMPORT
+    listParticipantTestsForCourse, // <-- ADD THIS IMPORT
     
     listPendingFacilitatorSubmissions,
     getFacilitatorApplicationSettings,
@@ -40,6 +41,7 @@ export const DataProvider = ({ children }) => {
         healthFacilities: null,
         skillMentorshipSubmissions: null, // <-- ADD THIS
         imnciVisitReports: null, // <-- ADD THIS
+        participantTests: null, // <-- ADD THIS
         
         pendingFacilitatorSubmissions: null,
         facilitatorApplicationSettings: { isActive: false, openCount: 0 },
@@ -57,6 +59,7 @@ export const DataProvider = ({ children }) => {
         healthFacilities: true,
         skillMentorshipSubmissions: true, // <-- ADD THIS
         imnciVisitReports: true, // <-- ADD THIS
+        participantTests: true, // <-- ADD THIS
         
         pendingFacilitatorSubmissions: true,
         facilitatorApplicationSettings: true,
@@ -246,6 +249,7 @@ export const DataProvider = ({ children }) => {
         fetchHealthFacilities: createFetcher('healthFacilities', listHealthFacilities), // This one is special
         fetchSkillMentorshipSubmissions: createFetcher('skillMentorshipSubmissions', (opts) => listMentorshipSessions(opts)), // <-- ADD THIS
         fetchIMNCIVisitReports: createFetcher('imnciVisitReports', (opts) => listIMNCIVisitReports(opts)), // <-- ADD THIS
+        fetchParticipantTests: createFetcher('participantTests', (opts) => listParticipantTestsForCourse(opts)), // <-- ADD THIS
         
         fetchPendingFacilitatorSubmissions: createFetcher('pendingFacilitatorSubmissions', (opts) => listPendingFacilitatorSubmissions(opts)),
         fetchFacilitatorApplicationSettings: createFetcher('facilitatorApplicationSettings', (opts) => getFacilitatorApplicationSettings(opts)),
@@ -269,6 +273,7 @@ export const DataProvider = ({ children }) => {
                 healthFacilities: null,
                 skillMentorshipSubmissions: null, // <-- ADD THIS
                 imnciVisitReports: null, // <-- ADD THIS
+                participantTests: null, // <-- ADD THIS
                 pendingFacilitatorSubmissions: null,
                 facilitatorApplicationSettings: { isActive: false, openCount: 0 },
                 pendingFederalSubmissions: null,
@@ -283,6 +288,7 @@ export const DataProvider = ({ children }) => {
                 healthFacilities: true,
                 skillMentorshipSubmissions: true, // <-- ADD THIS
                 imnciVisitReports: true, // <-- ADD THIS
+                participantTests: true, // <-- ADD THIS
                 pendingFacilitatorSubmissions: true,
                 facilitatorApplicationSettings: true,
                 pendingFederalSubmissions: true,
