@@ -44,6 +44,11 @@ const TeamMemberApplicationForm = lazy(() => import('./components/ProgramTeamVie
 const ParticipantsView = lazy(() => import('./components/Participants').then(module => ({ default: module.ParticipantsView })));
 const ParticipantForm = lazy(() => import('./components/Participants').then(module => ({ default: module.ParticipantForm })));
 const ParticipantMigrationMappingView = lazy(() => import('./components/Participants').then(module => ({ default: module.ParticipantMigrationMappingView })));
+
+// --- *** START: NEWLY ADDED LAZY IMPORT *** ---
+const CourseTestForm = lazy(() => import('./components/CourseTestForm.jsx').then(module => ({ default: module.CourseTestForm })));
+// --- *** END: NEWLY ADDED LAZY IMPORT *** ---
+
 const PublicFacilityUpdateForm = lazy(() => import('./components/FacilityForms.jsx').then(module => ({ default: module.PublicFacilityUpdateForm })));
 const NewFacilityEntryForm = lazy(() => import('./components/FacilityForms.jsx').then(module => ({ default: module.NewFacilityEntryForm })));
 const SkillsMentorshipView = lazy(() => import('./components/SkillsMentorshipView.jsx'));
@@ -298,6 +303,13 @@ export default function App() {
     const [publicMonitorLoading, setPublicMonitorLoading] = useState(false);
     const [publicMonitorError, setPublicMonitorError] = useState(null);
 
+    // --- *** START: NEWLY ADDED STATES *** ---
+    const [isPublicTestView, setIsPublicTestView] = useState(false);
+    const [publicTestData, setPublicTestData] = useState({ course: null, participants: [], tests: [] });
+    const [publicTestLoading, setPublicTestLoading] = useState(false);
+    const [publicTestError, setPublicTestError] = useState(null);
+    // --- *** END: NEWLY ADDED STATES *** ---
+
     // State for operation counts (for the real-time monitor)
     const [operationCounts, setOperationCounts] = useState({ reads: 0, writes: 0 });
     // --- NEW: State for monitor visibility ---
@@ -357,6 +369,12 @@ export default function App() {
             setPublicViewData(null);
             setPublicViewType(null);
             setPublicViewLoading(false);
+
+            // --- *** START: NEWLY ADDED RESET *** ---
+            setIsPublicTestView(false);
+            setPublicTestError(null);
+            setPublicTestData({ course: null, participants: [], tests: [] });
+            // --- *** END: NEWLY ADDED RESET *** ---
 
 
             const facilityUpdateMatch = path.match(/^\/facilities\/data-entry\/([a-zA-Z0-9]+)\/?$/);
@@ -432,6 +450,41 @@ export default function App() {
                 return;
             }
             // --- *** END OF FIX --- ---
+            
+            // --- *** START: NEWLY ADDED PATH MATCHER *** ---
+            const publicTestMatch = path.match(/^\/public\/test\/course\/([a-zA-Z0-9]+)\/?$/);
+            if (publicTestMatch && publicTestMatch[1]) {
+                setIsPublicTestView(true);
+                const courseId = publicTestMatch[1];
+                setPublicTestLoading(true);
+                const fetchData = async () => {
+                    try {
+                        const [courseData, participantData, testData] = await Promise.all([
+                            getCourseById(courseId, 'server'),
+                            listAllParticipantsForCourse(courseId, 'server'),
+                            listParticipantTestsForCourse(courseId, 'server')
+                        ]);
+
+                        if (!courseData) throw new Error('Course not found.');
+                        if (!participantData) throw new Error('Participants not found.');
+
+                        // Validate course type
+                        if (courseData.course_type !== 'ICCM' && courseData.course_type !== 'EENC') {
+                            throw new Error('Test forms are only available for ICCM and EENC courses.');
+                        }
+
+                        setPublicTestData({ course: courseData, participants: participantData, tests: testData || [] });
+                        setPublicTestError(null);
+                    } catch (err) {
+                        setPublicTestError(err.message);
+                    } finally {
+                        setPublicTestLoading(false);
+                    }
+                };
+                fetchData();
+                return; // Stop processing
+            }
+            // --- *** END: NEWLY ADDED PATH MATCHER *** ---
 
             // --- MODIFIED: publicReportMatch (Course) ---
             const publicCourseReportMatch = path.match(/^\/public\/report\/course\/([a-zA-Z0-9]+)\/?$/);
@@ -794,7 +847,7 @@ export default function App() {
         if (state.participantId && state.participantId !== selectedParticipantId) setSelectedParticipantId(state.participantId);
         if (state.activeCourseType) setActiveCourseType(state.activeCourseType);
 
-        const courseSubTabs = ['participants', 'reports', 'courseDetails'];
+        const courseSubTabs = ['participants', 'reports', 'courseDetails', 'test-dashboard', 'enter-test-scores']; // <-- Added test tabs
         const hrSubTabs = ['facilitators', 'programTeams', 'partnersPage'];
 
         if (hrSubTabs.includes(newView)) { setActiveHRTab(newView); setView('humanResources'); }
@@ -1149,6 +1202,20 @@ export default function App() {
     const handleDismissMonitor = useCallback(() => {
         setIsMonitorVisible(false);
     }, []);
+    
+    // --- *** NEW: Wrapper for saving participant from test form *** ---
+    const handleSaveParticipantFromTestForm = useCallback(async (participantData, facilityUpdateData) => {
+        try {
+            const savedParticipant = await saveParticipantAndSubmitFacilityUpdate(participantData, facilityUpdateData);
+            if (facilityUpdateData) {
+                setToast({ show: true, message: 'Facility update submitted for approval.', type: 'info' });
+            }
+            return savedParticipant; // Return the saved participant (with ID)
+        } catch (e) {
+            setToast({ show: true, message: `Submission failed: ${e.message}`, type: 'error' });
+            throw e; // Re-throw error so the test form can handle it
+        }
+    }, [setToast]); // Add dependencies
 
     // --- MODIFIED: renderView ---
     const renderView = () => {
@@ -1212,6 +1279,24 @@ export default function App() {
                 canEditDeleteActiveCourse={permissions.canManageCourse}
                 canEditDeleteInactiveCourse={permissions.canUseFederalManagerAdvancedFeatures}
                 onSaveParticipantTest={upsertParticipantTest}
+                
+                // --- *** NEW: Prop for saving participant from test form *** ---
+                onSaveParticipant={handleSaveParticipantFromTestForm}
+                
+                // --- Props for CourseForm (passed down) ---
+                facilitatorsList={allFacilitators || []}
+                fundersList={funders || []}
+                federalCoordinatorsList={federalCoordinators || []}
+                stateCoordinatorsList={stateCoordinators || []}
+                localityCoordinatorsList={localityCoordinators || []}
+                onSaveCourse={async (payload) => { 
+                    const id = await upsertCourse({ ...payload, id: payload.id }); 
+                    await fetchCourses(true); 
+                    return id; 
+                }}
+                onAddNewFacilitator={async (data) => { await upsertFacilitator(data); await fetchFacilitators(true); }}
+                onAddNewCoordinator={handleAddNewCoordinator}
+                onAddNewFunder={handleAddNewFunder}
             />;
 
             case 'participantMigration': return selectedCourse && (permissions.canUseSuperUserAdvancedFeatures ? <ParticipantMigrationMappingView course={selectedCourse} participants={courseDetails.participants} onCancel={() => navigate('participants')} onSave={handleExecuteBulkMigration} setToast={setToast} /> : null);
@@ -1246,20 +1331,23 @@ export default function App() {
                 const canMonitor = (permissions.canManageCourse && isCourseActive) || permissions.canUseFederalManagerAdvancedFeatures;
                 return canMonitor ? (selectedCourse && currentParticipant && <ObservationView course={selectedCourse} participant={currentParticipant} participants={courseDetails.participants} onChangeParticipant={(id) => setSelectedParticipantId(id)} initialCaseToEdit={editingCaseFromReport} />) : null;
 
-            case 'courseForm': return permissions.canManageCourse ? (<CourseForm
-                courseType={activeCourseType || editingCourse?.course_type}
-                initialData={editingCourse}
-                facilitatorsList={allFacilitators || []}
-                onCancel={() => navigate(previousView)}
-                onSave={async (payload) => { const id = await upsertCourse({ ...payload, id: editingCourse?.id, course_type: activeCourseType || editingCourse?.course_type }); await fetchCourses(true); handleOpenCourse(id); }}
-                onAddNewFacilitator={async (data) => { await upsertFacilitator(data); await fetchFacilitators(true); }}
-                onAddNewCoordinator={handleAddNewCoordinator}
-                onAddNewFunder={handleAddNewFunder}
-                fundersList={funders || []}
-                federalCoordinatorsList={federalCoordinators || []}
-                stateCoordinatorsList={stateCoordinators || []}
-                localityCoordinatorsList={localityCoordinators || []}
-            />) : null;
+            case 'courseForm': 
+                // This case is now handled inside CourseManagementView, but we keep
+                // this as a fallback in case navigate('courseForm') is called directly.
+                return permissions.canManageCourse ? (<CourseForm
+                    courseType={activeCourseType || editingCourse?.course_type}
+                    initialData={editingCourse}
+                    facilitatorsList={allFacilitators || []}
+                    onCancel={() => navigate(previousView)}
+                    onSave={async (payload) => { const id = await upsertCourse({ ...payload, id: editingCourse?.id, course_type: activeCourseType || editingCourse?.course_type }); await fetchCourses(true); handleOpenCourse(id); }}
+                    onAddNewFacilitator={async (data) => { await upsertFacilitator(data); await fetchFacilitators(true); }}
+                    onAddNewCoordinator={handleAddNewCoordinator}
+                    onAddNewFunder={handleAddNewFunder}
+                    fundersList={funders || []}
+                    federalCoordinatorsList={federalCoordinators || []}
+                    stateCoordinatorsList={stateCoordinators || []}
+                    localityCoordinatorsList={localityCoordinators || []}
+                />) : null;
 
             case 'participantForm': return permissions.canManageCourse ? (selectedCourse && <ParticipantForm course={selectedCourse} initialData={editingParticipant} onCancel={() => navigate(previousView)} onSave={async (participantData, facilityUpdateData) => { try { const fullPayload = { ...participantData, id: editingParticipant?.id, courseId: selectedCourse.id }; await saveParticipantAndSubmitFacilityUpdate(fullPayload, facilityUpdateData); if (facilityUpdateData) setToast({ show: true, message: 'Facility update submitted for approval.', type: 'info' }); 
             
@@ -1324,7 +1412,7 @@ export default function App() {
         // ... (memo unchanged)
         { label: 'Home', view: 'landing', active: view === 'landing', disabled: false },
         { label: 'Dashboard', view: 'dashboard', active: view === 'dashboard', disabled: false },
-        { label: 'Courses', view: 'courses', active: ['courses', 'courseForm', 'courseReport', 'participants', 'participantForm', 'participantReport', 'observe', 'monitoring', 'reports', 'finalReport', 'participantMigration', 'courseDetails'].includes(view), disabled: !permissions.canViewCourse },
+        { label: 'Courses', view: 'courses', active: ['courses', 'courseForm', 'courseReport', 'participants', 'participantForm', 'participantReport', 'observe', 'monitoring', 'reports', 'finalReport', 'participantMigration', 'courseDetails', 'test-dashboard', 'enter-test-scores'].includes(view), disabled: !permissions.canViewCourse }, // <-- Added test tabs
         { label: 'Human Resources', view: 'humanResources', active: ['humanResources', 'facilitatorForm', 'facilitatorReport'].includes(view), disabled: !permissions.canViewHumanResource },
         { label: 'Child Health Services', view: 'childHealthServices', active: view === 'childHealthServices', disabled: !permissions.canViewFacilities },
         { label: 'Skills Mentorship', view: 'skillsMentorship', active: view === 'skillsMentorship', disabled: !permissions.canViewSkillsMentorship },
@@ -1341,8 +1429,10 @@ export default function App() {
     // --- NEW: Check for any public report/profile view ---
     const isPublicReportView = !!publicViewType; // This is true for course, facilitator, or team reports
 
+    // --- *** START: MODIFIED LINE *** ---
     // This checks if the user is on *any* minimal UI path (whether authenticated or not)
-    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView;
+    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView;
+    // --- *** END: MODIFIED LINE *** ---
 
     let mainContent;
 
@@ -1491,6 +1581,60 @@ export default function App() {
         }
     }
     // --- END MODIFICATION ---
+
+    // --- *** START: NEWLY ADDED RENDER BLOCK *** ---
+    else if (isPublicTestView) {
+        if (authLoading) {
+            mainContent = <Card><Spinner /></Card>;
+        } else if (!user) {
+            mainContent = <SignInBox message="You must sign in to access the public test form." />;
+        } else if (publicTestLoading) {
+            mainContent = <Card><div className="flex justify-center p-8"><Spinner /></div></Card>;
+        } else if (publicTestError) {
+            mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">{publicTestError}</div></Card>;
+        } else if (publicTestData.course) {
+            mainContent = (
+                <Suspense fallback={<Card><Spinner /></Card>}>
+                    <CourseTestForm
+                        course={publicTestData.course}
+                        participants={publicTestData.participants}
+                        participantTests={publicTestData.tests}
+                        onSaveTest={upsertParticipantTest} // The function to save data
+                        
+                        // --- NEW: Pass the participant save function ---
+                        onSaveParticipant={handleSaveParticipantFromTestForm}
+                        
+                        onCancel={() => {}} // Cancel button does nothing in public view
+                        onSave={(savedTest) => { // This is called *after* score is shown
+                            setToast({ show: true, message: 'Test saved successfully!', type: 'success' });
+                            // Re-fetch test data AND participant data to update the UI
+                            const refetchData = async () => {
+                                setPublicTestLoading(true);
+                                try {
+                                    const [testData, participantData] = await Promise.all([
+                                        listParticipantTestsForCourse(publicTestData.course.id, 'server'),
+                                        listAllParticipantsForCourse(publicTestData.course.id, 'server')
+                                    ]);
+                                    setPublicTestData(prev => ({ ...prev, tests: testData || [], participants: participantData || [] }));
+                                } catch (err) {
+                                    setToast({ show: true, message: 'Failed to refresh test data.', type: 'error' });
+                                } finally {
+                                    setPublicTestLoading(false);
+                                }
+                            };
+                            refetchData();
+                        }}
+                        initialParticipantId={''} // Let the user choose
+                        isPublicView={true} // --- NEW: Set public view flag
+                    />
+                </Suspense>
+            );
+        } else {
+             mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">Could not load test session.</div></Card>;
+        }
+    }
+    // --- *** END: NEWLY ADDED RENDER BLOCK *** ---
+
 
     // --- *** START OF CRITICAL FIX *** ---
     // Standard authenticated view

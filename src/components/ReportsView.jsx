@@ -433,6 +433,7 @@ function ImnciReports({ course, participants, allObs, allCases }) {
                                 <thead>
                                     <tr className="text-left border-b bg-gray-50 sticky top-0">
                                         <th className="py-2 pr-4 w-1/3">Classification</th>
+                                        {/* MODIFICATION: No change needed, w-32 already allows wrapping */}
                                         {parts.map(p => <th key={p.id} className="py-2 px-1 text-center w-32">{p.name}</th>)}
                                     </tr>
                                 </thead>
@@ -692,7 +693,8 @@ function EtatReports({ course, participants, allObs, allCases }) {
                                 <thead>
                                     <tr className="text-left border-b bg-gray-50 sticky top-0">
                                         <th className="py-2 pr-4 w-80">Skill</th>
-                                        {parts.map(p => <th key={p.id} className="py-2 pr-4 whitespace-nowrap text-center">{p.name}</th>)}
+                                        {/* MODIFICATION: Removed whitespace-nowrap, added w-32 and px-1 to allow wrapping */}
+                                        {parts.map(p => <th key={p.id} className="py-2 px-1 text-center w-32">{p.name}</th>)}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -947,7 +949,8 @@ function IccmReports({ course, participants, allObs, allCases }) {
                                 <thead>
                                     <tr className="text-left border-b bg-gray-50 sticky top-0">
                                         <th className="py-2 pr-4 w-80">Skill</th>
-                                        {parts.map(p => <th key={p.id} className="py-2 pr-4 whitespace-nowrap text-center">{p.name}</th>)}
+                                        {/* MODIFICATION: Removed whitespace-nowrap, added w-32 and px-1 to allow wrapping */}
+                                        {parts.map(p => <th key={p.id} className="py-2 px-1 text-center w-32">{p.name}</th>)}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1144,7 +1147,8 @@ function EencReports({ course, participants, allObs, allCases }) {
                         <thead>
                             <tr className="text-left border-b bg-gray-50 sticky top-0">
                                 <th className="py-2 pr-4 w-80">Skill</th>
-                                {parts.map(p => <th key={p.id} className="py-2 pr-4 whitespace-nowrap text-center">{p.name}</th>)}
+                                {/* MODIFICATION: Removed whitespace-nowrap, added w-32 and px-1 to allow wrapping */}
+                                {parts.map(p => <th key={p.id} className="py-2 px-1 text-center w-32">{p.name}</th>)}
                             </tr>
                         </thead>
                         <tbody>
@@ -1286,7 +1290,8 @@ const EencDetailedMatrix = ({ group, scenario, participants, filteredObs, scenar
                     <thead>
                         <tr className="text-left border-b bg-gray-50 sticky top-0">
                             <th className="py-2 pr-4 w-80">Skill</th>
-                            {parts.map(p => <th key={p.id} className="py-2 pr-4 whitespace-nowrap text-center">{p.name}</th>)}
+                            {/* MODIFICATION: Removed whitespace-nowrap, added w-32 and px-1 to allow wrapping */}
+                            {parts.map(p => <th key={p.id} className="py-2 px-1 text-center w-32">{p.name}</th>)}
                         </tr>
                     </thead>
                     <tbody>

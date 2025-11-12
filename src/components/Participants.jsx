@@ -1221,12 +1221,19 @@ export function ParticipantsView({
                                     <div className="flex gap-2 flex-wrap justify-end">
                                         <Button variant="primary" onClick={() => onOpen(p.id)} disabled={!canAddMonitoring} title={!canAddMonitoring ? "You do not have permission to monitor" : "Monitor Participant"}>Monitor</Button>
                                         <Button variant="secondary" onClick={() => onOpenReport(p.id)}>Report</Button>
-                                        {/* --- NEW: Button to open test form for ICCM --- */}
-                                        {course.course_type === 'ICCM' && (
+                                        
+                                        {/* --- 
+                                          --- THIS IS THE FIX ---
+                                          --- Logic changed from (course.course_type === 'ICCM') 
+                                          --- To: (course.course_type === 'ICCM' || course.course_type === 'EENC')
+                                        --- */}
+                                        {(course.course_type === 'ICCM' || course.course_type === 'EENC') && (
                                             <Button variant="secondary" onClick={() => onOpenTestFormForParticipant(p.id)}>
                                                 Test Score
                                             </Button>
                                         )}
+                                        {/* --- END OF FIX --- */}
+
                                         <Button variant="secondary" onClick={() => onEdit(p)} disabled={!canEdit} title={!canEdit ? "Permission denied" : "Edit Participant"}>Edit</Button>
                                         <Button variant="danger" onClick={() => onDelete(p.id)} disabled={!canDelete} title={!canDelete ? "Permission denied" : "Delete Participant"}>Delete</Button>
                                     </div>
@@ -1261,12 +1268,19 @@ export function ParticipantsView({
                             <div className="mt-4 pt-4 border-t border-gray-200 flex flex-wrap gap-2 justify-end">
                                 <Button variant="secondary" onClick={() => onOpen(p.id)} disabled={!canAddMonitoring} title={!canAddMonitoring ? "You do not have permission to monitor" : "Monitor Participant"}>Monitor</Button>
                                 <Button variant="secondary" onClick={() => onOpenReport(p.id)}>Report</Button>
-                                {/* --- NEW: Button to open test form for ICCM --- */}
-                                {course.course_type === 'ICCM' && (
+                                
+                                {/* --- 
+                                  --- THIS IS THE FIX ---
+                                  --- Logic changed from (course.course_type === 'ICCM') 
+                                  --- To: (course.course_type === 'ICCM' || course.course_type === 'EENC')
+                                --- */}
+                                {(course.course_type === 'ICCM' || course.course_type === 'EENC') && (
                                     <Button variant="secondary" onClick={() => onOpenTestFormForParticipant(p.id)}>
                                         Test Score
                                     </Button>
                                 )}
+                                {/* --- END OF FIX --- */}
+                                
                                 <Button variant="secondary" onClick={() => onEdit(p)} disabled={!canEdit} title={!canEdit ? "Permission denied" : "Edit Participant"}>Edit</Button>
                                 <Button variant="danger" onClick={() => onDelete(p.id)} disabled={!canDelete} title={!canDelete ? "Permission denied" : "Delete Participant"}>Delete</Button>
                             </div>
@@ -1440,8 +1454,8 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
     const isEenc = course.course_type === 'EENC';
 
     const excludedImnciSubtypes = ["Standard 7 days course for Medical Doctors", "Standard 7 days course for Medical Assistance", "Refreshment IMNCI Course"];
-    // --- MODIFIED: Added ICCM ---
-    const showTestScores = !(isImnci || isIccm) || ((isImnci || isIccm) && !excludedImnciSubtypes.includes(initialData?.imci_sub_type));
+    // --- MODIFIED: Added ICCM and EENC to exclusion list for simple test scores ---
+    const showTestScores = !(isImnci || isIccm || isEenc) || ((isImnci || isIccm) && !excludedImnciSubtypes.includes(initialData?.imci_sub_type));
 
     // --- MODIFIED: Added ICCM ---
     const jobTitleOptions = useMemo(() => {
@@ -1452,13 +1466,18 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
     }, [isIccm, isImnci, isEtat, isEenc]);
 
     // Participant States
-    const [name, setName] = useState(initialData?.name || '');
-    const [email, setEmail] = useState(initialData?.email || '');
+    // ---
+    // --- FIX APPLIED: Wrap initial values in String() ---
+    // ---
+    const [name, setName] = useState(String(initialData?.name || ''));
+    const [email, setEmail] = useState(String(initialData?.email || ''));
     const [state, setState] = useState(initialData?.state || course?.state || ''); // Default to course state
     const [locality, setLocality] = useState(initialData?.locality || course?.locality || ''); // Default to course locality
-    // --- MODIFIED: This now holds Facility Name or Village Name ---
-    const [center, setCenter] = useState(initialData?.center_name || ''); // This holds the facility *name*
-    const [phone, setPhone] = useState(initialData?.phone || '');
+    const [center, setCenter] = useState(String(initialData?.center_name || '')); // This holds the facility *name*
+    const [phone, setPhone] = useState(String(initialData?.phone || ''));
+    // ---
+    // --- END OF FIX ---
+    // ---
     const [group, setGroup] = useState(initialData?.group || 'Group A');
     const [error, setError] = useState('');
     const [preTestScore, setPreTestScore] = useState(initialData?.pre_test_score || '');
@@ -1595,7 +1614,13 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
 
         const facility = facilitiesInLocality.find(f => f.id === facilityIdOrAction);
         setSelectedFacility(facility || null);
-        setCenter(facility ? facility['اسم_المؤسسة'] : '');
+        //
+        // --- THIS IS FIX #2 ---
+        //
+        setCenter(facility ? String(facility['اسم_المؤسسة'] || '') : '');
+        //
+        // --- END OF FIX #2 ---
+        //
 
         // Reset participant details
         setIsEditingExistingWorker(false);
@@ -1660,14 +1685,21 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
             setShowNewParticipantForm(true); // Open the participant detail popup
         } else {
             setIsEditingExistingWorker(true);
-            setName(worker.name || '');
+            //
+            // --- THIS IS FIX #1 ---
+            //
+            setName(String(worker.name || ''));
             const staffJob = worker.job_title || '';
             if (jobTitleOptions.includes(staffJob)) {
                 setJob(staffJob); setOtherJobTitle('');
             } else {
                 setJob('Other'); setOtherJobTitle(staffJob);
             }
-            setPhone(worker.phone || '');
+            setPhone(String(worker.phone || ''));
+            //
+            // --- END OF FIX #1 ---
+            //
+
             // --- MODIFIED: Added ICCM ---
             if (isImnci || isIccm) {
                 setTrainedIMNCI(String(worker.is_trained || '').trim().toLowerCase() === 'yes' ? 'yes' : 'no');
@@ -1706,6 +1738,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
         const finalJobTitle = job === 'Other' ? otherJobTitle : job;
 
         // Validation
+        // --- FIX: Ensure .trim() is called on strings ---
         if (!name.trim()) { setError('Participant Name is required.'); return; }
         if (!state) { setError('State is required.'); return; }
         if (!locality) { setError('Locality is required.'); return; }
@@ -2037,7 +2070,14 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                             {trainedEENC === 'yes' && <FormGroup label="Date of last EENC training"><Input type="date" value={lastTrainEENC} onChange={(e) => setLastTrainEENC(e.target.value)} /></FormGroup>}
                             <FormGroup label="Has Special Newborn Care Unit (SNCU)?"><Select value={hasSncu ? 'yes' : 'no'} onChange={e => setHasSncu(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
                             <FormGroup label="Has IYCF Center?"><Select value={hasIycfCenter ? 'yes' : 'no'} onChange={e => setHasIycfCenter(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                            
+                            {/* ---
+                            --- THIS IS THE FIX for the syntax error ---
+                            --- The junk text from the previous error was removed ---
+                            --- */}
                             <FormGroup label="Has Kangaroo Care Room?"><Select value={hasKangaroo ? 'yes' : 'no'} onChange={e => setHasKangaroo(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                            {/* --- END OF FIX --- */}
+
                             <FormGroup label={`# ${professionalCategory}s in Delivery Room`}><Input type="number" min="0" value={numStaffInDelivery} onChange={e => setNumStaffInDelivery(Number(e.target.value || 0))} /></FormGroup>
                             <FormGroup label={`# ${professionalCategory}s trained in EENC`}><Input type="number" min="0" value={numStaffTrainedInEenc} onChange={e => setNumStaffTrainedInEenc(Number(e.target.value || 0))} /></FormGroup>
                         </>)}

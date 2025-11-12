@@ -247,13 +247,13 @@ export function CoursesTable({
                                     <div className="flex gap-2 flex-nowrap justify-end">
                                         <Button variant="primary" onClick={() => onOpen(c.id)}>Open Course</Button>
                                         <Button variant="secondary" onClick={() => onOpenReport(c.id)}>Course Reports</Button>
-                                        {/* --- NEW BUTTON: Test Scores --- */}
-                                        {c.course_type === 'ICCM' && (
+                                        {/* --- MODIFIED: Show button for ICCM or EENC --- */}
+                                        {(c.course_type === 'ICCM' || c.course_type === 'EENC') && (
                                             <Button variant="secondary" onClick={() => onOpenTestForm(c.id)}>
                                                 Test Scores
                                             </Button>
                                         )}
-                                        {/* --- END NEW BUTTON --- */}
+                                        {/* --- END MODIFICATION --- */}
                                         <Button
                                             variant="secondary"
                                             onClick={() => {
@@ -298,45 +298,53 @@ export function CoursesTable({
 
 // --- REMOVED CourseDetailView and DetailItem components ---
 
+// --- MODIFIED: CourseManagementView ---
 export function CourseManagementView({
-    // --- MODIFIED: 'courses' prop is now 'allCourses' ---
-    allCourses, onAdd, onOpen, onEdit, onDelete, onOpenReport,
-    onOpenTestForm, // <-- ADD THIS
-    /* canAddCourse, */ canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates,
-    activeCoursesTab, setActiveCoursesTab, selectedCourse, 
-    participants, 
-    participantTests, // <-- ADD THIS
+    // --- ORIGINAL PROPS ---
+    allCourses, onOpen, onDelete, onOpenReport,
+    onOpenTestForm,
+    canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates,
+    activeCoursesTab, setActiveCoursesTab, selectedCourse,
+    participants,
+    participantTests,
     onAddParticipant, onEditParticipant, onDeleteParticipant,
     onOpenParticipantReport, onImportParticipants, onAddFinalReport, onEditFinalReport,
     selectedParticipantId, onSetSelectedParticipantId, onBulkMigrate, onBatchUpdate,
-    loadingDetails, 
-    
-    // --- ADDED PROPS FROM App.jsx ---
+    loadingDetails,
     canManageCourse,
     canUseSuperUserAdvancedFeatures,
     canUseFederalManagerAdvancedFeatures,
-
-    // --- NEW PROPS to manage course type selection ---
     activeCourseType,
     setActiveCourseType,
+    onSaveParticipantTest,
 
-    // --- NEW PROP: Pass in the test save function ---
-    onSaveParticipantTest 
+    // --- NEW PROPS REQUIRED FOR CourseForm ---
+    // (These must be passed in from the parent component, e.g., App.jsx)
+    facilitatorsList,
+    fundersList,
+    federalCoordinatorsList,
+    stateCoordinatorsList,
+    localityCoordinatorsList,
+    onSaveCourse, // The function from App.jsx that saves/updates a course
+    onAddNewFacilitator,
+    onAddNewCoordinator,
+    onAddNewFunder
 }) {
     const currentParticipant = participants.find(p => p.id === selectedParticipantId);
 
-    // --- NEW: Filter allCourses based on activeCourseType ---
+    // --- NEW: State to hold the course being edited ---
+    const [courseToEdit, setCourseToEdit] = useState(null);
+
+    // --- (Existing code for filters: coursesForActiveType, filterStateOptions, etc.) ---
     const coursesForActiveType = useMemo(() => {
         if (!activeCourseType) return [];
         return allCourses.filter(c => c.course_type === activeCourseType);
     }, [allCourses, activeCourseType]);
 
-    // --- NEW: State for filters ---
     const [filterState, setFilterState] = useState('All');
     const [filterLocality, setFilterLocality] = useState('All');
     const [filterSubCourse, setFilterSubCourse] = useState('All');
 
-    // --- NEW: Options for filters, derived from courses for the active type ---
     const filterStateOptions = useMemo(() => {
         const states = new Set(coursesForActiveType.map(c => c.state));
         return ['All', ...Array.from(states).sort()];
@@ -362,19 +370,16 @@ export function CourseManagementView({
         return ['All', ...Array.from(subCourses).sort()];
     }, [coursesForActiveType]);
 
-    // --- NEW: Reset filters when course type changes ---
     useEffect(() => {
         setFilterState('All');
         setFilterLocality('All');
         setFilterSubCourse('All');
     }, [activeCourseType]);
 
-    // --- NEW: Reset locality filter when state changes ---
     useEffect(() => {
         setFilterLocality('All');
     }, [filterState]);
 
-    // --- MODIFIED: This now applies all filters ---
     const courses = useMemo(() => {
         return coursesForActiveType.filter(c => {
             const stateMatch = filterState === 'All' || c.state === filterState;
@@ -387,8 +392,8 @@ export function CourseManagementView({
         });
     }, [coursesForActiveType, filterState, filterLocality, filterSubCourse]);
 
-
     const isCourseActive = useMemo(() => {
+        // ... (existing isCourseActive logic) ...
         if (!selectedCourse?.start_date || !selectedCourse?.course_duration || selectedCourse.course_duration <= 0) {
             return false;
         }
@@ -401,36 +406,65 @@ export function CourseManagementView({
         return today >= startDate && today < endDate;
     }, [selectedCourse]);
 
-    // --- MODIFIED: handleOpenCourse now defaults to 'participants' tab ---
     const handleOpenCourse = (id) => {
         onOpen(id);
-                onSetSelectedParticipantId(null); // Clear participant selection when opening a new course
+        onSetSelectedParticipantId(null);
     };
 
-    // --- MODIFIED: This handler now uses the prop from App.jsx ---
-    const handleOpenTestForm = (courseId) => {
-        onOpenTestForm(courseId); // <-- This now calls the App.jsx function
+    // --- MODIFIED: This handler now loads data and switches the tab directly ---
+    const handleOpenTestForm = async (courseId) => {
+        if (onOpen) {
+            await onOpen(courseId); // 1. Load all course data (participants, tests, etc.)
+        }
+        onSetSelectedParticipantId(null); // 2. Ensure no specific participant is selected
+        setActiveCoursesTab('enter-test-scores'); // 3. Switch to the test score tab
     };
+    // --- END MODIFICATION ---
 
-    // --- NEW: Handler for opening Test Form from Participant List ---
     const handleOpenTestFormForParticipant = (participantId) => {
-        onSetSelectedParticipantId(participantId); // Pre-select this participant
+        onSetSelectedParticipantId(participantId);
         setActiveCoursesTab('enter-test-scores');
     };
+
+    // --- NEW: Handlers to switch to the CourseForm view ---
+    const handleOpenAddForm = () => {
+        setCourseToEdit(null); // Clear any old data
+        setActiveCoursesTab('add-course'); // Set the new view
+    };
+
+    const handleOpenEditForm = (course) => {
+        setCourseToEdit(course); // Set the course to edit
+        setActiveCoursesTab('edit-course'); // Set the new view
+    };
+
+    const handleCancelCourseForm = () => {
+        setCourseToEdit(null);
+        setActiveCoursesTab('courses'); // Go back to the course list
+    };
+
+    // --- NEW: Wrapper for saving and returning to the list ---
+    const handleSaveCourseAndReturn = async (courseData) => {
+        if (onSaveCourse) {
+            await onSaveCourse(courseData); // Call the main save function from App.jsx
+        }
+        setActiveCoursesTab('courses'); // Return to course list
+        setCourseToEdit(null);
+    };
+
 
     return (
         <Card>
             <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-4">
-                <Button variant="tab" isActive={activeCoursesTab === 'courses'} onClick={() => setActiveCoursesTab('courses')}>Courses</Button>
+                <Button variant="tab" isActive={activeCoursesTab === 'courses' || activeCoursesTab === 'add-course' || activeCoursesTab === 'edit-course'} onClick={() => setActiveCoursesTab('courses')}>Courses</Button>
 
                 {selectedCourse && (
                     <>
-                        {/* --- REMOVED: Course Details Tab Button --- */}
+                        {/* ... (existing tab buttons for Participants, Monitoring, etc.) ... */}
                         <Button variant="tab" isActive={activeCoursesTab === 'participants'} onClick={() => { setActiveCoursesTab('participants'); onSetSelectedParticipantId(null); }}>Participants</Button>
                         <Button variant="tab" isActive={activeCoursesTab === 'monitoring'} onClick={() => setActiveCoursesTab('monitoring')} disabled={!currentParticipant}>Monitoring</Button>
                         <Button variant="tab" isActive={activeCoursesTab === 'reports'} onClick={() => setActiveCoursesTab('reports')}>Reports</Button>
-                        {/* --- NEW: Test Scores Tab --- */}
-                        {selectedCourse.course_type === 'ICCM' && (
+                        {/* --- MODIFIED: Show tab for ICCM or EENC --- */}
+                        {(selectedCourse.course_type === 'ICCM' || selectedCourse.course_type === 'EENC') && (
                             <Button variant="tab" isActive={activeCoursesTab === 'enter-test-scores'} onClick={() => { setActiveCoursesTab('enter-test-scores'); }}>
                                 Test Scores
                             </Button>
@@ -439,32 +473,28 @@ export function CourseManagementView({
                 )}
             </div>
             
-            {/* --- MODIFIED: This entire block is refactored --- */}
             <div className="p-4">
                 {/* --- COURSES TAB LOGIC --- */}
                 {activeCoursesTab === 'courses' && (
                     <>
                         {!activeCourseType ? (
-                            // Show package selector if no type is selected
                             <Landing
                                 active={activeCourseType}
                                 onPick={(t) => setActiveCourseType(t)}
                             />
                         ) : (
-                            // Show course list if a type is selected
                             <div>
                                 <div className="mb-4 flex flex-wrap justify-between items-center gap-2">
-                                    {/* "Add" button */}
+                                    {/* --- MODIFIED: "Add" button now uses internal handler --- */}
                                     {canManageCourse && (
-                                        <Button onClick={onAdd} className="bg-sky-600 text-white hover:bg-sky-700">Add New Course</Button>
+                                        <Button onClick={handleOpenAddForm} className="bg-sky-600 text-white hover:bg-sky-700">Add New Course</Button>
                                     )}
-                                    {/* "Change Package" button */}
                                     <Button variant="secondary" onClick={() => setActiveCourseType(null)}>
                                         Change Course Package
                                     </Button>
                                 </div>
                                 
-                                {/* --- NEW: Filter controls --- */}
+                                {/* ... (existing filter controls) ... */}
                                 <Card className="p-4 mb-4 bg-gray-50">
                                     <h4 className="text-lg font-semibold mb-3">Filter Courses</h4>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -485,15 +515,14 @@ export function CourseManagementView({
                                         </FormGroup>
                                     </div>
                                 </Card>
-                                {/* --- END: Filter controls --- */}
                                 
                                 <CoursesTable
-                                    courses={courses} // Use the new filtered list
+                                    courses={courses}
                                     onOpen={handleOpenCourse}
-                                    onEdit={onEdit}
+                                    onEdit={handleOpenEditForm} // --- MODIFIED: Use internal handler
                                     onDelete={onDelete}
                                     onOpenReport={onOpenReport}
-                                    onOpenTestForm={handleOpenTestForm} // --- NEW: Pass handler
+                                    onOpenTestForm={handleOpenTestForm}
                                     canEditDeleteActiveCourse={canEditDeleteActiveCourse}
                                     canEditDeleteInactiveCourse={canEditDeleteInactiveCourse}
                                     userStates={userStates}
@@ -504,14 +533,33 @@ export function CourseManagementView({
                         )}
                     </>
                 )}
+
+                {/* --- NEW: RENDER COURSE FORM --- */}
+                {(activeCoursesTab === 'add-course' || activeCoursesTab === 'edit-course') && (
+                    <CourseForm
+                        courseType={activeCourseType}
+                        initialData={courseToEdit} // This is null for 'add-course'
+                        onCancel={handleCancelCourseForm} // Use new handler
+                        onSave={handleSaveCourseAndReturn} // Use new wrapper handler
+                        
+                        // Pass down all the props from the parent
+                        facilitatorsList={facilitatorsList}
+                        fundersList={fundersList}
+                        federalCoordinatorsList={federalCoordinatorsList}
+                        stateCoordinatorsList={stateCoordinatorsList}
+                        localityCoordinatorsList={localityCoordinatorsList}
+                        onAddNewFacilitator={onAddNewFacilitator}
+                        onAddNewCoordinator={onAddNewCoordinator}
+                        onAddNewFunder={onAddNewFunder}
+                    />
+                )}
                 
                 {/* --- OTHER TABS LOGIC --- */}
-                {/* --- MODIFIED: Include 'enter-test-scores' in loading check --- */}
-                {loadingDetails && (activeCoursesTab !== 'courses') ? <div className="flex justify-center p-8"><Spinner /></div> : (
+                {loadingDetails && (activeCoursesTab !== 'courses' && activeCoursesTab !== 'add-course' && activeCoursesTab !== 'edit-course') ? <div className="flex justify-center p-8"><Spinner /></div> : (
                     <>
-                        {/* --- REMOVED: Course Details Content --- */}
                         {activeCoursesTab === 'participants' && selectedCourse && (
                             <ParticipantsView
+                                // ... (all existing ParticipantsView props) ...
                                 course={selectedCourse}
                                 participants={participants}
                                 onAdd={onAddParticipant}
@@ -522,22 +570,19 @@ export function CourseManagementView({
                                 onImport={onImportParticipants}
                                 onBatchUpdate={onBatchUpdate}
                                 onBulkMigrate={onBulkMigrate}
-                                onOpenTestFormForParticipant={handleOpenTestFormForParticipant} // --- NEW: Pass handler
-                                // --- PASS ALL THE CORRECT PERMISSION PROPS ---
+                                onOpenTestFormForParticipant={handleOpenTestFormForParticipant}
                                 isCourseActive={isCourseActive}
                                 canAddParticipant={canManageCourse}
                                 canImportParticipants={canUseSuperUserAdvancedFeatures}
                                 canCleanParticipantData={canUseSuperUserAdvancedFeatures}
                                 canBulkChangeParticipants={canUseSuperUserAdvancedFeatures}
                                 canBulkMigrateParticipants={canUseSuperUserAdvancedFeatures}
-                                
-                                // *** MODIFIED: This prop now uses the new logic ***
                                 canAddMonitoring={(canManageCourse && isCourseActive) || canUseFederalManagerAdvancedFeatures}
-                                
                                 canEditDeleteParticipantActiveCourse={canManageCourse}
                                 canEditDeleteParticipantInactiveCourse={canUseFederalManagerAdvancedFeatures}
                             />
                         )}
+                        {/* ... (rest of the existing tab logic for monitoring, reports, test-scores) ... */}
                         {activeCoursesTab === 'participants' && !selectedCourse && activeCoursesTab !== 'courses' && (
                             <EmptyState message="Please select a course from the 'Courses' tab to view participants." />
                         )}
@@ -549,28 +594,24 @@ export function CourseManagementView({
                         )}
                         {activeCoursesTab === 'reports' && selectedCourse && (
                             <Suspense fallback={<Spinner />}><ReportsView course={selectedCourse} participants={participants} /></Suspense>
-                        )}
-                        {/* --- NEW: Render CourseTestForm --- */}
+)}
                         {activeCoursesTab === 'enter-test-scores' && selectedCourse && (
                             <CourseTestForm
                                 course={selectedCourse}
                                 participants={participants}
-                                participantTests={participantTests} // <-- PASS THE DATA
+                                participantTests={participantTests}
                                 initialParticipantId={selectedParticipantId}
-                                onSaveTest={onSaveParticipantTest} // This prop must be passed in from App.jsx
-                                onCancel={() => setActiveCoursesTab(selectedParticipantId ? 'participants' : 'courses')} // Go back
+                                onSaveTest={onSaveParticipantTest}
+                                onCancel={() => setActiveCoursesTab(selectedParticipantId ? 'participants' : 'courses')}
                                 onSave={() => {
-                                    // On save, go back to participants list
                                     setActiveCoursesTab('participants');
-                                    // --- NEW: Clear test data to force a refetch next time ---
-                                    onBatchUpdate(); // This is the prop that refreshes course details
+                                    onBatchUpdate();
                                 }}
                             />
                         )}
                     </>
                 )}
             </div>
-            {/* --- END OF MODIFIED BLOCK --- */}
         </Card>
     );
 }
@@ -870,6 +911,8 @@ export function CourseForm({
         return uniqueProjects.map(proj => ({ id: proj, name: proj }));
     }, [fundersList]);
 
+
+
     const addFacilitatorToGroup = (groupName) => {
         // --- MODIFIED: Set default subcourse for ICCM ---
         const defaultSubcourse = isIccm ? ICCM_SUBCOURSE_TYPES[0] : '';
@@ -954,6 +997,8 @@ export function CourseForm({
         }
 
         const payload = {
+            // Add id if it exists (for editing)
+            ...(initialData?.id && { id: initialData.id }),
             state, locality, hall, coordinator, start_date: startDate,
             course_duration: courseDuration,
             participants_count: participantsCount, director,
@@ -965,8 +1010,7 @@ export function CourseForm({
             course_project: courseProject,
             facilitators: allFacilitatorAssignments.map(f => f.name),
             facilitatorAssignments: allFacilitatorAssignments,
-            // course_type is passed in from App.jsx, but we'll add it to the payload
-            // onSave in App.jsx adds it, so this is redundant but safe
+            // course_type is passed in, but we'll add it to the payload
             course_type: courseType, 
         };
 
@@ -1121,7 +1165,7 @@ export function CourseForm({
                 <PageHeader title={`${initialData ? 'Edit' : 'Add New'} Course`} subtitle={`Package: ${courseType || 'N/A'}`} className="mb-6" />
                 {error && <div className="p-3 mb-6 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <FormGroup label="State"><Select value={state} onChange={(e) => { setState(e.target.value); setLocality(''); }}><option value="">— Select State —</option>{Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar)).map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar}</option>)}</Select></FormGroup>
+                    <FormGroup label="State"><Select value={state} onChange={(e) => { setState(e.target.value); setLocality(''); }}><option value="">— Select State —</option>{Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(b.ar)).map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar}</option>)}</Select></FormGroup>
                     <FormGroup label="Locality"><Select value={locality} onChange={(e) => setLocality(e.target.value)} disabled={!state}><option value="">— Select Locality —</option>{(STATE_LOCALITIES[state]?.localities || []).sort((a,b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}</Select></FormGroup>
                     <FormGroup label="Course Hall"><Input value={hall} onChange={(e) => setHall(e.target.value)} /></FormGroup>
                     <FormGroup label="Start Date of Course"><Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></FormGroup>
