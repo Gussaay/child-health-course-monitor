@@ -24,14 +24,18 @@ import SkillsAssessmentForm from './SkillsAssessmentForm';
 import MentorshipDashboard from './MentorshipDashboard'; // <-- IMPORT ADDED
 import { getAuth } from "firebase/auth";
 
-
 // --- NEW IMPORT: Bulk Upload Modal ---
 import DetailedMentorshipBulkUploadModal from './MentorshipBulkUpload';
 // --- END NEW IMPORT ---
 
 // --- NEW IMPORT: Mothers Form ---
-import MothersForm from './MothersForm'; // <-- NEW IMPORT
+import MothersForm from './MOTHERSForm'; // <-- existing IMNCI Mothers Form
 // --- END NEW IMPORT ---
+
+// --- NEW IMPORTS: EENC Forms ---
+import EENCSkillsAssessmentForm from './EENCSkillsAssessmentForm'; // <-- ADDED
+import EENCMothersForm from './EENCMothersForm'; // <-- ADDED
+// --- END EENC IMPORTS ---
 
 // --- NEW: Lazy load Visit Report ---
 const IMNCIVisitReport = lazy(() => import('./IMNCIVisitReport'));
@@ -370,14 +374,15 @@ const MentorshipTableColumns = () => (
 );
 // --- END Mentorship Table Column Component ---
 
-// --- Friendly Service Titles (MODIFIED to English) (KEPT AS-IS) ---
+// --- Friendly Service Titles (MODIFIED to English) ---
 const SERVICE_TITLES = {
     // ... (Implementation unchanged) ...
     'IMNCI': 'Integrated Management of Newborn and Childhood Illnesses (IMNCI)',
     'EENC': 'Early Essential Newborn Care (EENC)',
     'ETAT': 'Emergency Triage, Assessment and Treatment (ETAT)',
     'IPC': 'Infection Prevention and Control in Neonatal Units (IPC)',
-    'IMNCI_MOTHERS': 'Mother\'s Knowledge & Satisfaction Survey (IMNCI)' // <-- ADDED
+    'IMNCI_MOTHERS': 'Mother\'s Knowledge & Satisfaction Survey (IMNCI)', // <-- ADDED
+    'EENC_MOTHERS': 'Mother\'s Survey (EENC)' // <-- ADDED
 };
 
 // --- NEW: View Submission Modal (KEPT AS-IS) ---
@@ -415,10 +420,13 @@ const ViewSubmissionModal = ({ submission, onClose }) => {
     };
 
     // New: Handle Mother's Form display (simplified as this component is mainly for IMNCI skills)
-    if (submission.serviceType === 'IMNCI_MOTHERS') {
+    if (submission.serviceType === 'IMNCI_MOTHERS' || submission.serviceType === 'EENC_MOTHERS') {
          // Display Mother's Form data
-         const { mothersKnowledge = {}, mothersSatisfaction = {} } = submission;
+         const { mothersKnowledge = {}, mothersSatisfaction = {}, eencMothersData = {} } = submission;
          
+         const dataToRender = submission.serviceType === 'EENC_MOTHERS' ? eencMothersData : mothersKnowledge;
+         const titleToRender = submission.serviceType === 'EENC_MOTHERS' ? 'استبيان الأمهات (EENC)' : 'معرفة الأمهات';
+
          const renderMotherData = (data, title) => (
              <div className="mb-6">
                 <h4 className="text-lg font-bold text-sky-800 mb-3 border-b pb-2">{title}</h4>
@@ -454,8 +462,10 @@ const ViewSubmissionModal = ({ submission, onClose }) => {
                              <p><span className="font-medium text-gray-500">الولاية:</span> <span className="font-semibold text-gray-900">{STATE_LOCALITIES[submission.state]?.ar || submission.state}</span></p>
                          </div>
                      </div>
-                     {renderMotherData(mothersKnowledge, 'معرفة الأمهات')}
-                     {renderMotherData(mothersSatisfaction, 'رضا الأمهات')}
+                     
+                     {renderMotherData(dataToRender, titleToRender)}
+                     {submission.serviceType === 'IMNCI_MOTHERS' && renderMotherData(mothersSatisfaction, 'رضا الأمهات')}
+
                      {submission.notes && (
                          <div className="mt-6">
                              <h4 className="text-lg font-bold text-sky-800 mb-3 border-b pb-2">الملاحظات</h4>
@@ -494,30 +504,36 @@ const ViewSubmissionModal = ({ submission, onClose }) => {
                     <ul className="space-y-2 pr-2">
                         {renderScore('overallScore', 'الدرجة الكلية')}
                         <hr className="my-2"/>
-                        {renderScore('assessment_total_score', 'مهارات التقييم والتصنيف')}
-                        {renderScore('vitalSigns', ' - القياسات الحيوية')}
-                        {renderScore('dangerSigns', ' - علامات الخطورة العامة')}
-                        {renderScore('mainSymptoms', ' - الأعراض الأساسية (الإجمالي)')}
-                        {renderScore('symptom_cough', '   - الكحة')}
-                        {renderScore('symptom_diarrhea', '   - الإسهال')}
-                        {renderScore('symptom_fever', '   - الحمى')}
-                        {renderScore('symptom_ear', '   - الأذن')}
-                        {renderScore('malnutrition', ' - سوء التغذية')}
-                        {renderScore('anemia', ' - فقر الدم')}
-                        {renderScore('immunization', ' - التطعيم وفيتامين أ')}
-                        {renderScore('otherProblems', ' - الأمراض الأخرى')}
-                        {renderScore('finalDecision', 'القرار النهائي')}
-                        <hr className="my-2"/>
-                        {renderScore('treatment', 'مهارات العلاج والنصح (الإجمالي)')}
-                        {renderScore('ref_treatment', ' - العلاج قبل التحويل')}
-                        {renderScore('pneu_treatment', ' - علاج الإلتهاب الرئوي')}
-                        {renderScore('diar_treatment', ' - علاج الإسهال')}
-                        {renderScore('dyst_treatment', ' - علاج الدسنتاريا')}
-                        {renderScore('mal_treatment', ' - علاج الملاريا')}
-                        {renderScore('ear_treatment', ' - علاج الأذن')}
-                        {renderScore('nut_treatment', ' - علاج سوء التغذية')}
-                        {renderScore('anemia_treatment', ' - علاج فقر الدم')}
-                        {renderScore('fu_treatment', ' - نصح المتابعة')}
+                        {/* IMNCI-Specific Scores */}
+                        {submission.serviceType === 'IMNCI' && (
+                            <>
+                                {renderScore('assessment_total_score', 'مهارات التقييم والتصنيف')}
+                                {renderScore('vitalSigns', ' - القياسات الحيوية')}
+                                {renderScore('dangerSigns', ' - علامات الخطورة العامة')}
+                                {renderScore('mainSymptoms', ' - الأعراض الأساسية (الإجمالي)')}
+                                {renderScore('symptom_cough', '   - الكحة')}
+                                {renderScore('symptom_diarrhea', '   - الإسهال')}
+                                {renderScore('symptom_fever', '   - الحمى')}
+                                {renderScore('symptom_ear', '   - الأذن')}
+                                {renderScore('malnutrition', ' - سوء التغذية')}
+                                {renderScore('anemia', ' - فقر الدم')}
+                                {renderScore('immunization', ' - التطعيم وفيتامين أ')}
+                                {renderScore('otherProblems', ' - الأمراض الأخرى')}
+                                {renderScore('finalDecision', 'القرار النهائي')}
+                                <hr className="my-2"/>
+                                {renderScore('treatment', 'مهارات العلاج والنصح (الإجمالي)')}
+                                {renderScore('ref_treatment', ' - العلاج قبل التحويل')}
+                                {renderScore('pneu_treatment', ' - علاج الإلتهاب الرئوي')}
+                                {renderScore('diar_treatment', ' - علاج الإسهال')}
+                                {renderScore('dyst_treatment', ' - علاج الدسنتاريا')}
+                                {renderScore('mal_treatment', ' - علاج الملاريا')}
+                                {renderScore('ear_treatment', ' - علاج الأذن')}
+                                {renderScore('nut_treatment', ' - علاج سوء التغذية')}
+                                {renderScore('anemia_treatment', ' - علاج فقر الدم')}
+                                {renderScore('fu_treatment', ' - نصح المتابعة')}
+                            </>
+                        )}
+                        {/* EENC-Specific scores will just show overall if any */}
                     </ul>
                 </div>
 
@@ -608,12 +624,15 @@ const MentorshipSubmissionsTable = ({
 
     const filteredSubmissions = useMemo(() => {
         let filtered = submissions;
+        const motherServiceType = `${activeService}_MOTHERS`; // Dynamic mother service type
+
         if (activeService) {
-            // Filter by the main service *program* (e.g., IMNCI) and its related forms (IMNCI_MOTHERS)
-            filtered = filtered.filter(sub => sub.service === activeService || sub.service === 'IMNCI_MOTHERS'); 
+            // Filter by the main service *program* (e.g., IMNCI) and its related forms (IMNCI_MOTHERS or EENC_MOTHERS)
+            filtered = filtered.filter(sub => sub.service === activeService || sub.service === motherServiceType); 
         }
         // NEW: Add secondary filter for the specific tab (skills vs mothers)
         if (filterServiceType) {
+            // filterServiceType will be "IMNCI" or "EENC" or "IMNCI_MOTHERS" or "EENC_MOTHERS"
             filtered = filtered.filter(sub => sub.service === filterServiceType);
         }
         // --- MODIFICATION: Use filter props ---
@@ -659,15 +678,18 @@ const MentorshipSubmissionsTable = ({
                                         }
 
                                         // NEW: Determine worker name/service for display
-                                        const workerDisplay = sub.service === 'IMNCI_MOTHERS' 
+                                        const motherServiceType = `${activeService}_MOTHERS`;
+                                        const isMotherSurvey = sub.service === motherServiceType;
+                                
+                                        const workerDisplay = isMotherSurvey 
                                             ? `Survey: ${sub.motherName || 'N/A'}`
                                             : sub.staff;
-                                        const serviceStatus = sub.service === 'IMNCI_MOTHERS' 
+                                        const serviceStatus = isMotherSurvey 
                                             ? 'Mother\'s Survey' 
                                             : (sub.status === 'draft' ? 'Draft' : 'Complete');
 
                                         return (
-                                        <tr key={sub.id} className={sub.status === 'draft' ? 'bg-yellow-50' : (sub.service === 'IMNCI_MOTHERS' ? 'bg-blue-50' : 'bg-white')}>
+                                        <tr key={sub.id} className={sub.status === 'draft' ? 'bg-yellow-50' : (isMotherSurvey ? 'bg-blue-50' : 'bg-white')}>
                                             {/* --- MODIFICATION: Added border class to all <td>s --- */}
                                             <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-left border border-gray-300">{index + 1}</td>
                                             <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-left border border-gray-300">{sub.facility}</td>
@@ -675,7 +697,7 @@ const MentorshipSubmissionsTable = ({
                                             <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-left border border-gray-300">{sub.supervisorDisplay}</td> {/* <-- USE DISPLAY */}
                                             <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-left border border-gray-300">{sub.date}</td>
                                             <td className="px-4 py-4 whitespace-nowrap text-sm text-left border border-gray-300">
-                                                {sub.service === 'IMNCI_MOTHERS' ? (
+                                                {isMotherSurvey ? (
                                                     <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
                                                         {serviceStatus}
                                                     </span>
@@ -690,7 +712,7 @@ const MentorshipSubmissionsTable = ({
                                                 )}
                                             </td>
                                             <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-800 text-left border border-gray-300">
-                                                {sub.service === 'IMNCI_MOTHERS' ? 'N/A' : (percentage !== null ? `${percentage}%` : 'N/A')}
+                                                {isMotherSurvey ? 'N/A' : (percentage !== null ? `${percentage}%` : 'N/A')}
                                             </td>
                                             <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-left border border-gray-300">
                                                 <div className="flex gap-2">
@@ -714,12 +736,12 @@ const MentorshipSubmissionsTable = ({
 };
 // --- END Mentorship Submissions Table Component ---
 
-// --- Service Selection Component (MODIFIED to English Layout) (KEPT AS-IS) ---
+// --- Service Selection Component (MODIFIED to English Layout) ---
 const ServiceSelector = ({ onSelectService }) => {
     // ... (Implementation unchanged) ...
     const services = [
         { key: 'IMNCI', title: 'Mentorship on Integrated Management of Newborn and Childhood Illnesses (IMNCI)', enabled: true },
-        { key: 'EENC', title: 'Mentorship on Early Essential Newborn Care (EENC)', enabled: false },
+        { key: 'EENC', title: 'Mentorship on Early Essential Newborn Care (EENC)', enabled: true }, // <-- MODIFIED
         { key: 'ETAT', title: 'Mentorship on Emergency Triage, Assessment and Treatment (ETAT)', enabled: false },
         { key: 'IPC', title: 'Mentorship on Infection Prevention and Control in Neonatal Units (IPC)', enabled: false }
     ];
@@ -1933,7 +1955,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                         )}
 
                                         {/* --- NEW: Show "Add Visit Report" only on visit reports tab --- */}
-                                        {activeTab === 'visit_reports' && (
+                                        {activeTab === 'visit_reports' && activeService === 'IMNCI' && (
                                             <Button variant="primary" onClick={handleStartNewVisitReport}>Add New Visit Report</Button>
                                         )}
 
@@ -1962,7 +1984,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                 <MentorshipSubmissionsTable
                                     submissions={processedSubmissions}
                                     activeService={activeService}
-                                    filterServiceType="IMNCI"
+                                    filterServiceType={activeService} // <-- MODIFIED
                                     onView={handleViewSubmission}
                                     onEdit={handleEditSubmission}
                                     onDelete={handleDeleteSubmission}
@@ -1980,7 +2002,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                 <MentorshipSubmissionsTable
                                     submissions={processedSubmissions}
                                     activeService={activeService}
-                                    filterServiceType="IMNCI_MOTHERS"
+                                    filterServiceType={`${activeService}_MOTHERS`} // <-- MODIFIED
                                     onView={handleViewSubmission}
                                     onEdit={handleEditSubmission}
                                     onDelete={handleDeleteSubmission}
@@ -2083,168 +2105,200 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
 
     // --- MODIFIED: Added 'isReadyToStart' check ---
     if (currentView === 'form_setup' && activeFormType === 'skills_assessment' && (editingSubmission || (isReadyToStart && selectedHealthWorkerName && selectedFacility)) && activeService && !isAddWorkerModalOpen && !isWorkerInfoChanged) {
-        // Pass the original editingSubmission data (not the processed one)
-        return (
-            <>
-                {/* --- START: REMOVED Sticky Drafts Button --- */}
-                {/* The floating draft button was here and is now removed. */}
-                {/* --- END: REMOVED Sticky Drafts Button --- */}
-
-                <SkillsAssessmentForm
-                    ref={formRef} // MODIFIED: Pass the ref
-                    facility={facilityData}
-                    healthWorkerName={editingSubmission ? editingSubmission.healthWorkerName : selectedHealthWorkerName}
-                    healthWorkerJobTitle={editingSubmission ? editingSubmission.workerType : workerJobTitle} // <-- MODIFIED: Use editing data if available
-                    healthWorkerTrainingDate={workerTrainingDate}
-                    healthWorkerPhone={workerPhone}
-                    onExit={handleExitForm} // Renamed from onCancel
-                    onSaveComplete={handleSaveSuccess} // New prop for save
-                    setToast={setToast}
-                    visitNumber={visitNumber}
-                    existingSessionData={editingSubmission} // Pass the original data
-                    lastSessionDate={lastSessionDate}
-                    onDraftCreated={handleDraftCreated} // <-- MODIFIED: Pass handler
-                    
-                    // --- START: NEW PROPS PASSED DOWN ---
-                    setIsMothersFormModalOpen={setIsMothersFormModalOpen}
-                    setIsDashboardModalOpen={setIsDashboardModalOpen}
-                    setIsVisitReportModalOpen={setIsVisitReportModalOpen} // <-- NEW
-                    draftCount={currentUserDrafts.length}
-                    // --- END: NEW PROPS PASSED DOWN ---
-                />
-                 {/* --- NEW: Drafts Modal --- */}
-                 <MobileFormNavBar
-                    activeFormType={activeFormType}
-                    draftCount={currentUserDrafts.length}
-                    onNavClick={handleMobileNavClick}
-                 />
-                 <DraftsModal
-                    isOpen={isDraftsModalOpen}
-                    onClose={() => setIsDraftsModalOpen(false)}
-                    drafts={currentUserDrafts} // Pass the filtered drafts
-                    onView={handleViewSubmission}
-                    onEdit={handleEditSubmission}
-                    onDelete={handleDeleteSubmission}
-                 />
-                 {/* Viewing uses the original data structure */}
-                 {viewingSubmission && (
-                    <ViewSubmissionModal
-                        submission={viewingSubmission}
-                        onClose={() => setViewingSubmission(null)}
+        
+        // --- START: MODIFIED FOR EENC ---
+        if (activeService === 'IMNCI') {
+            return (
+                <>
+                    <SkillsAssessmentForm
+                        ref={formRef} // MODIFIED: Pass the ref
+                        facility={facilityData}
+                        healthWorkerName={editingSubmission ? editingSubmission.healthWorkerName : selectedHealthWorkerName}
+                        healthWorkerJobTitle={editingSubmission ? editingSubmission.workerType : workerJobTitle} // <-- MODIFIED: Use editing data if available
+                        healthWorkerTrainingDate={workerTrainingDate}
+                        healthWorkerPhone={workerPhone}
+                        onExit={handleExitForm} // Renamed from onCancel
+                        onSaveComplete={handleSaveSuccess} // New prop for save
+                        setToast={setToast}
+                        visitNumber={visitNumber}
+                        existingSessionData={editingSubmission} // Pass the original data
+                        lastSessionDate={lastSessionDate}
+                        onDraftCreated={handleDraftCreated} // <-- MODIFIED: Pass handler
+                        
+                        // --- START: NEW PROPS PASSED DOWN ---
+                        setIsMothersFormModalOpen={setIsMothersFormModalOpen}
+                        setIsDashboardModalOpen={setIsDashboardModalOpen}
+                        setIsVisitReportModalOpen={setIsVisitReportModalOpen} // <-- NEW
+                        draftCount={currentUserDrafts.length}
+                        // --- END: NEW PROPS PASSED DOWN ---
                     />
-                 )}
-            
-                 {/* --- START: NEW MOTHER'S FORM MODAL --- */}
-                 {isMothersFormModalOpen && (
-                    <Modal 
-                        isOpen={isMothersFormModalOpen} 
-                        onClose={() => setIsMothersFormModalOpen(false)} 
-                        title="استبيان الأم: رضاء ومعرفة الأمهات"
-                        size="full"
-                    >
-                        <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
-                            <MothersForm
-                                facility={facilityData} // Pass the same facility data as the skills form
-                                onCancel={() => { // This handles both Save and Cancel from the modal form
-                                    setIsMothersFormModalOpen(false);
-                                    fetchSkillMentorshipSubmissions(true); // Refresh submissions list on close
-                                }}
-                                setToast={setToast}
-                            />
-                        </div>
-                    </Modal>
-                 )}
-                 {/* --- END: NEW MOTHER'S FORM MODAL --- */}
-
-                 {/* --- START: NEW VISIT REPORT MODAL --- */}
-                 {isVisitReportModalOpen && (
-                    <Modal 
-                        isOpen={isVisitReportModalOpen} 
-                        onClose={() => setIsVisitReportModalOpen(false)} 
-                        title="تقرير زيارة العلاج المتكامل"
-                        size="full"
-                    >
-                        <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
-                            <Suspense fallback={<div className="p-8"><Spinner /></div>}>
-                                <IMNCIVisitReport
+                    {/* --- NEW: Drafts Modal --- */}
+                    <MobileFormNavBar
+                        activeFormType={activeFormType}
+                        draftCount={currentUserDrafts.length}
+                        onNavClick={handleMobileNavClick}
+                    />
+                    <DraftsModal
+                        isOpen={isDraftsModalOpen}
+                        onClose={() => setIsDraftsModalOpen(false)}
+                        drafts={currentUserDrafts} // Pass the filtered drafts
+                        onView={handleViewSubmission}
+                        onEdit={handleEditSubmission}
+                        onDelete={handleDeleteSubmission}
+                    />
+                    {/* Viewing uses the original data structure */}
+                    {viewingSubmission && (
+                        <ViewSubmissionModal
+                            submission={viewingSubmission}
+                            onClose={() => setViewingSubmission(null)}
+                        />
+                    )}
+                
+                    {/* --- START: NEW MOTHER'S FORM MODAL --- */}
+                    {isMothersFormModalOpen && (
+                        <Modal 
+                            isOpen={isMothersFormModalOpen} 
+                            onClose={() => setIsMothersFormModalOpen(false)} 
+                            title="استبيان الأم: رضاء ومعرفة الأمهات"
+                            size="full"
+                        >
+                            <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
+                                <MothersForm
                                     facility={facilityData} // Pass the same facility data as the skills form
                                     onCancel={() => { // This handles both Save and Cancel from the modal form
-                                        setIsVisitReportModalOpen(false);
+                                        setIsMothersFormModalOpen(false);
                                         fetchSkillMentorshipSubmissions(true); // Refresh submissions list on close
-                                        fetchIMNCIVisitReports(true); // <-- NEW
                                     }}
                                     setToast={setToast}
-                                    allSubmissions={processedSubmissions}
-                                    existingReportData={null} // Modal always creates new
                                 />
-                            </Suspense>
-                        </div>
-                    </Modal>
-                 )}
-                 {/* --- END: NEW VISIT REPORT MODAL --- */}
-                 
-                 {/* --- START: NEW DASHBOARD MODAL --- */}
-                 {isDashboardModalOpen && (
-                    <Modal 
-                        isOpen={isDashboardModalOpen} 
-                        onClose={() => setIsDashboardModalOpen(false)} 
-                        title="لوحة متابعة: العلاج المتكامل"
-                        size="full"
-                    >
-                        <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
-                            <MentorshipDashboard
-                                allSubmissions={processedSubmissions}
-                                STATE_LOCALITIES={STATE_LOCALITIES}
-                                activeService={activeService}
-                                
-                                // Pass dashboard filter state
-                                activeState={activeDashboardState}
-                                onStateChange={(value) => {
-                                    setActiveDashboardState(value);
-                                    setActiveDashboardLocality("");
-                                    setActiveDashboardFacilityId("");
-                                    setActiveDashboardWorkerName("");
-                                }}
-                                activeLocality={activeDashboardLocality}
-                                onLocalityChange={(value) => {
-                                    setActiveDashboardLocality(value);
-                                    setActiveDashboardFacilityId("");
-                                    setActiveDashboardWorkerName("");
-                                }}
-                                activeFacilityId={activeDashboardFacilityId}
-                                onFacilityIdChange={(value) => {
-                                    setActiveDashboardFacilityId(value);
-                                    setActiveDashboardWorkerName("");
-                                }}
-                                activeWorkerName={activeDashboardWorkerName}
-                                onWorkerNameChange={setActiveDashboardWorkerName}
-                            />
-                        </div>
-                    </Modal>
-                 )}
-                 {/* --- END: NEW DASHBOARD MODAL --- */}
-            </>
-        );
+                            </div>
+                        </Modal>
+                    )}
+                    {/* --- END: NEW MOTHER'S FORM MODAL --- */}
+
+                    {/* --- START: NEW VISIT REPORT MODAL --- */}
+                    {isVisitReportModalOpen && (
+                        <Modal 
+                            isOpen={isVisitReportModalOpen} 
+                            onClose={() => setIsVisitReportModalOpen(false)} 
+                            title="تقرير زيارة العلاج المتكامل"
+                            size="full"
+                        >
+                            <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
+                                <Suspense fallback={<div className="p-8"><Spinner /></div>}>
+                                    <IMNCIVisitReport
+                                        facility={facilityData} // Pass the same facility data as the skills form
+                                        onCancel={() => { // This handles both Save and Cancel from the modal form
+                                            setIsVisitReportModalOpen(false);
+                                            fetchSkillMentorshipSubmissions(true); // Refresh submissions list on close
+                                            fetchIMNCIVisitReports(true); // <-- NEW
+                                        }}
+                                        setToast={setToast}
+                                        allSubmissions={processedSubmissions}
+                                        existingReportData={null} // Modal always creates new
+                                    />
+                                </Suspense>
+                            </div>
+                        </Modal>
+                    )}
+                    {/* --- END: NEW VISIT REPORT MODAL --- */}
+                    
+                    {/* --- START: NEW DASHBOARD MODAL --- */}
+                    {isDashboardModalOpen && (
+                        <Modal 
+                            isOpen={isDashboardModalOpen} 
+                            onClose={() => setIsDashboardModalOpen(false)} 
+                            title="لوحة متابعة: العلاج المتكامل"
+                            size="full"
+                        >
+                            <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
+                                <MentorshipDashboard
+                                    allSubmissions={processedSubmissions}
+                                    STATE_LOCALITIES={STATE_LOCALITIES}
+                                    activeService={activeService}
+                                    
+                                    // Pass dashboard filter state
+                                    activeState={activeDashboardState}
+                                    onStateChange={(value) => {
+                                        setActiveDashboardState(value);
+                                        setActiveDashboardLocality("");
+                                        setActiveDashboardFacilityId("");
+                                        setActiveDashboardWorkerName("");
+                                    }}
+                                    activeLocality={activeDashboardLocality}
+                                    onLocalityChange={(value) => {
+                                        setActiveDashboardLocality(value);
+                                        setActiveDashboardFacilityId("");
+                                        setActiveDashboardWorkerName("");
+                                    }}
+                                    activeFacilityId={activeDashboardFacilityId}
+                                    onFacilityIdChange={(value) => {
+                                        setActiveDashboardFacilityId(value);
+                                        setActiveDashboardWorkerName("");
+                                    }}
+                                    activeWorkerName={activeDashboardWorkerName}
+                                    onWorkerNameChange={setActiveDashboardWorkerName}
+                                />
+                            </div>
+                        </Modal>
+                    )}
+                    {/* --- END: NEW DASHBOARD MODAL --- */}
+                </>
+            );
+        }
+        else if (activeService === 'EENC') {
+            return (
+                <>
+                    {/* Render EENC Skills Form */}
+                    <EENCSkillsAssessmentForm
+                        facility={facilityData}
+                        healthWorkerName={editingSubmission ? editingSubmission.healthWorkerName : selectedHealthWorkerName}
+                        onExit={handleExitForm}
+                        onSaveComplete={handleSaveSuccess} // Use the same save handler
+                        setToast={setToast}
+                        existingSessionData={editingSubmission}
+                    />
+                    {/* EENC Form doesn't use the complex sidebar, but we can add modals if needed */}
+                </>
+            );
+        }
+        // --- END: MODIFIED FOR EENC ---
     }
     
     // --- 2. Render MothersForm (MODIFIED) ---
     // --- MODIFIED: Added 'isReadyToStart' check ---
      if (currentView === 'form_setup' && activeFormType === 'mothers_form' && (isReadyToStart && selectedFacility) && activeService && !isAddWorkerModalOpen && !isWorkerInfoChanged) {
-        // Render the new MothersForm component
-        return (
-            <>
-                <MothersForm
-                    facility={selectedFacility}
-                    onCancel={() => handleGenericFormExit('mothers_list')} // Use the dedicated exit handler
-                    setToast={setToast}
-                />
-                <MobileFormNavBar
-                    activeFormType={activeFormType}
-                    draftCount={currentUserDrafts.length}
-                    onNavClick={handleMobileNavClick}
-                 />
-            </>
-        );
+        
+        // --- START: MODIFIED FOR EENC ---
+        if (activeService === 'IMNCI') {
+            return (
+                <>
+                    <MothersForm
+                        facility={selectedFacility}
+                        onCancel={() => handleGenericFormExit('mothers_list')} // Use the dedicated exit handler
+                        setToast={setToast}
+                    />
+                    <MobileFormNavBar
+                        activeFormType={activeFormType}
+                        draftCount={currentUserDrafts.length}
+                        onNavClick={handleMobileNavClick}
+                    />
+                </>
+            );
+        }
+        else if (activeService === 'EENC') {
+            return (
+                <>
+                    <EENCMothersForm
+                        facility={selectedFacility}
+                        onCancel={() => handleGenericFormExit('mothers_list')} // Use the dedicated exit handler
+                        setToast={setToast}
+                    />
+                    {/* We can add MobileFormNavBar here too if EENC mothers form needs it */}
+                </>
+            );
+        }
+        // --- END: MODIFIED FOR EENC ---
     }
 
     // --- 4. Render IMNCIVisitReport (NEW) ---
@@ -2284,12 +2338,22 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
     const isLocalityFilterDisabled = publicSubmissionMode ? !selectedState : (permissions.manageScope === 'locality' || !selectedState);
 
     if (currentView === 'form_setup') {
-        const serviceTitleArabic = "الاشراف التدريبي الداعم على تطبيق العلاج المتكامل للاطفال اقل من 5 سنوات";
+        const serviceTitleArabic = activeService === 'EENC' 
+            ? "الاشراف التدريبي الداعم على الرعاية الضرورية المبكرة (EENC)"
+            : "الاشراف التدريبي الداعم على تطبيق العلاج المتكامل للاطفال اقل من 5 سنوات";
+        
         const isSkillsAssessmentSetup = activeFormType === 'skills_assessment'; // Flag for worker requirement
         const isVisitReportSetup = activeFormType === 'visit_report'; // <-- NEW
-        const setupTitle = isSkillsAssessmentSetup 
-            ? (editingSubmission ? `تعديل جلسة: ${serviceTitleArabic}` : `إدخال بيانات: ${serviceTitleArabic}`) 
-            : (isVisitReportSetup ? (editingSubmission ? 'تعديل تقرير الزيارة' : 'إدخال تقرير زيارة جديد') : 'نموذج استبيان الأم');
+        
+        let setupTitle = '';
+        if (isSkillsAssessmentSetup) {
+            setupTitle = editingSubmission ? `تعديل جلسة: ${serviceTitleArabic}` : `إدخال بيانات: ${serviceTitleArabic}`;
+        } else if (isVisitReportSetup) {
+            setupTitle = editingSubmission ? 'تعديل تقرير الزيارة' : 'إدخال تقرير زيارة جديد';
+        } else {
+            setupTitle = activeService === 'EENC' ? 'نموذج استبيان الأم (EENC)' : 'نموذج استبيان الأم (IMNCI)';
+        }
+
         const setupSubtitle = isSkillsAssessmentSetup 
             ? "الرجاء اختيار الولاية والمحلية والمنشأة والعامل الصحي للمتابعة." 
             : "الرجاء اختيار الولاية والمحلية والمنشأة للمتابعة.";

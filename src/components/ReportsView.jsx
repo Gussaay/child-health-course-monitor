@@ -26,7 +26,7 @@ import {
 
 // --- ADDED: Print Icon Component ---
 const PrintIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <svg xmlns="http://www.w-3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm7-8V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
     </svg>
 );
@@ -242,6 +242,10 @@ export function ReportsView({ course, participants }) {
                         break-after: avoid;
                         page-break-after: avoid;
                     }
+                    /* --- ADDED: Ensure no overflow in print --- */
+                    .no-scroll-wrapper {
+                        overflow: visible !important;
+                    }
                 }
             `}
             </style>
@@ -335,8 +339,21 @@ function ImnciReports({ course, participants, allObs, allCases }) {
                     doc.addPage();
                 }
                 
+                // --- FIX: Temporarily disable scrolling on wrappers for capture ---
+                const scrollWrappers = el.getElementsByClassName('no-scroll-wrapper');
+                for (let j = 0; j < scrollWrappers.length; j++) {
+                    scrollWrappers[j].style.overflow = 'visible';
+                    scrollWrappers[j].style.maxHeight = 'none';
+                }
+
                 // Capture group content
                 const groupCanvas = await html2canvas(el, canvasOptions);
+
+                // --- FIX: Restore scrolling on wrappers after capture ---
+                for (let j = 0; j < scrollWrappers.length; j++) {
+                    scrollWrappers[j].style.overflow = ''; // Revert to CSS default
+                    scrollWrappers[j].style.maxHeight = ''; // Revert to CSS default
+                }
                 
                 // Add header and scaled group content to the same page
                 addCanvasToPdfOnePage(doc, headerCanvas, groupCanvas, profile, margin);
@@ -357,6 +374,12 @@ function ImnciReports({ course, participants, allObs, allCases }) {
             // --- FIX: Ensure header is hidden even if error occurs ---
             if (headerEl) {
                 headerEl.style.display = 'none';
+            }
+            // --- FIX: Ensure scrolling is restored even if error occurs ---
+            const allScrollWrappers = document.getElementsByClassName('no-scroll-wrapper');
+            for (let j = 0; j < allScrollWrappers.length; j++) {
+                allScrollWrappers[j].style.overflow = '';
+                allScrollWrappers[j].style.maxHeight = '';
             }
             setIsPdfGenerating(false);
         }
@@ -415,7 +438,7 @@ function ImnciReports({ course, participants, allObs, allCases }) {
                     // --- MODIFIED: Added ID and page-break class ---
                     <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
                         <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
-                        <div className="overflow-x-auto"><table className="min-w-full text-sm"><thead>{tab === 'case' ? (<tr className="text-left border-b"><th className="py-2 pr-4">Participant</th><th className="py-2 pr-4">IPD Cases</th><th className="py-2 pr-4">% IPD</th><th className="py-2 pr-4">OPD Cases</th><th className="py-2 pr-4">% OPD</th><th className="py-2 pr-4">Total</th><th className="py-2 pr-4">% Overall</th></tr>) : (<tr className="text-left border-b"><th className="py-2 pr-4">Participant</th><th className="py-2 pr-4">IPD Class.</th><th className="py-2 pr-4">% IPD</th><th className="py-2 pr-4">OPD Class.</th><th className="py-2 pr-4">% OPD</th><th className="py-2 pr-4">Total</th><th className="py-2 pr-4">% Overall</th></tr>)}</thead><tbody>{ids.map(id => { const r = data[id]; const inSeen = tab === 'case' ? r.inp_seen : r.inp_total; const inCor = r.inp_correct; const outSeen = tab === 'case' ? r.op_seen : r.op_total; const outCor = r.op_correct; const pctIn = calcPct(inCor, inSeen), pctOut = calcPct(outCor, outSeen), pctAll = calcPct(inCor + outCor, inSeen + outSeen); return (<tr key={id} className="border-b"><td className="py-2 pr-4">{r.name}</td><td className="py-2 pr-4">{inSeen}</td><td className={`py-2 pr-4 ${pctBgClass(pctIn)}`}>{fmtPct(pctIn)}</td><td className="py-2 pr-4">{outSeen}</td><td className={`py-2 pr-4 ${pctBgClass(pctOut)}`}>{fmtPct(pctOut)}</td><td className="py-2 pr-4">{inSeen + outSeen}</td><td className={`py-2 pr-4 ${pctBgClass(pctAll)}`}>{fmtPct(pctAll)}</td></tr>); })}</tbody></table></div>
+                        <div className="overflow-x-auto no-scroll-wrapper"><table className="min-w-full text-sm"><thead>{tab === 'case' ? (<tr className="text-left border-b"><th className="py-2 pr-4">Participant</th><th className="py-2 pr-4">IPD Cases</th><th className="py-2 pr-4">% IPD</th><th className="py-2 pr-4">OPD Cases</th><th className="py-2 pr-4">% OPD</th><th className="py-2 pr-4">Total</th><th className="py-2 pr-4">% Overall</th></tr>) : (<tr className="text-left border-b"><th className="py-2 pr-4">Participant</th><th className="py-2 pr-4">IPD Class.</th><th className="py-2 pr-4">% IPD</th><th className="py-2 pr-4">OPD Class.</th><th className="py-2 pr-4">% OPD</th><th className="py-2 pr-4">Total</th><th className="py-2 pr-4">% Overall</th></tr>)}</thead><tbody>{ids.map(id => { const r = data[id]; const inSeen = tab === 'case' ? r.inp_seen : r.inp_total; const inCor = r.inp_correct; const outSeen = tab === 'case' ? r.op_seen : r.op_total; const outCor = r.op_correct; const pctIn = calcPct(inCor, inSeen), pctOut = calcPct(outCor, outSeen), pctAll = calcPct(inCor + outCor, inSeen + outSeen); return (<tr key={id} className="border-b"><td className="py-2 pr-4">{r.name}</td><td className="py-2 pr-4">{inSeen}</td><td className={`py-2 pr-4 ${pctBgClass(pctIn)}`}>{fmtPct(pctIn)}</td><td className="py-2 pr-4">{outSeen}</td><td className={`py-2 pr-4 ${pctBgClass(pctOut)}`}>{fmtPct(pctOut)}</td><td className="py-2 pr-4">{inSeen + outSeen}</td><td className={`py-2 pr-4 ${pctBgClass(pctAll)}`}>{fmtPct(pctAll)}</td></tr>); })}</tbody></table></div>
                     </div>
                 );
             })}
@@ -427,13 +450,12 @@ function ImnciReports({ course, participants, allObs, allCases }) {
                     // --- MODIFIED: Added ID and page-break class ---
                     <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
                         <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
-                        {/* --- MODIFIED: Removed max-h-[70vh] and overflow-y-auto --- */}
-                        <div className="overflow-x-auto">
+                        {/* --- MODIFIED: Removed overflow-x-auto, kept overflow-y-auto for web view only --- */}
+                        <div className="overflow-y-auto max-h-[70vh] no-scroll-wrapper">
                             <table className="w-full text-xs table-fixed">
                                 <thead>
                                     <tr className="text-left border-b bg-gray-50 sticky top-0">
                                         <th className="py-2 pr-4 w-1/3">Classification</th>
-                                        {/* MODIFICATION: No change needed, w-32 already allows wrapping */}
                                         {parts.map(p => <th key={p.id} className="py-2 px-1 text-center w-32">{p.name}</th>)}
                                     </tr>
                                 </thead>
@@ -559,8 +581,21 @@ function EtatReports({ course, participants, allObs, allCases }) {
                     doc.addPage();
                 }
                 
+                // --- FIX: Temporarily disable scrolling on wrappers for capture ---
+                const scrollWrappers = el.getElementsByClassName('no-scroll-wrapper');
+                for (let j = 0; j < scrollWrappers.length; j++) {
+                    scrollWrappers[j].style.overflow = 'visible';
+                    scrollWrappers[j].style.maxHeight = 'none';
+                }
+
                 // Capture group content
                 const groupCanvas = await html2canvas(el, canvasOptions);
+
+                // --- FIX: Restore scrolling on wrappers after capture ---
+                for (let j = 0; j < scrollWrappers.length; j++) {
+                    scrollWrappers[j].style.overflow = ''; // Revert to CSS default
+                    scrollWrappers[j].style.maxHeight = ''; // Revert to CSS default
+                }
                 
                 // Add header and scaled group content to the same page
                 addCanvasToPdfOnePage(doc, headerCanvas, groupCanvas, profile, margin);
@@ -581,6 +616,12 @@ function EtatReports({ course, participants, allObs, allCases }) {
             // --- FIX: Ensure header is hidden even if error occurs ---
             if (headerEl) {
                 headerEl.style.display = 'none';
+            }
+            // --- FIX: Ensure scrolling is restored even if error occurs ---
+            const allScrollWrappers = document.getElementsByClassName('no-scroll-wrapper');
+            for (let j = 0; j < allScrollWrappers.length; j++) {
+                allScrollWrappers[j].style.overflow = '';
+                allScrollWrappers[j].style.maxHeight = '';
             }
             setIsPdfGenerating(false);
         }
@@ -635,7 +676,7 @@ function EtatReports({ course, participants, allObs, allCases }) {
                     // --- MODIFIED: Added ID and page-break class ---
                     <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
                         <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
-                        <div className="overflow-x-auto"><table className="min-w-full text-sm"><thead><tr className="text-left border-b"><th className="py-2 pr-4">Participant</th><th className="py-2 pr-4">Total Cases</th><th className="py-2 pr-4">Correct Cases</th><th className="py-2 pr-4">% Correct Cases</th></tr></thead><tbody>{ids.map(id => { const r = data[id]; const pct = calcPct(r.correct_cases, r.total_cases); return (<tr key={id} className="border-b"><td className="py-2 pr-4">{r.name}</td><td className="py-2 pr-4">{r.total_cases}</td><td className="py-2 pr-4">{r.correct_cases}</td><td className={`py-2 pr-4 ${pctBgClass(pct)}`}>{fmtPct(pct)}</td></tr>); })}</tbody></table></div>
+                        <div className="overflow-x-auto no-scroll-wrapper"><table className="min-w-full text-sm"><thead><tr className="text-left border-b"><th className="py-2 pr-4">Participant</th><th className="py-2 pr-4">Total Cases</th><th className="py-2 pr-4">Correct Cases</th><th className="py-2 pr-4">% Correct Cases</th></tr></thead><tbody>{ids.map(id => { const r = data[id]; const pct = calcPct(r.correct_cases, r.total_cases); return (<tr key={id} className="border-b"><td className="py-2 pr-4">{r.name}</td><td className="py-2 pr-4">{r.total_cases}</td><td className="py-2 pr-4">{r.correct_cases}</td><td className={`py-2 pr-4 ${pctBgClass(pct)}`}>{fmtPct(pct)}</td></tr>); })}</tbody></table></div>
                     </div>
                 );
             })}
@@ -649,7 +690,7 @@ function EtatReports({ course, participants, allObs, allCases }) {
                     // --- MODIFIED: Added ID and page-break class ---
                     <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
                         <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto no-scroll-wrapper">
                             <table className="min-w-full text-sm">
                                 <thead>
                                     <tr className="text-left border-b">
@@ -687,13 +728,12 @@ function EtatReports({ course, participants, allObs, allCases }) {
                     // --- MODIFIED: Added ID and page-break class ---
                     <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
                         <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
-                        {/* --- MODIFIED: Removed max-h-[70vh] and overflow-y-auto --- */}
-                        <div className="overflow-x-auto">
+                        {/* --- MODIFIED: Removed overflow-x-auto, kept overflow-y-auto for web view only --- */}
+                        <div className="overflow-y-auto max-h-[70vh] no-scroll-wrapper">
                             <table className="w-full text-xs table-fixed">
                                 <thead>
                                     <tr className="text-left border-b bg-gray-50 sticky top-0">
                                         <th className="py-2 pr-4 w-80">Skill</th>
-                                        {/* MODIFICATION: Removed whitespace-nowrap, added w-32 and px-1 to allow wrapping */}
                                         {parts.map(p => <th key={p.id} className="py-2 px-1 text-center w-32">{p.name}</th>)}
                                     </tr>
                                 </thead>
@@ -817,8 +857,21 @@ function IccmReports({ course, participants, allObs, allCases }) {
                     doc.addPage();
                 }
                 
+                // --- FIX: Temporarily disable scrolling on wrappers for capture ---
+                const scrollWrappers = el.getElementsByClassName('no-scroll-wrapper');
+                for (let j = 0; j < scrollWrappers.length; j++) {
+                    scrollWrappers[j].style.overflow = 'visible';
+                    scrollWrappers[j].style.maxHeight = 'none';
+                }
+
                 // Capture group content
                 const groupCanvas = await html2canvas(el, canvasOptions);
+
+                // --- FIX: Restore scrolling on wrappers after capture ---
+                for (let j = 0; j < scrollWrappers.length; j++) {
+                    scrollWrappers[j].style.overflow = ''; // Revert to CSS default
+                    scrollWrappers[j].style.maxHeight = ''; // Revert to CSS default
+                }
                 
                 // Add header and scaled group content to the same page
                 addCanvasToPdfOnePage(doc, headerCanvas, groupCanvas, profile, margin);
@@ -839,6 +892,12 @@ function IccmReports({ course, participants, allObs, allCases }) {
             // --- FIX: Ensure header is hidden even if error occurs ---
             if (headerEl) {
                 headerEl.style.display = 'none';
+            }
+            // --- FIX: Ensure scrolling is restored even if error occurs ---
+            const allScrollWrappers = document.getElementsByClassName('no-scroll-wrapper');
+            for (let j = 0; j < allScrollWrappers.length; j++) {
+                allScrollWrappers[j].style.overflow = '';
+                allScrollWrappers[j].style.maxHeight = '';
             }
             setIsPdfGenerating(false);
         }
@@ -893,7 +952,7 @@ function IccmReports({ course, participants, allObs, allCases }) {
                     // --- MODIFIED: Added ID and page-break class ---
                     <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
                         <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
-                        <div className="overflow-x-auto"><table className="min-w-full text-sm"><thead><tr className="text-left border-b"><th className="py-2 pr-4">Participant</th><th className="py-2 pr-4">Total Cases</th><th className="py-2 pr-4">Correct Cases</th><th className="py-2 pr-4">% Correct Cases</th></tr></thead><tbody>{ids.map(id => { const r = data[id]; const pct = calcPct(r.correct_cases, r.total_cases); return (<tr key={id} className="border-b"><td className="py-2 pr-4">{r.name}</td><td className="py-2 pr-4">{r.total_cases}</td><td className="py-2 pr-4">{r.correct_cases}</td><td className={`py-2 pr-4 ${pctBgClass(pct)}`}>{fmtPct(pct)}</td></tr>); })}</tbody></table></div>
+                        <div className="overflow-x-auto no-scroll-wrapper"><table className="min-w-full text-sm"><thead><tr className="text-left border-b"><th className="py-2 pr-4">Participant</th><th className="py-2 pr-4">Total Cases</th><th className="py-2 pr-4">Correct Cases</th><th className="py-2 pr-4">% Correct Cases</th></tr></thead><tbody>{ids.map(id => { const r = data[id]; const pct = calcPct(r.correct_cases, r.total_cases); return (<tr key={id} className="border-b"><td className="py-2 pr-4">{r.name}</td><td className="py-2 pr-4">{r.total_cases}</td><td className="py-2 pr-4">{r.correct_cases}</td><td className={`py-2 pr-4 ${pctBgClass(pct)}`}>{fmtPct(pct)}</td></tr>); })}</tbody></table></div>
                     </div>
                 );
             })}
@@ -906,7 +965,7 @@ function IccmReports({ course, participants, allObs, allCases }) {
                     // --- MODIFIED: Added ID and page-break class ---
                     <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
                         <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto no-scroll-wrapper">
                             <table className="min-w-full text-sm">
                                 <thead>
                                     <tr className="text-left border-b">
@@ -943,13 +1002,12 @@ function IccmReports({ course, participants, allObs, allCases }) {
                     // --- MODIFIED: Added ID and page-break class ---
                     <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
                         <h3 className="text-xl font-semibold">Group: {g.replace('Group ', '')}</h3>
-                        {/* --- MODIFIED: Removed max-h-[70vh] and overflow-y-auto --- */}
-                        <div className="overflow-x-auto">
+                        {/* --- MODIFIED: Removed overflow-x-auto, kept overflow-y-auto for web view only --- */}
+                        <div className="overflow-y-auto max-h-[70vh] no-scroll-wrapper">
                             <table className="w-full text-xs table-fixed">
                                 <thead>
                                     <tr className="text-left border-b bg-gray-50 sticky top-0">
                                         <th className="py-2 pr-4 w-80">Skill</th>
-                                        {/* MODIFICATION: Removed whitespace-nowrap, added w-32 and px-1 to allow wrapping */}
                                         {parts.map(p => <th key={p.id} className="py-2 px-1 text-center w-32">{p.name}</th>)}
                                     </tr>
                                 </thead>
@@ -1094,9 +1152,22 @@ function EencReports({ course, participants, allObs, allCases }) {
                 if (i > 0) {
                     doc.addPage();
                 }
+
+                // --- FIX: Temporarily disable scrolling on wrappers for capture ---
+                const scrollWrappers = el.getElementsByClassName('no-scroll-wrapper');
+                for (let j = 0; j < scrollWrappers.length; j++) {
+                    scrollWrappers[j].style.overflow = 'visible';
+                    scrollWrappers[j].style.maxHeight = 'none';
+                }
                 
                 // Capture group content
                 const groupCanvas = await html2canvas(el, canvasOptions);
+
+                // --- FIX: Restore scrolling on wrappers after capture ---
+                for (let j = 0; j < scrollWrappers.length; j++) {
+                    scrollWrappers[j].style.overflow = ''; // Revert to CSS default
+                    scrollWrappers[j].style.maxHeight = ''; // Revert to CSS default
+                }
                 
                 // Add header and scaled group content to the same page
                 addCanvasToPdfOnePage(doc, headerCanvas, groupCanvas, profile, margin);
@@ -1117,6 +1188,12 @@ function EencReports({ course, participants, allObs, allCases }) {
             // --- FIX: Ensure header is hidden even if error occurs ---
             if (headerEl) {
                 headerEl.style.display = 'none';
+            }
+            // --- FIX: Ensure scrolling is restored even if error occurs ---
+            const allScrollWrappers = document.getElementsByClassName('no-scroll-wrapper');
+            for (let j = 0; j < allScrollWrappers.length; j++) {
+                allScrollWrappers[j].style.overflow = '';
+                allScrollWrappers[j].style.maxHeight = '';
             }
             setIsPdfGenerating(false);
         }
@@ -1142,12 +1219,12 @@ function EencReports({ course, participants, allObs, allCases }) {
         return (
             <div className="grid gap-2 mt-6">
                 <h3 className="text-xl font-semibold">{group} - {scenario === 'breathing' ? "Breathing Baby" : "Not Breathing Baby"}</h3>
-                <div className="overflow-x-auto">
+                {/* --- MODIFIED: Removed overflow-x-auto, kept overflow-y-auto for web view only --- */}
+                <div className="overflow-y-auto max-h-[70vh] no-scroll-wrapper">
                     <table className="min-w-full text-xs">
                         <thead>
                             <tr className="text-left border-b bg-gray-50 sticky top-0">
                                 <th className="py-2 pr-4 w-80">Skill</th>
-                                {/* MODIFICATION: Removed whitespace-nowrap, added w-32 and px-1 to allow wrapping */}
                                 {parts.map(p => <th key={p.id} className="py-2 px-1 text-center w-32">{p.name}</th>)}
                             </tr>
                         </thead>
@@ -1221,7 +1298,7 @@ function EencReports({ course, participants, allObs, allCases }) {
                     // --- MODIFIED: Added ID and page-break class ---
                     <div key={g} className="grid gap-2 mb-8 report-group-wrapper" id={`group-${tab}-${g.replace(/\s+/g, '-')}`}>
                         <h3 className="text-xl font-semibold">{g}</h3>
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto no-scroll-wrapper">
                             <table className="min-w-full text-sm">
                                 <thead>
                                     <tr className="text-left border-b bg-gray-50">
@@ -1285,12 +1362,12 @@ const EencDetailedMatrix = ({ group, scenario, participants, filteredObs, scenar
     return (
         <div className="grid gap-2 mt-6">
             <h3 className="text-xl font-semibold">{group} - {scenario === 'breathing' ? "Breathing Baby" : "Not Breathing Baby"}</h3>
-            <div className="overflow-x-auto">
+            {/* --- MODIFIED: Removed overflow-x-auto, kept overflow-y-auto for web view only --- */}
+            <div className="overflow-y-auto max-h-[70vh] no-scroll-wrapper">
                 <table className="min-w-full text-xs">
                     <thead>
                         <tr className="text-left border-b bg-gray-50 sticky top-0">
                             <th className="py-2 pr-4 w-80">Skill</th>
-                            {/* MODIFICATION: Removed whitespace-nowrap, added w-32 and px-1 to allow wrapping */}
                             {parts.map(p => <th key={p.id} className="py-2 px-1 text-center w-32">{p.name}</th>)}
                         </tr>
                     </thead>
