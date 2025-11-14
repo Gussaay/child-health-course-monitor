@@ -21,6 +21,7 @@ import {
     Timestamp,
     startAfter
 } from "firebase/firestore";
+import { deleteField } from "firebase/firestore";
 import { onAuthStateChanged } from 'firebase/auth'; // Import onAuthStateChanged
 import { storage } from './firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -2172,5 +2173,30 @@ export async function listParticipantTestsForCourse(courseId, sourceOptions = {}
         console.error("Error fetching participant tests for course:", error);
         throw error;
     }
+}
+// --- *** END NEW FUNCTION *** ---
+
+// --- *** NEW FUNCTION: deleteParticipantTest *** ---
+export async function deleteParticipantTest(courseId, participantId, testType) {
+    if (!participantId || !testType) {
+        throw new Error("Participant ID and Test Type are required.");
+    }
+
+    const testRecordId = `${participantId}_${testType}`;
+    const testRecordRef = doc(db, "participantTests", testRecordId);
+    const participantRef = doc(db, "participants", participantId);
+    const scoreFieldToReset = testType === 'pre-test' ? 'pre_test_score' : 'post_test_score';
+
+    const batch = writeBatch(db);
+
+    // 1. Delete the test record document
+    batch.delete(testRecordRef);
+
+    // 2. Remove the score from the participant document
+    batch.update(participantRef, {
+        [scoreFieldToReset]: deleteField() // Removes the field entirely, or use null
+    });
+
+    await batch.commit();
 }
 // --- *** END NEW FUNCTION *** ---

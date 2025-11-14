@@ -1278,7 +1278,24 @@ export default function App() {
                 canUseFederalManagerAdvancedFeatures={permissions.canUseFederalManagerAdvancedFeatures}
                 canEditDeleteActiveCourse={permissions.canManageCourse}
                 canEditDeleteInactiveCourse={permissions.canUseFederalManagerAdvancedFeatures}
-                onSaveParticipantTest={upsertParticipantTest}
+            // --- UPDATED SECTION STARTS HERE ---
+                onSaveParticipantTest={async (payload) => {
+                    // 1. If not a delete signal, save the data to DB
+                    if (!payload.deleted) {
+                        await upsertParticipantTest(payload);
+                    }
+                    
+                    // 2. Force a data refresh (Clear cache)
+                    setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null });
+                    
+                    // 3. Toggle ID to trigger the useEffect hook that fetches data
+                    if (selectedCourse) {
+                        const currentId = selectedCourse.id;
+                        setSelectedCourseId(null);
+                        setTimeout(() => setSelectedCourseId(currentId), 0);
+                    }
+                }}
+                // --- UPDATED SECTION ENDS HERE ---
                 
                 // --- *** NEW: Prop for saving participant from test form *** ---
                 onSaveParticipant={handleSaveParticipantFromTestForm}

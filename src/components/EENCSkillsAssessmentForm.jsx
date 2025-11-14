@@ -7,61 +7,60 @@ import {
     Input, Textarea, Checkbox, Modal
 } from './CommonComponents';
 import { getAuth } from "firebase/auth";
-// --- FIX: Import EENCFormFields, not IMNCIFormFields ---
 import { GenericFacilityForm, EENCFormFields } from './FacilityForms.jsx'; 
 import { submitFacilityDataForApproval } from "../data.js";
 
 // --- مكونات خاصة بهذا النموذج ---
 
-// --- 1. هيكل النموذج (من المصادر 1 و 2) ---
+// --- 1. هيكل النموذج ---
 
 const PREPARATION_ITEMS = [
-    { key: 'prep_temp', label: 'التأكد من درجة حرارة الغرفة مناسبة، اغلق تيارات الهواء' }, //
-    { key: 'prep_notify_mother', label: 'إخبار الام (أوالشخص الداعم لها) عن مجريات سير الولادة وابدى تعاطفا معها وطمئنها' }, //
-    { key: 'prep_wash_1', label: 'غسل الأيدي جيدا بالماء والصابون (المرة الأولى)' }, //
-    { key: 'prep_cloths', label: 'تجهيز (2) قطعة قماش جافة ونظيفة، ووضع قطعة قماش جافة فوق بطن الأم لتجفيف الطفل مباشرة بعد الولادة، وضع القطعة الثانية جانبا لاستخدامها لتغطية الطفل بعد تجفيفه.' }, //
-    { key: 'prep_resuscitation_area', label: 'تجهيز منطقة إنعاش الوليد (قناع + كيس + عصفورة شفط + فوطة)' }, //
-    { key: 'prep_ambu_check', label: 'التأكد من فعالية القناع والكيس (امبوباق) لإنعاش الوليد' }, //
-    { key: 'prep_wash_2', label: 'غسل الأيدي جيدا بالماء والصابون (المرة الثانية)' }, //
-    { key: 'prep_gloves', label: 'لبس قفازات معقمة (2 قفاز)' }, //
-    { key: 'prep_tools', label: 'وضع المشابك والملقط وكل ادوات الولادة معقمة في منطقة يسهل استخدامها بعد الولادة' }, //
+    { key: 'prep_temp', label: 'التأكد من درجة حرارة الغرفة مناسبة، اغلق تيارات الهواء' }, 
+    { key: 'prep_notify_mother', label: 'إخبار الام (أوالشخص الداعم لها) عن مجريات سير الولادة وابدى تعاطفا معها وطمئنها' }, 
+    { key: 'prep_wash_1', label: 'غسل الأيدي جيدا بالماء والصابون (المرة الأولى)' }, 
+    { key: 'prep_cloths', label: 'تجهيز (2) قطعة قماش جافة ونظيفة، ووضع قطعة قماش جافة فوق بطن الأم لتجفيف الطفل مباشرة بعد الولادة، وضع القطعة الثانية جانبا لاستخدامها لتغطية الطفل بعد تجفيفه.' }, 
+    { key: 'prep_resuscitation_area', label: 'تجهيز منطقة إنعاش الوليد (قناع + كيس + عصفورة شفط + فوطة)' }, 
+    { key: 'prep_ambu_check', label: 'التأكد من فعالية القناع والكيس (امبوباق) لإنعاش الوليد' }, 
+    { key: 'prep_wash_2', label: 'غسل الأيدي جيدا بالماء والصابون (المرة الثانية)' }, 
+    { key: 'prep_gloves', label: 'لبس قفازات معقمة (2 قفاز)' }, 
+    { key: 'prep_tools', label: 'وضع المشابك والملقط وكل ادوات الولادة معقمة في منطقة يسهل استخدامها بعد الولادة' }, 
 ];
 
 const DRYING_STIMULATION_ITEMS = [
-    { key: 'dry_time_record', label: 'تسجيل زمن الولادة (الساعة ___ دقائق ____ ثواني___)' }, //
-    { key: 'dry_start_5sec', label: 'بداية التجفيف خلال 5 ثواني من الولادة' }, //
-    { key: 'dry_procedure', label: 'التجفيف جيدا بداية من العينين، الوجه، الراس، الصدر، البطن، الظهر وأخيراً اليدين والقدمين' }, //
-    { key: 'dry_stimulation', label: 'التحفيز بواسطة المسح برفق على الراس والجسم والاطراف (عدم الضرب على الظهر)' }, //
-    { key: 'dry_suction', label: 'شفط مجرى التنفس فقط في حالة قفل مجرى الهواء والطفل لا يتنفس تماما' }, //
-    { key: 'dry_remove_wet_cloth', label: 'ازالة القطعة المبللة بالسوائل' }, //
-    { key: 'dry_skin_to_skin', label: 'وضع الطفل ملتصقا جلدا بجلد امه' }, //
-    { key: 'dry_cover_baby', label: 'تغطية الطفل بقطعة جافة وتغطية الراس بطاقية' }, //
+    { key: 'dry_time_record', label: 'تسجيل زمن الولادة (الساعة ___ دقائق ____ ثواني___)' }, 
+    { key: 'dry_start_5sec', label: 'بداية التجفيف خلال 5 ثواني من الولادة' }, 
+    { key: 'dry_procedure', label: 'التجفيف جيدا بداية من العينين، الوجه، الراس، الصدر، البطن، الظهر وأخيراً اليدين والقدمين' }, 
+    { key: 'dry_stimulation', label: 'التحفيز بواسطة المسح برفق على الراس والجسم والاطراف (عدم الضرب على الظهر)' }, 
+    { key: 'dry_suction', label: 'شفط مجرى التنفس فقط في حالة قفل مجرى الهواء والطفل لا يتنفس تماما' }, 
+    { key: 'dry_remove_wet_cloth', label: 'ازالة القطعة المبللة بالسوائل' }, 
+    { key: 'dry_skin_to_skin', label: 'وضع الطفل ملتصقا جلدا بجلد امه' }, 
+    { key: 'dry_cover_baby', label: 'تغطية الطفل بقطعة جافة وتغطية الراس بطاقية' }, 
 ];
 
 const NORMAL_BREATHING_ITEMS = [
-    { key: 'normal_check_second_baby', label: 'التأكد من عدم وجود طفل اخر' }, //
-    { key: 'normal_oxytocin', label: 'اعطاء حقنة الطلق (اوكسيتوسين) خلال واحد دقيقة بعد الولادة' }, //
-    { key: 'normal_remove_outer_glove', label: 'نزع القفاز الخارجي والابقاء علي الداخلي قبل لمس الحبل السري' }, //
-    { key: 'normal_cord_pulse_check', label: 'التاكد من نبض الحبل السري قبل الشبك , وشبك الحبل السري بعد توقف النبض (عادة 1- 3 دقيقة)' }, //
-    { key: 'normal_cord_clamping', label: 'وضع المشبك الاول علي بعد 2سم من قاعدة السرة ووضع الملقط علي بعد 5 سم من قاعدة السرة ثم قطع الحبل السري' }, //
-    { key: 'normal_placenta', label: 'ازالة المشيمة' }, //
-    { key: 'normal_breastfeeding_guidance', label: 'ارشد الام علي علامات استعداد الوليد للرضاعة الطبيعية' }, //
+    { key: 'normal_check_second_baby', label: 'التأكد من عدم وجود طفل اخر' }, 
+    { key: 'normal_oxytocin', label: 'اعطاء حقنة الطلق (اوكسيتوسين) خلال واحد دقيقة بعد الولادة' }, 
+    { key: 'normal_remove_outer_glove', label: 'نزع القفاز الخارجي والابقاء علي الداخلي قبل لمس الحبل السري' }, 
+    { key: 'normal_cord_pulse_check', label: 'التاكد من نبض الحبل السري قبل الشبك , وشبك الحبل السري بعد توقف النبض (عادة 1- 3 دقيقة)' }, 
+    { key: 'normal_cord_clamping', label: 'وضع المشبك الاول علي بعد 2سم من قاعدة السرة ووضع الملقط علي بعد 5 سم من قاعدة السرة ثم قطع الحبل السري' }, 
+    { key: 'normal_placenta', label: 'ازالة المشيمة' }, 
+    { key: 'normal_breastfeeding_guidance', label: 'ارشد الام علي علامات استعداد الوليد للرضاعة الطبيعية' }, 
 ];
 
 const RESUSCITATION_ITEMS = [
-    { key: 'resus_ask_help', label: 'طلب المساعدة' }, //
-    { key: 'resus_remove_outer_glove', label: 'نزع القفاز الخارجي والابقاء على الداخلي' }, //
-    { key: 'resus_clamp_cord', label: 'وضع المشبك سريعا على الحبل السري وقطع الحبل السري' }, //
-    { key: 'resus_move_to_area', label: 'نقل الوليد سريعا الي منطقة الانعاش المجهزة' }, //
-    { key: 'resus_cover_while_moving', label: 'تغطية الوليد اثناء نقله الي منطقة الإنعاش' }, //
-    { key: 'resus_position_head', label: 'استعدال الراس لفتح مجري الهواء' }, //
-    { key: 'resus_mask_position', label: 'تغطية الكيس والقناع (الأمبوباق) للفم والانف والحنك' }, //
-    { key: 'resus_check_chest_rise', label: 'التأكد من ارتفاع الصدر في اقل من 1 دقيقة من الولادة' }, //
-    { key: 'resus_ventilation_rate', label: 'الضغط على الكيس (امبوباق) لإعطاء 30 – 50 نفس في الدقيقة والحفاظ علي ارتفاع الصدر (التهوية)' }, //
-    { key: 'resus_no_chest_rise_steps', label: 'فى حالة عدم ارتفاع الصدر بعد استخدام (امبوباق) اتبع الخطوات التالية: استعدال وضعية الراس، استعدال وضعية القناع لتعطى تغطية أفضل، التأكد من فتح مجرى الهواء' }, //
-    { key: 'resus_followup_if_breathing', label: 'إذا تنفس الطفل طبيعيا بعد الامبوباق (ايقاف عملية الانعاش والمراقبه كل 15 دقيقة, ارجاع الطفل الي بطن امه ملتصقا جلد بجلد, ارشاد الام ان طفلها سليم...)' }, //
-    { key: 'resus_followup_no_breathing_10min_pulse', label: 'فى حالة لم يتنفس الطفل طبيعيا بعد 10 دقائق من التنفس الفعال + وجود نبضات قلب (مواصلة عملية التنفس ,وتحويل الطفل والتأكد من المحافظة عليه دافئا أثناء التحويل)' }, //
-    { key: 'resus_followup_no_breathing_10min_no_pulse', label: 'فى حالة لم يتنفس الطفل طبيعيا بعد 10 دقائق من التنفس الفعال + عدم وجود نبضات قلب (هل تم التأكد من وفاة الطفل ,وايقاف عملية التنفس ,وتقديم الدعم العاطفي للام)' }, //
+    { key: 'resus_ask_help', label: 'طلب المساعدة' }, 
+    { key: 'resus_remove_outer_glove', label: 'نزع القفاز الخارجي والابقاء على الداخلي' }, 
+    { key: 'resus_clamp_cord', label: 'وضع المشبك سريعا على الحبل السري وقطع الحبل السري' }, 
+    { key: 'resus_move_to_area', label: 'نقل الوليد سريعا الي منطقة الانعاش المجهزة' }, 
+    { key: 'resus_cover_while_moving', label: 'تغطية الوليد اثناء نقله الي منطقة الإنعاش' }, 
+    { key: 'resus_position_head', label: 'استعدال الراس لفتح مجري الهواء' }, 
+    { key: 'resus_mask_position', label: 'تغطية الكيس والقناع (الأمبوباق) للفم والانف والحنك' }, 
+    { key: 'resus_check_chest_rise', label: 'التأكد من ارتفاع الصدر في اقل من 1 دقيقة من الولادة' }, 
+    { key: 'resus_ventilation_rate', label: 'الضغط على الكيس (امبوباق) لإعطاء 30 – 50 نفس في الدقيقة والحفاظ علي ارتفاع الصدر (التهوية)' }, 
+    { key: 'resus_no_chest_rise_steps', label: 'فى حالة عدم ارتفاع الصدر بعد استخدام (امبوباق) اتبع الخطوات التالية: استعدال وضعية الراس، استعدال وضعية القناع لتعطى تغطية أفضل، التأكد من فتح مجرى الهواء' }, 
+    { key: 'resus_followup_if_breathing', label: 'إذا تنفس الطفل طبيعيا بعد الامبوباق (ايقاف عملية الانعاش والمراقبه كل 15 دقيقة, ارجاع الطفل الي بطن امه ملتصقا جلد بجلد, ارشاد الام ان طفلها سليم...)' }, 
+    { key: 'resus_followup_no_breathing_10min_pulse', label: 'فى حالة لم يتنفس الطفل طبيعيا بعد 10 دقائق من التنفس الفعال + وجود نبضات قلب (مواصلة عملية التنفس ,وتحويل الطفل والتأكد من المحافظة عليه دافئا أثناء التحويل)' }, 
+    { key: 'resus_followup_no_breathing_10min_no_pulse', label: 'فى حالة لم يتنفس الطفل طبيعيا بعد 10 دقائق من التنفس الفعال + عدم وجود نبضات قلب (هل تم التأكد من وفاة الطفل ,وايقاف عملية التنفس ,وتقديم الدعم العاطفي للام)' }, 
 ];
 
 // دمج كل المفاتيح لإنشاء الحالة الأولية
@@ -76,12 +75,12 @@ const allItems = [
 const getInitialFormData = () => {
     const skills = {};
     allItems.forEach(item => {
-        skills[item.key] = 'na'; // 'na' | 'yes' | 'no' | 'partial'
+        skills[item.key] = 'na'; 
     });
 
     return {
         session_date: new Date().toISOString().split('T')[0],
-        eenc_breathing_status: 'na', // 'na' | 'yes' | 'no'
+        eenc_breathing_status: 'na', 
         skills: skills,
         notes: '',
     };
@@ -93,7 +92,6 @@ const rehydrateDraftData = (draftData) => {
     if (!draftData) return initial;
 
     const dataToLoad = draftData.formData ? draftData.formData : draftData;
-
     const skills = { ...initial.skills, ...dataToLoad.skills };
     
     return {
@@ -104,44 +102,60 @@ const rehydrateDraftData = (draftData) => {
     };
 };
 
-// --- 4. دالة حساب الدرجات ---
+// --- 4. دالة حساب الدرجات (UPDATED for Section Scores) ---
 const calculateScores = (formData) => {
     const { eenc_breathing_status, skills } = formData;
-    let score = 0;
-    let maxScore = 0;
-
-    const itemsToScore = [...PREPARATION_ITEMS, ...DRYING_STIMULATION_ITEMS];
+    let overallScore = 0;
+    let overallMax = 0;
     
-    if (eenc_breathing_status === 'yes') {
-        itemsToScore.push(...NORMAL_BREATHING_ITEMS);
-    } else if (eenc_breathing_status === 'no') {
-        itemsToScore.push(...RESUSCITATION_ITEMS);
-    }
-    // إذا كان 'na'، يتم حساب التحضيرات والتجفيف فقط
+    // Initialize section scores
+    const sectionScores = {
+        preparation: { score: 0, maxScore: 0 },
+        drying: { score: 0, maxScore: 0 },
+        normal_breathing: { score: 0, maxScore: 0 },
+        resuscitation: { score: 0, maxScore: 0 }
+    };
 
-    itemsToScore.forEach(item => {
-        const value = skills[item.key];
-        if (value && value !== 'na') {
-            maxScore += 2; // أقصى درجة لكل عنصر هي 2
-            if (value === 'yes') {
-                score += 2;
-            } else if (value === 'partial') {
-                score += 1;
+    const calculateSection = (items, sectionKey) => {
+        items.forEach(item => {
+            const value = skills[item.key];
+            if (value && value !== 'na') {
+                sectionScores[sectionKey].maxScore += 2;
+                overallMax += 2;
+                
+                if (value === 'yes') {
+                    sectionScores[sectionKey].score += 2;
+                    overallScore += 2;
+                } else if (value === 'partial') {
+                    sectionScores[sectionKey].score += 1;
+                    overallScore += 1;
+                }
+                // 'no' adds 0
             }
-            // 'no' adds 0
-        }
-    });
+        });
+    };
+
+    // Always calculate common sections
+    calculateSection(PREPARATION_ITEMS, 'preparation');
+    calculateSection(DRYING_STIMULATION_ITEMS, 'drying');
+
+    // Conditional sections
+    if (eenc_breathing_status === 'yes') {
+        calculateSection(NORMAL_BREATHING_ITEMS, 'normal_breathing');
+    } else if (eenc_breathing_status === 'no') {
+        calculateSection(RESUSCITATION_ITEMS, 'resuscitation');
+    }
 
     return {
-        overallScore: { score, maxScore },
+        overallScore: { score: overallScore, maxScore: overallMax },
+        ...sectionScores
     };
 };
 
 // --- 5. دالة التحقق من الاكتمال ---
-// --- FIX: Renamed function to avoid name collision ---
 const checkFormCompletion = (formData) => {
     const { eenc_breathing_status, skills } = formData;
-    if (eenc_breathing_status === 'na') return false; // يجب اختيار الحالة
+    if (eenc_breathing_status === 'na') return false; 
 
     const itemsToCheck = [...PREPARATION_ITEMS, ...DRYING_STIMULATION_ITEMS];
     
@@ -151,7 +165,6 @@ const checkFormCompletion = (formData) => {
         itemsToCheck.push(...RESUSCITATION_ITEMS);
     }
     
-    // التحقق من أن كل عنصر ذي صلة قد تم ملؤه (ليس 'na' أو '')
     for (const item of itemsToCheck) {
         if (skills[item.key] === 'na' || skills[item.key] === '') {
             return false;
@@ -162,6 +175,31 @@ const checkFormCompletion = (formData) => {
 
 
 // --- مكونات الواجهة ---
+
+// --- NEW: Score Circle Component (Percentage) ---
+const ScoreCircle = ({ score, maxScore }) => {
+    // If maxScore is 0 or undefined, don't show the circle
+    if (score === undefined || maxScore === undefined || maxScore === 0) return null;
+    
+    // Calculate Percentage
+    const percentage = Math.round((score / maxScore) * 100);
+    
+    let colorClasses = 'bg-red-100 text-red-700 border-red-200';
+    if (percentage >= 80) {
+        colorClasses = 'bg-green-100 text-green-700 border-green-200';
+    } else if (percentage >= 50) {
+        colorClasses = 'bg-yellow-100 text-yellow-700 border-yellow-200';
+    }
+
+    return (
+        <div 
+            className={`flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full border-2 text-xs font-bold ml-3 shadow-sm ${colorClasses}`}
+            title={`${score}/${maxScore}`} // Tooltip showing exact score
+        >
+            {percentage}%
+        </div>
+    );
+};
 
 const StickyOverallScore = ({ score, maxScore }) => {
     if (score === null || maxScore === null || maxScore === 0 || score === undefined || maxScore === undefined) return null;
@@ -187,31 +225,36 @@ const StickyOverallScore = ({ score, maxScore }) => {
     );
 };
 
-// --- START: LAYOUT FIX ---
 const SkillChecklistItem = ({ label, itemKey, value, onChange }) => {
     const handleChange = (e) => {
         onChange('skills', itemKey, e.target.value);
     };
 
     return (
-        // Use justify-between. In RTL, this pushes the first child (span) to the right
-        // and the second child (div) to the left.
-        <div className="p-3 border rounded-lg bg-white flex flex-col md:flex-row justify-between items-center gap-4">
-            {/* Label (Item 1: will be on the right) */}
-            <span className="font-medium text-gray-700 text-right md:flex-grow">{label}</span>
+        // dir="rtl": Label on Right, Buttons on Left
+        <div 
+            className="p-3 border rounded-lg bg-white flex flex-col md:flex-row justify-between items-center gap-4"
+            dir="rtl" 
+        >
+            {/* 1. Label (Right side) */}
+            <span className="font-medium text-gray-700 text-right w-full md:flex-1">
+                {label}
+            </span>
             
-            {/* Options (Item 2: will be on the left) */}
+            {/* 2. Options (Left side) */}
+            {/* dir="ltr" maintains the horizontal layout of buttons. */}
+            {/* The order inside is flipped: No -> Partial -> Yes */}
             <div className="flex gap-4 flex-shrink-0" dir="ltr">
                 <label className="flex items-center gap-1 cursor-pointer">
                     <input
                         type="radio"
                         name={itemKey}
-                        value="yes"
-                        checked={value === 'yes'}
+                        value="no"
+                        checked={value === 'no'}
                         onChange={handleChange}
-                        className="form-radio text-green-600"
+                        className="form-radio text-red-600"
                     />
-                    <span className="text-sm">نعم</span>
+                    <span className="text-sm">لا</span>
                 </label>
                 <label className="flex items-center gap-1 cursor-pointer">
                     <input
@@ -228,25 +271,27 @@ const SkillChecklistItem = ({ label, itemKey, value, onChange }) => {
                     <input
                         type="radio"
                         name={itemKey}
-                        value="no"
-                        checked={value === 'no'}
+                        value="yes"
+                        checked={value === 'yes'}
                         onChange={handleChange}
-                        className="form-radio text-red-600"
+                        className="form-radio text-green-600"
                     />
-                    <span className="text-sm">لا</span>
+                    <span className="text-sm">نعم</span>
                 </label>
             </div>
         </div>
     );
 };
-// --- END: LAYOUT FIX ---
 
-const SectionRenderer = ({ title, items, formData, handleSkillChange }) => {
+// --- UPDATED: SectionRenderer with Percentage Circle ---
+const SectionRenderer = ({ title, items, formData, handleSkillChange, score, maxScore }) => {
     return (
         <div className="mt-6 animate-fade-in">
-            {/* --- FIX: Changed background to blue and added text-right --- */}
-            <h3 className="text-xl font-semibold mb-4 p-3 bg-sky-100 text-sky-800 rounded-md sticky top-0 z-10 text-right">
-                {title}
+             {/* Flex container with items-center */}
+            <h3 className="text-xl font-semibold mb-4 p-3 bg-sky-100 text-sky-800 rounded-md sticky top-0 z-10 text-right flex items-center" dir="rtl">
+                {/* ScoreCircle comes first in RTL DOM, appearing on the Right (Before the title) */}
+                <ScoreCircle score={score} maxScore={maxScore} />
+                <span>{title}</span>
             </h3>
             <div className="space-y-3">
                 {items.map(item => (
@@ -294,7 +339,6 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
     const [scores, setScores] = useState({});
     const auth = getAuth();
     const user = auth.currentUser;
-    // --- FIX: Renamed state variable ---
     const [isFormComplete, setIsFormComplete] = useState(false);
 
     // --- Refs for Autosave ---
@@ -350,44 +394,36 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
         const newFormData = JSON.parse(JSON.stringify(formData));
         const { eenc_breathing_status, skills } = newFormData;
 
-        // Relevance Cleanup Logic
         const updateRelevance = (items, isRelevant) => {
             items.forEach(item => {
                 const key = item.key;
                 if (isRelevant && (skills[key] === 'na' || skills[key] === undefined)) {
-                    skills[key] = ''; // Set to empty to be filled
+                    skills[key] = ''; 
                     needsUpdate = true;
                 } else if (!isRelevant && skills[key] !== 'na') {
-                    skills[key] = 'na'; // Set to 'na' as it's not relevant
+                    skills[key] = 'na'; 
                     needsUpdate = true;
                 }
             });
         };
 
-        // Sections 1 & 2 are always relevant
         updateRelevance(PREPARATION_ITEMS, true);
         updateRelevance(DRYING_STIMULATION_ITEMS, true);
 
-        // Section 3
         updateRelevance(NORMAL_BREATHING_ITEMS, eenc_breathing_status === 'yes');
-        // Section 4
         updateRelevance(RESUSCITATION_ITEMS, eenc_breathing_status === 'no');
 
         if (needsUpdate) {
             setFormData(newFormData);
         }
 
-        // Calculate scores
         setScores(calculateScores(newFormData)); 
-
-        // Check completion
-        // --- FIX: Use renamed checker function ---
         setIsFormComplete(checkFormCompletion(newFormData));
 
     }, [formData]);
 
 
-    // --- Autosave Logic (Simplified) ---
+    // --- Autosave Logic ---
     const silentSaveDraft = useCallback(async () => {
         const {
             facility, healthWorkerName, user, visitNumber, existingSessionData,
@@ -449,7 +485,6 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
             }
         } catch (error) {
             console.error("Autosave failed:", error);
-            // Don't show toast on autosave fail
         }
     }, []); 
 
@@ -483,7 +518,6 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
     };
 
     const handleSaveFacilityData = async (formData) => {
-        // (Copied from IMNCI form)
         try {
             await submitFacilityDataForApproval(formData);
             setToast({ show: true, message: "Update submitted successfully! Your changes are pending approval.", type: 'success' });
@@ -497,7 +531,6 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
     const handleSubmit = async (e, status = 'complete') => {
         if (e) e.preventDefault();
         
-        // --- FIX: Use renamed checker function ---
         const currentFormComplete = checkFormCompletion(formData);
 
         if (status === 'complete' && !currentFormComplete) {
@@ -541,7 +574,6 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                 notes: formData.notes,
                 status: status,
                 visitNumber: visitNumber,
-                // EENC specific data
                 eenc_breathing_status: formData.eenc_breathing_status,
                 skills: formData.skills,
             };
@@ -592,7 +624,7 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                         </h2>
                     </div>
 
-                    {/* --- Info Cards Wrapper (Copied from IMNCI) --- */}
+                    {/* --- Info Cards Wrapper --- */}
                     <div className="space-y-2 mb-4">
                         {/* Facility Info */}
                         <div className="p-2 border rounded-lg bg-gray-50 text-right space-y-0.5">
@@ -638,11 +670,8 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
 
                     {/* --- EENC Form Content --- */}
                     <div className="mt-6 p-4 border rounded-lg bg-gray-50">
-                        {/* --- FIX: Added text-right --- */}
                         <h3 className="text-lg font-semibold mb-3 text-right">1. تحديد حالة الوليد</h3>
-                        {/* --- FIX: Added text-right --- */}
                         <FormGroup label="الرجاء تحديد حالة الوليد لبدء التقييم:" className="text-right">
-                            {/* --- FIX: Changed justify-end to justify-start for RTL --- */}
                             <div className="flex gap-4 justify-start" dir="rtl">
                                 <label className="flex items-center gap-2 p-2 border rounded-md bg-white cursor-pointer">
                                     <input
@@ -673,17 +702,45 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                     {/* --- Render Sections Based on Selection --- */}
                     {formData.eenc_breathing_status !== 'na' && (
                         <>
-                            <SectionRenderer title="2. تحضيرات ما قبل الولادة" items={PREPARATION_ITEMS} formData={formData} handleSkillChange={handleSkillChange} />
-                            <SectionRenderer title="3. التجفيف، التحفيز، التدفئة والشفط" items={DRYING_STIMULATION_ITEMS} formData={formData} handleSkillChange={handleSkillChange} />
+                            <SectionRenderer 
+                                title="2. تحضيرات ما قبل الولادة" 
+                                items={PREPARATION_ITEMS} 
+                                formData={formData} 
+                                handleSkillChange={handleSkillChange}
+                                score={scores.preparation?.score}
+                                maxScore={scores.preparation?.maxScore}
+                            />
+                            <SectionRenderer 
+                                title="3. التجفيف، التحفيز، التدفئة والشفط" 
+                                items={DRYING_STIMULATION_ITEMS} 
+                                formData={formData} 
+                                handleSkillChange={handleSkillChange} 
+                                score={scores.drying?.score}
+                                maxScore={scores.drying?.maxScore}
+                            />
                         </>
                     )}
 
                     {formData.eenc_breathing_status === 'yes' && (
-                        <SectionRenderer title="4. متابعة طفل يتنفس طبيعياً" items={NORMAL_BREATHING_ITEMS} formData={formData} handleSkillChange={handleSkillChange} />
+                        <SectionRenderer 
+                            title="4. متابعة طفل يتنفس طبيعياً" 
+                            items={NORMAL_BREATHING_ITEMS} 
+                            formData={formData} 
+                            handleSkillChange={handleSkillChange} 
+                            score={scores.normal_breathing?.score}
+                            maxScore={scores.normal_breathing?.maxScore}
+                        />
                     )}
 
                     {formData.eenc_breathing_status === 'no' && (
-                        <SectionRenderer title="4. إنعاش الوليد (الدقيقة الذهبية)" items={RESUSCITATION_ITEMS} formData={formData} handleSkillChange={handleSkillChange} />
+                        <SectionRenderer 
+                            title="4. إنعاش الوليد (الدقيقة الذهبية)" 
+                            items={RESUSCITATION_ITEMS} 
+                            formData={formData} 
+                            handleSkillChange={handleSkillChange} 
+                            score={scores.resuscitation?.score}
+                            maxScore={scores.resuscitation?.maxScore}
+                        />
                     )}
                     
 
@@ -697,7 +754,7 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                     )}
                 </div>
 
-                 {/* --- Button Bar (Copied from IMNCI) --- */}
+                 {/* --- Button Bar --- */}
                  <div className="hidden sm:flex flex-col gap-2 items-end p-4 border-t bg-gray-50 sticky bottom-0 z-10">
                      {/* Row 1: Action Buttons */}
                      <div className="flex gap-2 flex-wrap justify-end">
@@ -743,7 +800,7 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                      </div>
                  </div>
 
-                {/* --- Mobile Bar (Copied from IMNCI) --- */}
+                {/* --- Mobile Bar --- */}
                 <div className="flex sm:hidden fixed bottom-16 left-0 right-0 z-20 h-16 justify-around items-center bg-gray-900 text-white border-t border-gray-700 shadow-lg" dir="rtl">
                     <Button type="button" variant="secondary" onClick={onExit} disabled={isSaving || isSavingDraft} size="sm">
                         إلغاء
@@ -762,7 +819,7 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                 </div>
             </form>
 
-            {/* --- Facility Modal (Copied from IMNCI) --- */}
+            {/* --- Facility Modal --- */}
             {isFacilityModalOpen && facility && (
                 <Modal 
                     isOpen={isFacilityModalOpen} 
@@ -782,7 +839,6 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                             saveButtonText="Submit for Approval"
                             cancelButtonText="Close"
                         >
-                            {/* --- FIX: This now correctly points to EENCFormFields --- */}
                             {(props) => <EENCFormFields {...props} />}
                         </GenericFacilityForm>
                     </div>

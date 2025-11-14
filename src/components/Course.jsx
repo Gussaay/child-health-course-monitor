@@ -3,20 +3,15 @@ import React, { useState, useMemo, useRef, useEffect, Suspense } from 'react';
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Bar, Line } from 'react-chartjs-2';
-// --- MODIFIED: Added CourseIcon ---
-import { Button, Card, EmptyState, FormGroup, Input, PageHeader, PdfIcon, Select, Spinner, Table, Textarea, CourseIcon, Modal, CardBody, CardFooter } from './CommonComponents'; // Added Modal, CardBody, CardFooter
-import { listAllDataForCourse, listParticipants, listCoordinators, upsertCoordinator, deleteCoordinator, listFunders, upsertFunder, deleteFunder, listFinalReport, upsertFinalReport, deleteFinalReport, uploadFile } from '../data.js'; // Added uploadFile
-// Updated imports for participant components
-// --- MODIFIED: Import from separate files ---
+import { Button, Card, EmptyState, FormGroup, Input, PageHeader, PdfIcon, Select, Spinner, Table, Textarea, CourseIcon, Modal, CardBody, CardFooter } from './CommonComponents'; 
+import { listAllDataForCourse, listParticipants, listCoordinators, upsertCoordinator, deleteCoordinator, listFunders, upsertFunder, deleteFunder, listFinalReport, upsertFinalReport, deleteFinalReport, uploadFile } from '../data.js'; 
 import { ParticipantsView, ParticipantForm } from './Participants';
-import { CourseTestForm } from './CourseTestForm'; // --- NEW: Import from its own file
+import { CourseTestForm } from './CourseTestForm'; 
 import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES,
 } from './constants.js';
 import html2canvas from 'html2canvas';
-// --- ADDED: Import FacilitatorDataForm ---
 import { FacilitatorDataForm } from './Facilitator.jsx';
-// --- ADDED: Imports for Role-Syncing ---
 import { db } from '../firebase';
 import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { DEFAULT_ROLE_PERMISSIONS, ALL_PERMISSIONS } from './AdminDashboard';
@@ -130,19 +125,15 @@ const generateFullCourseReportPdf = async (course, overallChartRef, dailyChartRe
     if(dailyImg) dailyImg.remove();
 };
 
-// --- ADDED: HospitalIcon component (moved from App.jsx) ---
 const HospitalIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v2.85c-.9.17-1.72.6-2.43 1.24L4.3 11.2a1 1 0 0 0-.2 1.39l.2.2c.45.6.84 1.34 1.36 2.14L6 15l2.43-1.6c.71-.48 1.54-.74 2.43-.84V14a1 1 0 0 0 1 1h2c.7 0 1.25-.56 1.25-1.25S15.7 12.5 15 12.5V11a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v1.5a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5V9.85c-.9-.1-1.72-.36-2.43-.84L4.3 7.8a1 1 0 0 0-.2-1.39l.2-.2c.45-.6.84-1.34 1.36-2.14L6 3l2.43 1.6c.71.48 1.54-.74 2.43 .84V5a3 3 0 0 0-3-3zM12 22v-2a3 3 0 0 0-3-3h-2a3 3 0 0 0-3 3v2zM18 22v-2a3 3 0 0 0-3-3h-2a3 3 0 0 0-3 3v2z"></path><path d="M12 18.5V22"></path><path d="M12 11h-2"></path><path d="M14 11h2"></path><path d="M18 11h2"></path></svg>;
 
-// --- ADDED: New Icons for Course Packages ---
 const IccmIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline><path d="M12 9v6"></path><path d="M9 12h6"></path></svg>;
 const IpcIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M12 11v4"></path><path d="M10 13h4"></path></svg>;
 const NewbornIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 9c0-2-1.5-3.5-4-3.5C7.5 5.5 6 7 6 9c0 1.5.5 2.5 1 3.5h0l-1 4.5h10L17 17l-1-4.5h0c.5-1 1-2.5 1-3.5z"></path><path d="M12 18h.01"></path><path d="M10.5 21v-1.5h3V21"></path></svg>;
 
-// --- ADDED: Landing component (moved from App.jsx) ---
 const Landing = React.memo(function Landing({ active, onPick }) {
     const items = [
         { key: 'IMNCI', title: 'Integrated Management of Newborn and Childhood Illnesses (IMNCI)', enabled: true },
-        // --- NEW COURSE TYPE ---
         { key: 'ICCM', title: 'Integrated Community case management for under 5 children (iCCM)', enabled: true },
         { key: 'ETAT', title: 'Emergency Triage, Assessment & Treatment (ETAT)', enabled: true },
         { key: 'EENC', title: 'Early Essential Newborn Care (EENC)', enabled: true },
@@ -157,7 +148,6 @@ const Landing = React.memo(function Landing({ active, onPick }) {
                 {items.map(it => (
                     <button key={it.key} disabled={!it.enabled} className={`border rounded-lg p-6 text-left transition-all duration-200 ${active === it.key ? 'ring-2 ring-sky-500 shadow-lg' : ''} ${it.enabled ? 'hover:shadow-md hover:scale-105' : 'opacity-60 cursor-not-allowed bg-gray-50'}`} onClick={() => it.enabled && onPick(it.key)}>
                         <div className="flex items-center gap-4">
-                            {/* --- MODIFIED: Use specific icons for ICCM, IPC, and Newborn --- */}
                             {it.key === 'ICCM' ? <IccmIcon className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
                              it.key === 'IPC' ? <IpcIcon className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
                              it.key === 'Small & Sick Newborn' ? <NewbornIcon className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
@@ -176,7 +166,6 @@ const Landing = React.memo(function Landing({ active, onPick }) {
 });
 
 
-// --- MODIFIED: Added onOpenTestForm prop ---
 export function CoursesTable({ 
     courses, onOpen, onEdit, onDelete, onOpenReport, onOpenTestForm, 
     canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates, onAddFinalReport, canManageFinalReport 
@@ -213,7 +202,7 @@ export function CoursesTable({
     const courseType = sortedCourses.length > 0 ? sortedCourses[0].course_type : 'Courses';
 
     return (
-        sortedCourses.length === 0 ? <EmptyState message="No courses found matching the selected filters." /> : ( // MODIFIED EmptyState message
+        sortedCourses.length === 0 ? <EmptyState message="No courses found matching the selected filters." /> : ( 
             <div>
                 <h3 className="text-xl font-bold mb-4">{courseType} Courses</h3>
                 <Table headers={["#", "State", "Locality", "Subcourses", "# Participants", "Status", "Actions"]}>
@@ -247,13 +236,11 @@ export function CoursesTable({
                                     <div className="flex gap-2 flex-nowrap justify-end">
                                         <Button variant="primary" onClick={() => onOpen(c.id)}>Open Course</Button>
                                         <Button variant="secondary" onClick={() => onOpenReport(c.id)}>Course Reports</Button>
-                                        {/* --- MODIFIED: Show button for ICCM or EENC --- */}
                                         {(c.course_type === 'ICCM' || c.course_type === 'EENC') && (
                                             <Button variant="secondary" onClick={() => onOpenTestForm(c.id)}>
                                                 Test Scores
                                             </Button>
                                         )}
-                                        {/* --- END MODIFICATION --- */}
                                         <Button
                                             variant="secondary"
                                             onClick={() => {
@@ -296,11 +283,8 @@ export function CoursesTable({
     );
 }
 
-// --- REMOVED CourseDetailView and DetailItem components ---
 
-// --- MODIFIED: CourseManagementView ---
 export function CourseManagementView({
-    // --- ORIGINAL PROPS ---
     allCourses, onOpen, onDelete, onOpenReport,
     onOpenTestForm,
     canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates,
@@ -317,25 +301,25 @@ export function CourseManagementView({
     activeCourseType,
     setActiveCourseType,
     onSaveParticipantTest,
+    
+    // --- ADDED HERE ---
+    onSaveParticipant, // <--- Must be included here
+    // ------------------
 
-    // --- NEW PROPS REQUIRED FOR CourseForm ---
-    // (These must be passed in from the parent component, e.g., App.jsx)
     facilitatorsList,
     fundersList,
     federalCoordinatorsList,
     stateCoordinatorsList,
     localityCoordinatorsList,
-    onSaveCourse, // The function from App.jsx that saves/updates a course
+    onSaveCourse, 
     onAddNewFacilitator,
     onAddNewCoordinator,
     onAddNewFunder
 }) {
     const currentParticipant = participants.find(p => p.id === selectedParticipantId);
 
-    // --- NEW: State to hold the course being edited ---
     const [courseToEdit, setCourseToEdit] = useState(null);
 
-    // --- (Existing code for filters: coursesForActiveType, filterStateOptions, etc.) ---
     const coursesForActiveType = useMemo(() => {
         if (!activeCourseType) return [];
         return allCourses.filter(c => c.course_type === activeCourseType);
@@ -393,7 +377,6 @@ export function CourseManagementView({
     }, [coursesForActiveType, filterState, filterLocality, filterSubCourse]);
 
     const isCourseActive = useMemo(() => {
-        // ... (existing isCourseActive logic) ...
         if (!selectedCourse?.start_date || !selectedCourse?.course_duration || selectedCourse.course_duration <= 0) {
             return false;
         }
@@ -411,43 +394,39 @@ export function CourseManagementView({
         onSetSelectedParticipantId(null);
     };
 
-    // --- MODIFIED: This handler now loads data and switches the tab directly ---
     const handleOpenTestForm = async (courseId) => {
         if (onOpen) {
-            await onOpen(courseId); // 1. Load all course data (participants, tests, etc.)
+            await onOpen(courseId); 
         }
-        onSetSelectedParticipantId(null); // 2. Ensure no specific participant is selected
-        setActiveCoursesTab('enter-test-scores'); // 3. Switch to the test score tab
+        onSetSelectedParticipantId(null); 
+        setActiveCoursesTab('enter-test-scores'); 
     };
-    // --- END MODIFICATION ---
 
     const handleOpenTestFormForParticipant = (participantId) => {
         onSetSelectedParticipantId(participantId);
         setActiveCoursesTab('enter-test-scores');
     };
 
-    // --- NEW: Handlers to switch to the CourseForm view ---
     const handleOpenAddForm = () => {
-        setCourseToEdit(null); // Clear any old data
-        setActiveCoursesTab('add-course'); // Set the new view
+        setCourseToEdit(null); 
+        setActiveCoursesTab('add-course'); 
     };
 
     const handleOpenEditForm = (course) => {
-        setCourseToEdit(course); // Set the course to edit
-        setActiveCoursesTab('edit-course'); // Set the new view
+        setCourseToEdit(course); 
+        setActiveCoursesTab('edit-course'); 
     };
 
     const handleCancelCourseForm = () => {
         setCourseToEdit(null);
-        setActiveCoursesTab('courses'); // Go back to the course list
+        setActiveCoursesTab('courses'); 
     };
 
-    // --- NEW: Wrapper for saving and returning to the list ---
     const handleSaveCourseAndReturn = async (courseData) => {
         if (onSaveCourse) {
-            await onSaveCourse(courseData); // Call the main save function from App.jsx
+            await onSaveCourse(courseData); 
         }
-        setActiveCoursesTab('courses'); // Return to course list
+        setActiveCoursesTab('courses'); 
         setCourseToEdit(null);
     };
 
@@ -459,11 +438,9 @@ export function CourseManagementView({
 
                 {selectedCourse && (
                     <>
-                        {/* ... (existing tab buttons for Participants, Monitoring, etc.) ... */}
                         <Button variant="tab" isActive={activeCoursesTab === 'participants'} onClick={() => { setActiveCoursesTab('participants'); onSetSelectedParticipantId(null); }}>Participants</Button>
                         <Button variant="tab" isActive={activeCoursesTab === 'monitoring'} onClick={() => setActiveCoursesTab('monitoring')} disabled={!currentParticipant}>Monitoring</Button>
                         <Button variant="tab" isActive={activeCoursesTab === 'reports'} onClick={() => setActiveCoursesTab('reports')}>Reports</Button>
-                        {/* --- MODIFIED: Show tab for ICCM or EENC --- */}
                         {(selectedCourse.course_type === 'ICCM' || selectedCourse.course_type === 'EENC') && (
                             <Button variant="tab" isActive={activeCoursesTab === 'enter-test-scores'} onClick={() => { setActiveCoursesTab('enter-test-scores'); }}>
                                 Test Scores
@@ -474,7 +451,6 @@ export function CourseManagementView({
             </div>
             
             <div className="p-4">
-                {/* --- COURSES TAB LOGIC --- */}
                 {activeCoursesTab === 'courses' && (
                     <>
                         {!activeCourseType ? (
@@ -485,7 +461,6 @@ export function CourseManagementView({
                         ) : (
                             <div>
                                 <div className="mb-4 flex flex-wrap justify-between items-center gap-2">
-                                    {/* --- MODIFIED: "Add" button now uses internal handler --- */}
                                     {canManageCourse && (
                                         <Button onClick={handleOpenAddForm} className="bg-sky-600 text-white hover:bg-sky-700">Add New Course</Button>
                                     )}
@@ -494,7 +469,6 @@ export function CourseManagementView({
                                     </Button>
                                 </div>
                                 
-                                {/* ... (existing filter controls) ... */}
                                 <Card className="p-4 mb-4 bg-gray-50">
                                     <h4 className="text-lg font-semibold mb-3">Filter Courses</h4>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -519,7 +493,7 @@ export function CourseManagementView({
                                 <CoursesTable
                                     courses={courses}
                                     onOpen={handleOpenCourse}
-                                    onEdit={handleOpenEditForm} // --- MODIFIED: Use internal handler
+                                    onEdit={handleOpenEditForm} 
                                     onDelete={onDelete}
                                     onOpenReport={onOpenReport}
                                     onOpenTestForm={handleOpenTestForm}
@@ -534,15 +508,12 @@ export function CourseManagementView({
                     </>
                 )}
 
-                {/* --- NEW: RENDER COURSE FORM --- */}
                 {(activeCoursesTab === 'add-course' || activeCoursesTab === 'edit-course') && (
                     <CourseForm
                         courseType={activeCourseType}
-                        initialData={courseToEdit} // This is null for 'add-course'
-                        onCancel={handleCancelCourseForm} // Use new handler
-                        onSave={handleSaveCourseAndReturn} // Use new wrapper handler
-                        
-                        // Pass down all the props from the parent
+                        initialData={courseToEdit} 
+                        onCancel={handleCancelCourseForm} 
+                        onSave={handleSaveCourseAndReturn} 
                         facilitatorsList={facilitatorsList}
                         fundersList={fundersList}
                         federalCoordinatorsList={federalCoordinatorsList}
@@ -554,12 +525,10 @@ export function CourseManagementView({
                     />
                 )}
                 
-                {/* --- OTHER TABS LOGIC --- */}
                 {loadingDetails && (activeCoursesTab !== 'courses' && activeCoursesTab !== 'add-course' && activeCoursesTab !== 'edit-course') ? <div className="flex justify-center p-8"><Spinner /></div> : (
                     <>
                         {activeCoursesTab === 'participants' && selectedCourse && (
                             <ParticipantsView
-                                // ... (all existing ParticipantsView props) ...
                                 course={selectedCourse}
                                 participants={participants}
                                 onAdd={onAddParticipant}
@@ -582,7 +551,6 @@ export function CourseManagementView({
                                 canEditDeleteParticipantInactiveCourse={canUseFederalManagerAdvancedFeatures}
                             />
                         )}
-                        {/* ... (rest of the existing tab logic for monitoring, reports, test-scores) ... */}
                         {activeCoursesTab === 'participants' && !selectedCourse && activeCoursesTab !== 'courses' && (
                             <EmptyState message="Please select a course from the 'Courses' tab to view participants." />
                         )}
@@ -607,6 +575,10 @@ export function CourseManagementView({
                                     setActiveCoursesTab('participants');
                                     onBatchUpdate();
                                 }}
+                                // --- PASSING PERMISSION & SAVE HANDLER ---
+                                canManageTests={canUseFederalManagerAdvancedFeatures}
+                                onSaveParticipant={onSaveParticipant}
+                                // -----------------------------------------
                             />
                         )}
                     </>
@@ -616,7 +588,6 @@ export function CourseManagementView({
     );
 }
 
-// --- REMOVED: NewFacilitatorForm ---
 
 const NewCoordinatorForm = ({ initialName, onCancel, onSave }) => {
     const [name, setName] = useState(initialName || '');
@@ -769,9 +740,8 @@ export function CourseForm({
     const [implementedBy, setImplementedBy] = useState(initialData?.implemented_by || '');
 
 
-    // --- NEW: State for Facilitator Modal ---
     const [isNewFacilitatorModalOpen, setIsNewFacilitatorModalOpen] = useState(false);
-    const [newFacilitatorName, setNewFacilitatorName] = useState(''); // Kept to pre-fill name
+    const [newFacilitatorName, setNewFacilitatorName] = useState(''); 
     const initialModalData = {
         name: '', phone: '', email: '', courses: [], totDates: {}, certificateUrls: {}, currentState: '',
         currentLocality: '', directorCourse: 'No', directorCourseDate: '', followUpCourse: 'No', 
@@ -782,9 +752,7 @@ export function CourseForm({
     const [newFacilitatorFiles, setNewFacilitatorFiles] = useState({});
     const [modalError, setModalError] = useState('');
     const [isModalLoading, setIsModalLoading] = useState(false);
-    // --- END NEW STATE ---
 
-    // --- MODIFIED: Default to first type for IMNCI, but will be overridden for ICCM ---
     const [directorImciSubType, setDirectorImciSubType] = useState(initialData?.director_imci_sub_type || IMNCI_SUBCOURSE_TYPES[0]);
     const [clinicalImciSubType, setClinicalImciSubType] = useState(initialData?.clinical_instructor_imci_sub_type || IMNCI_SUBCOURSE_TYPES[0]);
 
@@ -794,12 +762,10 @@ export function CourseForm({
         'Neonatal Sepsis Surveillance',
     ];
 
-    // --- NEW: Default subcourse for ICCM (used internally) ---
     const ICCM_SUBCOURSE_TYPES = ['ICCM Community Module'];
 
     const COURSE_GROUPS = ['Group A', 'Group B', 'Group C', 'Group D'];
 
-    // --- MODIFIED: Check for ICCM type ---
     const isImnci = courseType === 'IMNCI';
     const isInfectionControl = courseType === 'IPC';
     const isIccm = courseType === 'ICCM';
@@ -807,7 +773,6 @@ export function CourseForm({
     const [groups, setGroups] = useState(initialData?.facilitatorAssignments ? [...new Set(initialData.facilitatorAssignments.map(a => a.group))] : ['Group A']);
 
     const [facilitatorGroups, setFacilitatorGroups] = useState(() => {
-        // --- MODIFIED: Set default subcourse for ICCM ---
         const defaultSubcourse = isIccm ? ICCM_SUBCOURSE_TYPES[0] : '';
         if (initialData?.facilitatorAssignments?.length > 0) {
             const groups = {};
@@ -828,7 +793,6 @@ export function CourseForm({
             });
             return groups;
         }
-        // --- MODIFIED: Set default subcourse for ICCM ---
         return { 'Group A': [{ imci_sub_type: defaultSubcourse, name: '' }] };
     });
 
@@ -851,22 +815,18 @@ export function CourseForm({
             .filter(f => {
                 const fCourses = Array.isArray(f.courses) ? f.courses : [];
                 
-                // --- MODIFIED: Implement new ICCM/IMNCI rule ---
                 if (isIccm) {
-                    // For ICCM, accept facilitators trained in ICCM OR IMNCI
                     return fCourses.includes('ICCM') || fCourses.includes('IMNCI');
                 }
-                // --- END MODIFICATION ---
 
                 if (isInfectionControl) {
                     return fCourses.includes('IPC');
                 }
                 
-                // Default for IMNCI, ETAT, EENC, etc.
                 return fCourses.includes(courseType);
             })
             .sort((a, b) => a.name.localeCompare(b.name));
-    }, [facilitatorsList, courseType, isInfectionControl, isIccm]); // Added isIccm dependency
+    }, [facilitatorsList, courseType, isInfectionControl, isIccm]);
 
     const federalCoordinatorOptions = useMemo(() => {
         return federalCoordinatorsList.map(c => ({ id: c.id, name: c.name }));
@@ -914,7 +874,6 @@ export function CourseForm({
 
 
     const addFacilitatorToGroup = (groupName) => {
-        // --- MODIFIED: Set default subcourse for ICCM ---
         const defaultSubcourse = isIccm ? ICCM_SUBCOURSE_TYPES[0] : '';
         setFacilitatorGroups(prev => ({
             ...prev,
@@ -939,7 +898,6 @@ export function CourseForm({
     const addGroup = () => {
         const nextGroupIndex = groups.length;
         if (nextGroupIndex < COURSE_GROUPS.length) {
-            // --- MODIFIED: Set default subcourse for ICCM ---
             const defaultSubcourse = isIccm ? ICCM_SUBCOURSE_TYPES[0] : '';
             const newGroup = COURSE_GROUPS[nextGroupIndex];
             setGroups(prev => [...prev, newGroup]);
@@ -964,10 +922,8 @@ export function CourseForm({
             const groupAssignments = facilitatorGroups[group].map(assignment => ({
                 ...assignment,
                 group: group
-                // --- MODIFIED: Ensure sub-type is set for ICCM ---
             })).filter(assignment => assignment.name && (assignment.imci_sub_type || isIccm));
             
-            // --- MODIFIED: Auto-assign sub-type if ICCM ---
             if (isIccm) {
                 groupAssignments.forEach(a => a.imci_sub_type = ICCM_SUBCOURSE_TYPES[0]);
             }
@@ -980,7 +936,6 @@ export function CourseForm({
             return;
         }
         
-        // --- ADDED: Check if courseType is provided ---
         if (!courseType) {
             setError('Could not determine course type. Please go back to the courses page and select a package before adding a new course.');
             return;
@@ -997,7 +952,6 @@ export function CourseForm({
         }
 
         const payload = {
-            // Add id if it exists (for editing)
             ...(initialData?.id && { id: initialData.id }),
             state, locality, hall, coordinator, start_date: startDate,
             course_duration: courseDuration,
@@ -1010,14 +964,11 @@ export function CourseForm({
             course_project: courseProject,
             facilitators: allFacilitatorAssignments.map(f => f.name),
             facilitatorAssignments: allFacilitatorAssignments,
-            // course_type is passed in, but we'll add it to the payload
             course_type: courseType, 
         };
 
-        // --- MODIFIED: Include ICCM in leadership logic ---
         if (isImnci || isIccm) {
             payload.clinical_instructor = clinical;
-            // --- MODIFIED: Set default for ICCM, use state for IMNCI ---
             payload.director_imci_sub_type = isIccm ? ICCM_SUBCOURSE_TYPES[0] : directorImciSubType;
             payload.clinical_instructor_imci_sub_type = isIccm ? ICCM_SUBCOURSE_TYPES[0] : clinicalImciSubType;
         }
@@ -1025,24 +976,19 @@ export function CourseForm({
         onSave(payload);
     };
 
-    // --- REMOVED: const [showNewFacilitatorForm, setShowNewFacilitatorForm] = useState(false); ---
     const [showNewCoordinatorForm, setShowNewCoordinatorForm] = useState(false);
     const [newCoordinatorName, setNewCoordinatorName] = useState('');
     const [showNewFunderForm, setShowNewFunderForm] = useState(false);
     const [newFunderOrgName, setNewFunderOrgName] = useState('');
 
-    // --- MODIFIED: This now opens the modal ---
     const handleOpenNewFacilitatorForm = (name) => {
-        setNewFacilitatorName(name); // Store name
-        setNewFacilitatorData({ ...initialModalData, name: name }); // Pre-fill form data
+        setNewFacilitatorName(name); 
+        setNewFacilitatorData({ ...initialModalData, name: name }); 
         setNewFacilitatorFiles({});
         setModalError('');
-        setIsNewFacilitatorModalOpen(true); // Open modal
+        setIsNewFacilitatorModalOpen(true); 
     }
 
-    // --- REMOVED: handleSaveNewFacilitator ---
-
-    // --- NEW: Handlers for the facilitator modal ---
     const handleModalFileChange = (certKey, file) => {
         if (file) {
             setNewFacilitatorFiles(prev => ({ ...prev, [certKey]: file }));
@@ -1053,7 +999,6 @@ export function CourseForm({
         const formData = newFacilitatorData;
         const files = newFacilitatorFiles;
 
-        // Validation (from FacilitatorForm)
         if (!formData.name || !formData.phone) {
             setModalError('Facilitator Name and Phone Number are required.');
             return;
@@ -1068,7 +1013,6 @@ export function CourseForm({
         setIsModalLoading(true);
 
         try {
-            // 1. File upload logic (from FacilitatorForm)
             let urls = {}; 
             if (files) { 
                 for (const key in files) { 
@@ -1078,11 +1022,8 @@ export function CourseForm({
             
             const finalPayload = { ...formData, certificateUrls: urls };
             
-            // 2. Call the prop to save the facilitator profile
             await onAddNewFacilitator(finalPayload); 
 
-            // --- START: NEWLY ADDED ROLE SYNC LOGIC ---
-            // (Copied from FacilitatorForm's handleSubmit)
             const email = finalPayload.email;
             if (email) {
                 const facilitatorRole = 'facilitator';
@@ -1109,12 +1050,9 @@ export function CourseForm({
             } else {
                 console.warn(`[RoleSync] New facilitator has no email. Skipping role assignment.`);
             }
-            // --- END: NEWLY ADDED ROLE SYNC LOGIC ---
 
-            // 3. Success
             setIsNewFacilitatorModalOpen(false);
             
-            // Set the facilitator in the CourseForm fields
             setDirector(finalPayload.name);
             setClinical(finalPayload.name);
             
@@ -1129,7 +1067,6 @@ export function CourseForm({
         if (isModalLoading) return;
         setIsNewFacilitatorModalOpen(false);
     };
-    // --- END NEW HANDLERS ---
 
     const handleOpenNewCoordinatorForm = (name) => {
         setNewCoordinatorName(name);
@@ -1151,7 +1088,6 @@ export function CourseForm({
         setSupporter(funderData.orgName);
     }
 
-    // --- REMOVED: if (showNewFacilitatorForm) ... ---
     if (showNewCoordinatorForm) {
         return <NewCoordinatorForm initialName={newCoordinatorName} onCancel={() => setShowNewCoordinatorForm(false)} onSave={handleSaveNewCoordinator} />;
     }
@@ -1253,7 +1189,6 @@ export function CourseForm({
                                             label="Course Director"
                                         />
                                     </FormGroup>
-                                    {/* --- MODIFIED: Show only for IMNCI --- */}
                                     {isImnci && (
                                         <FormGroup label="IMNCI Subcourse for Director">
                                             <Select value={directorImciSubType} onChange={(e) => setDirectorImciSubType(e.target.value)} className="w-full">
@@ -1263,7 +1198,6 @@ export function CourseForm({
                                     )}
                                 </div>
 
-                                {/* --- MODIFIED: Show for IMNCI and ICCM --- */}
                                 {(isImnci || isIccm) && (
                                     <div className="space-y-2">
                                         <FormGroup label="Clinical Instructor (Optional)">
@@ -1276,7 +1210,6 @@ export function CourseForm({
                                                 label="Clinical Instructor"
                                             />
                                         </FormGroup>
-                                        {/* --- MODIFIED: Show only for IMNCI --- */}
                                         {isImnci && (
                                             <FormGroup label="IMNCI Subcourse for Clinical Instructor (Optional)">
                                                 <Select value={clinicalImciSubType} onChange={(e) => setClinicalImciSubType(e.target.value)} className="w-full">
@@ -1298,7 +1231,6 @@ export function CourseForm({
                                     <h4 className="text-md font-semibold mb-2">{groupName}</h4>
                                     {facilitatorGroups[groupName]?.map((assignment, index) => (
                                         <div key={index} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                                            {/* --- MODIFIED: Hide Subcourse selection for ICCM --- */}
                                             {!isIccm && (
                                                 <FormGroup label="Subcourse Type">
                                                     <Select
@@ -1307,14 +1239,12 @@ export function CourseForm({
                                                         className="w-full"
                                                     >
                                                         <option value="">— Select Subcourse —</option>
-                                                        {/* --- MODIFIED: Handle subcourse types --- */}
                                                         {(isImnci ? IMNCI_SUBCOURSE_TYPES : (isIccm ? ICCM_SUBCOURSE_TYPES : INFECTION_CONTROL_SUBCOURSE_TYPES)).map(type => (
                                                             <option key={type} value={type}>{type}</option>
                                                         ))}
                                                     </Select>
                                                 </FormGroup>
                                             )}
-                                            {/* --- MODIFIED: Adjust grid for ICCM --- */}
                                             <FormGroup label="Facilitator Name" className={isIccm ? "lg:col-span-2" : ""}>
                                                 <SearchableSelect
                                                     value={assignment.name}
@@ -1348,7 +1278,6 @@ export function CourseForm({
                     <Button onClick={submit}>Save Course</Button>
                 </div>
 
-                {/* --- NEW: Modal for adding a full facilitator --- */}
                 <Modal isOpen={isNewFacilitatorModalOpen} onClose={handleCloseModal} title="Add New Facilitator" size="2xl">
                     {isModalLoading && <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-20"><Spinner /></div>}
                     <CardBody>
@@ -1377,23 +1306,15 @@ export function CourseForm({
     );
 }
 
-// --- NEWLY ADDED: PublicCourseMonitoringView ---
-
-/**
- * A public-facing view for data entry for an entire course.
- * Allows selecting a group, then a participant, then entering monitoring data.
- */
 export function PublicCourseMonitoringView({ course, allParticipants }) {
     const [selectedGroup, setSelectedGroup] = useState('All');
     const [selectedParticipantId, setSelectedParticipantId] = useState('');
 
-    // Get a unique, sorted list of groups from the participants
     const groups = useMemo(() => {
         const groupSet = new Set(allParticipants.map(p => p.group || 'N/A'));
         return ['All', ...Array.from(groupSet).sort()];
     }, [allParticipants]);
 
-    // Filter participants based on the selected group
     const filteredParticipants = useMemo(() => {
         if (selectedGroup === 'All') {
             return allParticipants.sort((a, b) => a.name.localeCompare(b.name));
@@ -1403,7 +1324,6 @@ export function PublicCourseMonitoringView({ course, allParticipants }) {
             .sort((a, b) => a.name.localeCompare(b.name));
     }, [allParticipants, selectedGroup]);
 
-    // Get the full participant object for the selected ID
     const selectedParticipant = useMemo(() => {
         if (!selectedParticipantId) {
             return null;
@@ -1413,7 +1333,7 @@ export function PublicCourseMonitoringView({ course, allParticipants }) {
 
     const handleGroupChange = (e) => {
         setSelectedGroup(e.target.value);
-        setSelectedParticipantId(''); // Reset participant selection when group changes
+        setSelectedParticipantId(''); 
     };
 
     const handleParticipantChange = (e) => {
@@ -1454,10 +1374,10 @@ export function PublicCourseMonitoringView({ course, allParticipants }) {
                     <ObservationView
                         course={course}
                         participant={selectedParticipant}
-                        participants={filteredParticipants} // Pass this for context, though selector is hidden
-                        onChangeParticipant={handleParticipantChange} // Allow changing participant
-                        initialCaseToEdit={null} // Public view never edits
-                        isPublicView={true} // Use the public view flag
+                        participants={filteredParticipants} 
+                        onChangeParticipant={handleParticipantChange} 
+                        initialCaseToEdit={null} 
+                        isPublicView={true} 
                     />
                 </Suspense>
             ) : (
