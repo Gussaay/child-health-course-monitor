@@ -29,7 +29,7 @@ import DetailedMentorshipBulkUploadModal from './MentorshipBulkUpload';
 // --- END NEW IMPORT ---
 
 // --- NEW IMPORT: Mothers Form ---
-import MothersForm from './MOTHERSForm'; // <-- existing IMNCI Mothers Form
+import MothersForm from './MothersForm'; // <-- existing IMNCI Mothers Form
 // --- END NEW IMPORT ---
 
 // --- NEW IMPORTS: EENC Forms ---
