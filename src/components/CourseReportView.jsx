@@ -44,21 +44,28 @@ const fmtPct = (value) => {
     return `${value.toFixed(1)}%`;
 };
 
+// --- NEW HELPER FOR DECIMAL FORMATTING ---
+const fmtDecimal = (value) => {
+    if (isNaN(Number(value)) || value === null) return 'N/A';
+    return Number(value).toFixed(1);
+};
+
 // --- Color-coding helper for consistency ---
 const getScoreColorClass = (value, type = 'percentage') => {
     if (isNaN(value) || value === null) {
         return 'bg-gray-700 text-white';
     }
     if (type === 'improvement') {
+        // This 'improvement' type is for the KPI card, not the new table logic
         if (value > 50) return 'bg-green-200 text-green-800';
         if (value >= 25) return 'bg-yellow-200 text-yellow-800';
         if (value >= 0) return 'bg-gray-200 text-gray-800';
         return 'bg-red-200 text-red-800';
     }
-    // Logic for general percentages
+    // Logic for general percentages (Practical Case Score)
     if (value === 100) return 'bg-green-200 text-green-800';
     if (value >= 95) return 'bg-yellow-200 text-yellow-800';
-    if (value >= 90) return 'bg-orange-200 text-orange-800'; // Changed from amber to orange
+    if (value >= 90) return 'bg-orange-200 text-orange-800';
     return 'bg-red-200 text-red-800'; // Default for < 90%
 };
 
@@ -68,7 +75,8 @@ const getCaseCountColorClass = (value) => {
     return '';
 }
 
-const getScoreCategory = (preScore, postScore) => {
+// --- NEW: Helper function for Average Improvement Score Category ---
+const getAvgImprovementCategory = (preScore, postScore) => {
     const pre = Number(preScore);
     const post = Number(postScore);
 
@@ -82,19 +90,25 @@ const getScoreCategory = (preScore, postScore) => {
         return { name: 'Data Incomplete', className: 'bg-gray-700 text-white' };
     }
 
+    // New logic as requested:
     if (increase > 50) {
-        return { name: 'Excellent', className: 'bg-green-200 text-green-800' };
+        return { name: 'Perfect', className: 'bg-green-200 text-green-800' };
     }
-    if (increase >= 25) {
-        return { name: 'Good', className: 'bg-yellow-200 text-yellow-800' };
+    if (increase >= 30) {
+        return { name: 'Excellent', className: 'bg-yellow-200 text-yellow-800' };
     }
-    if (increase >= 0) {
-        return { name: 'Fair', className: 'bg-gray-200 text-gray-800' };
+    if (increase >= 15) {
+        return { name: 'Good', className: 'bg-gray-200 text-gray-800' };
     }
-    return { name: 'Fail', className: 'bg-red-200 text-red-800' };
+    if (increase < 0) {
+        return { name: 'Fail', className: 'bg-red-200 text-red-800' };
+    }
+    // Default case: 0 <= increase < 15
+    return { name: 'Fair', className: 'bg-orange-200 text-orange-800' };
 };
 
 // --- NEW: Helper to get the name of the case correctness category ---
+// This is used for both practical cases and written test scores
 const getCaseCorrectnessName = (pct) => {
     if (isNaN(pct) || pct === null) return 'Data Incomplete';
     if (pct === 100) return 'Perfect';
@@ -221,7 +235,7 @@ export function CourseReportView({
     const [scoreFilter, setScoreFilter] = useState('All');
     const [caseCorrectnessFilter, setCaseCorrectnessFilter] = useState('All');
     const [isPdfGenerating, setIsPdfGenerating] = useState(false);
-
+    
     // --- NEW: Notification helper ---
     const notify = (message, type = 'info') => {
         if (setToast) {
@@ -297,7 +311,11 @@ export function CourseReportView({
 
     const isLoading = !course || !participants || !allObs || !allCases;
 
-    const { groupPerformance, overall, dailyPerformance, hasTestScores, hasCases, participantsWithStats, preTestStats, postTestStats, totalImprovement, caseCorrectnessDistribution, newImciFacilities, coverageData } = useMemo(() => {
+    const { 
+        groupPerformance, overall, dailyPerformance, hasTestScores, hasCases, participantsWithStats, 
+        preTestStats, postTestStats, totalImprovement, caseCorrectnessDistribution, 
+        newImciFacilities, coverageData, avgImprovementDistribution // <-- NEW: Added avgImprovementDistribution
+    } = useMemo(() => {
         if (isLoading) {
             return {
                 groupPerformance: {},
@@ -313,6 +331,7 @@ export function CourseReportView({
                 hasCases: false,
                 participantsWithStats: [],
                 caseCorrectnessDistribution: {},
+                avgImprovementDistribution: {}, // <-- NEW: Added default
                 newImciFacilities: [],
                 coverageData: null,
             };
@@ -444,7 +463,7 @@ export function CourseReportView({
 
         // --- NEW: Calculate case correctness distribution ---
         const caseCorrectnessDistribution = {
-            'Perfect': 0, 'Excellent': 0, 'Good': 0, 'Fail': 0, 'Data Incomplete': 0
+            'Perfect': 0, 'Excellent': 0, 'Good': 0, 'Fair': 0, 'Fail': 0, 'Data Incomplete': 0
         };
         participantsWithStats.forEach(p => {
             const categoryName = getCaseCorrectnessName(p.correctness_percentage);
@@ -452,6 +471,19 @@ export function CourseReportView({
                 caseCorrectnessDistribution[categoryName]++;
             }
         });
+
+        // --- NEW: Calculate Average Improvement distribution ---
+        const avgImprovementDistribution = {
+            'Perfect': 0, 'Excellent': 0, 'Good': 0, 'Fair': 0, 'Fail': 0, 'Data Incomplete': 0
+        };
+        participantsWithStats.forEach(p => {
+            // Use the new helper function
+            const category = getAvgImprovementCategory(p.pre_test_score, p.post_test_score);
+            if (avgImprovementDistribution.hasOwnProperty(category.name)) {
+                avgImprovementDistribution[category.name]++;
+            }
+        });
+        // --- END NEW CALCULATION ---
 
         // --- NEW: Calculate facilities with new IMCI introduction ---
         const newImciFacilityMap = new Map();
@@ -510,6 +542,7 @@ export function CourseReportView({
             hasCases,
             participantsWithStats,
             caseCorrectnessDistribution,
+            avgImprovementDistribution, // <-- NEW: Return new data
             newImciFacilities,
             coverageData,
         };
@@ -663,7 +696,7 @@ export function CourseReportView({
         }
     };
     
-    // --- UPDATED CHART DATA FOR PRE/POST TEST SCORES ---
+    // --- UPDATED CHART DATA FOR PRE/POST TEST SCORES (AS PERCENTAGES) ---
     // Filter participants to only include those with valid scores (> 0)
     const chartParticipants = participants.filter(p => Number(p.pre_test_score) > 0 && Number(p.post_test_score) > 0);
     
@@ -671,8 +704,15 @@ export function CourseReportView({
     const participantCount = chartParticipants.length;
     const showCompactLabels = participantCount > 24;
     
+    // --- Scores are already percentages, use them directly ---
     const preScores = chartParticipants.map(p => Number(p.pre_test_score));
     const postScores = chartParticipants.map(p => Number(p.post_test_score));
+
+    // --- Calculate Y-axis min value ---
+    const allScoresPct = [...preScores, ...postScores];
+    const minScorePct = allScoresPct.length > 0 ? Math.min(...allScoresPct.filter(s => !isNaN(s))) : 0;
+    let yMin = Math.max(0, minScorePct - 10); // Start 10% below min score
+    yMin = Math.floor(yMin / 5) * 5; // Round down to nearest 5
 
     // Determine the labels to display on the x-axis
     let participantLabels = [];
@@ -689,7 +729,7 @@ export function CourseReportView({
         datasets: [
             {
                 label: 'Pre-Test Score',
-                data: preScores,
+                data: preScores, // <-- Data is now percentages
                 borderColor: '#6366f1',
                 backgroundColor: 'rgba(99, 102, 241, 0.2)',
                 tension: 0.4,
@@ -699,7 +739,7 @@ export function CourseReportView({
             },
             {
                 label: 'Post-Test Score',
-                data: postScores,
+                data: postScores, // <-- Data is now percentages
                 borderColor: '#10b981',
                 backgroundColor: 'rgba(16, 185, 129, 0.2)',
                 tension: 0.4,
@@ -736,7 +776,8 @@ export function CourseReportView({
                             label += ': ';
                         }
                         if (context.raw !== null) {
-                            label += context.raw; // Display as figure
+                            // --- Format tooltip as percentage ---
+                            label += fmtPct(context.raw); 
                         }
                         return label;
                     }
@@ -761,16 +802,17 @@ export function CourseReportView({
                 }
             },
             y: {
+                // --- Update Y-axis for percentages ---
                 title: {
                     display: true,
-                    text: 'Test Result (figure)'
+                    text: 'Test Result (%)' // <-- Changed label
                 },
-                beginAtZero: true,
+                beginAtZero: false, // <-- Allow starting from yMin
                 ticks: {
-                    stepSize: 2
+                    stepSize: 5 // <-- 5% increment
                 },
-                min: 4,
-                max: 20
+                min: yMin, // <-- Start 10% below min score
+                max: 100 // <-- Max is 100%
             }
         },
     };
@@ -816,24 +858,20 @@ export function CourseReportView({
     const filteredParticipants = useMemo(() => {
         let participants = [...participantsWithStats];
 
-        // Apply Score Category filter
+        // Apply Score Category filter (now filters by avg. improvement)
         if (scoreFilter !== 'All') {
             participants = participants.filter(p => {
-                const category = getScoreCategory(p.pre_test_score, p.post_test_score).name;
+                const category = getAvgImprovementCategory(p.pre_test_score, p.post_test_score).name;
                 return category === scoreFilter;
             });
         }
 
-        // Apply Case Correctness filter (logic updated to match new color scheme)
+        // Apply Case Correctness filter (filters by practical case score)
         if (caseCorrectnessFilter !== 'All') {
             participants = participants.filter(p => {
                 const pct = p.correctness_percentage;
-                if (caseCorrectnessFilter === 'Perfect') return pct === 100;
-                if (caseCorrectnessFilter === 'Excellent') return pct >= 95 && pct < 100;
-                if (caseCorrectnessFilter === 'Good') return pct >= 90 && pct < 95;
-                if (caseCorrectnessFilter === 'Fail') return pct < 90;
-                if (caseCorrectnessFilter === 'Data Incomplete') return isNaN(pct) || pct === null;
-                return true;
+                const categoryName = getCaseCorrectnessName(pct);
+                return categoryName === caseCorrectnessFilter;
             });
         }
 
@@ -858,14 +896,15 @@ export function CourseReportView({
         tableHeaders.push('Total Cases');
         // CHANGE: Conditionally hide Correctness % header in shared view
         if (!isSharedView) {
-            tableHeaders.push('Correctness %');
+            tableHeaders.push('Practical Case Score');
         }
     }
     if (showTestScoreColumns) {
         tableHeaders.push('Pre-Test Result');
         tableHeaders.push('Post-Test Result');
         tableHeaders.push('% Increase');
-        tableHeaders.push('Score Category');
+        // --- CHANGE: Renamed column header ---
+        tableHeaders.push('average improvemt score');
     }
 
     // --- DAILY CASE TABLE DATA CALCULATION ---
@@ -905,31 +944,42 @@ export function CourseReportView({
         grandTotalCasesTotal += row.totalCases.total;
     });
     
-    // --- Filter button definitions ---
+    // --- UPDATED: Filter definitions ---
     const scoreFilterOptions = [
-        { name: 'All', colorClass: 'bg-blue-600 text-white' },
-        { name: 'Excellent', colorClass: 'bg-green-600 text-white' },
-        { name: 'Good', colorClass: 'bg-yellow-500 text-white' },
-        { name: 'Fair', colorClass: 'bg-gray-600 text-white' },
-        { name: 'Fail', colorClass: 'bg-red-600 text-white' },
-        { name: 'Data Incomplete', colorClass: 'bg-gray-700 text-white' }
+        { name: 'All' },
+        { name: 'Perfect' },
+        { name: 'Excellent' },
+        { name: 'Good' },
+        { name: 'Fair' },
+        { name: 'Fail' },
+        { name: 'Data Incomplete' }
     ];
 
-    // Filter buttons to match new color logic
     const caseFilterOptions = [
-        { name: 'All', colorClass: 'bg-blue-600 text-white' },
-        { name: 'Perfect', colorClass: 'bg-green-600 text-white' },    // 100%
-        { name: 'Excellent', colorClass: 'bg-yellow-500 text-white' },  // >= 95
-        { name: 'Good', colorClass: 'bg-orange-500 text-white' },     // >= 90 (Changed from amber)
-        { name: 'Fail', colorClass: 'bg-red-600 text-white' },          // < 90
-        { name: 'Data Incomplete', colorClass: 'bg-gray-700 text-white' }
+        { name: 'All' },
+        { name: 'Perfect' },
+        { name: 'Excellent' },
+        { name: 'Good' },
+        { name: 'Fail' },
+        { name: 'Data Incomplete' }
     ];
 
-    // --- NEW: Definitions for the correctness summary table ---
+    // --- UPDATED: Definitions for the summary table headers ---
     const correctnessCategories = [
+        { name: 'Perfect', colorClass: 'bg-green-200 text-green-800', key: 'Perfect' },
+        { name: 'Excellent', colorClass: 'bg-yellow-200 text-yellow-800', key: 'Excellent' },
+        { name: 'Good', colorClass: 'bg-gray-200 text-gray-800', key: 'Good' },
+        { name: 'Fair', colorClass: 'bg-orange-200 text-orange-800', key: 'Fair' },
+        { name: 'Fail', colorClass: 'bg-red-200 text-red-800', key: 'Fail' },
+        { name: 'Data Incomplete', colorClass: 'bg-gray-700 text-white', key: 'Data Incomplete' }
+    ];
+    
+    // --- Definitions for the practical case score summary (which has a different color scheme) ---
+    const practicalScoreCategories = [
         { name: 'Perfect', colorClass: getScoreColorClass(100), key: 'Perfect' },
         { name: 'Excellent', colorClass: getScoreColorClass(95), key: 'Excellent' },
         { name: 'Good', colorClass: getScoreColorClass(90), key: 'Good' },
+        { name: 'Fair', colorClass: 'bg-orange-200 text-orange-800', key: 'Fair' }, // Included for layout
         { name: 'Fail', colorClass: getScoreColorClass(89), key: 'Fail' },
         { name: 'Data Incomplete', colorClass: getScoreColorClass(NaN), key: 'Data Incomplete' }
     ];
@@ -1198,11 +1248,11 @@ export function CourseReportView({
                             <div className="grid grid-cols-3 gap-4 text-center mb-6">
                                 <div className="p-4 bg-gray-100 rounded-lg">
                                     <div className="text-sm font-semibold text-gray-600">Avg. Pre-Test</div>
-                                    <div className="text-2xl font-bold">{preTestStats.avg.toFixed(1)}</div>
+                                    <div className="text-2xl font-bold">{fmtPct(preTestStats.avg)}</div>
                                 </div>
                                 <div className="p-4 bg-gray-100 rounded-lg">
                                     <div className="text-sm font-semibold text-gray-600">Avg. Post-Test</div>
-                                    <div className="text-2xl font-bold">{postTestStats.avg.toFixed(1)}</div>
+                                    <div className="text-2xl font-bold">{fmtPct(postTestStats.avg)}</div>
                                 </div>
                                 <div className={`p-4 rounded-lg ${getScoreColorClass(totalImprovement, 'improvement')}`}>
                                     <div className="text-sm font-semibold">Avg. Improvement</div>
@@ -1215,7 +1265,7 @@ export function CourseReportView({
                                     <Line 
                                         ref={prePostDistributionChartRef} 
                                         data={testScoreChartData} 
-                                        options={testScoreChartOptions} 
+                                        options={testScoreChartOptions} // <-- Options are now updated for percentages
                                     />
                                 </div>
                             ) : (
@@ -1403,14 +1453,16 @@ export function CourseReportView({
                             )}
                             <h3 className="text-xl font-bold mb-4">Participant Results</h3>
 
-                            {/* --- Case Correctness Summary Table --- */}
+                            {/* --- UPDATED: Participant Score Summary Table --- */}
                             {showCaseColumns && (
                                 <div className="mb-6">
-                                    <h4 className="text-md font-semibold mb-2 text-gray-700">Case Correctness Summary</h4>
+                                    <h4 className="text-md font-semibold mb-2 text-gray-700">Participant Score Summary</h4>
                                     <table className="w-full border-collapse border border-gray-300 text-center">
                                         <thead>
                                             <tr>
-                                                {correctnessCategories.map(cat => (
+                                                <th className="p-2 border font-semibold bg-gray-100 text-left">Score Type</th>
+                                                {/* --- Headers now use practical score categories for row 1 --- */}
+                                                {practicalScoreCategories.map(cat => (
                                                     <th key={cat.key} className={`p-2 border font-semibold ${cat.colorClass}`}>
                                                         {cat.name}
                                                     </th>
@@ -1418,53 +1470,69 @@ export function CourseReportView({
                                             </tr>
                                         </thead>
                                         <tbody>
+                                            {/* --- Row 1: Practical Case Score --- */}
                                             <tr>
-                                                {correctnessCategories.map(cat => (
+                                                <td className="p-2 border font-semibold text-left">Practical Case Score</td>
+                                                {practicalScoreCategories.map(cat => (
                                                     <td key={cat.key} className="p-2 border text-2xl font-bold">
-                                                        {caseCorrectnessDistribution[cat.key]}
+                                                        {/* This will show 0 for 'Fair' as it's not in this logic */}
+                                                        {caseCorrectnessDistribution[cat.key] || 0}
                                                     </td>
                                                 ))}
                                             </tr>
+                                            {/* --- Row 2: Written Test Score --- */}
+                                            {showTestScoreColumns && (
+                                                <tr>
+                                                    <td className="p-2 border font-semibold text-left">Written Test Score (average improvement)</td>
+                                                    {/* --- Data now uses avgImprovementDistribution --- */}
+                                                    {correctnessCategories.map(cat => (
+                                                        <td key={cat.key} className="p-2 border text-2xl font-bold">
+                                                            {avgImprovementDistribution[cat.key] || 0}
+                                                        </td>
+                                                    ))}
+                                                </tr>
+                                            )}
                                         </tbody>
                                     </table>
                                 </div>
                             )}
 
-                            {/* --- Filters --- */}
+                            {/* --- UPDATED: Filters (Buttons to Dropdowns) --- */}
                             {!isSharedView && (
-                                <div className="flex flex-col gap-4 mb-4">
+                                <div className="flex flex-col md:flex-row gap-4 mb-4">
                                     {showTestScoreColumns && (
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <span className="text-sm font-semibold text-gray-700">Filter by Score Category:</span>
-                                            {scoreFilterOptions.map(option => {
-                                                const isSelected = scoreFilter === option.name;
-                                                return (
-                                                    <button
-                                                        key={option.name}
-                                                        onClick={() => setScoreFilter(option.name)}
-                                                        className={`text-sm px-4 py-2 rounded-full font-semibold transition-colors duration-200 ease-in-out ${option.colorClass} ${isSelected ? 'border-2 border-black shadow-md' : ''}`}
-                                                    >
+                                        <div className="flex items-center gap-2">
+                                            {/* --- This filter now uses the new avg. improvement categories --- */}
+                                            <label htmlFor="score-filter" className="text-sm font-semibold text-gray-700">Filter by Avg. Improvement:</label>
+                                            <select
+                                                id="score-filter"
+                                                value={scoreFilter}
+                                                onChange={(e) => setScoreFilter(e.target.value)}
+                                                className="border border-gray-300 rounded-md p-2 bg-white"
+                                            >
+                                                {scoreFilterOptions.map(option => (
+                                                    <option key={option.name} value={option.name}>
                                                         {option.name}
-                                                    </button>
-                                                );
-                                            })}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
                                     )}
                                     {showCaseColumns && (
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <span className="text-sm font-semibold text-gray-700">Filter by Case Correctness:</span>
-                                            {caseFilterOptions.map(option => {
-                                                const isSelected = caseCorrectnessFilter === option.name;
-                                                return (
-                                                    <button
-                                                        key={option.name}
-                                                        onClick={() => setCaseCorrectnessFilter(option.name)}
-                                                        className={`text-sm px-4 py-2 rounded-full font-semibold transition-colors duration-200 ease-in-out ${option.colorClass} ${isSelected ? 'border-2 border-black shadow-md' : ''}`}
-                                                    >
+                                        <div className="flex items-center gap-2">
+                                            <label htmlFor="case-filter" className="text-sm font-semibold text-gray-700">Filter by Case Correctness:</label>
+                                            <select
+                                                id="case-filter"
+                                                value={caseCorrectnessFilter}
+                                                onChange={(e) => setCaseCorrectnessFilter(e.target.value)}
+                                                className="border border-gray-300 rounded-md p-2 bg-white"
+                                            >
+                                                {caseFilterOptions.map(option => (
+                                                    <option key={option.name} value={option.name}>
                                                         {option.name}
-                                                    </button>
-                                                );
-                                            })}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
                                     )}
                                 </div>
@@ -1482,11 +1550,15 @@ export function CourseReportView({
                                         const preScore = Number(p.pre_test_score);
                                         const postScore = Number(p.post_test_score);
                                         const increase = (!isNaN(preScore) && preScore > 0 && !isNaN(postScore) && postScore > 0) ? ((postScore - preScore) / preScore) * 100 : null;
-                                        const category = getScoreCategory(p.pre_test_score, p.post_test_score);
+                                        
+                                        // --- Use the new helper function for the table row ---
+                                        const category = getAvgImprovementCategory(p.pre_test_score, p.post_test_score);
                                         
                                         const increaseDisplay = isNaN(increase) || increase === null ? 'N/A' : `${increase.toFixed(1)}%`;
-                                        const preDisplay = isNaN(preScore) ? 'N/A' : preScore;
-                                        const postDisplay = isNaN(postScore) ? 'N/A' : postScore;
+                                        
+                                        // --- THESE ARE THE CHANGED LINES ---
+                                        const preDisplay = fmtDecimal(preScore);
+                                        const postDisplay = fmtDecimal(postScore);
 
                                         return (
                                             <tr 
@@ -1500,7 +1572,9 @@ export function CourseReportView({
                                                     <>
                                                         <td className={`p-2 border text-center`}>{p.total_cases_seen}</td>
                                                         {!isSharedView && (
-                                                            <td className={`p-2 border text-center font-bold ${getScoreColorClass(p.correctness_percentage)}`}>{fmtPct(p.correctness_percentage)}</td>
+                                                            <td className={`p-2 border text-center font-bold ${getScoreColorClass(p.correctness_percentage)}`}>
+                                                                {getCaseCorrectnessName(p.correctness_percentage)}
+                                                            </td>
                                                         )}
                                                     </>
                                                 )}

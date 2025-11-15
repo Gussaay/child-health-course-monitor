@@ -369,7 +369,7 @@ const MentorshipTableColumns = () => (
         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Date</th>
         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Status</th>
         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Overall Score</th>
-        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Action</th>
+        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-3D0">Action</th>
     </>
 );
 // --- END Mentorship Table Column Component ---
@@ -976,20 +976,19 @@ const SkillsMentorshipView = ({
         }
     };
 
-     // --- MODIFICATION START ---
+     // --- START: DATA FETCHING FIX ---
      useEffect(() => {
+        // This fetches the list of facilities for the dropdowns
         fetchHealthFacilities();
 
-        // If we are in public mode, App.jsx's view-based fetcher
-        // (in App.jsx) didn't run, so we must trigger the submission
-        // fetch here. We need this data for visit number calculation and drafts.
-        if (publicSubmissionMode) {
-            fetchSkillMentorshipSubmissions();
-            fetchIMNCIVisitReports(); // <-- NEW
-        }
+        // These fetches are required for BOTH public and authenticated modes
+        // to populate all the history tables (skills, mothers, visits)
+        // and for the dashboard to have data.
+        fetchSkillMentorshipSubmissions();
+        fetchIMNCIVisitReports(); 
 
-    }, [fetchHealthFacilities, fetchSkillMentorshipSubmissions, fetchIMNCIVisitReports, publicSubmissionMode]); // Add fetchers
-    // --- MODIFICATION END ---
+    }, [fetchHealthFacilities, fetchSkillMentorshipSubmissions, fetchIMNCIVisitReports]);
+    // --- END: DATA FETCHING FIX ---
     
     // --- NEW: Effect to reset filters on tab change ---
     useEffect(() => {
@@ -1758,9 +1757,9 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
         // --- MODIFIED: Added icons, labels are already Arabic ---
         const navItems = [
             { id: 'skills_assessment', label: 'استمارة المهارات', icon: FileText, active: activeFormType === 'skills_assessment', disabled: false },
-            { id: 'mothers_form', label: 'استبيان الامهات', icon: Users, active: false, disabled: false },
+            { id: 'mothers_form', label: 'استبيان الامهات', icon: Users, active: activeFormType === 'mothers_form', disabled: false },
             { id: 'facility_info', label: 'معلومات المؤسسة', icon: Building, active: false, disabled: !isSkillsActive },
-            { id: 'visit_report', label: 'تقرير الزيارة', icon: ClipboardCheck, active: false, disabled: false },
+            { id: 'visit_report', label: 'تقرير الزيارة', icon: ClipboardCheck, active: activeFormType === 'visit_report', disabled: false },
             { id: 'drafts', label: `مسودات (${draftCount})`, icon: Archive, active: false, disabled: !isSkillsActive },
             { id: 'dashboard', label: 'المنصة', icon: LayoutDashboard, active: false, disabled: false },
         ];
@@ -1801,22 +1800,39 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
 
    // --- NEW: Handler for Mobile Nav Clicks ---
     const handleMobileNavClick = async (target) => {
-        if (target === 'skills_assessment') {
+        // An "active form" is when the form itself is rendered (not the setup screen)
+        const isFormRendered = (currentView === 'form_setup' && (isReadyToStart || editingSubmission));
+
+         if (target === 'skills_assessment') {
             if (activeFormType !== 'skills_assessment') {
-                 // Just switch. Drafts are handled on the form itself.
                  resetSelection(); // This resets form type to default 'skills_assessment'
-                 // setActiveFormType('skills_assessment');
+                 // isReadyToStart will be false, so it stays on setup screen
             }
         } 
         else if (target === 'mothers_form') {
-            // --- MODIFIED: Open modal instead of switching form ---
-            setIsMothersFormModalOpen(true);
-            // --- END MODIFIED ---
+            if (isFormRendered) {
+                // Form is open, open modal
+                setIsMothersFormModalOpen(true);
+            } else {
+                // We are on the setup screen, just switch form type
+                if (activeFormType !== 'mothers_form') {
+                    resetSelection();
+                    setActiveFormType('mothers_form');
+                }
+            }
         }
         else if (target === 'visit_report') {
-             setIsVisitReportModalOpen(true);
+             if (isFormRendered) {
+                // Form is open, open modal
+                setIsVisitReportModalOpen(true);
+             } else {
+                // We are on the setup screen, just switch form type
+                if (activeFormType !== 'visit_report') {
+                    resetSelection();
+                    setActiveFormType('visit_report');
+                }
+             }
         }
-        // --- NEW: Handle Facility Info button click ---
         else if (target === 'facility_info' && activeFormType === 'skills_assessment' && formRef.current) {
             formRef.current.openFacilityModal();
         }
@@ -1824,13 +1840,20 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
             formRef.current.openFacilityModal();
         }
         else if (target === 'drafts' && activeFormType === 'skills_assessment') {
+            // This button is only enabled when isSkillsActive is true.
+            // It should work from setup screen or active form.
             setIsDraftsModalOpen(true);
         }
-        // --- NEW: Case for Dashboard ---
         else if (target === 'dashboard') {
+            // Pre-filter dashboard if we are on the setup screen
+            if (!isFormRendered) {
+                setActiveDashboardState(selectedState);
+                setActiveDashboardLocality(selectedLocality);
+                setActiveDashboardFacilityId(selectedFacilityId);
+                setActiveDashboardWorkerName(selectedHealthWorkerName);
+            }
             setIsDashboardModalOpen(true);
         }
-        // --- END NEW ---
     };
     // --- END: Handler for Mobile Nav Clicks ---
 
@@ -2516,23 +2539,85 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         </div>
                         
                         {/* START/CONTINUE BUTTON (MODIFIED) */}
-                        <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
-                            <Button 
-                                onClick={handleBackToHistoryView}
-                                variant="secondary"
-                                disabled={isFacilitiesLoading}
-                            >
-                                إلغاء والعودة
-                            </Button>
-                             <Button
-                                onClick={handleProceedToForm} // <-- MODIFIED: Calls new handler
-                                disabled={!selectedFacilityId || (isSkillsAssessmentSetup && !selectedHealthWorkerName) || isFacilitiesLoading || isWorkerInfoChanged}
-                                variant="primary"
-                            >
-                                {isSkillsAssessmentSetup ? 'بدء جلسة الاشراف' : (isVisitReportSetup ? 'بدء تقرير الزيارة' : 'بدء استبيان الأم')}
-                            </Button>
+                        {/* --- MODIFICATION: Changed to flex-col and added Row 2 --- */}
+                        <div className="hidden sm:flex flex-col gap-2 items-end mt-6 pt-4 border-t">
+                            {/* --- Row 1: Action Buttons --- */}
+                            <div className="flex gap-2 flex-wrap justify-end">
+                                <Button 
+                                    onClick={handleBackToHistoryView}
+                                    variant="secondary"
+                                    disabled={isFacilitiesLoading}
+                                >
+                                    إلغاء والعودة
+                                </Button>
+                                <Button
+                                    onClick={handleProceedToForm} // <-- MODIFIED: Calls new handler
+                                    disabled={!selectedFacilityId || (isSkillsAssessmentSetup && !selectedHealthWorkerName) || isFacilitiesLoading || isWorkerInfoChanged}
+                                    variant="primary"
+                                >
+                                    {isSkillsAssessmentSetup ? 'بدء جلسة الاشراف' : (isVisitReportSetup ? 'بدء تقرير الزيارة' : 'بدء استبيان الأم')}
+                                </Button>
+                            </div>
+                            {/* --- Row 2: Navigation Buttons (NEW) --- */}
+                            <div className="flex gap-2 flex-wrap justify-end">
+                                {/* Note: Facility Data button is omitted as it's part of the SkillsAssessmentForm itself */}
+                                <Button 
+                                    type="button" 
+                                    variant="info"
+                                    onClick={() => setIsMothersFormModalOpen(true)} 
+                                    disabled={isFacilitiesLoading || !selectedFacility}
+                                    title={selectedFacility ? "Open Mother's Survey" : "Select a facility first"}
+                                >
+                                    استبيان الأم
+                                </Button>
+                                <Button 
+                                    type="button" 
+                                    variant="info"
+                                    onClick={() => setIsVisitReportModalOpen(true)} 
+                                    disabled={isFacilitiesLoading || !selectedFacility}
+                                    title={selectedFacility ? "Open IMNCI Visit Report" : "Select a facility first"}
+                                >
+                                    تقرير الزيارة
+                                </Button>
+                                <Button 
+                                    type="button" 
+                                    variant="info"
+                                    onClick={() => {
+                                        // Pre-filter dashboard
+                                        setActiveDashboardState(selectedState);
+                                        setActiveDashboardLocality(selectedLocality);
+                                        setActiveDashboardFacilityId(selectedFacilityId);
+                                        setActiveDashboardWorkerName(selectedHealthWorkerName);
+                                        setIsDashboardModalOpen(true);
+                                    }} 
+                                    disabled={isFacilitiesLoading}
+                                    title="Open Dashboard"
+                                >
+                                    لوحة المتابعة
+                                </Button>
+                            </div>
                         </div>
                         {/* END START/CONTINUE BUTTON */}
+
+                        {/* --- NEW: Mobile Bar (Generic) --- */}
+                        <div className="flex sm:hidden fixed bottom-16 left-0 right-0 z-20 h-16 justify-around items-center bg-gray-900 text-white border-t border-gray-700 shadow-lg" dir="rtl">
+                            <Button type="button" variant="secondary" onClick={handleBackToHistoryView} disabled={isFacilitiesLoading} size="sm">
+                                إلغاء
+                            </Button>
+                            
+                            {/* This view has no "draft" state */}
+                            
+                            <Button 
+                                type="button" 
+                                onClick={handleProceedToForm}
+                                disabled={!selectedFacilityId || (isSkillsAssessmentSetup && !selectedHealthWorkerName) || isFacilitiesLoading || isWorkerInfoChanged}
+                                title={!selectedFacilityId ? "Select facility" : (isSkillsAssessmentSetup && !selectedHealthWorkerName ? "Select health worker" : "Start Session")}
+                                size="sm"
+                            >
+                                {isSkillsAssessmentSetup ? 'بدء الجلسة' : (isVisitReportSetup ? 'بدء التقرير' : 'بدء الاستبيان')} 
+                            </Button>
+                        </div>
+                        {/* --- END NEW: Mobile Bar --- */}
                     </div>
                 </Card>
 
@@ -2591,6 +2676,107 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                     onClose={handlePostSaveClose}
                     onSelect={handlePostSaveSelect}
                 />
+
+                {/* --- NEW: Modals for Nav Bar (Copied from SkillsAssessmentForm render) --- */}
+                {/* We need these here so the new desktop/mobile nav bars can open them */}
+                
+                {/* --- START: NEW MOTHER'S FORM MODAL --- */}
+                {isMothersFormModalOpen && selectedFacility && (
+                    <Modal 
+                        isOpen={isMothersFormModalOpen} 
+                        onClose={() => setIsMothersFormModalOpen(false)} 
+                        title="استبيان الأم: رضاء ومعرفة الأمهات"
+                        size="full"
+                    >
+                        <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
+                            <MothersForm
+                                facility={selectedFacility} // Use selectedFacility from setup
+                                onCancel={() => { 
+                                    setIsMothersFormModalOpen(false);
+                                    fetchSkillMentorshipSubmissions(true); 
+                                }}
+                                setToast={setToast}
+                            />
+                        </div>
+                    </Modal>
+                )}
+                {/* --- END: NEW MOTHER'S FORM MODAL --- */}
+
+                {/* --- START: NEW VISIT REPORT MODAL --- */}
+                {isVisitReportModalOpen && selectedFacility && (
+                    <Modal 
+                        isOpen={isVisitReportModalOpen} 
+                        onClose={() => setIsVisitReportModalOpen(false)} 
+                        title="تقرير زيارة العلاج المتكامل"
+                        size="full"
+                    >
+                        <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
+                            <Suspense fallback={<div className="p-8"><Spinner /></div>}>
+                                <IMNCIVisitReport
+                                    facility={selectedFacility} // Use selectedFacility from setup
+                                    onCancel={() => {
+                                        setIsVisitReportModalOpen(false);
+                                        fetchSkillMentorshipSubmissions(true);
+                                        fetchIMNCIVisitReports(true);
+                                    }}
+                                    setToast={setToast}
+                                    allSubmissions={processedSubmissions}
+                                    existingReportData={null} // Modal always creates new
+                                />
+                            </Suspense>
+                        </div>
+                    </Modal>
+                )}
+                {/* --- END: NEW VISIT REPORT MODAL --- */}
+                
+                {/* --- START: NEW DASHBOARD MODAL --- */}
+                {isDashboardModalOpen && (
+                    <Modal 
+                        isOpen={isDashboardModalOpen} 
+                        onClose={() => setIsDashboardModalOpen(false)} 
+                        title="لوحة متابعة: العلاج المتكامل"
+                        size="full"
+                    >
+                        <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
+                            <MentorshipDashboard
+                                allSubmissions={processedSubmissions}
+                                STATE_LOCALITIES={STATE_LOCALITIES}
+                                activeService={activeService}
+                                
+                                // Pass dashboard filter state
+                                // Pre-filter based on setup screen selection
+                                activeState={activeDashboardState || selectedState}
+                                onStateChange={(value) => {
+                                    setActiveDashboardState(value);
+                                    setActiveDashboardLocality("");
+                                    setActiveDashboardFacilityId("");
+                                    setActiveDashboardWorkerName("");
+                                }}
+                                activeLocality={activeDashboardLocality || selectedLocality}
+                                onLocalityChange={(value) => {
+                                    setActiveDashboardLocality(value);
+                                    setActiveDashboardFacilityId("");
+                                    setActiveDashboardWorkerName("");
+                                }}
+                                activeFacilityId={activeDashboardFacilityId || selectedFacilityId}
+                                onFacilityIdChange={(value) => {
+                                    setActiveDashboardFacilityId(value);
+                                    setActiveDashboardWorkerName("");
+                                }}
+                                activeWorkerName={activeDashboardWorkerName || selectedHealthWorkerName}
+                                onWorkerNameChange={setActiveDashboardWorkerName}
+                            />
+                        </div>
+                    </Modal>
+                )}
+                {/* --- END: NEW DASHBOARD MODAL --- */}
+
+                {/* --- NEW: Mobile Nav Bar for Setup View --- */}
+                <MobileFormNavBar
+                    activeFormType={activeFormType}
+                    draftCount={currentUserDrafts.length}
+                    onNavClick={handleMobileNavClick}
+                 />
             </>
         );
     }

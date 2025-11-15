@@ -1738,7 +1738,7 @@ export default function App() {
 
             <Suspense fallback={null}>
                 {isShareModalOpen && user && (
-                     <ShareModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} shareableItem={itemToShare} shareType={type} onSave={handleSaveSharingSettings} />
+                     <ShareModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} shareableItem={itemToShare} shareType={shareType} onSave={handleSaveSharingSettings} />
                 )}
             </Suspense>
 

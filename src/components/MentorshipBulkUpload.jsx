@@ -11,7 +11,16 @@ import {
     EmptyState, Input, Modal
 } from './CommonComponents'; 
 import { STATE_LOCALITIES } from "./constants.js"; 
-import { importMentorshipSessions } from '../data'; 
+import { importMentorshipSessions } from '../data';
+
+// --- START: EENC Imports ---
+import {
+    PREPARATION_ITEMS as EENC_PREPARATION_ITEMS,
+    DRYING_STIMULATION_ITEMS as EENC_DRYING_STIMULATION_ITEMS,
+    NORMAL_BREATHING_ITEMS as EENC_NORMAL_BREATHING_ITEMS,
+    RESUSCITATION_ITEMS as EENC_RESUSCITATION_ITEMS
+} from './EENCSkillsAssessmentForm';
+// --- END: EENC Imports ---
 
 // --- START: STANDARDIZATION HELPER LOGIC ---
 
@@ -79,6 +88,90 @@ const CLASSIFICATION_CONSTANTS = {
 };
 
 // --- END: STANDARDIZATION HELPER LOGIC ---
+
+
+// --- START: EENC Scoring Logic (Copied from EENCSkillsAssessmentForm.jsx) ---
+
+// 1. EENC Item list
+const EENC_ALL_ITEMS = [
+    ...EENC_PREPARATION_ITEMS,
+    ...EENC_DRYING_STIMULATION_ITEMS,
+    ...EENC_NORMAL_BREATHING_ITEMS,
+    ...EENC_RESUSCITATION_ITEMS
+];
+
+// 2. EENC Score calculation
+const calculateEencScores = (formData) => {
+    const { eenc_breathing_status, skills } = formData;
+    let overallScore = 0;
+    let overallMax = 0;
+    
+    // Initialize section scores
+    const sectionScores = {
+        preparation: { score: 0, maxScore: 0 },
+        drying: { score: 0, maxScore: 0 },
+        normal_breathing: { score: 0, maxScore: 0 },
+        resuscitation: { score: 0, maxScore: 0 }
+    };
+
+    const calculateSection = (items, sectionKey) => {
+        items.forEach(item => {
+            // Use the skills object passed in formData
+            const value = skills[item.key];
+            if (value && value !== 'na') {
+                sectionScores[sectionKey].maxScore += 2;
+                overallMax += 2;
+                
+                if (value === 'yes') {
+                    sectionScores[sectionKey].score += 2;
+                    overallScore += 2;
+                } else if (value === 'partial') {
+                    sectionScores[sectionKey].score += 1;
+                    overallScore += 1;
+                }
+                // 'no' adds 0
+            }
+        });
+    };
+
+    // Always calculate common sections
+    calculateSection(EENC_PREPARATION_ITEMS, 'preparation');
+    calculateSection(EENC_DRYING_STIMULATION_ITEMS, 'drying');
+
+    // Conditional sections
+    if (eenc_breathing_status === 'yes') {
+        calculateSection(EENC_NORMAL_BREATHING_ITEMS, 'normal_breathing');
+    } else if (eenc_breathing_status === 'no') {
+        calculateSection(EENC_RESUSCITATION_ITEMS, 'resuscitation');
+    }
+
+    const scores = {
+        overallScore: { score: overallScore, maxScore: overallMax },
+        ...sectionScores
+    };
+    
+    // --- MODIFICATION: Convert to payload format ---
+    // This matches the format returned by the IMNCI calculateScores function
+    const scoresPayload = {};
+    for (const key in scores) {
+        if (scores[key]?.score !== undefined && scores[key]?.maxScore !== undefined) {
+            scoresPayload[`${key}_score`] = scores[key].score;
+            scoresPayload[`${key}_maxScore`] = scores[key].maxScore;
+        }
+    }
+    // --- EENC specific fields that are not part of the standard score loop ---
+    // (None for EENC, unlike IMNCI's hands-on fields)
+    
+    // Ensure overallScore is present if it was 0/0
+    if (scoresPayload['overallScore_score'] === undefined) {
+        scoresPayload['overallScore_score'] = 0;
+        scoresPayload['overallScore_maxScore'] = 0;
+    }
+
+    return scoresPayload;
+};
+
+// --- END: EENC Scoring Logic ---
 
 
 // --- Core Logic from SkillsMentorshipView.jsx (For Scoring) ---
@@ -632,6 +725,22 @@ const DetailedMentorshipBulkUploadModal = ({
         { key: 'worker_job_title', label: 'Worker Job Title (Optional)' }, 
         { key: 'facility_type', label: 'Facility Type (Optional)' }, 
     ];
+
+    // --- START: EENC Field Definitions ---
+    const EENC_BASE_FIELDS = [
+        { key: 'eenc_breathing_status', label: 'EENC: Breathing Status (yes/no/na)', required: true },
+    ];
+
+    const EENC_SKILL_FIELDS = useMemo(() => EENC_ALL_ITEMS.map(item => ({
+        key: item.key,
+        label: `EENC: ${item.label}`,
+        // All EENC skills are 'yes'/'no'/'partial'/'na'
+        // We will standardize them as 'yes'/'no'/'na' for simplicity in upload, or 'yes'/'partial'/'no'
+        // The EENC scoring function handles yes/partial/no/na.
+        // We will standardize 1='yes', 0='no', 2='partial' or just 'yes','no','partial'.
+    })), []);
+    // --- END: EENC Field Definitions ---
+
     // ... (ASSESSMENT_SKILL_FIELDS, DECISION_FIELDS, TREATMENT_SKILL_FIELDS definitions unchanged) ...
     const ASSESSMENT_SKILL_FIELDS = [
         { key: 'as_skill_weight', label: 'AS: Weight Correctly' },
@@ -706,14 +815,29 @@ const DetailedMentorshipBulkUploadModal = ({
         { key: 'ts_skill_fu_when', label: 'TS: Counselled When to Return Immediately' },
         { key: 'ts_skill_fu_return', label: 'TS: Counselled Follow-Up Visit' },
     ];
-    const ALL_MENTORSHIP_FIELDS = useMemo(() => [
+
+    // --- START: Dynamic Field/Header Logic ---
+    const ALL_IMNCI_FIELDS = useMemo(() => [
         ...BASE_FIELDS,
         ...ASSESSMENT_SKILL_FIELDS,
         ...DECISION_FIELDS,
         ...TREATMENT_SKILL_FIELDS
     ], []);
-    const ALL_TEMPLATE_HEADERS = useMemo(() => ALL_MENTORSHIP_FIELDS.map(f => f.key), [ALL_MENTORSHIP_FIELDS]);
 
+    const ALL_EENC_FIELDS = useMemo(() => [
+        ...BASE_FIELDS,
+        ...EENC_BASE_FIELDS,
+        ...EENC_SKILL_FIELDS
+    ], [EENC_SKILL_FIELDS]);
+
+    const ALL_MENTORSHIP_FIELDS = useMemo(() => {
+        return activeService === 'EENC' ? ALL_EENC_FIELDS : ALL_IMNCI_FIELDS;
+    }, [activeService, ALL_EENC_FIELDS, ALL_IMNCI_FIELDS]);
+
+    const ALL_TEMPLATE_HEADERS = useMemo(() => ALL_MENTORSHIP_FIELDS.map(f => f.key), [ALL_MENTORSHIP_FIELDS]);
+    // --- END: Dynamic Field/Header Logic ---
+
+    
     // --- MODIFIED: stateArToKey to include English name lookup ---
     const stateArToKey = useMemo(() => {
         return Object.entries(STATE_LOCALITIES).reduce((acc, [key, value]) => {
@@ -838,57 +962,92 @@ const DetailedMentorshipBulkUploadModal = ({
                 const rowData = ALL_TEMPLATE_HEADERS.map(header => {
                     let value = '';
                     
-                    // 1. Base Fields
-                    if (header === 'session_date') {
-                        value = data.sessionDate || '';
-                    } else if (header === 'state') {
-                        value = stateKeyToAr[data.state] || data.state || '';
-                    } else if (header === 'locality') {
-                        value = getLocalityAr(data.state, data.locality) || data.locality || '';
-                    } else if (header === 'facility_name') {
-                        value = data.facilityName || '';
-                    } else if (header === 'health_worker_name') {
-                        value = data.healthWorkerName || '';
-                    } else if (header === 'notes') {
-                        value = data.notes || '';
-                    } else if (header === 'mentor_email') {
-                        value = data.mentorEmail || '';
-                    } else if (header === 'worker_job_title') {
-                        value = data.workerType || ''; // Map workerType to worker_job_title
-                    } else if (header === 'facility_type') {
-                        value = data.facilityType || ''; // Map facilityType to facility_type
-                    } 
-                    
-                    // 2. Assessment Skills (as_...)
-                    else if (header.startsWith('as_')) {
-                        const key = header.replace('as_', '');
-                        if (data.assessmentSkills) {
-                            const rawValue = data.assessmentSkills[key];
-                            if (Array.isArray(rawValue)) {
-                                value = rawValue.join(','); // Convert multi-select arrays to comma-sep string
-                            } else if (rawValue !== undefined && rawValue !== null) {
-                                value = String(rawValue); // Ensure it's a string
-                            }
+                    // --- START: Service-Specific Data Mapping ---
+                    if (activeService === 'EENC') {
+                        // 1. Base Fields (EENC)
+                        if (header === 'session_date') {
+                            value = data.sessionDate || '';
+                        } else if (header === 'state') {
+                            value = stateKeyToAr[data.state] || data.state || '';
+                        } else if (header === 'locality') {
+                            value = getLocalityAr(data.state, data.locality) || data.locality || '';
+                        } else if (header === 'facility_name') {
+                            value = data.facilityName || '';
+                        } else if (header === 'health_worker_name') {
+                            value = data.healthWorkerName || '';
+                        } else if (header === 'notes') {
+                            value = data.notes || '';
+                        } else if (header === 'mentor_email') {
+                            value = data.mentorEmail || '';
+                        } else if (header === 'worker_job_title') {
+                            value = data.workerType || '';
+                        } else if (header === 'facility_type') {
+                            value = data.facilityType || '';
                         }
-                    } 
-                    
-                    // 3. Treatment Skills (ts_...)
-                    else if (header.startsWith('ts_')) {
-                         const key = header.replace('ts_', '');
-                         if (data.treatmentSkills) {
-                             const rawValue = data.treatmentSkills[key];
-                             if (rawValue !== undefined && rawValue !== null) {
-                                value = String(rawValue); // Ensure it's a string
+                        // 2. EENC-Specific Base Fields
+                        else if (header === 'eenc_breathing_status') {
+                            value = data.eenc_breathing_status || '';
+                        }
+                        // 3. EENC Skills
+                        // The header key (e.g., 'prep_temp') matches the key in the skills object
+                        else if (data.skills && data.skills[header] !== undefined) {
+                            value = data.skills[header];
+                        }
+
+                    } else { // IMNCI (Existing Logic)
+                        // 1. Base Fields (IMNCI)
+                        if (header === 'session_date') {
+                            value = data.sessionDate || '';
+                        } else if (header === 'state') {
+                            value = stateKeyToAr[data.state] || data.state || '';
+                        } else if (header === 'locality') {
+                            value = getLocalityAr(data.state, data.locality) || data.locality || '';
+                        } else if (header === 'facility_name') {
+                            value = data.facilityName || '';
+                        } else if (header === 'health_worker_name') {
+                            value = data.healthWorkerName || '';
+                        } else if (header === 'notes') {
+                            value = data.notes || '';
+                        } else if (header === 'mentor_email') {
+                            value = data.mentorEmail || '';
+                        } else if (header === 'worker_job_title') {
+                            value = data.workerType || ''; // Map workerType to worker_job_title
+                        } else if (header === 'facility_type') {
+                            value = data.facilityType || ''; // Map facilityType to facility_type
+                        } 
+                        
+                        // 2. Assessment Skills (as_...)
+                        else if (header.startsWith('as_')) {
+                            const key = header.replace('as_', '');
+                            if (data.assessmentSkills) {
+                                const rawValue = data.assessmentSkills[key];
+                                if (Array.isArray(rawValue)) {
+                                    value = rawValue.join(','); // Convert multi-select arrays to comma-sep string
+                                } else if (rawValue !== undefined && rawValue !== null) {
+                                    value = String(rawValue); // Ensure it's a string
+                                }
+                            }
+                        } 
+                        
+                        // 3. Treatment Skills (ts_...)
+                        else if (header.startsWith('ts_')) {
+                             const key = header.replace('ts_', '');
+                             if (data.treatmentSkills) {
+                                 const rawValue = data.treatmentSkills[key];
+                                 if (rawValue !== undefined && rawValue !== null) {
+                                    value = String(rawValue); // Ensure it's a string
+                                 }
                              }
-                         }
-                    } 
-                    
-                    // 4. Decision Fields
-                    else if (header === 'finalDecision') {
-                        value = data.finalDecision || '';
-                    } else if (header === 'decisionMatches') {
-                        value = data.decisionMatches || '';
+                        } 
+                        
+                        // 4. Decision Fields
+                        else if (header === 'finalDecision') {
+                            value = data.finalDecision || '';
+                        } else if (header === 'decisionMatches') {
+                            value = data.decisionMatches || '';
+                        }
                     }
+                    // --- END: Service-Specific Data Mapping ---
 
                     // Return the found value (or empty string)
                     return value;
@@ -923,6 +1082,16 @@ const DetailedMentorshipBulkUploadModal = ({
         const missingMappings = BASE_FIELDS
             .filter(field => field.required && !fieldMappings[field.key])
             .map(field => field.label);
+        
+        // --- START: EENC Validation ---
+        if (activeService === 'EENC') {
+            const missingEenc = EENC_BASE_FIELDS
+                .filter(field => field.required && !fieldMappings[field.key])
+                .map(field => field.label);
+            missingMappings.push(...missingEenc);
+        }
+        // --- END: EENC Validation ---
+
         if (missingMappings.length > 0) {
             setError(`The following base fields must be mapped: ${missingMappings.join(', ')}.`);
             return;
@@ -1052,7 +1221,17 @@ const DetailedMentorshipBulkUploadModal = ({
                          // --- START: VALUE STANDARDIZATION ---
                          let standardizedValue = cellValue;
 
-                         if (field.key.startsWith('as_skill') || field.key.startsWith('ts_skill') || field.key === 'decisionMatches' || field.key.startsWith('as_supervisor_confirms') || field.key === 'finalDecision') {
+                         if (activeService === 'EENC') {
+                            // For EENC, all relevant fields are yes/no/na or yes/partial/no
+                            // standardizeYesNoNa handles 'yes', 'no', 'na', 1, 0
+                            // We'll also treat 'partial' as 'partial'
+                            if (String(cellValue).trim().toLowerCase() === 'partial' || cellValue === 2) {
+                                standardizedValue = 'partial';
+                            } else {
+                                standardizedValue = standardizeYesNoNa(cellValue);
+                            }
+                         } else { // IMNCI Logic
+                             if (field.key.startsWith('as_skill') || field.key.startsWith('ts_skill') || field.key === 'decisionMatches' || field.key.startsWith('as_supervisor_confirms') || field.key === 'finalDecision') {
                              // Standardize 'yes', 'no', 'na', or finalDecision
                              if (field.key === 'finalDecision') {
                                  standardizedValue = standardizeFinalDecision(cellValue);
@@ -1076,6 +1255,7 @@ const DetailedMentorshipBulkUploadModal = ({
                                  return classificationMap[cleanedKey] || rawCls; 
                              });
                          }
+                         }
                          
                          if (standardizedValue !== null && standardizedValue !== '') {
                             sessionFromRow[field.key] = standardizedValue;
@@ -1090,54 +1270,85 @@ const DetailedMentorshipBulkUploadModal = ({
                  return; // Skip this row, it's missing fundamental data
             }
 
-            const formDataForRow = {
-                 session_date: '', notes: sessionFromRow.notes || '', assessment_skills: {}, treatment_skills: {},
-                 finalDecision: sessionFromRow.finalDecision || '', decisionMatches: sessionFromRow.decisionMatches || '',
-            };
-            
-            ASSESSMENT_SKILL_FIELDS.forEach(field => {
-                 const keyWithoutPrefix = field.key.replace('as_', '');
-                 const value = sessionFromRow[field.key];
-                 if (value !== undefined) {
-                     if (field.key.endsWith('_classification') && field.label.includes('(comma-sep)')) {
-                        // Value is already an array from standardization
-                        formDataForRow.assessment_skills[keyWithoutPrefix] = value; 
-                     } else {
-                        formDataForRow.assessment_skills[keyWithoutPrefix] = value;
-                     }
-                 } else {
-                      if (field.key.endsWith('_classification') && field.label.includes('(comma-sep)')) {
-                         formDataForRow.assessment_skills[keyWithoutPrefix] = [];
-                      } else {
-                         formDataForRow.assessment_skills[keyWithoutPrefix] = '';
-                      }
-                 }
-            });
-            
-            TREATMENT_SKILL_FIELDS.forEach(field => {
-                 const keyWithoutPrefix = field.key.replace('ts_', '');
-                 const value = sessionFromRow[field.key];
-                 if (value !== undefined) {
-                     formDataForRow.treatment_skills[keyWithoutPrefix] = value;
-                 } else {
-                     formDataForRow.treatment_skills[keyWithoutPrefix] = '';
-                 }
-            });
-            
-            // --- Final Payload Construction ---
-            const payload = {
-                serviceType: activeService, status: 'complete', healthWorkerName: sessionFromRow.health_worker_name || '',
-                workerType: sessionFromRow.worker_job_title || null, 
-                facilityType: sessionFromRow.facility_type || null, 
-                notes: formDataForRow.notes || '',
-                mentorEmail: sessionFromRow.mentor_email || user.email || 'unknown@example.com',
-                mentorName: user.displayName || 'Batch Upload',
-                assessmentSkills: formDataForRow.assessment_skills,
-                treatmentSkills: formDataForRow.treatment_skills,
-                finalDecision: sessionFromRow.finalDecision ?? '',
-                decisionMatches: sessionFromRow.decisionMatches ?? '',
-            };
+            // --- Payload construction and scoring must be service-specific ---
+            let payload;
 
+            if (activeService === 'EENC') {
+                // --- EENC PAYLOAD ---
+                payload = {
+                    serviceType: 'EENC',
+                    status: 'complete',
+                    healthWorkerName: sessionFromRow.health_worker_name || '',
+                    workerType: sessionFromRow.worker_job_title || null, 
+                    facilityType: sessionFromRow.facility_type || null, 
+                    notes: sessionFromRow.notes || '',
+                    mentorEmail: sessionFromRow.mentor_email || user.email || 'unknown@example.com',
+                    mentorName: user.displayName || 'Batch Upload',
+                    eenc_breathing_status: sessionFromRow.eenc_breathing_status || 'na',
+                    skills: {},
+                };
+
+                // Populate skills object
+                EENC_SKILL_FIELDS.forEach(field => {
+                    // Use 'na' as default if field was not mapped or is empty
+                    payload.skills[field.key] = sessionFromRow[field.key] || 'na';
+                });
+
+            } else {
+                // --- IMNCI PAYLOAD (Existing Logic) ---
+                const formDataForRow = {
+                    session_date: '', notes: sessionFromRow.notes || '', assessment_skills: {}, treatment_skills: {},
+                    finalDecision: sessionFromRow.finalDecision || '', decisionMatches: sessionFromRow.decisionMatches || '',
+                };
+                
+                ASSESSMENT_SKILL_FIELDS.forEach(field => {
+                    const keyWithoutPrefix = field.key.replace('as_', '');
+                    const value = sessionFromRow[field.key];
+                    if (value !== undefined) {
+                        if (field.key.endsWith('_classification') && field.label.includes('(comma-sep)')) {
+                            formDataForRow.assessment_skills[keyWithoutPrefix] = value; 
+                        } else {
+                            formDataForRow.assessment_skills[keyWithoutPrefix] = value;
+                        }
+                    } else {
+                        if (field.key.endsWith('_classification') && field.label.includes('(comma-sep)')) {
+                            formDataForRow.assessment_skills[keyWithoutPrefix] = [];
+                        } else {
+                            formDataForRow.assessment_skills[keyWithoutPrefix] = '';
+                        }
+                    }
+                });
+                
+                TREATMENT_SKILL_FIELDS.forEach(field => {
+                    const keyWithoutPrefix = field.key.replace('ts_', '');
+                    const value = sessionFromRow[field.key];
+                    if (value !== undefined) {
+                        formDataForRow.treatment_skills[keyWithoutPrefix] = value;
+                    } else {
+                        formDataForRow.treatment_skills[keyWithoutPrefix] = '';
+                    }
+                });
+                
+                payload = {
+                    serviceType: 'IMNCI', // Explicitly set
+                    status: 'complete',
+                    healthWorkerName: sessionFromRow.health_worker_name || '',
+                    workerType: sessionFromRow.worker_job_title || null, 
+                    facilityType: sessionFromRow.facility_type || null, 
+                    notes: formDataForRow.notes || '',
+                    mentorEmail: sessionFromRow.mentor_email || user.email || 'unknown@example.com',
+                    mentorName: user.displayName || 'Batch Upload',
+                    assessmentSkills: formDataForRow.assessment_skills,
+                    treatmentSkills: formDataForRow.treatment_skills,
+                    finalDecision: sessionFromRow.finalDecision ?? '',
+                    decisionMatches: sessionFromRow.decisionMatches ?? '',
+                    // Store formData for IMNCI scoring
+                    _formDataForScoring: formDataForRow 
+                };
+            }
+
+            // --- COMMON PAYLOAD LOGIC (Date, Location, Visit #, Scoring) ---
+            
             // Date processing
             try {
                 let effectiveDate;
@@ -1215,26 +1426,35 @@ const DetailedMentorshipBulkUploadModal = ({
 
 
              // Score calculation - must convert multi-select arrays back to objects for the function
-             try {
-                 const formDataForScoring = {
-                     ...formDataForRow,
-                     assessment_skills: {
-                         ...formDataForRow.assessment_skills,
-                         worker_diarrhea_classification: (formDataForRow.assessment_skills.worker_diarrhea_classification || []).reduce((acc, c) => { acc[c] = true; return acc; }, {}),
-                         supervisor_correct_diarrhea_classification: (formDataForRow.assessment_skills.supervisor_correct_diarrhea_classification || []).reduce((acc, c) => { acc[c] = true; return acc; }, {}),
-                         worker_fever_classification: (formDataForRow.assessment_skills.worker_fever_classification || []).reduce((acc, c) => { acc[c] = true; return acc; }, {}),
-                         supervisor_correct_fever_classification: (formDataForRow.assessment_skills.supervisor_correct_fever_classification || []).reduce((acc, c) => { acc[c] = true; return acc; }, {}),
-                     }
-                 };
-                 payload.scores = calculateScores(formDataForScoring);
-             } catch (scoreError) {
-                 payload.scores = {};
-                 hasError = true;
-             }
-             
-             if (!hasError) {
-                 processedSessions.push(payload);
-             } 
+            try {
+                if (activeService === 'EENC') {
+                    const formDataForScoring = {
+                        eenc_breathing_status: payload.eenc_breathing_status,
+                        skills: payload.skills
+                    };
+                    payload.scores = calculateEencScores(formDataForScoring);
+                } else { // IMNCI
+                    const formDataForScoring = {
+                        ...payload._formDataForScoring, // Use the stored formData
+                        assessment_skills: {
+                            ...payload._formDataForScoring.assessment_skills,
+                            worker_diarrhea_classification: (payload._formDataForScoring.assessment_skills.worker_diarrhea_classification || []).reduce((acc, c) => { acc[c] = true; return acc; }, {}),
+                            supervisor_correct_diarrhea_classification: (payload._formDataForScoring.assessment_skills.supervisor_correct_diarrhea_classification || []).reduce((acc, c) => { acc[c] = true; return acc; }, {}),
+                            worker_fever_classification: (payload._formDataForScoring.assessment_skills.worker_fever_classification || []).reduce((acc, c) => { acc[c] = true; return acc; }, {}),
+                            supervisor_correct_fever_classification: (payload._formDataForScoring.assessment_skills.supervisor_correct_fever_classification || []).reduce((acc, c) => { acc[c] = true; return acc; }, {}),
+                        }
+                    };
+                    payload.scores = calculateScores(formDataForScoring);
+                    delete payload._formDataForScoring; // Clean up temp data
+                }
+            } catch (scoreError) {
+                payload.scores = {};
+                hasError = true;
+            }
+            
+            if (!hasError) {
+                processedSessions.push(payload);
+            } 
 
         }); // --- End of preProcessedData.forEach loop ---
 
@@ -1379,8 +1599,8 @@ const DetailedMentorshipBulkUploadModal = ({
             <div className="p-4">
                 {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
                 {currentPage === 0 && (
-                    <div>
-                        <p className="mb-4">Download the detailed template for {activeService}. If data exists, it will be pre-filled. Use Arabic or English names for State. Use Arabic names for Locality. Use 'yes', 'no', 'na' for skill checks. Use comma-separated values for multi-select classifications (e.g., "بعض الجفاف,دسنتاريا").</p>
+                    <div dir="ltr" className="text-left">
+                        <p className="mb-4">Download the detailed template for {activeService}. If data exists, it will be pre-filled. Use Arabic or English names for State. Use Arabic names for Locality. Use 'yes', 'no', 'na' (or 'partial' for EENC) for skill checks. For IMNCI, use comma-separated values for multi-select classifications (e.g., "بعض الجفاف,دسنتاريا").</p>
                         <Button variant="secondary" onClick={handleDownloadTemplate} className="mb-4">Download Template / Data</Button>
                         <hr className="my-4" />
                         <p className="mb-2">Or, upload your completed Excel file (first row must be headers).</p>
@@ -1388,7 +1608,7 @@ const DetailedMentorshipBulkUploadModal = ({
                     </div>
                 )}
                 {currentPage === 1 && (
-                    <div>
+                    <div dir="ltr" className="text-left">
                         <h4 className="font-medium mb-4">Map Excel columns to application fields</h4>
                         <p className="text-sm text-gray-600 mb-4">Match columns to fields. Base fields marked * are required for basic processing. **Note: Input standardization is applied (case/space insensitive) to 'yes/no/na' and classification fields.**</p>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 mb-4 max-h-[50vh] overflow-y-auto p-2 border rounded">
