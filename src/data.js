@@ -318,29 +318,26 @@ export const writeBatch = (firestore) => {
 // --- END WRAPPED FUNCTIONS ---
 
 
-// --- MODIFIED: getData now accepts and uses sourceOptions ---
+// --- *** THIS IS THE CRITICAL FIX *** ---
+// --- MODIFIED: getData now uses Firestore's default cache-aware behavior ---
 async function getData(query, sourceOptions = {}) {
-    const defaultSource = { source: 'cache' }; // Original behavior
-    
-    // If sourceOptions is passed (e.g., { source: 'server' }), it will be used.
-    // Otherwise, it defaults to the original cache-first behavior.
-    const options = Object.keys(sourceOptions).length > 0 ? sourceOptions : defaultSource;
-
+    // We simply pass the sourceOptions directly to getDocs.
+    // If sourceOptions is {}, getDocs uses Firestore's default behavior
+    // (which respects the offline cache you enabled).
+    // If sourceOptions is { source: 'server' } (e.g., for incremental
+    // facility fetches), it will try the server.
     try {
-        const snapshot = await getDocs(query, options); // Use modified options
-        
-        // If we tried the cache and it was empty, try the server
-        if (options.source === 'cache' && snapshot.empty) {
-            return getDocs(query, { source: 'server' });
-        }
-        
+        const snapshot = await getDocs(query, sourceOptions); 
         return snapshot;
     } catch (e) {
-        console.log(`Cache read with options ${options.source} failed, fetching from server.`);
-        // If any getDocs fails, fall back to server
-        return getDocs(query, { source: 'server' });
+        // If the query fails (e.g., offline and { source: 'server' } was
+        // requested), Firestore will throw. We re-throw so the
+        // caller (DataContext) can handle it and return a default value.
+        console.error(`getData query failed with options ${JSON.stringify(sourceOptions)}:`, e.message);
+        throw e; 
     }
 }
+// --- *** END OF CRITICAL FIX *** ---
 
 // uploadFile and deleteFile don't interact with Firestore directly
 export async function uploadFile(file) {

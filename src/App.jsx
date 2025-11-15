@@ -1643,6 +1643,10 @@ export default function App() {
                         }}
                         initialParticipantId={''} // Let the user choose
                         isPublicView={true} // --- NEW: Set public view flag
+
+                        // --- *** THIS IS THE FIX *** ---
+                        // Pass the correct permission for managing tests
+                        canManageTests={permissions.canUseFederalManagerAdvancedFeatures}
                     />
                 </Suspense>
             );

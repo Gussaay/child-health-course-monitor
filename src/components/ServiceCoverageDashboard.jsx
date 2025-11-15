@@ -90,16 +90,17 @@ const SortIcon = ({ direction }) => {
 const MapLegend = () => (
     <div className="flex justify-center items-center gap-2 p-1 text-sm text-gray-600">
         <span className="font-bold">Legend:</span>
-        <div className="flex items-center gap-1"><div className="w-4 h-4 rounded-full bg-red-200 border border-gray-300"></div><span className='text-xs'>&lt;40% (Includes 0%)</span></div>
-        <div className="flex items-center gap-1"><div className="w-4 h-4 rounded-full bg-yellow-400 border border-gray-300"></div><span className='text-xs'>40-75%</span></div>
-        <div className="flex items-center gap-1"><div className="w-4 h-4 rounded-full bg-green-600 border border-gray-300"></div><span className='text-xs'>&gt;75%</span></div>
-        <div className="flex items-center gap-1"><div className="w-4 h-4 rounded-full bg-sky-700 border-2 border-white ring-1 ring-sky-800"></div><span className='text-xs'>Facility</span></div>
+        <div className="flex items-center gap-1"><div className="w-4 h-4 rounded-full border border-gray-300" style={{ backgroundColor: '#6B6B6B' }}></div><span className='text-xs'>0-39% (or No Data)</span></div>
+        <div className="flex items-center gap-1"><div className="w-4 h-4 rounded-full border border-gray-300" style={{ backgroundColor: '#6266B1' }}></div><span className='text-xs'>40-74%</span></div>
+        <div className="flex items-center gap-1"><div className="w-4 h-4 rounded-full border border-gray-300" style={{ backgroundColor: '#313695' }}></div><span className='text-xs'>&ge;75%</span></div>
+        <div className="flex items-center gap-1"><div className="w-4 h-4 rounded-full border-2 border-white ring-1 ring-[#313695]" style={{ backgroundColor: '#313695' }}></div><span className='text-xs'>Facility</span></div>
     </div>
 );
 const getCoverageBar = (c) => {
     const coverage = Number(c) || 0;
     const isZero = coverage === 0;
-    const colorClass = coverage >= 75 ? 'bg-green-600' : coverage >= 40 ? 'bg-yellow-400' : 'bg-red-600';
+    // This logic correctly handles all cases, including 0
+    const colorClass = coverage >= 75 ? 'bg-sky-700' : coverage >= 40 ? 'bg-sky-400' : 'bg-gray-600';
     const barWidth = isZero ? '2px' : `${coverage}%`;
     const barStyle = { width: barWidth, minWidth: isZero ? '2px' : undefined };
     return (
@@ -164,9 +165,14 @@ export const NeonatalCoverageDashboard = () => {
     const [tooltipData, setTooltipData] = useState(null); 
     const [hoveredFacilityData, setHoveredFacilityData] = useState(null); 
     const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
+    const [showFacilityMarkers, setShowFacilityMarkers] = useState(true);
     const mapContainerRef = useRef(null);
     const fullscreenMapContainerRef = useRef(null);
     const dashboardSectionRef = useRef(null);
+    
+    // --- MODIFICATION: Add ref for fullscreen modal ---
+    const fullscreenModalRef = useRef(null);
+    // --- END MODIFICATION ---
     
     // --- Polling useEffect for Incremental Facility Fetch (15 minutes) ---
     useEffect(() => {
@@ -404,13 +410,41 @@ export const NeonatalCoverageDashboard = () => {
     const handleMouseMove = useCallback((event) => { if (tooltipData || hoveredFacilityData) { setHoverPosition({ x: event.clientX, y: event.clientY }); } }, [tooltipData, hoveredFacilityData]);
     // --- End Tooltip Handlers ---
 
-    // --- Download Handler --- (Unchanged)
+    // --- MODIFICATION: Update Download Handler ---
     const handleDownloadMap = useCallback((format = 'jpg') => {
-        const targetRef = isMapFullscreen ? fullscreenMapContainerRef : mapContainerRef;
-        if (targetRef.current) { html2canvas(targetRef.current, { useCORS: true, scale: 2, backgroundColor: '#ffffff' }).then(canvas => { const filename = `scnu-map-${stateFilter || 'sudan'}-${currentMapViewLevel}.${format}`; if (format === 'pdf') { const imgData = canvas.toDataURL('image/jpeg', 0.9); const pdf = new jsPDF({ orientation: canvas.width > canvas.height ? 'l' : 'p', unit: 'px', format: [canvas.width, canvas.height] }); pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height); pdf.save(filename); } else { const image = canvas.toDataURL("image/jpeg", 0.9); const link = document.createElement('a'); link.href = image; link.download = filename; document.body.appendChild(link); link.click(); document.body.removeChild(link); } }).catch(err => console.error("Error generating map image:", err)); }
-    }, [stateFilter, currentMapViewLevel, isMapFullscreen]);
+        // --- Use dashboardSectionRef if not fullscreen ---
+        const targetRef = isMapFullscreen ? fullscreenModalRef : dashboardSectionRef;
+        if (targetRef.current) { 
+            html2canvas(targetRef.current, { 
+                useCORS: true, 
+                scale: 2, 
+                backgroundColor: '#ffffff',
+                // --- MODIFICATION: Use 'ignore-for-export' class ---
+                ignoreElements: (element) => element.classList.contains('ignore-for-export')
+            }).then(canvas => { 
+                // --- Update filename logic ---
+                const baseName = isMapFullscreen ? 'scnu-map-fullscreen' : 'scnu-dashboard';
+                const filename = `${baseName}-${stateFilter || 'sudan'}.${format}`; 
+                if (format === 'pdf') { 
+                    const imgData = canvas.toDataURL('image/jpeg', 0.9); 
+                    const pdf = new jsPDF({ orientation: canvas.width > canvas.height ? 'l' : 'p', unit: 'px', format: [canvas.width, canvas.height] }); 
+                    pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height); 
+                    pdf.save(filename); 
+                } else { 
+                    const image = canvas.toDataURL("image/jpeg", 0.9); 
+                    const link = document.createElement('a'); 
+                    link.href = image; 
+                    link.download = filename; 
+                    document.body.appendChild(link); 
+                    link.click(); 
+                    document.body.removeChild(link); 
+                } 
+            }).catch(err => console.error("Error generating map image:", err)); 
+        }
+    }, [stateFilter, currentMapViewLevel, isMapFullscreen, dashboardSectionRef, fullscreenModalRef]); // <-- Added refs
+    // --- END MODIFICATION ---
 
-    // --- NEW Copy Image Handler ---
+    // --- MODIFICATION: Update Copy Image Handler ---
     const handleCopyImage = useCallback(async () => {
         const targetRef = dashboardSectionRef;
         if (targetRef.current && navigator.clipboard?.write) {
@@ -418,13 +452,15 @@ export const NeonatalCoverageDashboard = () => {
             try {
                 const canvas = await html2canvas(targetRef.current, {
                     useCORS: true, scale: 2, backgroundColor: '#ffffff', logging: false,
-                    ignoreElements: (element) => element.classList.contains('ignore-for-copy')
+                    // --- MODIFICATION: Use 'ignore-for-export' class ---
+                    ignoreElements: (element) => element.classList.contains('ignore-for-export')
                 });
                 canvas.toBlob(async (blob) => { if (blob) { await navigator.clipboard.write([ new ClipboardItem({ 'image/png': blob }) ]); setCopyStatus('Copied!'); } else { throw new Error('Canvas to Blob failed'); } }, 'image/png', 0.95);
             } catch (err) { console.error("Failed to copy image:", err); setCopyStatus('Failed'); }
             finally { setTimeout(() => setCopyStatus(''), 2000); }
         } else { console.error("Clipboard API not available or target element not found."); setCopyStatus('Failed'); setTimeout(() => setCopyStatus(''), 2000); }
     }, []);
+    // --- END MODIFICATION ---
 
     const mapLocationName = stateFilter ? STATE_LOCALITIES[stateFilter]?.ar || stateFilter : 'Sudan';
     const mapTitle = `Functioning Special Care Newborn Unit in (${mapLocationName}) (${kpiData.totalWithSCNU} out of ${kpiData.totalSupposed}, ${kpiData.scnuCoveragePercentage}%)`;
@@ -436,7 +472,8 @@ export const NeonatalCoverageDashboard = () => {
             <div ref={dashboardSectionRef} className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch relative">
 
                 <div className="flex flex-col gap-6 lg:col-span-1">
-                    <Card>
+                    {/* --- MODIFICATION: Added ignore-for-export class to filter card --- */}
+                    <Card className="ignore-for-export">
                         <div className="p-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <FormGroup label="State">
                                 <Select value={stateFilter} onChange={handleStateChange}>
@@ -460,6 +497,7 @@ export const NeonatalCoverageDashboard = () => {
                             </FormGroup>
                         </div>
                     </Card>
+                    {/* --- END MODIFICATION --- */}
 
                     {loading ? <Spinner/> : (
                         <>
@@ -490,7 +528,8 @@ export const NeonatalCoverageDashboard = () => {
                     <Card className="p-0 flex flex-col flex-grow lg:col-span-2">
                          <div className="p-4 border-b flex flex-col sm:flex-row sm:justify-between sm:items-center flex-shrink-0 gap-2 sm:gap-0">
                             <h3 className="text-xl font-medium text-gray-700 text-left sm:text-center">SCNU Geographical Distribution</h3>
-                            <div className="flex items-center flex-wrap justify-start sm:justify-end gap-1 w-full sm:w-auto">
+                            {/* --- MODIFICATION: Added ignore-for-export to button container --- */}
+                            <div className="flex items-center flex-wrap justify-start sm:justify-end gap-1 w-full sm:w-auto ignore-for-export">
                                 {!isLocalityView && (
                                     <>
                                         <div className="text-sm font-medium text-gray-500">View:</div>
@@ -506,12 +545,22 @@ export const NeonatalCoverageDashboard = () => {
                                     onClick={handleCopyImage}
                                     title="Copy Dashboard Image"
                                     disabled={!!copyStatus && copyStatus !== 'Failed'}
-                                    className="ignore-for-copy px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors relative min-w-[70px] text-center disabled:opacity-50 disabled:cursor-wait"
+                                    className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors relative min-w-[70px] text-center disabled:opacity-50 disabled:cursor-wait"
                                 >
                                     {copyStatus || 'Copy Image'}
                                 </button>
+                                <button
+                                    onClick={() => setShowFacilityMarkers(!showFacilityMarkers)}
+                                    title={showFacilityMarkers ? "Hide Facilities" : "Show Facilities"}
+                                    className={`ml-1 px-2 py-1 text-xs font-semibold rounded-md transition-colors ${
+                                        showFacilityMarkers ? 'bg-sky-700 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    {showFacilityMarkers ? 'Hide' : 'Show'} Facilities
+                                </button>
                                 <button onClick={() => setIsMapFullscreen(true)} className="px-2 py-1 text-xs font-semibold text-sky-700 bg-sky-100 rounded-md hover:bg-sky-200 transition-colors">Full</button>
                             </div>
+                            {/* --- END MODIFICATION --- */}
                         </div>
 
                         <div ref={mapContainerRef} className="flex-grow flex flex-col bg-white">
@@ -522,7 +571,7 @@ export const NeonatalCoverageDashboard = () => {
                                     <SudanMap
                                         data={!isLocalityView && currentMapViewLevel === 'state' ? nationalMapData : []}
                                         localityData={isLocalityView ? stateData : (currentMapViewLevel === 'locality' ? allLocalitiesCoverageData : [])}
-                                        facilityMarkers={facilityLocationMarkers}
+                                        facilityMarkers={showFacilityMarkers ? facilityLocationMarkers : []}
                                         viewLevel={currentMapViewLevel}
                                         {...mapViewConfig}
                                         onStateHover={handleStateHover} onStateLeave={handleMapMouseLeave}
@@ -592,21 +641,23 @@ export const NeonatalCoverageDashboard = () => {
                 </div>
 
                 {isMapFullscreen && (
-                    <div className="fixed inset-0 bg-white z-50 p-4 flex flex-col">
+                    <div ref={fullscreenModalRef} className="fixed inset-0 bg-white z-50 p-4 flex flex-col">
                         <div className="flex justify-between items-center mb-4 flex-shrink-0">
                              <h3 className="text-xl font-bold text-gray-800">{mapTitle}</h3>
-                             <div className='flex items-center gap-1'>
+                             {/* --- MODIFICATION: Add 'ignore-for-export' class to hide buttons --- */}
+                             <div className='flex items-center gap-1 ignore-for-export'>
                                 <button onClick={() => handleDownloadMap('jpg')} title="Download Map as JPG" className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">JPG</button>
                                 <button onClick={() => handleDownloadMap('pdf')} title="Download Map as PDF" className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">PDF</button>
                                 <button onClick={() => setIsMapFullscreen(false)} className="px-4 py-2 text-sm font-bold text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 ml-1">Close</button>
                              </div>
+                             {/* --- END MODIFICATION --- */}
                         </div>
                         <div className="flex-grow min-h-0 flex gap-4">
                             <div ref={fullscreenMapContainerRef} className="flex-grow min-h-0 bg-white w-2/3">
                                 <SudanMap
                                     data={nationalMapData}
                                     localityData={isLocalityView ? stateData : (currentMapViewLevel === 'locality' ? allLocalitiesCoverageData : [])}
-                                    facilityMarkers={facilityLocationMarkers}
+                                    facilityMarkers={showFacilityMarkers ? facilityLocationMarkers : []}
                                     viewLevel={currentMapViewLevel}
                                     {...fullscreenMapViewConfig}
                                     onStateHover={handleStateHover} onStateLeave={handleMapMouseLeave}
@@ -662,9 +713,14 @@ export const EENCCoverageDashboard = () => {
     const [hoveredFacilityData, setHoveredFacilityData] = useState(null); 
     const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
     const [isMapFullscreen, setIsMapFullscreen] = useState(false);
+    const [showFacilityMarkers, setShowFacilityMarkers] = useState(true);
     const mapContainerRef = useRef(null);
     const fullscreenMapContainerRef = useRef(null);
     const dashboardSectionRef = useRef(null);
+
+    // --- MODIFICATION: Add ref for fullscreen modal ---
+    const fullscreenModalRef = useRef(null);
+    // --- END MODIFICATION ---
     
     // --- Polling useEffect for Incremental Facility Fetch (15 minutes) ---
     useEffect(() => {
@@ -825,22 +881,60 @@ export const EENCCoverageDashboard = () => {
 
     const currentMapViewLevel = stateFilter ? 'locality' : mapViewLevel;
 
+    // --- MODIFICATION: Update Download Handler ---
     const handleDownloadMap = useCallback((format = 'jpg') => {
-        const targetRef = isMapFullscreen ? fullscreenMapContainerRef : mapContainerRef; 
-        if (targetRef.current) { html2canvas(targetRef.current, { useCORS: true, scale: 2, backgroundColor: '#ffffff' }).then(canvas => { const filename = `eenc-map-${stateFilter || 'sudan'}-${currentMapViewLevel}.${format}`; if (format === 'pdf') { const imgData = canvas.toDataURL('image/jpeg', 0.9); const pdf = new jsPDF({ orientation: canvas.width > canvas.height ? 'l' : 'p', unit: 'px', format: [canvas.width, canvas.height] }); pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height); pdf.save(filename); } else { const image = canvas.toDataURL("image/jpeg", 0.9); const link = document.createElement('a'); link.href = image; link.download = filename; document.body.appendChild(link); link.click(); document.body.removeChild(link); } }).catch(err => console.error("Error generating map image:", err)); }
-    }, [stateFilter, currentMapViewLevel, isMapFullscreen]); 
+        // --- Use dashboardSectionRef if not fullscreen ---
+        const targetRef = isMapFullscreen ? fullscreenModalRef : dashboardSectionRef; 
+        if (targetRef.current) { 
+            html2canvas(targetRef.current, { 
+                useCORS: true, 
+                scale: 2, 
+                backgroundColor: '#ffffff',
+                // --- MODIFICATION: Use 'ignore-for-export' class ---
+                ignoreElements: (element) => element.classList.contains('ignore-for-export')
+            }).then(canvas => { 
+                // --- Update filename logic ---
+                const baseName = isMapFullscreen ? 'eenc-map-fullscreen' : 'eenc-dashboard';
+                const filename = `${baseName}-${stateFilter || 'sudan'}.${format}`; 
+                if (format === 'pdf') { 
+                    const imgData = canvas.toDataURL('image/jpeg', 0.9); 
+                    const pdf = new jsPDF({ orientation: canvas.width > canvas.height ? 'l' : 'p', unit: 'px', format: [canvas.width, canvas.height] }); 
+                    pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height); 
+                    pdf.save(filename); 
+                } else { 
+                    const image = canvas.toDataURL("image/jpeg", 0.9); 
+                    const link = document.createElement('a'); 
+                    link.href = image; 
+                    link.download = filename; 
+                    document.body.appendChild(link); 
+                    link.click(); 
+                    document.body.removeChild(link); 
+                } 
+            }).catch(err => console.error("Error generating map image:", err)); 
+        }
+    }, [stateFilter, currentMapViewLevel, isMapFullscreen, dashboardSectionRef, fullscreenModalRef]); // <-- Added refs
+    // --- END MODIFICATION ---
 
+    // --- MODIFICATION: Update Copy Image Handler ---
     const handleCopyImage = useCallback(async () => {
         const targetRef = dashboardSectionRef;
         if (targetRef.current && navigator.clipboard?.write) {
             setCopyStatus('Copying...');
             try {
-                const canvas = await html2canvas(targetRef.current, { useCORS: true, scale: 2, backgroundColor: '#ffffff', logging: false, ignoreElements: (element) => element.classList.contains('ignore-for-copy') });
+                const canvas = await html2canvas(targetRef.current, { 
+                    useCORS: true, 
+                    scale: 2, 
+                    backgroundColor: '#ffffff', 
+                    logging: false, 
+                    // --- MODIFICATION: Use 'ignore-for-export' class ---
+                    ignoreElements: (element) => element.classList.contains('ignore-for-export') 
+                });
                 canvas.toBlob(async (blob) => { if (blob) { await navigator.clipboard.write([ new ClipboardItem({ 'image/png': blob }) ]); setCopyStatus('Copied!'); } else { throw new Error('Canvas to Blob failed'); } }, 'image/png', 0.95);
             } catch (err) { console.error("Failed to copy image:", err); setCopyStatus('Failed'); }
             finally { setTimeout(() => setCopyStatus(''), 2000); }
         } else { console.error("Clipboard API not available or target element not found."); setCopyStatus('Failed'); setTimeout(() => setCopyStatus(''), 2000); }
     }, []);
+    // --- END MODIFICATION ---
 
     const aggregationLevelName = stateFilter ? 'Locality' : 'State';
     const dynamicTitlePrefix = stateFilter ? `${STATE_LOCALITIES[stateFilter]?.ar || stateFilter} - ` : '';
@@ -854,7 +948,8 @@ export const EENCCoverageDashboard = () => {
              <div ref={dashboardSectionRef} className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch relative">
 
                  <div className="flex flex-col gap-6 lg:col-span-1">
-                    <Card>
+                    {/* --- MODIFICATION: Added ignore-for-export class to filter card --- */}
+                    <Card className="ignore-for-export">
                         <div className="p-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <FormGroup label="State">
                                 <Select value={stateFilter} onChange={handleStateChange}>
@@ -878,6 +973,7 @@ export const EENCCoverageDashboard = () => {
                             </FormGroup>
                         </div>
                     </Card>
+                    {/* --- END MODIFICATION --- */}
 
                     {loading ? <Spinner/> : (
                         <>
@@ -896,7 +992,8 @@ export const EENCCoverageDashboard = () => {
                     <Card className="p-0 flex flex-col flex-grow lg:col-span-2">
                         <div className="p-4 border-b flex flex-col sm:flex-row sm:justify-between sm:items-center flex-shrink-0 gap-2 sm:gap-0">
                             <h3 className="text-xl font-medium text-gray-700 text-left sm:text-center">EENC Geographical Distribution</h3>
-                            <div className="flex items-center flex-wrap justify-start sm:justify-end gap-1 w-full sm:w-auto">
+                            {/* --- MODIFICATION: Added ignore-for-export to button container --- */}
+                            <div className="flex items-center flex-wrap justify-start sm:justify-end gap-1 w-full sm:w-auto ignore-for-export">
                                 {!stateFilter && (
                                      <>
                                         <div className="text-sm font-medium text-gray-500">View:</div>
@@ -912,12 +1009,22 @@ export const EENCCoverageDashboard = () => {
                                     onClick={handleCopyImage}
                                     title="Copy Dashboard Image"
                                     disabled={!!copyStatus && copyStatus !== 'Failed'}
-                                    className="ignore-for-copy px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors relative min-w-[70px] text-center disabled:opacity-50 disabled:cursor-wait"
+                                    className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors relative min-w-[70px] text-center disabled:opacity-50 disabled:cursor-wait"
                                 >
                                     {copyStatus || 'Copy Image'}
                                 </button>
+                                <button
+                                    onClick={() => setShowFacilityMarkers(!showFacilityMarkers)}
+                                    title={showFacilityMarkers ? "Hide Facilities" : "Show Facilities"}
+                                    className={`ml-1 px-2 py-1 text-xs font-semibold rounded-md transition-colors ${
+                                        showFacilityMarkers ? 'bg-sky-700 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    {showFacilityMarkers ? 'Hide' : 'Show'} Facilities
+                                </button>
                                 <button onClick={() => setIsMapFullscreen(true)} className="px-2 py-1 text-xs font-semibold text-sky-700 bg-sky-100 rounded-md hover:bg-sky-200 transition-colors">Full</button>
                              </div>
+                             {/* --- END MODIFICATION --- */}
                         </div>
                         <div ref={mapContainerRef} className="flex-grow flex flex-col bg-white">
                              <h4 className="text-center text-lg font-bold text-gray-600 py-1 flex-shrink-0">{mapTitle}</h4>
@@ -927,7 +1034,7 @@ export const EENCCoverageDashboard = () => {
                                     <SudanMap
                                         data={!stateFilter && currentMapViewLevel === 'state' ? mapData : []}
                                         localityData={stateFilter ? tableData : (!stateFilter && currentMapViewLevel === 'locality' ? allLocalitiesCoverageDataEENC : [])}
-                                        facilityMarkers={facilityLocationMarkers}
+                                        facilityMarkers={showFacilityMarkers ? facilityLocationMarkers : []}
                                         viewLevel={currentMapViewLevel}
                                         {...mapViewConfig}
                                         onStateHover={handleStateHover} onStateLeave={handleMapMouseLeave}
@@ -971,14 +1078,16 @@ export const EENCCoverageDashboard = () => {
                 </div>
 
                 {isMapFullscreen && (
-                    <div className="fixed inset-0 bg-white z-50 p-4 flex flex-col">
+                    <div ref={fullscreenModalRef} className="fixed inset-0 bg-white z-50 p-4 flex flex-col">
                         <div className="flex justify-between items-center mb-4 flex-shrink-0">
                              <h3 className="text-xl font-bold text-gray-800">{mapTitle}</h3>
-                             <div className='flex items-center gap-1'>
+                             {/* --- MODIFICATION: Add 'ignore-for-export' class to hide buttons --- */}
+                             <div className='flex items-center gap-1 ignore-for-export'>
                                 <button onClick={() => handleDownloadMap('jpg')} title="Download Map as JPG" className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">JPG</button>
                                 <button onClick={() => handleDownloadMap('pdf')} title="Download Map as PDF" className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">PDF</button>
                                 <button onClick={() => setIsMapFullscreen(false)} className="px-4 py-2 text-sm font-bold text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 ml-1">Close</button>
                              </div>
+                             {/* --- END MODIFICATION --- */}
                         </div>
 
                         <div className="flex-grow min-h-0 flex gap-4">
@@ -986,7 +1095,7 @@ export const EENCCoverageDashboard = () => {
                                 <SudanMap
                                     data={!stateFilter && currentMapViewLevel === 'state' ? mapData : []}
                                     localityData={stateFilter ? tableData : (!stateFilter && currentMapViewLevel === 'locality' ? allLocalitiesCoverageDataEENC : [])}
-                                    facilityMarkers={facilityLocationMarkers}
+                                    facilityMarkers={showFacilityMarkers ? facilityLocationMarkers : []}
                                     viewLevel={currentMapViewLevel}
                                     {...fullscreenMapViewConfig}
                                     onStateHover={handleStateHover} onStateLeave={handleMapMouseLeave}
@@ -1053,9 +1162,14 @@ export const IMNCICoverageDashboard = () => {
     const [tooltipData, setTooltipData] = useState(null);
     const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
     const [isMapFullscreen, setIsMapFullscreen] = useState(false);
+    const [showFacilityMarkers, setShowFacilityMarkers] = useState(true);
     const mapContainerRef = useRef(null);
     const fullscreenMapContainerRef = useRef(null);
     const dashboardSectionRef = useRef(null);
+    
+    // --- MODIFICATION: Add ref for fullscreen modal ---
+    const fullscreenModalRef = useRef(null);
+    // --- END MODIFICATION ---
     
 
     // --- Polling useEffect for Incremental Facility Fetch (15 minutes) ---
@@ -1242,21 +1356,61 @@ export const IMNCICoverageDashboard = () => {
     const handleMapMouseLeave = useCallback(() => { setTooltipData(null); }, []);
     const handleMouseMove = useCallback((event) => { if (tooltipData) { setHoverPosition({ x: event.clientX, y: event.clientY }); } }, [tooltipData]);
     const currentMapViewLevel = isLocalityView ? 'locality' : mapViewLevel;
+    
+    // --- MODIFICATION: Update Download Handler ---
     const handleDownloadMap = useCallback((format = 'jpg') => {
-        const targetRef = isMapFullscreen ? fullscreenMapContainerRef : mapContainerRef;
-         if (targetRef.current) { html2canvas(targetRef.current, { useCORS: true, scale: 2, backgroundColor: '#ffffff' }).then(canvas => { const filename = `imnci-map-${stateFilter || 'sudan'}-${currentMapViewLevel}.${format}`; if (format === 'pdf') { const imgData = canvas.toDataURL('image/jpeg', 0.9); const pdf = new jsPDF({ orientation: canvas.width > canvas.height ? 'l' : 'p', unit: 'px', format: [canvas.width, canvas.height] }); pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height); pdf.save(filename); } else { const image = canvas.toDataURL("image/jpeg", 0.9); const link = document.createElement('a'); link.href = image; link.download = filename; document.body.appendChild(link); link.click(); document.body.removeChild(link); } }).catch(err => console.error("Error generating map image:", err)); }
-    }, [stateFilter, currentMapViewLevel, isMapFullscreen]); 
+        // --- Use dashboardSectionRef if not fullscreen ---
+        const targetRef = isMapFullscreen ? fullscreenModalRef : dashboardSectionRef;
+         if (targetRef.current) { 
+            html2canvas(targetRef.current, { 
+                useCORS: true, 
+                scale: 2, 
+                backgroundColor: '#ffffff',
+                // --- MODIFICATION: Use 'ignore-for-export' class ---
+                ignoreElements: (element) => element.classList.contains('ignore-for-export')
+            }).then(canvas => { 
+                // --- Update filename logic ---
+                const baseName = isMapFullscreen ? 'imnci-map-fullscreen' : 'imnci-dashboard';
+                const filename = `${baseName}-${stateFilter || 'sudan'}.${format}`; 
+                if (format === 'pdf') { 
+                    const imgData = canvas.toDataURL('image/jpeg', 0.9); 
+                    const pdf = new jsPDF({ orientation: canvas.width > canvas.height ? 'l' : 'p', unit: 'px', format: [canvas.width, canvas.height] }); 
+                    pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height); 
+                    pdf.save(filename); 
+                } else { 
+                    const image = canvas.toDataURL("image/jpeg", 0.9); 
+                    const link = document.createElement('a'); 
+                    link.href = image; 
+                    link.download = filename; 
+                    document.body.appendChild(link); 
+                    link.click(); 
+                    document.body.removeChild(link); 
+                } 
+            }).catch(err => console.error("Error generating map image:", err)); 
+        }
+    }, [stateFilter, currentMapViewLevel, isMapFullscreen, dashboardSectionRef, fullscreenModalRef]); // <-- Added refs
+    // --- END MODIFICATION ---
+    
+    // --- MODIFICATION: Update Copy Image Handler ---
     const handleCopyImage = useCallback(async () => {
         const targetRef = dashboardSectionRef;
         if (targetRef.current && navigator.clipboard?.write) {
             setCopyStatus('Copying...');
             try {
-                const canvas = await html2canvas(targetRef.current, { useCORS: true, scale: 2, backgroundColor: '#ffffff', logging: false, ignoreElements: (element) => element.classList.contains('ignore-for-copy') });
+                const canvas = await html2canvas(targetRef.current, { 
+                    useCORS: true, 
+                    scale: 2, 
+                    backgroundColor: '#ffffff', 
+                    logging: false, 
+                    // --- MODIFICATION: Use 'ignore-for-export' class ---
+                    ignoreElements: (element) => element.classList.contains('ignore-for-export') 
+                });
                 canvas.toBlob(async (blob) => { if (blob) { await navigator.clipboard.write([ new ClipboardItem({ 'image/png': blob }) ]); setCopyStatus('Copied!'); } else { throw new Error('Canvas to Blob failed'); } }, 'image/png', 0.95);
             } catch (err) { console.error("Failed to copy image:", err); setCopyStatus('Failed'); }
             finally { setTimeout(() => setCopyStatus(''), 2000); }
         } else { console.error("Clipboard API not available or target element not found."); setCopyStatus('Failed'); setTimeout(() => setCopyStatus(''), 2000); }
     }, []);
+    // --- END MODIFICATION ---
 
 
     const mapLocationName = stateFilter ? STATE_LOCALITIES[stateFilter]?.ar || stateFilter : 'Sudan';
@@ -1269,7 +1423,8 @@ export const IMNCICoverageDashboard = () => {
              <div ref={dashboardSectionRef} className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch relative">
 
                  <div className="flex flex-col gap-6 lg:col-span-1">
-                    <Card>
+                    {/* --- MODIFICATION: Added ignore-for-export class to filter card --- */}
+                    <Card className="ignore-for-export">
                         <div className="p-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <FormGroup label="State"><Select value={stateFilter} onChange={handleStateChange}><option value="">All States</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort((a,b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar)).map(sKey => <option key={sKey} value={sKey}>{STATE_LOCALITIES[sKey].ar}</option>)}</Select></FormGroup>
                             <FormGroup label="Locality"><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">All Localities</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}</Select></FormGroup>
@@ -1283,6 +1438,7 @@ export const IMNCICoverageDashboard = () => {
                             </FormGroup>
                         </div>
                     </Card>
+                    {/* --- END MODIFICATION --- */}
 
                     {loading ? <Spinner/> : (
                         <>
@@ -1297,7 +1453,8 @@ export const IMNCICoverageDashboard = () => {
                     <Card className="p-0 flex flex-col flex-grow lg:col-span-2">
                          <div className="p-4 border-b flex flex-col sm:flex-row sm:justify-between sm:items-center flex-shrink-0 gap-2 sm:gap-0">
                              <h3 className="text-xl font-medium text-gray-700 text-left sm:text-center">IMNCI Geographical Distribution</h3>
-                             <div className="flex items-center flex-wrap justify-start sm:justify-end gap-1 w-full sm:w-auto">
+                             {/* --- MODIFICATION: Added ignore-for-export to button container --- */}
+                             <div className="flex items-center flex-wrap justify-start sm:justify-end gap-1 w-full sm:w-auto ignore-for-export">
                                 {!isLocalityView && (
                                     <>
                                         <div className="text-sm font-medium text-gray-500">View:</div>
@@ -1313,26 +1470,38 @@ export const IMNCICoverageDashboard = () => {
                                     onClick={handleCopyImage}
                                     title="Copy Dashboard Image"
                                     disabled={!!copyStatus && copyStatus !== 'Failed'}
-                                    className="ignore-for-copy px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors relative min-w-[70px] text-center disabled:opacity-50 disabled:cursor-wait"
+                                    className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors relative min-w-[70px] text-center disabled:opacity-50 disabled:cursor-wait"
                                 >
                                     {copyStatus || 'Copy Image'}
                                 </button>
+                                <button
+                                    onClick={() => setShowFacilityMarkers(!showFacilityMarkers)}
+                                    title={showFacilityMarkers ? "Hide Facilities" : "Show Facilities"}
+                                    className={`ml-1 px-2 py-1 text-xs font-semibold rounded-md transition-colors ${
+                                        showFacilityMarkers ? 'bg-sky-700 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    {showFacilityMarkers ? 'Hide' : 'Show'} Facilities
+                                </button>
                                 <button onClick={() => setIsMapFullscreen(true)} className="px-2 py-1 text-xs font-semibold text-sky-700 bg-sky-100 rounded-md hover:bg-sky-200 transition-colors">Full</button>
                             </div>
+                            {/* --- END MODIFICATION --- */}
                         </div>
                         <div ref={mapContainerRef} className="flex-grow flex flex-col bg-white">
                              <h4 className="text-center text-lg font-bold text-gray-600 py-1 flex-shrink-0">{mapTitle}</h4>
                              <div className="flex justify-center items-center gap-2 p-1 text-sm text-gray-600">
                                 <span className="font-bold">Legend:</span>
-                                <div className="flex items-center gap-1"><div className="w-4 h-4 rounded-full bg-red-200 border border-gray-300"></div><span className='text-xs'>&lt;40% (Includes 0%)</span></div>
-                                <div className="flex items-center gap-1"><div className="w-4 h-4 rounded-full bg-yellow-400 border border-gray-300"></div><span className='text-xs'>40-75%</span></div>
-                                <div className="flex items-center gap-1"><div className="w-4 h-4 rounded-full bg-green-600 border border-gray-300"></div><span className='text-xs'>&gt;75%</span></div>
+                                <div className="flex items-center gap-1"><div className="w-4 h-4 rounded-full border border-gray-300" style={{ backgroundColor: '#6B6B6B' }}></div><span className='text-xs'>0-39% (or No Data)</span></div>
+                                <div className="flex items-center gap-1"><div className="w-4 h-4 rounded-full border border-gray-300" style={{ backgroundColor: '#6266B1' }}></div><span className='text-xs'>40-74%</span></div>
+                                <div className="flex items-center gap-1"><div className="w-4 h-4 rounded-full border border-gray-300" style={{ backgroundColor: '#313695' }}></div><span className='text-xs'>&ge;75%</span></div>
+                                <div className="flex items-center gap-1"><div className="w-4 h-4 rounded-full border-2 border-white ring-1 ring-[#313695]" style={{ backgroundColor: '#313695' }}></div><span className='text-xs'>Facility</span></div>
                              </div>
                              <div className='flex-grow min-h-[450px]'>
                                 <div className='flex-grow min-h-0 h-full'>
                                     <SudanMap
                                         data={!isLocalityView && currentMapViewLevel === 'state' ? nationalMapData : []}
                                         localityData={isLocalityView ? tableCoverageData : (!isLocalityView && currentMapViewLevel === 'locality' ? allLocalitiesCoverageDataIMNCI : [])}
+                                        facilityMarkers={showFacilityMarkers ? facilityLocationMarkers : []}
                                         viewLevel={currentMapViewLevel}
                                         center={mapViewConfig.center}
                                         scale={mapViewConfig.scale}
@@ -1377,14 +1546,16 @@ export const IMNCICoverageDashboard = () => {
                 </div>
 
                 {isMapFullscreen && (
-                    <div className="fixed inset-0 bg-white z-50 p-4 flex flex-col">
+                    <div ref={fullscreenModalRef} className="fixed inset-0 bg-white z-50 p-4 flex flex-col">
                         <div className="flex justify-between items-center mb-4 flex-shrink-0">
                              <h3 className="text-xl font-bold text-gray-800">{mapTitle}</h3>
-                             <div className='flex items-center gap-1'>
+                             {/* --- MODIFICATION: Add 'ignore-for-export' class to hide buttons --- */}
+                             <div className='flex items-center gap-1 ignore-for-export'>
                                 <button onClick={() => handleDownloadMap('jpg')} title="Download Map as JPG" className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">JPG</button>
                                 <button onClick={() => handleDownloadMap('pdf')} title="Download Map as PDF" className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">PDF</button>
                                 <button onClick={() => setIsMapFullscreen(false)} className="px-4 py-2 text-sm font-bold text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 ml-1">Close</button>
                              </div>
+                             {/* --- END MODIFICATION --- */}
                         </div>
 
                         <div className="flex-grow min-h-0 flex gap-4">
@@ -1392,6 +1563,7 @@ export const IMNCICoverageDashboard = () => {
                                 <SudanMap
                                     data={!isLocalityView && currentMapViewLevel === 'state' ? nationalMapData : []}
                                     localityData={isLocalityView ? tableCoverageData : (!isLocalityView && currentMapViewLevel === 'locality' ? allLocalitiesCoverageDataIMNCI : [])}
+                                    facilityMarkers={showFacilityMarkers ? facilityLocationMarkers : []}
                                     viewLevel={currentMapViewLevel}
                                     center={fullscreenMapViewConfig.center}
                                     scale={fullscreenMapViewConfig.scale}

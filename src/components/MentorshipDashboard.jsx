@@ -16,6 +16,15 @@ import {
 
 import { IMNCI_FORM_STRUCTURE, evaluateRelevance } from './IMNCIFormPart.jsx';
 
+// --- NEW EENC IMPORTS ---
+import { 
+    PREPARATION_ITEMS, 
+    DRYING_STIMULATION_ITEMS, 
+    NORMAL_BREATHING_ITEMS, 
+    RESUSCITATION_ITEMS 
+} from './EENCSkillsAssessmentForm.jsx'; // <-- IMPORT EENC STRUCTURE
+// --- END EENC IMPORTS ---
+
 // --- MODIFICATION: Register BarElement ---
 ChartJS.register(
   CategoryScale,
@@ -151,6 +160,13 @@ const KpiLineChart = ({ title, chartData, kpiKeys }) => {
         'Referral ID': '#f43f5e', // rose-dark
         'Malnutrition ID': '#eab308', // yellow-dark
         'DangerSigns': '#f97316', // orange
+
+        // --- NEW EENC Colors ---
+        'Preparation': '#10b981', // green
+        'Drying': '#3b82f6', // blue
+        'Breathing Mgmt': '#f59e0b', // yellow
+        'Resuscitation': '#ef4444', // red
+        // --- END EENC Colors ---
     };
 
     const data = {
@@ -342,7 +358,7 @@ const KpiBarChart = ({ title, chartData }) => {
         labels: chartData.map(d => d.stateName),
         datasets: [
             {
-                label: 'Overall IMNCI Adherence',
+                label: 'Overall Adherence',
                 data: chartData.map(d => d.avgOverall ? Math.round(d.avgOverall * 100) : null),
                 backgroundColor: chartData.map(d => getBarColor(d.avgOverall ? d.avgOverall * 100 : 0)),
                 borderColor: '#ffffff',
@@ -407,7 +423,7 @@ const KpiBarChart = ({ title, chartData }) => {
 // --- END: NEW KpiBarChart Component ---
 
 
-// --- START: NEW Compact Skills Table Component ---
+// --- START: IMNCI Compact Skills Table Component ---
 
 const SKILL_LABEL_MAP = {
     'skill_ask_cough': 'هل سأل عن وجود الكحة أو ضيق التنفس',
@@ -601,7 +617,101 @@ const CompactSkillsTable = ({ overallKpis }) => {
         </div>
     );
 };
-// --- END: Compact Skills Table Component ---
+// --- END: IMNCI Compact Skills Table Component ---
+
+
+// --- START: NEW EENC Compact Skills Table Component ---
+const EENCCompactSkillRow = ({ label, stats }) => {
+    const yes = stats?.yes || 0;
+    const partial = stats?.partial || 0;
+    const no = stats?.no || 0;
+    const na = stats?.na || 0;
+    
+    const totalResponses = yes + partial + no;
+    const score = (yes * 2) + (partial * 1);
+    const maxScore = totalResponses * 2;
+    
+    const percentage = maxScore > 0 ? (score / maxScore) : null;
+
+    return (
+        <tr className="bg-white hover:bg-gray-50">
+            <td className="p-1.5 text-xs font-medium text-gray-700 border border-gray-300 w-3/5">{label}</td>
+            <td className="p-1.5 text-xs font-semibold text-gray-800 border border-gray-300 w-1/5 text-center">
+                {/* Show Yes / Partial / No counts */}
+                <span title="نعم">{yes}</span> / <span title="جزئياً">{partial}</span> / <span title="لا">{no}</span>
+                {/* <span className="text-green-600" title="نعم">{yes}</span> / <span className="text-yellow-600" title="جزئياً">{partial}</span> / <span className="text-red-600" title="لا">{no}</span> */}
+            </td>
+            <td className="p-1.5 border border-gray-300 w-1/5 text-center">
+                <ScoreText value={percentage} />
+            </td>
+        </tr>
+    );
+};
+
+const EENCCompactSkillsTable = ({ overallKpis }) => {
+    const skillStats = overallKpis?.skillStats;
+
+    if (!overallKpis || !skillStats || Object.keys(skillStats).length === 0) {
+        return (
+            <div className="bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200 text-center text-gray-500">
+                No detailed EENC skill data available for the current filters.
+            </div>
+        );
+    }
+
+    const sections = [
+        { title: 'تحضيرات ما قبل الولادة', items: PREPARATION_ITEMS, score: overallKpis.avgPreparation },
+        { title: 'التجفيف، التحفيز، التدفئة والشفط', items: DRYING_STIMULATION_ITEMS, score: overallKpis.avgDrying },
+        { title: 'متابعة طفل يتنفس طبيعياً', items: NORMAL_BREATHING_ITEMS, score: overallKpis.avgNormalBreathing },
+        { title: 'إنعاش الوليد (الدقيقة الذهبية)', items: RESUSCITATION_ITEMS, score: overallKpis.avgResuscitation },
+    ];
+
+    return (
+        <div className="bg-white rounded-lg shadow-lg border-2 border-gray-200" dir="rtl">
+            <table className="w-full border-collapse">
+                <thead className="sticky top-0 z-10">
+                    <tr className="bg-gray-50">
+                        <th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-3/5 text-right">المهارة (EENC)</th>
+                        <th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-1/5 text-center">العدد (نعم / جزئياً / لا)</th>
+                        <th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-1/5 text-center">النسبة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {sections.map(section => {
+                        // Only render sections that have data (i.e., at least one skill was not 'na')
+                        const hasData = section.items.some(item => skillStats[item.key] && (skillStats[item.key].yes > 0 || skillStats[item.key].partial > 0 || skillStats[item.key].no > 0));
+                        if (!hasData) return null;
+
+                        return (
+                            <React.Fragment key={section.title}>
+                                <tr className="bg-sky-900 text-white">
+                                    <td className="p-1 text-sm font-bold text-right border border-gray-300" colSpan="2">
+                                        {section.title}
+                                    </td>
+                                    <td className="p-1 border border-gray-300 text-center">
+                                        {section.score !== null && (
+                                            <div className="bg-white rounded-md px-2 py-0.5 inline-block">
+                                                <ScoreText value={section.score} />
+                                            </div>
+                                        )}
+                                    </td>
+                                </tr>
+                                {section.items.map(item => (
+                                    <EENCCompactSkillRow
+                                        key={item.key}
+                                        label={item.label}
+                                        stats={skillStats[item.key]}
+                                    />
+                                ))}
+                            </React.Fragment>
+                        );
+                    })}
+                </tbody>
+            </table>
+        </div>
+    );
+};
+// --- END: NEW EENC Compact Skills Table Component ---
 
 
 // --- Filter Helper Component ---
@@ -653,7 +763,7 @@ const MentorshipDashboard = ({
     };
 
     // 2. --- MODIFIED: kpiHelper now calculates all subgroup averages ---
-    const kpiHelper = useCallback((submissions) => {
+    const imnciKpiHelper = useCallback((submissions) => {
         // This object will hold arrays of scores for averaging
         const scores = {
             overall: [], assessment: [], decision: [], treatment: [],
@@ -889,7 +999,76 @@ const MentorshipDashboard = ({
         
         return averages;
     }, [calculateAverage]);
-    // --- END: kpiHelper modification ---
+    // --- END: imnciKpiHelper modification ---
+
+
+    // --- START: NEW eencKpiHelper ---
+    const eencKpiHelper = useCallback((submissions) => {
+        const scores = {
+            overall: [],
+            preparation: [],
+            drying: [],
+            normal_breathing: [],
+            resuscitation: []
+        };
+        let totalVisits = submissions.length;
+        const skillStats = {};
+
+        const allSkillItems = [
+            ...PREPARATION_ITEMS,
+            ...DRYING_STIMULATION_ITEMS,
+            ...NORMAL_BREATHING_ITEMS,
+            ...RESUSCITATION_ITEMS
+        ];
+
+        // Initialize skillStats
+        allSkillItems.forEach(item => {
+            skillStats[item.key] = { yes: 0, no: 0, partial: 0, na: 0 };
+        });
+
+        submissions.forEach(sub => {
+            const s = sub.scores; // This is the scoresPayload from the database
+            if (s) {
+                if (s.overallScore_maxScore > 0) scores.overall.push(s.overallScore_score / s.overallScore_maxScore);
+                if (s.preparation_maxScore > 0) scores.preparation.push(s.preparation_score / s.preparation_maxScore);
+                if (s.drying_maxScore > 0) scores.drying.push(s.drying_score / s.drying_maxScore);
+                if (s.normal_breathing_maxScore > 0) scores.normal_breathing.push(s.normal_breathing_score / s.normal_breathing_maxScore);
+                if (s.resuscitation_maxScore > 0) scores.resuscitation.push(s.resuscitation_score / s.resuscitation_maxScore);
+            }
+
+            // --- Detailed Skill Stats ---
+            const eencSkills = sub.fullData?.skills;
+            if (eencSkills) {
+                allSkillItems.forEach(item => {
+                    const key = item.key;
+                    const value = eencSkills[key];
+                    if (value === 'yes') {
+                        skillStats[key].yes++;
+                    } else if (value === 'no') {
+                        skillStats[key].no++;
+                    } else if (value === 'partial') {
+                        skillStats[key].partial++;
+                    } else if (value === 'na') {
+                        skillStats[key].na++;
+                    }
+                });
+            }
+        });
+
+        // --- Calculate Averages ---
+        const averages = {
+            totalVisits,
+            skillStats,
+            avgOverall: calculateAverage(scores.overall),
+            avgPreparation: calculateAverage(scores.preparation),
+            avgDrying: calculateAverage(scores.drying),
+            avgNormalBreathing: calculateAverage(scores.normal_breathing),
+            avgResuscitation: calculateAverage(scores.resuscitation),
+        };
+        
+        return averages;
+    }, [calculateAverage]); // Dependency on the helper function
+    // --- END: NEW eencKpiHelper ---
 
 
     // 3. Get base completed submissions for this service
@@ -986,12 +1165,20 @@ const MentorshipDashboard = ({
 
     // 6. Calculate Overall KPIs based on *filtered* submissions
     const overallKpis = useMemo(() => {
-        return kpiHelper(filteredSubmissions);
-    }, [filteredSubmissions, kpiHelper]);
+        if (activeService === 'IMNCI') {
+            return imnciKpiHelper(filteredSubmissions);
+        }
+        if (activeService === 'EENC') {
+            return eencKpiHelper(filteredSubmissions);
+        }
+        // Default empty state
+        return { totalVisits: filteredSubmissions.length, skillStats: {} };
+    }, [filteredSubmissions, imnciKpiHelper, eencKpiHelper, activeService]);
 
-    // 7. Calculate Chart Data by averaging per visit number
-    const chartData = useMemo(() => {
-        
+    // 7. Calculate Chart Data by averaging per visit number (IMNCI)
+    const imnciChartData = useMemo(() => {
+        if (activeService !== 'IMNCI') return [];
+
         const calcPercent = (score, max) => (max > 0) ? (score / max) * 100 : null;
 
         const visitGroups = filteredSubmissions.reduce((acc, sub) => {
@@ -1093,11 +1280,87 @@ const MentorshipDashboard = ({
                     'DangerSigns': averageScores(data['DangerSigns']), // <-- NEW
                 };
             });
-    }, [filteredSubmissions]);
+    }, [filteredSubmissions, activeService]);
     // --- END MODIFICATION ---
+
+    // --- START: NEW eencChartData ---
+    const eencChartData = useMemo(() => {
+        if (activeService !== 'EENC') return [];
+
+        const calcPercent = (score, max) => (max > 0) ? (score / max) * 100 : null;
+
+        const visitGroups = filteredSubmissions.reduce((acc, sub) => {
+            const s = sub.scores;
+            const visitNum = sub.visitNumber || 'N/A'; 
+            if (!s || visitNum === 'N/A') return acc;
+
+            if (!acc[visitNum]) {
+                acc[visitNum] = {
+                    'Overall': [],
+                    'Preparation': [],
+                    'Drying': [],
+                    'Breathing Mgmt': [], // Combined key
+                    'Resuscitation': [], // Separate key for granularity
+                    count: 0
+                };
+            }
+            
+            const group = acc[visitNum];
+            group.count++;
+            
+            group['Overall'].push(calcPercent(s.overallScore_score, s.overallScore_maxScore));
+            group['Preparation'].push(calcPercent(s.preparation_score, s.preparation_maxScore));
+            group['Drying'].push(calcPercent(s.drying_score, s.drying_maxScore));
+            
+            // Combine Normal Breathing and Resuscitation into one 'Breathing Mgmt' line
+            // This assumes only one of them has a max score > 0 per submission
+            if (s.normal_breathing_maxScore > 0) {
+                group['Breathing Mgmt'].push(calcPercent(s.normal_breathing_score, s.normal_breathing_maxScore));
+            } else if (s.resuscitation_maxScore > 0) {
+                group['Breathing Mgmt'].push(calcPercent(s.resuscitation_score, s.resuscitation_maxScore));
+            }
+            // Also keep resuscitation separate if needed, though 'Breathing Mgmt' is cleaner
+            group['Resuscitation'].push(calcPercent(s.resuscitation_score, s.resuscitation_maxScore));
+
+            return acc;
+        }, {});
+
+        // 2. Calculate averages for each group and sort by visit number
+        return Object.keys(visitGroups)
+            .map(visitNumStr => ({
+                visitNumber: parseInt(visitNumStr, 10),
+                data: visitGroups[visitNumStr]
+            }))
+            .sort((a, b) => a.visitNumber - b.visitNumber)
+            .map(({ visitNumber, data }) => {
+                
+                const averageScores = (scores) => {
+                    const validScores = scores.filter(s => s !== null && !isNaN(s));
+                    if (validScores.length === 0) return null;
+                    const sum = validScores.reduce((a, b) => a + b, 0);
+                    return Math.round(sum / validScores.length);
+                };
+
+                return {
+                    name: `Visit ${visitNumber}`, // X-axis label
+                    'Overall': averageScores(data['Overall']),
+                    'Preparation': averageScores(data['Preparation']),
+                    'Drying': averageScores(data['Drying']),
+                    'Breathing Mgmt': averageScores(data['Breathing Mgmt']),
+                    'Resuscitation': averageScores(data['Resuscitation']), // This will be sparse
+                };
+            });
+    }, [filteredSubmissions, activeService]);
+    // --- END: NEW eencChartData ---
+
 
     // 8. Calculate State-level KPIs
     const stateKpis = useMemo(() => {
+        // --- MODIFICATION: Select the correct helper --- 
+        const kpisHelper = activeService === 'IMNCI' ? imnciKpiHelper : (activeService === 'EENC' ? eencKpiHelper : null);
+        if (!kpisHelper) return [];
+        // --- END MODIFICATION ---
+
         const submissionsByState = filteredSubmissions.reduce((acc, sub) => {
             const stateKey = sub.state || 'UNKNOWN';
             if (!acc[stateKey]) {
@@ -1110,22 +1373,22 @@ const MentorshipDashboard = ({
         return Object.keys(submissionsByState).map(stateKey => {
             const stateName = STATE_LOCALITIES[stateKey]?.ar || stateKey;
             const stateSubmissions = submissionsByState[stateKey];
-            const kpis = kpiHelper(stateSubmissions);
+            const kpis = kpisHelper(stateSubmissions);
             return {
                 stateKey,
                 stateName,
                 ...kpis // This includes avgOverall
             };
         }).sort((a, b) => a.stateName.localeCompare(b.name, 'ar'));
-    }, [filteredSubmissions, kpiHelper, STATE_LOCALITIES]);
+    }, [filteredSubmissions, imnciKpiHelper, eencKpiHelper, activeService, STATE_LOCALITIES]);
 
 
-    // --- Render Component ---
+    // --- Render Component --- 
     const serviceTitle = SERVICE_TITLES[activeService] || activeService;
     const isFiltered = activeState || activeLocality || activeFacilityId || activeWorkerName;
     const scopeTitle = isFiltered ? "(Filtered Data)" : "(All Sudan Data)";
 
-    // --- KPI lists for the new layout ---
+    // --- KPI lists for the IMNCI layout ---
     const mainKpiGridList = [
         { title: "Overall IMNCI Adherence", scoreValue: overallKpis.avgOverall },
         { title: "Assess & Classify Score", scoreValue: overallKpis.avgAssessment },
@@ -1140,7 +1403,6 @@ const MentorshipDashboard = ({
         { key: 'Treatment', title: 'Treatment' },
     ];
     
-    // --- NEW: Danger Signs KPI List ---
     const dangerSignsKpiList = [
         { title: "Asked/Checked: Cannot Drink/Breastfeed", scoreValue: calculateAverage(overallKpis.skillStats['skill_ds_drink'] ? [overallKpis.skillStats['skill_ds_drink'].yes / (overallKpis.skillStats['skill_ds_drink'].yes + overallKpis.skillStats['skill_ds_drink'].no)] : []) },
         { title: "Asked/Checked: Vomits Everything", scoreValue: calculateAverage(overallKpis.skillStats['skill_ds_vomit'] ? [overallKpis.skillStats['skill_ds_vomit'].yes / (overallKpis.skillStats['skill_ds_vomit'].yes + overallKpis.skillStats['skill_ds_vomit'].no)] : []) },
@@ -1151,7 +1413,6 @@ const MentorshipDashboard = ({
         { key: 'DangerSigns', title: 'Danger Signs Score' },
     ];
 
-    // --- NEW: Referral KPI Lists ---
     const referralKpiList = [
         { title: "Referral Cases Correctly Identified", scoreValue: overallKpis.avgReferralCaseCount },
         { title: "Referral Management Score", scoreValue: overallKpis.avgReferralManagement },
@@ -1161,7 +1422,6 @@ const MentorshipDashboard = ({
         { key: 'Referral Mgmt', title: 'Referral Mgmt' },
     ];
 
-    // --- NEW: Pneumonia KPI Lists ---
     const pneumoniaKpiList = [
         { title: "Cough Classification Score", scoreValue: overallKpis.avgCoughClassification },
         { title: "Pneumonia Management Score", scoreValue: overallKpis.avgPneumoniaManagement },
@@ -1171,7 +1431,6 @@ const MentorshipDashboard = ({
         { key: 'Pneumonia', title: 'Pneumonia Mgmt' },
     ];
 
-    // --- NEW: Diarrhea KPI Lists ---
     const diarrheaKpiList = [
         { title: "Diarrhea Classification Score", scoreValue: overallKpis.avgDiarrheaClassification },
         { title: "Diarrhea Management Score", scoreValue: overallKpis.avgDiarrheaManagement },
@@ -1181,7 +1440,6 @@ const MentorshipDashboard = ({
         { key: 'Diarrhea (Mgmt)', title: 'Diarrhea Mgmt' },
     ];
 
-    // --- NEW: Malaria KPI Lists ---
     const malariaKpiList = [
         { title: "Malaria Classification Score", scoreValue: overallKpis.avgMalariaClassification },
         { title: "Malaria Management Score", scoreValue: overallKpis.avgMalariaManagement },
@@ -1191,7 +1449,6 @@ const MentorshipDashboard = ({
         { key: 'Malaria Mgmt', title: 'Malaria Mgmt' },
     ];
 
-    // --- NEW: Malnutrition KPI Lists ---
     const malnutritionKpiList = [
         { title: "Malnutrition Case Identification", scoreValue: overallKpis.avgMalnutritionCaseCount },
         { title: "Malnutrition Management Score", scoreValue: overallKpis.avgMalnutritionManagement },
@@ -1201,7 +1458,6 @@ const MentorshipDashboard = ({
         { key: 'Malnutrition Mgmt', title: 'Malnutrition Mgmt' },
     ];
 
-    // --- NEW: Anemia KPI Lists ---
     const anemiaKpiList = [
         { title: "Anemia Assessment (Pallor)", scoreValue: overallKpis.avgHandsOnPallor },
         { title: "Anemia Management Score", scoreValue: overallKpis.avgAnemiaManagement },
@@ -1211,7 +1467,6 @@ const MentorshipDashboard = ({
         { key: 'Anemia Mgmt', title: 'Anemia Mgmt' },
     ];
 
-    // --- NEW: Measurement Skills KPI List ---
     const measurementKpiGridList = [
         { title: "Weight Measured Correctly", scoreValue: overallKpis.avgHandsOnWeight },
         { title: "Temp Measured Correctly", scoreValue: overallKpis.avgHandsOnTemp },
@@ -1224,7 +1479,6 @@ const MentorshipDashboard = ({
         { key: 'Height', title: 'Height' }, { key: 'Resp. Rate', title: 'Resp. Rate' },
     ];
 
-    // --- NEW: Malnutrition & Anemia Skills KPI List ---
     const malnutritionAnemiaSkillsKpiGridList = [
         { title: "MUAC Measured Correctly", scoreValue: overallKpis.avgHandsOnMUAC },
         { title: "Z-Score (WFH) Measured Correctly", scoreValue: overallKpis.avgHandsOnWFH },
@@ -1236,6 +1490,23 @@ const MentorshipDashboard = ({
         { key: 'WFH', title: 'WFH' },
         { key: 'Pallor', title: 'Pallor' },
     ];
+
+    // --- NEW: KPI lists for the EENC layout ---
+    const eencMainKpiGridList = [
+        { title: "Overall EENC Adherence", scoreValue: overallKpis.avgOverall },
+        { title: "Preparation Score", scoreValue: overallKpis.avgPreparation },
+        { title: "Drying & Stimulation Score", scoreValue: overallKpis.avgDrying },
+        { title: "Breathing Baby Mgmt Score", scoreValue: overallKpis.avgNormalBreathing },
+        { title: "Resuscitation Score", scoreValue: overallKpis.avgResuscitation },
+    ];
+
+    const eencMainKpiChartKeys = [
+        { key: 'Overall', title: 'Overall' },
+        { key: 'Preparation', title: 'Preparation' },
+        { key: 'Drying', title: 'Drying' },
+        { key: 'Breathing Mgmt', title: 'Breathing Mgmt' }, // Use the combined key
+    ];
+    // --- END NEW KPI Lists ---
     
     return (
         <div className="p-4" dir="ltr"> 
@@ -1291,144 +1562,194 @@ const MentorshipDashboard = ({
             </div>
             
             
-            {/* --- MODIFIED: KPI Layout --- */}
+            {/* --- START: Conditional Rendering for IMNCI --- */}
+            {activeService === 'IMNCI' && (
+                <>
+                    {/* Row 1: Total Visits */}
+                    <div className="grid grid-cols-1 gap-4 mb-6">
+                        <KpiCard title="Total Completed Visits" value={overallKpis.totalVisits} />
+                    </div>
 
-            {/* Row 1: Total Visits */}
-            <div className="grid grid-cols-1 gap-4 mb-6">
-                <KpiCard title="Total Completed Visits" value={overallKpis.totalVisits} />
-            </div>
+                    {/* Row 2: Main KPIs & Danger Signs */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                        <KpiGridCard
+                            title="Overall Adherence Scores (Average)"
+                            kpis={mainKpiGridList}
+                            cols={2}
+                        />
+                        <KpiLineChart 
+                            title="Adherence Over Time (Main KPIs)"
+                            chartData={imnciChartData}
+                            kpiKeys={mainKpiChartKeys}
+                        />
+                    </div>
 
-            {/* Row 2: Main KPIs & Danger Signs */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                <KpiGridCard
-                    title="Overall Adherence Scores (Average)"
-                    kpis={mainKpiGridList}
-                    cols={2}
-                />
-                <KpiLineChart 
-                    title="Adherence Over Time (Main KPIs)"
-                    chartData={chartData}
-                    kpiKeys={mainKpiChartKeys}
-                />
-            </div>
+                    {/* --- NEW: Row 3: Danger Signs --- */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                        <DetailedKpiCard
+                            title="Danger Signs Assessment"
+                            overallScore={overallKpis.avgDangerSigns}
+                            kpis={dangerSignsKpiList}
+                        />
+                        <KpiLineChart 
+                            title="Adherence Over Time (Danger Signs)"
+                            chartData={imnciChartData}
+                            kpiKeys={dangerSignsChartKeys}
+                        />
+                    </div>
 
-            {/* --- NEW: Row 3: Danger Signs --- */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                <DetailedKpiCard
-                    title="Danger Signs Assessment"
-                    overallScore={overallKpis.avgDangerSigns}
-                    kpis={dangerSignsKpiList}
-                />
-                <KpiLineChart 
-                    title="Adherence Over Time (Danger Signs)"
-                    chartData={chartData}
-                    kpiKeys={dangerSignsChartKeys}
-                />
-            </div>
+                    {/* --- NEW: Row 4: Referral & Pneumonia KPIs --- */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                        <KpiCardWithChart
+                            title="Referral KPIs"
+                            kpis={referralKpiList}
+                            chartData={imnciChartData}
+                            kpiKeys={referralChartKeys}
+                            cols={2}
+                        />
+                        <KpiCardWithChart
+                            title="Cough & Pneumonia KPIs"
+                            kpis={pneumoniaKpiList}
+                            chartData={imnciChartData}
+                            kpiKeys={pneumoniaChartKeys}
+                            cols={2}
+                        />
+                    </div>
 
-            {/* --- NEW: Row 4: Referral & Pneumonia KPIs --- */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                <KpiCardWithChart
-                    title="Referral KPIs"
-                    kpis={referralKpiList}
-                    chartData={chartData}
-                    kpiKeys={referralChartKeys}
-                    cols={2}
-                />
-                <KpiCardWithChart
-                    title="Cough & Pneumonia KPIs"
-                    kpis={pneumoniaKpiList}
-                    chartData={chartData}
-                    kpiKeys={pneumoniaChartKeys}
-                    cols={2}
-                />
-            </div>
+                    {/* --- NEW: Row 5: Diarrhea & Malaria KPIs --- */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                        <KpiCardWithChart
+                            title="Diarrhea KPIs"
+                            kpis={diarrheaKpiList}
+                            chartData={imnciChartData}
+                            kpiKeys={diarrheaChartKeys}
+                            cols={2}
+                        />
+                        <KpiCardWithChart
+                            title="Malaria KPIs"
+                            kpis={malariaKpiList}
+                            chartData={imnciChartData}
+                            kpiKeys={malariaChartKeys}
+                            cols={2}
+                        />
+                    </div>
 
-            {/* --- NEW: Row 5: Diarrhea & Malaria KPIs --- */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                <KpiCardWithChart
-                    title="Diarrhea KPIs"
-                    kpis={diarrheaKpiList}
-                    chartData={chartData}
-                    kpiKeys={diarrheaChartKeys}
-                    cols={2}
-                />
-                <KpiCardWithChart
-                    title="Malaria KPIs"
-                    kpis={malariaKpiList}
-                    chartData={chartData}
-                    kpiKeys={malariaChartKeys}
-                    cols={2}
-                />
-            </div>
+                    {/* --- NEW: Row 6: Malnutrition & Anemia KPIs --- */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                        <KpiCardWithChart
+                            title="Malnutrition KPIs"
+                            kpis={malnutritionKpiList}
+                            chartData={imnciChartData}
+                            kpiKeys={malnutritionChartKeys}
+                            cols={2}
+                        />
+                        <KpiCardWithChart
+                            title="Anemia KPIs"
+                            kpis={anemiaKpiList}
+                            chartData={imnciChartData}
+                            kpiKeys={anemiaChartKeys}
+                            cols={2}
+                        />
+                    </div>
 
-            {/* --- NEW: Row 6: Malnutrition & Anemia KPIs --- */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                <KpiCardWithChart
-                    title="Malnutrition KPIs"
-                    kpis={malnutritionKpiList}
-                    chartData={chartData}
-                    kpiKeys={malnutritionChartKeys}
-                    cols={2}
-                />
-                <KpiCardWithChart
-                    title="Anemia KPIs"
-                    kpis={anemiaKpiList}
-                    chartData={chartData}
-                    kpiKeys={anemiaChartKeys}
-                    cols={2}
-                />
-            </div>
+                    {/* --- NEW: Row 7: Hands-on Skills --- */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                         <DetailedKpiCard
+                            title="Measurement Skills (Average)"
+                            overallScore={overallKpis.avgMeasurementSkills}
+                            kpis={measurementKpiGridList}
+                        />
+                        <KpiLineChart 
+                            title="Adherence Over Time (Measurement Skills)"
+                            chartData={imnciChartData}
+                            kpiKeys={measurementKpiChartKeys}
+                        />
+                    </div>
 
-            {/* --- NEW: Row 7: Hands-on Skills --- */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                 <DetailedKpiCard
-                    title="Measurement Skills (Average)"
-                    overallScore={overallKpis.avgMeasurementSkills}
-                    kpis={measurementKpiGridList}
-                />
-                <KpiLineChart 
-                    title="Adherence Over Time (Measurement Skills)"
-                    chartData={chartData}
-                    kpiKeys={measurementKpiChartKeys}
-                />
-            </div>
-
-            {/* --- NEW: Row 8: Malnutrition/Anemia Skills --- */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                 <DetailedKpiCard
-                    title="Malnutrition and Anemia Signs"
-                    overallScore={overallKpis.avgMalnutritionAnemiaSkills}
-                    kpis={malnutritionAnemiaSkillsKpiGridList}
-                />
-                <KpiLineChart 
-                    title="Adherence Over Time (Malnutrition & Anemia Signs)"
-                    chartData={chartData}
-                    kpiKeys={malnutritionAnemiaSkillsKpiChartKeys}
-                />
-            </div>
-            
-            {/* --- NEW: Bar Chart by State --- */}
-            <h3 className="text-xl font-bold text-sky-800 mb-4 text-left">
-                Overall Adherence by State {scopeTitle}
-            </h3>
-            <div className="mb-8">
-                <KpiBarChart
-                    title="Overall IMNCI Adherence by State"
-                    chartData={stateKpis}
-                />
-            </div>
-            {/* --- END: NEW Bar Chart by State --- */}
+                    {/* --- NEW: Row 8: Malnutrition/Anemia Skills --- */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                         <DetailedKpiCard
+                            title="Malnutrition and Anemia Signs"
+                            overallScore={overallKpis.avgMalnutritionAnemiaSkills}
+                            kpis={malnutritionAnemiaSkillsKpiGridList}
+                        />
+                        <KpiLineChart 
+                            title="Adherence Over Time (Malnutrition & Anemia Signs)"
+                            chartData={imnciChartData}
+                            kpiKeys={malnutritionAnemiaSkillsKpiChartKeys}
+                        />
+                    </div>
+                    
+                    {/* --- NEW: Bar Chart by State --- */}
+                    <h3 className="text-xl font-bold text-sky-800 mb-4 text-left">
+                        Overall Adherence by State {scopeTitle}
+                    </h3>
+                    <div className="mb-8">
+                        <KpiBarChart
+                            title="Overall IMNCI Adherence by State"
+                            chartData={stateKpis}
+                        />
+                    </div>
+                    {/* --- END: NEW Bar Chart by State --- */}
 
 
-            {/* --- NEW: Detailed Skills Table --- */}
-            <h3 className="text-xl font-bold text-sky-800 mb-4 text-left">
-                Detailed Skill Performance {scopeTitle}
-            </h3>
-            <div className="mb-8">
-                <CompactSkillsTable overallKpis={overallKpis} />
-            </div>
-            {/* --- END NEW: Detailed Skills Table --- */}
+                    {/* --- NEW: Detailed Skills Table --- */}
+                    <h3 className="text-xl font-bold text-sky-800 mb-4 text-left">
+                        Detailed Skill Performance {scopeTitle}
+                    </h3>
+                    <div className="mb-8">
+                        <CompactSkillsTable overallKpis={overallKpis} />
+                    </div>
+                    {/* --- END NEW: Detailed Skills Table --- */}
+                </>
+            )}
+            {/* --- END: Conditional Rendering for IMNCI --- */}
+
+
+            {/* --- START: NEW Conditional Rendering for EENC --- */}
+            {activeService === 'EENC' && (
+                <>
+                    {/* Row 1: Total Visits */}
+                    <div className="grid grid-cols-1 gap-4 mb-6">
+                        <KpiCard title="Total Completed EENC Visits" value={overallKpis.totalVisits} />
+                    </div>
+
+                    {/* Row 2: Main EENC KPIs & Chart */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                        <KpiGridCard
+                            title="Overall EENC Adherence Scores (Average)"
+                            kpis={eencMainKpiGridList}
+                            cols={3} // Use 3 cols for the 5 items
+                        />
+                        <KpiLineChart 
+                            title="EENC Adherence Over Time (Main KPIs)"
+                            chartData={eencChartData}
+                            kpiKeys={eencMainKpiChartKeys}
+                        />
+                    </div>
+
+                    {/* EENC Bar Chart by State */}
+                    <h3 className="text-xl font-bold text-sky-800 mb-4 text-left">
+                        Overall EENC Adherence by State {scopeTitle}
+                    </h3>
+                    <div className="mb-8">
+                        <KpiBarChart
+                            title="Overall EENC Adherence by State"
+                            chartData={stateKpis}
+                        />
+                    </div>
+
+                    {/* EENC Detailed Skills Table */}
+                    <h3 className="text-xl font-bold text-sky-800 mb-4 text-left">
+                        Detailed EENC Skill Performance {scopeTitle}
+                    </h3>
+                    <div className="mb-8">
+                        <EENCCompactSkillsTable overallKpis={overallKpis} />
+                    </div>
+                </>
+            )}
+            {/* --- END: NEW Conditional Rendering for EENC --- */}
+
         </div>
     );
 };

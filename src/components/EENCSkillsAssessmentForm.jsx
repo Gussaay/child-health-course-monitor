@@ -10,11 +10,12 @@ import { getAuth } from "firebase/auth";
 import { GenericFacilityForm, EENCFormFields } from './FacilityForms.jsx'; 
 import { submitFacilityDataForApproval } from "../data.js";
 
-// --- مكونات خاصة بهذا النموذج ---
+// --- مكونات خاصة بهذا النموذج --- 
 
 // --- 1. هيكل النموذج ---
 
-const PREPARATION_ITEMS = [
+// --- MODIFICATION: Added export ---
+export const PREPARATION_ITEMS = [
     { key: 'prep_temp', label: 'التأكد من درجة حرارة الغرفة مناسبة، اغلق تيارات الهواء' }, 
     { key: 'prep_notify_mother', label: 'إخبار الام (أوالشخص الداعم لها) عن مجريات سير الولادة وابدى تعاطفا معها وطمئنها' }, 
     { key: 'prep_wash_1', label: 'غسل الأيدي جيدا بالماء والصابون (المرة الأولى)' }, 
@@ -26,7 +27,8 @@ const PREPARATION_ITEMS = [
     { key: 'prep_tools', label: 'وضع المشابك والملقط وكل ادوات الولادة معقمة في منطقة يسهل استخدامها بعد الولادة' }, 
 ];
 
-const DRYING_STIMULATION_ITEMS = [
+// --- MODIFICATION: Added export ---
+export const DRYING_STIMULATION_ITEMS = [
     { key: 'dry_time_record', label: 'تسجيل زمن الولادة (الساعة ___ دقائق ____ ثواني___)' }, 
     { key: 'dry_start_5sec', label: 'بداية التجفيف خلال 5 ثواني من الولادة' }, 
     { key: 'dry_procedure', label: 'التجفيف جيدا بداية من العينين، الوجه، الراس، الصدر، البطن، الظهر وأخيراً اليدين والقدمين' }, 
@@ -37,7 +39,8 @@ const DRYING_STIMULATION_ITEMS = [
     { key: 'dry_cover_baby', label: 'تغطية الطفل بقطعة جافة وتغطية الراس بطاقية' }, 
 ];
 
-const NORMAL_BREATHING_ITEMS = [
+// --- MODIFICATION: Added export ---
+export const NORMAL_BREATHING_ITEMS = [
     { key: 'normal_check_second_baby', label: 'التأكد من عدم وجود طفل اخر' }, 
     { key: 'normal_oxytocin', label: 'اعطاء حقنة الطلق (اوكسيتوسين) خلال واحد دقيقة بعد الولادة' }, 
     { key: 'normal_remove_outer_glove', label: 'نزع القفاز الخارجي والابقاء علي الداخلي قبل لمس الحبل السري' }, 
@@ -47,7 +50,8 @@ const NORMAL_BREATHING_ITEMS = [
     { key: 'normal_breastfeeding_guidance', label: 'ارشد الام علي علامات استعداد الوليد للرضاعة الطبيعية' }, 
 ];
 
-const RESUSCITATION_ITEMS = [
+// --- MODIFICATION: Added export ---
+export const RESUSCITATION_ITEMS = [
     { key: 'resus_ask_help', label: 'طلب المساعدة' }, 
     { key: 'resus_remove_outer_glove', label: 'نزع القفاز الخارجي والابقاء على الداخلي' }, 
     { key: 'resus_clamp_cord', label: 'وضع المشبك سريعا على الحبل السري وقطع الحبل السري' }, 
@@ -71,7 +75,7 @@ const allItems = [
     ...RESUSCITATION_ITEMS
 ];
 
-// --- 2. دالة الحالة الأولية ---
+// --- 2. دالة الحالة الأولية --- 
 const getInitialFormData = () => {
     const skills = {};
     allItems.forEach(item => {
@@ -102,7 +106,7 @@ const rehydrateDraftData = (draftData) => {
     };
 };
 
-// --- 4. دالة حساب الدرجات (UPDATED for Section Scores) ---
+// --- 4. دالة حساب الدرجات (UPDATED for Section Scores) --- 
 const calculateScores = (formData) => {
     const { eenc_breathing_status, skills } = formData;
     let overallScore = 0;

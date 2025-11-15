@@ -70,24 +70,29 @@ const SudanMap = ({
   const dataMap = useMemo(() => new Map((data || []).map(item => [item.state, item])), [data]);
   const localityDataMap = useMemo(() => new Map((localityData || []).map(item => [item.key, item])), [localityData]);
 
+  // --- MODIFICATION: Updated to new color scale from image ---
   const getColorForPercentage = (percentage) => {
-    if (percentage === undefined || percentage === null || isNaN(percentage)) return "#CFD8DC"; // Gray/Neutral
+    // Dark Gray for undefined, null, or NaN (from image)
+    if (percentage === undefined || percentage === null || isNaN(percentage)) return "#6B6B6B";
 
-    // Use light pink instead of red for low coverage
-    if (percentage < 40) return "#FECACA"; // Light Pink (Red-200)
-    if (percentage >= 75) return "#16A34A"; // Green
-    if (percentage >= 40) return "#FACC15"; // Yellow
+    // < 40: Dark Gray (from image)
+    if (percentage < 40) return "#6B6B6B";
+    
+    // >= 75: Dark Blue (from image)
+    if (percentage >= 75) return "#313695"; 
+    
+    // 40-74: A lighter version of the image's blue
+    if (percentage >= 40) return "#6266B1"; 
 
-    return "#CFD8DC";
+    return "#6B6B6B"; // Fallback to dark gray
   };
 
+  // --- MODIFICATION: Updated label colors for new dark background ---
   const getLabelStyle = (percentage) => {
-    if (percentage === undefined || percentage === null) return { fill: "#333", stroke: "white" };
-    // Use dark red text on the new light pink background for contrast
-    if (percentage < 40) return { fill: "#991B1B", stroke: "#FEF2F2" };
-    if (percentage >= 40 && percentage < 75) return { fill: "#1f2937", stroke: "white" };
-    return { fill: "#FFFFFF", stroke: "black" };
+    // All backgrounds are dark, so use white text with a dark stroke for contrast.
+    return { fill: "#FFFFFF", stroke: "#374151" }; 
   };
+
 
   // --- MODIFICATION START ---
   // We define the map's content here so it can be reused.
@@ -104,9 +109,10 @@ const SudanMap = ({
                 return null;
             }
             
+            // --- MODIFICATION: Use new dark gray as base/disabled color ---
             const fillColor = (viewLevel === 'locality' && isFocused)
-                ? "#E0E0E0" // Focused state is gray background
-                : (choroplethEnabled ? getColorForPercentage(stateData ? stateData.percentage : undefined) : "#F0F0F0"); // State view gets colors
+                ? "#525252" // Focused state is slightly lighter gray
+                : (choroplethEnabled ? getColorForPercentage(stateData ? stateData.percentage : undefined) : "#6B6B6B"); // State view gets colors
 
             const stateName = geo.properties.name;
 
@@ -115,7 +121,8 @@ const SudanMap = ({
                 key={geo.rsmKey}
                 geography={geo}
                 fill={fillColor}
-                stroke="#FFF"
+                stroke="#BEBEBE" // --- MODIFICATION: Light gray border ---
+                strokeWidth={0.5}
                 onMouseEnter={(event) => {
                   if (viewLevel === 'state' && !focusedState && onStateHover) {
                     onStateHover(stateName, event);
@@ -128,8 +135,9 @@ const SudanMap = ({
                 }}
                 style={{
                   default: { outline: "none" },
-                  hover: { fill: (choroplethEnabled && viewLevel === 'state') ? "#0e7490" : "#E0E0E0", outline: "none" },
-                  pressed: { fill: (choroplethEnabled && viewLevel === 'state') ? "#0e7490" : "#E0E0E0", outline: "none" }
+                  // --- MODIFICATION: Use bright blue hover for contrast ---
+                  hover: { fill: "#0ea5e9", outline: "none" },
+                  pressed: { fill: "#0ea5e9", outline: "none" }
                 }}
               />
             );
@@ -142,19 +150,22 @@ const SudanMap = ({
             geographies.map(geo => {
               const lData = localityDataMap.get(geo.properties.admin_2);
               const coverage = lData ? lData.coverage : undefined;
-              const fillColor = choroplethEnabled ? getColorForPercentage(coverage) : "#F0F0F0";
+              // --- MODIFICATION: Use new dark gray as base/disabled color ---
+              const fillColor = choroplethEnabled ? getColorForPercentage(coverage) : "#6B6B6B";
               
               return (
                 <Geography
                   key={geo.rsmKey}
                   geography={geo}
                   fill={fillColor}
-                  stroke="#000000"
+                  // --- MODIFICATION: Set locality border to light gray ---
+                  stroke="#BEBEBE"
                   strokeWidth={0.5}
                   style={{ 
                       default: { outline: "none" }, 
-                      hover: { fill: "#0e7490", outline: "none", cursor: "pointer" }, // Added hover style
-                      pressed: { fill: "#0e7490", outline: "none" } 
+                      // --- MODIFICATION: Use bright blue hover for contrast ---
+                      hover: { fill: "#0ea5e9", outline: "none", cursor: "pointer" }, 
+                      pressed: { fill: "#0ea5e9", outline: "none" } 
                   }}
                   onMouseEnter={(event) => { // Added event handler
                     if (onLocalityHover) {
@@ -228,10 +239,10 @@ const SudanMap = ({
 
       {(facilityMarkers || []).map(({ key, coordinates, name }) => (
         <Marker key={key} coordinates={coordinates}>
-          {/* Facility markers are now larger and a more prominent blue */}
+          {/* --- MODIFICATION: Update facility marker to match new blue --- */}
           <circle
             r={4}
-            fill="#0369A1"
+            fill="#313695" 
             stroke="#FFFFFF"
             strokeWidth={1.5}
             style={{ cursor: 'pointer' }}
