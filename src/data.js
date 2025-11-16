@@ -224,41 +224,27 @@ export const getDocs = async (query, options) => {
   return snapshot;
 };
 
+// --- *** START OF OFFLINE FIX #1 *** ---
+// This simplified function allows Firestore's default
+// cache-first behavior to work correctly when offline.
 export const getDoc = async (docRef, options) => {
-    // --- MODIFICATION: Allow options to be undefined ---
-    // Use the raw fbGetDoc to check existence without counting
-    const preliminarySnap = await fbGetDoc(docRef, options?.source ? { source: 'cache' } : undefined);
-    let exists = preliminarySnap.exists(); // Check cache first
+  // 1. Pass the options object (e.g., { source: 'server' } or undefined)
+  //    directly to the raw Firestore function (fbGetDoc).
+  //    When 'options' is undefined, Firestore (with persistence enabled)
+  //    will correctly serve from the cache if offline.
+  const snapshot = await fbGetDoc(docRef, options);
 
-    if (!exists && options?.source !== 'cache') {
-        // If not in cache and fetching from server, check server existence (raw)
-         const serverSnap = await fbGetDoc(docRef, { source: 'server' });
-         exists = serverSnap.exists();
-    }
+  // 2. Count the read operation, ONLY IF:
+  //    a) The request was not *explicitly* a 'cache' request.
+  //    b) The document actually existed (no reads for non-existent docs).
+  if (options?.source !== 'cache' && snapshot.exists()) {
+    dispatchOpEvent('read', 1);
+  }
 
-    // Only dispatch read event if the document actually exists and it wasn't a cache hit
-    if (exists && options?.source !== 'cache') {
-        dispatchOpEvent('read', 1);
-        // Return the server snapshot if we fetched it, otherwise fetch properly if needed
-        if (preliminarySnap.exists() && options?.source !== 'server') {
-             return await fbGetDoc(docRef, options); // Fetch with original options if cached
-        } else {
-            const serverSnap = await fbGetDoc(docRef, { source: 'server' }); // Ensure we return data if server was checked
-            return serverSnap;
-        }
-
-    } else if (preliminarySnap.exists()) {
-        // It existed in cache, return the cached snapshot or refetch if options differ
-         return await fbGetDoc(docRef, options);
-    } else {
-        // Document doesn't exist, return the non-existent snapshot (no read counted)
-        if (options?.source === 'cache'){
-             return preliminarySnap; // Return cache miss snapshot
-        } else {
-             return await fbGetDoc(docRef, { source: 'server'}); // Return server miss snapshot
-        }
-    }
+  // 3. Return the snapshot.
+  return snapshot;
 };
+// --- *** END OF OFFLINE FIX #1 *** ---
 
 
 export const setDoc = async (docRef, data, options) => {
@@ -545,8 +531,9 @@ export async function approveFacilitySubmission(submission, approverEmail) {
     await updateDoc(submissionRef, { status: 'approved', approvedBy: approverEmail, approvedAt: serverTimestamp() });
 }
 
-// --- MODIFIED: listHealthFacilities now supports incremental fetching ---
-// --- NO CHANGE TO THIS FUNCTION, it's handled by a custom fetcher ---
+// --- *** START OF OFFLINE FIX #2 *** ---
+// This corrected function removes the forced { source: 'server' }
+// option, allowing it to read from the cache when offline.
 export async function listHealthFacilities(filters = {}) {
     let q = collection(db, "healthFacilities");
     const conditions = [];
@@ -586,13 +573,15 @@ export async function listHealthFacilities(filters = {}) {
     q = query(q, orderByClause);
 
     try {
-        // --- MODIFICATION: Pass { source: 'server' } for incremental fetches ---
-        // The custom fetcher in DataContext determines *if* we're fetching.
-        // If we *are* fetching (i.e., this function is called), we should
-        // prioritize server data for incremental updates.
-        // The default getData logic will handle other cases.
-        const sourceOptions = filters.lastUpdatedAfter ? { source: 'server' } : {};
+        // --- *** THIS IS THE FIX *** ---
+        // The line '{ source: 'server' }' has been removed.
+        // We now pass an empty object, which allows Firestore's
+        // persistence-enabled default behavior to work.
+        // It will now correctly serve from the cache when offline.
+        const sourceOptions = {};
         const querySnapshot = await getData(q, sourceOptions);
+        // --- *** END OF FIX *** ---
+
         let facilities = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
         // Post-query filtering (only needed for complex filters not supported by Firestore query)
@@ -605,7 +594,7 @@ export async function listHealthFacilities(filters = {}) {
         throw error;
     }
 }
-// --- END MODIFIED: listHealthFacilities ---
+// --- *** END OF OFFLINE FIX #2 *** ---
 
 export async function getHealthFacilityById(facilityId) {
     const docRef = doc(db, "healthFacilities", facilityId);
@@ -1986,6 +1975,67 @@ export async function deleteIMNCIVisitReport(reportId) {
     return true;
 }
 // --- END IMNCI VISIT REPORT FUNCTIONS ---
+
+
+// --- NEW EENC VISIT REPORT FUNCTIONS ---
+
+/**
+ * Saves a new EENC visit report or updates an existing one.
+ * @param {object} payload - The report data.
+ * @param {string|null} reportId - The ID of the report to update, or null to create new.
+ * @returns {string} The ID of the created or updated document.
+ */
+export async function saveEENCVisitReport(payload, reportId = null) {
+    try {
+        const sessionData = {
+            ...payload,
+            // Add createdAt only if it's a new document
+            ...( !reportId ? { createdAt: serverTimestamp() } : { lastUpdatedAt: serverTimestamp() } ),
+        };
+
+        const docRef = reportId 
+            ? doc(db, "eencVisitReports", reportId) // Get ref to existing doc
+            : doc(collection(db, "eencVisitReports")); // Create ref for new doc
+
+        // Use the wrapped setDoc
+        await setDoc(docRef, sessionData, { merge: !!reportId });
+        return docRef.id;
+    } catch (error) {
+        console.error("Error saving EENC visit report:", error);
+        throw error;
+    }
+}
+
+/**
+ * Lists all EENC visit reports from Firestore.
+ * @returns {Array<object>} A list of visit report documents.
+ */
+export async function listEENCVisitReports(sourceOptions = {}) {
+    try {
+        const q = query(collection(db, "eencVisitReports"), orderBy("visit_date", "desc"));
+        // Use the getData helper
+        const snapshot = await getData(q, sourceOptions);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error fetching EENC visit reports:", error);
+        throw error;
+    }
+}
+
+/**
+ * Deletes an EENC visit report from Firestore.
+ * @param {string} reportId - The ID of the report to delete.
+ * @returns {Promise<boolean>} True on success.
+ */
+export async function deleteEENCVisitReport(reportId) {
+    if (!reportId) {
+        throw new Error("Report ID is required to delete.");
+    }
+    const sessionRef = doc(db, "eencVisitReports", reportId);
+    await deleteDoc(sessionRef); // Use the wrapped deleteDoc
+    return true;
+}
+// --- END EENC VISIT REPORT FUNCTIONS ---
 
 
 // --- NEW FUNCTIONS FOR PUBLIC PROFILES/REPORTS ---

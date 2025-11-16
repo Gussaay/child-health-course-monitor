@@ -1,29 +1,28 @@
 // CourseReportView.jsx
 import React, { useMemo, useRef, useState } from 'react';
 import jsPDF from "jspdf";
+import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import { Bar, Line } from 'react-chartjs-2';
 import { Button, Card, EmptyState, PageHeader, PdfIcon, Table, Spinner } from './CommonComponents';
-// Import Chart.js to register components needed for the graph
 import {
     Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend,
     PointElement, LineElement
 } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
+import { amiriFontBase64 } from './AmiriFont.js'; // <-- Import Arabic font
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, PointElement, LineElement, ChartDataLabels);
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 
-// --- New Icon Component for the Copy Button ---
+// --- Icon Components (CopyIcon, ShareIcon) ---
 const CopyIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
     </svg>
 );
-
-// --- New Icon for Share Button ---
 const ShareIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.368a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
@@ -31,7 +30,7 @@ const ShareIcon = () => (
 );
 
 
-// --- Helper functions for calculations and formatting ---
+// --- Helper functions (calcPct, fmtPct, fmtDecimal, getScoreColorClass, etc.) ---
 const calcPct = (correct, total) => {
     if (total === 0) {
         return 0;
@@ -44,25 +43,22 @@ const fmtPct = (value) => {
     return `${value.toFixed(1)}%`;
 };
 
-// --- NEW HELPER FOR DECIMAL FORMATTING ---
 const fmtDecimal = (value) => {
     if (isNaN(Number(value)) || value === null) return 'N/A';
     return Number(value).toFixed(1);
 };
 
-// --- Color-coding helper for consistency ---
+// This helper is for JSX classNames
 const getScoreColorClass = (value, type = 'percentage') => {
     if (isNaN(value) || value === null) {
         return 'bg-gray-700 text-white';
     }
     if (type === 'improvement') {
-        // This 'improvement' type is for the KPI card, not the new table logic
         if (value > 50) return 'bg-green-200 text-green-800';
         if (value >= 25) return 'bg-yellow-200 text-yellow-800';
         if (value >= 0) return 'bg-gray-200 text-gray-800';
         return 'bg-red-200 text-red-800';
     }
-    // Logic for general percentages (Practical Case Score)
     if (value === 100) return 'bg-green-200 text-green-800';
     if (value >= 95) return 'bg-yellow-200 text-yellow-800';
     if (value >= 90) return 'bg-orange-200 text-orange-800';
@@ -70,12 +66,11 @@ const getScoreColorClass = (value, type = 'percentage') => {
 };
 
 
-// New helper for coloring case count - this function will no longer be used for the table
 const getCaseCountColorClass = (value) => {
     return '';
 }
 
-// --- NEW: Helper function for Average Improvement Score Category ---
+// This helper is for JSX classNames
 const getAvgImprovementCategory = (preScore, postScore) => {
     const pre = Number(preScore);
     const post = Number(postScore);
@@ -83,14 +78,10 @@ const getAvgImprovementCategory = (preScore, postScore) => {
     if (isNaN(pre) || isNaN(post) || pre === 0 || post === 0) {
         return { name: 'Data Incomplete', className: 'bg-gray-700 text-white' };
     }
-
     const increase = ((post - pre) / pre) * 100;
-
     if (isNaN(increase) || increase === null) {
         return { name: 'Data Incomplete', className: 'bg-gray-700 text-white' };
     }
-
-    // New logic as requested:
     if (increase > 50) {
         return { name: 'Perfect', className: 'bg-green-200 text-green-800' };
     }
@@ -103,12 +94,9 @@ const getAvgImprovementCategory = (preScore, postScore) => {
     if (increase < 0) {
         return { name: 'Fail', className: 'bg-red-200 text-red-800' };
     }
-    // Default case: 0 <= increase < 15
     return { name: 'Fair', className: 'bg-orange-200 text-orange-800' };
 };
 
-// --- NEW: Helper to get the name of the case correctness category ---
-// This is used for both practical cases and written test scores
 const getCaseCorrectnessName = (pct) => {
     if (isNaN(pct) || pct === null) return 'Data Incomplete';
     if (pct === 100) return 'Perfect';
@@ -117,78 +105,322 @@ const getCaseCorrectnessName = (pct) => {
     return 'Fail';
 };
 
+// --- NEW: PDF Color Helpers ---
+// These return RGB arrays for jsPDF
+const getPdfScoreStyles = (value) => {
+    const styles = { fillColor: [255, 255, 255], textColor: [0, 0, 0] }; // Default
+    if (isNaN(value) || value === null) {
+        styles.fillColor = [55, 65, 81]; // gray-700
+        styles.textColor = [255, 255, 255]; // white
+        return styles;
+    }
+    if (value === 100) {
+        styles.fillColor = [187, 247, 208]; // green-200
+        styles.textColor = [22, 101, 52];   // green-800
+    } else if (value >= 95) {
+        styles.fillColor = [254, 240, 138]; // yellow-200
+        styles.textColor = [133, 77, 14];  // yellow-800
+    } else if (value >= 90) {
+        styles.fillColor = [254, 215, 170]; // orange-200
+        styles.textColor = [154, 52, 18];  // orange-800
+    } else {
+        styles.fillColor = [254, 202, 202]; // red-200
+        styles.textColor = [153, 27, 27];  // red-800
+    }
+    return styles;
+};
 
-// --- UPDATED PDF Export Helper with Quality Settings ---
-const generateFullCourseReportPdf = async (course, quality = 'print', onSuccess, onError) => {
+const getPdfImprovementStyles = (preScore, postScore) => {
+    const styles = { fillColor: [255, 255, 255], textColor: [0, 0, 0] };
+    const pre = Number(preScore);
+    const post = Number(postScore);
+
+    if (isNaN(pre) || isNaN(post) || pre === 0 || post === 0) {
+        styles.fillColor = [55, 65, 81]; // gray-700
+        styles.textColor = [255, 255, 255]; // white
+        return styles;
+    }
+    const increase = ((post - pre) / pre) * 100;
+    if (isNaN(increase) || increase === null) {
+        styles.fillColor = [55, 65, 81];
+        styles.textColor = [255, 255, 255];
+        return styles;
+    }
+
+    if (increase > 50) {
+        styles.fillColor = [187, 247, 208]; // green-200
+        styles.textColor = [22, 101, 52];   // green-800
+    } else if (increase >= 30) {
+        styles.fillColor = [254, 240, 138]; // yellow-200
+        styles.textColor = [133, 77, 14];  // yellow-800
+    } else if (increase >= 15) {
+        styles.fillColor = [229, 231, 235]; // gray-200
+        styles.textColor = [31, 41, 55];   // gray-800
+    } else if (increase < 0) {
+        styles.fillColor = [254, 202, 202]; // red-200
+        styles.textColor = [153, 27, 27];  // red-800
+    } else { // 0 <= increase < 15
+        styles.fillColor = [254, 215, 170]; // orange-200
+        styles.textColor = [154, 52, 18];  // orange-800
+    }
+    return styles;
+};
+// --- END NEW PDF Color Helpers ---
+
+
+// --- *** REVISED PDF EXPORT HELPER (HYBRID APPROACH) *** ---
+const generateFullCourseReportPdf = async (
+    course, 
+    quality, 
+    onSuccess, 
+    onError,
+    // Pass all necessary data for tables
+    tableData
+) => {
+    const {
+        filteredParticipants, tableHeaders, showCaseColumns, showTestScoreColumns, isSharedView
+    } = tableData;
+
     // Define quality profiles for different export needs
     const qualityProfiles = {
-        print: { /* ... */ },
-        screen: { /* ... */ }
+        print: { scale: 2, fileSuffix: '_Print_Quality', imageType: 'image/jpeg', imageQuality: 0.95, imageFormat: 'JPEG', compression: 'MEDIUM' },
+        screen: { scale: 1.5, fileSuffix: '_Screen_Quality', imageType: 'image/png', imageQuality: 1.0, imageFormat: 'PNG', compression: 'FAST' }
     };
 
     const profile = qualityProfiles[quality] || qualityProfiles.print;
 
     const doc = new jsPDF('portrait', 'mm', 'a4');
     const fileName = `Course_Report_${course.course_type}_${course.state}${profile.fileSuffix}.pdf`;
-    const element = document.getElementById('full-course-report');
+    
+    // --- Add Arabic Font Support ---
+    doc.addFileToVFS('Amiri-Regular.ttf', amiriFontBase64);
+    doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
+    doc.setFont('Amiri'); // Set default font for titles
 
-    if (!element) {
-        console.error("The element with ID 'full-course-report' was not found.");
-        onError("Report element not found. Could not generate PDF."); // Use onError
-        return;
-    }
+    // --- PDF Layout Variables ---
+    let y = 15; // Current Y position
+    const margin = 14;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const contentWidth = pageWidth - (margin * 2);
 
-    try {
-        const canvas = await html2canvas(element, {
-            scale: profile.scale,
-            useCORS: true,
-            backgroundColor: '#ffffff' // Set a white background to avoid transparency issues
-        });
-
-        const imgData = canvas.toDataURL(profile.imageType, profile.imageQuality);
-        const imgWidth = 210; // A4 width in mm
-        const pageHeight = 297; // A4 height in mm
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        let heightLeft = imgHeight;
-        let position = 0;
-
-        // Add the captured image to the PDF, handling multiple pages
-        doc.addImage(imgData, profile.imageFormat, 0, position, imgWidth, imgHeight, undefined, profile.compression);
-        heightLeft -= pageHeight;
-
-        while (heightLeft > 0) {
-            position = -(imgHeight - heightLeft);
+    // --- Helper to check for page break ---
+    const checkPageBreak = (currentY, elementHeight) => {
+        if (currentY + elementHeight + margin > pageHeight) {
             doc.addPage();
-            doc.addImage(imgData, profile.imageFormat, 0, position, imgWidth, imgHeight, undefined, profile.compression);
-            heightLeft -= pageHeight;
+            doc.setFont('Amiri'); // Re-set font on new page
+            return margin; // Reset y to top margin
+        }
+        return currentY;
+    };
+
+    // --- Helper to add an element as a canvas image ---
+    const addCanvasImageToPdf = async (elementId, currentY) => {
+        const element = document.getElementById(elementId);
+        if (!element) {
+            console.warn(`PDF: Element ${elementId} not found.`);
+            return currentY;
         }
 
-        // --- NEW SAVE LOGIC ---
-        if (Capacitor.isNativePlatform()) {
-            // We are on mobile (Android/iOS)
-            // Get PDF as base64 string (remove data:application/pdf;base64, prefix)
-            const base64Data = doc.output('datauristring').split('base64,')[1];
+        try {
+            const canvas = await html2canvas(element, {
+                scale: profile.scale,
+                useCORS: true,
+                backgroundColor: '#ffffff'
+            });
+            const imgData = canvas.toDataURL(profile.imageType, profile.imageQuality);
+            const imgWidth = contentWidth;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+            currentY = checkPageBreak(currentY, imgHeight);
             
-            // Write the file to the Downloads directory
+            doc.addImage(imgData, profile.imageFormat, margin, currentY, imgWidth, imgHeight, undefined, profile.compression);
+            return currentY + imgHeight + 5; // Return new Y position
+        } catch (e) {
+            console.error(`Failed to add canvas for ${elementId}:`, e);
+            onError(`Failed to render element ${elementId} for PDF.`);
+            throw e; // Stop PDF generation if a critical element fails
+        }
+    };
+
+    // --- Helper to add a title ---
+    const addTitle = (text, currentY) => {
+        currentY = checkPageBreak(currentY, 10);
+        doc.setFontSize(16);
+        doc.setFont('Amiri', 'normal');
+        doc.text(text, margin, currentY, { align: 'left' });
+        return currentY + 10;
+    };
+
+    // --- Common AutoTable Styles (FOR PARTICIPANT LIST ONLY) ---
+    const autoTableStyles = {
+        theme: 'grid',
+        styles: {
+            font: 'Amiri',
+            fontSize: 8,
+            cellPadding: 2,
+            overflow: 'linebreak'
+        },
+        headStyles: {
+            font: 'Amiri',
+            fillColor: [41, 128, 185],
+            textColor: [255, 255, 255],
+            fontStyle: 'bold',
+            halign: 'center'
+        },
+    };
+
+    // --- START PDF GENERATION ---
+    try {
+        // 1. Title
+        doc.setFontSize(20);
+        doc.setFont('Amiri', 'normal');
+        doc.text(`Full Course Report: ${course.course_type} - ${course.state}`, margin, y, { align: 'left' });
+        y += 10;
+
+        // 2. Course Info Card (Canvas)
+        y = await addCanvasImageToPdf('course-info-card', y);
+        
+        // 3. KPI Card (Canvas)
+        if (document.getElementById('kpi-card')) {
+             y = await addCanvasImageToPdf('kpi-card', y);
+        }
+       
+        // 4. IMNCI Cards (Canvas)
+        if (document.getElementById('new-imci-facilities-card')) {
+            y = await addCanvasImageToPdf('new-imci-facilities-card', y);
+        }
+        if (document.getElementById('coverage-card')) {
+            y = await addCanvasImageToPdf('coverage-card', y);
+        }
+
+        // 5. Test Scores Card (KPIs + Chart) (Canvas)
+        if (document.getElementById('test-scores-card')) {
+            y = await addCanvasImageToPdf('test-scores-card', y);
+        }
+
+        // 6. Group & Day Charts (Canvas)
+        if (document.getElementById('charts-grid')) {
+             y = addTitle('Performance Charts', y);
+             y = await addCanvasImageToPdf('charts-grid', y);
+        }
+
+        // 7. Daily Tables (Canvas)
+        if (document.getElementById('daily-tables-grid')) {
+            y = addTitle('Daily Performance Tables', y);
+            y = await addCanvasImageToPdf('daily-tables-grid', y);
+        }
+        
+        // 8. Participant Summary Table (Canvas)
+        if (document.getElementById('participant-summary-table')) {
+            y = addTitle('Participant Score Summary', y);
+            y = await addCanvasImageToPdf('participant-summary-table', y);
+        }
+
+
+        // 9. Participant Results List Table (AutoTable)
+        if (filteredParticipants.length > 0) {
+            y = addTitle('Participant Results', y);
+            
+            const head = [tableHeaders]; // e.g., ['#', 'Participant Name', 'Total Cases', 'Practical Case Score', ...]
+            const body = filteredParticipants.map((p, index) => {
+                const row = [index + 1, p.name];
+                
+                if (showCaseColumns) {
+                    row.push(p.total_cases_seen);
+                    if (!isSharedView) {
+                        row.push(getCaseCorrectnessName(p.correctness_percentage));
+                    }
+                }
+                if (showTestScoreColumns) {
+                    const preScore = Number(p.pre_test_score);
+                    const postScore = Number(p.post_test_score);
+                    const increase = (!isNaN(preScore) && preScore > 0 && !isNaN(postScore) && postScore > 0) ? ((postScore - preScore) / preScore) * 100 : null;
+                    const category = getAvgImprovementCategory(p.pre_test_score, p.post_test_score);
+                    
+                    row.push(fmtDecimal(preScore));
+                    row.push(fmtDecimal(postScore));
+                    row.push(isNaN(increase) || increase === null ? 'N/A' : `${increase.toFixed(1)}%`);
+                    row.push(category.name);
+                }
+                return row;
+            });
+
+            doc.setFont('Amiri');
+            autoTable(doc, {
+                ...autoTableStyles,
+                head: head,
+                body: body,
+                startY: y,
+                didDrawPage: (data) => { 
+                    y = data.cursor.y; 
+                    doc.setFont('Amiri'); // Re-set font on new page
+                },
+
+                // --- *** THIS IS THE FIX FOR COLORS AND ALIGNMENT *** ---
+                didParseCell: (data) => {
+                    // Set font for all cells
+                    data.cell.styles.font = 'Amiri';
+
+                    // --- Head Styling ---
+                    if (data.section === 'head') {
+                        data.cell.styles.halign = 'center';
+                        data.cell.styles.fontStyle = 'bold'; // Re-affirm
+                        return;
+                    }
+
+                    // --- Body Styling ---
+                    if (data.section === 'body') {
+                        const participant = filteredParticipants[data.row.index];
+                        if (!participant) return;
+
+                        const colKey = head[0][data.column.index]; // Get header text
+                        
+                        // 1. Color Styling
+                        let styles = null;
+                        if (colKey === 'Practical Case Score') {
+                            styles = getPdfScoreStyles(participant.correctness_percentage);
+                        } 
+                        else if (colKey === 'average improvemt score') {
+                            styles = getPdfImprovementStyles(participant.pre_test_score, participant.post_test_score);
+                        }
+
+                        if (styles) {
+                            data.cell.styles.fillColor = styles.fillColor;
+                            data.cell.styles.textColor = styles.textColor;
+                        }
+
+                        // 2. Alignment Styling
+                        if (colKey === 'Participant Name') {
+                            data.cell.styles.halign = 'right'; // Arabic name
+                        } else {
+                            data.cell.styles.halign = 'center'; // All other data
+                        }
+                    }
+                }
+                // --- *** END FIX *** ---
+            });
+            y = doc.lastAutoTable.finalY + 10;
+        }
+
+        // --- FINAL SAVE LOGIC (from original) ---
+        if (Capacitor.isNativePlatform()) {
+            const base64Data = doc.output('datauristring').split('base64,')[1];
             const writeResult = await Filesystem.writeFile({
                 path: fileName,
                 data: base64Data,
                 directory: Directory.Downloads,
             });
-
-            // Now, try to open the file using its native URI
             await FileOpener.open({
-                filePath: writeResult.uri, // Use the URI returned by writeFile
+                filePath: writeResult.uri,
                 contentType: 'application/pdf',
             });
-
             onSuccess(`PDF saved to Downloads folder: ${fileName}`);
         } else {
-            // We are on web
             doc.save(fileName);
-            onSuccess("PDF download initiated."); // Web download is just an initiation
+            onSuccess("PDF download initiated.");
         }
-        // --- END NEW SAVE LOGIC ---
+        // --- END SAVE LOGIC ---
 
     } catch (e) {
         console.error("Error generating or saving PDF:", e);
@@ -196,7 +428,7 @@ const generateFullCourseReportPdf = async (course, quality = 'print', onSuccess,
     }
 };
 
-// --- NEW HELPER FUNCTION FOR STATS AND DISTRIBUTION ---
+// --- NEW HELPER FOR STATS AND DISTRIBUTION ---
 const getStatsAndDistribution = (scores) => {
     if (scores.length === 0) {
         return { avg: 0, median: 0, min: 0, max: 0, range: 'N/A', distribution: {}, totalPoints: 'N/A' };
@@ -236,87 +468,23 @@ export function CourseReportView({
     const [caseCorrectnessFilter, setCaseCorrectnessFilter] = useState('All');
     const [isPdfGenerating, setIsPdfGenerating] = useState(false);
     
-    // --- NEW: Notification helper ---
     const notify = (message, type = 'info') => {
         if (setToast) {
             setToast({ show: true, message, type });
         } else {
-            // Fallback for when setToast is not provided
             alert(message);
         }
     };
 
-
-
-    // --- NEW: Wrapper function to handle PDF generation state ---
-   const handlePdfGeneration = async (quality) => {
-        setIsPdfGenerating(true);
-        // Add a small delay to allow the UI to update to the loading state
-        await new Promise(resolve => setTimeout(resolve, 100));
-        try {
-            // Pass the notify functions as callbacks
-            await generateFullCourseReportPdf(
-                course, 
-                quality,
-                (message) => notify(message, 'success'), // OnSuccess callback
-                (message) => notify(message, 'error')    // OnError callback
-            );
-        } catch (error) {
-            // This catch is a fallback, but the helper should handle its own errors
-            console.error("Failed to generate PDF:", error);
-            notify("Sorry, there was an error generating the PDF.", 'error');
-        } finally {
-            setIsPdfGenerating(false);
-        }
-    };
-
-
-
-    // --- NEW: Function to handle copying a card as an image ---
-    const handleCopyAsImage = async (elementId) => {
-        const element = document.getElementById(elementId);
-        if (!element) {
-            alert('Could not find element to copy.');
-            return;
-        }
-
-        try {
-            const canvas = await html2canvas(element, {
-                scale: 2,
-                useCORS: true,
-                backgroundColor: '#ffffff', // Set a white background for transparency issues
-                onclone: (document) => {
-                    // Hide the copy button itself from the copied image
-                    const button = document.querySelector(`#${elementId} .copy-button`);
-                    if (button) button.style.visibility = 'hidden';
-                }
-            });
-
-            canvas.toBlob(async (blob) => {
-                if (navigator.clipboard && navigator.clipboard.write) {
-                    await navigator.clipboard.write([
-                        new ClipboardItem({ 'image/png': blob })
-                    ]);
-                    alert('Card copied to clipboard as an image!');
-                } else {
-                    alert('Clipboard API not available in this browser.');
-                }
-            }, 'image/png');
-        } catch (error) {
-            console.error('Failed to copy image:', error);
-            alert('Failed to copy image to clipboard.');
-        }
-    };
-
-
     const isLoading = !course || !participants || !allObs || !allCases;
 
+    // --- DATA CALCULATION (useMemo) ---
     const { 
         groupPerformance, overall, dailyPerformance, hasTestScores, hasCases, participantsWithStats, 
         preTestStats, postTestStats, totalImprovement, caseCorrectnessDistribution, 
-        newImciFacilities, coverageData, avgImprovementDistribution // <-- NEW: Added avgImprovementDistribution
+        newImciFacilities, coverageData, avgImprovementDistribution
     } = useMemo(() => {
-        if (isLoading) {
+        if (isLoading) { 
             return {
                 groupPerformance: {},
                 overall: { 
@@ -331,7 +499,7 @@ export function CourseReportView({
                 hasCases: false,
                 participantsWithStats: [],
                 caseCorrectnessDistribution: {},
-                avgImprovementDistribution: {}, // <-- NEW: Added default
+                avgImprovementDistribution: {},
                 newImciFacilities: [],
                 coverageData: null,
             };
@@ -349,10 +517,8 @@ export function CourseReportView({
         const preTestStats = getStatsAndDistribution(preScoresForAvg);
         const postTestStats = getStatsAndDistribution(postScoresForAvg);
         
-        // Calculate average improvement using the newly calculated averages
         const totalImprovement = preTestStats.avg > 0 ? ((postTestStats.avg - preTestStats.avg) / preTestStats.avg) * 100 : 0;
         
-        // Use a separate filtered list for the chart
         const chartParticipants = participants.filter(p => Number(p.pre_test_score) > 0 && Number(p.post_test_score) > 0);
         
         let hasAnyScores = preScoresForAvg.length > 0 || postScoresForAvg.length > 0;
@@ -411,7 +577,6 @@ export function CourseReportView({
             }
         });
         
-        // Recalculate group totals to include skills from observations
         Object.keys(groupPerformance).forEach(g => {
             const group = groupPerformance[g];
             const groupObs = allObs.filter(o => group.pids.includes(o.participant_id));
@@ -421,7 +586,6 @@ export function CourseReportView({
             group.participantCount = group.pids.length;
         });
 
-        // Recalculate overall totals for the new KPI structure
         let totalObs = 0, correctObs = 0, totalCases = 0, correctCases = 0;
         Object.keys(groupPerformance).forEach(g => {
             const group = groupPerformance[g];
@@ -431,7 +595,6 @@ export function CourseReportView({
             correctCases += group.correctCases;
         });
         
-        // Add participant-level case and skills data
         const participantsWithStats = participants.map(p => {
             const participantCases = allCases.filter(c => c.participant_id === p.id);
             const participantObs = allObs.filter(o => o.participant_id === p.id);
@@ -446,22 +609,17 @@ export function CourseReportView({
             };
         });
         
-        // New 'overall' object structure for KPIs
         const overall = {
-            // Case KPIs
             totalCases,
             correctCases,
             avgCasesPerParticipant: (totalCases / participants.length) || 0,
             caseCorrectnessPercentage: calcPct(correctCases, totalCases),
-
-            // Skill/Classification KPIs (using 'obs' which means skills)
             totalSkills: totalObs,
             correctSkills: correctObs,
             avgSkillsPerParticipant: (totalObs / participants.length) || 0,
             skillCorrectnessPercentage: calcPct(correctObs, totalObs)
         };
 
-        // --- NEW: Calculate case correctness distribution ---
         const caseCorrectnessDistribution = {
             'Perfect': 0, 'Excellent': 0, 'Good': 0, 'Fair': 0, 'Fail': 0, 'Data Incomplete': 0
         };
@@ -472,20 +630,16 @@ export function CourseReportView({
             }
         });
 
-        // --- NEW: Calculate Average Improvement distribution ---
         const avgImprovementDistribution = {
             'Perfect': 0, 'Excellent': 0, 'Good': 0, 'Fair': 0, 'Fail': 0, 'Data Incomplete': 0
         };
         participantsWithStats.forEach(p => {
-            // Use the new helper function
             const category = getAvgImprovementCategory(p.pre_test_score, p.post_test_score);
             if (avgImprovementDistribution.hasOwnProperty(category.name)) {
                 avgImprovementDistribution[category.name]++;
             }
         });
-        // --- END NEW CALCULATION ---
 
-        // --- NEW: Calculate facilities with new IMCI introduction ---
         const newImciFacilityMap = new Map();
         participantsWithStats
             .filter(p => p.introduced_imci_to_facility === true)
@@ -498,7 +652,6 @@ export function CourseReportView({
         const newImciFacilities = Array.from(newImciFacilityMap.values());
         const newImciFacilityNames = new Set(newImciFacilities.map(f => f.name));
 
-        // --- NEW: Calculate locality coverage ---
         let coverageData = null;
         if (allHealthFacilities && course.locality && course.state) {
             const facilitiesInLocality = allHealthFacilities.filter(f => 
@@ -509,13 +662,7 @@ export function CourseReportView({
             if (totalFacilitiesInLocality > 0) {
                 const currentImciFacilities = facilitiesInLocality.filter(f => f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes');
                 const totalImciCount = currentImciFacilities.length;
-
-                // We assume the submission was approved, so the 'Yes' status is now in the data.
-                // We identify the "new" ones by cross-referencing with our participant-derived list.
                 const newImciCount = currentImciFacilities.filter(f => newImciFacilityNames.has(f['اسم_المؤسسة'])).length;
-                
-                // Original count is total current minus the new ones.
-                // This logic assumes that if a facility is on the 'new' list, it wasn't 'Yes' before.
                 const originalImciCount = totalImciCount - newImciCount;
 
                 coverageData = {
@@ -529,7 +676,6 @@ export function CourseReportView({
                 };
             }
         }
-        // --- END NEW CALCULATIONS ---
 
         return {
             groupPerformance,
@@ -542,19 +688,211 @@ export function CourseReportView({
             hasCases,
             participantsWithStats,
             caseCorrectnessDistribution,
-            avgImprovementDistribution, // <-- NEW: Return new data
+            avgImprovementDistribution,
             newImciFacilities,
             coverageData,
         };
     }, [participants, allObs, allCases, isLoading, allHealthFacilities, course.locality, course.state]);
 
+
+    // --- DYNAMIC DATA/PROPS FOR TABLES (Needed for PDF) ---
+    const groupsWithData = Object.keys(groupPerformance).sort();
+
+    // Daily Chart Labels (used by tables)
+    const dailyChartLabels = Object.keys(dailyPerformance).sort((a, b) => {
+        const dayA = parseInt(a.replace('Day ', ''));
+        const dayB = parseInt(b.replace('Day ', ''));
+        return dayA - dayB;
+    });
+
+    // Daily Skill Table Data
+    const dailySkillTableData = dailyChartLabels.map(day => {
+        const row = { day, totalSkills: { correct: 0, total: 0 } };
+        groupsWithData.forEach(group => {
+            const dayData = dailyPerformance[day] && dailyPerformance[day][group] ? dailyPerformance[day][group] : { correct: 0, total: 0, cases: 0 };
+            const pct = calcPct(dayData.correct, dayData.total);
+            row[group] = { pct, display: `${dayData.total} (${fmtPct(pct)})` };
+            row.totalSkills.correct += dayData.correct;
+            row.totalSkills.total += dayData.total;
+        });
+        const totalDayPct = calcPct(row.totalSkills.correct, row.totalSkills.total);
+        row.totalDisplay = `${row.totalSkills.total} (${fmtPct(totalDayPct)})`;
+        row.totalDayPct = totalDayPct;
+        return row;
+    });
+
+    const groupSkillTotals = {};
+    groupsWithData.forEach(group => {
+        groupSkillTotals[group] = { totalSkills: { correct: 0, total: 0 } };
+    });
+    let grandTotalSkillsCorrect = 0;
+    let grandTotalSkillsTotal = 0;
+    dailySkillTableData.forEach(row => {
+        groupsWithData.forEach(group => {
+            const dayData = dailyPerformance[row.day] && dailyPerformance[row.day][group] ? dailyPerformance[row.day][group] : { correct: 0, total: 0 };
+            groupSkillTotals[group].totalSkills.correct += dayData.correct;
+            groupSkillTotals[group].totalSkills.total += dayData.total;
+        });
+        grandTotalSkillsCorrect += row.totalSkills.correct;
+        grandTotalSkillsTotal += row.totalSkills.total;
+    });
+
+
+    // Daily Case Table Data
+    const dailyCaseTableData = dailyChartLabels.map(day => {
+        const row = { day, totalCases: { correct: 0, total: 0 } };
+        groupsWithData.forEach(group => {
+            const dayData = dailyPerformance[day] && dailyPerformance[day][group] ? dailyPerformance[day][group] : { cases: 0, correctCases: 0 };
+            const pct = calcPct(dayData.correctCases, dayData.cases);
+            row[group] = { pct, display: `${dayData.cases} (${fmtPct(pct)})` };
+            row.totalCases.correct += dayData.correctCases;
+            row.totalCases.total += dayData.cases;
+        });
+        const totalDayPct = calcPct(row.totalCases.correct, row.totalCases.total);
+        row.totalDisplay = `${row.totalCases.total} (${fmtPct(totalDayPct)})`;
+        row.totalDayPct = totalDayPct;
+        return row;
+    });
+
+    const groupCaseTotals = {};
+    groupsWithData.forEach(group => {
+        groupCaseTotals[group] = { totalCases: { correct: 0, total: 0 } };
+    });
+    let grandTotalCasesCorrect = 0;
+    let grandTotalCasesTotal = 0;
+    dailyCaseTableData.forEach(row => {
+        groupsWithData.forEach(group => {
+            const dayData = dailyPerformance[row.day] && dailyPerformance[row.day][group] ? dailyPerformance[row.day][group] : { cases: 0, correctCases: 0 };
+            groupCaseTotals[group].totalCases.correct += dayData.correctCases;
+            groupCaseTotals[group].totalCases.total += dayData.cases;
+        });
+        grandTotalCasesCorrect += row.totalCases.correct;
+        grandTotalCasesTotal += row.totalCases.total;
+    });
+
+
+    // Participant Filtering
+    const filteredParticipants = useMemo(() => {
+        let participants = [...participantsWithStats];
+        if (scoreFilter !== 'All') {
+             participants = participants.filter(p => {
+                const category = getAvgImprovementCategory(p.pre_test_score, p.post_test_score).name;
+                return category === scoreFilter;
+            });
+        }
+        if (caseCorrectnessFilter !== 'All') {
+            participants = participants.filter(p => {
+                const pct = p.correctness_percentage;
+                const categoryName = getCaseCorrectnessName(pct);
+                return categoryName === caseCorrectnessFilter;
+            });
+        }
+        participants.sort((a, b) => {
+            const pctA = a.correctness_percentage ?? -1;
+            const pctB = b.correctness_percentage ?? -1;
+            return pctB - pctA;
+        });
+        return participants;
+    }, [participantsWithStats, scoreFilter, caseCorrectnessFilter]);
+
+
+    // Dynamic Participant Table Headers
+    const showTestScoreColumns = hasTestScores;
+    const showCaseColumns = hasCases;
+    const tableHeaders = ['#', 'Participant Name'];
+    if (showCaseColumns) {
+        tableHeaders.push('Total Cases');
+        if (!isSharedView) {
+            tableHeaders.push('Practical Case Score');
+        }
+    }
+    if (showTestScoreColumns) {
+        tableHeaders.push('Pre-Test Result');
+        tableHeaders.push('Post-Test Result');
+        tableHeaders.push('% Increase');
+        tableHeaders.push('average improvemt score');
+    }
+    // --- END DYNAMIC DATA FOR TABLES ---
+
+
+    // --- UPDATED: PDF Handler ---
+    const handlePdfGeneration = async (quality) => {
+        setIsPdfGenerating(true);
+        await new Promise(resolve => setTimeout(resolve, 100)); // UI update delay
+        
+        // --- Bundle all dynamic data for the PDF function ---
+        const pdfTableData = {
+            filteredParticipants,
+            tableHeaders,
+            showCaseColumns,
+            showTestScoreColumns,
+            isSharedView,
+            // Pass the data for the tables that are now canvas
+            dailyCaseTableData,
+            dailySkillTableData,
+            groupsWithData,
+            groupCaseTotals,
+            grandTotalCasesCorrect,
+            grandTotalCasesTotal,
+            groupSkillTotals,
+            grandTotalSkillsCorrect,
+            grandTotalSkillsTotal
+        };
+
+        try {
+            await generateFullCourseReportPdf(
+                course, 
+                quality,
+                (message) => notify(message, 'success'),
+                (message) => notify(message, 'error'),
+                pdfTableData // <-- Pass all the table data
+            );
+        } catch (error) {
+            console.error("Failed to generate PDF:", error);
+            notify("Sorry, there was an error generating the PDF.", 'error');
+        } finally {
+            setIsPdfGenerating(false);
+        }
+    };
+
+    // --- (handleCopyAsImage function remains unchanged) ---
+    const handleCopyAsImage = async (elementId) => {
+        const element = document.getElementById(elementId);
+        if (!element) {
+            alert('Could not find element to copy.');
+            return;
+        }
+        try {
+            const canvas = await html2canvas(element, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                onclone: (document) => {
+                    const button = document.querySelector(`#${elementId} .copy-button`);
+                    if (button) button.style.visibility = 'hidden';
+                }
+            });
+            canvas.toBlob(async (blob) => {
+                if (navigator.clipboard && navigator.clipboard.write) {
+                    await navigator.clipboard.write([
+                        new ClipboardItem({ 'image/png': blob })
+                    ]);
+                    alert('Card copied to clipboard as an image!');
+                } else {
+                    alert('Clipboard API not available in this browser.');
+                }
+            }, 'image/png');
+        } catch (error) {
+            console.error('Failed to copy image:', error);
+            alert('Failed to copy image to clipboard.');
+        }
+    };
+
+    // --- (Chart definitions remain unchanged) ---
     const excludedImnciSubtypes = ["Standard 7 days course for Medical Doctors", "Standard 7 days course for Medical Assistance", "Refreshment IMNCI Course"];
     const showTestScoresOnScreen = course.course_type !== 'IMNCI' || (course.course_type === 'IMNCI' && !excludedImnciSubtypes.includes(course.imci_sub_type));
 
     if (isLoading) return <Card><Spinner /></Card>;
-
-    // Dynamically get groups with data for charts and tables, and sort them alphabetically
-    const groupsWithData = Object.keys(groupPerformance).sort();
 
     // Chart Data for Overall Performance by Group (Combined Bar Chart)
     const combinedChartData = {
@@ -587,7 +925,7 @@ export function CourseReportView({
                 display: true,
                 text: 'Overall Performance by Group: Cases & Correct Cases'
             },
-            datalabels: { // NEW: Data labels plugin configuration
+            datalabels: {
                 anchor: 'end',
                 align: 'top',
                 formatter: (value, context) => {
@@ -615,12 +953,6 @@ export function CourseReportView({
     };
 
     // Chart Data for Daily Performance (Combined Bar/Line Chart)
-    const dailyChartLabels = Object.keys(dailyPerformance).sort((a, b) => {
-        const dayA = parseInt(a.replace('Day ', ''));
-        const dayB = parseInt(b.replace('Day ', ''));
-        return dayA - dayB;
-    });
-
     const dailyChartData = {
         labels: dailyChartLabels,
         datasets: [
@@ -660,7 +992,7 @@ export function CourseReportView({
         plugins: {
             title: {
                 display: true,
-                text: 'Overall Performance by Day' // Updated title here
+                text: 'Overall Performance by Day'
             },
             legend: {
                 position: 'top',
@@ -696,31 +1028,20 @@ export function CourseReportView({
         }
     };
     
-    // --- UPDATED CHART DATA FOR PRE/POST TEST SCORES (AS PERCENTAGES) ---
-    // Filter participants to only include those with valid scores (> 0)
+    // Pre/Post Test Score Chart Data
     const chartParticipants = participants.filter(p => Number(p.pre_test_score) > 0 && Number(p.post_test_score) > 0);
-    
-    // Adjust labels and tooltips based on participant count
     const participantCount = chartParticipants.length;
     const showCompactLabels = participantCount > 24;
-    
-    // --- Scores are already percentages, use them directly ---
     const preScores = chartParticipants.map(p => Number(p.pre_test_score));
     const postScores = chartParticipants.map(p => Number(p.post_test_score));
-
-    // --- Calculate Y-axis min value ---
     const allScoresPct = [...preScores, ...postScores];
     const minScorePct = allScoresPct.length > 0 ? Math.min(...allScoresPct.filter(s => !isNaN(s))) : 0;
-    let yMin = Math.max(0, minScorePct - 10); // Start 10% below min score
-    yMin = Math.floor(yMin / 5) * 5; // Round down to nearest 5
-
-    // Determine the labels to display on the x-axis
+    let yMin = Math.max(0, minScorePct - 10);
+    yMin = Math.floor(yMin / 5) * 5;
     let participantLabels = [];
     if (showCompactLabels) {
-        // Create labels like 'P1', 'P2', etc. to avoid crowding
         participantLabels = chartParticipants.map((p, index) => `P${index + 1}`);
     } else {
-        // Use full names for a small number of participants
         participantLabels = chartParticipants.map((p, index) => `${p.name} (${index + 1})`);
     }
 
@@ -729,22 +1050,22 @@ export function CourseReportView({
         datasets: [
             {
                 label: 'Pre-Test Score',
-                data: preScores, // <-- Data is now percentages
+                data: preScores,
                 borderColor: '#6366f1',
                 backgroundColor: 'rgba(99, 102, 241, 0.2)',
                 tension: 0.4,
                 fill: false,
-                pointRadius: showCompactLabels ? 3 : 5, // Reduce point size for more participants
+                pointRadius: showCompactLabels ? 3 : 5,
                 pointBackgroundColor: '#6366f1',
             },
             {
                 label: 'Post-Test Score',
-                data: postScores, // <-- Data is now percentages
+                data: postScores,
                 borderColor: '#10b981',
                 backgroundColor: 'rgba(16, 185, 129, 0.2)',
                 tension: 0.4,
                 fill: false,
-                pointRadius: showCompactLabels ? 3 : 5, // Reduce point size
+                pointRadius: showCompactLabels ? 3 : 5,
                 pointBackgroundColor: '#10b981',
             }
         ]
@@ -766,7 +1087,6 @@ export function CourseReportView({
                 intersect: false,
                 callbacks: {
                     title: function(context) {
-                         // Find the full name for the tooltip title
                         const participantIndex = context[0].dataIndex;
                         return `${chartParticipants[participantIndex].name} (${participantIndex + 1})`;
                     },
@@ -776,14 +1096,12 @@ export function CourseReportView({
                             label += ': ';
                         }
                         if (context.raw !== null) {
-                            // --- Format tooltip as percentage ---
                             label += fmtPct(context.raw); 
                         }
                         return label;
                     }
                 }
             },
-            // Disable data labels for this specific chart
             datalabels: {
                 display: false,
             }
@@ -798,173 +1116,33 @@ export function CourseReportView({
                     display: false
                 },
                 ticks: {
-                    maxTicksLimit: 25, // Limit the number of ticks to avoid crowding
+                    maxTicksLimit: 25,
                 }
             },
             y: {
-                // --- Update Y-axis for percentages ---
                 title: {
                     display: true,
-                    text: 'Test Result (%)' // <-- Changed label
+                    text: 'Test Result (%)'
                 },
-                beginAtZero: false, // <-- Allow starting from yMin
+                beginAtZero: false,
                 ticks: {
-                    stepSize: 5 // <-- 5% increment
+                    stepSize: 5
                 },
-                min: yMin, // <-- Start 10% below min score
-                max: 100 // <-- Max is 100%
+                min: yMin,
+                max: 100
             }
         },
     };
     
-    // --- DAILY SKILL TABLE DATA CALCULATION ---
-    const dailySkillTableData = dailyChartLabels.map(day => {
-        const row = { day, totalSkills: { correct: 0, total: 0 } };
-        groupsWithData.forEach(group => {
-            const dayData = dailyPerformance[day] && dailyPerformance[day][group] ? dailyPerformance[day][group] : { correct: 0, total: 0, cases: 0 };
-            const pct = calcPct(dayData.correct, dayData.total);
-            row[group] = {
-                pct,
-                display: `${dayData.total} (${fmtPct(pct)})`
-            };
-            row.totalSkills.correct += dayData.correct;
-            row.totalSkills.total += dayData.total;
-        });
-        const totalDayPct = calcPct(row.totalSkills.correct, row.totalSkills.total);
-        row.totalDisplay = `${row.totalSkills.total} (${fmtPct(totalDayPct)})`;
-        row.totalDayPct = totalDayPct;
-        return row;
-    });
-
-    // --- DAILY SKILL TABLE TOTALS CALCULATION ---
-    const groupSkillTotals = {};
-    groupsWithData.forEach(group => {
-        groupSkillTotals[group] = { totalSkills: { correct: 0, total: 0 } };
-    });
-    let grandTotalSkillsCorrect = 0;
-    let grandTotalSkillsTotal = 0;
-
-    dailySkillTableData.forEach(row => {
-        groupsWithData.forEach(group => {
-            const dayData = dailyPerformance[row.day] && dailyPerformance[row.day][group] ? dailyPerformance[row.day][group] : { correct: 0, total: 0 };
-            groupSkillTotals[group].totalSkills.correct += dayData.correct;
-            groupSkillTotals[group].totalSkills.total += dayData.total;
-        });
-        grandTotalSkillsCorrect += row.totalSkills.correct;
-        grandTotalSkillsTotal += row.totalSkills.total;
-    });
-
-    // --- PARTICIPANT FILTERING AND SORTING ---
-    const filteredParticipants = useMemo(() => {
-        let participants = [...participantsWithStats];
-
-        // Apply Score Category filter (now filters by avg. improvement)
-        if (scoreFilter !== 'All') {
-            participants = participants.filter(p => {
-                const category = getAvgImprovementCategory(p.pre_test_score, p.post_test_score).name;
-                return category === scoreFilter;
-            });
-        }
-
-        // Apply Case Correctness filter (filters by practical case score)
-        if (caseCorrectnessFilter !== 'All') {
-            participants = participants.filter(p => {
-                const pct = p.correctness_percentage;
-                const categoryName = getCaseCorrectnessName(pct);
-                return categoryName === caseCorrectnessFilter;
-            });
-        }
-
-        // Sort by correctness percentage in descending order
-        participants.sort((a, b) => {
-            const pctA = a.correctness_percentage ?? -1; // Treat null/NaN as low values for sorting
-            const pctB = b.correctness_percentage ?? -1;
-            return pctB - pctA;
-        });
-
-        return participants;
-    }, [participantsWithStats, scoreFilter, caseCorrectnessFilter]);
-
-
-    // Determine which columns to show dynamically
-    const showTestScoreColumns = hasTestScores;
-    const showCaseColumns = hasCases;
-    
-    // Construct table headers dynamically
-    const tableHeaders = ['#', 'Participant Name'];
-    if (showCaseColumns) {
-        tableHeaders.push('Total Cases');
-        // CHANGE: Conditionally hide Correctness % header in shared view
-        if (!isSharedView) {
-            tableHeaders.push('Practical Case Score');
-        }
-    }
-    if (showTestScoreColumns) {
-        tableHeaders.push('Pre-Test Result');
-        tableHeaders.push('Post-Test Result');
-        tableHeaders.push('% Increase');
-        // --- CHANGE: Renamed column header ---
-        tableHeaders.push('average improvemt score');
-    }
-
-    // --- DAILY CASE TABLE DATA CALCULATION ---
-    const dailyCaseTableData = dailyChartLabels.map(day => {
-        const row = { day, totalCases: { correct: 0, total: 0 } };
-        groupsWithData.forEach(group => {
-            const dayData = dailyPerformance[day] && dailyPerformance[day][group] ? dailyPerformance[day][group] : { cases: 0, correctCases: 0 };
-            const pct = calcPct(dayData.correctCases, dayData.cases);
-            row[group] = {
-                pct,
-                display: `${dayData.cases} (${fmtPct(pct)})`
-            };
-            row.totalCases.correct += dayData.correctCases;
-            row.totalCases.total += dayData.cases;
-        });
-        const totalDayPct = calcPct(row.totalCases.correct, row.totalCases.total);
-        row.totalDisplay = `${row.totalCases.total} (${fmtPct(totalDayPct)})`;
-        row.totalDayPct = totalDayPct;
-        return row;
-    });
-
-    // --- DAILY CASE TABLE TOTALS CALCULATION ---
-    const groupCaseTotals = {};
-    groupsWithData.forEach(group => {
-        groupCaseTotals[group] = { totalCases: { correct: 0, total: 0 } };
-    });
-    let grandTotalCasesCorrect = 0;
-    let grandTotalCasesTotal = 0;
-
-    dailyCaseTableData.forEach(row => {
-        groupsWithData.forEach(group => {
-            const dayData = dailyPerformance[row.day] && dailyPerformance[row.day][group] ? dailyPerformance[row.day][group] : { cases: 0, correctCases: 0 };
-            groupCaseTotals[group].totalCases.correct += dayData.correctCases;
-            groupCaseTotals[group].totalCases.total += dayData.cases;
-        });
-        grandTotalCasesCorrect += row.totalCases.correct;
-        grandTotalCasesTotal += row.totalCases.total;
-    });
-    
-    // --- UPDATED: Filter definitions ---
+    // --- (Filter definitions remain unchanged) ---
     const scoreFilterOptions = [
-        { name: 'All' },
-        { name: 'Perfect' },
-        { name: 'Excellent' },
-        { name: 'Good' },
-        { name: 'Fair' },
-        { name: 'Fail' },
-        { name: 'Data Incomplete' }
+        { name: 'All' }, { name: 'Perfect' }, { name: 'Excellent' }, { name: 'Good' },
+        { name: 'Fair' }, { name: 'Fail' }, { name: 'Data Incomplete' }
     ];
-
     const caseFilterOptions = [
-        { name: 'All' },
-        { name: 'Perfect' },
-        { name: 'Excellent' },
-        { name: 'Good' },
-        { name: 'Fail' },
-        { name: 'Data Incomplete' }
+        { name: 'All' }, { name: 'Perfect' }, { name: 'Excellent' }, { name: 'Good' },
+        { name: 'Fail' }, { name: 'Data Incomplete' }
     ];
-
-    // --- UPDATED: Definitions for the summary table headers ---
     const correctnessCategories = [
         { name: 'Perfect', colorClass: 'bg-green-200 text-green-800', key: 'Perfect' },
         { name: 'Excellent', colorClass: 'bg-yellow-200 text-yellow-800', key: 'Excellent' },
@@ -973,18 +1151,16 @@ export function CourseReportView({
         { name: 'Fail', colorClass: 'bg-red-200 text-red-800', key: 'Fail' },
         { name: 'Data Incomplete', colorClass: 'bg-gray-700 text-white', key: 'Data Incomplete' }
     ];
-    
-    // --- Definitions for the practical case score summary (which has a different color scheme) ---
     const practicalScoreCategories = [
         { name: 'Perfect', colorClass: getScoreColorClass(100), key: 'Perfect' },
         { name: 'Excellent', colorClass: getScoreColorClass(95), key: 'Excellent' },
         { name: 'Good', colorClass: getScoreColorClass(90), key: 'Good' },
-        { name: 'Fair', colorClass: 'bg-orange-200 text-orange-800', key: 'Fair' }, // Included for layout
+        { name: 'Fair', colorClass: 'bg-orange-200 text-orange-800', key: 'Fair' },
         { name: 'Fail', colorClass: getScoreColorClass(89), key: 'Fail' },
         { name: 'Data Incomplete', colorClass: getScoreColorClass(NaN), key: 'Data Incomplete' }
     ];
 
-
+    // --- (Boolean flags remain unchanged) ---
     const hasAnyKpis = overall.totalCases > 0 || overall.totalSkills > 0;
     const hasAnyCaseDataForCharts = combinedChartData.datasets[0].data.some(d => d > 0);
     const hasAnyDailyCaseDataForCharts = dailyChartData.datasets[0].data.some(d => d > 0);
@@ -994,6 +1170,7 @@ export function CourseReportView({
     const hasChartParticipants = chartParticipants.length > 0;
 
 
+    // --- JSX RENDER ---
     return (
         <div className="grid gap-6">
             <PageHeader 
@@ -1032,7 +1209,7 @@ export function CourseReportView({
             
             <div id="full-course-report" className="space-y-6">
 
-                {/* Main Course Info Card */}
+                {/* Main Course Info Card (id="course-info-card") */}
                 <Card>
                     <div id="course-info-card" className="relative p-2">
                         {!isSharedView && (
@@ -1062,7 +1239,7 @@ export function CourseReportView({
                     </div>
                 </Card>
 
-                {/* Final Report Card */}
+                {/* Final Report Card (Not included in PDF) */}
                 {finalReportData && finalReportData.pdf_url && (
                     <Card>
                         <h3 className="text-xl font-bold mb-4">Final Report Documents</h3>
@@ -1092,7 +1269,7 @@ export function CourseReportView({
                     </Card>
                 )}
                 
-                {/* KPI Card */}
+                {/* KPI Card (id="kpi-card") */}
                 {hasAnyKpis && (
                     <Card>
                         <div id="kpi-card" className="relative p-2">
@@ -1129,7 +1306,6 @@ export function CourseReportView({
                                         </div>
                                     </div>
                                 </div>
-
                                 {/* Classification KPIs Row */}
                                 <div>
                                     <h4 className="text-lg font-semibold mb-2 text-gray-700">Skill/Classification KPIs</h4>
@@ -1152,8 +1328,7 @@ export function CourseReportView({
                                         </div>
                                     </div>
                                 </div>
-
-                                {/* --- NEW: IMNCI Introduction KPIs --- */}
+                                {/* IMNCI Introduction KPIs */}
                                 {course.course_type === 'IMNCI' && newImciFacilities.length > 0 && (
                                     <div>
                                         <h4 className="text-lg font-semibold mb-2 text-gray-700">IMNCI Introduction</h4>
@@ -1165,14 +1340,12 @@ export function CourseReportView({
                                         </div>
                                     </div>
                                 )}
-                                {/* --- END NEW KPIs --- */}
-
                             </div>
                         </div>
                     </Card>
                 )}
 
-                {/* --- NEW: Facilities with New IMCI Introduction --- */}
+                {/* Facilities w/ New IMNCI (id="new-imci-facilities-card") */}
                 {course.course_type === 'IMNCI' && newImciFacilities && newImciFacilities.length > 0 && (
                     <Card>
                         <div id="new-imci-facilities-card" className="relative p-2">
@@ -1185,7 +1358,7 @@ export function CourseReportView({
                                     <CopyIcon />
                                 </button>
                             )}
-                            <h3 className="text-xl font-bold mb-4">Facilities with New IMCI Service Introduction</h3>
+                            <h3 className="text-xl font-bold mb-4">Facilities with New IMNCI Service Introduction</h3>
                             <p className="text-sm text-gray-600 mb-4">
                                 The following facilities did not provide IMCI services before this course. Adding participants from these facilities has triggered an update to mark them as IMNCI-providing sites.
                             </p>
@@ -1202,7 +1375,7 @@ export function CourseReportView({
                     </Card>
                 )}
 
-                {/* --- NEW: IMNCI Coverage Card --- */}
+                {/* IMNCI Coverage (id="coverage-card") */}
                 {course.course_type === 'IMNCI' && coverageData && (
                     <Card>
                         <div id="coverage-card" className="relative p-2">
@@ -1230,7 +1403,7 @@ export function CourseReportView({
                     </Card>
                 )}
 
-                {/* Participant Test Scores Card */}
+                {/* Participant Test Scores (id="test-scores-card") */}
                 {showTestScoresOnScreen && hasTestScoreDataForKpis && (
                     <Card>
                         <div id="test-scores-card" className="relative p-2">
@@ -1265,7 +1438,7 @@ export function CourseReportView({
                                     <Line 
                                         ref={prePostDistributionChartRef} 
                                         data={testScoreChartData} 
-                                        options={testScoreChartOptions} // <-- Options are now updated for percentages
+                                        options={testScoreChartOptions}
                                     />
                                 </div>
                             ) : (
@@ -1275,10 +1448,10 @@ export function CourseReportView({
                     </Card>
                 )}
 
-                {/* --- CHART SECTION START --- */}
+                {/* --- CHART SECTION (id="charts-grid") --- */}
                 {(hasAnyCaseDataForCharts || hasAnyDailyCaseDataForCharts) && (
-                    <div className="grid md:grid-cols-2 gap-6">
-                        {/* Overall Performance by Group chart card */}
+                    <div id="charts-grid" className="grid md:grid-cols-2 gap-6">
+                        {/* Group Perf Chart (id="group-perf-chart-card") */}
                         {hasAnyCaseDataForCharts && (
                             <Card>
                                 <div id="group-perf-chart-card" className="relative p-2">
@@ -1297,7 +1470,7 @@ export function CourseReportView({
                             </Card>
                         )}
                         
-                        {/* Overall Performance by Day chart card */}
+                        {/* Day Perf Chart (id="day-perf-chart-card") */}
                         {hasAnyDailyCaseDataForCharts && (
                              <Card>
                                 <div id="day-perf-chart-card" className="relative p-2">
@@ -1317,10 +1490,10 @@ export function CourseReportView({
                         )}
                     </div>
                 )}
-                {/* --- CHART SECTION END --- */}
 
-                <div className="grid md:grid-cols-2 gap-6">
-                    {/* Daily Case Table */}
+                {/* --- DATA TABLE SECTION (id="daily-tables-grid") --- */}
+                <div id="daily-tables-grid" className="grid md:grid-cols-2 gap-6">
+                    {/* Daily Case Table (id="daily-case-table-card") */}
                     {hasDailyCaseData && (
                         <Card>
                             <div id="daily-case-table-card" className="relative p-2">
@@ -1378,7 +1551,7 @@ export function CourseReportView({
                             </div>
                         </Card>
                     )}
-                    {/* Daily Skill Table */}
+                    {/* Daily Skill Table (id="daily-skill-table-card") */}
                     {hasDailySkillData && (
                         <Card>
                              <div id="daily-skill-table-card" className="relative p-2">
@@ -1419,6 +1592,7 @@ export function CourseReportView({
                                                             {totalSkillsTotal} ({fmtPct(pct)})
                                                         </td>
                                                     );
+                
                                                 })}
                                                 <td className={`p-2 border text-center ${getScoreColorClass(calcPct(grandTotalSkillsCorrect, grandTotalSkillsTotal))}`}>
                                                     {grandTotalSkillsCorrect} ({fmtPct(calcPct(grandTotalSkillsCorrect, grandTotalSkillsTotal))})
@@ -1438,7 +1612,7 @@ export function CourseReportView({
                     )}
                 </div>
 
-                {/* Participant Results Card */}
+                {/* Participant Results (id="participant-results-card") */}
                 {(showTestScoreColumns || showCaseColumns) && (
                     <Card>
                          <div id="participant-results-card" className="relative p-2">
@@ -1453,15 +1627,14 @@ export function CourseReportView({
                             )}
                             <h3 className="text-xl font-bold mb-4">Participant Results</h3>
 
-                            {/* --- UPDATED: Participant Score Summary Table --- */}
+                            {/* Participant Score Summary Table (will be captured by canvas) */}
                             {showCaseColumns && (
-                                <div className="mb-6">
+                                <div id="participant-summary-table" className="mb-6">
                                     <h4 className="text-md font-semibold mb-2 text-gray-700">Participant Score Summary</h4>
                                     <table className="w-full border-collapse border border-gray-300 text-center">
                                         <thead>
                                             <tr>
                                                 <th className="p-2 border font-semibold bg-gray-100 text-left">Score Type</th>
-                                                {/* --- Headers now use practical score categories for row 1 --- */}
                                                 {practicalScoreCategories.map(cat => (
                                                     <th key={cat.key} className={`p-2 border font-semibold ${cat.colorClass}`}>
                                                         {cat.name}
@@ -1470,21 +1643,19 @@ export function CourseReportView({
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {/* --- Row 1: Practical Case Score --- */}
+                                            {/* Row 1: Practical Case Score */}
                                             <tr>
                                                 <td className="p-2 border font-semibold text-left">Practical Case Score</td>
                                                 {practicalScoreCategories.map(cat => (
                                                     <td key={cat.key} className="p-2 border text-2xl font-bold">
-                                                        {/* This will show 0 for 'Fair' as it's not in this logic */}
                                                         {caseCorrectnessDistribution[cat.key] || 0}
                                                     </td>
                                                 ))}
                                             </tr>
-                                            {/* --- Row 2: Written Test Score --- */}
+                                            {/* Row 2: Written Test Score */}
                                             {showTestScoreColumns && (
                                                 <tr>
                                                     <td className="p-2 border font-semibold text-left">Written Test Score (average improvement)</td>
-                                                    {/* --- Data now uses avgImprovementDistribution --- */}
                                                     {correctnessCategories.map(cat => (
                                                         <td key={cat.key} className="p-2 border text-2xl font-bold">
                                                             {avgImprovementDistribution[cat.key] || 0}
@@ -1497,12 +1668,11 @@ export function CourseReportView({
                                 </div>
                             )}
 
-                            {/* --- UPDATED: Filters (Buttons to Dropdowns) --- */}
+                            {/* Filters (Not included in PDF) */}
                             {!isSharedView && (
                                 <div className="flex flex-col md:flex-row gap-4 mb-4">
                                     {showTestScoreColumns && (
                                         <div className="flex items-center gap-2">
-                                            {/* --- This filter now uses the new avg. improvement categories --- */}
                                             <label htmlFor="score-filter" className="text-sm font-semibold text-gray-700">Filter by Avg. Improvement:</label>
                                             <select
                                                 id="score-filter"
@@ -1538,6 +1708,7 @@ export function CourseReportView({
                                 </div>
                             )}
 
+                            {/* Participant List Table (This is what autoTable will generate) */}
                             <Table headers={tableHeaders}>
                                 {filteredParticipants.length === 0 ? (
                                     <tr>
@@ -1551,12 +1722,10 @@ export function CourseReportView({
                                         const postScore = Number(p.post_test_score);
                                         const increase = (!isNaN(preScore) && preScore > 0 && !isNaN(postScore) && postScore > 0) ? ((postScore - preScore) / preScore) * 100 : null;
                                         
-                                        // --- Use the new helper function for the table row ---
                                         const category = getAvgImprovementCategory(p.pre_test_score, p.post_test_score);
                                         
                                         const increaseDisplay = isNaN(increase) || increase === null ? 'N/A' : `${increase.toFixed(1)}%`;
                                         
-                                        // --- THESE ARE THE CHANGED LINES ---
                                         const preDisplay = fmtDecimal(preScore);
                                         const postDisplay = fmtDecimal(postScore);
 

@@ -51,7 +51,7 @@ const CourseTestForm = lazy(() => import('./components/CourseTestForm.jsx').then
 
 const PublicFacilityUpdateForm = lazy(() => import('./components/FacilityForms.jsx').then(module => ({ default: module.PublicFacilityUpdateForm })));
 const NewFacilityEntryForm = lazy(() => import('./components/FacilityForms.jsx').then(module => ({ default: module.NewFacilityEntryForm })));
-const SkillsMentorshipView = lazy(() => import('./components/SkillsMentorshipView.jsx'));
+const SkillsMentorshipView = lazy(() => import('./components/mentorship/SkillsMentorshipView.jsx'));
 
 
 // --- Data & Component Imports ---

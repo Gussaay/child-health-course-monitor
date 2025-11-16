@@ -1,14 +1,14 @@
 // EENCSkillsAssessmentForm.jsx
 import React, { useState, useMemo, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
-import { saveMentorshipSession } from "../data.js";
+import { saveMentorshipSession } from '../../data';
 import { Timestamp } from 'firebase/firestore';
 import {
     Card, PageHeader, Button, FormGroup, Select, Spinner,
     Input, Textarea, Checkbox, Modal
-} from './CommonComponents';
+} from '../CommonComponents';
 import { getAuth } from "firebase/auth";
-import { GenericFacilityForm, EENCFormFields } from './FacilityForms.jsx'; 
-import { submitFacilityDataForApproval } from "../data.js";
+import { GenericFacilityForm, EENCFormFields } from '../FacilityForms.jsx'; 
+import { submitFacilityDataForApproval } from '../../data';
 
 // --- مكونات خاصة بهذا النموذج --- 
 

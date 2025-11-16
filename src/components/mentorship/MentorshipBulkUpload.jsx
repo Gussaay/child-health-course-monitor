@@ -9,9 +9,9 @@ import { getAuth } from "firebase/auth";
 import {
     Button, FormGroup, Select, Spinner,
     EmptyState, Input, Modal
-} from './CommonComponents'; 
-import { STATE_LOCALITIES } from "./constants.js"; 
-import { importMentorshipSessions } from '../data';
+} from '../CommonComponents'; 
+import { STATE_LOCALITIES } from "../constants.js"; 
+import { importMentorshipSessions } from '../../data';
 
 // --- START: EENC Imports ---
 import {

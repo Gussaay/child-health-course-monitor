@@ -1,16 +1,16 @@
 // SkillsAssessmentForm.jsx
 import React, { useState, useMemo, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
-import { saveMentorshipSession } from "../data.js";
+import { saveMentorshipSession } from '../../data';
 import { Timestamp } from 'firebase/firestore';
 import {
     Card, PageHeader, Button, FormGroup, Select, Spinner,
     EmptyState, Input, Textarea, CourseIcon, Checkbox,
     Modal
-} from './CommonComponents';
+} from '../CommonComponents';
 import { getAuth } from "firebase/auth";
 
-import { GenericFacilityForm, IMNCIFormFields } from './FacilityForms.jsx';
-import { submitFacilityDataForApproval } from "../data.js";
+import { GenericFacilityForm, IMNCIFormFields } from '../FacilityForms.jsx';
+import { submitFacilityDataForApproval } from '../../data';
 
 // --- NEW: Import all IMNCI-specific logic and the renderer ---
 import {
@@ -433,8 +433,9 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                     scoresPayload[`${key}_maxScore`] = calculatedScores[key].maxScore;
                 }
             }
-            scoresPayload['treatment_score'] = calculatedScores.treatmentScoreForSave ?? 0;
-            scoresPayload['treatment_maxScore'] = calculatedScores['treatment']?.maxScore ?? 0;
+            // --- *** THIS IS THE FIX (Part 2) *** ---
+            // scoresPayload['treatment_score'] = calculatedScores.treatmentScoreForSave ?? 0; // <-- THIS LINE IS DELETED
+            // scoresPayload['treatment_maxScore'] = calculatedScores['treatment']?.maxScore ?? 0; // <-- THIS LINE IS DELETED
 
             const effectiveDateTimestamp = Timestamp.fromDate(new Date(currentFormData.session_date));
             const sessionId = editingIdRef.current; // Get sessionId first
@@ -620,8 +621,9 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                     scoresPayload[`${key}_maxScore`] = calculatedScores[key].maxScore;
                 }
             }
-            scoresPayload['treatment_score'] = calculatedScores.treatmentScoreForSave ?? 0;
-            scoresPayload['treatment_maxScore'] = calculatedScores['treatment']?.maxScore ?? 0;
+            // --- *** THIS IS THE FIX (Part 2) *** ---
+            // scoresPayload['treatment_score'] = calculatedScores.treatmentScoreForSave ?? 0; // <-- THIS LINE IS DELETED
+            // scoresPayload['treatment_maxScore'] = calculatedScores['treatment']?.maxScore ?? 0; // <-- THIS LINE IS DELETED
 
             const effectiveDateTimestamp = Timestamp.fromDate(new Date(formData.session_date));
             const sessionId = editingIdRef.current; // Get sessionId first
@@ -701,8 +703,9 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                     scoresPayload[`${key}_maxScore`] = calculatedScores[key].maxScore;
                 }
             }
-            scoresPayload['treatment_score'] = calculatedScores.treatmentScoreForSave ?? 0;
-            scoresPayload['treatment_maxScore'] = calculatedScores['treatment']?.maxScore ?? 0;
+            // --- *** THIS IS THE FIX (Part 2) *** ---
+            // scoresPayload['treatment_score'] = calculatedScores.treatmentScoreForSave ?? 0; // <-- THIS LINE IS DELETED
+            // scoresPayload['treatment_maxScore'] = calculatedScores['treatment']?.maxScore ?? 0; // <-- THIS LINE IS DELETED
 
              const effectiveDateTimestamp = Timestamp.fromDate(new Date(formData.session_date));
              const sessionId = editingIdRef.current; // Get sessionId first

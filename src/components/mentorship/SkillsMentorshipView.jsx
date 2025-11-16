@@ -1,6 +1,6 @@
 // SkillsMentorshipView.jsx
 import React, { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
-import { useDataCache } from '../DataContext';
+import { useDataCache } from "../../DataContext";
 import { Timestamp } from 'firebase/firestore';
 import { PlusCircle, Trash2, FileText, Users, Building, ClipboardCheck, Archive, LayoutDashboard } from 'lucide-react';
 import {
@@ -13,13 +13,15 @@ import {
     deleteFile, 
     saveIMNCIVisitReport,
     deleteIMNCIVisitReport,
-    listIMNCIVisitReports
-} from '../data';
+    listIMNCIVisitReports, // Implied import
+    saveEENCVisitReport, // <-- ADDED
+    deleteEENCVisitReport // <-- ADDED
+} from '../../data';
 import {
     Card, PageHeader, Button, FormGroup, Select, Spinner,
     EmptyState, Input, Textarea, CourseIcon, Checkbox, Modal
-} from './CommonComponents';
-import { STATE_LOCALITIES } from "./constants.js";
+} from '../CommonComponents';
+import { STATE_LOCALITIES } from "../constants.js";
 import SkillsAssessmentForm from './SkillsAssessmentForm';
 import MentorshipDashboard from './MentorshipDashboard'; // <-- IMPORT ADDED
 import { getAuth } from "firebase/auth";
@@ -37,15 +39,22 @@ import EENCSkillsAssessmentForm from './EENCSkillsAssessmentForm'; // <-- ADDED
 import EENCMothersForm from './EENCMothersForm'; // <-- ADDED
 // --- END EENC IMPORTS ---
 
-// --- NEW: Lazy load Visit Report ---
-const IMNCIVisitReport = lazy(() => import('./IMNCIVisitReport'));
+// --- MODIFIED: Lazy load Visit Reports from combined file ---
+const IMNCIVisitReport = lazy(() =>
+  import('./VisitReports.jsx').then(module => ({ default: module.IMNCIVisitReport }))
+);
+const EENCVisitReport = lazy(() =>
+  import('./VisitReports.jsx').then(module => ({ default: module.EENCVisitReport }))
+);
+// --- END MODIFICATION ---
+
 
 // --- NEW IMPORTS: For Add Facility Modal ---
 import {
     GenericFacilityForm,
     SharedFacilityFields,
     IMNCIFormFields
-} from './FacilityForms.jsx';
+} from '../FacilityForms.jsx';
 import { onAuthStateChanged } from "firebase/auth"; // <-- NEW IMPORT
 
 // --- AddHealthWorkerModal Component (with job title dropdown) (KEPT AS-IS) ---
@@ -167,7 +176,7 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "اختر م
                     {selectedOption ? selectedOption.label : <span className="text-gray-500">{placeholder}</span>}
                 </span>
                 <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                    <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="http://www.w3.org/2000/svg" fill="currentColor" aria-hidden="true">
                         <path fillRule="evenodd" d="M10 3a1 1 0 01.707.293l3 3a1 1 0 01-1.414 1.414L10 5.414 7.707 7.707a1 1 0 01-1.414-1.414l3-3A1 1 0 0110 3zm-3.707 9.293a1 1 0 011.414 0L10 14.586l2.293-2.293a1 1 0 011.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
                     </svg>
                 </span>
@@ -822,8 +831,10 @@ const SkillsMentorshipView = ({
         isLoading: isDataCacheLoading,
         skillMentorshipSubmissions,
         fetchSkillMentorshipSubmissions,
-        imnciVisitReports, // <-- NEW
-        fetchIMNCIVisitReports, // <-- NEW
+        imnciVisitReports, // <-- EXISTING
+        fetchIMNCIVisitReports, // <-- EXISTING
+        eencVisitReports, // <-- ASSUMED/ADDED
+        fetchEENCVisitReports, // <-- ASSUMED/ADDED
         isFacilitiesLoading, // Use this directly for form setup
     } = useDataCache();
     // --- END MODIFICATION ---
@@ -934,27 +945,52 @@ const SkillsMentorshipView = ({
     }, [processedSubmissions, user, activeService]);
 
 
-    // --- NEW: Memoized list of visit reports ---
+    // --- MODIFIED: Memoized list of visit reports (filters by activeService) ---
     const processedVisitReports = useMemo(() => {
-        if (!imnciVisitReports) return [];
-        return imnciVisitReports.map(rep => ({
+        const imnci = (imnciVisitReports || []).map(rep => ({
             id: rep.id,
+            service: 'IMNCI', // <-- Add service type
             facilityId: rep.facilityId || null,
             facilityName: rep.facilityName || 'N/A',
             state: rep.state || 'N/A',
             locality: rep.locality || 'N/A',
-            visitDate: rep.visit_date || 'N/A', // <-- FIX: use visit_date
+            visitDate: rep.visit_date || 'N/A',
             mentorEmail: rep.mentorEmail || null,
             mentorName: rep.mentorName || null,
             mentorDisplay: rep.mentorName || rep.mentorEmail || 'N/A',
             fullData: rep // Store original for editing
         }));
-    }, [imnciVisitReports]);
+        
+        const eenc = (eencVisitReports || []).map(rep => ({
+            id: rep.id,
+            service: 'EENC', // <-- Add service type
+            facilityId: rep.facilityId || null,
+            facilityName: rep.facilityName || 'N/A',
+            state: rep.state || 'N/A',
+            locality: rep.locality || 'N/A',
+            visitDate: rep.visit_date || 'N/A',
+            mentorEmail: rep.mentorEmail || null,
+            mentorName: rep.mentorName || null,
+            mentorDisplay: rep.mentorName || rep.mentorEmail || 'N/A',
+            fullData: rep // Store original for editing
+        }));
 
-    // --- NEW: Handlers for Visit Reports ---
+        // Combine and filter by the active service
+        const allReports = [...imnci, ...eenc];
+        return allReports.filter(rep => rep.service === activeService);
+
+    }, [imnciVisitReports, eencVisitReports, activeService]); // <-- MODIFIED
+    // --- END MODIFICATION ---
+
+    // --- MODIFIED: Handlers for Visit Reports ---
     const handleEditVisitReport = (reportId) => {
-        const report = imnciVisitReports.find(r => r.id === reportId);
+        // Find in the correct *original* list based on activeService
+        const reportList = activeService === 'IMNCI' ? imnciVisitReports : eencVisitReports;
+        if (!reportList) return;
+
+        const report = reportList.find(r => r.id === reportId);
         if (!report) return;
+
         setSelectedState(report.state);
         setSelectedLocality(report.locality);
         setSelectedFacilityId(report.facilityId);
@@ -967,16 +1003,22 @@ const SkillsMentorshipView = ({
     const handleDeleteVisitReport = async (reportId) => {
         if (window.confirm('Are you sure you want to delete this visit report?')) {
             try {
-                await deleteIMNCIVisitReport(reportId);
+                if (activeService === 'IMNCI') {
+                    await deleteIMNCIVisitReport(reportId);
+                    await fetchIMNCIVisitReports(true);
+                } else if (activeService === 'EENC') {
+                    await deleteEENCVisitReport(reportId);
+                    await fetchEENCVisitReports(true); // <-- Fetch EENC
+                }
                 setToast({ show: true, message: 'Report deleted.', type: 'success' });
-                await fetchIMNCIVisitReports(true);
             } catch (error) {
                 setToast({ show: true, message: `Delete failed: ${error.message}`, type: 'error' });
             }
         }
     };
+    // --- END MODIFICATION ---
 
-     // --- START: DATA FETCHING FIX ---
+     // --- MODIFIED: DATA FETCHING (Fetches EENC reports) ---
      useEffect(() => {
         // This fetches the list of facilities for the dropdowns
         fetchHealthFacilities();
@@ -986,9 +1028,10 @@ const SkillsMentorshipView = ({
         // and for the dashboard to have data.
         fetchSkillMentorshipSubmissions();
         fetchIMNCIVisitReports(); 
+        if (fetchEENCVisitReports) fetchEENCVisitReports(); // <-- ADDED (with check)
 
-    }, [fetchHealthFacilities, fetchSkillMentorshipSubmissions, fetchIMNCIVisitReports]);
-    // --- END: DATA FETCHING FIX ---
+    }, [fetchHealthFacilities, fetchSkillMentorshipSubmissions, fetchIMNCIVisitReports, fetchEENCVisitReports]); // <-- ADDED
+    // --- END MODIFICATION ---
     
     // --- NEW: Effect to reset filters on tab change ---
     useEffect(() => {
@@ -1365,7 +1408,7 @@ const SkillsMentorshipView = ({
         }
     };
 
-    // This function handles exits from MothersForm and VisitReport
+    // --- MODIFIED: This function handles exits from MothersForm and VisitReport ---
     const handleGenericFormExit = async (returnTab = 'skills_list') => {
         resetSelection(); 
 
@@ -1373,6 +1416,7 @@ const SkillsMentorshipView = ({
         // (Skills form has its own save handler 'handleSaveSuccess')
         await fetchSkillMentorshipSubmissions(true); 
         await fetchIMNCIVisitReports(true); // Also refresh visit reports
+        if (fetchEENCVisitReports) await fetchEENCVisitReports(true); // <-- ADDED
 
 
         if (publicSubmissionMode) {
@@ -1977,10 +2021,14 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                             <Button variant="primary" onClick={handleStartMothersForm}>Add Mother's Knowledge & Satisfaction Form</Button>
                                         )}
 
-                                        {/* --- NEW: Show "Add Visit Report" only on visit reports tab --- */}
+                                        {/* --- MODIFICATION: Show "Add Visit Report" based on service --- */}
                                         {activeTab === 'visit_reports' && activeService === 'IMNCI' && (
-                                            <Button variant="primary" onClick={handleStartNewVisitReport}>Add New Visit Report</Button>
+                                            <Button variant="primary" onClick={handleStartNewVisitReport}>Add New IMNCI Visit Report</Button>
                                         )}
+                                        {activeTab === 'visit_reports' && activeService === 'EENC' && (
+                                            <Button variant="primary" onClick={handleStartNewVisitReport}>Add New EENC Visit Report</Button>
+                                        )}
+                                        {/* --- END MODIFICATION --- */}
 
                                         {/* --- MODIFICATION: Show "Bulk Upload" only on skills tab --- */}
                                         {activeTab === 'skills_list' && canBulkUploadMentorships && (
@@ -2038,14 +2086,15 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     statusFilter={statusFilter}
                                 />
                             )}
-                            {/* --- NEW CONTENT BLOCK: For Visit Reports --- */}
+                            {/* --- MODIFIED CONTENT BLOCK: For Visit Reports --- */}
                             {activeTab === 'visit_reports' && (
                                 <VisitReportsTable
-                                    reports={processedVisitReports}
+                                    reports={processedVisitReports} // This is now filtered by activeService
                                     onEdit={handleEditVisitReport}
                                     onDelete={handleDeleteVisitReport}
                                 />
                             )}
+                            {/* --- END MODIFICATION --- */}
 
                             {/* --- MODIFIED: Dashboard props --- */}
                             {activeTab === 'dashboard' && (
@@ -2199,27 +2248,41 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                     )}
                     {/* --- END: NEW MOTHER'S FORM MODAL --- */}
 
-                    {/* --- START: NEW VISIT REPORT MODAL --- */}
+                    {/* --- START: NEW VISIT REPORT MODAL (MODIFIED) --- */}
                     {isVisitReportModalOpen && (
                         <Modal 
                             isOpen={isVisitReportModalOpen} 
                             onClose={() => setIsVisitReportModalOpen(false)} 
-                            title="تقرير زيارة العلاج المتكامل"
+                            title={activeService === 'IMNCI' ? "تقرير زيارة العلاج المتكامل" : "تقرير زيارة EENC"}
                             size="full"
                         >
                             <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
                                 <Suspense fallback={<div className="p-8"><Spinner /></div>}>
-                                    <IMNCIVisitReport
-                                        facility={facilityData} // Pass the same facility data as the skills form
-                                        onCancel={() => { // This handles both Save and Cancel from the modal form
-                                            setIsVisitReportModalOpen(false);
-                                            fetchSkillMentorshipSubmissions(true); // Refresh submissions list on close
-                                            fetchIMNCIVisitReports(true); // <-- NEW
-                                        }}
-                                        setToast={setToast}
-                                        allSubmissions={processedSubmissions}
-                                        existingReportData={null} // Modal always creates new
-                                    />
+                                    {activeService === 'IMNCI' ? (
+                                        <IMNCIVisitReport
+                                            facility={facilityData} // Pass the same facility data as the skills form
+                                            onCancel={() => { // This handles both Save and Cancel from the modal form
+                                                setIsVisitReportModalOpen(false);
+                                                fetchSkillMentorshipSubmissions(true); // Refresh submissions list on close
+                                                fetchIMNCIVisitReports(true);
+                                            }}
+                                            setToast={setToast}
+                                            allSubmissions={processedSubmissions}
+                                            existingReportData={null} // Modal always creates new
+                                        />
+                                    ) : (
+                                        <EENCVisitReport
+                                            facility={facilityData}
+                                            onCancel={() => {
+                                                setIsVisitReportModalOpen(false);
+                                                fetchSkillMentorshipSubmissions(true);
+                                                if (fetchEENCVisitReports) fetchEENCVisitReports(true);
+                                            }}
+                                            setToast={setToast}
+                                            allSubmissions={processedSubmissions}
+                                            existingReportData={null}
+                                        />
+                                    )}
                                 </Suspense>
                             </div>
                         </Modal>
@@ -2324,16 +2387,19 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
         // --- END: MODIFIED FOR EENC ---
     }
 
-    // --- 4. Render IMNCIVisitReport (NEW) ---
+    // --- 4. Render VisitReport (MODIFIED) ---
      if (currentView === 'form_setup' && activeFormType === 'visit_report' && (editingSubmission || (isReadyToStart && selectedFacility)) && activeService) {
+        
+        const ReportComponent = activeService === 'IMNCI' ? IMNCIVisitReport : EENCVisitReport;
+        
         return (
             <>
                 <Suspense fallback={<div className="p-8"><Spinner /></div>}>
-                    <IMNCIVisitReport
+                    <ReportComponent
                         facility={facilityData} // Use the same facilityData logic from Skills form
                         onCancel={() => handleGenericFormExit('visit_reports')}
                         setToast={setToast}
-                        allSubmissions={processedSubmissions}
+                        allSubmissions={processedSubmissions} // Pass skills submissions
                         existingReportData={editingSubmission} // Pass editing data
                     />
                 </Suspense>
@@ -2354,6 +2420,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
             </>
         );
     }
+    // --- END MODIFICATION ---
 
 
     // --- 3. Render Setup View (Fallback for selection) ---
@@ -2368,14 +2435,16 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
         const isSkillsAssessmentSetup = activeFormType === 'skills_assessment'; // Flag for worker requirement
         const isVisitReportSetup = activeFormType === 'visit_report'; // <-- NEW
         
+        // --- MODIFIED: Setup Title ---
         let setupTitle = '';
         if (isSkillsAssessmentSetup) {
             setupTitle = editingSubmission ? `تعديل جلسة: ${serviceTitleArabic}` : `إدخال بيانات: ${serviceTitleArabic}`;
         } else if (isVisitReportSetup) {
-            setupTitle = editingSubmission ? 'تعديل تقرير الزيارة' : 'إدخال تقرير زيارة جديد';
+            setupTitle = editingSubmission ? (activeService === 'EENC' ? 'تعديل تقرير زيارة EENC' : 'تعديل تقرير الزيارة') : (activeService === 'EENC' ? 'إدخال تقرير زيارة EENC' : 'إدخال تقرير زيارة جديد');
         } else {
             setupTitle = activeService === 'EENC' ? 'نموذج استبيان الأم (EENC)' : 'نموذج استبيان الأم (IMNCI)';
         }
+        // --- END MODIFICATION ---
 
         const setupSubtitle = isSkillsAssessmentSetup 
             ? "الرجاء اختيار الولاية والمحلية والمنشأة والعامل الصحي للمتابعة." 
@@ -2550,13 +2619,15 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                 >
                                     إلغاء والعودة
                                 </Button>
+                                {/* --- MODIFIED: Button Text --- */}
                                 <Button
                                     onClick={handleProceedToForm} // <-- MODIFIED: Calls new handler
                                     disabled={!selectedFacilityId || (isSkillsAssessmentSetup && !selectedHealthWorkerName) || isFacilitiesLoading || isWorkerInfoChanged}
                                     variant="primary"
                                 >
-                                    {isSkillsAssessmentSetup ? 'بدء جلسة الاشراف' : (isVisitReportSetup ? 'بدء تقرير الزيارة' : 'بدء استبيان الأم')}
+                                    {isSkillsAssessmentSetup ? 'بدء جلسة الاشراف' : (isVisitReportSetup ? (activeService === 'EENC' ? 'بدء تقرير زيارة EENC' : 'بدء تقرير الزيارة') : 'بدء استبيان الأم')}
                                 </Button>
+                                {/* --- END MODIFICATION --- */}
                             </div>
                             {/* --- Row 2: Navigation Buttons (NEW) --- */}
                             <div className="flex gap-2 flex-wrap justify-end">
@@ -2570,15 +2641,17 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                 >
                                     استبيان الأم
                                 </Button>
+                                {/* --- MODIFIED: Button Text and Title --- */}
                                 <Button 
                                     type="button" 
                                     variant="info"
                                     onClick={() => setIsVisitReportModalOpen(true)} 
                                     disabled={isFacilitiesLoading || !selectedFacility}
-                                    title={selectedFacility ? "Open IMNCI Visit Report" : "Select a facility first"}
+                                    title={selectedFacility ? (activeService === 'EENC' ? "Open EENC Visit Report" : "Open IMNCI Visit Report") : "Select a facility first"}
                                 >
-                                    تقرير الزيارة
+                                    {activeService === 'EENC' ? 'تقرير زيارة EENC' : 'تقرير الزيارة'}
                                 </Button>
+                                {/* --- END MODIFICATION --- */}
                                 <Button 
                                     type="button" 
                                     variant="info"
@@ -2607,6 +2680,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                             
                             {/* This view has no "draft" state */}
                             
+                            {/* --- MODIFIED: Button Text --- */}
                             <Button 
                                 type="button" 
                                 onClick={handleProceedToForm}
@@ -2614,8 +2688,9 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                 title={!selectedFacilityId ? "Select facility" : (isSkillsAssessmentSetup && !selectedHealthWorkerName ? "Select health worker" : "Start Session")}
                                 size="sm"
                             >
-                                {isSkillsAssessmentSetup ? 'بدء الجلسة' : (isVisitReportSetup ? 'بدء التقرير' : 'بدء الاستبيان')} 
+                                {isSkillsAssessmentSetup ? 'بدء الجلسة' : (isVisitReportSetup ? (activeService === 'EENC' ? 'بدء تقرير EENC' : 'بدء التقرير') : 'بدء الاستبيان')} 
                             </Button>
+                            {/* --- END MODIFICATION --- */}
                         </div>
                         {/* --- END NEW: Mobile Bar --- */}
                     </div>
@@ -2702,27 +2777,41 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                 )}
                 {/* --- END: NEW MOTHER'S FORM MODAL --- */}
 
-                {/* --- START: NEW VISIT REPORT MODAL --- */}
+                {/* --- START: NEW VISIT REPORT MODAL (MODIFIED) --- */}
                 {isVisitReportModalOpen && selectedFacility && (
                     <Modal 
                         isOpen={isVisitReportModalOpen} 
                         onClose={() => setIsVisitReportModalOpen(false)} 
-                        title="تقرير زيارة العلاج المتكامل"
+                        title={activeService === 'IMNCI' ? "تقرير زيارة العلاج المتكامل" : "تقرير زيارة EENC"}
                         size="full"
                     >
                         <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
                             <Suspense fallback={<div className="p-8"><Spinner /></div>}>
-                                <IMNCIVisitReport
-                                    facility={selectedFacility} // Use selectedFacility from setup
-                                    onCancel={() => {
-                                        setIsVisitReportModalOpen(false);
-                                        fetchSkillMentorshipSubmissions(true);
-                                        fetchIMNCIVisitReports(true);
-                                    }}
-                                    setToast={setToast}
-                                    allSubmissions={processedSubmissions}
-                                    existingReportData={null} // Modal always creates new
-                                />
+                                {activeService === 'IMNCI' ? (
+                                    <IMNCIVisitReport
+                                        facility={selectedFacility} // Use selectedFacility from setup
+                                        onCancel={() => {
+                                            setIsVisitReportModalOpen(false);
+                                            fetchSkillMentorshipSubmissions(true);
+                                            fetchIMNCIVisitReports(true);
+                                        }}
+                                        setToast={setToast}
+                                        allSubmissions={processedSubmissions}
+                                        existingReportData={null} // Modal always creates new
+                                    />
+                                ) : (
+                                    <EENCVisitReport
+                                        facility={selectedFacility}
+                                        onCancel={() => {
+                                            setIsVisitReportModalOpen(false);
+                                            fetchSkillMentorshipSubmissions(true);
+                                            if (fetchEENCVisitReports) fetchEENCVisitReports(true);
+                                        }}
+                                        setToast={setToast}
+                                        allSubmissions={processedSubmissions}
+                                        existingReportData={null}
+                                    />
+                                )}
                             </Suspense>
                         </div>
                     </Modal>

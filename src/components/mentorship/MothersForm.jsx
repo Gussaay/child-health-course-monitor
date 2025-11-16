@@ -1,6 +1,6 @@
 // MothersForm.jsx
 import React, { useState, useMemo, useRef } from 'react';
-import { saveMentorshipSession } from "../data.js";
+import { saveMentorshipSession } from '../../data';
 import { Timestamp } from 'firebase/firestore';
 import {
     Card, 
@@ -12,7 +12,7 @@ import {
     Textarea,
     // FIX APPLIED: Input must be imported to be defined.
     Input 
-} from './CommonComponents';
+} from '../CommonComponents';
 import { getAuth } from "firebase/auth";
 
 // --- Score Circle Component (Modified for placement next to RTL title) ---

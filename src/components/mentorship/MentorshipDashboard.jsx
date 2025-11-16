@@ -14,7 +14,16 @@ import {
   Legend,
 } from 'chart.js';
 
-import { IMNCI_FORM_STRUCTURE, evaluateRelevance } from './IMNCIFormPart.jsx';
+// --- *** THIS IS THE FIX (Part 1) *** ---
+// --- Import the scoring logic to re-calculate old data ---
+import { 
+    IMNCI_FORM_STRUCTURE, 
+    evaluateRelevance, 
+    calculateScores, 
+    rehydrateDraftData, 
+    DIARRHEA_CLASSIFICATIONS, 
+    FEVER_CLASSIFICATIONS 
+} from './IMNCIFormPart.jsx';
 
 // --- NEW EENC IMPORTS ---
 import { 
@@ -762,6 +771,54 @@ const MentorshipDashboard = ({
         return sum / validScores.length;
     };
 
+    // --- *** THIS IS THE FIX (Part 2) *** ---
+    // --- NEW: Re-calculate old/buggy scores on the fly ---
+    const reCalculatedSubmissions = useMemo(() => {
+        if (!allSubmissions) return [];
+        
+        return allSubmissions.map(sub => {
+            // Check if this submission is an IMNCI 'skills' form
+            if (sub.service !== 'IMNCI' || !sub.fullData) {
+                return sub; // Not an IMNCI form, or has no raw data, return as-is
+            }
+
+            const s = sub.scores || {};
+            
+            // Check if it's OLD data (missing the new treatment key)
+            if (s.treatment_total_score_maxScore === undefined) {
+                try {
+                    // This is old data, we must re-calculate
+                    const rehydratedData = rehydrateDraftData(sub.fullData, DIARRHEA_CLASSIFICATIONS, FEVER_CLASSIFICATIONS);
+                    const reCalculatedScores = calculateScores(rehydratedData);
+
+                    // Build a new scores object in the correct format
+                    const newScoresPayload = {};
+                    for (const key in reCalculatedScores) { 
+                        if (key !== 'treatmentScoreForSave' && reCalculatedScores[key]?.score !== undefined && reCalculatedScores[key]?.maxScore !== undefined) {
+                            newScoresPayload[`${key}_score`] = reCalculatedScores[key].score;
+                            newScoresPayload[`${key}_maxScore`] = reCalculatedScores[key].maxScore;
+                        }
+                    }
+                    
+                    // Return a new submission object with the *fixed* scores
+                    return {
+                        ...sub,
+                        scores: newScoresPayload
+                    };
+
+                } catch (e) {
+                    console.error("Failed to re-calculate score for old submission:", sub.id, e);
+                    return sub; // Return original on error
+                }
+            }
+
+            // This is NEW data, it's already correct.
+            return sub;
+        });
+    }, [allSubmissions]);
+    // --- END: Re-calculation ---
+
+
     // 2. --- MODIFIED: kpiHelper now calculates all subgroup averages ---
     const imnciKpiHelper = useCallback((submissions) => {
         // This object will hold arrays of scores for averaging
@@ -792,7 +849,15 @@ const MentorshipDashboard = ({
             if (s.overallScore_maxScore > 0) scores.overall.push(s.overallScore_score / s.overallScore_maxScore);
             if (s.assessment_total_score_maxScore > 0) scores.assessment.push(s.assessment_total_score_score / s.assessment_total_score_maxScore);
             if (s.finalDecision_maxScore > 0) scores.decision.push(s.finalDecision_score / s.finalDecision_maxScore);
-            if (s.treatment_maxScore > 0) scores.treatment.push(s.treatment_score / s.treatment_maxScore);
+            
+            // --- *** THIS IS THE FIX (Part 3) *** ---
+            // --- FIX: Only read the correct "_total_score" keys ---
+            // (The data is now clean thanks to reCalculatedSubmissions)
+            if (s.treatment_total_score_maxScore > 0) {
+                scores.treatment.push(s.treatment_total_score_score / s.treatment_total_score_maxScore);
+            }
+            // --- *** END OF FIX *** ---
+
             if (s.coughClassification_maxScore > 0) scores.coughClassification.push(s.coughClassification_score / s.coughClassification_maxScore);
             if (s.pneumoniaManagement_maxScore > 0) scores.pneumoniaManagement.push(s.pneumoniaManagement_score / s.pneumoniaManagement_maxScore);
             if (s.diarrheaClassification_maxScore > 0) scores.diarrheaClassification.push(s.diarrheaClassification_score / s.diarrheaClassification_maxScore);
@@ -1073,11 +1138,13 @@ const MentorshipDashboard = ({
 
     // 3. Get base completed submissions for this service
     const serviceCompletedSubmissions = useMemo(() => {
-        return (allSubmissions || []).filter(sub => 
+        // --- *** THIS IS THE FIX (Part 2) *** ---
+        // --- Use reCalculatedSubmissions instead of allSubmissions ---
+        return (reCalculatedSubmissions || []).filter(sub => 
             sub.service === activeService && 
             sub.status === 'complete'
         );
-    }, [allSubmissions, activeService]);
+    }, [reCalculatedSubmissions, activeService]);
 
 
     // 4. Derive options for filters 
@@ -1204,7 +1271,13 @@ const MentorshipDashboard = ({
             group['Overall'].push(calcPercent(s.overallScore_score, s.overallScore_maxScore));
             group['Assessment'].push(calcPercent(s.assessment_total_score_score, s.assessment_total_score_maxScore));
             group['Decision'].push(calcPercent(s.finalDecision_score, s.finalDecision_maxScore));
-            group['Treatment'].push(calcPercent(s.treatment_score, s.treatment_maxScore));
+            
+            // --- *** THIS IS THE FIX (Part 3) *** ---
+            // --- FIX: Only read the correct "_total_score" keys ---
+            // (The data is now clean thanks to reCalculatedSubmissions)
+            group['Treatment'].push(calcPercent(s.treatment_total_score_score, s.treatment_total_score_maxScore));
+            // --- *** END OF FIX *** ---
+
             group['Cough'].push(calcPercent(s.coughClassification_score, s.coughClassification_maxScore));
             group['Pneumonia'].push(calcPercent(s.pneumoniaManagement_score, s.pneumoniaManagement_maxScore));
             group['Diarrhea (Classify)'].push(calcPercent(s.diarrheaClassification_score, s.diarrheaClassification_maxScore));

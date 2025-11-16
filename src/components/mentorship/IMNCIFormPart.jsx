@@ -2,7 +2,7 @@
 import React from 'react';
 import {
     FormGroup, Select, Checkbox
-} from './CommonComponents';
+} from '../CommonComponents';
 
 // --- Single Skill Checklist Item (Moved here) ---
 export const SkillChecklistItem = ({ label, value, onChange, name, showNaOption = true, naLabel = "لا ينطبق", isMainSymptom = false, scoreCircle = null }) => {
@@ -649,9 +649,11 @@ export const calculateScores = (formData) => {
             // This block is for the total Treatment score
             else if (group.scoreKey === 'treatment') {
                 groupMaxScore = totalTreatmentMaxScore; // Max score is the sum of all relevant skills
-                scores[group.scoreKey] = { score: groupCurrentScore, maxScore: groupMaxScore };
+                // --- FIX: Save under 'treatment_total_score' to match 'assessment_total_score' pattern ---
+                scores['treatment_total_score'] = { score: groupCurrentScore, maxScore: groupMaxScore };
                 totalMaxScore += groupMaxScore;
                 totalCurrentScore += groupCurrentScore;
+                currentTreatmentScore = groupCurrentScore; // <-- *** THIS IS THE FIX (Part 1) ***
             }
         }
     });
@@ -670,7 +672,8 @@ export const calculateScores = (formData) => {
     // --- THIS IS THE CRITICAL ADDITION ---
     // --- Add all the KPI and Hands-On scores that were missing ---
 
-    scores.treatmentScoreForSave = currentTreatmentScore; // For save payload compatibility
+    // --- LEGACY COMPATIBILITY: Keep old 'treatment_score' format for bulk upload logic ---
+    // scores.treatmentScoreForSave = currentTreatmentScore; // <-- *** THIS LINE WAS REMOVED (Part 1) ***
 
     // --- NEW HANDS-ON SKILL SCORES ---
     scores.handsOnWeight = { score: handsOnWeight_score, maxScore: handsOnWeight_max };
@@ -851,7 +854,12 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
             {IMNCI_FORM_STRUCTURE.map(group => {
                 const isGroupVisible = !group.step || visibleStep >= group.step;
                 if (!isGroupVisible) return null;
-                const groupScoreData = group.scoreKey ? scores[group.scoreKey] : (group.sectionKey === 'assessment_skills' ? scores['assessment_total_score'] : (group.sectionKey === 'treatment_skills' ? scores['treatment'] : null));
+                
+                // --- MODIFIED: Use 'treatment_total_score' for the treatment group score ---
+                const groupScoreData = group.scoreKey 
+                    ? (group.scoreKey === 'treatment' ? scores['treatment_total_score'] : scores[group.scoreKey])
+                    : (group.sectionKey === 'assessment_skills' ? scores['assessment_total_score'] : null);
+                // --- END MODIFICATION ---
 
                 // Decision Section Rendering
                 if (group.isDecisionSection) {
