@@ -10,7 +10,7 @@ import {
     deleteFile, 
     saveIMNCIVisitReport, 
     saveEENCVisitReport 
-} from '../data.js';
+} from '../../data';
 import { 
     Card, 
     PageHeader, 
