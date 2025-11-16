@@ -181,16 +181,18 @@ const generateFullCourseReportPdf = async (
         filteredParticipants, tableHeaders, showCaseColumns, showTestScoreColumns, isSharedView
     } = tableData;
 
-    // Define quality profiles for different export needs
+    // --- *** FIX: Removed fileSuffix *** ---
     const qualityProfiles = {
-        print: { scale: 2, fileSuffix: '_Print_Quality', imageType: 'image/jpeg', imageQuality: 0.95, imageFormat: 'JPEG', compression: 'MEDIUM' },
-        screen: { scale: 1.5, fileSuffix: '_Screen_Quality', imageType: 'image/png', imageQuality: 1.0, imageFormat: 'PNG', compression: 'FAST' }
+        print: { scale: 2, fileSuffix: '', imageType: 'image/jpeg', imageQuality: 0.95, imageFormat: 'JPEG', compression: 'MEDIUM' },
+        screen: { scale: 1.5, fileSuffix: '', imageType: 'image/png', imageQuality: 1.0, imageFormat: 'PNG', compression: 'FAST' }
     };
+    // --- *** END FIX *** ---
 
     const profile = qualityProfiles[quality] || qualityProfiles.print;
 
     const doc = new jsPDF('portrait', 'mm', 'a4');
-    const fileName = `Course_Report_${course.course_type}_${course.state}${profile.fileSuffix}.pdf`;
+    // File name no longer has the suffix from profile
+    const fileName = `Course_Report_${course.course_type}_${course.state}.pdf`;
     
     // --- Add Arabic Font Support ---
     doc.addFileToVFS('Amiri-Regular.ttf', amiriFontBase64);
@@ -257,16 +259,17 @@ const generateFullCourseReportPdf = async (
         theme: 'grid',
         styles: {
             font: 'Amiri',
-            fontSize: 8,
-            cellPadding: 2,
-            overflow: 'linebreak'
+            fontSize: 7, // Smaller font
+            cellPadding: 1.5, // Tighter padding
+            overflow: 'linebreak' // Default overflow
         },
         headStyles: {
             font: 'Amiri',
             fillColor: [41, 128, 185],
             textColor: [255, 255, 255],
             fontStyle: 'bold',
-            halign: 'center'
+            halign: 'center',
+            fontSize: 8, // Keep header readable
         },
     };
 
@@ -306,9 +309,8 @@ const generateFullCourseReportPdf = async (
         }
 
         // 7. Daily Tables (Canvas)
-        if (document.getElementById('daily-tables-grid')) {
-            y = addTitle('Daily Performance Tables', y);
-            y = await addCanvasImageToPdf('daily-tables-grid', y);
+        if (document.getElementById('daily-tables-section')) {
+            y = await addCanvasImageToPdf('daily-tables-section', y);
         }
         
         // 8. Participant Summary Table (Canvas)
@@ -322,7 +324,7 @@ const generateFullCourseReportPdf = async (
         if (filteredParticipants.length > 0) {
             y = addTitle('Participant Results', y);
             
-            const head = [tableHeaders]; // e.g., ['#', 'Participant Name', 'Total Cases', 'Practical Case Score', ...]
+            const head = [tableHeaders];
             const body = filteredParticipants.map((p, index) => {
                 const row = [index + 1, p.name];
                 
@@ -356,27 +358,46 @@ const generateFullCourseReportPdf = async (
                     y = data.cursor.y; 
                     doc.setFont('Amiri'); // Re-set font on new page
                 },
-
-                // --- *** THIS IS THE FIX FOR COLORS AND ALIGNMENT *** ---
                 didParseCell: (data) => {
-                    // Set font for all cells
                     data.cell.styles.font = 'Amiri';
+                    const colKey = head[0][data.column.index];
 
-                    // --- Head Styling ---
+                    // --- 1. Column Width & Overflow (Applied to Head & Body) ---
+                    if (colKey === 'Participant Name') {
+                        data.cell.styles.overflow = 'ellipsis';
+                        data.cell.styles.cellWidth = 'auto'; // Let this take remaining space
+                    } else {
+                        data.cell.styles.overflow = 'linebreak';
+                        if (colKey === '#') {
+                            data.cell.styles.cellWidth = 8;
+                        } else if (colKey === 'Total Cases') {
+                            data.cell.styles.cellWidth = 16;
+                        } else if (colKey === 'Practical Case Score') {
+                            data.cell.styles.cellWidth = 22;
+                        } else if (colKey === 'Pre-Test Result') {
+                            data.cell.styles.cellWidth = 16;
+                        } else if (colKey === 'Post-Test Result') {
+                            data.cell.styles.cellWidth = 16;
+                        } else if (colKey === '% Increase') {
+                            data.cell.styles.cellWidth = 16;
+                        } else if (colKey === 'average improvemt score') {
+                            data.cell.styles.cellWidth = 22;
+                        }
+                    }
+
+                    // --- 2. Head Styling ---
                     if (data.section === 'head') {
                         data.cell.styles.halign = 'center';
-                        data.cell.styles.fontStyle = 'bold'; // Re-affirm
+                        data.cell.styles.fontStyle = 'bold';
                         return;
                     }
 
-                    // --- Body Styling ---
+                    // --- 3. Body Styling (Alignment & Color) ---
                     if (data.section === 'body') {
                         const participant = filteredParticipants[data.row.index];
                         if (!participant) return;
-
-                        const colKey = head[0][data.column.index]; // Get header text
                         
-                        // 1. Color Styling
+                        // Color
                         let styles = null;
                         if (colKey === 'Practical Case Score') {
                             styles = getPdfScoreStyles(participant.correctness_percentage);
@@ -384,13 +405,12 @@ const generateFullCourseReportPdf = async (
                         else if (colKey === 'average improvemt score') {
                             styles = getPdfImprovementStyles(participant.pre_test_score, participant.post_test_score);
                         }
-
                         if (styles) {
                             data.cell.styles.fillColor = styles.fillColor;
                             data.cell.styles.textColor = styles.textColor;
                         }
 
-                        // 2. Alignment Styling
+                        // Alignment
                         if (colKey === 'Participant Name') {
                             data.cell.styles.halign = 'right'; // Arabic name
                         } else {
@@ -398,10 +418,27 @@ const generateFullCourseReportPdf = async (
                         }
                     }
                 }
-                // --- *** END FIX *** ---
             });
             y = doc.lastAutoTable.finalY + 10;
         }
+
+        // --- ADD PAGE NUMBERS ---
+        const pageCount = doc.internal.getNumberOfPages();
+        doc.setFont('Amiri');
+        doc.setFontSize(10);
+        doc.setTextColor(150); // Gray color
+
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i); // Go to page i
+            
+            const text = `Page ${i} of ${pageCount}`;
+            const textWidth = doc.getStringUnitWidth(text) * doc.internal.getFontSize() / doc.internal.scaleFactor;
+            const x = (pageWidth - textWidth) / 2; // Center horizontally
+            const y_footer = pageHeight - 10; // 10mm from bottom
+            
+            doc.text(text, x, y_footer);
+        }
+
 
         // --- FINAL SAVE LOGIC (from original) ---
         if (Capacitor.isNativePlatform()) {
@@ -1178,27 +1215,55 @@ export function CourseReportView({
                 subtitle={`${course.course_type} - ${course.state}`} 
                 actions={
                     isSharedView ? (
-                        isPdfGenerating ? (
-                            <Button disabled variant="secondary"><Spinner /> Generating PDF...</Button>
-                        ) : (
-                            <div className="flex items-center gap-2">
-                                <Button onClick={() => handlePdfGeneration('print')} variant="secondary"><PdfIcon /> Export for Print</Button>
-                                <Button onClick={() => handlePdfGeneration('screen')} variant="secondary"><PdfIcon /> Export for Sharing</Button>
-                            </div>
-                        )
+                        <div className="flex items-center gap-2">
+                            <Button 
+                                onClick={() => handlePdfGeneration('print')} 
+                                variant="secondary" 
+                                disabled={isPdfGenerating}
+                            >
+                                <PdfIcon /> Export for Print
+                            </Button>
+                            <Button 
+                                onClick={() => handlePdfGeneration('screen')} 
+                                variant="secondary" 
+                                disabled={isPdfGenerating}
+                            >
+                                <PdfIcon /> Export for Sharing
+                            </Button>
+                            
+                            {isPdfGenerating && (
+                                <div className="flex items-center gap-2 text-gray-500">
+                                    <Spinner size="sm" />
+                                    <span>Generating...</span>
+                                </div>
+                            )}
+                        </div>
                     ) : (
                         <>
                             <div className="flex items-center gap-2">
-                                <Button onClick={() => onShare(course)} variant="secondary">
+                                <Button onClick={() => onShare(course)} variant="secondary" disabled={isPdfGenerating}>
                                     <ShareIcon /> Share
                                 </Button>
-                                {isPdfGenerating ? (
-                                    <Button disabled variant="secondary"><Spinner /> Generating PDF...</Button>
-                                ) : (
-                                    <>
-                                        <Button onClick={() => handlePdfGeneration('print')} variant="secondary"><PdfIcon /> Export for Print</Button>
-                                        <Button onClick={() => handlePdfGeneration('screen')} variant="secondary"><PdfIcon /> Export for Sharing</Button>
-                                    </>
+                                <Button 
+                                    onClick={() => handlePdfGeneration('print')} 
+                                    variant="secondary" 
+                                    disabled={isPdfGenerating}
+                                >
+                                    <PdfIcon /> Export for Print
+                                </Button>
+                                <Button 
+                                    onClick={() => handlePdfGeneration('screen')} 
+                                    variant="secondary" 
+                                    disabled={isPdfGenerating}
+                                >
+                                    <PdfIcon /> Export for Sharing
+                                </Button>
+                                
+                                {isPdfGenerating && (
+                                    <div className="flex items-center gap-2 text-gray-500">
+                                        <Spinner size="sm" />
+                                        <span>Generating...</span>
+                                    </div>
                                 )}
                             </div>
                             <Button onClick={onBack} disabled={isPdfGenerating}>Back to List</Button>
@@ -1491,126 +1556,133 @@ export function CourseReportView({
                     </div>
                 )}
 
-                {/* --- DATA TABLE SECTION (id="daily-tables-grid") --- */}
-                <div id="daily-tables-grid" className="grid md:grid-cols-2 gap-6">
-                    {/* Daily Case Table (id="daily-case-table-card") */}
-                    {hasDailyCaseData && (
-                        <Card>
-                            <div id="daily-case-table-card" className="relative p-2">
-                                {!isSharedView && (
-                                    <button
-                                        onClick={() => handleCopyAsImage('daily-case-table-card')}
-                                        className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors"
-                                        title="Copy as Image"
-                                    >
-                                        <CopyIcon />
-                                    </button>
-                                )}
-                                <h3 className="text-xl font-bold mb-4">Daily Case Performance</h3>
-                                <Table headers={['Day', ...groupsWithData, 'Total']}>
-                                    {dailyCaseTableData.length > 0 ? (
-                                        <>
-                                            {dailyCaseTableData.map((row) => (
-                                                <tr key={row.day} className="hover:bg-gray-50">
-                                                    <td className="p-2 border font-bold">{row.day}</td>
-                                                    {groupsWithData.map(group => (
-                                                        <td key={group} className={`p-2 border text-center ${getScoreColorClass(row[group].pct)}`}>
-                                                            {row[group].display}
+                {/* --- *** FIX: Added wrapper div and title *** --- */}
+                <div id="daily-tables-section">
+                    {(hasDailyCaseData || hasDailySkillData) && (
+                        <h3 className="text-xl font-bold mb-4 px-2">Daily Performance Tables</h3>
+                    )}
+                    <div id="daily-tables-grid" className="grid md:grid-cols-2 gap-6">
+                        {/* Daily Case Table (id="daily-case-table-card") */}
+                        {hasDailyCaseData && (
+                            <Card>
+                                <div id="daily-case-table-card" className="relative p-2">
+                                    {!isSharedView && (
+                                        <button
+                                            onClick={() => handleCopyAsImage('daily-case-table-card')}
+                                            className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors"
+                                            title="Copy as Image"
+                                        >
+                                            <CopyIcon />
+                                        </button>
+                                    )}
+                                    <h3 className="text-xl font-bold mb-4">Daily Case Performance</h3>
+                                    <Table headers={['Day', ...groupsWithData, 'Total']}>
+                                        {dailyCaseTableData.length > 0 ? (
+                                            <>
+                                                {dailyCaseTableData.map((row) => (
+                                                    <tr key={row.day} className="hover:bg-gray-50">
+                                                        <td className="p-2 border font-bold">{row.day}</td>
+                                                        {groupsWithData.map(group => (
+                                                            <td key={group} className={`p-2 border text-center ${getScoreColorClass(row[group].pct)}`}>
+                                                                {row[group].display}
+                                                            </td>
+                                                        ))}
+                                                        <td className={`p-2 border text-center font-bold ${getScoreColorClass(row.totalDayPct)}`}>
+                                                            {row.totalDisplay}
                                                         </td>
-                                                    ))}
-                                                    <td className={`p-2 border text-center font-bold ${getScoreColorClass(row.totalDayPct)}`}>
-                                                        {row.totalDisplay}
+                                                    </tr>
+                                                ))}
+                                                <tr className="hover:bg-gray-50 font-bold">
+                                                    <td className="p-2 border">Total</td>
+                                                    {groupsWithData.map(group => {
+                                                        const totalCasesCorrect = groupCaseTotals[group].totalCases.correct;
+                                                        const totalCasesTotal = groupCaseTotals[group].totalCases.total;
+                                                        const pct = calcPct(totalCasesCorrect, totalCasesTotal);
+                                                        return (
+                                                            <td key={group} className={`p-2 border text-center ${getScoreColorClass(pct)}`}>
+                                                                {totalCasesTotal} ({fmtPct(pct)})
+                                                            </td>
+                                                        );
+                                                    })}
+                                                    <td className={`p-2 border text-center ${getScoreColorClass(calcPct(grandTotalCasesCorrect, grandTotalCasesTotal))}`}>
+                                                        {grandTotalCasesTotal} ({fmtPct(calcPct(grandTotalCasesCorrect, grandTotalCasesTotal))})
                                                     </td>
                                                 </tr>
-                                            ))}
-                                            <tr className="hover:bg-gray-50 font-bold">
-                                                <td className="p-2 border">Total</td>
-                                                {groupsWithData.map(group => {
-                                                    const totalCasesCorrect = groupCaseTotals[group].totalCases.correct;
-                                                    const totalCasesTotal = groupCaseTotals[group].totalCases.total;
-                                                    const pct = calcPct(totalCasesCorrect, totalCasesTotal);
-                                                    return (
-                                                        <td key={group} className={`p-2 border text-center ${getScoreColorClass(pct)}`}>
-                                                            {totalCasesTotal} ({fmtPct(pct)})
-                                                        </td>
-                                                    );
-                                                })}
-                                                <td className={`p-2 border text-center ${getScoreColorClass(calcPct(grandTotalCasesCorrect, grandTotalCasesTotal))}`}>
-                                                    {grandTotalCasesTotal} ({fmtPct(calcPct(grandTotalCasesCorrect, grandTotalCasesTotal))})
+                                            </>
+                                        ) : (
+                                            <tr>
+                                                <td colSpan={groupsWithData.length + 2}>
+                                                    <EmptyState message="No daily case data available." />
                                                 </td>
                                             </tr>
-                                        </>
-                                    ) : (
-                                        <tr>
-                                            <td colSpan={groupsWithData.length + 2}>
-                                                <EmptyState message="No daily case data available." />
-                                            </td>
-                                        </tr>
+                                        )}
+                                    </Table>
+                                </div>
+                            </Card>
+                        )}
+                        {/* Daily Skill Table (id="daily-skill-table-card") */}
+                        {hasDailySkillData && (
+                            <Card>
+                                <div id="daily-skill-table-card" className="relative p-2">
+                                    {!isSharedView && (
+                                        <button
+                                            onClick={() => handleCopyAsImage('daily-skill-table-card')}
+                                            className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors"
+                                            title="Copy as Image"
+                                        >
+                                            <CopyIcon />
+                                        </button>
                                     )}
-                                </Table>
-                            </div>
-                        </Card>
-                    )}
-                    {/* Daily Skill Table (id="daily-skill-table-card") */}
-                    {hasDailySkillData && (
-                        <Card>
-                             <div id="daily-skill-table-card" className="relative p-2">
-                                {!isSharedView && (
-                                    <button
-                                        onClick={() => handleCopyAsImage('daily-skill-table-card')}
-                                        className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors"
-                                        title="Copy as Image"
-                                    >
-                                        <CopyIcon />
-                                    </button>
-                                )}
-                                <h3 className="text-xl font-bold mb-4">Daily Skill Performance</h3>
-                                <Table headers={['Day', ...groupsWithData, 'Total']}>
-                                    {dailySkillTableData.length > 0 ? (
-                                        <>
-                                            {dailySkillTableData.map((row) => (
-                                                <tr key={row.day} className="hover:bg-gray-50">
-                                                    <td className="p-2 border font-bold">{row.day}</td>
-                                                    {groupsWithData.map(group => (
-                                                        <td key={group} className={`p-2 border text-center ${getScoreColorClass(row[group].pct)}`}>
-                                                            {row[group].display}
+                                    <h3 className="text-xl font-bold mb-4">Daily Skill Performance</h3>
+                                    <Table headers={['Day', ...groupsWithData, 'Total']}>
+                                        {dailySkillTableData.length > 0 ? (
+                                            <>
+                                                {dailySkillTableData.map((row) => (
+                                                    <tr key={row.day} className="hover:bg-gray-50">
+                                                        <td className="p-2 border font-bold">{row.day}</td>
+                                                        {groupsWithData.map(group => (
+                                                            <td key={group} className={`p-2 border text-center ${getScoreColorClass(row[group].pct)}`}>
+                                                                {row[group].display}
+                                                            </td>
+                                                        ))}
+                                                        <td className={`p-2 border text-center font-bold ${getScoreColorClass(row.totalDayPct)}`}>
+                                                            {row.totalDisplay}
                                                         </td>
-                                                    ))}
-                                                    <td className={`p-2 border text-center font-bold ${getScoreColorClass(row.totalDayPct)}`}>
-                                                        {row.totalDisplay}
+                                                    </tr>
+                                                ))}
+                                                <tr className="hover:bg-gray-50 font-bold">
+                                                    <td className="p-2 border">Total</td>
+                                                    {groupsWithData.map(group => {
+                                                        const totalSkillsCorrect = groupSkillTotals[group].totalSkills.correct;
+                                                        const totalSkillsTotal = groupSkillTotals[group].totalSkills.total;
+                                                        const pct = calcPct(totalSkillsCorrect, totalSkillsTotal);
+                                                        return (
+                                                            <td key={group} className={`p-2 border text-center ${getScoreColorClass(pct)}`}>
+                                                                {totalSkillsTotal} ({fmtPct(pct)})
+                                                            </td>
+                                                        );
+                                    
+                                                    })}
+                                                    <td className={`p-2 border text-center ${getScoreColorClass(calcPct(grandTotalSkillsCorrect, grandTotalSkillsTotal))}`}>
+                                                        {grandTotalSkillsCorrect} ({fmtPct(calcPct(grandTotalSkillsCorrect, grandTotalSkillsTotal))})
                                                     </td>
                                                 </tr>
-                                            ))}
-                                            <tr className="hover:bg-gray-50 font-bold">
-                                                <td className="p-2 border">Total</td>
-                                                {groupsWithData.map(group => {
-                                                    const totalSkillsCorrect = groupSkillTotals[group].totalSkills.correct;
-                                                    const totalSkillsTotal = groupSkillTotals[group].totalSkills.total;
-                                                    const pct = calcPct(totalSkillsCorrect, totalSkillsTotal);
-                                                    return (
-                                                        <td key={group} className={`p-2 border text-center ${getScoreColorClass(pct)}`}>
-                                                            {totalSkillsTotal} ({fmtPct(pct)})
-                                                        </td>
-                                                    );
-                
-                                                })}
-                                                <td className={`p-2 border text-center ${getScoreColorClass(calcPct(grandTotalSkillsCorrect, grandTotalSkillsTotal))}`}>
-                                                    {grandTotalSkillsCorrect} ({fmtPct(calcPct(grandTotalSkillsCorrect, grandTotalSkillsTotal))})
+                                            </>
+                                        ) : (
+                                            <tr>
+                                                <td colSpan={groupsWithData.length + 2}>
+                                                    <EmptyState message="No daily skill performance data available." />
                                                 </td>
                                             </tr>
-                                        </>
-                                    ) : (
-                                        <tr>
-                                            <td colSpan={groupsWithData.length + 2}>
-                                                <EmptyState message="No daily skill performance data available." />
-                                            </td>
-                                        </tr>
-                                    )}
-                                </Table>
-                            </div>
-                        </Card>
-                    )}
+                                        )}
+                                    </Table>
+                                </div>
+                            </Card>
+                        )}
+                    </div>
                 </div>
+                {/* --- *** END FIX *** --- */}
+
 
                 {/* Participant Results (id="participant-results-card") */}
                 {(showTestScoreColumns || showCaseColumns) && (

@@ -14,7 +14,7 @@ import {
     Hospital,
     Database,
     ClipboardCheck,
-    X // --- NEW: Import X icon for dismiss ---
+    X 
 } from 'lucide-react';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, LineElement, PointElement);
@@ -35,19 +35,18 @@ const FacilitatorReportView = lazy(() => import('./components/Facilitator').then
 const FacilitatorApplicationForm = lazy(() => import('./components/Facilitator').then(module => ({ default: module.FacilitatorApplicationForm })));
 const CourseManagementView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.CourseManagementView })));
 const CourseForm = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.CourseForm })));
-// --- NEW: Import PublicCourseMonitoringView from Course.jsx ---
 const PublicCourseMonitoringView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicCourseMonitoringView })));
 const ProgramTeamView = lazy(() => import('./components/ProgramTeamView.jsx'));
-// --- NEW: Import PublicTeamMemberProfileView ---
 const PublicTeamMemberProfileView = lazy(() => import('./components/ProgramTeamView.jsx').then(module => ({ default: module.PublicTeamMemberProfileView })));
 const TeamMemberApplicationForm = lazy(() => import('./components/ProgramTeamView.jsx').then(module => ({ default: module.TeamMemberApplicationForm })));
 const ParticipantsView = lazy(() => import('./components/Participants').then(module => ({ default: module.ParticipantsView })));
 const ParticipantForm = lazy(() => import('./components/Participants').then(module => ({ default: module.ParticipantForm })));
 const ParticipantMigrationMappingView = lazy(() => import('./components/Participants').then(module => ({ default: module.ParticipantMigrationMappingView })));
 
-// --- *** START: NEWLY ADDED LAZY IMPORT *** ---
+// --- NEW: Import CertificateVerificationView from Course.jsx ---
+const CertificateVerificationView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.CertificateVerificationView })));
+
 const CourseTestForm = lazy(() => import('./components/CourseTestForm.jsx').then(module => ({ default: module.CourseTestForm })));
-// --- *** END: NEWLY ADDED LAZY IMPORT *** ---
 
 const PublicFacilityUpdateForm = lazy(() => import('./components/FacilityForms.jsx').then(module => ({ default: module.PublicFacilityUpdateForm })));
 const NewFacilityEntryForm = lazy(() => import('./components/FacilityForms.jsx').then(module => ({ default: module.NewFacilityEntryForm })));
@@ -62,34 +61,26 @@ import {
     getCourseById, getParticipantById, updateCourseSharingSettings, updateParticipantSharingSettings,
     listPendingFacilitatorSubmissions, approveFacilitatorSubmission, rejectFacilitatorSubmission,
     saveParticipantAndSubmitFacilityUpdate, bulkMigrateFromMappings,
-    
-    // --- NEW: Import public data functions ---
     getPublicCourseReportData,
     getPublicFacilitatorReportData,
     getPublicTeamMemberProfileData,
-    
     initializeUsageTracking,
-    // --- NEW: Import listAllParticipantsForCourse ---
     listAllParticipantsForCourse,
-    listParticipantTestsForCourse, // <-- ADD THIS
+    listParticipantTestsForCourse, 
     listMentorshipSessions,
     saveMentorshipSession,
     importMentorshipSessions,
-    // --- NEW: Import upsertParticipantTest ---
     upsertParticipantTest
 } from './data.js';
 import { STATE_LOCALITIES } from './components/constants.js';
 import { Card, PageHeader, Button, Table, EmptyState, Spinner, PdfIcon, CourseIcon, Footer, Toast } from './components/CommonComponents';
 import { auth, db } from './firebase';
-// --- MODIFICATION: Removed unused firestore imports ---
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-// --- END MODIFICATION ---
 import { signOut, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { useDataCache } from './DataContext';
 import { useAuth } from './hooks/useAuth';
 import { SignInBox } from './auth-ui.jsx';
 
-// --- Import centralized permission constants ---
 import {
     ALL_PERMISSIONS,
     DEFAULT_ROLE_PERMISSIONS,
@@ -98,21 +89,12 @@ import {
 } from './components/AdminDashboard';
 
 
-// --- VIEW COMPONENTS ---
-// --- Mobile Navigation Icons & Components ---
-// --- REMOVED: Inline SVG components (HomeIcon, CoursesIcon, etc.) ---
-// --- They are now imported from lucide-react ---
-
-
 // --- Resource Monitor Component ---
 const ResourceMonitor = ({ counts, onReset, onDismiss }) => {
-    // ... (component unchanged)
     return (
-        // --- MODIFICATION: Make smaller (p-2, w-56) and move to top-right on mobile (top-4) and bottom-right on desktop (md:bottom-4, md:top-auto) ---
         <div className="fixed top-4 right-4 md:bottom-4 md:top-auto bg-gray-900 text-white p-2 rounded-lg shadow-lg z-50 opacity-90 w-56">
             <div className="flex justify-between items-center mb-1.5">
                 <div className="flex items-center gap-1.5">
-                    {/* --- MODIFIED: Use lucide-react icon --- */}
                     <Database className="w-4 h-4 text-sky-400" />
                     <h4 className="font-bold text-sm">Session Ops</h4>
                 </div>
@@ -124,7 +106,6 @@ const ResourceMonitor = ({ counts, onReset, onDismiss }) => {
                     >
                         Reset
                     </button>
-                    {/* --- NEW: Dismiss Button --- */}
                     <button
                         onClick={onDismiss}
                         className="text-gray-400 hover:text-white transition-colors"
@@ -150,8 +131,6 @@ const ResourceMonitor = ({ counts, onReset, onDismiss }) => {
 
 // --- Landing Page Component ---
 function Landing({ navigate, permissions }) {
-    // ... (component unchanged)
-    // --- MODIFIED: Use lucide-react components directly ---
     const navButtons = [
         { label: 'Dashboard', view: 'dashboard', icon: Home, permission: true },
         { label: 'Courses', view: 'courses', icon: Book, permission: permissions.canViewCourse },
@@ -170,7 +149,7 @@ function Landing({ navigate, permissions }) {
                 {accessibleButtons.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {accessibleButtons.map(btn => {
-                            const Icon = btn.icon; // Icon is now the component itself (e.g., Home)
+                            const Icon = btn.icon; 
                             return (
                                 <button
                                     key={btn.view}
@@ -192,8 +171,6 @@ function Landing({ navigate, permissions }) {
 }
 
 const BottomNav = React.memo(function BottomNav({ navItems, navigate }) {
-    // ... (component unchanged)
-    // --- MODIFIED: Use lucide-react components directly ---
     const icons = { Dashboard: Home, Home: Home, Courses: Book, 'Human Resources': Users, 'Child Health Services': Hospital, 'Skills Mentorship': ClipboardCheck, Admin: User };
     return (
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-800 border-t border-slate-700 flex justify-around items-center z-20">
@@ -211,7 +188,6 @@ const BottomNav = React.memo(function BottomNav({ navItems, navigate }) {
 });
 
 function SplashScreen() {
-    // ... (component unchanged)
     return (
         <div className="fixed inset-0 bg-sky-50 flex flex-col items-center justify-center gap-6 text-center p-4">
             <div className="h-24 w-24 bg-white rounded-full flex items-center justify-center p-1 shadow-xl animate-pulse"><img src="/child.png" alt="NCHP Logo" className="h-20 w-20 object-contain" /></div>
@@ -226,28 +202,25 @@ function SplashScreen() {
 // Root App Component
 // =============================================================================
 export default function App() {
-    // ... (state and hooks definitions unchanged)
     const {
         courses: allCourses,
         facilitators: allFacilitators,
         funders, federalCoordinators, stateCoordinators, localityCoordinators,
         healthFacilities,
-        participantTests, // <-- ADD THIS
+        participantTests, 
         fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators,
         fetchHealthFacilities,
         fetchSkillMentorshipSubmissions,
-        fetchParticipantTests // <-- ADD THIS
+        fetchParticipantTests
     } = useDataCache();
     const { user, userStates, authLoading, userLocalities } = useAuth();
 
-    // --- NEW: Check if the user profile is incomplete ---
     const isProfileIncomplete = useMemo(() => {
-        // Only check if auth is loaded AND user exists, but displayName is missing
         if (!authLoading && user && (!user.displayName || user.displayName.trim().length === 0)) {
             return true;
         }
         return false;
-    }, [user, authLoading]); // Re-checks whenever user or authLoading changes
+    }, [user, authLoading]);
 
     const [view, setView] = useState("landing");
     const [activeCourseType, setActiveCourseType] = useState(null);
@@ -268,10 +241,8 @@ export default function App() {
     const [activeCoursesTab, setActiveCoursesTab] = useState('courses');
     const [activeHRTab, setActiveHRTab] = useState('facilitators');
 
-    // --- *** MODIFICATION: Add participantTests: null *** ---
     const [courseDetails, setCourseDetails] = useState({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null });
     
-    // --- NEW STATE ---
     const [courseDetailsLoading, setCourseDetailsLoading] = useState(false);
     
     const [pendingSubmissions, setPendingSubmissions] = useState([]);
@@ -292,34 +263,27 @@ export default function App() {
     const [itemToShare, setItemToShare] = useState(null);
     const [shareType, setShareType] = useState('course');
     
-    // --- NEW: State for generic public views ---
     const [publicViewData, setPublicViewData] = useState(null);
-    const [publicViewType, setPublicViewType] = useState(null); // e.g., 'facilitatorReport', 'teamMemberProfile'
+    const [publicViewType, setPublicViewType] = useState(null); 
     const [publicViewLoading, setPublicViewLoading] = useState(false);
 
-    // --- MODIFIED: State for public monitoring view ---
     const [isPublicMonitoringView, setIsPublicMonitoringView] = useState(false);
     const [publicMonitorData, setPublicMonitorData] = useState({ course: null, participants: [] });
     const [publicMonitorLoading, setPublicMonitorLoading] = useState(false);
     const [publicMonitorError, setPublicMonitorError] = useState(null);
 
-    // --- *** START: NEWLY ADDED STATES *** ---
     const [isPublicTestView, setIsPublicTestView] = useState(false);
     const [publicTestData, setPublicTestData] = useState({ course: null, participants: [], tests: [] });
     const [publicTestLoading, setPublicTestLoading] = useState(false);
     const [publicTestError, setPublicTestError] = useState(null);
-    // --- *** END: NEWLY ADDED STATES *** ---
 
-    // State for operation counts (for the real-time monitor)
     const [operationCounts, setOperationCounts] = useState({ reads: 0, writes: 0 });
-    // --- NEW: State for monitor visibility ---
     const [isMonitorVisible, setIsMonitorVisible] = useState(true);
 
     const historyInitialized = useRef(false);
     const isPopStateNavigation = useRef(false);
     const initialViewIsSet = useRef(false);
 
-    // Initialize usage tracking from data.js when auth is ready
     useEffect(() => {
         if (!authLoading && user) {
             initializeUsageTracking();
@@ -327,7 +291,6 @@ export default function App() {
     }, [authLoading, user]);
 
 
-    // Effect to listen for custom operation events for the real-time monitor
     useEffect(() => {
       const handleOperation = (event) => {
         const { type, count } = event.detail;
@@ -343,16 +306,13 @@ export default function App() {
       };
     }, []);
 
-    // --- MODIFIED: useEffect for path handling ---
     useEffect(() => {
-        // ... (effect unchanged)
         if (historyInitialized.current) return;
         historyInitialized.current = true;
 
-        const handlePathChange = async () => { // Make async
+        const handlePathChange = async () => { 
             const path = window.location.pathname;
 
-            // Reset all public/shared view states
             setIsSharedView(false);
             setIsPublicSubmissionView(false);
             setIsNewFacilityView(false);
@@ -365,28 +325,23 @@ export default function App() {
             setSubmissionType(null);
             setSharedViewError(null);
             
-            // --- NEW: Reset generic public view state ---
             setPublicViewData(null);
             setPublicViewType(null);
             setPublicViewLoading(false);
 
-            // --- *** START: NEWLY ADDED RESET *** ---
             setIsPublicTestView(false);
             setPublicTestError(null);
             setPublicTestData({ course: null, participants: [], tests: [] });
-            // --- *** END: NEWLY ADDED RESET *** ---
 
 
             const facilityUpdateMatch = path.match(/^\/facilities\/data-entry\/([a-zA-Z0-9]+)\/?$/);
             if (path.startsWith('/facilities/data-entry/new')) {
                 setIsNewFacilityView(true);
-                // --- MODIFICATION: Read query param for 'new' route as well ---
                 const searchParams = new URLSearchParams(window.location.search);
                 const service = searchParams.get('service');
                 if (service) {
                     setPublicServiceType(service); 
                 }
-                // --- END MODIFICATION ---
                 return;
             }
             if (facilityUpdateMatch) {
@@ -399,18 +354,16 @@ export default function App() {
                 return;
             }
 
-            // --- MODIFIED: Public Monitoring Link for COURSE ---
             const publicMonitorMatch = path.match(/^\/monitor\/course\/([a-zA-Z0-9]+)\/?$/);
             if (publicMonitorMatch && publicMonitorMatch[1]) {
                 setIsPublicMonitoringView(true);
                 const courseId = publicMonitorMatch[1];
-                // Fetch data right here
                 setPublicMonitorLoading(true);
                 const fetchData = async () => {
                     try {
                         const [courseData, participantData] = await Promise.all([
                             getCourseById(courseId, 'server'),
-                            listAllParticipantsForCourse(courseId, 'server') // Fetch all participants
+                            listAllParticipantsForCourse(courseId, 'server') 
                         ]);
                         if (!courseData) throw new Error('Course not found.');
                         if (!participantData) throw new Error('Participants not found.'); 
@@ -423,18 +376,15 @@ export default function App() {
                     }
                 };
                 fetchData();
-                return; // Stop processing
+                return; 
             }
 
-            // Public Mentorship Link - path still checked, authentication check moved to render logic
             const publicMentorshipMatch = path.match(/^\/mentorship\/submit\/([a-zA-Z0-9_]+)\/?$/);
             if (publicMentorshipMatch && publicMentorshipMatch[1]) {
                 setPublicMentorshipProps({ serviceType: publicMentorshipMatch[1] });
                 return;
             }
 
-            // --- *** START OF FIX *** ---
-            // Changed path from /submit/... to /public/...
             const facilitatorAppMatch = path.match(/^\/public\/facilitator-application\/?$/);
             if (facilitatorAppMatch) {
                 setIsPublicSubmissionView(true);
@@ -442,16 +392,13 @@ export default function App() {
                 return;
             }
 
-            // Changed path from /submit/... to /public/...
             const teamAppMatch = path.match(/^\/public\/team-member-application\/?$/);
             if (teamAppMatch) {
                 setIsPublicSubmissionView(true);
                 setSubmissionType('team-member-application');
                 return;
             }
-            // --- *** END OF FIX --- ---
             
-            // --- *** START: NEWLY ADDED PATH MATCHER *** ---
             const publicTestMatch = path.match(/^\/public\/test\/course\/([a-zA-Z0-9]+)\/?$/);
             if (publicTestMatch && publicTestMatch[1]) {
                 setIsPublicTestView(true);
@@ -468,7 +415,6 @@ export default function App() {
                         if (!courseData) throw new Error('Course not found.');
                         if (!participantData) throw new Error('Participants not found.');
 
-                        // Validate course type
                         if (courseData.course_type !== 'ICCM' && courseData.course_type !== 'EENC') {
                             throw new Error('Test forms are only available for ICCM and EENC courses.');
                         }
@@ -482,30 +428,53 @@ export default function App() {
                     }
                 };
                 fetchData();
-                return; // Stop processing
+                return; 
             }
-            // --- *** END: NEWLY ADDED PATH MATCHER *** ---
 
-            // --- MODIFIED: publicReportMatch (Course) ---
+            // --- UPDATED REGEX TO ALLOW HYPHENS AND UNDERSCORES ---
+            const publicCertificateMatch = path.match(/^\/verify\/certificate\/([a-zA-Z0-9_-]+)\/?$/);
+            if (publicCertificateMatch && publicCertificateMatch[1]) {
+                const participantId = publicCertificateMatch[1];
+                setPublicViewType('certificateVerification');
+                setPublicViewLoading(true);
+                try {
+                    const participant = await getParticipantById(participantId, 'server');
+                    if (!participant || !participant.courseId) {
+                        throw new Error("Certificate invalid or participant not found.");
+                    }
+                    
+                    const course = await getCourseById(participant.courseId, 'server');
+                    if (!course) {
+                        throw new Error("Associated course data not found.");
+                    }
+                    
+                    setPublicViewData({ participant, course });
+                } catch (error) {
+                    setSharedViewError(error.message); 
+                } finally {
+                    setPublicViewLoading(false);
+                }
+                return; 
+            }
+
             const publicCourseReportMatch = path.match(/^\/public\/report\/course\/([a-zA-Z0-9]+)\/?$/);
             if (publicCourseReportMatch && publicCourseReportMatch[1]) {
                 const courseId = publicCourseReportMatch[1];
-                setIsSharedView(true); // Keep this for legacy
-                setPublicViewType('courseReport'); // Set new type
+                setIsSharedView(true); 
+                setPublicViewType('courseReport'); 
                 setPublicViewLoading(true);
                 try {
                     const data = await getPublicCourseReportData(courseId);
-                    setSharedReportData(data); // Keep setting legacy state
-                    setPublicViewData(data); // Set new generic state
+                    setSharedReportData(data); 
+                    setPublicViewData(data); 
                 } catch (error) {
                     setSharedViewError(error.message);
                 } finally {
                     setPublicViewLoading(false);
                 }
-                return; // Stop processing
+                return; 
             }
 
-            // --- NEW: Public Facilitator Report Match ---
             const publicFacilitatorReportMatch = path.match(/^\/public\/report\/facilitator\/([a-zA-Z0-9]+)\/?$/);
             if (publicFacilitatorReportMatch && publicFacilitatorReportMatch[1]) {
                 const facilitatorId = publicFacilitatorReportMatch[1];
@@ -515,14 +484,13 @@ export default function App() {
                     const data = await getPublicFacilitatorReportData(facilitatorId);
                     setPublicViewData(data);
                 } catch (error) {
-                    setSharedViewError(error.message); // Use sharedViewError for simplicity
+                    setSharedViewError(error.message); 
                 } finally {
                     setPublicViewLoading(false);
                 }
-                return; // Stop processing
+                return; 
             }
 
-            // --- NEW: Public Team Member Profile Match ---
             const publicTeamMemberMatch = path.match(/^\/public\/profile\/team\/(federal|state|locality)\/([a-zA-Z0-9]+)\/?$/);
             if (publicTeamMemberMatch && publicTeamMemberMatch[1] && publicTeamMemberMatch[2]) {
                 const level = publicTeamMemberMatch[1];
@@ -533,54 +501,38 @@ export default function App() {
                     const data = await getPublicTeamMemberProfileData(level, memberId);
                     setPublicViewData(data);
                 } catch (error) {
-                    setSharedViewError(error.message); // Use sharedViewError for simplicity
+                    setSharedViewError(error.message); 
                 } finally {
                     setPublicViewLoading(false);
                 }
-                return; // Stop processing
+                return; 
             }
         };
 
         handlePathChange();
-    }, []); // Empty dependency array
-    // --- END MODIFICATION ---
+    }, []); 
 
     const ALL_PERMISSIONS_MINIMAL = useMemo(() => {
-        // ... (memo unchanged)
-        // --- START MODIFICATION ---
-        // Removed the hardcoded { canViewSkillsMentorship: false }
         return ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
-        // --- END MODIFICATION ---
     }, [ALL_PERMISSION_KEYS]);
 
     const permissions = useMemo(() => {
-        // ... (memo unchanged)
         let derivedPermissions = { ...userPermissions };
         if (userRole?.toLowerCase() === 'super_user') {
-            // --- START MODIFICATION ---
-            // Removed the hardcoded { canViewSkillsMentorship: true }
             return ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: true }), {});
-            // --- END MODIFICATION ---
         }
         return { ...ALL_PERMISSIONS_MINIMAL, ...derivedPermissions };
     }, [userRole, userPermissions, ALL_PERMISSIONS_MINIMAL, ALL_PERMISSION_KEYS]);
 
-    // This hook is modified to prevent the post-login redirect to 'landing'
-    // when the user is on a special page (like a submission form).
     useEffect(() => {
-        // ... (effect unchanged)
-        // Manually check the path *before* running this effect,
-        // because the state flags (like isMinimalUILayout) might not be set yet.
         const path = window.location.pathname;
-        const isSpecialPath = path.startsWith('/submit/') || // Keep old /submit/ just in case
-                              path.startsWith('/public/') || // Add new /public/
+        const isSpecialPath = path.startsWith('/submit/') || 
+                              path.startsWith('/public/') || 
                               path.startsWith('/facilities/') || 
                               path.startsWith('/monitor/') || 
+                              path.startsWith('/verify/') || 
                               path.startsWith('/mentorship/');
                               
-        // If we're on a special path, DO NOT run this auto-redirect logic.
-        // Also, don't run if we're not logged in, or if permissions are loading,
-        // or if we've already set the initial view.
         if (!isSpecialPath && user && !permissionsLoading && !initialViewIsSet.current) {
             setView("landing");
             initialViewIsSet.current = true;
@@ -588,7 +540,6 @@ export default function App() {
     }, [user, permissionsLoading]);
 
     useEffect(() => {
-        // ... (effect unchanged)
         const checkUserRoleAndPermissions = async () => {
             setPermissionsLoading(true);
             try {
@@ -626,14 +577,12 @@ export default function App() {
     }, [user, ALL_PERMISSIONS_MINIMAL, DEFAULT_ROLE_PERMISSIONS]);
 
     useEffect(() => {
-        // ... (effect unchanged)
         if (!user) {
             initialViewIsSet.current = false;
         }
     }, [user]);
 
     useEffect(() => {
-        // ... (effect unchanged)
         const handlePopState = (event) => {
             isPopStateNavigation.current = true;
             if (window.location.pathname === '/') {
@@ -646,19 +595,15 @@ export default function App() {
     }, []);
 
     const fetchCoordinators = useCallback(async (force = false) => {
-        // ... (callback unchanged)
         await fetchFederalCoordinators(force);
         await fetchStateCoordinators(force);
         await fetchLocalityCoordinators(force);
     }, [fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators]);
 
 
-    // This effect fetches data ON DEMAND based on view
     useEffect(() => {
-        // ... (effect unchanged)
         if (isSharedView || !user) return;
 
-        // Fetch facilities on dashboard, human resources, and skills mentorship views
         if (view === 'dashboard') {
             fetchCourses();
             fetchParticipants();
@@ -674,78 +619,56 @@ export default function App() {
         if (['courseForm'].includes(view)) {
             fetchCoordinators();
         }
-        // --- THIS IS THE FIX ---
-        // Added 'facilitatorReport' to this condition
         if (view === 'courses' || view === 'facilitatorReport') {
             fetchCourses();
         }
-        // --- END OF FIX ---
         if (view === 'skillsMentorship') {
             fetchHealthFacilities();
             fetchSkillMentorshipSubmissions();
         }
         
-        // --- START OF FIX ---
-        // Fetch health facilities when navigating to the Child Health Services view
         if (view === 'childHealthServices') {
             fetchHealthFacilities();
         }
-        // --- END OF FIX ---
 
-        // --- MODIFICATION: Also fetch facilities when opening a course report ---
         if (view === 'courseReport') {
             fetchHealthFacilities();
         }
     }, [view, isSharedView, user, fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchCoordinators, fetchHealthFacilities, fetchSkillMentorshipSubmissions]);
 
-    // --- NEW: Background fetcher for full course details ---
     useEffect(() => {
-        // ... (effect unchanged)
-        // If a course is selected, and we don't have its details, and we're not already loading...
         if (selectedCourseId && !courseDetails.allObs && !courseDetailsLoading) {
             
             const fetchFullCourseDetails = async () => {
                 setCourseDetailsLoading(true);
                 try {
-                    // Fetch all the data needed for reports
-                    // --- MODIFICATION: Added participantTests ---
                     const [participantsData, allCourseData, finalReport, testData] = await Promise.all([
                         listAllParticipantsForCourse(selectedCourseId),
                         listAllDataForCourse(selectedCourseId),
                         getFinalReportByCourseId(selectedCourseId),
-                        listParticipantTestsForCourse(selectedCourseId) // <-- ADD THIS
+                        listParticipantTestsForCourse(selectedCourseId) 
                     ]);
                     const { allObs, allCases } = allCourseData;
                     
-                    // Silently update the state once data is loaded
-                    setCourseDetails({ participants: participantsData || [], allObs, allCases, finalReport, participantTests: testData || [] }); // <-- ADD THIS
+                    setCourseDetails({ participants: participantsData || [], allObs, allCases, finalReport, participantTests: testData || [] }); 
                     
                 } catch (error) {
-                    // Don't bother the user with a toast, just log it.
-                    // The report view will try again if the user clicks it.
                     console.error("Background fetch of course details failed:", error);
-                    // --- *** MODIFICATION: Clear all fields *** ---
-                    setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null }); // <-- ADD THIS
+                    setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null }); 
                 } finally {
                     setCourseDetailsLoading(false);
                 }
             };
             
-            // Start the background fetch
             fetchFullCourseDetails();
         }
-    }, [selectedCourseId, courseDetails.allObs, courseDetailsLoading]); // Re-run when courseId changes
-    // --- END NEW EFFECT ---
+    }, [selectedCourseId, courseDetails.allObs, courseDetailsLoading]); 
 
-
-    // --- FILTERING LOGIC ---
     const canSeeAllData = useMemo(() => {
-        // ... (memo unchanged)
         return permissions.canUseSuperUserAdvancedFeatures || permissions.canUseFederalManagerAdvancedFeatures;
     }, [permissions]);
 
     const filteredCourses = useMemo(() => {
-        // ... (memo unchanged)
         if (!allCourses) {
             return [];
         }
@@ -757,7 +680,6 @@ export default function App() {
     }, [allCourses, userStates, canSeeAllData]);
 
     const filteredFacilitators = useMemo(() => {
-        // ... (memo unchanged)
         if (!allFacilitators) {
             return [];
         }
@@ -767,10 +689,8 @@ export default function App() {
         const userStateSet = new Set(userStates);
         return allFacilitators.filter(f => userStateSet.has(f.currentState));
     }, [allFacilitators, userStates, canSeeAllData]);
-    // --- END: FILTERING LOGIC ---
 
     const fetchPendingSubmissions = useCallback(async () => {
-        // ... (callback unchanged)
         if (!permissions.canApproveSubmissions) return;
         setIsSubmissionsLoading(true);
         try {
@@ -781,13 +701,9 @@ export default function App() {
 
     useEffect(() => { if (view === 'humanResources' && activeHRTab === 'facilitators' && permissions.canApproveSubmissions) fetchPendingSubmissions(); }, [view, activeHRTab, permissions.canApproveSubmissions, fetchPendingSubmissions]);
 
-    // Use the imported listAllParticipantsForCourse
-    // const listAllParticipantsForCourse = ... (removed, now imported)
-
     const selectedCourse = useMemo(() => (allCourses || []).find(c => c.id === selectedCourseId) || null, [allCourses, selectedCourseId]);
 
     const isCourseActive = useMemo(() => {
-        // ... (memo unchanged)
         if (!selectedCourse?.start_date || !selectedCourse?.course_duration || selectedCourse.course_duration <= 0) {
             return false;
         }
@@ -802,9 +718,7 @@ export default function App() {
 
     const selectedFacilitator = useMemo(() => (allFacilitators || []).find(f => f.id === selectedFacilitatorId) || null, [allFacilitators, selectedFacilitatorId]);
 
-    // --- MODIFIED: navigate ---
     const navigate = useCallback((newView, state = {}) => {
-        // ... (callback unchanged)
         const viewPermissions = {
             'landing': true,
             'dashboard': true,
@@ -847,7 +761,7 @@ export default function App() {
         if (state.participantId && state.participantId !== selectedParticipantId) setSelectedParticipantId(state.participantId);
         if (state.activeCourseType) setActiveCourseType(state.activeCourseType);
 
-        const courseSubTabs = ['participants', 'reports', 'courseDetails', 'test-dashboard', 'enter-test-scores']; // <-- Added test tabs
+        const courseSubTabs = ['participants', 'reports', 'courseDetails', 'test-dashboard', 'enter-test-scores']; 
         const hrSubTabs = ['facilitators', 'programTeams', 'partnersPage'];
 
         if (hrSubTabs.includes(newView)) { setActiveHRTab(newView); setView('humanResources'); }
@@ -866,8 +780,7 @@ export default function App() {
             setSelectedCourseId(null);
             setSelectedParticipantId(null);
             setFinalReportCourse(null);
-            // --- *** MODIFICATION: Clear participantTests *** ---
-            setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null }); // <-- ADD THIS
+            setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null }); 
             if (['dashboard', 'admin', 'landing', 'skillsMentorship'].includes(newView)) {
                 setActiveCourseType(null);
             }
@@ -876,105 +789,83 @@ export default function App() {
             setSelectedParticipantId(null);
         }
     }, [view, selectedCourseId, selectedParticipantId, permissions, user, isCourseActive]);
-    // --- END MODIFICATION ---
 
-    // --- MODIFIED: handleOpenCourse ---
-    // This is now fast. It just navigates. The useEffect above handles the slow background fetch.
     const handleOpenCourse = useCallback((courseId) => {
-        // ... (callback unchanged)
         setSelectedCourseId(courseId);
-        setLoading(false); // Ensure global spinner is off
+        setLoading(false); 
         
-        // --- *** MODIFICATION: Clear participantTests *** ---
-        setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null }); // <-- ADD THIS
+        setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null }); 
         
         navigate('participants', { courseId });
     }, [navigate]);
-    // --- END MODIFICATION ---
 
-    // --- MODIFIED: handleOpenCourseReport ---
-    // This now checks if data is already loaded/loading, or fetches it on-demand.
     const handleOpenCourseReport = useCallback(async (courseId) => {
-        // ... (callback unchanged)
         setSelectedCourseId(courseId);
         
-        // --- *** MODIFICATION: Check for participantTests *** ---
-        if (courseDetails.allObs !== null && courseDetails.participants !== null && courseDetails.participantTests !== null) { // <-- ADD THIS
+        if (courseDetails.allObs !== null && courseDetails.participants !== null && courseDetails.participantTests !== null) { 
              navigate('courseReport', { courseId });
-             return; // Data is ready, just navigate
+             return; 
         }
         
-        // Check if details are currently loading in the background
         if (courseDetailsLoading) {
              setToast({ show: true, message: 'Report data is still loading, please wait...', type: 'info' });
-             return; // Background fetch is in progress, ask user to wait
+             return; 
         }
 
-        // Data is not present and not loading, so fetch it now (and show spinner)
         setLoading(true); 
-        setCourseDetailsLoading(true); // Mark as loading
+        setCourseDetailsLoading(true); 
         try {
-            // --- MODIFICATION: Fetch participantTests ---
             const [participantsData, allCourseData, finalReport, testData] = await Promise.all([
                 listAllParticipantsForCourse(courseId),
                 listAllDataForCourse(courseId),
                 getFinalReportByCourseId(courseId),
-                listParticipantTestsForCourse(courseId) // <-- ADD THIS
+                listParticipantTestsForCourse(courseId) 
             ]);
             const { allObs, allCases } = allCourseData;
-            setCourseDetails({ participants: participantsData, allObs, allCases, finalReport, participantTests: testData || [] }); // <-- ADD THIS
+            setCourseDetails({ participants: participantsData, allObs, allCases, finalReport, participantTests: testData || [] }); 
             navigate('courseReport', { courseId });
         } catch (error) {
             console.error("Error loading course report data:", error);
             setToast({ show: true, message: 'Failed to load course report data. Please try again.', type: 'error' });
         } finally {
             setLoading(false);
-            setCourseDetailsLoading(false); // Mark as done
+            setCourseDetailsLoading(false); 
         }
     }, [navigate, courseDetails, courseDetailsLoading]);
-    // --- END MODIFICATION ---
 
-    // --- *** MODIFIED HANDLER *** ---
     const handleOpenCourseForTestForm = useCallback(async (courseId) => {
         setLoading(true);
         setSelectedCourseId(courseId);
-        setSelectedParticipantId(null); // Clear any old participant
+        setSelectedParticipantId(null); 
 
         try {
-            // Fetch all data needed for the test form
             const [participantsData, testData] = await Promise.all([
-                listAllParticipantsForCourse(courseId, { source: 'server' }), // Get fresh participant list
-                listParticipantTestsForCourse(courseId, { source: 'server' }) // Get fresh test results
+                listAllParticipantsForCourse(courseId, { source: 'server' }), 
+                listParticipantTestsForCourse(courseId, { source: 'server' }) 
             ]);
             
-            // Set the details
             setCourseDetails({
                 participants: participantsData || [],
                 participantTests: testData || [],
-                allObs: null, // Not needed for this view
-                allCases: null, // Not needed for this view
-                finalReport: null // Not needed for this view
+                allObs: null, 
+                allCases: null, 
+                finalReport: null 
             });
 
-            // --- THIS IS THE FIX ---
-            // Navigate to the dashboard, not the entry form
             setActiveCoursesTab('test-dashboard'); 
             setView('courses');
-            // --- END OF FIX ---
 
         } catch (error) {
             console.error("Error loading data for test form:", error);
             setToast({ show: true, message: 'Failed to load test form data. Please try again.', type: 'error' });
-            navigate('courses'); // Go back to course list on failure
+            navigate('courses'); 
         } finally {
             setLoading(false);
         }
-    }, [navigate]); // Add dependencies
-    // --- *** END MODIFIED HANDLER *** ---
+    }, [navigate]); 
 
 
     const handleApproveSubmission = useCallback(async (submission) => {
-        // ... (callback unchanged)
         if (window.confirm(`Approve ${submission.name}?`)) {
             try {
                 await approveFacilitatorSubmission(submission, user.email);
@@ -988,7 +879,6 @@ export default function App() {
     }, [user, fetchPendingSubmissions, fetchFacilitators]);
 
     const handleRejectSubmission = useCallback(async (submissionId) => {
-        // ... (callback unchanged)
         if (window.confirm('Reject this submission?')) {
             try {
                 await rejectFacilitatorSubmission(submissionId, user.email);
@@ -1001,14 +891,12 @@ export default function App() {
     }, [user, fetchPendingSubmissions]);
 
     const handleShare = useCallback((item, type) => {
-        // ... (callback unchanged)
         setItemToShare(item);
         setShareType(type);
         setIsShareModalOpen(true);
     }, []);
 
     const handleSaveSharingSettings = useCallback(async (itemId, settings) => {
-        // ... (callback unchanged)
         try {
             if (shareType === 'course') await updateCourseSharingSettings(itemId, settings);
             else if (shareType === 'participant') await updateParticipantSharingSettings(itemId, settings);
@@ -1020,7 +908,6 @@ export default function App() {
     }, [shareType, fetchCourses]);
 
     const handleDeleteCourse = useCallback(async (courseId) => {
-        // ... (callback unchanged)
         if (!permissions.canManageCourse) return;
         if (window.confirm('Are you sure you want to delete this course and all its data?')) {
             await deleteCourse(courseId);
@@ -1036,14 +923,10 @@ export default function App() {
 
 
     const handleDeleteParticipant = useCallback(async (participantId) => {
-        // ... (callback unchanged)
         if (!permissions.canManageCourse) return;
         if (window.confirm('Are you sure you want to delete this participant and all their data?')) {
             await deleteParticipant(participantId);
-            // --- MODIFICATION ---
-            // handleOpenCourse no longer fetches, just navigate to refresh ParticipantsView
             if (selectedCourseId) navigate('participants', { courseId: selectedCourseId });
-            // --- END MODIFICATION ---
             if (selectedParticipantId === participantId) {
                 setSelectedParticipantId(null);
                 navigate('participants');
@@ -1052,7 +935,6 @@ export default function App() {
     }, [permissions, selectedCourseId, selectedParticipantId, navigate]);
 
     const handleDeleteFacilitator = useCallback(async (facilitatorId) => {
-        // ... (callback unchanged)
         if (!permissions.canManageHumanResource) return;
         if (window.confirm('Are you sure you want to delete this facilitator?')) {
             await deleteFacilitator(facilitatorId);
@@ -1062,7 +944,6 @@ export default function App() {
     }, [permissions, navigate, fetchFacilitators]);
 
     const handleImportParticipants = useCallback(async ({ participantsToImport, facilitiesToUpsert }) => {
-        // ... (callback unchanged)
         if (!permissions.canUseSuperUserAdvancedFeatures) return;
         try {
             setLoading(true);
@@ -1070,11 +951,7 @@ export default function App() {
             const participantsWithCourseId = participantsToImport.map(p => ({ ...p, courseId: selectedCourse.id }));
             await importParticipants(participantsWithCourseId);
             
-            // --- MODIFICATION ---
-            // handleOpenCourse no longer refetches, so we must manually refresh ParticipantsView
-            // The best way is to just call navigate again, which will trigger ParticipantsView's refetch
             navigate('participants', { courseId: selectedCourse.id });
-            // --- END MODIFICATION ---
 
             setToast({ show: true, message: `Successfully imported ${participantsToImport.length} participants.`, type: 'success' });
         } catch (error) {
@@ -1082,7 +959,7 @@ export default function App() {
         } finally {
             setLoading(false);
         }
-    }, [permissions, selectedCourse, navigate]); // Removed handleOpenCourse dependency
+    }, [permissions, selectedCourse, navigate]); 
 
     const handleBulkMigrate = useCallback((courseId) => { navigate('participantMigration', { courseId }); }, [navigate]);
     const handleExecuteBulkMigration = useCallback(async (mappings) => {
@@ -1091,12 +968,10 @@ export default function App() {
             return;
         }
 
-        setLoading(true); // Use the global loading spinner
+        setLoading(true); 
         try {
-            // This is the function from data.js that does the work
             const result = await bulkMigrateFromMappings(mappings, { dryRun: false });
 
-            // Show a summary toast based on the result
             let summaryMessage = `${result.submitted} participants submitted for migration.`;
             if (result.errors > 0) {
                 summaryMessage += ` ${result.errors} failed.`;
@@ -1111,24 +986,20 @@ export default function App() {
                 type: result.errors > 0 ? 'warning' : 'success'
             });
 
-            // On success, navigate back to the participants list and force a refresh
-            // by clearing the course details (which ParticipantsView depends on).
-            // --- MODIFICATION: Clear participantTests ---
-            setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null }); // <-- ADD THIS
+            setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null }); 
             navigate('participants', { courseId: selectedCourseId });
 
         } catch (error) {
             console.error("Bulk migration failed:", error);
             setToast({ show: true, message: `Migration failed: ${error.message}`, type: 'error' });
         } finally {
-            setLoading(false); // Turn off global spinner
+            setLoading(false); 
         }
-    }, [navigate, selectedCourseId, setToast]); // Make sure dependencies are updated
+    }, [navigate, selectedCourseId, setToast]); 
     const handleAddNewCoordinator = useCallback(async (coordinatorData) => { await upsertCoordinator(coordinatorData); await fetchCoordinators(true); }, [fetchCoordinators]);
     const handleAddNewFunder = useCallback(async (funderData) => { await upsertFunder(funderData); await fetchFunders(true); }, [fetchFunders]);
 
     const handleAddFinalReport = useCallback(async (courseId) => {
-        // ... (callback unchanged)
         if (!permissions.canUseFederalManagerAdvancedFeatures) return;
         const courseToReport = (allCourses || []).find(c => c.id === courseId);
         if (!courseToReport) return;
@@ -1148,7 +1019,6 @@ export default function App() {
     }, [permissions, allCourses, navigate]);
 
     const handleSaveFinalReport = useCallback(async (reportData) => {
-        // ... (callback unchanged)
         if (!permissions.canUseFederalManagerAdvancedFeatures) return;
         setLoading(true);
         try {
@@ -1176,7 +1046,6 @@ export default function App() {
     }, [permissions]);
 
     const handleEditFinalReport = useCallback(async (courseId) => {
-        // ... (callback unchanged)
         if (!permissions.canUseFederalManagerAdvancedFeatures) return;
         const courseToEditReport = (allCourses || []).find(c => c.id === courseId);
         if (!courseToEditReport) { setToast({ show: true, message: 'Course not found.', type: 'error' }); return; }
@@ -1189,37 +1058,32 @@ export default function App() {
         finally { setLoading(false); }
     }, [permissions, allCourses, navigate]);
 
-    const handleDeletePdf = useCallback(async (courseId) => { /* ... unchanged ... */ }, [permissions, courseDetails.finalReport]);
+    const handleDeletePdf = useCallback(async (courseId) => {  }, [permissions, courseDetails.finalReport]);
     const handleLogout = useCallback(async () => { try { await signOut(auth); } catch (error) { console.error("Error signing out:", error); } }, []);
-    const handleLoginForSharedView = useCallback(async () => { /* ... unchanged ... */ }, []);
+    const handleLoginForSharedView = useCallback(async () => {  }, []);
 
-    // Reset function for the monitor
     const handleResetMonitor = useCallback(() => {
         setOperationCounts({ reads: 0, writes: 0 });
     }, []);
     
-    // --- NEW: Dismiss function for the monitor ---
     const handleDismissMonitor = useCallback(() => {
         setIsMonitorVisible(false);
     }, []);
     
-    // --- *** NEW: Wrapper for saving participant from test form *** ---
     const handleSaveParticipantFromTestForm = useCallback(async (participantData, facilityUpdateData) => {
         try {
             const savedParticipant = await saveParticipantAndSubmitFacilityUpdate(participantData, facilityUpdateData);
             if (facilityUpdateData) {
                 setToast({ show: true, message: 'Facility update submitted for approval.', type: 'info' });
             }
-            return savedParticipant; // Return the saved participant (with ID)
+            return savedParticipant; 
         } catch (e) {
             setToast({ show: true, message: `Submission failed: ${e.message}`, type: 'error' });
-            throw e; // Re-throw error so the test form can handle it
+            throw e; 
         }
-    }, [setToast]); // Add dependencies
+    }, [setToast]); 
 
-    // --- MODIFIED: renderView ---
     const renderView = () => {
-        // ... (other cases unchanged)
         const currentParticipant = (courseDetails.participants || []).find(p => p.id === selectedParticipantId);
         const viewToRender = view;
 
@@ -1249,13 +1113,13 @@ export default function App() {
                 onEdit={(c) => navigate('courseForm', { editCourse: c })}
                 onDelete={handleDeleteCourse}
                 onOpenReport={handleOpenCourseReport}
-                onOpenTestForm={handleOpenCourseForTestForm} // <-- MODIFIED
+                onOpenTestForm={handleOpenCourseForTestForm} 
                 userStates={userStates}
                 activeCoursesTab={activeCoursesTab}
                 setActiveCoursesTab={setActiveCoursesTab}
                 selectedCourse={selectedCourse}
                 participants={courseDetails.participants || []} 
-                participantTests={courseDetails.participantTests || []} // <-- ADD THIS
+                participantTests={courseDetails.participantTests || []} 
                 onAddParticipant={() => navigate('participantForm')}
                 onEditParticipant={(p) => navigate('participantForm', { editParticipant: p })}
                 onDeleteParticipant={handleDeleteParticipant}
@@ -1267,40 +1131,32 @@ export default function App() {
                 onSetSelectedParticipantId={setSelectedParticipantId}
                 onBulkMigrate={handleBulkMigrate}
                 onBatchUpdate={() => {
-                    // This is the prop to refresh data. We must clear the state to trigger the refetch.
                     setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null });
-                    setSelectedCourseId(null); // Clear selected course ID...
-                    setSelectedCourseId(selectedCourse.id); // ...and re-set it to trigger the useEffect
+                    setSelectedCourseId(null); 
+                    setSelectedCourseId(selectedCourse.id); 
                 }}
-                loadingDetails={loading || (selectedCourseId && courseDetailsLoading)} // <-- MODIFIED
+                loadingDetails={loading || (selectedCourseId && courseDetailsLoading)} 
                 canManageCourse={permissions.canManageCourse}
                 canUseSuperUserAdvancedFeatures={permissions.canUseSuperUserAdvancedFeatures}
                 canUseFederalManagerAdvancedFeatures={permissions.canUseFederalManagerAdvancedFeatures}
                 canEditDeleteActiveCourse={permissions.canManageCourse}
                 canEditDeleteInactiveCourse={permissions.canUseFederalManagerAdvancedFeatures}
-            // --- UPDATED SECTION STARTS HERE ---
                 onSaveParticipantTest={async (payload) => {
-                    // 1. If not a delete signal, save the data to DB
                     if (!payload.deleted) {
                         await upsertParticipantTest(payload);
                     }
                     
-                    // 2. Force a data refresh (Clear cache)
                     setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null });
                     
-                    // 3. Toggle ID to trigger the useEffect hook that fetches data
                     if (selectedCourse) {
                         const currentId = selectedCourse.id;
                         setSelectedCourseId(null);
                         setTimeout(() => setSelectedCourseId(currentId), 0);
                     }
                 }}
-                // --- UPDATED SECTION ENDS HERE ---
                 
-                // --- *** NEW: Prop for saving participant from test form *** ---
                 onSaveParticipant={handleSaveParticipantFromTestForm}
                 
-                // --- Props for CourseForm (passed down) ---
                 facilitatorsList={allFacilitators || []}
                 fundersList={funders || []}
                 federalCoordinatorsList={federalCoordinators || []}
@@ -1349,8 +1205,6 @@ export default function App() {
                 return canMonitor ? (selectedCourse && currentParticipant && <ObservationView course={selectedCourse} participant={currentParticipant} participants={courseDetails.participants} onChangeParticipant={(id) => setSelectedParticipantId(id)} initialCaseToEdit={editingCaseFromReport} />) : null;
 
             case 'courseForm': 
-                // This case is now handled inside CourseManagementView, but we keep
-                // this as a fallback in case navigate('courseForm') is called directly.
                 return permissions.canManageCourse ? (<CourseForm
                     courseType={activeCourseType || editingCourse?.course_type}
                     initialData={editingCourse}
@@ -1368,10 +1222,8 @@ export default function App() {
 
             case 'participantForm': return permissions.canManageCourse ? (selectedCourse && <ParticipantForm course={selectedCourse} initialData={editingParticipant} onCancel={() => navigate(previousView)} onSave={async (participantData, facilityUpdateData) => { try { const fullPayload = { ...participantData, id: editingParticipant?.id, courseId: selectedCourse.id }; await saveParticipantAndSubmitFacilityUpdate(fullPayload, facilityUpdateData); if (facilityUpdateData) setToast({ show: true, message: 'Facility update submitted for approval.', type: 'info' }); 
             
-            // --- *** MODIFICATION: Clear participantTests *** ---
-            setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null }); // <-- ADD THIS
+            setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null }); 
             navigate('participants', { courseId: selectedCourse.id });
-            // --- END MODIFICATION ---
 
             } catch (e) { setToast({ show: true, message: `Submission failed: ${e.message}`, type: 'error' }); } }} />) : null;
 
@@ -1379,22 +1231,18 @@ export default function App() {
 
             case 'courseReport': return permissions.canViewCourse ? (selectedCourse && <CourseReportView course={selectedCourse} participants={courseDetails.participants} allObs={courseDetails.allObs} allCases={courseDetails.allCases} finalReportData={courseDetails.finalReport} onBack={() => navigate(previousView)} onEditFinalReport={handleEditFinalReport} onDeletePdf={handleDeletePdf} onViewParticipantReport={(pid) => { setSelectedParticipantId(pid); navigate('participantReport'); }} onShare={(course) => handleShare(course, 'course')} setToast={setToast} allHealthFacilities={healthFacilities} />) : null;
 
-            // --- MODIFICATION: This case has been refactored ---
             case 'facilitatorForm':
                 return permissions.canManageHumanResource ? (<FacilitatorForm 
                     initialData={editingFacilitator} 
                     onCancel={() => navigate(previousView)} 
-                    // This is the new, simple onSave callback
                     onSave={async () => { 
                         await fetchFacilitators(true); 
                         setToast({ show: true, message: 'Facilitator saved.', type: 'success' }); 
                         navigate('humanResources'); 
                     }}
-                    // Pass setLoading and setToast to the form
                     setToast={setToast}
                     setLoading={setLoading}
                 />) : null;
-            // --- END MODIFICATION ---
 
             case 'facilitatorReport': return permissions.canViewHumanResource ? (selectedFacilitator && <FacilitatorReportView
                 facilitator={selectedFacilitator}
@@ -1414,22 +1262,17 @@ export default function App() {
                         initialData={courseDetails.finalReport}
                         onSave={handleSaveFinalReport}
                         onCancel={() => navigate(previousView)}
-                        
-                        // --- THIS IS THE FIX ---
-                        // The prop name was changed from 'canEditDeleteFinalReport' to 'canUseFederalManagerAdvancedFeatures' to match what FinalReportManager.jsx expects
                         canUseFederalManagerAdvancedFeatures={permissions.canUseFederalManagerAdvancedFeatures}
                     />
                 );
             default: return <Landing navigate={navigate} permissions={permissions} />;
         }
     };
-    // --- END MODIFICATION ---
 
     const navItems = useMemo(() => [
-        // ... (memo unchanged)
         { label: 'Home', view: 'landing', active: view === 'landing', disabled: false },
         { label: 'Dashboard', view: 'dashboard', active: view === 'dashboard', disabled: false },
-        { label: 'Courses', view: 'courses', active: ['courses', 'courseForm', 'courseReport', 'participants', 'participantForm', 'participantReport', 'observe', 'monitoring', 'reports', 'finalReport', 'participantMigration', 'courseDetails', 'test-dashboard', 'enter-test-scores'].includes(view), disabled: !permissions.canViewCourse }, // <-- Added test tabs
+        { label: 'Courses', view: 'courses', active: ['courses', 'courseForm', 'courseReport', 'participants', 'participantForm', 'participantReport', 'observe', 'monitoring', 'reports', 'finalReport', 'participantMigration', 'courseDetails', 'test-dashboard', 'enter-test-scores'].includes(view), disabled: !permissions.canViewCourse }, 
         { label: 'Human Resources', view: 'humanResources', active: ['humanResources', 'facilitatorForm', 'facilitatorReport'].includes(view), disabled: !permissions.canViewHumanResource },
         { label: 'Child Health Services', view: 'childHealthServices', active: view === 'childHealthServices', disabled: !permissions.canViewFacilities },
         { label: 'Skills Mentorship', view: 'skillsMentorship', active: view === 'skillsMentorship', disabled: !permissions.canViewSkillsMentorship },
@@ -1437,29 +1280,19 @@ export default function App() {
 
     const visibleNavItems = useMemo(() => navItems.filter(item => !item.disabled), [navItems]);
 
-    // --- MODIFIED: isMinimalUILayout logic ---
-    // isApplicationPublicView includes forms that ARE public (like application forms, facility updates)
     const isApplicationPublicView = isPublicSubmissionView || isNewFacilityView || isPublicFacilityUpdateView;
-    // isMentorshipPublicView is a specific path, but access is now restricted to logged-in users.
     const isMentorshipPublicView = !!publicMentorshipProps; 
     
-    // --- NEW: Check for any public report/profile view ---
-    const isPublicReportView = !!publicViewType; // This is true for course, facilitator, or team reports
+    const isPublicReportView = !!publicViewType; 
 
-    // --- *** START: MODIFIED LINE *** ---
-    // This checks if the user is on *any* minimal UI path (whether authenticated or not)
     const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView;
-    // --- *** END: MODIFIED LINE *** ---
 
     let mainContent;
 
     if ((authLoading || permissionsLoading) && !isMinimalUILayout) {
-        // ... (block unchanged)
         mainContent = <SplashScreen />;
     }
-    // --- MODIFICATION: Added authLoading check ---
     else if (isPublicFacilityUpdateView) {
-        // ... (block unchanged)
         if (authLoading) {
             mainContent = <Card><Spinner /></Card>;
         } else if (!user) {
@@ -1468,46 +1301,36 @@ export default function App() {
             mainContent = <PublicFacilityUpdateForm setToast={setToast} serviceType={publicServiceType} />;
         }
     }
-    // --- MODIFICATION: Added authLoading check ---
     else if (isNewFacilityView) {
-        // ... (block unchanged)
         if (authLoading) {
             mainContent = <Card><Spinner /></Card>;
         } else if (!user) {
             mainContent = <SignInBox message="You must sign in to use this new facility entry form." />;
         } else {
-            // --- MODIFICATION: Pass publicServiceType as a prop ---
             mainContent = <NewFacilityEntryForm setToast={setToast} serviceType={publicServiceType} />;
         }
     }
-    // --- END MODIFICATION ---
     
-    // --- This block handles the public submission links ---
     else if (isPublicSubmissionView) {
-        // ... (block unchanged)
         if (authLoading) {
             mainContent = <Card><Spinner /></Card>;
         } else if (!user) {
-            // --- User must be signed in to access application forms ---
             mainContent = <SignInBox message="You must sign in to submit an application." />;
         } else {
-            // --- User is logged in, show the correct form ---
             if (submissionType === 'facilitator-application') mainContent = <FacilitatorApplicationForm />;
             else if (submissionType === 'team-member-application') mainContent = <TeamMemberApplicationForm />;
             else mainContent = <div className="p-8 text-center">Invalid form link.</div>;
         }
     }
     
-    // --- MODIFIED: This block now handles ALL public views ---
-    else if (isPublicReportView) { // This replaces `isSharedView`
+    else if (isPublicReportView) { 
         if (publicViewLoading) {
             mainContent = <Card><div className="flex justify-center p-8"><Spinner /></div></Card>;
         }
-        else if (sharedViewError) { // We still use sharedViewError for all errors
+        else if (sharedViewError) { 
             mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">{sharedViewError}</div></Card>;
         } 
         else if (publicViewData) {
-            // Render based on the type
             switch (publicViewType) {
                 case 'courseReport':
                     mainContent = (
@@ -1517,10 +1340,10 @@ export default function App() {
                             allObs={publicViewData.allObs}
                             allCases={publicViewData.allCases}
                             finalReportData={publicViewData.finalReport}
-                            allHealthFacilities={null} // Public reports don't have access to all facilities
+                            allHealthFacilities={null} 
                             isSharedView={true}
                             onBack={() => {}}
-                            onShare={() => {}} // Share button is handled internally
+                            onShare={() => {}} 
                         />
                     );
                     break;
@@ -1542,6 +1365,18 @@ export default function App() {
                         />
                     );
                     break;
+                
+                case 'certificateVerification':
+                    mainContent = (
+                        <Suspense fallback={<Card><Spinner /></Card>}>
+                            <CertificateVerificationView
+                                participant={publicViewData.participant}
+                                course={publicViewData.course}
+                            />
+                        </Suspense>
+                    );
+                    break;
+                
                 default:
                     mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">Invalid report type.</div></Card>;
             }
@@ -1550,11 +1385,8 @@ export default function App() {
              mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">Could not load report data.</div></Card>;
         }
     }
-    // --- END MODIFICATION ---
     
-    // --- MODIFICATION: Added authLoading check ---
     else if (isPublicMonitoringView) {
-        // ... (block unchanged)
         if (authLoading) {
              mainContent = <Card><Spinner /></Card>;
         } else if (!user) {
@@ -1574,32 +1406,26 @@ export default function App() {
              mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">Could not load monitoring session.</div></Card>;
         }
     }
-    // --- END MODIFICATION ---
-    // --- MODIFICATION: Added authLoading check ---
     else if (isMentorshipPublicView) {
-        // ... (block unchanged)
         if (authLoading) {
             mainContent = <Card><Spinner /></Card>;
-        } else if (!user) { // CRITICAL CHECK: If user is NOT authenticated, show sign-in
+        } else if (!user) { 
             mainContent = <SignInBox message="You must sign in to use the mentorship submission link." />;
         } else {
-            // User IS authenticated, proceed to render the Mentorship View with minimal UI
             mainContent = (
                 <SkillsMentorshipView
                     setToast={setToast}
-                    permissions={permissions} // Pass actual permissions
-                    userStates={userStates} // Pass actual states
-                    userLocalities={userLocalities} // Pass actual localities
-                    publicSubmissionMode={true} // Keep publicSubmissionMode to enable setup mode
+                    permissions={permissions} 
+                    userStates={userStates} 
+                    userLocalities={userLocalities} 
+                    publicSubmissionMode={true} 
                     publicServiceType={publicMentorshipProps.serviceType}
                     canBulkUploadMentorships={permissions.canUseSuperUserAdvancedFeatures}
                 />
             );
         }
     }
-    // --- END MODIFICATION ---
 
-    // --- *** START: NEWLY ADDED RENDER BLOCK *** ---
     else if (isPublicTestView) {
         if (authLoading) {
             mainContent = <Card><Spinner /></Card>;
@@ -1616,15 +1442,13 @@ export default function App() {
                         course={publicTestData.course}
                         participants={publicTestData.participants}
                         participantTests={publicTestData.tests}
-                        onSaveTest={upsertParticipantTest} // The function to save data
+                        onSaveTest={upsertParticipantTest} 
                         
-                        // --- NEW: Pass the participant save function ---
                         onSaveParticipant={handleSaveParticipantFromTestForm}
                         
-                        onCancel={() => {}} // Cancel button does nothing in public view
-                        onSave={(savedTest) => { // This is called *after* score is shown
+                        onCancel={() => {}} 
+                        onSave={(savedTest) => { 
                             setToast({ show: true, message: 'Test saved successfully!', type: 'success' });
-                            // Re-fetch test data AND participant data to update the UI
                             const refetchData = async () => {
                                 setPublicTestLoading(true);
                                 try {
@@ -1641,11 +1465,9 @@ export default function App() {
                             };
                             refetchData();
                         }}
-                        initialParticipantId={''} // Let the user choose
-                        isPublicView={true} // --- NEW: Set public view flag
+                        initialParticipantId={''} 
+                        isPublicView={true} 
 
-                        // --- *** THIS IS THE FIX *** ---
-                        // Pass the correct permission for managing tests
                         canManageTests={permissions.canUseFederalManagerAdvancedFeatures}
                     />
                 </Suspense>
@@ -1654,48 +1476,30 @@ export default function App() {
              mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">Could not load test session.</div></Card>;
         }
     }
-    // --- *** END: NEWLY ADDED RENDER BLOCK *** ---
 
 
-    // --- *** START OF CRITICAL FIX *** ---
-    // Standard authenticated view
     else if (!user && !authLoading) {
-        // ... (block unchanged)
-        // User is fully logged out
         mainContent = <SignInBox />;
     }
-    // --- NEW: Keep showing SignInBox if profile is incomplete ---
     else if (user && isProfileIncomplete) {
-        // ... (block unchanged)
-        // User is logged IN, but profile is incomplete.
-        // Keep showing SignInBox, which will handle the profile form.
         mainContent = <SignInBox />;
     }
     else {
-        // ... (block unchanged)
-        // User is logged in AND profile is complete
         mainContent = renderView();
     }
-    // --- *** END OF CRITICAL FIX *** ---
 
 
     return (
         <div className="min-h-screen bg-sky-50 flex flex-col">
-            {/* --- MODIFIED HEADER: Always show logo, hide nav bar if minimal layout --- */}
             <header className="bg-slate-800 shadow-lg sticky top-0 z-10">
-                {/* ... (header unchanged) */}
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
                     <div className="flex items-center justify-between">
-                        {/* Always show the logo/title block */}
                         <div className="flex items-center gap-4 cursor-pointer" onClick={() => !isSharedView && navigate('landing')}>
                             <div className="h-14 w-14 bg-white rounded-full flex items-center justify-center p-1 shadow-md">
-                                {/* --- MODIFICATION: Changed to absolute path --- */}
                                 <img src="/child.png" alt="NCHP Logo" className="h-12 w-12 object-contain" />
-                                {/* --- END MODIFICATION --- */}
                             </div>
                             <div><h1 className="text-xl sm:text-2xl font-bold text-white">National Child Health Program</h1><p className="text-sm text-slate-300 hidden sm:block">Program & Course Monitoring System</p></div>
                         </div>
-                        {/* Only show the full navigation for authenticated users NOT on a minimal UI path */}
                         {!isMinimalUILayout && user && (
                             <nav className="hidden md:flex items-center gap-1">
                                 {visibleNavItems.map(item => (
@@ -1708,16 +1512,11 @@ export default function App() {
                     </div>
                 </div>
             </header>
-            {/* --- END MODIFIED HEADER --- */}
 
-            {/* --- User/Admin Info Bar: Hidden if minimal layout OR not logged in --- */}
             {user && !isMinimalUILayout && (
                 <div className="bg-slate-700 text-slate-200 p-2 md:p-3 text-center flex items-center justify-center gap-4">
-                    {/* ... (bar unchanged) */}
                     <div className="flex items-center gap-2">
-                        {/* --- MODIFICATION START (The requested change is here) --- */}
                         <span>Welcome, **{user.displayName || user.email}**</span>
-                        {/* --- MODIFICATION END --- */}
                         {userRole && <span className="bg-sky-600 text-xs px-2 py-1 rounded">{userRole}</span>}
                     </div>
                     {permissions.canViewAdmin && (<Button onClick={() => navigate('admin')} variant="primary">Admin Dashboard</Button>)}
@@ -1733,7 +1532,6 @@ export default function App() {
             </main>
 
             <Footer />
-            {/* --- Mobile Nav: Hidden if minimal layout OR not logged in --- */}
             { user && !isMinimalUILayout && <BottomNav navItems={visibleNavItems} navigate={navigate} /> }
 
             <Suspense fallback={null}>
@@ -1742,7 +1540,6 @@ export default function App() {
                 )}
             </Suspense>
 
-            {/* --- Conditionally render the Resource Monitor for Super Users --- */}
             {permissions.canUseSuperUserAdvancedFeatures && isMonitorVisible && (
                 <ResourceMonitor
                     counts={operationCounts}

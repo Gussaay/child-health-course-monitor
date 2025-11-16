@@ -61,7 +61,11 @@ const pctBgClass = (value, customClasses) => {
     return '';
 };
 
+// ... (rest of existing code up to PublicCourseMonitoringView) ...
+// [I am keeping all your existing Course.jsx logic intact and appending the missing component]
+
 const generateFullCourseReportPdf = async (course, overallChartRef, dailyChartRef) => {
+    // ... (function content unchanged)
     const doc = new jsPDF('portrait', 'mm', 'a4');
     const fileName = `Course_Report_${course.course_type}_${course.state}.pdf`;
     const element = document.getElementById('full-course-report');
@@ -1387,6 +1391,56 @@ export function PublicCourseMonitoringView({ course, allParticipants }) {
                     </div>
                 </Card>
             )}
+        </div>
+    );
+}
+
+// --- NEW: Certificate Verification View Component ---
+// This component was missing from the previous file but is required by App.jsx
+export function CertificateVerificationView({ participant, course }) {
+    if (!participant || !course) return <EmptyState message="Invalid certificate data." />;
+
+    const courseTypeTitle = course.course_type === 'IMNCI' ? 'Integrated Management of Newborn and Childhood Illnesses (IMNCI)' :
+                            course.course_type === 'ICCM' ? 'Integrated Community case management for under 5 children (iCCM)' :
+                            course.course_type === 'ETAT' ? 'Emergency Triage, Assessment & Treatment (ETAT)' :
+                            course.course_type === 'EENC' ? 'Early Essential Newborn Care (EENC)' :
+                            course.course_type;
+
+    return (
+        <div className="flex flex-col items-center justify-center min-h-[50vh] p-4">
+            <Card className="w-full max-w-lg border-t-4 border-green-500">
+                <div className="p-8 text-center">
+                    <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
+                        <svg className="h-10 w-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Certificate Verified</h2>
+                    <p className="text-gray-600 mb-6">This certificate is valid and issued by the National Child Health Program.</p>
+                    
+                    <div className="bg-gray-50 rounded-lg p-4 text-left space-y-3 border border-gray-200">
+                        <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase">Participant Name</p>
+                            <p className="text-lg font-medium text-gray-900">{participant.name}</p>
+                        </div>
+                        <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase">Course</p>
+                            <p className="text-md font-medium text-gray-900">{courseTypeTitle}</p>
+                        </div>
+                        <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase">Location</p>
+                            <p className="text-md font-medium text-gray-900">{course.state} - {course.locality}</p>
+                        </div>
+                        <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase">Date</p>
+                            <p className="text-md font-medium text-gray-900">{course.start_date}</p>
+                        </div>
+                    </div>
+                </div>
+                <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-center">
+                    <p className="text-xs text-gray-500">Verified by NCHP System</p>
+                </div>
+            </Card>
         </div>
     );
 }
