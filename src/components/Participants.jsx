@@ -2,10 +2,8 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import * as XLSX from 'xlsx'; 
 import jsPDF from "jspdf"; 
-import html2canvas from 'html2canvas'; 
 import { createRoot } from 'react-dom/client'; 
-// --- Import for QR Code ---
-import { QRCodeCanvas } from 'qrcode.react';
+
 import {
     Card, PageHeader, Button, FormGroup, Input, Select, Textarea, Table, EmptyState, Modal, Spinner
 } from "./CommonComponents";
@@ -24,421 +22,12 @@ import { useDataCache } from '../DataContext';
 
 import { GenericFacilityForm, IMNCIFormFields } from './FacilityForms.jsx';
 
-
-// ====================================================================
-// ===== 1. CERTIFICATE GENERATION LOGIC & HELPERS (Reusable) =========
-// ====================================================================
-
-// Helper function to get the full course title based on the template
-const getCertificateCourseTitle = (courseType) => {
-    if (courseType === 'IMNCI') {
-        return 'Integrated Management of Newborn and Childhood Illnesses (IMNCI)';
-    }
-    if (courseType === 'ICCM') {
-        return 'Integrated Community case management for under 5 children (iCCM)';
-    }
-    if (courseType === 'ETAT') {
-        return 'Emergency Triage, Assessment & Treatment (ETAT)';
-    }
-    if (courseType === 'EENC') {
-        return 'Early Essential Newborn Care (EENC)';
-    }
-    if (courseType === 'IPC') {
-        return 'Infection Prevention & Control (Neonatal Unit)';
-    }
-    if (courseType === 'Small & Sick Newborn') {
-        return 'Small & Sick Newborn Case Management';
-    }
-    return courseType; // Fallback
-};
-
-/**
- * Helper function to format the day number as a day suffix (e.g., 1st, 2nd, 3rd, 4th)
- * Returns a raw HTML string with <sup> for the superscript effect in PDF generation.
- */
-const getDayWithSuffix = (day) => {
-    let suffix;
-    if (day > 3 && day < 21) suffix = 'th';
-    else {
-        switch (day % 10) {
-            case 1: suffix = 'st'; break;
-            case 2: suffix = 'nd'; break;
-            case 3: suffix = 'rd'; break;
-            default: suffix = 'th';
-        }
-    }
-    // Use raw HTML string with minimal style for html2canvas compatibility
-    return `${day}<sup style="font-size: 0.6em; line-height: 0;">${suffix}</sup>`;
-};
-
-// Helper function to get Arabic month name
-const getArabicMonthName = (monthIndex) => {
-    const months = [
-        "January", "February", "March", "April", "May", "June",
-        "July", "Auguat", "September", "October", "November", "December"
-    ];
-    return months[monthIndex];
-};
-
-
-/**
- * Hidden React component used as a template for html2canvas rendering.
- */
-const CertificateTemplate = React.memo(function CertificateTemplate({ course, participant, federalProgramManagerName, participantSubCourse }) {
-    const courseTitle = getCertificateCourseTitle(course.course_type);
-    
-    const location = `${course.state} - ${course.hall}`;
-    let courseDate = '';
-    const courseDuration = course.course_duration;
-    
-    if (courseDuration && course.start_date) {
-        const [startYear, startMonth, startDay] = course.start_date.split('-').map(Number);
-        const startDateObj = new Date(Date.UTC(startYear, startMonth - 1, startDay));
-        const endDateObj = new Date(startDateObj);
-        endDateObj.setUTCDate(startDateObj.getUTCDate() + (courseDuration - 1));
-        
-        const startDayOfMonth = startDateObj.getUTCDate();
-        const startMonthIndex = startDateObj.getUTCMonth();
-        const startYearNum = startDateObj.getUTCFullYear();
-        
-        const endDayOfMonth = endDateObj.getUTCDate();
-        const endMonthIndex = endDateObj.getUTCMonth();
-        
-        const startMonthName = getArabicMonthName(startMonthIndex);
-        const endMonthName = getArabicMonthName(endMonthIndex);
-
-        const startDayHtml = getDayWithSuffix(startDayOfMonth);
-        const endDayHtml = getDayWithSuffix(endDayOfMonth);
-
-        if (startMonthIndex === endMonthIndex) {
-            courseDate = `${startDayHtml} - ${endDayHtml} ${startMonthName} ${startYearNum}`;
-        } else {
-            courseDate = `${startDayHtml} ${startMonthName} - ${endDayHtml} ${endMonthName} ${endYearNum}`;
-        }
-    } else {
-        courseDate = course.start_date ? course.start_date.split('-').reverse().join('/') : 'N/A';
-    }
-    
-    const verificationUrl = `${window.location.origin}/verify/certificate/${participant.id}`;
-    
-    return (
-        <div 
-            id="certificate-template" 
-            style={{ 
-                width: '297mm', 
-                height: '210mm', 
-                boxSizing: 'border-box', 
-                fontFamily: 'Times New Roman, serif', 
-                color: 'black', 
-                backgroundColor: 'white',
-                position: 'relative' 
-            }}
-        >
-            <img 
-                src="/certificate/border.jpg" 
-                alt="Certificate Border" 
-                style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    zIndex: 0, 
-                }}
-            />
-            
-            <div style={{
-                position: 'absolute',
-                top: '14mm', 
-                left: '0mm',
-                right: '0mm',
-                textAlign: 'center',
-                fontSize: '24px',
-                fontWeight: 'bold',
-                lineHeight: '1.4'
-            }}>
-                Republic of Sudan<br />
-                Federal Ministry of Health<br />
-                Directorate General of PHC<br />
-                Maternal and Child Health Directorate<br />
-                National Child Health Program
-            </div>
-
-            <div style={{
-                position: 'absolute',
-                top: '88mm',
-                left: '60mm',
-                right: '60mm',
-                textAlign: 'center',
-                fontSize: '30px',
-                fontWeight: 'bold',
-            }}>
-                Dr. {participant.name}
-            </div>
-
-            <div style={{
-                position: 'absolute',
-                top: '105mm', 
-                left: '50mm',
-                right: '50mm',
-                textAlign: 'center',
-                fontSize: '22px', 
-                fontStyle: 'italic',
-            }}>
-                Has successfully completed:
-            </div>
-
-            <div style={{
-                position: 'absolute',
-                top: '118mm', 
-                left: '10mm',
-                right: '10mm',
-                textAlign: 'center',
-                fontSize: '28px', 
-                fontWeight: 'bold',
-                color: 'red' 
-            }}>
-                {courseTitle}
-            </div>
-            
-            {(course.course_type === 'IMNCI' || course.course_type === 'ICCM') && participantSubCourse && (
-                <div style={{
-                    position: 'absolute',
-                    top: '131mm', 
-                    left: '10mm',
-                    right: '10mm',
-                    textAlign: 'center',
-                    fontSize: '20px',
-                    fontWeight: 'normal',
-                    color: 'Black'
-                }}>
-                   ({participantSubCourse})
-                </div>
-            )}
-
-            <div style={{
-                position: 'absolute',
-                top: '144mm', 
-                left: '50%', 
-                transform: 'translateX(-50%)', 
-                textAlign: 'center', 
-                width: 'auto', 
-                maxWidth: '90%', 
-                fontFamily: 'Times New Roman, serif', 
-            }}>
-                <div style={{
-                    fontSize: '24px',
-                    fontWeight: 'bold',
-                    display: 'inline-block', 
-                    whiteSpace: 'nowrap', 
-                }}>
-                    <span style={{ color: 'red' }}>Place :</span> {location}
-                </div>
-
-                <div style={{
-                    marginTop: '3mm', 
-                    fontSize: '24px',
-                    fontWeight: 'bold',
-                    display: 'block', 
-                    whiteSpace: 'nowrap', 
-                }}>
-                    <span style={{ color: 'red' }}>Date :</span> 
-                    <span dangerouslySetInnerHTML={{ __html: courseDate }}></span>
-                </div>
-            </div>
-
-            <div style={{
-                position: 'absolute',
-                top: '171mm',    
-                left: '136mm',   
-                width: '25mm',
-                height: '25mm',
-                backgroundColor: 'white', 
-                padding: '1mm',           
-                boxSizing: 'border-box'
-            }}>
-                <QRCodeCanvas
-                    value={verificationUrl}
-                    size={87} 
-                    bgColor={"#ffffff"}
-                    fgColor={"#000000"}
-                    level={"L"} 
-                    includeMargin={false}
-                />
-            </div>
-
-            <div style={{
-                position: 'absolute',
-                top: '175mm', 
-                left: '180mm',  
-                right: '5mm', 
-                textAlign: 'center',
-                fontSize: '22px',
-                fontWeight: 'bold',
-            }}>
-               Dr. {course.director}
-            </div>
-
-            <div style={{
-                position: 'absolute',
-                top: '185mm', 
-                left: '180mm',  
-                right: '5mm', 
-                textAlign: 'center',
-                fontSize: '20px', 
-                fontWeight: 'bold',
-            }}>
-                Course Director
-            </div>
-
-            <div style={{
-                position: 'absolute',
-                top: '175mm', 
-                left: '5mm', 
-                right: '190mm', 
-                textAlign: 'center',
-                fontSize: '22px',
-                fontWeight: 'bold',
-            }}>
-                Dr. {federalProgramManagerName || 'Federal Program Manager'}
-            </div>
-
-            <div style={{
-                position: 'absolute',
-                top: '185mm', 
-                left: '5mm', 
-                right: '190mm', 
-                textAlign: 'center',
-                fontSize: '20px', 
-                fontWeight: 'bold',
-            }}>
-                National Program Manager
-            </div>
-        </div>
-    );
-});
-
-
-/**
- * Renders the certificate component in a hidden div,
- * captures it with html2canvas, and returns the canvas.
- */
-const generateCertificatePdf = async (course, participant, federalProgramManagerName, participantSubCourse) => {
-    
-    try {
-        await new Promise((resolve, reject) => {
-            const img = new Image();
-            img.src = '/certificate/border.jpg';
-            img.onload = resolve;
-            img.onerror = () => reject(new Error("Failed to load certificate background image."));
-        });
-    } catch (error) {
-        console.error(error);
-        alert(error.message);
-        return null;
-    }
-
-    const container = document.createElement('div');
-    container.style.position = 'absolute';
-    container.style.left = '-9999px'; 
-    container.style.top = '0';
-    container.style.zIndex = '-1'; 
-    document.body.appendChild(container);
-
-    const root = createRoot(container);
-    
-    let canvas = null;
-    try {
-        root.render(
-            <CertificateTemplate 
-                course={course} 
-                participant={participant} 
-                federalProgramManagerName={federalProgramManagerName} 
-                participantSubCourse={participantSubCourse} 
-            />
-        );
-
-        await new Promise(resolve => setTimeout(resolve, 500)); 
-
-        const element = container.querySelector('#certificate-template');
-        if (!element) throw new Error("Certificate template element not found.");
-
-        canvas = await html2canvas(element, { 
-            scale: 2, 
-            useCORS: true,
-            logging: false,
-            backgroundColor: '#ffffff' 
-        });
-        
-        return canvas;
-
-    } catch (error) {
-        console.error("Error generating certificate:", error);
-        alert(`Could not generate certificate for ${participant.name}. See console for details.`);
-        return null;
-    } finally {
-        if (container.parentNode === document.body) {
-             root.unmount();
-             document.body.removeChild(container);
-        }
-    }
-};
-
-/**
- * Generates a single multi-page PDF containing all course participants' certificates.
- */
-const generateAllCertificatesPdf = async (course, participants, federalProgramManagerName) => {
-    if (!participants || participants.length === 0) {
-        alert("No participants found to generate certificates.");
-        return;
-    }
-
-    const doc = new jsPDF('landscape', 'mm', 'a4');
-    const imgWidth = 297; 
-    const imgHeight = 210; 
-    let firstPage = true;
-
-    for (let i = 0; i < participants.length; i++) {
-        const participant = participants[i];
-        
-        // Determine the participant's sub-course for the certificate
-        let participantSubCourse = participant.imci_sub_type;
-        if (!participantSubCourse) {
-             const participantAssignment = course.facilitatorAssignments?.find(
-                (a) => a.group === participant.group
-            );
-            participantSubCourse = participantAssignment?.imci_sub_type;
-        }
-
-        const canvas = await generateCertificatePdf(
-            course, 
-            participant, 
-            federalProgramManagerName, 
-            participantSubCourse
-        );
-
-        if (canvas) {
-            if (!firstPage) {
-                doc.addPage();
-            }
-            firstPage = false;
-            
-            const imgData = canvas.toDataURL('image/png');
-            doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-        }
-    }
-
-    if (!firstPage) {
-        const fileName = `All_Certificates_${course.course_type}_${course.start_date}.pdf`;
-        doc.save(fileName);
-    } else {
-        alert("Failed to generate any certificates. Please check the console for errors.");
-    }
-};
+// --- Import Certificate Generators ---
+import { generateCertificatePdf, generateAllCertificatesPdf } from './CertificateGenerator';
 
 
 // ====================================================================
-// ===== 2. MODAL COMPONENTS (Nested) =================================
+// ===== 1. MODAL COMPONENTS (Nested) =================================
 // ====================================================================
 
 // --- Reusable Searchable Select Component ---
@@ -530,7 +119,7 @@ const SearchableSelect = ({ options, value, onChange, placeholder, disabled }) =
     );
 };
 
-// --- ADDED: New Participant Popup Form ---
+// --- New Participant Popup Form ---
 const NewParticipantForm = ({ initialName, jobTitleOptions, onCancel, onSave }) => {
     const [name, setName] = useState(initialName || '');
     const [phone, setPhone] = useState('');
@@ -1591,6 +1180,7 @@ export function ParticipantsView({
     const [isLoading, setIsLoading] = useState(true);
     const [hasMore, setHasMore] = useState(true);
     const [isBulkCertLoading, setIsBulkCertLoading] = useState(false);
+    const [certLanguage, setCertLanguage] = useState('en'); // Added state for certificate language
 
     const [groupFilter, setGroupFilter] = useState('All');
     const [importModalOpen, setImportModalOpen] = useState(false);
@@ -1680,7 +1270,8 @@ export function ParticipantsView({
         }
         setIsBulkCertLoading(true);
         try {
-             await generateAllCertificatesPdf(course, participants, federalProgramManagerName);
+             // Pass language to bulk generator
+             await generateAllCertificatesPdf(course, participants, federalProgramManagerName, certLanguage);
         } catch(error) {
             console.error("Bulk certificate download failed:", error);
             alert("Failed to generate bulk certificates. See console for details.");
@@ -1719,7 +1310,7 @@ export function ParticipantsView({
 
 
             <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 items-center">
                     {canAddParticipant && (
                         <Button onClick={onAdd}>Add Participant</Button>
                     )}
@@ -1748,6 +1339,21 @@ export function ParticipantsView({
                             Bulk Migrate to Facilities
                         </Button>
                     )}
+                    
+                    {/* Language Selector */}
+                    <div className="flex items-center bg-white border border-gray-300 rounded px-2 h-10">
+                        <span className="text-xs font-bold text-gray-600 mr-2 uppercase">Cert. Lang:</span>
+                        <select 
+                            value={certLanguage} 
+                            onChange={(e) => setCertLanguage(e.target.value)}
+                            className="border-none text-sm focus:ring-0 py-1 cursor-pointer bg-transparent"
+                            style={{ outline: 'none' }}
+                        >
+                            <option value="en">English</option>
+                            <option value="ar">Arabic (عربي)</option>
+                        </select>
+                    </div>
+
                     <Button
                         variant="primary"
                         onClick={handleBulkCertificateDownload}
@@ -1799,7 +1405,8 @@ export function ParticipantsView({
                                         <Button 
                                             variant="secondary" 
                                             onClick={async () => {
-                                                const canvas = await generateCertificatePdf(course, p, federalProgramManagerName, participantSubCourse);
+                                                // Call imported generator with language
+                                                const canvas = await generateCertificatePdf(course, p, federalProgramManagerName, participantSubCourse, certLanguage);
                                                 if (canvas) {
                                                     const doc = new jsPDF('landscape', 'mm', 'a4');
                                                     const imgWidth = 297;
@@ -1866,7 +1473,8 @@ export function ParticipantsView({
                                 <Button 
                                     variant="secondary" 
                                     onClick={async () => {
-                                        const canvas = await generateCertificatePdf(course, p, federalProgramManagerName, participantSubCourse);
+                                        // Call imported generator with language
+                                        const canvas = await generateCertificatePdf(course, p, federalProgramManagerName, participantSubCourse, certLanguage);
                                         if (canvas) {
                                             const doc = new jsPDF('landscape', 'mm', 'a4');
                                             const imgWidth = 297;

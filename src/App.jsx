@@ -20,6 +20,7 @@ import {
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, LineElement, PointElement);
 
 // --- Lazy Load View Components ---
+// Note: We removed the named imports from AdminDashboard to prevent circular dependency crashes
 const DashboardView = lazy(() => import('./components/DashboardView'));
 const CourseReportView = lazy(() => import('./components/CourseReportView.jsx').then(module => ({ default: module.CourseReportView })));
 const ShareModal = lazy(() => import('./components/ShareModal').then(module => ({ default: module.ShareModal })));
@@ -81,12 +82,49 @@ import { useDataCache } from './DataContext';
 import { useAuth } from './hooks/useAuth';
 import { SignInBox } from './auth-ui.jsx';
 
-import {
-    ALL_PERMISSIONS,
-    DEFAULT_ROLE_PERMISSIONS,
-    ALL_PERMISSION_KEYS,
-    applyDerivedPermissions
-} from './components/AdminDashboard';
+// --- CRITICAL FIX: Permissions Defined Locally to Avoid Circular Dependency ---
+const ALL_PERMISSIONS = {
+    canViewDashboard: true,
+    canViewCourse: true,
+    canViewHumanResource: true,
+    canViewFacilities: true,
+    canViewSkillsMentorship: true,
+    canViewAdmin: true,
+    canManageCourse: true,
+    canManageHumanResource: true,
+    canManageFacilities: true,
+    canApproveSubmissions: true,
+    canUseSuperUserAdvancedFeatures: true,
+    canUseFederalManagerAdvancedFeatures: true,
+};
+
+const ALL_PERMISSION_KEYS = Object.keys(ALL_PERMISSIONS);
+
+const DEFAULT_ROLE_PERMISSIONS = {
+    'super_user': ALL_PERMISSION_KEYS,
+    'federal_manager': [
+        'canViewDashboard', 'canViewCourse', 'canViewHumanResource', 'canViewFacilities', 'canViewSkillsMentorship',
+        'canManageCourse', 'canManageHumanResource', 'canManageFacilities',
+        'canApproveSubmissions', 'canUseFederalManagerAdvancedFeatures'
+    ],
+    'state_manager': [
+        'canViewDashboard', 'canViewCourse', 'canViewHumanResource', 'canViewFacilities', 'canViewSkillsMentorship',
+        'canManageCourse', 'canManageHumanResource', 'canManageFacilities'
+    ],
+    'locality_manager': [
+        'canViewDashboard', 'canViewCourse', 'canViewHumanResource', 'canViewFacilities', 'canViewSkillsMentorship',
+        'canManageCourse',
+        'canManageFacilities'
+    ],
+    'user': [
+        'canViewDashboard', 'canViewCourse', 'canViewHumanResource', 'canViewFacilities', 'canViewSkillsMentorship'
+    ]
+};
+
+const applyDerivedPermissions = (basePermissions) => {
+    return basePermissions;
+};
+// --- END CRITICAL FIX ---
 
 
 // --- Resource Monitor Component ---
@@ -512,17 +550,15 @@ export default function App() {
         handlePathChange();
     }, []); 
 
-    const ALL_PERMISSIONS_MINIMAL = useMemo(() => {
-        return ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
-    }, [ALL_PERMISSION_KEYS]);
-
     const permissions = useMemo(() => {
         let derivedPermissions = { ...userPermissions };
         if (userRole?.toLowerCase() === 'super_user') {
             return ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: true }), {});
         }
+        
+        const ALL_PERMISSIONS_MINIMAL = ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
         return { ...ALL_PERMISSIONS_MINIMAL, ...derivedPermissions };
-    }, [userRole, userPermissions, ALL_PERMISSIONS_MINIMAL, ALL_PERMISSION_KEYS]);
+    }, [userRole, userPermissions]);
 
     useEffect(() => {
         const path = window.location.pathname;
@@ -556,6 +592,8 @@ export default function App() {
                         await setDoc(userRef, { email: user.email, role: role, permissions: permissionsData, lastLogin: new Date(), assignedState: '' }, { merge: true });
                     } else {
                         role = userSnap.data().role;
+                        // Use ALL_PERMISSIONS logic from local definition
+                        const ALL_PERMISSIONS_MINIMAL = ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
                         const rawPerms = { ...ALL_PERMISSIONS_MINIMAL, ...(userSnap.data().permissions || {}) };
                         permissionsData = applyDerivedPermissions(rawPerms);
                     }
@@ -574,7 +612,7 @@ export default function App() {
             }
         };
         checkUserRoleAndPermissions();
-    }, [user, ALL_PERMISSIONS_MINIMAL, DEFAULT_ROLE_PERMISSIONS]);
+    }, [user]);
 
     useEffect(() => {
         if (!user) {
