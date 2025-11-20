@@ -4,6 +4,9 @@ import { createRoot } from 'react-dom/client';
 import html2canvas from 'html2canvas';
 import jsPDF from "jspdf";
 import { QRCodeCanvas } from 'qrcode.react';
+import { STATE_LOCALITIES } from './constants';
+import { db } from '../firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 // --- Constants & Helpers ---
 
@@ -41,7 +44,7 @@ const getCertificateCourseTitle = (courseType, language = 'en') => {
     if (language === 'ar') {
         switch (courseType) {
             case 'ICCM': return 'العلاج المتكامل للأطفال أقل من 5 سنوات في المجتمع';
-            case 'IMNCI': return 'الادارة المتكاملة لصحة الطفولة وحديثي الولادة (IMNCI)';
+            case 'IMNCI': return 'العلاج المتكامل للاطفال اقل من 5 سنوات (IMNCI)';
             case 'ETAT': return 'الفرز والتقييم والعلاج في حالات الطوارئ (ETAT)';
             case 'EENC': return 'الرعاية الأساسية المبكرة لحديثي الولادة (EENC)';
             case 'IPC': return 'مكافحة العدوى (وحدة حديثي الولادة)';
@@ -49,7 +52,6 @@ const getCertificateCourseTitle = (courseType, language = 'en') => {
             default: return courseType;
         }
     }
-    // English Fallback
     switch (courseType) {
         case 'IMNCI': return 'Integrated Management of Newborn and Childhood Illnesses (IMNCI)';
         case 'ICCM': return 'Integrated Community case management for under 5 children (iCCM)';
@@ -61,6 +63,33 @@ const getCertificateCourseTitle = (courseType, language = 'en') => {
     }
 };
 
+// --- SIMPLIFIED HELPER ---
+const fetchArabicName = async (collectionName, englishName, fieldName) => {
+    if (!englishName) return null;
+    
+    try {
+        // 1. Try finding the name exactly as it is
+        let q = query(collection(db, collectionName), where("name", "==", englishName));
+        let snapshot = await getDocs(q);
+
+        // 2. If not found, try removing "Dr." prefix
+        if (snapshot.empty && englishName.includes("Dr.")) {
+            const cleanName = englishName.replace(/^Dr\.?\s*/i, '').trim();
+            q = query(collection(db, collectionName), where("name", "==", cleanName));
+            snapshot = await getDocs(q);
+        }
+
+        if (!snapshot.empty) {
+            const data = snapshot.docs[0].data();
+            const arName = data[fieldName]; // 'nameAr' or 'arabicName'
+            if (arName) return arName;
+        }
+    } catch (error) {
+        console.error(`Error fetching Arabic name from ${collectionName}:`, error);
+    }
+    return null;
+};
+
 // --- Component ---
 
 const CertificateTemplate = React.memo(function CertificateTemplate({ 
@@ -68,22 +97,28 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
     participant, 
     federalProgramManagerName, 
     participantSubCourse,
-    language = 'en'
+    language = 'en',
+    directorNameAr,      
+    programManagerNameAr 
 }) {
     const isArabic = language === 'ar';
     const courseTitle = getCertificateCourseTitle(course.course_type, language);
     
-    // Handle Sub-course translation specifically for ICCM
     let displaySubCourse = participantSubCourse;
     if (isArabic && course.course_type === 'ICCM') {
         displaySubCourse = "تدريب العامل الصحي المجتمعي";
     }
 
-    const location = `${course.state} - ${course.hall}`;
+    let stateDisplay = course.state;
+    if (isArabic && STATE_LOCALITIES[course.state]) {
+        stateDisplay = STATE_LOCALITIES[course.state].ar;
+    }
+
+    const location = `${stateDisplay} - ${course.hall}`;
+
     let courseDate = '';
     const courseDuration = course.course_duration;
     
-    // Date Logic
     if (courseDuration && course.start_date) {
         const [startYear, startMonth, startDay] = course.start_date.split('-').map(Number);
         const startDateObj = new Date(Date.UTC(startYear, startMonth - 1, startDay));
@@ -98,7 +133,6 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
         const endYearNum = endDateObj.getUTCFullYear();
 
         if (isArabic) {
-            // Arabic: No suffixes (st, nd), just numbers
             const startMonthName = getArabicMonthName(startMonthIndex);
             const endMonthName = getArabicMonthName(endMonthIndex);
             if (startMonthIndex === endMonthIndex) {
@@ -107,7 +141,6 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                 courseDate = `${startDayOfMonth} ${startMonthName} - ${endDayOfMonth} ${endMonthName} ${endYearNum}`;
             }
         } else {
-            // English: With suffixes
             const startMonthName = getEnglishMonthName(startMonthIndex);
             const endMonthName = getEnglishMonthName(endMonthIndex);
             const startDayHtml = getDayWithSuffix(startDayOfMonth);
@@ -125,46 +158,74 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
     
     const verificationUrl = `${window.location.origin}/verify/certificate/${participant.id}`;
 
-    // Styles
     const containerStyle = { 
         width: '297mm', 
         height: '210mm', 
         boxSizing: 'border-box', 
         fontFamily: isArabic ? 'Arial, sans-serif' : 'Times New Roman, serif', 
         color: 'black', 
-        backgroundColor: 'white',
+        backgroundColor: 'white', 
         position: 'relative',
         direction: isArabic ? 'rtl' : 'ltr'
     };
 
+    // --- UPDATED: QR Code Container Style (Strict Centering) ---
+    const qrContainerStyle = {
+        position: 'absolute',
+        top: '65mm',
+        width: '45mm',
+        height: 'auto',
+        zIndex: 2,
+        // Flexbox centering
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',     // Horizontally centers children (Text and QR)
+        justifyContent: 'center', // Vertically centers content
+        
+        // Explicitly set left/right based on language
+        left: isArabic ? '15mm' : 'auto',
+        right: isArabic ? 'auto' : '15mm',
+    };
+
     return (
         <div id="certificate-template" style={containerStyle}>
-            {/* Background Border */}
             <img 
                 src="/certificate/border.jpg" 
                 alt="Certificate Border" 
                 style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0 }}
             />
             
-            {/* === ARABIC LOGOS === */}
-            {isArabic && (
-                <>
-                    {/* Right: FMOH & Child Health */}
-                    <div style={{ position: 'absolute', top: '15mm', right: '25mm', zIndex: 1, textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        {/* Ensure these images exist in your public folder */}
-                        <img src="/logos/fmoh_logo.png" alt="FMOH" style={{ height: '22mm', width: 'auto' }} />
-                        <img src="/logos/child_health_logo.png" alt="NCHP" style={{ height: '22mm', width: 'auto' }} />
-                    </div>
-                    
-                    {/* Left: UNICEF & WHO */}
-                    <div style={{ position: 'absolute', top: '15mm', left: '25mm', zIndex: 1, display: 'flex', gap: '15px' }}>
-                         <img src="/logos/who_logo.png" alt="WHO" style={{ height: '22mm', width: 'auto' }} />
-                         <img src="/logos/unicef_logo.png" alt="UNICEF" style={{ height: '22mm', width: 'auto' }} />
-                    </div>
-                </>
-            )}
+            {/* Logos */}
+            <div style={{ 
+                position: 'absolute', 
+                top: '25mm', 
+                [isArabic ? 'right' : 'left']: '25mm', 
+                zIndex: 1, 
+                textAlign: 'center', 
+                display: 'flex', 
+                flexDirection: 'row', 
+                gap: '15px',
+                alignItems: 'center'
+            }}>
+                <img src="/certificate/fmoh-logo.jpg" alt="FMOH" style={{ height: '30mm', width: 'auto' }} />
+                <img src="/certificate/ch-logo.png" alt="NCHP" style={{ height: '35mm', width: 'auto' }} />
+            </div>
+            
+            <div style={{ 
+                position: 'absolute', 
+                top: '25mm', 
+                [isArabic ? 'left' : 'right']: '25mm', 
+                zIndex: 1, 
+                display: 'flex', 
+                flexDirection: 'row', 
+                gap: '15px',
+                alignItems: 'center'
+            }}>
+                 <img src="/certificate/who-logo.png" alt="WHO" style={{ height: '30mm', width: 'auto' }} />
+                 <img src="/certificate/unicef-logo.png" alt="UNICEF" style={{ height: '30mm', width: 'auto' }} />
+            </div>
 
-            {/* Header Text */}
+            {/* Header */}
             <div style={{
                 position: 'absolute',
                 top: '14mm', 
@@ -195,27 +256,27 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                 )}
             </div>
 
-            {/* Certificate Word (Arabic Only) */}
-            {isArabic && (
-                 <div style={{
-                    position: 'absolute',
-                    top: '70mm',
-                    left: '0',
-                    right: '0',
-                    textAlign: 'center',
-                    fontSize: '40px',
-                    fontWeight: 'bold',
-                    textDecoration: 'underline',
-                    zIndex: 2
-                }}>
-                    شهادة
-                </div>
-            )}
+            {/* Certificate Word */}
+             <div style={{
+                position: 'absolute',
+                top: '60mm',
+                left: '0',
+                right: '0',
+                textAlign: 'center',
+                fontSize: '60px',
+                fontWeight: 'bold',
+                textDecoration: 'underline',
+                color: 'red',
+                zIndex: 2,
+                fontFamily: isArabic ? 'Arial, sans-serif' : 'Times New Roman, serif'
+            }}>
+                {isArabic ? 'شهادة' : 'CERTIFICATE'}
+            </div>
 
-            {/* Name */}
+            {/* Participant Name */}
             <div style={{
                 position: 'absolute',
-                top: isArabic ? '95mm' : '88mm',
+                top: isArabic ? '88mm' : '88mm',
                 left: '60mm',
                 right: '60mm',
                 textAlign: 'center',
@@ -223,10 +284,10 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                 fontWeight: 'bold',
                 zIndex: 2
             }}>
-                {isArabic ? `مقدم الخدمة / ${participant.name}` : `Dr. ${participant.name}`}
+                {isArabic ? `${participant.name}` : `Dr. ${participant.name}`}
             </div>
 
-            {/* Completed Text */}
+            {/* Completion Text */}
             <div style={{
                 position: 'absolute',
                 top: isArabic ? '110mm' : '105mm', 
@@ -272,7 +333,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                 </div>
             )}
 
-            {/* Place and Date */}
+            {/* Location & Date */}
             <div style={{
                 position: 'absolute',
                 top: '148mm', 
@@ -303,31 +364,31 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                 </div>
             </div>
 
-            {/* QR Code */}
-            <div style={{
-                position: 'absolute',
-                top: '171mm',    
-                left: '136mm',   
-                width: '25mm',
-                height: '25mm',
-                backgroundColor: 'white', 
-                padding: '1mm',           
-                boxSizing: 'border-box',
-                zIndex: 2
-            }}>
-                <QRCodeCanvas
-                    value={verificationUrl}
-                    size={87} 
-                    bgColor={"#ffffff"}
-                    fgColor={"#000000"}
-                    level={"L"} 
-                    includeMargin={false}
-                />
+            {/* === UPDATED: QR Code Section (Text with Border & Blue Background) === */}
+            <div style={qrContainerStyle}>
+                <div style={{
+                    marginBottom: '8px',
+                    lineHeight: '1.5',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    fontFamily: isArabic ? 'Arial, sans-serif' : 'sans-serif',
+                  
+                }}>
+                    {isArabic ? 'أمسح وتحقق' : 'Scan & Verify'}
+                </div>
+                <div style={{ display: 'block' }}>
+                    <QRCodeCanvas
+                        value={verificationUrl}
+                        size={87} 
+                        bgColor={"#ffffff"}
+                        fgColor={"#000000"}
+                        level={"L"} 
+                        includeMargin={false}
+                    />
+                </div>
             </div>
 
-            {/* === SIGNATURES === */}
-            
-            {/* Right Signature Slot */}
+            {/* Signatures */}
             <div style={{
                 position: 'absolute',
                 top: '175mm', 
@@ -339,21 +400,20 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                 zIndex: 2
             }}>
                {isArabic ? (
-                   // Arabic: Program Manager on Right (Under Ministry Logo)
+                   // Arabic: Program Manager on Right
                    <>
-                       <div style={{ marginBottom: '10mm' }}>د. {federalProgramManagerName || '...'}</div>
+                       <div style={{ marginBottom: '1mm' }}>د. {programManagerNameAr || federalProgramManagerName || '...'}</div>
                        <div>مدير البرنامج</div>
                    </>
                ) : (
                    // English: Course Director on Right
                    <>
-                       <div style={{ marginBottom: '10mm' }}>Dr. {course.director}</div>
+                       <div style={{ marginBottom: '1mm' }}>Dr. {course.director}</div>
                        <div>Course Director</div>
                    </>
                )}
             </div>
 
-            {/* Left Signature Slot */}
             <div style={{
                 position: 'absolute',
                 top: '175mm', 
@@ -365,15 +425,15 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                 zIndex: 2
             }}>
                 {isArabic ? (
-                   // Arabic: Course Director on Left (Under Partners Logo)
+                   // Arabic: Course Director on Left
                    <>
-                       <div style={{ marginBottom: '10mm' }}>د. {course.director}</div>
+                       <div style={{ marginBottom: '1mm' }}>د. {directorNameAr || course.director || '...'}</div>
                        <div>مدير الدورة</div>
                    </>
                ) : (
                    // English: Program Manager on Left
                    <>
-                       <div style={{ marginBottom: '10mm' }}>Dr. {federalProgramManagerName || 'Federal Program Manager'}</div>
+                       <div style={{ marginBottom: '1mm' }}>Dr. {federalProgramManagerName || 'Federal Program Manager'}</div>
                        <div>National Program Manager</div>
                    </>
                )}
@@ -385,6 +445,17 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
 // --- Generation Functions ---
 
 export const generateCertificatePdf = async (course, participant, federalProgramManagerName, participantSubCourse, language = 'en') => {
+    let directorNameAr = null;
+    let programManagerNameAr = null;
+
+    if (language === 'ar') {
+        // 1. Fetch Director Name from 'facilitators' collection using 'arabicName' field
+        directorNameAr = await fetchArabicName('facilitators', course.director, 'arabicName');
+        
+        // 2. Fetch Program Manager Name from 'federalCoordinators' collection using 'nameAr' field
+        programManagerNameAr = await fetchArabicName('federalCoordinators', federalProgramManagerName, 'nameAr');
+    }
+
     try {
         await new Promise((resolve, reject) => {
             const img = new Image();
@@ -416,10 +487,11 @@ export const generateCertificatePdf = async (course, participant, federalProgram
                 federalProgramManagerName={federalProgramManagerName} 
                 participantSubCourse={participantSubCourse} 
                 language={language}
+                directorNameAr={directorNameAr}       
+                programManagerNameAr={programManagerNameAr} 
             />
         );
 
-        // Wait for render
         await new Promise(resolve => setTimeout(resolve, 800)); 
 
         const element = container.querySelector('#certificate-template');

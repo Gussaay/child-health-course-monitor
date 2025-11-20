@@ -4,9 +4,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Bar, Pie } from 'react-chartjs-2';
 import * as XLSX from 'xlsx';
-// --- NEW: Import QRCode from the correct library ---
-import { QRCodeCanvas } from 'qrcode.react'; // Use this component
-// --- END NEW ---
+import { QRCodeCanvas } from 'qrcode.react';
 import { Button, Card, EmptyState, FormGroup, Input, PageHeader, Select, Spinner, Table, Textarea, Modal, CardBody, CardFooter, CardHeader } from './CommonComponents';
 import {
     listAllCourses,
@@ -20,17 +18,14 @@ import {
     incrementFacilitatorApplicationOpenCount,
     uploadFile,
     getFacilitatorApplicationSettings,
-    // --- ADDED: Import upload/delete/upsert ---
     deleteFile
 } from '../data';
-import { COURSE_TYPES_FACILITATOR, STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES } from './constants.js'; // --- MODIFIED: Added IMNCI_SUBCOURSE_TYPES ---
-// --- MODIFIED: Import db, firestore functions, and permission configs ---
+import { COURSE_TYPES_FACILITATOR, STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES } from './constants.js';
 import { auth, db } from '../firebase';
-import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore'; // Added imports
+import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useDataCache } from '../DataContext'; 
-import { DEFAULT_ROLE_PERMISSIONS, ALL_PERMISSIONS } from './AdminDashboard'; // Added import
-// --- END MODIFICATION ---
+import { DEFAULT_ROLE_PERMISSIONS, ALL_PERMISSIONS } from './AdminDashboard';
 
 const getCertificateName = (key) => {
     const names = {
@@ -138,6 +133,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
     const allFields = [
         { key: 'id', label: 'ID', required: false, hidden: true },
         { key: 'name', label: 'Name' },
+        { key: 'arabicName', label: 'Arabic Name' },
         { key: 'phone', label: 'Phone Number' },
         { key: 'email', label: 'Email' },
         { key: 'currentState', label: 'Current State' },
@@ -153,7 +149,6 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
     ];
     
     const handleDownloadTemplate = () => {
-        // --- FIX: Handle null facilitators ---
         const templateData = (facilitators || []).map(f => {
             const row = {};
             allFields.forEach(field => {
@@ -321,6 +316,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
 function SubmissionDetails({ submission }) {
     const fieldsToShow = {
         name: "Name",
+        arabicName: "Arabic Name",
         phone: "Phone",
         email: "Email",
         currentState: "State",
@@ -367,9 +363,8 @@ function SubmissionDetails({ submission }) {
 }
 
 // --- Reusable Facilitator Form Fields Component ---
-// --- *** MODIFICATION: Added 'export' keyword *** ---
 export function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublicForm = false }) {
-    const { name, phone, email, isUserEmail, courses, totDates, certificateUrls, currentState, currentLocality, directorCourse, directorCourseDate, followUpCourse, followUpCourseDate, teamLeaderCourse, teamLeaderCourseDate, isClinicalInstructor, comments, backgroundQualification, backgroundQualificationOther } = data;
+    const { name, arabicName, phone, email, isUserEmail, courses, totDates, certificateUrls, currentState, currentLocality, directorCourse, directorCourseDate, followUpCourse, followUpCourseDate, teamLeaderCourse, teamLeaderCourseDate, isClinicalInstructor, comments, backgroundQualification, backgroundQualificationOther } = data;
 
     const handleFieldChange = (field, value) => onDataChange({ ...data, [field]: value });
     const handleTotDateChange = (course, date) => onDataChange({ ...data, totDates: { ...totDates, [course]: date } });
@@ -383,11 +378,23 @@ export function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublic
             <Card className="shadow-none border">
                 <CardHeader>Personal Information</CardHeader>
                 <CardBody>
-                    <div className="grid md:grid-cols-3 gap-4">
-                        <FormGroup label="Facilitator Name"><Input value={name} onChange={e => handleFieldChange('name', e.target.value)} required /></FormGroup>
-                        <FormGroup label="Phone Number"><Input value={phone} onChange={e => handleFieldChange('phone', e.target.value)} required /></FormGroup>
-                        <FormGroup label="Email"><Input type="email" value={email} onChange={e => handleFieldChange('email', e.target.value)} disabled={isPublicForm && isUserEmail} /></FormGroup>
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <FormGroup label="Facilitator Name (English)">
+                            <Input value={name} onChange={e => handleFieldChange('name', e.target.value)} required />
+                        </FormGroup>
+                        <FormGroup label="Facilitator Name (Arabic)">
+                            <Input value={arabicName || ''} onChange={e => handleFieldChange('arabicName', e.target.value)} placeholder="الاسم بالعربي" />
+                        </FormGroup>
                     </div>
+                    <div className="grid md:grid-cols-2 gap-4 mt-4">
+                        <FormGroup label="Phone Number">
+                            <Input value={phone} onChange={e => handleFieldChange('phone', e.target.value)} required />
+                        </FormGroup>
+                        <FormGroup label="Email">
+                            <Input type="email" value={email} onChange={e => handleFieldChange('email', e.target.value)} disabled={isPublicForm && isUserEmail} />
+                        </FormGroup>
+                    </div>
+
                     <div className="grid md:grid-cols-2 gap-4 mt-4">
                         <FormGroup label="Background Qualification">
                             <Select value={backgroundQualification} onChange={e => handleFieldChange('backgroundQualification', e.target.value)}>
@@ -539,7 +546,6 @@ export function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublic
     );
 }
 
-// --- MODIFIED: Reusable Share Link Modal ---
 function ShareLinkModal({ isOpen, onClose, title, link }) {
     const [copied, setCopied] = useState(false);
 
@@ -564,21 +570,18 @@ function ShareLinkModal({ isOpen, onClose, title, link }) {
 
             <FormGroup label="QR Code">
                 <div className="flex justify-center p-4 bg-white rounded-md border">
-                    {/* --- MODIFICATION: Use the QRCode component --- */}
                     <QRCodeCanvas
                         value={link}
-                        size={256} // Specify size
+                        size={256} 
                         bgColor={"#ffffff"}
                         fgColor={"#000000"}
-                        level={"Q"} // Error correction level
+                        level={"Q"}
                     />
-                    {/* --- END MODIFICATION --- */}
                 </div>
             </FormGroup>
         </Modal>
     );
 }
-// --- END MODIFICATION ---
 
 export function FacilitatorsView({ 
     onAdd, 
@@ -611,31 +614,29 @@ export function FacilitatorsView({
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [viewingCertsFor, setViewingCertsFor] = useState(null);
     
-    // --- NEW: State for share modal ---
+    // --- NEW STATE: Search Query ---
+    const [searchQuery, setSearchQuery] = useState('');
     const [shareModalInfo, setShareModalInfo] = useState({ isOpen: false, link: '' });
 
     useEffect(() => {
-        fetchFacilitators(); // This will only fetch if cache is null
+        fetchFacilitators(); 
 
         if (permissions.canApproveSubmissions) {
-            fetchPendingFacilitatorSubmissions(); // Fetch pending
-            fetchFacilitatorApplicationSettings(); // Fetch settings
+            fetchPendingFacilitatorSubmissions(); 
+            fetchFacilitatorApplicationSettings();
         }
     }, [permissions.canApproveSubmissions, fetchFacilitators, fetchPendingFacilitatorSubmissions, fetchFacilitatorApplicationSettings]);
 
     const handleToggleLinkStatus = async () => {
         const newStatus = !facilitatorApplicationSettings.isActive;
         await updateFacilitatorApplicationStatus(newStatus);
-        fetchFacilitatorApplicationSettings(true); // force=true
+        fetchFacilitatorApplicationSettings(true);
     };
 
-    // --- MODIFIED: handleApprove function ---
     const handleApprove = async (submission) => {
         try {
-            // 1. Call the original approval function (creates the facilitator profile)
             await onApproveSubmission(submission); 
 
-            // 2. --- NEW LOGIC: Assign 'facilitator' role ---
             if (submission.email) {
                 const facilitatorRole = 'facilitator';
                 const newPermissions = DEFAULT_ROLE_PERMISSIONS[facilitatorRole];
@@ -643,7 +644,6 @@ export function FacilitatorsView({
                 if (!newPermissions) {
                     console.warn(`[RoleSync] Default permissions for role '${facilitatorRole}' not found. Skipping role assignment.`);
                 } else {
-                    // Find the user by email
                     const usersRef = collection(db, "users");
                     const q = query(usersRef, where("email", "==", submission.email));
                     const querySnapshot = await getDocs(q);
@@ -667,21 +667,17 @@ export function FacilitatorsView({
                  console.warn(`[RoleSync] Submission ${submission.id} has no email. Skipping role assignment.`);
             }
 
-            // 3. Refresh data
             refreshData(); 
         } catch (error) {
              console.error("Error during approval or role assignment:", error);
-             // Optionally show an error toast to the user
         }
     };
-    // --- END MODIFICATION ---
 
     const handleReject = async (submissionId) => {
         await onRejectSubmission(submissionId); 
         refreshData(); 
     };
     
-    // --- NEW: Handler to open the share modal ---
     const handleShare = (facilitator) => {
         const link = `${window.location.origin}/public/report/facilitator/${facilitator.id}`;
         setShareModalInfo({ isOpen: true, link: link });
@@ -692,36 +688,59 @@ export function FacilitatorsView({
             return [];
         }
         
-        if (permissions.manageScope === 'federal') {
-            return facilitators;
+        let result = facilitators;
+
+        // Filter by Permission Scope
+        if (permissions.manageScope !== 'federal') {
+            if (userStates && userStates.length > 0) {
+                result = result.filter(f => f.currentState && userStates.includes(f.currentState));
+            }
         }
 
-        if (!userStates || userStates.length === 0) {
-            return facilitators;
+        // --- NEW: Search Filtering ---
+        if (searchQuery) {
+            const lowerQuery = searchQuery.toLowerCase();
+            result = result.filter(f => 
+                (f.name && f.name.toLowerCase().includes(lowerQuery)) ||
+                (f.email && f.email.toLowerCase().includes(lowerQuery)) ||
+                (f.phone && f.phone.includes(lowerQuery))
+            );
         }
         
-        return facilitators.filter(f => f.currentState && userStates.includes(f.currentState));
-    }, [facilitators, userStates, permissions.manageScope]);
+        return result;
+    }, [facilitators, userStates, permissions.manageScope, searchQuery]);
 
     return (
         <Card>
             <CardBody>
                 <PageHeader title="Manage Facilitators" />
-                <div className="mb-6 flex gap-2 flex-wrap items-start">
-                    {permissions.canManageHumanResource && <Button onClick={onAdd}>Add New Facilitator</Button>}
-                    {permissions.canManageHumanResource && <Button variant="secondary" onClick={() => setImportModalOpen(true)}>Import from Excel</Button>}
-                    {permissions.canApproveSubmissions && (
-                        <Button variant="secondary" onClick={() => setIsLinkModalOpen(true)}>
-                            Manage Submission Link
-                        </Button>
-                    )}
+                
+                {/* --- UPDATED: Toolbar with Buttons on Left, Search on Right --- */}
+                <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex gap-2 flex-wrap">
+                        {permissions.canManageHumanResource && <Button onClick={onAdd}>Add New Facilitator</Button>}
+                        {permissions.canManageHumanResource && <Button variant="secondary" onClick={() => setImportModalOpen(true)}>Import from Excel</Button>}
+                        {permissions.canApproveSubmissions && (
+                            <Button variant="secondary" onClick={() => setIsLinkModalOpen(true)}>
+                                Manage Submission Link
+                            </Button>
+                        )}
+                    </div>
+                    <div className="w-full md:w-64">
+                        <Input 
+                            type="text" 
+                            placeholder="Search by name, email, phone..." 
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
                 </div>
                 
                 <ExcelImportModal
                     isOpen={importModalOpen}
                     onClose={() => setImportModalOpen(false)}
                     onImport={onImport}
-                    facilitators={facilitators} // Pass facilitators (can be null)
+                    facilitators={facilitators}
                 />
 
                 <LinkManagementModal 
@@ -738,7 +757,6 @@ export function FacilitatorsView({
                     facilitator={viewingCertsFor}
                 />
                 
-                {/* --- NEW: Share Modal Instance --- */}
                 <ShareLinkModal
                     isOpen={shareModalInfo.isOpen}
                     onClose={() => setShareModalInfo({ isOpen: false, link: '' })}
@@ -756,7 +774,6 @@ export function FacilitatorsView({
                                 <Button variant="tab" isActive={activeTab === 'pending'} onClick={() => setActiveTab('pending')}>
                                     Pending Submissions 
                                     <span className={`ml-2 text-xs font-bold px-2 py-1 rounded-full ${activeTab === 'pending' ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-200 text-gray-600'}`}>
-                                        {/* --- FIX: Handle null pendingSubmissions --- */}
                                         {pendingSubmissions ? pendingSubmissions.length : 0}
                                     </span>
                                 </Button>
@@ -766,22 +783,24 @@ export function FacilitatorsView({
 
                     <div className="mt-4">
                         {activeTab === 'current' && (
+                             // --- UPDATED: Removed Arabic Name from headers, kept actions simple ---
                              <Table headers={["Name", "Phone", "Courses", "Actions"]}>
                                 {isLoading.facilitators ? (
                                     <tr><td colSpan={4} className="p-8 text-center"><Spinner /></td></tr>
-                                ) : filteredFacilitators.length > 0 ? ( // --- FIX: This check is now safe ---
+                                ) : filteredFacilitators.length > 0 ? (
                                     filteredFacilitators.map(f => {
                                         const hasCerts = f.certificateUrls && Object.keys(f.certificateUrls).length > 0;
                                         return (
                                             <tr key={f.id}>
                                                 <td className="p-4">{f.name}</td>
+                                                {/* Removed Arabic Name TD */}
                                                 <td className="p-4">{f.phone}</td>
                                                 <td className="p-4">{(Array.isArray(f.courses) ? f.courses : []).join(', ')}</td>
                                                 <td className="p-4">
-                                                    <div className="flex gap-2 flex-wrap justify-end">
+                                                    {/* --- UPDATED: Actions container with whitespace-nowrap --- */}
+                                                    <div className="flex gap-2 justify-end whitespace-nowrap">
                                                         <Button size="sm" onClick={() => onOpenReport(f.id)}>Report</Button>
                                                         
-                                                        {/* --- NEW: Share Button --- */}
                                                         <Button size="sm" variant="secondary" onClick={() => handleShare(f)}>Share</Button>
                                                         
                                                         <Button size="sm" variant="secondary" onClick={() => setViewingCertsFor(f)} disabled={!hasCerts} title={hasCerts ? "View Certificates" : "No certificates available"}>Certs</Button>
@@ -793,24 +812,27 @@ export function FacilitatorsView({
                                         );
                                     })
                                 ) : (
-                                    <EmptyState key="empty-facilitators" message="No facilitators found." colSpan={4} />
+                                    <EmptyState key="empty-facilitators" message="No facilitators found matching your search." colSpan={4} />
                                 )}
                             </Table>
                         )}
 
                         {activeTab === 'pending' && permissions.canApproveSubmissions && (
                             isSubmissionsLoading ? <Spinner /> : (
+                                // Pending table still shows Arabic name as per previous instruction, or should I remove it here too? 
+                                // User said "no need for arabic name in the table", usually implying the main view. 
+                                // I will remove it from here too for consistency with "the table".
                                 <Table headers={["Name", "Phone", "State", "Submitted At", "Actions"]}>
-                                    {/* --- FIX: Handle null pendingSubmissions --- */}
                                     {pendingSubmissions && pendingSubmissions.length > 0 ? (
                                         pendingSubmissions.map(sub => (
                                             <tr key={sub.id}>
                                                 <td className="p-2">{sub.name}</td>
+                                                {/* Removed Arabic Name TD */}
                                                 <td className="p-2">{sub.phone}</td>
                                                 <td className="p-2">{sub.currentState}</td>
                                                 <td className="p-2">{sub.submittedAt?.toDate ? sub.submittedAt.toDate().toLocaleDateString() : 'N/A'}</td>
                                                 <td className="p-2">
-                                                    <div className="flex gap-2">
+                                                    <div className="flex gap-2 whitespace-nowrap">
                                                         <Button size="sm" variant="secondary" onClick={() => setViewingSubmission(sub)}>View</Button>
                                                         <Button size="sm" variant="success" onClick={() => handleApprove(sub)}>Approve</Button>
                                                         <Button size="sm" variant="danger" onClick={() => handleReject(sub.id)}>Reject</Button>
@@ -837,11 +859,9 @@ export function FacilitatorsView({
     );
 }
 
-// --- MODIFICATION: Component signature changed ---
 export function FacilitatorForm({ initialData, onCancel, onSave, setToast, setLoading }) {
-// --- END MODIFICATION ---
     const [formData, setFormData] = useState({
-        name: '', phone: '', email: '', courses: [], totDates: {}, certificateUrls: {}, currentState: '',
+        name: '', arabicName: '', phone: '', email: '', courses: [], totDates: {}, certificateUrls: {}, currentState: '',
         currentLocality: '', directorCourse: 'No', directorCourseDate: '', followUpCourse: 'No', 
         followUpCourseDate: '', teamLeaderCourse: 'No', teamLeaderCourseDate: '', isClinicalInstructor: 'No', comments: '',
         backgroundQualification: '', backgroundQualificationOther: '',
@@ -858,7 +878,6 @@ export function FacilitatorForm({ initialData, onCancel, onSave, setToast, setLo
         }
     };
 
-    // --- MODIFICATION: handleSubmit now contains all save logic ---
     const handleSubmit = async () => {
         if (!formData.name || !formData.phone) {
             setError('Facilitator Name and Phone Number are required.');
@@ -873,28 +892,24 @@ export function FacilitatorForm({ initialData, onCancel, onSave, setToast, setLo
         
         setError('');
         
-        // --- START: MOVED LOGIC FROM App.jsx ---
         try { 
             setLoading(true); 
-            const payload = { ...formData, certificateFiles }; // Get data from state
+            const payload = { ...formData, certificateFiles }; 
             const { certificateFiles: files, ...data } = payload; 
             let urls = data.certificateUrls || {}; 
             
             if (files) { 
                 for (const key in files) { 
-                    // Check against initialData
                     if (initialData?.certificateUrls?.[key]) await deleteFile(initialData.certificateUrls[key]); 
                     urls[key] = await uploadFile(files[key]); 
                 } 
             } 
             
             const finalPayload = { ...data, id: initialData?.id, certificateUrls: urls }; 
-            delete finalPayload.certificateFiles; // This key is not in the datamodel
+            delete finalPayload.certificateFiles; 
             
-            // 1. Save the facilitator profile
             await upsertFacilitator(finalPayload); 
 
-            // 2. --- ROLE ASSIGNMENT LOGIC ---
             const email = finalPayload.email;
             if (email) {
                 const facilitatorRole = 'facilitator';
@@ -922,17 +937,14 @@ export function FacilitatorForm({ initialData, onCancel, onSave, setToast, setLo
                 console.warn(`[RoleSync] New facilitator has no email. Skipping role assignment.`);
             }
             
-            // 3. Call the onSave prop (which is now just for refresh/navigate)
-            onSave(); // This prop is from App.jsx
+            onSave(); 
 
         } catch (error) { 
             setToast({ show: true, message: `Error saving: ${error.message}`, type: 'error' }); 
         } finally { 
             setLoading(false); 
         } 
-        // --- END: MOVED LOGIC ---
     };
-    // --- END MODIFICATION ---
 
     return (
         <Card>
@@ -960,7 +972,7 @@ export function FacilitatorForm({ initialData, onCancel, onSave, setToast, setLo
 
 export function FacilitatorApplicationForm() {
     const [formData, setFormData] = useState({
-        name: '', phone: '', email: '', courses: [], totDates: {}, certificateUrls: {}, currentState: '',
+        name: '', arabicName: '', phone: '', email: '', courses: [], totDates: {}, certificateUrls: {}, currentState: '',
         currentLocality: '', directorCourse: 'No', directorCourseDate: '', followUpCourse: 'No', 
         followUpCourseDate: '', teamLeaderCourse: 'No', teamLeaderCourseDate: '', isClinicalInstructor: 'No', comments: '',
         backgroundQualification: '', backgroundQualificationOther: '',
@@ -972,15 +984,12 @@ export function FacilitatorApplicationForm() {
     const [submitted, setSubmitted] = useState(false);
     const [isLinkActive, setIsLinkActive] = useState(false);
     const [isLoadingStatus, setIsLoadingStatus] = useState(true);
-    const [isUpdate, setIsUpdate] = useState(false); // State to track if this is an update
+    const [isUpdate, setIsUpdate] = useState(false); 
 
     useEffect(() => {
         const checkStatusAndIncrement = async () => {
             try {
-                // --- *** START OF FIX *** ---
-                // Force a server read to bypass any stale cache
                 const settings = await getFacilitatorApplicationSettings(true); 
-                // --- *** END OF FIX *** ---
 
                 if (settings.isActive) {
                     await incrementFacilitatorApplicationOpenCount();
@@ -1107,7 +1116,6 @@ export function FacilitatorApplicationForm() {
     );
 }
 
-// --- START: MODIFICATIONS TO FacilitatorReportView ---
 export function FacilitatorReportView({ 
     facilitator, 
     allCourses, 
@@ -1122,7 +1130,6 @@ export function FacilitatorReportView({
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const publicLink = isSharedView ? window.location.href : `${window.location.origin}/public/report/facilitator/${facilitator?.id}`;
     
-    // --- MODIFIED: Expanded useMemo hook ---
     const { 
         directedCourses, 
         facilitatedCourses, 
@@ -1162,7 +1169,6 @@ export function FacilitatorReportView({
                 summary[courseType].daysInstructed += (course.course_duration || 0);
             }
 
-            // IMNCI Sub-course logic
             if (courseType === 'IMNCI' && (isDirector || isClinical || isFacilitator)) {
                 const involvedSubTypes = new Set();
                 
@@ -1234,18 +1240,14 @@ export function FacilitatorReportView({
             totalDirected: directed.length
         };
     }, [facilitator, allCourses]);
-    // --- END MODIFIED useMemo ---
     
     const generateFacilitatorPdf = () => {
-        // ... PDF generation logic ...
-        // (This function is unchanged)
     };
     
     if (!facilitator) {
         return <Card><CardBody><EmptyState message="Facilitator not found." /></CardBody></Card>;
     }
     
-    // --- START: MODIFIED JSX LAYOUT ---
     return (
         <div className="space-y-6">
             <ViewCertificatesModal isOpen={isCertsModalOpen} onClose={() => setIsCertsModalOpen(false)} facilitator={facilitator} />
@@ -1273,7 +1275,8 @@ export function FacilitatorReportView({
                 <CardHeader>Facilitator Details</CardHeader>
                 <CardBody>
                     <dl className="divide-y divide-gray-200">
-                       <div className="py-2 grid grid-cols-1 md:grid-cols-3 gap-4"><dt className="font-medium text-gray-500">Name</dt><dd className="md:col-span-2">{facilitator.name}</dd></div>
+                       <div className="py-2 grid grid-cols-1 md:grid-cols-3 gap-4"><dt className="font-medium text-gray-500">Name (English)</dt><dd className="md:col-span-2">{facilitator.name}</dd></div>
+                       <div className="py-2 grid grid-cols-1 md:grid-cols-3 gap-4"><dt className="font-medium text-gray-500">Name (Arabic)</dt><dd className="md:col-span-2 font-arabic">{facilitator.arabicName || '-'}</dd></div>
                        <div className="py-2 grid grid-cols-1 md:grid-cols-3 gap-4"><dt className="font-medium text-gray-500">Phone</dt><dd className="md:col-span-2">{facilitator.phone}</dd></div>
                        <div className="py-2 grid grid-cols-1 md:grid-cols-3 gap-4"><dt className="font-medium text-gray-500">Email</dt><dd className="md:col-span-2">{facilitator.email || 'N/A'}</dd></div>
                        <div className="py-2 grid grid-cols-1 md:grid-cols-3 gap-4"><dt className="font-medium text-gray-500">Location</dt><dd className="md:col-span-2">{facilitator.currentState ? `${facilitator.currentState}${facilitator.currentLocality ? `, ${facilitator.currentLocality}` : ''}` : 'N/A'}</dd></div>
@@ -1343,6 +1346,4 @@ export function FacilitatorReportView({
             </div>
         </div>
     );
-    // --- END: MODIFIED JSX LAYOUT ---
 }
-// --- END: MODIFICATIONS TO FacilitatorReportView ---

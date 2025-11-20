@@ -20,7 +20,6 @@ import {
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, LineElement, PointElement);
 
 // --- Lazy Load View Components ---
-// Note: We removed the named imports from AdminDashboard to prevent circular dependency crashes
 const DashboardView = lazy(() => import('./components/DashboardView'));
 const CourseReportView = lazy(() => import('./components/CourseReportView.jsx').then(module => ({ default: module.CourseReportView })));
 const ShareModal = lazy(() => import('./components/ShareModal').then(module => ({ default: module.ShareModal })));
@@ -1323,7 +1322,11 @@ export default function App() {
     
     const isPublicReportView = !!publicViewType; 
 
-    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView;
+    // --- FIX START: Define verification path synchronously ---
+    const isVerificationPath = typeof window !== 'undefined' && window.location.pathname.startsWith('/verify/certificate/');
+
+    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath;
+    // --- FIX END ---
 
     let mainContent;
 
@@ -1361,15 +1364,18 @@ export default function App() {
         }
     }
     
-    else if (isPublicReportView) { 
-        if (publicViewLoading) {
+    // --- FIX START: Modified public report view logic ---
+    else if (isPublicReportView || isVerificationPath) { 
+        if (publicViewLoading || (isVerificationPath && !publicViewData && !sharedViewError)) {
             mainContent = <Card><div className="flex justify-center p-8"><Spinner /></div></Card>;
         }
         else if (sharedViewError) { 
             mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">{sharedViewError}</div></Card>;
         } 
         else if (publicViewData) {
-            switch (publicViewType) {
+            const viewType = publicViewType || (isVerificationPath ? 'certificateVerification' : null);
+            
+            switch (viewType) {
                 case 'courseReport':
                     mainContent = (
                         <CourseReportView
@@ -1423,6 +1429,7 @@ export default function App() {
              mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">Could not load report data.</div></Card>;
         }
     }
+    // --- FIX END ---
     
     else if (isPublicMonitoringView) {
         if (authLoading) {

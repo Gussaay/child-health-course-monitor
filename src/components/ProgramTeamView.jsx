@@ -1,8 +1,6 @@
 // src/components/ProgramTeamView.jsx
 import React, { useState, useEffect, useMemo } from 'react';
-// --- NEW: Import QRCode from the correct library ---
-import { QRCodeCanvas } from 'qrcode.react'; // Use this component
-// --- END NEW ---
+import { QRCodeCanvas } from 'qrcode.react'; 
 import {
     upsertStateCoordinator,
     deleteStateCoordinator,
@@ -25,29 +23,23 @@ import {
     updateCoordinatorApplicationStatus,
     incrementCoordinatorApplicationOpenCount,
 
-    // --- START OF FIX: Add missing imports for public form ---
-    getCoordinatorApplicationSettings, // (Assuming this exists in data.js, like getFacilitatorApplicationSettings)
-    // getCoordinatorByEmail, // (This function does not exist in data.js, keeping commented)
-    // getCoordinatorSubmissionByEmail, // (This function does not exist in data.js, keeping commented)
-    uploadFile // (Assuming this exists, like in Facilitator.jsx)
-    // --- END OF FIX ---
+    getCoordinatorApplicationSettings, 
+    uploadFile 
 
 } from '../data';
 import { Button, Card, Table, Modal, Input, Select, Textarea, Spinner, PageHeader, EmptyState, FormGroup, CardBody, CardFooter } from './CommonComponents';
 import { STATE_LOCALITIES } from './constants';
-import { auth, db } from '../firebase'; // --- MODIFICATION: Added db
+import { auth, db } from '../firebase'; 
 import { onAuthStateChanged } from 'firebase/auth';
 import { useDataCache } from '../DataContext'; 
-// --- MODIFICATION: Add Firestore functions and Permission constants ---
 import { doc, updateDoc, getDocs, collection, query, where } from 'firebase/firestore';
 import { 
     DEFAULT_ROLE_PERMISSIONS, 
     applyDerivedPermissions, 
     ALL_PERMISSIONS 
 } from './AdminDashboard';
-// --- END MODIFICATION ---
 
-// --- MODIFIED: Reusable Share Link Modal ---
+// Reusable Share Link Modal
 function ShareLinkModal({ isOpen, onClose, title, link }) {
     const [copied, setCopied] = useState(false);
 
@@ -72,21 +64,18 @@ function ShareLinkModal({ isOpen, onClose, title, link }) {
 
             <FormGroup label="QR Code">
                 <div className="flex justify-center p-4 bg-white rounded-md border">
-                    {/* --- MODIFICATION: Use the QRCode component --- */}
                     <QRCodeCanvas
                         value={link}
-                        size={256} // Specify size
+                        size={256} 
                         bgColor={"#ffffff"}
                         fgColor={"#000000"}
-                        level={"Q"} // Error correction level
+                        level={"Q"} 
                     />
-                    {/* --- END MODIFICATION --- */}
                 </div>
             </FormGroup>
         </Modal>
     );
 }
-// --- END MODIFICATION ---
 
 
 // Reusable component for dynamic experience fields
@@ -103,10 +92,8 @@ function DynamicExperienceFields({ experiences, onChange }) {
             <div className="space-y-4">
                 {experiences.map((exp, index) => (
                     <div key={index} className="flex flex-col sm:flex-row gap-2 p-3 border rounded-md bg-gray-50">
-                        {/* --- MODIFICATION: Updated placeholder --- */}
                         <Input label="الخبرة/المهمة" value={exp.role} onChange={(e) => handleExperienceChange(index, 'role', e.target.value)} placeholder="العمل ببرنامج الصحة الانجابية" className="flex-grow" />
                         <Input label="مدة الخبرة بالسنوات" value={exp.duration} onChange={(e) => handleExperienceChange(index, 'duration', e.target.value)} placeholder="مثال: سنتان" className="sm:w-40" />
-                        {/* --- MODIFICATION: Allow removing initial rows --- */}
                         <Button size="sm" variant="danger" onClick={() => handleRemoveExperience(index)} className="self-end sm:self-center mt-2 sm:mt-0 h-10">حذف</Button>
                     </div>
                 ))}
@@ -124,7 +111,10 @@ function MemberFormFieldset({ level, formData, onFormChange, onDynamicFieldChang
 
     return (
         <>
-            <Input label="الإسم" name="name" value={formData.name} onChange={onFormChange} required />
+            {/* --- MODIFIED: Explicitly labeled English Name and Added Arabic Name --- */}
+            <Input label="الإسم (باللغة الإنجليزية)" name="name" value={formData.name} onChange={onFormChange} required />
+            <Input label="الإسم (باللغة العربية)" name="nameAr" value={formData.nameAr || ''} onChange={onFormChange} required />
+            
             <Input label="رقم الهاتف" name="phone" type="tel" value={formData.phone} onChange={onFormChange} />
             <Input label="الايميل" name="email" type="email" value={formData.email} onChange={onFormChange} required disabled={formData.isUserEmail} />
             {level !== 'federal' && ( <Select label="الولاية" name="state" value={formData.state} onChange={onFormChange} required><option value="">اختر ولاية</option>{states.map(s => <option key={s} value={s}>{s}</option>)}</Select> )}
@@ -145,8 +135,12 @@ function MemberFormFieldset({ level, formData, onFormChange, onDynamicFieldChang
 function TeamMemberForm({ member, onSave, onCancel }) {
     const [selectedLevel, setSelectedLevel] = useState(member?.level || (member ? (member.locality ? 'locality' : member.state ? 'state' : 'federal') : ''));
     const [formData, setFormData] = useState(() => {
-        const initialData = member || { name: '', phone: '', email: '', state: '', locality: '', jobTitle: '', jobTitleOther: '', role: '', directorDate: '', unit: '', joinDate: '', comments: '' };
-        // --- MODIFICATION: Set 3 initial rows ---
+        // --- MODIFIED: Added nameAr to default state ---
+        const initialData = member || { 
+            name: '', 
+            nameAr: '', 
+            phone: '', email: '', state: '', locality: '', jobTitle: '', jobTitleOther: '', role: '', directorDate: '', unit: '', joinDate: '', comments: '' 
+        };
         if (!initialData.previousRoles || !Array.isArray(initialData.previousRoles) || initialData.previousRoles.length === 0) {
             initialData.previousRoles = [{ role: '', duration: '' }, { role: '', duration: '' }, { role: '', duration: '' }];
         }
@@ -205,7 +199,10 @@ function TeamMemberView({ level, member, onBack }) {
                 <PageHeader title="View Team Member Details" />
                 <div className="border-t border-gray-200">
                     <dl className="divide-y divide-gray-200">
-                        {renderDetail('الإسم', member.name)}
+                        {/* --- MODIFIED: Added Arabic Name --- */}
+                        {renderDetail('الإسم (باللغة الإنجليزية)', member.name)}
+                        {renderDetail('الإسم (باللغة العربية)', member.nameAr)}
+
                         {renderDetail('رقم الهاتف', member.phone)}
                         {renderDetail('الايميل', member.email)}
                         {level !== 'federal' && renderDetail('الولاية', member.state)}
@@ -239,18 +236,20 @@ function TeamMemberView({ level, member, onBack }) {
 }
 
 function PendingSubmissions({ submissions, isLoading, onApprove, onReject, onView }) {
-    const headers = ['Name', 'Email', 'Actions'];
+    // --- MODIFIED: Added Arabic Name to Header ---
+    const headers = ['Name (En)', 'Name (Ar)', 'Email', 'Actions'];
     if (isLoading) return <Card><Spinner /></Card>;
     
     return (
         <Card>
             <CardBody>
                 <Table headers={headers}>
-                    {/* --- FIX: Handle null submissions --- */}
                     {submissions && submissions.length > 0 ? (
                         submissions.map(s => (
                             <tr key={s.id}>
                                 <td className="p-4 text-sm">{s.name}</td>
+                                {/* --- MODIFIED: Added Arabic Name to Row --- */}
+                                <td className="p-4 text-sm">{s.nameAr || '-'}</td>
                                 <td className="p-4 text-sm">{s.email}</td>
                                 <td className="p-4 text-sm">
                                     <div className="flex gap-2">
@@ -310,9 +309,9 @@ function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleSta
     );
 }
 
-// --- MODIFICATION: New helper function for role assignment ---
+// Helper function for role assignment
 const updateUserRoleByEmail = async (email, newRole, state, locality) => {
-    if (!email || !newRole) return; // Don't do anything if email or role is missing
+    if (!email || !newRole) return; 
 
     try {
         // 1. Find the user by email
@@ -322,14 +321,14 @@ const updateUserRoleByEmail = async (email, newRole, state, locality) => {
 
         if (querySnapshot.empty) {
             console.warn(`Role assignment skipped: No user found with email ${email}.`);
-            return; // No user found
+            return; 
         }
 
         const userDoc = querySnapshot.docs[0];
         const userRef = doc(db, "users", userDoc.id);
         const currentUserRole = userDoc.data().role;
 
-        // --- Safety Check: Do not override a super_user's role ---
+        // Safety Check: Do not override a super_user's role
         if (currentUserRole === 'super_user') {
              console.warn(`Role assignment skipped: Cannot programmatically change the role of a Super User (${email}).`);
              return;
@@ -345,7 +344,7 @@ const updateUserRoleByEmail = async (email, newRole, state, locality) => {
         // 3. Add state/locality assignments if needed
         if (newRole === 'states_manager' || newRole === 'state_coordinator') {
             updatePayload.assignedState = state || '';
-            updatePayload.assignedLocality = ''; // Clear locality
+            updatePayload.assignedLocality = ''; 
         } else if (newRole === 'locality_manager') {
             updatePayload.assignedState = state || '';
             updatePayload.assignedLocality = locality || '';
@@ -357,8 +356,6 @@ const updateUserRoleByEmail = async (email, newRole, state, locality) => {
 
     } catch (error) {
         console.error(`Failed to update role for ${email}:`, error);
-        // Don't block the main save operation, just log the error
-        // We can re-throw to notify the admin in the catch block of handleSave
         throw new Error(`Failed to update user role: ${error.message}`);
     }
 };
@@ -407,7 +404,6 @@ export function ProgramTeamView({ permissions, userStates }) {
     const [modalMode, setModalMode] = useState(null); 
     const [editingMember, setEditingMember] = useState(null);
     
-    // --- NEW: State for share modal ---
     const [shareModalInfo, setShareModalInfo] = useState({ isOpen: false, link: '' });
 
     const fetchersByLevel = useMemo(() => ({
@@ -471,11 +467,9 @@ export function ProgramTeamView({ permissions, userStates }) {
         
         const { members, loading } = dataByLevel[filters.level];
 
-        // --- START OF FIX: Handle null members and loading state ---
         if (loading || !members) {
             return [];
         }
-        // --- END OF FIX ---
         
         let membersToFilter = [...members];
 
@@ -535,13 +529,11 @@ export function ProgramTeamView({ permissions, userStates }) {
         setIsModalOpen(true);
     };
     
-    // --- NEW: Handler to open the share modal ---
     const handleShare = (level, member) => {
         const link = `${window.location.origin}/public/profile/team/${level}/${member.id}`;
         setShareModalInfo({ isOpen: true, link: link });
     };
 
-    // --- MODIFICATION: handleSave NOW assigns roles ---
     const handleSave = async (level, payload) => {
         const upsertFnMap = {
             federal: upsertFederalCoordinator,
@@ -554,12 +546,9 @@ export function ProgramTeamView({ permissions, userStates }) {
 
             await upsertFn({ ...payload, id: editingMember?.id });
             
-            // --- START OF NEW LOGIC ---
             // After successful save, update the user's role
-            
-            // 1. Determine the new role based on user's logic
             let newRole = null;
-            const roleFromForm = payload.role; // "مدير البرنامج", "رئيس وحدة", etc.
+            const roleFromForm = payload.role; 
             const isManagerOrHead = roleFromForm === 'مدير البرنامج' || roleFromForm === 'رئيس وحدة';
 
             if (level === 'federal') {
@@ -570,7 +559,6 @@ export function ProgramTeamView({ permissions, userStates }) {
                 newRole = 'locality_manager';
             }
 
-            // 2. Call the helper function to update the role
             if (newRole && payload.email) {
                 try {
                     await updateUserRoleByEmail(
@@ -579,16 +567,12 @@ export function ProgramTeamView({ permissions, userStates }) {
                         payload.state, 
                         payload.locality
                     );
-                    // Successfully updated role, no extra toast needed unless you want one
                 } catch (roleError) {
-                     // Role update failed, but member save succeeded.
-                     // Alert the admin.
                      alert(`Team member ${payload.name} was saved, but their system role could not be assigned automatically. Please assign their role manually in the Admin Dashboard. \n\nError: ${roleError.message}`);
                 }
             }
-            // --- END OF NEW LOGIC ---
 
-            fetchersByLevel[level].list(true); // force=true
+            fetchersByLevel[level].list(true); 
             
             if (level !== filters.level) {
                 handleFilterChange('level', level);
@@ -609,13 +593,12 @@ export function ProgramTeamView({ permissions, userStates }) {
         try {
             const newStatus = !coordinatorApplicationSettings.isActive;
             await updateCoordinatorApplicationStatus(newStatus);
-            fetchCoordinatorApplicationSettings(true); // force=true
+            fetchCoordinatorApplicationSettings(true); 
         } catch (error) {
             console.error("Failed to update link status:", error);
         }
     };
     
-    // --- MODIFICATION: handleApproveSubmission ASSIGNS ROLES ---
     const handleApproveSubmission = async (submission) => {
         const approveFnMap = {
             federal: approveFederalSubmission,
@@ -634,11 +617,11 @@ export function ProgramTeamView({ permissions, userStates }) {
             const approveFn = approveFnMap[filters.level];
             const approverInfo = { uid: currentUser.uid, email: currentUser.email, approvedAt: new Date() };
             
-            // --- Role assignment logic ON APPROVAL ---
+            // Role assignment logic ON APPROVAL
             let newRole = null;
             const roleFromForm = submission.role;
             const isManagerOrHead = roleFromForm === 'مدير البرنامج' || roleFromForm === 'رئيس وحدة';
-            const level = filters.level; // 'federal', 'state', or 'locality'
+            const level = filters.level; 
 
             if (level === 'federal') {
                 newRole = isManagerOrHead ? 'federal_manager' : 'federal_coordinator';
@@ -648,10 +631,8 @@ export function ProgramTeamView({ permissions, userStates }) {
                 newRole = 'locality_manager';
             }
 
-            // 1. Approve the submission (creates the coordinator doc)
             await approveFn(submission, approverInfo);
 
-            // 2. Update the user's role
             if (newRole && submission.email) {
                  try {
                     await updateUserRoleByEmail(
@@ -664,10 +645,9 @@ export function ProgramTeamView({ permissions, userStates }) {
                      alert(`Team member ${submission.name} was approved, but their system role could not be assigned automatically. Please assign their role manually in the Admin Dashboard. \n\nError: ${roleError.message}`);
                  }
             }
-            // --- END NEW LOGIC ---
 
-            fetchersByLevel[filters.level].listPending(true); // force=true
-            fetchersByLevel[filters.level].list(true); // force=true
+            fetchersByLevel[filters.level].listPending(true); 
+            fetchersByLevel[filters.level].list(true); 
             
         } catch (error) {
             console.error("Error approving submission:", error);
@@ -695,7 +675,7 @@ export function ProgramTeamView({ permissions, userStates }) {
                 const rejecterInfo = { uid: currentUser.uid, email: currentUser.email, rejectedAt: new Date() };
                 await rejectFn(submissionId, rejecterInfo);
                 
-                fetchersByLevel[filters.level].listPending(true); // force=true
+                fetchersByLevel[filters.level].listPending(true); 
 
             } catch (error) {
                 console.error("Error rejecting submission:", error);
@@ -704,13 +684,13 @@ export function ProgramTeamView({ permissions, userStates }) {
         }
     };
     
+    // --- MODIFIED: Included 'الإسم (Ar)' in all headers ---
     const tableHeaders = {
-        state: ['الإسم', 'الايميل', 'الولاية', 'المسمى الوظيفي', 'الصفة', 'Actions'],
-        federal: ['الإسم', 'الايميل', 'المسمى الوظيفي', 'الصفة', 'Actions'],
-        locality: ['الإسم', 'الايميل', 'الولاية', 'المحلية', 'المسمى الوظيفي', 'Actions'],
+        state: ['الإسم (En)', 'الإسم (Ar)', 'الايميل', 'الولاية', 'المسمى الوظيفي', 'الصفة', 'Actions'],
+        federal: ['الإسم (En)', 'الإسم (Ar)', 'الايميل', 'المسمى الوظيفي', 'الصفة', 'Actions'],
+        locality: ['الإسم (En)', 'الإسم (Ar)', 'الايميل', 'الولاية', 'المحلية', 'المسمى الوظيفي', 'Actions'],
     };
     
-    // --- FIX: Handle null by providing safe defaults ---
     const currentLevelData = dataByLevel[filters.level] || { members: null, pending: null, loading: true, pendingLoading: true };
 
     return (
@@ -757,7 +737,6 @@ export function ProgramTeamView({ permissions, userStates }) {
                                 <Button variant="tab" isActive={activeTab === 'pending'} onClick={() => setActiveTab('pending')}>
                                     Pending Approvals 
                                     <span className="ml-2 bg-sky-100 text-sky-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
-                                        {/* --- FIX: Handle null pending --- */}
                                         {currentLevelData.pending ? currentLevelData.pending.length : 0}
                                     </span>
                                 </Button>
@@ -776,6 +755,9 @@ export function ProgramTeamView({ permissions, userStates }) {
                                 {filteredMembers.length > 0 ? filteredMembers.map(c => (
                                     <tr key={c.id}>
                                         <td className="p-4 text-sm">{c.name}</td>
+                                        {/* --- MODIFIED: Display Arabic Name --- */}
+                                        <td className="p-4 text-sm">{c.nameAr || '-'}</td>
+
                                         <td className="p-4 text-sm">{c.email}</td>
                                         {filters.level !== 'federal' && <td className="p-4 text-sm">{c.state}</td>}
                                         {filters.level === 'locality' && <td className="p-4 text-sm">{c.locality}</td>}
@@ -784,10 +766,7 @@ export function ProgramTeamView({ permissions, userStates }) {
                                         <td className="p-4 text-sm">
                                             <div className="flex gap-2">
                                                 <Button variant="secondary" onClick={() => handleView(c)}>View</Button>
-                                                
-                                                {/* --- NEW: Share Button --- */}
                                                 <Button variant="secondary" onClick={() => handleShare(filters.level, c)}>Share</Button>
-                                                
                                                 {permissions.canManageHumanResource && <Button onClick={() => handleEdit(c)}>Edit</Button>}
                                                 {permissions.canManageHumanResource && <Button variant="danger" onClick={() => {}}>Delete</Button>}
                                             </div>
@@ -822,7 +801,6 @@ export function ProgramTeamView({ permissions, userStates }) {
                 onToggleStatus={handleToggleLinkStatus}
             />
             
-            {/* --- NEW: Share Modal Instance --- */}
             <ShareLinkModal
                 isOpen={shareModalInfo.isOpen}
                 onClose={() => setShareModalInfo({ isOpen: false, link: '' })}
@@ -850,18 +828,17 @@ export function ProgramTeamView({ permissions, userStates }) {
     );
 }
 
-// --- START OF FIX: Replace placeholder with full component implementation ---
 export function TeamMemberApplicationForm() {
     const [formData, setFormData] = useState({
-        name: '', phone: '', email: '', state: '', locality: '', jobTitle: '', jobTitleOther: '', 
+        name: '', 
+        nameAr: '', // --- NEW
+        phone: '', email: '', state: '', locality: '', jobTitle: '', jobTitleOther: '', 
         role: '', directorDate: '', unit: '', joinDate: '', comments: '',
-        // --- MODIFICATION: Set 3 initial rows ---
-        previousRoles: [{ role: '', duration: '' }, { role: '', duration: '' }, { role: '', duration: '' }], // Start with three empty
+        previousRoles: [{ role: '', duration: '' }, { role: '', duration: '' }, { role: '', duration: '' }],
         isUserEmail: false,
     });
     
-    // --- NEW: State for level selection ---
-    const [selectedLevel, setSelectedLevel] = useState(''); // '' means no level selected yet
+    const [selectedLevel, setSelectedLevel] = useState(''); 
     
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -873,8 +850,6 @@ export function TeamMemberApplicationForm() {
     useEffect(() => {
         const checkStatusAndIncrement = async () => {
             try {
-                // --- THIS IS THE FIX ---
-                // Force a server read (true) to bypass any stale cache
                 const settings = await getCoordinatorApplicationSettings(true); 
                 
                 if (settings.isActive) {
@@ -896,37 +871,11 @@ export function TeamMemberApplicationForm() {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user && user.email) {
                 setFormData(prev => ({ ...prev, email: user.email, isUserEmail: true }));
-
-                // --- FIX: Comment out logic that calls non-existent functions ---
-                // Check if user is already a state coordinator
-                // const existingCoordinator = await getCoordinatorByEmail(user.email);
-                
-                // if (existingCoordinator) {
-                //     let data = { ...existingCoordinator };
-                //     if (!data.previousRoles || !Array.isArray(data.previousRoles) || data.previousRoles.length === 0) {
-                //         data.previousRoles = [{ role: '', duration: '' }, { role: '', duration: '' }, { role: '', duration: '' }];
-                //     }
-                //     setFormData(prev => ({ ...prev, ...data, isUserEmail: true }));
-                //     setIsUpdate(true); 
-                //     setSelectedLevel(existingCoordinator.level || 'state'); // <-- Auto-select level if updating
-                // } else {
-                //     // Check if they have a pending submission
-                //     const existingSubmission = await getCoordinatorSubmissionByEmail(user.email);
-                //     if (existingSubmission) {
-                //         let data = { ...existingSubmission };
-                //          if (!data.previousRoles || !Array.isArray(data.previousRoles) || data.previousRoles.length === 0) {
-                //             data.previousRoles = [{ role: '', duration: '' }, { role: '', duration: '' }, { role: '', duration: '' }];
-                //         }
-                //         setFormData(prev => ({ ...prev, ...data, email: user.email, isUserEmail: true }));
-                //         setSelectedLevel(existingSubmission.level || 'state'); // <-- Auto-select level
-                //     }
-                // }
-                // --- END OF FIX ---
             }
         });
 
         return () => unsubscribe();
-    }, []); // Empty dependency array ensures this runs once on mount
+    }, []);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -941,7 +890,6 @@ export function TeamMemberApplicationForm() {
         e.preventDefault();
         setError('');
         
-        // --- NEW: Check for selected level ---
         if (!selectedLevel) {
             setError('Please select an application level.');
             return;
@@ -967,12 +915,10 @@ export function TeamMemberApplicationForm() {
 
         setSubmitting(true);
         try {
-            // Prepare payload
             let payload = { ...formData };
             payload.previousRoles = payload.previousRoles.filter(exp => exp.role && exp.role.trim() !== '');
-            delete payload.isUserEmail; // Don't save this helper flag
+            delete payload.isUserEmail; 
             
-            // Clean up payload based on level
             if (payload.jobTitle !== 'اخرى') payload.jobTitleOther = '';
             
             if (selectedLevel === 'federal') {
@@ -985,14 +931,12 @@ export function TeamMemberApplicationForm() {
                  if (payload.role !== 'مدير البرنامج') payload.directorDate = '';
                  if (payload.role !== 'رئيس وحدة' && payload.role !== 'عضو في وحدة') payload.unit = '';
             } else if (selectedLevel === 'locality') {
-                // Locality level doesn't have 'role', 'directorDate', 'unit'
                 delete payload.role;
                 delete payload.directorDate;
                 delete payload.unit;
-                delete payload.joinDate; // Or adjust label if it's needed for locality
+                delete payload.joinDate; 
             }
 
-            // --- NEW: Dynamic function call ---
             const submitFnMap = {
                 federal: submitFederalApplication,
                 state: submitCoordinatorApplication,
@@ -1055,7 +999,6 @@ export function TeamMemberApplicationForm() {
         );
     }
 
-    // --- NEW: Level name map for title ---
     const levelNames = {
         federal: "Federal Level (اتحادي)",
         state: "State Level (ولائي)",
@@ -1072,7 +1015,6 @@ export function TeamMemberApplicationForm() {
                     />
                     {error && <div className="p-3 my-4 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
                     
-                    {/* --- NEW: Step 1 - Level Selector --- */}
                     {!selectedLevel && !isUpdate && (
                         <div className="space-y-4 p-4 border rounded-md">
                              <FormGroup label="اختر المستوى الذي تتقدم إليه" dir="rtl">
@@ -1086,7 +1028,6 @@ export function TeamMemberApplicationForm() {
                         </div>
                     )}
                     
-                    {/* --- Step 2 - The Form (renders if level is selected) --- */}
                     {selectedLevel && (
                         <div className="space-y-4">
                             <div className="p-2 bg-sky-50 border border-sky-200 rounded-md">
@@ -1104,7 +1045,6 @@ export function TeamMemberApplicationForm() {
                     )}
                 </CardBody>
 
-                {/* --- NEW: Only show footer if a level is selected --- */}
                 {selectedLevel && (
                     <CardFooter>
                          <Button type="submit" disabled={submitting}>
@@ -1116,9 +1056,7 @@ export function TeamMemberApplicationForm() {
         </Card>
     );
 }
-// --- END OF FIX ---
 
-// --- NEW: Public Profile View Component ---
 export function PublicTeamMemberProfileView({ member, level }) {
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const publicLink = window.location.href;
@@ -1156,7 +1094,10 @@ export function PublicTeamMemberProfileView({ member, level }) {
             <CardBody>
                 <div className="border-t border-gray-200">
                     <dl className="divide-y divide-gray-200">
-                        {renderDetail('الإسم', member.name)}
+                        {/* --- MODIFIED: Added Arabic Name --- */}
+                        {renderDetail('الإسم (باللغة الإنجليزية)', member.name)}
+                        {renderDetail('الإسم (باللغة العربية)', member.nameAr)}
+
                         {renderDetail('رقم الهاتف', member.phone)}
                         {renderDetail('الايميل', member.email)}
                         {level !== 'federal' && renderDetail('الولاية', member.state)}
@@ -1185,4 +1126,3 @@ export function PublicTeamMemberProfileView({ member, level }) {
         </Card>
     );
 }
-// --- END NEW COMPONENT ---
