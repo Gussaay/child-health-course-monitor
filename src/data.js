@@ -2247,3 +2247,45 @@ export async function deleteParticipantTest(courseId, participantId, testType) {
     await batch.commit();
 }
 // --- *** END NEW FUNCTION *** ---
+
+// --- NEW: Send/Queue Certificate Email ---
+// Note: This requires the "Trigger Email" Firebase Extension to be installed 
+// and configured to listen to the 'mail' collection.
+export const queueCertificateEmail = async (participant, link, language) => {
+    if (!participant.email) {
+        return { success: false, error: "No email address found for participant." };
+    }
+
+    const subject = language === 'ar' 
+        ? `شهادة إكمال الدورة - ${participant.name}`
+        : `Course Completion Certificate - ${participant.name}`;
+
+    const body = language === 'ar' 
+        ? `<p>عزيزي/عزيزتي <strong>${participant.name}</strong>،</p>
+           <p>تهانينا على إكمال الدورة التدريبية.</p>
+           <p>يمكنك تحميل شهادتك مباشرة من الرابط أدناه:</p>
+           <p><a href="${link}">اضغط هنا لتحميل الشهادة</a></p>
+           <br/>
+           <p>البرنامج القومي لصحة الطفل</p>`
+        : `<p>Dear <strong>${participant.name}</strong>,</p>
+           <p>Congratulations on completing the training course.</p>
+           <p>You can download your certificate directly from the link below:</p>
+           <p><a href="${link}">Click here to download certificate</a></p>
+           <br/>
+           <p>National Child Health Program</p>`;
+
+    try {
+        await addDoc(collection(db, 'mail'), {
+            to: participant.email,
+            message: {
+                subject: subject,
+                html: body
+            }
+        });
+        return { success: true };
+    } catch (error) {
+        console.error("Error queuing email:", error);
+        // Fallback: If firestore write fails, return error so UI can suggest mailto
+        return { success: false, error: error.message };
+    }
+};

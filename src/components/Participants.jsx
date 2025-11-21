@@ -4,8 +4,11 @@ import * as XLSX from 'xlsx';
 import jsPDF from "jspdf"; 
 import { createRoot } from 'react-dom/client'; 
 
+// --- Icons ---
+import { Mail } from 'lucide-react'; 
+
 import {
-    Card, PageHeader, Button, FormGroup, Input, Select, Textarea, Table, EmptyState, Modal, Spinner
+    Card, PageHeader, Button, FormGroup, Input, Select, Textarea, Table, EmptyState, Modal, Spinner, Toast
 } from "./CommonComponents";
 import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_ETAT, JOB_TITLES_EENC
@@ -16,7 +19,8 @@ import {
     bulkMigrateFromMappings,
     listParticipants,
     submitFacilityDataForApproval, 
-    getHealthFacilityById 
+    getHealthFacilityById,
+    queueCertificateEmail // <--- Ensure this is exported in data.js
 } from '../data.js';
 import { useDataCache } from '../DataContext';
 
@@ -29,6 +33,213 @@ import { generateCertificatePdf, generateAllCertificatesPdf } from './Certificat
 // ====================================================================
 // ===== 1. MODAL COMPONENTS (Nested) =================================
 // ====================================================================
+
+// --- NEW: Email Certificate Modal (Handles Single & Bulk) ---
+const EmailCertificateModal = ({ isOpen, onClose, participants = [], isBulk = false, setToast }) => {
+    const [language, setLanguage] = useState('en');
+    const [isSending, setIsSending] = useState(false);
+    const [progress, setProgress] = useState({ current: 0, total: 0, errors: 0 });
+
+    useEffect(() => {
+        if (isOpen) {
+            setLanguage('en');
+            setIsSending(false);
+            setProgress({ current: 0, total: participants.length, errors: 0 });
+        }
+    }, [isOpen, participants]);
+
+    const handleSend = async () => {
+        setIsSending(true);
+        let errorCount = 0;
+        const total = participants.length;
+
+        for (let i = 0; i < total; i++) {
+            const p = participants[i];
+            setProgress({ current: i + 1, total, errors: errorCount });
+            
+            // Generate direct public download link
+            const downloadLink = `${window.location.origin}/public/certificate/download/${p.id}?lang=${language}`;
+
+            if (p.email) {
+                const result = await queueCertificateEmail(p, downloadLink, language);
+                if (!result.success) {
+                    console.error(`Failed to email ${p.name}: ${result.error}`);
+                    errorCount++;
+                }
+            } else {
+                // No email, count as error/skip
+                console.warn(`Skipping ${p.name}: No email address.`);
+                errorCount++;
+            }
+        }
+        
+        setIsSending(false);
+        setProgress(prev => ({ ...prev, errors: errorCount }));
+        
+        if (errorCount === 0) {
+            setToast({ show: true, message: `Successfully queued emails for ${total} participants.`, type: 'success' });
+            onClose();
+        } else if (errorCount < total) {
+            setToast({ show: true, message: `Queued emails. ${errorCount} failed (missing email or error).`, type: 'warning' });
+            // Keep modal open to show result
+        } else {
+            setToast({ show: true, message: "Failed to send emails. Check if participants have email addresses.", type: 'error' });
+        }
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={isBulk ? "Email All Certificates" : "Email Certificate"}>
+            <div className="p-4 space-y-4">
+                {!isSending && progress.current === 0 ? (
+                    <>
+                        <p className="text-sm text-gray-600">
+                            {isBulk 
+                                ? `You are about to send certificate download links to ${participants.length} participants via email.` 
+                                : `Send certificate download link to ${participants[0]?.name} via email.`
+                            }
+                        </p>
+                        {isBulk && (
+                            <div className="bg-yellow-50 border border-yellow-200 p-3 rounded text-xs text-yellow-800">
+                                <strong>Note:</strong> Only participants with a saved email address will receive the link.
+                            </div>
+                        )}
+
+                        <FormGroup label="Select Certificate Language">
+                            <Select value={language} onChange={(e) => setLanguage(e.target.value)}>
+                                <option value="en">English</option>
+                                <option value="ar">Arabic (عربي)</option>
+                            </Select>
+                        </FormGroup>
+                    </>
+                ) : (
+                    <div className="text-center py-6">
+                        {isSending ? <Spinner size="lg" /> : (progress.errors > 0 ? <div className="text-orange-600 text-xl font-bold">Completed with Issues</div> : <div className="text-green-600 text-xl font-bold">Done!</div>)}
+                        <p className="mt-4 text-gray-700">
+                            Processing: {progress.current} / {progress.total}
+                        </p>
+                        {progress.errors > 0 && (
+                            <p className="text-red-600 text-sm mt-2">
+                                {progress.errors} skipped (missing email or error)
+                            </p>
+                        )}
+                    </div>
+                )}
+
+                <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
+                    <Button variant="secondary" onClick={onClose} disabled={isSending}>Close</Button>
+                    {!isSending && progress.current === 0 && (
+                        <Button onClick={handleSend} variant="primary">
+                            {isBulk ? "Send All Emails" : "Send Email"}
+                        </Button>
+                    )}
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
+// --- Share Course Page Modal ---
+const ShareCoursePageModal = ({ isOpen, onClose, courseId, courseName }) => {
+    const [link, setLink] = useState('');
+    const [copied, setCopied] = useState(false);
+
+    useEffect(() => {
+        if (isOpen && courseId) {
+            setLink(`${window.location.origin}/public/course/certificates/${courseId}`);
+            setCopied(false);
+        }
+    }, [isOpen, courseId]);
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(link);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Share Public Certificates Page">
+            <div className="p-4 space-y-4">
+                <p className="text-sm text-gray-600">
+                    Share this link with participants or stakeholders. They will be able to view the list of all participants in the <strong>{courseName}</strong> course and download certificates individually.
+                </p>
+                
+                <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Public Page Link</label>
+                    <div className="flex gap-2">
+                        <Input readOnly value={link} className="bg-gray-50 text-sm text-gray-600" />
+                        <Button onClick={handleCopy} variant={copied ? "success" : "primary"}>
+                            {copied ? "Copied!" : "Copy Link"}
+                        </Button>
+                    </div>
+                </div>
+
+                <div className="flex justify-end mt-4 pt-4 border-t">
+                    <Button variant="secondary" onClick={onClose}>Close</Button>
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
+// --- Share Certificate Modal (Single Link Copy) ---
+const ShareCertificateModal = ({ isOpen, onClose, participantName, participantId }) => {
+    const [language, setLanguage] = useState('en');
+    const [generatedLink, setGeneratedLink] = useState('');
+    const [copied, setCopied] = useState(false);
+
+    useEffect(() => {
+        if (isOpen && participantId) {
+            setLanguage('en'); 
+            setCopied(false);
+            const link = `${window.location.origin}/public/certificate/download/${participantId}?lang=en`;
+            setGeneratedLink(link);
+        }
+    }, [isOpen, participantId]);
+
+    const handleLanguageChange = (e) => {
+        const newLang = e.target.value;
+        setLanguage(newLang);
+        const link = `${window.location.origin}/public/certificate/download/${participantId}?lang=${newLang}`;
+        setGeneratedLink(link);
+    };
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(generatedLink);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Share Certificate Link">
+            <div className="p-4 space-y-4">
+                <p className="text-sm text-gray-600">
+                    Generate a direct download link for <strong>{participantName}</strong>. 
+                </p>
+
+                <FormGroup label="Select Certificate Language">
+                    <Select value={language} onChange={handleLanguageChange}>
+                        <option value="en">English</option>
+                        <option value="ar">Arabic (عربي)</option>
+                    </Select>
+                </FormGroup>
+
+                <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Direct Download Link</label>
+                    <div className="flex gap-2">
+                        <Input readOnly value={generatedLink} className="bg-gray-50 text-sm" />
+                        <Button onClick={handleCopy} variant={copied ? "success" : "primary"}>
+                            {copied ? "Copied!" : "Copy Link"}
+                        </Button>
+                    </div>
+                </div>
+
+                <div className="flex justify-end mt-4 pt-4 border-t">
+                    <Button variant="secondary" onClick={onClose}>Close</Button>
+                </div>
+            </div>
+        </Modal>
+    );
+};
 
 // --- Reusable Searchable Select Component ---
 const SearchableSelect = ({ options, value, onChange, placeholder, disabled }) => {
@@ -1187,6 +1398,17 @@ export function ParticipantsView({
     const [isCleanupModalOpen, setIsCleanupModalOpen] = useState(false);
     const [isBulkChangeModalOpen, setIsBulkChangeModalOpen] = useState(false);
 
+    const [shareModalOpen, setShareModalOpen] = useState(false);
+    const [shareTarget, setShareTarget] = useState({ id: '', name: '' });
+    const [sharePageModalOpen, setSharePageModalOpen] = useState(false); // --- NEW STATE
+    
+    // --- NEW STATES FOR EMAIL FUNCTIONALITY ---
+    const [emailModalOpen, setEmailModalOpen] = useState(false);
+    const [emailTargets, setEmailTargets] = useState([]);
+    const [isBulkEmail, setIsBulkEmail] = useState(false);
+    const [toast, setToast] = useState({ show: false, message: '', type: '' }); // Local toast
+    // ------------------------------------------
+
     const { federalCoordinators, fetchFederalCoordinators, isLoading: isCacheLoading } = useDataCache();
 
     useEffect(() => {
@@ -1280,8 +1502,30 @@ export function ParticipantsView({
         }
     };
 
+    const handleShareClick = (p) => {
+        setShareTarget({ id: p.id, name: p.name });
+        setShareModalOpen(true);
+    };
+
+    // --- NEW: Email Handlers ---
+    const handleOpenSingleEmail = (participant) => {
+        setEmailTargets([participant]);
+        setIsBulkEmail(false);
+        setEmailModalOpen(true);
+    };
+
+    const handleOpenBulkEmail = () => {
+        setEmailTargets(filtered);
+        setIsBulkEmail(true);
+        setEmailModalOpen(true);
+    };
+    // ---------------------------
+
     return (
         <Card>
+            {/* --- Toast Component (Local) --- */}
+            {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ show: false, message: '', type: '' })} />}
+
             <PageHeader title="Course Participants" subtitle={`${course.state} / ${course.locality}`} />
 
             <ExcelImportModal
@@ -1307,6 +1551,30 @@ export function ParticipantsView({
                 onSave={handleSaveCleanup}
                 courseType={course.course_type}
             />
+            
+            <ShareCertificateModal 
+                isOpen={shareModalOpen} 
+                onClose={() => setShareModalOpen(false)} 
+                participantName={shareTarget.name}
+                participantId={shareTarget.id}
+            />
+            
+             {/* --- NEW: Share Public Page Modal --- */}
+             <ShareCoursePageModal
+                isOpen={sharePageModalOpen}
+                onClose={() => setSharePageModalOpen(false)}
+                courseId={course.id}
+                courseName={course.course_type}
+             />
+
+             {/* --- NEW: Email Certificate Modal --- */}
+             <EmailCertificateModal 
+                isOpen={emailModalOpen}
+                onClose={() => setEmailModalOpen(false)}
+                participants={emailTargets}
+                isBulk={isBulkEmail}
+                setToast={setToast}
+             />
 
 
             <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
@@ -1362,6 +1630,29 @@ export function ParticipantsView({
                     >
                          {isBulkCertLoading ? <Spinner size="sm"/> : 'Download All Certificates'}
                     </Button>
+                    
+                    {/* --- NEW: Share Public Page Button --- */}
+                    <Button
+                        variant="secondary"
+                        onClick={() => setSharePageModalOpen(true)}
+                        title="Share a public link where all participants can download their certificates"
+                        className="border-sky-600 text-sky-700 hover:bg-sky-50"
+                    >
+                        Share Public Page
+                    </Button>
+
+                    {/* --- NEW: Email All Button --- */}
+                    <Button
+                        variant="secondary"
+                        onClick={handleOpenBulkEmail}
+                        disabled={!filtered || filtered.length === 0}
+                        title="Send certificate emails to all visible participants"
+                        className="border-green-600 text-green-700 hover:bg-green-50 flex items-center gap-1"
+                    >
+                        <Mail className="w-4 h-4" />
+                        Email All Certs
+                    </Button>
+
                 </div>
                 <div className="flex items-center gap-2">
                     <label className="font-semibold text-gray-700 text-sm">Filter by Group:</label>
@@ -1404,6 +1695,14 @@ export function ParticipantsView({
                                         
                                         <Button 
                                             variant="secondary" 
+                                            onClick={() => handleShareClick(p)}
+                                            title="Share Public Download Link"
+                                        >
+                                            Share Cert.
+                                        </Button>
+                                        
+                                        <Button 
+                                            variant="secondary" 
                                             onClick={async () => {
                                                 // Call imported generator with language
                                                 const canvas = await generateCertificatePdf(course, p, federalProgramManagerName, participantSubCourse, certLanguage);
@@ -1422,6 +1721,18 @@ export function ParticipantsView({
                                         >
                                             {isCacheLoading.federalCoordinators ? <Spinner size="sm" /> : 'Certificate'}
                                         </Button>
+                                        
+                                        {/* --- NEW: Email Single Button --- */}
+                                        <Button 
+                                            variant="secondary" 
+                                            onClick={() => handleOpenSingleEmail(p)}
+                                            title={p.email ? "Send Certificate to Email" : "No email address available"}
+                                            disabled={!p.email} 
+                                            className={!p.email ? "opacity-50 cursor-not-allowed" : ""}
+                                        >
+                                            <Mail className="w-4 h-4" />
+                                        </Button>
+                                        {/* ------------------------------- */}
 
                                         {(course.course_type === 'ICCM' || course.course_type === 'EENC') && (
                                             <Button variant="secondary" onClick={() => onOpenTestFormForParticipant(p.id)}>
@@ -1472,6 +1783,14 @@ export function ParticipantsView({
                                 
                                 <Button 
                                     variant="secondary" 
+                                    onClick={() => handleShareClick(p)}
+                                    title="Share Public Download Link"
+                                >
+                                    Share Cert.
+                                </Button>
+
+                                <Button 
+                                    variant="secondary" 
                                     onClick={async () => {
                                         // Call imported generator with language
                                         const canvas = await generateCertificatePdf(course, p, federalProgramManagerName, participantSubCourse, certLanguage);
@@ -1490,6 +1809,18 @@ export function ParticipantsView({
                                 >
                                     {isCacheLoading.federalCoordinators ? <Spinner size="sm" /> : 'Certificate'}
                                 </Button>
+
+                                {/* --- NEW: Email Single Button (Mobile) --- */}
+                                <Button 
+                                    variant="secondary" 
+                                    onClick={() => handleOpenSingleEmail(p)}
+                                    title={p.email ? "Send Certificate to Email" : "No email address available"}
+                                    disabled={!p.email} 
+                                    className={!p.email ? "opacity-50 cursor-not-allowed" : ""}
+                                >
+                                    <Mail className="w-4 h-4" />
+                                </Button>
+                                {/* ---------------------------------------- */}
 
                                 {(course.course_type === 'ICCM' || course.course_type === 'EENC') && (
                                     <Button variant="secondary" onClick={() => onOpenTestFormForParticipant(p.id)}>

@@ -9,8 +9,8 @@ import {
 } from "react-simple-maps";
 import { geoCentroid } from "d3-geo";
 
-const geoUrl = "./sudan.json"; // <-- FIXED
-const localitiesGeoUrl = "./sudan_localities.json"; // <-- FIXED
+const geoUrl = "/sudan.json"; 
+const localitiesGeoUrl = "/sudan_localities.json";
 
 // Maps app state names to the names used in the localities GeoJSON file.
 const STATE_NAME_MAP = {

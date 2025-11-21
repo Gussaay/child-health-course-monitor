@@ -3,8 +3,16 @@ import React, { useState, useMemo, useRef, useEffect, Suspense } from 'react';
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Bar, Line } from 'react-chartjs-2';
-import { Button, Card, EmptyState, FormGroup, Input, PageHeader, PdfIcon, Select, Spinner, Table, Textarea, CourseIcon, Modal, CardBody, CardFooter } from './CommonComponents'; 
-import { listAllDataForCourse, listParticipants, listCoordinators, upsertCoordinator, deleteCoordinator, listFunders, upsertFunder, deleteFunder, listFinalReport, upsertFinalReport, deleteFinalReport, uploadFile } from '../data.js'; 
+import { 
+    Button, Card, EmptyState, FormGroup, Input, PageHeader, PdfIcon, 
+    Select, Spinner, Table, Textarea, CourseIcon, Modal, CardBody, CardFooter 
+} from './CommonComponents'; 
+import { 
+    listAllDataForCourse, listParticipants, listCoordinators, upsertCoordinator, 
+    deleteCoordinator, listFunders, upsertFunder, deleteFunder, listFinalReport, 
+    upsertFinalReport, deleteFinalReport, uploadFile, getParticipantById, 
+    getCourseById, listAllParticipantsForCourse 
+} from '../data.js'; 
 import { ParticipantsView, ParticipantForm } from './Participants';
 import { CourseTestForm } from './CourseTestForm'; 
 import {
@@ -15,6 +23,8 @@ import { FacilitatorDataForm } from './Facilitator.jsx';
 import { db } from '../firebase';
 import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { DEFAULT_ROLE_PERMISSIONS, ALL_PERMISSIONS } from './AdminDashboard';
+import { generateCertificatePdf } from './CertificateGenerator'; 
+import { Users, Download } from 'lucide-react'; 
 
 // Lazy load components that are not always visible to speed up initial load
 const ReportsView = React.lazy(() => import('./ReportsView').then(module => ({ default: module.ReportsView })));
@@ -61,11 +71,7 @@ const pctBgClass = (value, customClasses) => {
     return '';
 };
 
-// ... (rest of existing code up to PublicCourseMonitoringView) ...
-// [I am keeping all your existing Course.jsx logic intact and appending the missing component]
-
 const generateFullCourseReportPdf = async (course, overallChartRef, dailyChartRef) => {
-    // ... (function content unchanged)
     const doc = new jsPDF('portrait', 'mm', 'a4');
     const fileName = `Course_Report_${course.course_type}_${course.state}.pdf`;
     const element = document.getElementById('full-course-report');
@@ -1396,7 +1402,6 @@ export function PublicCourseMonitoringView({ course, allParticipants }) {
 }
 
 // --- NEW: Certificate Verification View Component ---
-// This component was missing from the previous file but is required by App.jsx
 export function CertificateVerificationView({ participant, course }) {
     if (!participant || !course) return <EmptyState message="Invalid certificate data." />;
 
@@ -1441,6 +1446,321 @@ export function CertificateVerificationView({ participant, course }) {
                     <p className="text-xs text-gray-500">Verified by NCHP System</p>
                 </div>
             </Card>
+        </div>
+    );
+}
+
+// --- NEW: Public Certificate Download View ---
+export function PublicCertificateDownloadView({ participantId }) {
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [data, setData] = useState(null);
+    const [generating, setGenerating] = useState(false);
+
+    // Extract language from URL query params
+    const searchParams = new URLSearchParams(window.location.search);
+    const language = searchParams.get('lang') || 'en';
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                // 1. Fetch Participant
+                const participant = await getParticipantById(participantId, 'server'); 
+                if (!participant) throw new Error("Participant not found.");
+
+                // 2. Fetch Course
+                const course = await getCourseById(participant.courseId, 'server');
+                if (!course) throw new Error("Course not found.");
+
+                // 3. Fetch Federal Manager Name (Handle Permission Error Gracefully)
+                let managerName = "Federal Program Manager";
+                try {
+                    const coords = await listCoordinators('federalCoordinators');
+                    const manager = coords.find(c => c.role === 'مدير البرنامج');
+                    if (manager) managerName = manager.name;
+                } catch (e) {
+                    console.warn("Could not fetch coordinators (likely permission issue). Using default.", e);
+                    // Fallback is already set
+                }
+
+                // 4. Determine Subcourse
+                let subCourse = participant.imci_sub_type;
+                if (!subCourse && course.facilitatorAssignments) {
+                    const assignment = course.facilitatorAssignments.find(a => a.group === participant.group);
+                    subCourse = assignment?.imci_sub_type;
+                }
+
+                setData({ participant, course, managerName, subCourse });
+            } catch (err) {
+                console.error(err);
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (participantId) fetchData();
+    }, [participantId]);
+
+    const handleDownload = async () => {
+        if (!data) return;
+        setGenerating(true);
+        try {
+            const canvas = await generateCertificatePdf(
+                data.course, 
+                data.participant, 
+                data.managerName, 
+                data.subCourse, 
+                language // Use the language from URL
+            );
+            
+            if (canvas) {
+                const doc = new jsPDF('landscape', 'mm', 'a4');
+                const imgWidth = 297;
+                const imgHeight = 210;
+                const imgData = canvas.toDataURL('image/png');
+                doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+                const fileName = `Certificate_${data.participant.name.replace(/ /g, '_')}_${language}.pdf`;
+                doc.save(fileName);
+            }
+        } catch (err) {
+            alert("Failed to generate certificate: " + err.message);
+        } finally {
+            setGenerating(false);
+        }
+    };
+
+    if (loading) return <div className="flex justify-center items-center h-screen"><Spinner /></div>;
+    if (error) return <EmptyState message={`Error: ${error}`} />;
+    if (!data) return <EmptyState message="No data found." />;
+
+    const isArabic = language === 'ar';
+
+    return (
+        <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+            <Card className="max-w-2xl w-full">
+                <div className="p-8 text-center space-y-6">
+                    <div className="mx-auto h-20 w-20 bg-sky-100 rounded-full flex items-center justify-center">
+                        <PdfIcon className="h-10 w-10 text-sky-600" />
+                    </div>
+                    
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">
+                            {isArabic ? 'تحميل الشهادة' : 'Download Certificate'}
+                        </h1>
+                        <p className="text-gray-600 mt-2">
+                            {isArabic 
+                                ? `شهادة اكمال دورة لـ: ${data.participant.name}` 
+                                : `Course Completion Certificate for: ${data.participant.name}`}
+                        </p>
+                    </div>
+
+                    <div className="bg-gray-50 p-4 rounded-lg border text-left space-y-2">
+                        <div className="flex justify-between">
+                            <span className="text-gray-500 text-sm">{isArabic ? 'الدورة' : 'Course'}:</span>
+                            <span className="font-medium">{data.course.course_type}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-500 text-sm">{isArabic ? 'التاريخ' : 'Date'}:</span>
+                            <span className="font-medium">{data.course.start_date}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-500 text-sm">{isArabic ? 'اللغة' : 'Language'}:</span>
+                            <span className="font-medium uppercase">{language}</span>
+                        </div>
+                    </div>
+
+                    <Button 
+                        onClick={handleDownload} 
+                        disabled={generating}
+                        className="w-full py-3 text-lg justify-center"
+                    >
+                        {generating 
+                            ? (isArabic ? 'جاري التحميل...' : 'Generating PDF...') 
+                            : (isArabic ? 'تحميل الشهادة (PDF)' : 'Download Certificate (PDF)')}
+                    </Button>
+                </div>
+            </Card>
+        </div>
+    );
+}
+
+// --- NEW: Public Course Certificates Page ---
+export function PublicCourseCertificatesView({ courseId }) {
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [data, setData] = useState({ course: null, participants: [], managerName: '' });
+    const [downloadingId, setDownloadingId] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    
+    // Read 'lang' from URL to set initial language
+    const searchParams = new URLSearchParams(window.location.search);
+    const initialLang = searchParams.get('lang') || 'en';
+    
+    // State for language is initialized but NOT updated by user UI (locked)
+    const [language] = useState(initialLang);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                // 1. Fetch Course
+                const course = await getCourseById(courseId, 'server');
+                if (!course) throw new Error("Course not found.");
+
+                // 2. Fetch All Participants
+                const participants = await listAllParticipantsForCourse(courseId, 'server');
+
+                // 3. Fetch Federal Manager Name (Handle Permission Error Gracefully)
+                let managerName = "Federal Program Manager";
+                try {
+                    const coords = await listCoordinators('federalCoordinators');
+                    const manager = coords.find(c => c.role === 'مدير البرنامج');
+                    if (manager) managerName = manager.name;
+                } catch (e) {
+                    console.warn("Could not fetch coordinators (likely permission issue). Using default.", e);
+                    // Fallback is already set
+                }
+
+                setData({ course, participants: participants || [], managerName });
+            } catch (err) {
+                console.error(err);
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (courseId) fetchData();
+    }, [courseId]);
+
+    const handleDownload = async (participant) => {
+        setDownloadingId(participant.id);
+        try {
+            // Determine Subcourse
+            let subCourse = participant.imci_sub_type;
+            if (!subCourse && data.course.facilitatorAssignments) {
+                const assignment = data.course.facilitatorAssignments.find(a => a.group === participant.group);
+                subCourse = assignment?.imci_sub_type;
+            }
+
+            const canvas = await generateCertificatePdf(
+                data.course, 
+                participant, 
+                data.managerName, 
+                subCourse, 
+                language
+            );
+            
+            if (canvas) {
+                const doc = new jsPDF('landscape', 'mm', 'a4');
+                const imgWidth = 297;
+                const imgHeight = 210;
+                const imgData = canvas.toDataURL('image/png');
+                doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+                const fileName = `Certificate_${participant.name.replace(/ /g, '_')}_${language}.pdf`;
+                doc.save(fileName);
+            }
+        } catch (err) {
+            alert("Failed to generate certificate: " + err.message);
+        } finally {
+            setDownloadingId(null);
+        }
+    };
+
+    const filteredParticipants = useMemo(() => {
+        if (!searchTerm) return data.participants;
+        return data.participants.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    }, [data.participants, searchTerm]);
+
+    if (loading) return <div className="flex justify-center items-center h-screen"><Spinner /></div>;
+    if (error) return <EmptyState message={`Error: ${error}`} />;
+    if (!data.course) return <EmptyState message="Course not found." />;
+
+    const isArabic = language === 'ar';
+
+    return (
+        <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+            <div className="max-w-5xl mx-auto space-y-6">
+                <Card className="p-6 border-t-4 border-sky-500">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h1 className="text-2xl font-bold text-gray-900">{data.course.course_type} Course Certificates</h1>
+                            <p className="text-gray-600 mt-1">
+                                {data.course.state} - {data.course.locality} | {data.course.start_date}
+                            </p>
+                        </div>
+                        
+                        <div className="flex items-center bg-white border border-gray-300 rounded-md px-3 py-2 shadow-sm">
+                            <span className="text-sm font-bold text-gray-600 mr-2 uppercase">Certificate Language:</span>
+                            <span className="text-sm font-medium text-sky-700">
+                                {language === 'ar' ? 'Arabic (عربي)' : 'English'}
+                            </span>
+                        </div>
+                    </div>
+                </Card>
+
+                <Card>
+                    <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div className="flex items-center gap-2 text-gray-700">
+                            <Users className="w-5 h-5" />
+                            <span className="font-semibold">{filteredParticipants.length} Participants</span>
+                        </div>
+                        <Input 
+                            placeholder="Search by name..." 
+                            value={searchTerm} 
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="max-w-xs bg-white"
+                        />
+                    </div>
+                    
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-100">
+                                <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Name</th>
+                                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Group</th>
+                                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Job Title</th>
+                                    <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {filteredParticipants.map((p) => (
+                                    <tr key={p.id} className="hover:bg-gray-50 transition-colors">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                            {p.name}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            {p.group || '-'}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            {p.job_title}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <Button 
+                                                onClick={() => handleDownload(p)}
+                                                disabled={!!downloadingId}
+                                                className={`inline-flex items-center gap-2 ${downloadingId === p.id ? 'opacity-70' : ''}`}
+                                                size="sm"
+                                                variant={downloadingId === p.id ? 'secondary' : 'primary'}
+                                            >
+                                                {downloadingId === p.id ? <Spinner size="sm" /> : <Download className="w-4 h-4" />}
+                                                {downloadingId === p.id ? (isArabic ? 'جاري...' : 'Generating...') : (isArabic ? 'تحميل' : 'Download')}
+                                            </Button>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {filteredParticipants.length === 0 && (
+                                    <tr>
+                                        <td colSpan="4" className="px-6 py-8 text-center text-gray-500">
+                                            No participants found.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </Card>
+            </div>
         </div>
     );
 }

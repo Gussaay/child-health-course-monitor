@@ -43,8 +43,11 @@ const ParticipantsView = lazy(() => import('./components/Participants').then(mod
 const ParticipantForm = lazy(() => import('./components/Participants').then(module => ({ default: module.ParticipantForm })));
 const ParticipantMigrationMappingView = lazy(() => import('./components/Participants').then(module => ({ default: module.ParticipantMigrationMappingView })));
 
-// --- NEW: Import CertificateVerificationView from Course.jsx ---
+// --- Import Certificate Views ---
 const CertificateVerificationView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.CertificateVerificationView })));
+const PublicCertificateDownloadView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicCertificateDownloadView })));
+// --- ADDED: Import for the Course Certificates Page ---
+const PublicCourseCertificatesView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicCourseCertificatesView }))); 
 
 const CourseTestForm = lazy(() => import('./components/CourseTestForm.jsx').then(module => ({ default: module.CourseTestForm })));
 
@@ -81,7 +84,7 @@ import { useDataCache } from './DataContext';
 import { useAuth } from './hooks/useAuth';
 import { SignInBox } from './auth-ui.jsx';
 
-// --- CRITICAL FIX: Permissions Defined Locally to Avoid Circular Dependency ---
+// --- Permissions Defined Locally ---
 const ALL_PERMISSIONS = {
     canViewDashboard: true,
     canViewCourse: true,
@@ -123,8 +126,6 @@ const DEFAULT_ROLE_PERMISSIONS = {
 const applyDerivedPermissions = (basePermissions) => {
     return basePermissions;
 };
-// --- END CRITICAL FIX ---
-
 
 // --- Resource Monitor Component ---
 const ResourceMonitor = ({ counts, onReset, onDismiss }) => {
@@ -467,6 +468,26 @@ export default function App() {
                 fetchData();
                 return; 
             }
+            
+            // --- NEW: Public Certificate Download Logic ---
+            const certDownloadMatch = path.match(/^\/public\/certificate\/download\/([a-zA-Z0-9_-]+)\/?$/);
+            if (certDownloadMatch && certDownloadMatch[1]) {
+                const participantId = certDownloadMatch[1];
+                setPublicViewType('certificateDownload');
+                setPublicViewData({ participantId });
+                return;
+            }
+            // ---------------------------------------------
+            
+            // --- NEW ROUTE: Public Course Certificates Page ---
+            const courseCertPageMatch = path.match(/^\/public\/course\/certificates\/([a-zA-Z0-9_-]+)\/?$/);
+            if (courseCertPageMatch && courseCertPageMatch[1]) {
+                const courseId = courseCertPageMatch[1];
+                setPublicViewType('courseCertificatesPage');
+                setPublicViewData({ courseId });
+                return;
+            }
+            // -------------------------------------------------
 
             // --- UPDATED REGEX TO ALLOW HYPHENS AND UNDERSCORES ---
             const publicCertificateMatch = path.match(/^\/verify\/certificate\/([a-zA-Z0-9_-]+)\/?$/);
@@ -1324,8 +1345,12 @@ export default function App() {
 
     // --- FIX START: Define verification path synchronously ---
     const isVerificationPath = typeof window !== 'undefined' && window.location.pathname.startsWith('/verify/certificate/');
+    // --- NEW: Define certificate download path synchronously ---
+    const isCertDownloadPath = typeof window !== 'undefined' && window.location.pathname.startsWith('/public/certificate/download/');
+    // --- NEW: Define course certificates page path synchronously ---
+    const isCourseCertPagePath = typeof window !== 'undefined' && window.location.pathname.startsWith('/public/course/certificates/');
 
-    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath;
+    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath || isCertDownloadPath || isCourseCertPagePath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage';
     // --- FIX END ---
 
     let mainContent;
@@ -1365,8 +1390,8 @@ export default function App() {
     }
     
     // --- FIX START: Modified public report view logic ---
-    else if (isPublicReportView || isVerificationPath) { 
-        if (publicViewLoading || (isVerificationPath && !publicViewData && !sharedViewError)) {
+    else if (isPublicReportView || isVerificationPath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage') { 
+        if (publicViewLoading || ((isVerificationPath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage') && !publicViewData && !sharedViewError)) {
             mainContent = <Card><div className="flex justify-center p-8"><Spinner /></div></Card>;
         }
         else if (sharedViewError) { 
@@ -1416,6 +1441,26 @@ export default function App() {
                             <CertificateVerificationView
                                 participant={publicViewData.participant}
                                 course={publicViewData.course}
+                            />
+                        </Suspense>
+                    );
+                    break;
+
+                case 'certificateDownload':
+                    mainContent = (
+                         <Suspense fallback={<Card><Spinner /></Card>}>
+                             <PublicCertificateDownloadView 
+                                 participantId={publicViewData.participantId} 
+                             />
+                         </Suspense>
+                    );
+                    break;
+                
+                case 'courseCertificatesPage':
+                    mainContent = (
+                        <Suspense fallback={<Card><Spinner /></Card>}>
+                            <PublicCourseCertificatesView 
+                                courseId={publicViewData.courseId} 
                             />
                         </Suspense>
                     );
