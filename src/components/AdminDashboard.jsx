@@ -1,46 +1,44 @@
 // AdminDashboard.jsx
-import React, { useState, useEffect, useMemo } from 'react';
-import { Card, PageHeader, Button, Table, Spinner, Select, Checkbox, Toast, Input, FormGroup } from './CommonComponents';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Card, PageHeader, Button, Table, Spinner, Select, Checkbox, Toast, Input, FormGroup, Modal, CardBody, CardFooter } from './CommonComponents';
 import { db, auth } from '../firebase';
-import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc, writeBatch } from 'firebase/firestore';
+import { collection, query, getDocs, doc, updateDoc, getDoc, setDoc, writeBatch } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
-import { STATE_LOCALITIES } from './constants'; // Import the states
+import { STATE_LOCALITIES } from './constants'; 
+
+// --- Icons & Data Imports ---
+import { CheckCircle, XCircle, RefreshCw, Lock, Upload } from 'lucide-react';
+import { 
+    listAllCourses, 
+    listFederalCoordinators, 
+    approveCourseCertificates,
+    unapproveCourseCertificates,
+    uploadFile
+} from '../data';
+// ----------------------------
 
 // -----------------------------------------------------------------------------
-// EXPORTED PERMISSION MANAGEMENT CONSTANTS FOR App.jsx
-// (Unchanged)
+// EXPORTED PERMISSION MANAGEMENT CONSTANTS (Unchanged)
 // -----------------------------------------------------------------------------
 export const ALL_PERMISSIONS = {
-    // --- A. Course Management ---
-    canViewCourse: false, // Now selectable
-    canManageCourse: false, // NEW: Replaces 5 old permissions
-
-    // --- B. Child Health Service Facility Management ---
-    canViewFacilities: false, // Base value is always false
-    canManageFacilities: false, // Basic add/edit/delete within scope
-
-    // --- C. Human Resource (HR) Management ---
-    canViewHumanResource: false, // NEW: Replaces 3 view permissions
-    canManageHumanResource: false, // NEW: Replaces 3 manage permissions
-
-    // --- NEW: D. Skills Mentorship ---
+    canViewCourse: false,
+    canManageCourse: false,
+    canViewFacilities: false,
+    canManageFacilities: false,
+    canViewHumanResource: false,
+    canManageHumanResource: false,
     canViewSkillsMentorship: false,
     canManageSkillsMentorship: false,
-
-    // --- E. System / Advanced / Scope ---
-    canApproveSubmissions: false,   // DERIVED: Now tied to canUseFederalManagerAdvancedFeatures
-    canUseSuperUserAdvancedFeatures: false,    // REVERTED: Back in System category
-    canUseFederalManagerAdvancedFeatures: false, // REVERTED: Back in System category
-    
-    // Scope fields for non-Super roles (Scope, Location, Time)
-    manageScope: 'none',            // 'federal', 'state', 'locality', 'course', 'none'
-    manageLocation: '',             // Assigned State/Locality key (e.g., 'Khartoum')
-    manageTimePeriod: 'course_period_only', // 'anytime', 'course_period_only'
-
-    // Legacy/Derived flags (Base value is always false for clean derivation)
+    canApproveSubmissions: false,
+    canUseSuperUserAdvancedFeatures: false,
+    canUseFederalManagerAdvancedFeatures: false,
+    manageScope: 'none',
+    manageLocation: '',
+    manageTimePeriod: 'course_period_only',
     canViewDashboard: false,
     canViewAdmin: false,
 };
+
 export const applyDerivedPermissions = (basePermissions) => {
     if (basePermissions.manageScope !== 'none' || basePermissions.canViewCourse) {
         basePermissions.canViewDashboard = true;
@@ -51,32 +49,26 @@ export const applyDerivedPermissions = (basePermissions) => {
     if (basePermissions.canManageHumanResource) {
         basePermissions.canViewHumanResource = true;
     }
-    // --- START MODIFICATION ---
     if (basePermissions.canManageSkillsMentorship) {
         basePermissions.canViewSkillsMentorship = true;
     }
-    // --- END MODIFICATION ---
     if (basePermissions.canUseFederalManagerAdvancedFeatures) {
         basePermissions.canApproveSubmissions = true;
     }
     return basePermissions;
 };
+
 const BASE_PERMS = { ...ALL_PERMISSIONS };
-const COURSE_MGMT_NONE = { canViewCourse: false, canManageCourse: false };
-const COURSE_MGMT_VIEW_ONLY = { canViewCourse: true, canManageCourse: false };
 const COURSE_MGMT_STANDARD = { canViewCourse: true, canManageCourse: true };
-const FACILITY_MGMT_NONE = { canViewFacilities: false, canManageFacilities: false };
-const FACILITY_MGMT_VIEW_ONLY = { ...FACILITY_MGMT_NONE, canViewFacilities: true, canManageFacilities: false };
-const FACILITY_MGMT_STANDARD = { ...FACILITY_MGMT_NONE, canViewFacilities: true, canManageFacilities: true };
+const FACILITY_MGMT_VIEW_ONLY = { canViewFacilities: true, canManageFacilities: false };
+const FACILITY_MGMT_STANDARD = { canViewFacilities: true, canManageFacilities: true };
+const HR_MGMT_VIEW_ONLY = { canViewHumanResource: true, canManageHumanResource: false };
 const HR_MGMT_NONE = { canViewHumanResource: false, canManageHumanResource: false };
-const HR_MGMT_VIEW_ONLY = { ...HR_MGMT_NONE, canViewHumanResource: true };
 const HR_MGMT_STANDARD = { canViewHumanResource: true, canManageHumanResource: true };
-// --- START MODIFICATION ---
-const MENTORSHIP_MGMT_NONE = { canViewSkillsMentorship: false, canManageSkillsMentorship: false };
-const MENTORSHIP_MGMT_VIEW_ONLY = { ...MENTORSHIP_MGMT_NONE, canViewSkillsMentorship: true };
-const MENTORSHIP_MGMT_STANDARD = { ...MENTORSHIP_MGMT_NONE, canViewSkillsMentorship: true, canManageSkillsMentorship: true };
-// --- END MODIFICATION ---
+const MENTORSHIP_MGMT_VIEW_ONLY = { canViewSkillsMentorship: true, canManageSkillsMentorship: false };
+const MENTORSHIP_MGMT_STANDARD = { canViewSkillsMentorship: true, canManageSkillsMentorship: true };
 const ADVANCED_PERMS_NONE = { canApproveSubmissions: false, canUseSuperUserAdvancedFeatures: false, canUseFederalManagerAdvancedFeatures: false, canViewAdmin: false };
+
 const SUPER_USER_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_STANDARD, ...HR_MGMT_STANDARD, ...MENTORSHIP_MGMT_STANDARD, ...ADVANCED_PERMS_NONE, canViewAdmin: true, canUseSuperUserAdvancedFeatures: true, canUseFederalManagerAdvancedFeatures: true, manageScope: 'federal', manageTimePeriod: 'anytime' };
 const FEDERAL_MANAGER_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_STANDARD, ...HR_MGMT_STANDARD, ...MENTORSHIP_MGMT_STANDARD, ...ADVANCED_PERMS_NONE, canUseFederalManagerAdvancedFeatures: true, manageScope: 'federal', manageTimePeriod: 'anytime' };
 const STATES_MANAGER_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_STANDARD, ...HR_MGMT_STANDARD, ...MENTORSHIP_MGMT_STANDARD, ...ADVANCED_PERMS_NONE, manageScope: 'state', manageLocation: 'user_state', manageTimePeriod: 'course_period_only' };
@@ -86,6 +78,7 @@ const FACILITATOR_PERMS = { ...FEDERAL_COORDINATOR_PERMS };
 const STATE_COORDINATOR_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_VIEW_ONLY, ...HR_MGMT_VIEW_ONLY, ...MENTORSHIP_MGMT_VIEW_ONLY, ...ADVANCED_PERMS_NONE, manageScope: 'course', manageLocation: 'user_state', manageTimePeriod: 'course_period_only' };
 const COURSE_COORDINATOR_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_VIEW_ONLY, ...HR_MGMT_NONE, ...MENTORSHIP_MGMT_VIEW_ONLY, ...ADVANCED_PERMS_NONE, manageScope: 'course', manageTimePeriod: 'course_period_only' };
 const USER_PERMS = { ...BASE_PERMS, canViewCourse: true, canViewFacilities: true, canViewSkillsMentorship: true, canViewDashboard: true };
+
 export const DEFAULT_ROLE_PERMISSIONS = {
     'super_user': applyDerivedPermissions(SUPER_USER_PERMS),
     'federal_manager': applyDerivedPermissions(FEDERAL_MANAGER_PERMS),
@@ -98,15 +91,10 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     'user': applyDerivedPermissions(USER_PERMS),
 };
 export const ALL_PERMISSION_KEYS = Object.keys(ALL_PERMISSIONS);
-// (End Unchanged Section)
-// -----------------------------------------------------------------------------
-
 
 // -----------------------------------------------------------------------------
-// LOCAL CONSTANTS FOR AdminDashboard COMPONENT
+// LOCAL CONSTANTS
 // -----------------------------------------------------------------------------
-
-// --- Define Professional Roles and their display labels ---
 const ROLES = {
     'super_user': 'Super User',
     'federal_manager': 'Federal Manager',
@@ -119,7 +107,6 @@ const ROLES = {
     'user': 'Standard User',
 };
 
-// (Unchanged PERMISSION_DESCRIPTIONS)
 const PERMISSION_DESCRIPTIONS = {
     canViewCourse: "Allow user to view course list, details, and reports.",
     canManageCourse: "Allow user to add/edit/delete active courses, participants, and monitoring observations.",
@@ -127,10 +114,8 @@ const PERMISSION_DESCRIPTIONS = {
     canManageFacilities: "Add, Edit, and Delete facility records within assigned scope.",
     canViewHumanResource: "Allow viewing lists for Facilitators, Program Teams, and Partners.",
     canManageHumanResource: "Allow add/edit/delete for Facilitators, Program Teams, and Partners within the user's assigned scope (federal, state, or locality).",
-    // --- START MODIFICATION ---
     canViewSkillsMentorship: "Allow user to view the Skills Mentorship module, dashboard, and history.",
     canManageSkillsMentorship: "Allow user to share public submission links for mentorship.",
-    // --- END MODIFICATION ---
     canApproveSubmissions: "Derived: Approve/Reject submissions for Facilitators and Health Facilities. (Granted by Federal/Super advanced features).",
     canUseSuperUserAdvancedFeatures: "ADVANCED (Super User): Allows bulk participant/facility operations (import, clean, migrate, duplicates, location check).", 
     canUseFederalManagerAdvancedFeatures: "ADVANCED (Federal/Super): Allows managing inactive items (courses, participants, monitoring), Final Reports, *enables* ALL Human Resources Management, and *grants* submission approval rights.", 
@@ -143,26 +128,29 @@ const PERMISSION_DESCRIPTIONS = {
 
 const STATES = Object.keys(STATE_LOCALITIES);
 
-// --- MODIFICATION: Helper component for Tab Navigation ---
+// --- Helper Components ---
+
 const AdminTabs = ({ activeTab, setActiveTab, currentUserRole }) => {
-    // Base tabs
     const tabs = [
         { key: 'roles', label: 'Manage User Roles' },
         { key: 'permissions', label: 'Manage Role Permissions' },
     ];
 
-    // Conditionally add the new tab for super users
+    if (currentUserRole === 'super_user' || currentUserRole === 'federal_manager') {
+        tabs.push({ key: 'approvals', label: 'Certificate Approvals' });
+    }
+
     if (currentUserRole === 'super_user') {
         tabs.push({ key: 'usage', label: 'Resource Usage' });
     }
 
     return (
-        <div className="flex border-b border-gray-200 mb-6">
+        <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
             {tabs.map(tab => (
                 <button
                     key={tab.key}
                     onClick={() => setActiveTab(tab.key)}
-                    className={`px-4 py-2 font-medium text-sm transition-colors duration-150 ${
+                    className={`px-4 py-2 font-medium text-sm transition-colors duration-150 whitespace-nowrap ${
                         activeTab === tab.key
                             ? 'border-b-2 border-sky-500 text-sky-600'
                             : 'text-gray-500 hover:text-gray-700'
@@ -174,19 +162,15 @@ const AdminTabs = ({ activeTab, setActiveTab, currentUserRole }) => {
         </div>
     );
 };
-// --- END MODIFICATION ---
 
-// (Unchanged PermissionsDropdown)
 const PermissionsDropdown = ({ role, currentPermissions, allPermissions, onPermissionChange, disabled }) => {
     const [isOpen, setIsOpen] = useState(false);
     const PERMISSION_CATEGORIES = useMemo(() => [
         { title: 'A. Course Management', keys: ['canViewCourse', 'canManageCourse'] },
         { title: 'B. Child Health Service Facility Management', keys: ['canViewFacilities', 'canManageFacilities'] },
         { title: 'C. Human Resource (HR) Management', keys: ['canViewHumanResource', 'canManageHumanResource'] },
-        // --- START MODIFICATION ---
         { title: 'D. Skills Mentorship', keys: ['canViewSkillsMentorship', 'canManageSkillsMentorship'] },
         { title: 'E. System / Advanced / Scope', keys: ['canUseSuperUserAdvancedFeatures', 'canUseFederalManagerAdvancedFeatures', 'manageLocation', 'manageTimePeriod', 'canViewAdmin', 'canViewDashboard'] }
-        // --- END MODIFICATION ---
     ], []);
     const booleanPermissionKeys = useMemo(() => {
         return PERMISSION_CATEGORIES.flatMap(category => 
@@ -272,37 +256,313 @@ const PermissionsDropdown = ({ role, currentPermissions, allPermissions, onPermi
         </div>
     );
 };
-// (End Unchanged PermissionsDropdown)
 
-// --- NEW: Helper function to format duration ---
 const formatDuration = (milliseconds) => {
     if (!milliseconds || milliseconds < 60000) {
         return '0 minutes';
     }
-    
     const totalMinutes = Math.floor(milliseconds / 60000);
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
-
     let parts = [];
-    if (hours > 0) {
-        parts.push(`${hours} hour${hours > 1 ? 's' : ''}`);
-    }
-    if (minutes > 0) {
-        parts.push(`${minutes} minute${minutes > 1 ? 's' : ''}`);
-    }
+    if (hours > 0) parts.push(`${hours} hour${hours > 1 ? 's' : ''}`);
+    if (minutes > 0) parts.push(`${minutes} minute${minutes > 1 ? 's' : ''}`);
     return parts.join(', ');
 };
 
+// -----------------------------------------------------------------------------
+// Certificate Approvals Tab (Extracted)
+// -----------------------------------------------------------------------------
+const CertificateApprovalsTab = ({ setToast }) => {
+    const [courses, setCourses] = useState([]);
+    const [managerName, setManagerName] = useState('');
+    const [loadingApprovals, setLoadingApprovals] = useState(false);
+    
+    // --- STATE FOR APPROVAL MODAL ---
+    const [approvalModalOpen, setApprovalModalOpen] = useState(false);
+    const [selectedCourse, setSelectedCourse] = useState(null);
+    const [signatureFile, setSignatureFile] = useState(null);
+    const [isApproving, setIsApproving] = useState(false);
+    const fileInputRef = useRef(null);
 
-// --- MODIFICATION: Admin Dashboard Component ---
+    const loadData = async () => {
+        setLoadingApprovals(true);
+        try {
+            const allCourses = await listAllCourses({ source: 'server' });
+            // Sort: Pending first, then Approved (descending by date)
+            const sorted = allCourses.sort((a, b) => {
+                if (a.isCertificateApproved === b.isCertificateApproved) {
+                    return new Date(b.start_date) - new Date(a.start_date);
+                }
+                return a.isCertificateApproved ? 1 : -1;
+            });
+            setCourses(sorted);
+
+            const coords = await listFederalCoordinators({ source: 'server' });
+            const manager = coords.find(c => c.role === 'مدير البرنامج' || c.role === 'Federal Program Manager');
+            if (manager) {
+                setManagerName(manager.name);
+            }
+        } catch (err) {
+            console.error(err);
+            setToast({ show: true, message: "Error loading approval data", type: 'error' });
+        } finally {
+            setLoadingApprovals(false);
+        }
+    };
+
+    useEffect(() => {
+        loadData();
+    }, [setToast]);
+
+    // --- HANDLERS ---
+
+    const handleOpenApprovalModal = (course) => {
+        if (!managerName) {
+            setToast({ show: true, message: "Program Manager Name is missing. Please check HR settings.", type: 'error' });
+            return;
+        }
+        setSelectedCourse(course);
+        setSignatureFile(null);
+        setApprovalModalOpen(true);
+    };
+
+    const handleConfirmApprove = async () => {
+        if (!selectedCourse || !managerName) return;
+        
+        setIsApproving(true);
+        try {
+            let signatureUrl = null;
+            if (signatureFile) {
+                signatureUrl = await uploadFile(signatureFile);
+            }
+
+            await approveCourseCertificates(selectedCourse.id, managerName, signatureUrl);
+            
+            setToast({ show: true, message: "Certificates Approved Successfully.", type: 'success' });
+            setApprovalModalOpen(false);
+            
+            // --- SELECTIVE UPDATE: Update local state instead of reloading ---
+            setCourses(prevCourses => prevCourses.map(c => {
+                if (c.id === selectedCourse.id) {
+                    return {
+                        ...c,
+                        isCertificateApproved: true,
+                        approvedByManagerName: managerName,
+                        approvedByManagerSignatureUrl: signatureUrl || undefined,
+                        certificateApprovedAt: { seconds: Math.floor(Date.now() / 1000) } // Fake timestamp for immediate display
+                    };
+                }
+                return c;
+            }));
+            // ----------------------------------------------------------------
+
+        } catch (err) {
+            console.error(err);
+            setToast({ show: true, message: `Error: ${err.message}`, type: 'error' });
+        } finally {
+            setIsApproving(false);
+        }
+    };
+
+    const handleUnapprove = async (course) => {
+        if (course.approvedByManagerName && course.approvedByManagerName !== managerName) {
+            setToast({ 
+                show: true, 
+                message: `Permission Denied. Only ${course.approvedByManagerName} can revoke this approval.`, 
+                type: 'error' 
+            });
+            return;
+        }
+
+        if (window.confirm(`Revoke approval for ${course.course_type}? \n\nThis will hide the download links for participants.`)) {
+            setLoadingApprovals(true);
+            try {
+                await unapproveCourseCertificates(course.id);
+                setToast({ show: true, message: "Approval Revoked.", type: 'info' });
+                
+                // --- SELECTIVE UPDATE: Update local state instead of reloading ---
+                setCourses(prevCourses => prevCourses.map(c => {
+                    if (c.id === course.id) {
+                        return {
+                            ...c,
+                            isCertificateApproved: false,
+                            approvedByManagerName: null,
+                            approvedByManagerSignatureUrl: null,
+                            certificateApprovedAt: null
+                        };
+                    }
+                    return c;
+                }));
+                // ----------------------------------------------------------------
+
+            } catch (err) {
+                setToast({ show: true, message: err.message, type: 'error' });
+            } finally {
+                setLoadingApprovals(false);
+            }
+        }
+    };
+
+    if (loadingApprovals && !approvalModalOpen) return <div className="flex justify-center p-8"><Spinner /></div>;
+
+    return (
+        <>
+            <Card>
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-medium">Certificate Approvals</h3>
+                    <Button variant="secondary" onClick={loadData} size="sm">
+                        <RefreshCw className="w-4 h-4 mr-1" /> Refresh
+                    </Button>
+                </div>
+                
+                <div className="bg-blue-50 border border-blue-200 p-4 rounded-md mb-6">
+                    <p className="text-sm text-blue-800">
+                        <strong>Current Signing Authority:</strong> 
+                        <span className="font-bold text-lg ml-2 underline">{managerName || "Loading..."}</span>
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">
+                        * Approving a course will stamp your name on the certificates. You can optionally upload a signature/stamp image.
+                    </p>
+                </div>
+
+                {courses.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">No courses found.</div>
+                ) : (
+                    <Table headers={["State", "Locality", "Course Type", "Start Date", "Status", "Actions"]}>
+                        {courses.map(c => {
+                            const isApproved = c.isCertificateApproved === true;
+                            const canModify = isApproved && c.approvedByManagerName === managerName;
+
+                            return (
+                                <tr key={c.id} className={isApproved ? "bg-gray-50" : "bg-white"}>
+                                    <td className="font-medium">{c.state}</td>
+                                    <td>{c.locality}</td>
+                                    <td>{c.course_type}</td>
+                                    <td>{c.start_date}</td>
+                                    <td>
+                                        {isApproved ? (
+                                            <div className="flex flex-col">
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 w-fit">
+                                                    <CheckCircle className="w-3 h-3 mr-1" />
+                                                    Approved
+                                                </span>
+                                                <span className="text-[10px] text-gray-500 mt-1">
+                                                    By: {c.approvedByManagerName}
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                                Pending
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td className="text-right">
+                                        {isApproved ? (
+                                            <Button 
+                                                onClick={() => handleUnapprove(c)} 
+                                                disabled={!canModify}
+                                                variant="secondary"
+                                                size="sm"
+                                                className={!canModify ? "opacity-50 cursor-not-allowed" : "text-red-600 hover:bg-red-50"}
+                                                title={!canModify ? `Only ${c.approvedByManagerName} can revoke this.` : "Revoke Approval"}
+                                            >
+                                                {canModify ? "Revoke" : <Lock className="w-4 h-4" />}
+                                            </Button>
+                                        ) : (
+                                            <Button 
+                                                onClick={() => handleOpenApprovalModal(c)} 
+                                                disabled={!managerName} 
+                                                variant="primary"
+                                                size="sm"
+                                            >
+                                                Approve
+                                            </Button>
+                                        )}
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </Table>
+                )}
+            </Card>
+
+            {/* --- APPROVAL MODAL --- */}
+            <Modal isOpen={approvalModalOpen} onClose={() => !isApproving && setApprovalModalOpen(false)} title="Confirm Approval">
+                <CardBody>
+                    <div className="space-y-4">
+                        <p className="text-sm text-gray-600">
+                            You are approving certificates for <strong>{selectedCourse?.course_type}</strong> in <strong>{selectedCourse?.locality}, {selectedCourse?.state}</strong>.
+                        </p>
+                        
+                        <div className="bg-gray-50 p-3 rounded border border-gray-200">
+                            <p className="text-xs font-bold text-gray-500 uppercase mb-1">Certificate Signatory</p>
+                            <p className="text-lg font-medium text-gray-900">{managerName}</p>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Add Signature/Stamp Image (Optional)
+                            </label>
+                            <div className="flex items-center gap-2">
+                                <input 
+                                    type="file" 
+                                    accept="image/*"
+                                    ref={fileInputRef}
+                                    onChange={(e) => setSignatureFile(e.target.files[0])}
+                                    className="hidden"
+                                />
+                                <Button 
+                                    type="button" 
+                                    variant="secondary" 
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="w-full justify-center border-dashed"
+                                >
+                                    <Upload className="w-4 h-4 mr-2" />
+                                    {signatureFile ? signatureFile.name : "Upload Image..."}
+                                </Button>
+                                {signatureFile && (
+                                    <Button 
+                                        type="button" 
+                                        variant="danger" 
+                                        onClick={() => {
+                                            setSignatureFile(null);
+                                            if (fileInputRef.current) fileInputRef.current.value = '';
+                                        }}
+                                        title="Remove file"
+                                    >
+                                        <XCircle className="w-4 h-4" />
+                                    </Button>
+                                )}
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                                Preferred: Transparent PNG. This image will be placed above your name on the certificate.
+                            </p>
+                        </div>
+                    </div>
+                </CardBody>
+                <CardFooter>
+                    <div className="flex justify-end gap-2 w-full">
+                        <Button variant="secondary" onClick={() => setApprovalModalOpen(false)} disabled={isApproving}>
+                            Cancel
+                        </Button>
+                        <Button variant="primary" onClick={handleConfirmApprove} disabled={isApproving}>
+                            {isApproving ? <><Spinner size="sm" className="mr-2" /> Approving...</> : "Confirm & Approve"}
+                        </Button>
+                    </div>
+                </CardFooter>
+            </Modal>
+        </>
+    );
+};
+
+// -----------------------------------------------------------------------------
+// Main AdminDashboard Component
+// -----------------------------------------------------------------------------
 export function AdminDashboard() {
     const [users, setUsers] = useState([]);
     const [rolesAndPermissions, setRolesAndPermissions] = useState({});
-    
-    // --- STATE FOR USAGE TAB ---
     const [usageStats, setUsageStats] = useState([]);
-
     const [loading, setLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState(null);
     const [toast, setToast] = useState({ show: false, message: '', type: '' });
@@ -325,10 +585,9 @@ export function AdminDashboard() {
                     if (docSnap.exists()) {
                         role = docSnap.data().role;
                     } else {
-                        role = 'user'; // Default for a user not in DB yet
+                        role = 'user'; 
                     }
                     setCurrentUserRole(role);
-                    // Trigger data load *after* role is confirmed
                     loadData(role);
                 }).catch(error => {
                     console.error("Error fetching current user's role:", error);
@@ -348,20 +607,15 @@ export function AdminDashboard() {
 
     const loadData = async (role) => {
         try {
-            // Fetch Users
             const usersQuery = query(collection(db, "users"));
             const usersSnapshot = await getDocs(usersQuery);
             const userList = usersSnapshot.docs.map(doc => ({
                 id: doc.id,
-                ...doc.data(), // Spread data first
-                // --- START MODIFICATION ---
-                // Ensure displayName is prioritized, falling back to name
+                ...doc.data(),
                 displayName: doc.data().displayName || doc.data().name || '', 
-                // --- END MODIFICATION ---
                 assignedLocality: doc.data().assignedLocality || '',
             }));
 
-            // Fetch Role Permissions
             const rolesDocRef = doc(db, "meta", "roles");
             const rolesDocSnap = await getDoc(rolesDocRef);
             const permissionsData = rolesDocSnap.exists() ? rolesDocSnap.data() : {};
@@ -376,7 +630,6 @@ export function AdminDashboard() {
             setUsers(userList);
             setRolesAndPermissions(updatedPermissions);
 
-            // Conditionally fetch usage stats
             if (role === 'super_user') {
                 const usageQuery = query(collection(db, "userUsageStats"));
                 const usageSnapshot = await getDocs(usageQuery);
@@ -394,7 +647,6 @@ export function AdminDashboard() {
         setLoading(false);
     };
 
-    // (Unchanged user/permission handlers)
     const handleUserRoleChange = async (userId, newRole) => {
         const userToUpdate = users.find(u => u.id === userId);
         if (currentUser.email === userToUpdate.email && newRole !== userToUpdate.role) {
@@ -422,17 +674,15 @@ export function AdminDashboard() {
                     user.id === userId ? { ...user, ...updatePayload } : user
                 );
                 setUsers(updatedUsers);
-                // --- START MODIFICATION ---
-                // Use displayName in toast message
                 const userName = userToUpdate.displayName || userToUpdate.email;
                 setToast({ show: true, message: `Successfully updated ${userName}'s role.`, type: "success" });
-                // --- END MODIFICATION ---
             } catch (error) {
                 console.error("Error updating user role:", error);
                 setToast({ show: true, message: "Failed to update user role. Please try again.", type: "error" });
             }
         }
     };
+
     const handleUserStateChange = async (userId, newState) => {
         const userToUpdate = users.find(u => u.id === userId);
         if (!['states_manager', 'state_coordinator', 'locality_manager'].includes(userToUpdate.role)) {
@@ -441,7 +691,7 @@ export function AdminDashboard() {
         }
         const userRef = doc(db, "users", userId);
         try {
-            await updateDoc(userRef, { assignedState: newState, assignedLocality: '' }); // Clear locality when state changes
+            await updateDoc(userRef, { assignedState: newState, assignedLocality: '' }); 
             setUsers(users.map(user => user.id === userId ? { ...user, assignedState: newState, assignedLocality: '' } : user));
             setToast({ show: true, message: "User's state updated successfully.", type: "success" });
         } catch (error) {
@@ -449,6 +699,7 @@ export function AdminDashboard() {
             setToast({ show: true, message: "Failed to update user state. Please try again.", type: "error" });
         }
     };
+
     const handleLocalityChange = async (userId, newState, newLocality) => {
         const userToUpdate = users.find(u => u.id === userId);
         if (userToUpdate.role !== 'locality_manager') {
@@ -469,6 +720,7 @@ export function AdminDashboard() {
             setToast({ show: true, message: "Failed to update user locality. Please try again.", type: "error" });
         }
     };
+
     const handlePermissionChange = (role, permission, value) => {
         setRolesAndPermissions(prev => {
             let baseRole = { ...ALL_PERMISSIONS, ...prev[role] };
@@ -481,11 +733,9 @@ export function AdminDashboard() {
             if (permission !== 'canViewFacilities') {
                 baseRole.canViewFacilities = prev[role].canViewFacilities;
             } 
-            // --- START MODIFICATION ---
             if (permission !== 'canViewSkillsMentorship') {
                 baseRole.canViewSkillsMentorship = prev[role].canViewSkillsMentorship;
             }
-            // --- END MODIFICATION ---
             if (baseRole.canManageFacilities) {
                  baseRole.canViewFacilities = true;
             }
@@ -493,6 +743,7 @@ export function AdminDashboard() {
             return { ...prev, [role]: updatedRole };
         });
     };
+
     const handleSaveAndSyncAllPermissions = async () => {
         if (!window.confirm("Are you sure you want to save these global permissions AND synchronize them with ALL users in the database?")) {
             return;
@@ -517,7 +768,7 @@ export function AdminDashboard() {
             });
             await batch.commit();
             setRolesAndPermissions(rolesAndPermissionsWithDerived);
-            await loadData(currentUserRole); // Reload all data
+            await loadData(currentUserRole); 
             setToast({ show: true, message: "Permissions saved and synchronized with all users successfully!", type: "success" });
         } catch (error) {
             console.error("Error saving and syncing permissions:", error);
@@ -525,36 +776,28 @@ export function AdminDashboard() {
         }
         setLoading(false);
     };
-    // (End Unchanged handlers)
 
-
-    // (Unchanged Filtering Logic)
     const allLocalitiesInFilterState = useMemo(() => {
         if (!filterState || filterState === 'All') return [];
         return (STATE_LOCALITIES[filterState]?.localities || []).map(l => l.en);
     }, [filterState]);
+
     const filteredUsers = useMemo(() => {
         const queryLower = searchQuery.toLowerCase();
         let filtered = users.filter(user => {
             const roleMatch = !filterRole || user.role === filterRole;
             const stateMatch = !filterState || user.assignedState === filterState;
             const localityMatch = !filterLocality || user.assignedLocality === filterLocality;
-            // --- START MODIFICATION ---
-            // Search displayName instead of name
             const searchMatch = !searchQuery ||
                                 String(user.displayName || '').toLowerCase().includes(queryLower) ||
                                 String(user.email || '').toLowerCase().includes(queryLower);
-            // --- END MODIFICATION ---
             return roleMatch && stateMatch && localityMatch && searchMatch;
         });
         return filtered;
     }, [users, filterRole, filterState, filterLocality, searchQuery]);
-    // (End Unchanged Filtering Logic)
 
-    // --- MODIFIED: Memoized calculations for usage tab ---
     const aggregates = useMemo(() => {
         const totalUsersWithDuration = usageStats.filter(u => (u.totalActiveDurationMs || 0) > 0).length;
-
         const totals = usageStats.reduce(
             (acc, user) => {
                 acc.totalReads += user.totalReads || 0;
@@ -564,18 +807,14 @@ export function AdminDashboard() {
             },
             { totalReads: 0, totalWrites: 0, totalDurationMs: 0 }
         );
-
         return {
             ...totals,
             meanDurationMs: totalUsersWithDuration > 0 ? (totals.totalDurationMs / totalUsersWithDuration) : 0,
         };
     }, [usageStats]);
-    // --- END MODIFICATION ---
-
 
     if (loading) return <Spinner />;
 
-    // (Unchanged renderUserRolesTab)
     const renderUserRolesTab = () => (
         <Card>
             <h3 className="text-lg font-medium mb-4">Manage User Roles</h3>
@@ -606,10 +845,7 @@ export function AdminDashboard() {
                 </FormGroup>
             </div>
             {filteredUsers.length > 0 ? (
-                // --- START MODIFICATION ---
-                // Change header from "Name" to "Display Name"
                 <Table headers={["#", "Display Name", "Email", "Current Role", "Change Role", "Assigned State", "Assigned Locality"]}>
-                {/* --- END MODIFICATION --- */}
                     {filteredUsers.map((user, index) => {
                         const isStateAssignable = ['states_manager', 'state_coordinator', 'locality_manager'].includes(user.role);
                         const isLocalityAssignable = user.role === 'locality_manager';
@@ -617,10 +853,7 @@ export function AdminDashboard() {
                         return (
                             <tr key={user.id}>
                                 <td>{index + 1}</td>
-                                {/* --- START MODIFICATION --- */}
-                                {/* Render displayName instead of name */}
                                 <td>{user.displayName || 'N/A'}</td>
-                                {/* --- END MODIFICATION --- */}
                                 <td>{user.email}</td>
                                 <td><span className="bg-slate-200 text-slate-800 text-xs font-medium px-2 py-1 rounded-full">{ROLES[user.role] || 'N/A'}</span></td>
                                 <td>
@@ -652,7 +885,6 @@ export function AdminDashboard() {
         </Card>
     );
 
-    // (Unchanged renderRolePermissionsTab)
     const renderRolePermissionsTab = () => (
         <Card>
             <div className="flex justify-between items-center mb-4">
@@ -677,68 +909,63 @@ export function AdminDashboard() {
         </Card>
     );
 
+    const renderUsageTab = () => {
+        const formatTimestamp = (timestamp) => {
+            if (!timestamp) return 'N/A';
+            return new Date(timestamp.seconds * 1000).toLocaleString();
+        };
 
-    // --- MODIFIED: Render function for the Usage Tab ---
-    const formatTimestamp = (timestamp) => {
-        if (!timestamp) return 'N/A';
-        return new Date(timestamp.seconds * 1000).toLocaleString();
+        return (
+            <Card>
+                <h3 className="text-lg font-medium mb-4">Resource Usage Tracking (All Users)</h3>
+                <p className="text-sm text-gray-600 mb-6">
+                    This table shows the total read/write operations and an approximation of active time in the app.
+                    Active time is counted in 1-minute intervals as long as the user has database activity within a 5-minute window.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="bg-green-50 border border-green-200 p-4 rounded-lg text-center">
+                        <div className="text-sm font-medium text-green-700">Total System Reads</div>
+                        <div className="text-3xl font-bold text-green-900">{aggregates.totalReads.toLocaleString()}</div>
+                    </div>
+                    <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg text-center">
+                        <div className="text-sm font-medium text-yellow-700">Total System Writes</div>
+                        <div className="text-3xl font-bold text-yellow-900">{aggregates.totalWrites.toLocaleString()}</div>
+                    </div>
+                    <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg text-center">
+                        <div className="text-sm font-medium text-blue-700">Mean Active Duration</div>
+                        <div className="text-3xl font-bold text-blue-900">{formatDuration(aggregates.meanDurationMs)}</div>
+                        <div className="text-xs text-gray-500">Total: {formatDuration(aggregates.totalDurationMs)}</div>
+                    </div>
+                </div>
+
+                <Table 
+                    headers={[
+                        'User Email',
+                        'Total Reads',
+                        'Total Writes',
+                        'Total Active Duration',
+                        'Last Updated'
+                    ]}
+                >
+                    {usageStats.map((stat) => (
+                        <tr key={stat.id}>
+                            <td>{stat.email || 'N/A'}</td>
+                            <td className="font-mono">{stat.totalReads ? stat.totalReads.toLocaleString() : 0}</td>
+                            <td className="font-mono">{stat.totalWrites ? stat.totalWrites.toLocaleString() : 0}</td>
+                            <td>{formatDuration(stat.totalActiveDurationMs)}</td>
+                            <td>{formatTimestamp(stat.lastUpdated)}</td>
+                        </tr>
+                    ))}
+                </Table>
+                {usageStats.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                        No usage data found.
+                    </div>
+                )}
+            </Card>
+        );
     };
-
-    const renderUsageTab = () => (
-        <Card>
-            <h3 className="text-lg font-medium mb-4">Resource Usage Tracking (All Users)</h3>
-            <p className="text-sm text-gray-600 mb-6">
-                This table shows the total read/write operations and an approximation of active time in the app.
-                Active time is counted in 1-minute intervals as long as the user has database activity within a 5-minute window.
-            </p>
-
-            {/* --- MODIFIED: Aggregate Stats --- */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="bg-green-50 border border-green-200 p-4 rounded-lg text-center">
-                    <div className="text-sm font-medium text-green-700">Total System Reads</div>
-                    <div className="text-3xl font-bold text-green-900">{aggregates.totalReads.toLocaleString()}</div>
-                </div>
-                <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg text-center">
-                    <div className="text-sm font-medium text-yellow-700">Total System Writes</div>
-                    <div className="text-3xl font-bold text-yellow-900">{aggregates.totalWrites.toLocaleString()}</div>
-                </div>
-                {/* --- NEW CARD --- */}
-                <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg text-center">
-                    <div className="text-sm font-medium text-blue-700">Mean Active Duration</div>
-                    <div className="text-3xl font-bold text-blue-900">{formatDuration(aggregates.meanDurationMs)}</div>
-                    <div className="text-xs text-gray-500">Total: {formatDuration(aggregates.totalDurationMs)}</div>
-                </div>
-            </div>
-
-            {/* --- MODIFIED: Usage Table --- */}
-            <Table 
-                headers={[
-                    'User Email',
-                    'Total Reads',
-                    'Total Writes',
-                    'Total Active Duration', // <-- NEW
-                    'Last Updated'
-                ]}
-            >
-                {usageStats.map((stat) => (
-                    <tr key={stat.id}>
-                        <td>{stat.email || 'N/A'}</td>
-                        <td className="font-mono">{stat.totalReads ? stat.totalReads.toLocaleString() : 0}</td>
-                        <td className="font-mono">{stat.totalWrites ? stat.totalWrites.toLocaleString() : 0}</td>
-                        <td>{formatDuration(stat.totalActiveDurationMs)}</td> {/* <-- NEW */}
-                        <td>{formatTimestamp(stat.lastUpdated)}</td>
-                    </tr>
-                ))}
-            </Table>
-            {usageStats.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                    No usage data found.
-                </div>
-            )}
-        </Card>
-    );
-    // --- END MODIFICATION ---
-
 
     return (
         <div className="space-y-6">
@@ -757,6 +984,8 @@ export function AdminDashboard() {
             {activeTab === 'roles' && renderUserRolesTab()}
             {activeTab === 'permissions' && renderRolePermissionsTab()}
             {activeTab === 'usage' && currentUserRole === 'super_user' && renderUsageTab()}
+            {/* Render the extracted component here, NOT by calling a helper function with hooks */}
+            {activeTab === 'approvals' && <CertificateApprovalsTab setToast={setToast} />}
 
         </div>
     );

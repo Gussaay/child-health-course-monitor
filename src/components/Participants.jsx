@@ -5,7 +5,7 @@ import jsPDF from "jspdf";
 import { createRoot } from 'react-dom/client'; 
 
 // --- Icons ---
-import { Mail } from 'lucide-react'; 
+import { Mail, Lock } from 'lucide-react'; 
 
 import {
     Card, PageHeader, Button, FormGroup, Input, Select, Textarea, Table, EmptyState, Modal, Spinner, Toast
@@ -1622,36 +1622,43 @@ export function ParticipantsView({
                         </select>
                     </div>
 
-                    <Button
-                        variant="primary"
-                        onClick={handleBulkCertificateDownload}
-                        disabled={isBulkCertLoading || participants.length === 0 || isCacheLoading.federalCoordinators}
-                        title={isBulkCertLoading ? "Generating PDF..." : "Download all certificates as one PDF"}
-                    >
-                         {isBulkCertLoading ? <Spinner size="sm"/> : 'Download All Certificates'}
-                    </Button>
-                    
-                    {/* --- NEW: Share Public Page Button --- */}
-                    <Button
-                        variant="secondary"
-                        onClick={() => setSharePageModalOpen(true)}
-                        title="Share a public link where all participants can download their certificates"
-                        className="border-sky-600 text-sky-700 hover:bg-sky-50"
-                    >
-                        Share Public Page
-                    </Button>
+                    {course.isCertificateApproved ? (
+                        <>
+                            <Button
+                                variant="primary"
+                                onClick={handleBulkCertificateDownload}
+                                disabled={isBulkCertLoading || participants.length === 0 || isCacheLoading.federalCoordinators}
+                                title={isBulkCertLoading ? "Generating PDF..." : "Download all certificates as one PDF"}
+                            >
+                                {isBulkCertLoading ? <Spinner size="sm"/> : 'Download All Certificates'}
+                            </Button>
+                            
+                            <Button
+                                variant="secondary"
+                                onClick={() => setSharePageModalOpen(true)}
+                                title="Share a public link where all participants can download their certificates"
+                                className="border-sky-600 text-sky-700 hover:bg-sky-50"
+                            >
+                                Share Public Page
+                            </Button>
 
-                    {/* --- NEW: Email All Button --- */}
-                    <Button
-                        variant="secondary"
-                        onClick={handleOpenBulkEmail}
-                        disabled={!filtered || filtered.length === 0}
-                        title="Send certificate emails to all visible participants"
-                        className="border-green-600 text-green-700 hover:bg-green-50 flex items-center gap-1"
-                    >
-                        <Mail className="w-4 h-4" />
-                        Email All Certs
-                    </Button>
+                            <Button
+                                variant="secondary"
+                                onClick={handleOpenBulkEmail}
+                                disabled={!filtered || filtered.length === 0}
+                                title="Send certificate emails to all visible participants"
+                                className="border-green-600 text-green-700 hover:bg-green-50 flex items-center gap-1"
+                            >
+                                <Mail className="w-4 h-4" />
+                                Email All Certs
+                            </Button>
+                        </>
+                    ) : (
+                        <div className="flex items-center gap-1 bg-orange-50 border border-orange-200 text-orange-700 px-3 py-2 rounded text-sm">
+                            <Lock className="w-4 h-4" />
+                            <span className="font-medium">Certificates Pending Approval</span>
+                        </div>
+                    )}
 
                 </div>
                 <div className="flex items-center gap-2">
@@ -1672,6 +1679,7 @@ export function ParticipantsView({
                     {filtered.length > 0 && filtered.map(p => {
                         const canEdit = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
                         const canDelete = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
+                        const isCertApproved = course.isCertificateApproved === true;
 
                         let participantSubCourse = p.imci_sub_type;
                         if (!participantSubCourse) {
@@ -1693,46 +1701,52 @@ export function ParticipantsView({
                                         <Button variant="primary" onClick={() => onOpen(p.id)} disabled={!canAddMonitoring} title={!canAddMonitoring ? "You do not have permission to monitor" : "Monitor Participant"}>Monitor</Button>
                                         <Button variant="secondary" onClick={() => onOpenReport(p.id)}>Report</Button>
                                         
-                                        <Button 
-                                            variant="secondary" 
-                                            onClick={() => handleShareClick(p)}
-                                            title="Share Public Download Link"
-                                        >
-                                            Share Cert.
-                                        </Button>
-                                        
-                                        <Button 
-                                            variant="secondary" 
-                                            onClick={async () => {
-                                                // Call imported generator with language
-                                                const canvas = await generateCertificatePdf(course, p, federalProgramManagerName, participantSubCourse, certLanguage);
-                                                if (canvas) {
-                                                    const doc = new jsPDF('landscape', 'mm', 'a4');
-                                                    const imgWidth = 297;
-                                                    const imgHeight = 210;
-                                                    const imgData = canvas.toDataURL('image/png');
-                                                    doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-                                                    const fileName = `Certificate_${p.name.replace(/ /g, '_')}_${course.course_type}.pdf`;
-                                                    doc.save(fileName);
-                                                }
-                                            }}
-                                            title="Generate Single Certificate"
-                                            disabled={isCacheLoading.federalCoordinators}
-                                        >
-                                            {isCacheLoading.federalCoordinators ? <Spinner size="sm" /> : 'Certificate'}
-                                        </Button>
-                                        
-                                        {/* --- NEW: Email Single Button --- */}
-                                        <Button 
-                                            variant="secondary" 
-                                            onClick={() => handleOpenSingleEmail(p)}
-                                            title={p.email ? "Send Certificate to Email" : "No email address available"}
-                                            disabled={!p.email} 
-                                            className={!p.email ? "opacity-50 cursor-not-allowed" : ""}
-                                        >
-                                            <Mail className="w-4 h-4" />
-                                        </Button>
-                                        {/* ------------------------------- */}
+                                        {isCertApproved ? (
+                                            <>
+                                                <Button 
+                                                    variant="secondary" 
+                                                    onClick={() => handleShareClick(p)}
+                                                    title="Share Public Download Link"
+                                                >
+                                                    Share Cert.
+                                                </Button>
+                                                
+                                                <Button 
+                                                    variant="secondary" 
+                                                    onClick={async () => {
+                                                        const canvas = await generateCertificatePdf(course, p, federalProgramManagerName, participantSubCourse, certLanguage);
+                                                        if (canvas) {
+                                                            const doc = new jsPDF('landscape', 'mm', 'a4');
+                                                            const imgWidth = 297;
+                                                            const imgHeight = 210;
+                                                            const imgData = canvas.toDataURL('image/png');
+                                                            doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+                                                            const fileName = `Certificate_${p.name.replace(/ /g, '_')}_${course.course_type}.pdf`;
+                                                            doc.save(fileName);
+                                                        }
+                                                    }}
+                                                    title="Generate Single Certificate"
+                                                    disabled={isCacheLoading.federalCoordinators}
+                                                >
+                                                    {isCacheLoading.federalCoordinators ? <Spinner size="sm" /> : 'Certificate'}
+                                                </Button>
+                                                
+                                                <Button 
+                                                    variant="secondary" 
+                                                    onClick={() => handleOpenSingleEmail(p)}
+                                                    title={p.email ? "Send Certificate to Email" : "No email address available"}
+                                                    disabled={!p.email} 
+                                                    className={!p.email ? "opacity-50 cursor-not-allowed" : ""}
+                                                >
+                                                    <Mail className="w-4 h-4" />
+                                                </Button>
+                                            </>
+                                        ) : (
+                                            <div className="flex items-center gap-1 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded border border-orange-200" title="Certificates must be approved by the Federal Program Manager in the Admin Dashboard before downloading.">
+                                                <Lock className="w-3 h-3" />
+                                                <span>Pending Approval</span>
+                                            </div>
+                                        )}
 
                                         {(course.course_type === 'ICCM' || course.course_type === 'EENC') && (
                                             <Button variant="secondary" onClick={() => onOpenTestFormForParticipant(p.id)}>
@@ -1756,6 +1770,7 @@ export function ParticipantsView({
                 {filtered.length > 0 && filtered.map(p => {
                     const canEdit = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
                     const canDelete = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
+                    const isCertApproved = course.isCertificateApproved === true;
 
                     let participantSubCourse = p.imci_sub_type;
                     if (!participantSubCourse) {
@@ -1781,46 +1796,52 @@ export function ParticipantsView({
                                 <Button variant="secondary" onClick={() => onOpen(p.id)} disabled={!canAddMonitoring} title={!canAddMonitoring ? "You do not have permission to monitor" : "Monitor Participant"}>Monitor</Button>
                                 <Button variant="secondary" onClick={() => onOpenReport(p.id)}>Report</Button>
                                 
-                                <Button 
-                                    variant="secondary" 
-                                    onClick={() => handleShareClick(p)}
-                                    title="Share Public Download Link"
-                                >
-                                    Share Cert.
-                                </Button>
+                                {isCertApproved ? (
+                                    <>
+                                        <Button 
+                                            variant="secondary" 
+                                            onClick={() => handleShareClick(p)}
+                                            title="Share Public Download Link"
+                                        >
+                                            Share Cert.
+                                        </Button>
 
-                                <Button 
-                                    variant="secondary" 
-                                    onClick={async () => {
-                                        // Call imported generator with language
-                                        const canvas = await generateCertificatePdf(course, p, federalProgramManagerName, participantSubCourse, certLanguage);
-                                        if (canvas) {
-                                            const doc = new jsPDF('landscape', 'mm', 'a4');
-                                            const imgWidth = 297;
-                                            const imgHeight = 210;
-                                            const imgData = canvas.toDataURL('image/png');
-                                            doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-                                            const fileName = `Certificate_${p.name.replace(/ /g, '_')}_${course.course_type}.pdf`;
-                                            doc.save(fileName);
-                                        }
-                                    }}
-                                    title="Generate Single Certificate"
-                                    disabled={isCacheLoading.federalCoordinators}
-                                >
-                                    {isCacheLoading.federalCoordinators ? <Spinner size="sm" /> : 'Certificate'}
-                                </Button>
+                                        <Button 
+                                            variant="secondary" 
+                                            onClick={async () => {
+                                                const canvas = await generateCertificatePdf(course, p, federalProgramManagerName, participantSubCourse, certLanguage);
+                                                if (canvas) {
+                                                    const doc = new jsPDF('landscape', 'mm', 'a4');
+                                                    const imgWidth = 297;
+                                                    const imgHeight = 210;
+                                                    const imgData = canvas.toDataURL('image/png');
+                                                    doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+                                                    const fileName = `Certificate_${p.name.replace(/ /g, '_')}_${course.course_type}.pdf`;
+                                                    doc.save(fileName);
+                                                }
+                                            }}
+                                            title="Generate Single Certificate"
+                                            disabled={isCacheLoading.federalCoordinators}
+                                        >
+                                            {isCacheLoading.federalCoordinators ? <Spinner size="sm" /> : 'Certificate'}
+                                        </Button>
 
-                                {/* --- NEW: Email Single Button (Mobile) --- */}
-                                <Button 
-                                    variant="secondary" 
-                                    onClick={() => handleOpenSingleEmail(p)}
-                                    title={p.email ? "Send Certificate to Email" : "No email address available"}
-                                    disabled={!p.email} 
-                                    className={!p.email ? "opacity-50 cursor-not-allowed" : ""}
-                                >
-                                    <Mail className="w-4 h-4" />
-                                </Button>
-                                {/* ---------------------------------------- */}
+                                        <Button 
+                                            variant="secondary" 
+                                            onClick={() => handleOpenSingleEmail(p)}
+                                            title={p.email ? "Send Certificate to Email" : "No email address available"}
+                                            disabled={!p.email} 
+                                            className={!p.email ? "opacity-50 cursor-not-allowed" : ""}
+                                        >
+                                            <Mail className="w-4 h-4" />
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <div className="flex items-center gap-1 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded border border-orange-200 w-full justify-center sm:w-auto" title="Certificates must be approved by the Federal Program Manager in the Admin Dashboard before downloading.">
+                                        <Lock className="w-3 h-3" />
+                                        <span>Pending Approval</span>
+                                    </div>
+                                )}
 
                                 {(course.course_type === 'ICCM' || course.course_type === 'EENC') && (
                                     <Button variant="secondary" onClick={() => onOpenTestFormForParticipant(p.id)}>
@@ -2376,7 +2397,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                         <FormGroup label="Has immunization service?"><Select value={hasImm ? 'yes' : 'no'} onChange={e => setHasImm(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
                                         {!hasImm && <FormGroup label="Nearest immunization center?"><Input value={nearestImm} onChange={e => setNearestImm(e.target.value)} /></FormGroup>}
                                         <FormGroup label="Has ORS corner service?"><Select value={hasORS ? 'yes' : 'no'} onChange={e => setHasORS(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                                        <FormGroup label="Growth Monitoring Service"><Select value={hasGrowthMonitoring ? 'yes' : 'no'} onChange={e => setHasGrowthMonitoring(e.target.value === 'yes')}><option value="no">No</option><option valueV="yes">Yes</option></Select></FormGroup>
+                                        <FormGroup label="Growth Monitoring Service"><Select value={hasGrowthMonitoring ? 'yes' : 'no'} onChange={e => setHasGrowthMonitoring(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
                                         <FormGroup label="Weighting scale"><Select value={hasWeightScale ? 'yes' : 'no'} onChange={e => setHasWeightScale(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
                                         <FormGroup label="Height scale"><Select value={hasHeightScale ? 'yes' : 'no'} onChange={e => setHasHeightScale(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
                                         <FormGroup label="Thermometer"><Select value={hasThermometer ? 'yes' : 'no'} onChange={e => setHasThermometer(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>

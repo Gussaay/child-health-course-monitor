@@ -1472,6 +1472,12 @@ export function PublicCertificateDownloadView({ participantId }) {
                 const course = await getCourseById(participant.courseId, 'server');
                 if (!course) throw new Error("Course not found.");
 
+                // --- NEW CHECK: Ensure Certificate is Approved ---
+                if (!course.isCertificateApproved) {
+                    throw new Error("Certificates for this course have not yet been approved/released by the National Child Health Program.");
+                }
+                // -----------------------------------------------
+
                 // 3. Fetch Federal Manager Name (Handle Permission Error Gracefully)
                 let managerName = "Federal Program Manager";
                 try {
@@ -1606,6 +1612,12 @@ export function PublicCourseCertificatesView({ courseId }) {
                 // 1. Fetch Course
                 const course = await getCourseById(courseId, 'server');
                 if (!course) throw new Error("Course not found.");
+
+                // --- NEW CHECK: Ensure Certificate is Approved ---
+                if (!course.isCertificateApproved) {
+                    throw new Error("Certificates for this course have not yet been approved/released.");
+                }
+                // -----------------------------------------------
 
                 // 2. Fetch All Participants
                 const participants = await listAllParticipantsForCourse(courseId, 'server');

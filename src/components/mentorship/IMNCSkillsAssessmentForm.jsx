@@ -4,7 +4,7 @@ import {
     FormGroup, Select, Checkbox
 } from '../CommonComponents';
 
-// --- Single Skill Checklist Item (Moved here) ---
+// --- Single Skill Checklist Item ---
 export const SkillChecklistItem = ({ label, value, onChange, name, showNaOption = true, naLabel = "لا ينطبق", isMainSymptom = false, scoreCircle = null }) => {
     const handleChange = (e) => { onChange(name, e.target.value); };
 
@@ -40,7 +40,7 @@ export const SkillChecklistItem = ({ label, value, onChange, name, showNaOption 
 };
 
 
-// --- Score Circle Component (Moved here) ---
+// --- Score Circle Component ---
 export const ScoreCircle = ({ score, maxScore }) => {
     if (maxScore === null || maxScore === undefined || score === null || score === undefined) {
         return null;
@@ -77,7 +77,7 @@ export const ScoreCircle = ({ score, maxScore }) => {
 };
 
 
-// --- Helper function to evaluate the relevance logic (Moved here) ---
+// --- Helper function to evaluate the relevance logic ---
 export const evaluateRelevance = (relevanceString, formData) => {
     if (!relevanceString) return true;
     const logicRegex = /\$\{(.*?)\}='(.*?)'/;
@@ -102,7 +102,7 @@ export const evaluateRelevance = (relevanceString, formData) => {
 };
 
 
-// --- Form Structure (Moved here) ---
+// --- Form Structure ---
 export const IMNCI_FORM_STRUCTURE = [
     {
         group: 'تقييم مهارات التقييم والتصنيف',
@@ -265,7 +265,7 @@ export const IMNCI_FORM_STRUCTURE = [
     }
 ];
 
-// --- Classification Constants (Moved here) ---
+// --- Classification Constants ---
 export const COUGH_CLASSIFICATIONS = ["التهاب رئوي شديد أو مرض شديد جدا", "التهاب رئوي", "كحة أو نزلة برد"];
 export const DIARRHEA_CLASSIFICATIONS = ["جفاف شديد", "بعض الجفاف", "لا يوجد جفاف", "إسهال مستمر شديد", "إسهال مستمر", "دسنتاريا"];
 export const DIARRHEA_COLS_1 = ["جفاف شديد", "بعض الجفاف", "لا يوجد جفاف"];
@@ -277,10 +277,10 @@ export const EAR_CLASSIFICATIONS = ["التهاب العظمة خلف الاذن
 export const MALNUTRITION_CLASSIFICATIONS = ["سوء تغذية شديد مصحوب بمضاعفات", "سوء تغذية شديد غير مصحوب بمضاعفات", "سوء تغذية حاد متوسط", "لا يوجد سوء تغذية"];
 export const ANEMIA_CLASSIFICATIONS = ["فقر دم شديد", "فقر دم", "لا يوجد فقر دم"];
 
-// Helper for initial state (Moved here)
+// Helper for initial state
 export const createInitialClassificationState = (classifications) => classifications.reduce((acc, c) => { acc[c] = false; return acc; }, {});
 
-// --- Initial Form Data setup (Moved here) ---
+// --- Initial Form Data setup ---
 export const getInitialFormData = () => {
     const initialState = {
         session_date: new Date().toISOString().split('T')[0], notes: '', assessment_skills: { supervisor_confirms_cough: '', worker_cough_classification: '', supervisor_correct_cough_classification: '', supervisor_confirms_diarrhea: '', worker_diarrhea_classification: createInitialClassificationState(DIARRHEA_CLASSIFICATIONS), supervisor_correct_diarrhea_classification: createInitialClassificationState(DIARRHEA_CLASSIFICATIONS), supervisor_confirms_fever: '', worker_fever_classification: createInitialClassificationState(FEVER_CLASSIFICATIONS), supervisor_correct_fever_classification: createInitialClassificationState(FEVER_CLASSIFICATIONS), supervisor_confirms_ear: '', worker_ear_classification: '', supervisor_correct_ear_classification: '', worker_malnutrition_classification: '', supervisor_correct_malnutrition_classification: '', worker_anemia_classification: '', supervisor_correct_anemia_classification: '', }, treatment_skills: {}, finalDecision: '', decisionMatches: '',
@@ -300,7 +300,7 @@ export const getInitialFormData = () => {
     return initialState;
 };
 
-// --- Helper function to find incomplete treatment skills (Moved here) ---
+// --- Helper function to find incomplete treatment skills ---
 export const ensureArrayOfKeys = (data, classifications) => {
     if (Array.isArray(data)) {
         return data;
@@ -312,7 +312,7 @@ export const ensureArrayOfKeys = (data, classifications) => {
     return [];
 };
 
-// --- Helper to rehydrate draft data into form state (Moved here) ---
+// --- Helper to rehydrate draft data into form state ---
 // --- MODIFIED: Pass in constants to avoid circular dependencies ---
 export const rehydrateDraftData = (draft, DIARRHEA_CLASSIFICATIONS, FEVER_CLASSIFICATIONS) => {
     const rehydrated = getInitialFormData();
@@ -712,7 +712,7 @@ export const calculateScores = (formData) => {
 };
 // --- END calculateScores ---
 
-// --- Helper function to find incomplete treatment skills (Moved here) ---
+// --- Helper function to find incomplete treatment skills ---
 export const findIncompleteTreatmentSkills = (formData) => {
     const treatmentGroup = IMNCI_FORM_STRUCTURE.find(g => g.sectionKey === 'treatment_skills');
     if (!treatmentGroup) return [];
@@ -747,7 +747,7 @@ export const findIncompleteTreatmentSkills = (formData) => {
 };
 
 
-// --- Step completion helpers (Moved here) ---
+// --- Step completion helpers ---
 const isMultiSelectGroupEmpty = (obj) => !obj || !Object.values(obj).some(v => v === true);
 
 export const isVitalSignsComplete = (data) => { const skills = data.assessment_skills; return skills.skill_weight !== '' && skills.skill_temp !== '' && skills.skill_height !== ''; };

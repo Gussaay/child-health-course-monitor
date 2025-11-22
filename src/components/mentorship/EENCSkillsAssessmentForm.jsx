@@ -324,7 +324,8 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
         onSaveComplete,
         setToast,
         existingSessionData = null,
-        visitNumber = 1, 
+        visitNumber = 1,
+        canEditVisitNumber = false, // <--- NEW PROP
         lastSessionDate = null,
         onDraftCreated,
         setIsMothersFormModalOpen,
@@ -344,6 +345,15 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
     const auth = getAuth();
     const user = auth.currentUser;
     const [isFormComplete, setIsFormComplete] = useState(false);
+
+    // --- NEW: Visit Number State ---
+    const [currentVisitNumber, setCurrentVisitNumber] = useState(visitNumber);
+
+    // Keep local state in sync if the parent prop changes (e.g., switching facility)
+    useEffect(() => {
+        setCurrentVisitNumber(visitNumber);
+    }, [visitNumber]);
+    // -------------------------------
 
     // --- Refs for Autosave ---
     const formDataRef = useRef(formData);
@@ -465,7 +475,7 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                 scores: scoresPayload,
                 notes: currentFormData.notes,
                 status: 'draft',
-                visitNumber: visitNumber,
+                visitNumber: Number(currentVisitNumber), // <--- USE LOCAL STATE
                 eenc_breathing_status: currentFormData.eenc_breathing_status,
                 skills: currentFormData.skills,
             };
@@ -490,7 +500,7 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
         } catch (error) {
             console.error("Autosave failed:", error);
         }
-    }, []); 
+    }, [currentVisitNumber]); // Added dependency
 
     // --- useImperativeHandle ---
     useImperativeHandle(ref, () => ({
@@ -577,7 +587,7 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                 scores: scoresPayload,
                 notes: formData.notes,
                 status: status,
-                visitNumber: visitNumber,
+                visitNumber: Number(currentVisitNumber), // <--- USE LOCAL STATE
                 eenc_breathing_status: formData.eenc_breathing_status,
                 skills: formData.skills,
             };
@@ -665,9 +675,22 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                                     <span className="font-medium text-gray-500">تاريخ الجلسة السابقة:</span>
                                     <span className="font-semibold text-gray-900 mr-2">{lastSessionDate || '---'}</span> 
                                 </div>
-                                <div className="text-sm"><span className="font-medium text-gray-700">رقم الجلسة:</span>
-                                    <span className="text-lg font-bold text-sky-700 mr-2">{visitNumber}</span>
+                                {/* --- REPLACE THE VISIT NUMBER RENDER LOGIC HERE --- */}
+                                <div className="text-sm flex items-center">
+                                    <span className="font-medium text-gray-700 ml-2">رقم الجلسة:</span>
+                                    {canEditVisitNumber ? (
+                                        <Input 
+                                            type="number" 
+                                            min="1"
+                                            value={currentVisitNumber}
+                                            onChange={(e) => setCurrentVisitNumber(e.target.value)}
+                                            className="w-20 p-1 text-center font-bold text-sky-700 border-sky-300 focus:ring-sky-500"
+                                        />
+                                    ) : (
+                                        <span className="text-lg font-bold text-sky-700 mr-2">{currentVisitNumber}</span>
+                                    )}
                                 </div>
+                                {/* -------------------------------------------------- */}
                             </div>
                         </div>
                     </div>

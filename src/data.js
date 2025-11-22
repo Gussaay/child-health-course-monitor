@@ -1,20 +1,18 @@
 // data.js
-import { db, auth as firebaseAuth } from './firebase'; // Import auth
+import { db, auth as firebaseAuth } from './firebase'; 
 import {
     collection,
     query,
     where,
-    // --- MODIFICATION: Import Firebase functions with 'fb' prefix ---
     getDocs as fbGetDocs,
     doc,
     setDoc as fbSetDoc,
     addDoc as fbAddDoc,
     deleteDoc as fbDeleteDoc,
-    writeBatch as fbWriteBatch, // Ensure this is imported correctly
+    writeBatch as fbWriteBatch, 
     updateDoc as fbUpdateDoc,
     getDoc as fbGetDoc,
-    increment, // Import increment
-    // --- END MODIFICATION ---
+    increment, 
     serverTimestamp,
     orderBy,
     limit,
@@ -22,131 +20,53 @@ import {
     startAfter
 } from "firebase/firestore";
 import { deleteField } from "firebase/firestore";
-import { onAuthStateChanged } from 'firebase/auth'; // Import onAuthStateChanged
+import { onAuthStateChanged } from 'firebase/auth'; 
 import { storage } from './firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 
-// --- NEW: Usage Tracking Variables ---
+// --- USAGE TRACKING VARIABLES ---
 let currentUser = null;
 let sessionReads = 0;
 let sessionWrites = 0;
-let lastDbUpdateTime = 0; // Still used for debouncing op counts
-const UPDATE_INTERVAL = 30000; // Update Firestore every 30 seconds
-const UPDATE_THRESHOLD = 15; // Or update every 15 operations
-let updateTimeout = null; // To debounce updates
+let lastDbUpdateTime = 0; 
+const UPDATE_INTERVAL = 30000; 
+const UPDATE_THRESHOLD = 15; 
+let updateTimeout = null; 
 
-// --- MODIFIED: Duration Tracking Variables ---
-let localSessionDurationMs = 0; // In-memory counter for the current session
-let durationIntervalId = null; // Timer for the local counter
-const DURATION_TICK_MS = 60 * 1000; // Update local duration every 1 minute
-const LOCAL_STORAGE_KEY_DURATION = 'unsyncedAppDuration'; // Key for browser storage
+let localSessionDurationMs = 0; 
+let durationIntervalId = null; 
+const DURATION_TICK_MS = 60 * 1000; 
+const LOCAL_STORAGE_KEY_DURATION = 'unsyncedAppDuration'; 
 
-// --- NEW: Function to sync duration to Firestore (uses RAW functions) ---
+// --- INTERNAL HELPERS FOR USAGE TRACKING ---
 const syncDurationToDb = (durationMs, userId) => {
-    if (!userId || !durationMs || durationMs <= 0) {
-        return; // Nothing to sync
-    }
+    if (!userId || !durationMs || durationMs <= 0) return;
 
     const userUsageRef = doc(db, 'userUsageStats', userId);
-    // Use fbSetDoc directly to avoid recursive counting
     fbSetDoc(userUsageRef, {
         totalActiveDurationMs: increment(durationMs),
-        lastUpdated: serverTimestamp() // Update lastUpdated when syncing duration too
-    }, { merge: true })
-    .then(() => {
-        console.log(`Synced ${durationMs}ms of active time for user ${userId}.`);
-    })
-    .catch(error => {
-        console.error("Failed to update active duration:", error);
-    });
+        lastUpdated: serverTimestamp() 
+    }, { merge: true }).catch(e => console.error("Failed to sync duration:", e));
 };
 
-// --- MODIFIED: Function to update the local (in-memory) duration counter ---
 const tickLocalDuration = () => {
-    // If the user logs out, the interval is cleared by onAuthStateChanged
     if (!currentUser) {
         if (durationIntervalId) clearInterval(durationIntervalId);
         durationIntervalId = null;
         return;
     }
-
-    // Always increment the local counter as long as the interval is running
     localSessionDurationMs += DURATION_TICK_MS;
 };
 
-// --- NEW: Function to save duration to localStorage on browser close/refresh ---
 const saveDurationToLocalStorage = () => {
     if (localSessionDurationMs > 0) {
-        // Add our current in-memory time to any time that might already be in storage
         const existingUnsyncedMs = parseInt(localStorage.getItem(LOCAL_STORAGE_KEY_DURATION) || '0', 10);
         const totalUnsyncedMs = existingUnsyncedMs + localSessionDurationMs;
-
         localStorage.setItem(LOCAL_STORAGE_KEY_DURATION, totalUnsyncedMs.toString());
-
-        // Reset in-memory counter to prevent double-counting if logout also fires
         localSessionDurationMs = 0;
     }
 };
 
-// --- MODIFIED: Initialize Usage Tracking ---
-export const initializeUsageTracking = () => {
-  onAuthStateChanged(firebaseAuth, (user) => {
-    // --- This block runs on LOGOUT ---
-    if (!user) {
-        // 1. Stop all timers
-        if (durationIntervalId) clearInterval(durationIntervalId); // Stop duration timer
-        durationIntervalId = null;
-        if (updateTimeout) clearTimeout(updateTimeout); // Stop op count timer
-        updateTimeout = null;
-
-        // 2. Remove the "browser close" listener
-        window.removeEventListener('beforeunload', saveDurationToLocalStorage);
-
-        // 3. Sync any remaining duration from this session
-        if (currentUser && localSessionDurationMs > 0) {
-            syncDurationToDb(localSessionDurationMs, currentUser.uid);
-        }
-
-        // 4. Clear all local state
-        currentUser = null;
-        localSessionDurationMs = 0;
-        sessionReads = 0;
-        sessionWrites = 0;
-
-        // 5. Clear localStorage just in case (logout is a clean exit)
-        localStorage.removeItem(LOCAL_STORAGE_KEY_DURATION);
-
-        return;
-    }
-
-    // --- This block runs on LOGIN ---
-    if (user && !currentUser) { // Check !currentUser to run only once on login
-        currentUser = { uid: user.uid, email: user.email };
-
-        // 1. Sync any duration left over from a previous *crashed* session
-        const unsyncedMs = parseInt(localStorage.getItem(LOCAL_STORAGE_KEY_DURATION) || '0', 10);
-        if (unsyncedMs > 0) {
-            syncDurationToDb(unsyncedMs, currentUser.uid);
-            localStorage.removeItem(LOCAL_STORAGE_KEY_DURATION); // Clear it after syncing
-        }
-
-        // 2. Reset all local counters for the new session
-        localSessionDurationMs = 0;
-        sessionReads = 0;
-        sessionWrites = 0;
-        lastDbUpdateTime = Date.now(); // Reset op count timer base
-
-        // 3. Start the local duration timer
-        durationIntervalId = setInterval(tickLocalDuration, DURATION_TICK_MS);
-
-        // 4. Add the "browser close" listener
-        window.addEventListener('beforeunload', saveDurationToLocalStorage);
-    }
-  });
-};
-
-
-// --- NEW: Function to update Firestore (uses RAW functions) ---
 const updateUsageStatsInDb = () => {
     if (!currentUser || (sessionReads === 0 && sessionWrites === 0)) {
         if (updateTimeout) clearTimeout(updateTimeout);
@@ -173,27 +93,16 @@ const updateUsageStatsInDb = () => {
         totalWrites: increment(writesToUpdate),
         email: userEmail,
         lastUpdated: serverTimestamp()
-    }, { merge: true })
-    .catch(error => {
-        console.error("Failed to update usage stats:", error);
-    });
+    }, { merge: true }).catch(e => console.error("Failed to update stats:", e));
 };
 
-
-// --- MODIFIED: Global event dispatcher & usage tracker ---
 const dispatchOpEvent = (type, count = 1) => {
   if (count > 0 && currentUser) {
-    // 1. Dispatch browser event for real-time UI update (ResourceMonitor)
     window.dispatchEvent(new CustomEvent('firestoreOperation', { detail: { type, count } }));
 
-    // 2. Update local session counts for reads/writes
-    if (type === 'read') {
-      sessionReads += count;
-    } else {
-      sessionWrites += count;
-    }
+    if (type === 'read') sessionReads += count;
+    else sessionWrites += count;
 
-    // 3. Check if we need to schedule a Firestore update
     const totalOpsSinceLastUpdate = sessionReads + sessionWrites;
     const timeSinceLastUpdate = Date.now() - lastDbUpdateTime;
 
@@ -206,46 +115,65 @@ const dispatchOpEvent = (type, count = 1) => {
        updateUsageStatsInDb();
     }
     else if (!updateTimeout) {
-        // Calculate remaining time carefully
         const remainingTime = UPDATE_INTERVAL - timeSinceLastUpdate;
         updateTimeout = setTimeout(updateUsageStatsInDb, remainingTime > 0 ? remainingTime : 0);
     }
   }
 };
 
-// --- Wrapped Firestore functions (Unchanged) ---
+// --- INITIALIZATION ---
+export const initializeUsageTracking = () => {
+  onAuthStateChanged(firebaseAuth, (user) => {
+    if (!user) {
+        if (durationIntervalId) clearInterval(durationIntervalId);
+        durationIntervalId = null;
+        if (updateTimeout) clearTimeout(updateTimeout);
+        updateTimeout = null;
+        window.removeEventListener('beforeunload', saveDurationToLocalStorage);
+        if (currentUser && localSessionDurationMs > 0) {
+            syncDurationToDb(localSessionDurationMs, currentUser.uid);
+        }
+        currentUser = null;
+        localSessionDurationMs = 0;
+        sessionReads = 0;
+        sessionWrites = 0;
+        localStorage.removeItem(LOCAL_STORAGE_KEY_DURATION);
+        return;
+    }
+
+    if (user && !currentUser) { 
+        currentUser = { uid: user.uid, email: user.email };
+        const unsyncedMs = parseInt(localStorage.getItem(LOCAL_STORAGE_KEY_DURATION) || '0', 10);
+        if (unsyncedMs > 0) {
+            syncDurationToDb(unsyncedMs, currentUser.uid);
+            localStorage.removeItem(LOCAL_STORAGE_KEY_DURATION); 
+        }
+        localSessionDurationMs = 0;
+        sessionReads = 0;
+        sessionWrites = 0;
+        lastDbUpdateTime = Date.now(); 
+        durationIntervalId = setInterval(tickLocalDuration, DURATION_TICK_MS);
+        window.addEventListener('beforeunload', saveDurationToLocalStorage);
+    }
+  });
+};
+
+// --- FIRESTORE WRAPPERS ---
 export const getDocs = async (query, options) => {
-  // --- MODIFICATION: Allow options to be undefined ---
   const snapshot = await fbGetDocs(query, options);
   if (options?.source !== 'cache') {
-    // Count 1 read for the query + 1 per doc
     dispatchOpEvent('read', 1 + (snapshot.docs.length || 0));
   }
   return snapshot;
 };
 
-// --- *** START OF OFFLINE FIX #1 *** ---
-// This simplified function allows Firestore's default
-// cache-first behavior to work correctly when offline.
 export const getDoc = async (docRef, options) => {
-  // 1. Pass the options object (e.g., { source: 'server' } or undefined)
-  //    directly to the raw Firestore function (fbGetDoc).
-  //    When 'options' is undefined, Firestore (with persistence enabled)
-  //    will correctly serve from the cache if offline.
   const snapshot = await fbGetDoc(docRef, options);
-
-  // 2. Count the read operation, ONLY IF:
-  //    a) The request was not *explicitly* a 'cache' request.
-  //    b) The document actually existed (no reads for non-existent docs).
   if (options?.source !== 'cache' && snapshot.exists()) {
     dispatchOpEvent('read', 1);
   }
-
-  // 3. Return the snapshot.
   return snapshot;
 };
-// --- *** END OF OFFLINE FIX #1 *** ---
-
 
 export const setDoc = async (docRef, data, options) => {
   await fbSetDoc(docRef, data, options);
@@ -264,68 +192,47 @@ export const deleteDoc = async (docRef) => {
 };
 
 export const updateDoc = async (docRef, data) => {
-  await fbUpdateDoc(docRef, { ...data }); // Use spread operator
+  await fbUpdateDoc(docRef, { ...data }); 
   dispatchOpEvent('write', 1);
-
 };
 
 export const writeBatch = (firestore) => {
   const batch = fbWriteBatch(firestore);
   let writeCount = 0;
-
-  // Wrap batch methods
   const originalSet = batch.set;
   batch.set = (docRef, data, options) => {
     writeCount++;
     return originalSet.call(batch, docRef, data, options);
   };
-
   const originalUpdate = batch.update;
-  batch.update = (docRef, data) => { // Correct signature
+  batch.update = (docRef, data) => { 
     writeCount++;
-    return originalUpdate.call(batch, docRef, data); // Pass docRef and data
+    return originalUpdate.call(batch, docRef, data); 
   };
-
   const originalDelete = batch.delete;
   batch.delete = (docRef) => {
     writeCount++;
     return originalDelete.call(batch, docRef);
   };
-
-  // Wrap commit
   const originalCommit = batch.commit;
   batch.commit = async () => {
     await originalCommit.call(batch);
-    dispatchOpEvent('write', writeCount); // Dispatch total count AFTER commit succeeds
+    dispatchOpEvent('write', writeCount); 
   };
-
   return batch;
 };
-// --- END WRAPPED FUNCTIONS ---
 
-
-// --- *** THIS IS THE CRITICAL FIX *** ---
-// --- MODIFIED: getData now uses Firestore's default cache-aware behavior ---
 async function getData(query, sourceOptions = {}) {
-    // We simply pass the sourceOptions directly to getDocs.
-    // If sourceOptions is {}, getDocs uses Firestore's default behavior
-    // (which respects the offline cache you enabled).
-    // If sourceOptions is { source: 'server' } (e.g., for incremental
-    // facility fetches), it will try the server.
     try {
         const snapshot = await getDocs(query, sourceOptions); 
         return snapshot;
     } catch (e) {
-        // If the query fails (e.g., offline and { source: 'server' } was
-        // requested), Firestore will throw. We re-throw so the
-        // caller (DataContext) can handle it and return a default value.
         console.error(`getData query failed with options ${JSON.stringify(sourceOptions)}:`, e.message);
         throw e; 
     }
 }
-// --- *** END OF CRITICAL FIX *** ---
 
-// uploadFile and deleteFile don't interact with Firestore directly
+// --- STORAGE HELPERS ---
 export async function uploadFile(file) {
     if (!file) return null;
     const storageRef = ref(storage, `uploads/${Date.now()}_${file.name}`);
@@ -347,25 +254,19 @@ export async function deleteFile(fileUrl) {
        if (error.code !== 'storage/object-not-found') {
             console.error("Error deleting file:", error);
             throw error;
-       } else {
-            console.warn("Attempted to delete a file that does not exist:", fileUrl);
        }
     }
 }
 
-
-// --- MODIFIED: saveFacilitySnapshot ensures lastSnapshotAt is set ---
+// --- FACILITY SNAPSHOTS & LISTING ---
 export async function saveFacilitySnapshot(payload, externalBatch = null) {
     if (!payload.date_of_visit) {
         throw new Error("Cannot save a historical snapshot without a 'date_of_visit'.");
     }
-
     let visitDate;
     try {
         visitDate = new Date(payload.date_of_visit);
-        if (isNaN(visitDate.getTime())) {
-            throw new Error(`Invalid date format.`);
-        }
+        if (isNaN(visitDate.getTime())) throw new Error(`Invalid date format.`);
     } catch (e) {
         throw new Error(`Failed to process date_of_visit ('${payload.date_of_visit}'). Reason: ${e.message}`);
     }
@@ -402,39 +303,37 @@ export async function saveFacilitySnapshot(payload, externalBatch = null) {
     delete snapshotData.submittedAt;
     batch.set(snapshotRef, snapshotData);
 
-    // KEY CHANGE: Ensure lastSnapshotAt is set on every update to the main document to support incremental fetching
     const mainFacilityData = { ...payload, id: facilityId, lastSnapshotAt: serverTimestamp() };
     if (isNewFacility) mainFacilityData.createdAt = serverTimestamp();
     delete mainFacilityData.submissionId;
     delete mainFacilityData.status;
     delete mainFacilityData.submittedAt;
     batch.set(facilityRef, mainFacilityData, { merge: true });
-    // --- END KEY CHANGE ---
-
 
     if (!externalBatch) await batch.commit();
     return facilityId;
 }
+
 export async function upsertHealthFacility(payload) {
     if (!payload.date_of_visit) {
         payload.date_of_visit = new Date().toISOString().split('T')[0];
     }
     return await saveFacilitySnapshot(payload);
 }
+
 const isDataChanged = (newData, oldData) => {
     const keysToCompare = Object.keys(newData);
     for (const key of keysToCompare) {
         if (['id', 'lastSnapshotAt', 'createdAt', 'اخر تحديث', 'updated_by'].includes(key)) continue;
-        // Basic check, might need deep comparison for nested objects if they occur
         if (JSON.stringify(newData[key]) !== JSON.stringify(oldData[key])) return true;
     }
-    // Check if keys were removed in newData
     for (const key of Object.keys(oldData)) {
          if (['id', 'lastSnapshotAt', 'createdAt', 'اخر تحديث', 'updated_by'].includes(key)) continue;
-         if (!(key in newData)) return true; // Key removed
+         if (!(key in newData)) return true; 
     }
     return false;
 };
+
 export async function importHealthFacilities(facilities, originalRows, onProgress) {
     const errors = [];
     const successes = [];
@@ -457,7 +356,7 @@ export async function importHealthFacilities(facilities, originalRows, onProgres
 
                 if (facilityData.id) {
                     const docRef = doc(db, "healthFacilities", facilityData.id);
-                    existingDocSnap = await getDoc(docRef); // Use wrapped getDoc
+                    existingDocSnap = await getDoc(docRef); 
                     if (existingDocSnap.exists()) {
                          existingDocData = existingDocSnap.data();
                     }
@@ -465,7 +364,7 @@ export async function importHealthFacilities(facilities, originalRows, onProgres
                     const { "الولاية": state, "المحلية": locality, "اسم_المؤسسة": facilityName } = facilityData;
                     if (state && locality && facilityName) {
                         const q = query(collection(db, "healthFacilities"), where("الولاية", "==", state), where("المحلية", "==", locality), where("اسم_المؤسسة", "==", facilityName), limit(1));
-                        const snapshot = await getDocs(q); // Use wrapped getDocs
+                        const snapshot = await getDocs(q); 
                         if (!snapshot.empty) {
                              existingDocSnap = snapshot.docs[0];
                              existingDocData = existingDocSnap.data();
@@ -479,7 +378,6 @@ export async function importHealthFacilities(facilities, originalRows, onProgres
                     await saveFacilitySnapshot(facilityData, batch);
                     successes.push({ id: facilityData.id || 'new', action: 'created' });
                 } else {
-                    // Combine existing data with new data, ensuring ID is correct
                     const payload = { ...existingDocData, ...facilityData, id: existingDocSnap.id };
                     if (isDataChanged(payload, existingDocData)) {
                         await saveFacilitySnapshot(payload, batch);
@@ -492,31 +390,21 @@ export async function importHealthFacilities(facilities, originalRows, onProgres
                 const originalRowForError = chunkOriginalRows ? chunkOriginalRows[j] : null;
                 const errorPayload = { message: e.message || 'Unknown error during import.', rowIndex: progressIndex, rowData: originalRowForError };
                 errors.push(errorPayload);
-                if (originalRowForError) {
-                    failedRowsData.push(errorPayload);
-                }
-                // Don't re-throw, just record error and continue batch
+                if (originalRowForError) failedRowsData.push(errorPayload);
             }
-             // Report progress after attempting each row
-             if (onProgress) {
-                 onProgress({ processed: progressIndex + 1, total: facilities.length });
-             }
+             if (onProgress) onProgress({ processed: progressIndex + 1, total: facilities.length });
         }
          try {
-             await batch.commit(); // Commit batch
+             await batch.commit(); 
          } catch(commitError) {
              console.error(`Batch commit failed starting at index ${i}:`, commitError);
-             // Mark all rows in this chunk as failed if commit fails
              for (let k = 0; k < chunk.length; k++) {
                  const progressIndex = i + k;
                  const originalRowForError = chunkOriginalRows ? chunkOriginalRows[k] : null;
-                 // Avoid adding duplicate errors if individual row already failed
                  if (!errors.some(err => err.rowIndex === progressIndex)) {
                      const errorPayload = { message: `Batch commit failed: ${commitError.message}`, rowIndex: progressIndex, rowData: originalRowForError };
                      errors.push(errorPayload);
-                      if (originalRowForError) {
-                         failedRowsData.push(errorPayload);
-                      }
+                      if (originalRowForError) failedRowsData.push(errorPayload);
                  }
              }
          }
@@ -525,66 +413,40 @@ export async function importHealthFacilities(facilities, originalRows, onProgres
 }
 
 export async function approveFacilitySubmission(submission, approverEmail) {
-    const { submissionId, ...facilityData } = submission; // Separate submissionId
-    await saveFacilitySnapshot(facilityData); // Save the actual data
+    const { submissionId, ...facilityData } = submission; 
+    await saveFacilitySnapshot(facilityData); 
     const submissionRef = doc(db, "facilitySubmissions", submissionId);
     await updateDoc(submissionRef, { status: 'approved', approvedBy: approverEmail, approvedAt: serverTimestamp() });
 }
 
-// --- *** START OF OFFLINE FIX #2 *** ---
-// This corrected function removes the forced { source: 'server' }
-// option, allowing it to read from the cache when offline.
 export async function listHealthFacilities(filters = {}) {
     let q = collection(db, "healthFacilities");
     const conditions = [];
-    
-    // Set a default order. This will be overwritten if more specific filters are used.
     let orderByClause = orderBy("الولاية"); 
 
     if (filters.state && filters.state !== 'NOT_ASSIGNED') conditions.push(where("الولاية", "==", filters.state));
-    
     if (filters.locality) {
         conditions.push(where("المحلية", "==", filters.locality));
-        // If we filter by locality, it's logical to sort by facility name.
-        // This also fixes the invalid query error.
         orderByClause = orderBy("اسم_المؤسسة");
     }
-
     if (filters.facilityType) conditions.push(where("نوع_المؤسسةالصحية", "==", filters.facilityType));
     if (filters.functioningStatus && filters.functioningStatus !== 'NOT_SET') conditions.push(where("هل_المؤسسة_تعمل", "==", filters.functioningStatus));
     if (filters.project) conditions.push(where("project_name", "==", filters.project));
 
-    // NEW TIMESTAMP FILTER LOGIC: Filter by 'lastSnapshotAt'
-    if (filters.lastUpdatedAfter instanceof Date) { // Check if it's a Date object
-        // lastUpdatedAfter is a JavaScript Date object, convert to Firestore Timestamp
+    if (filters.lastUpdatedAfter instanceof Date) { 
         const timestamp = Timestamp.fromDate(filters.lastUpdatedAfter);
-        // Query for documents where the last update time is *after* the provided timestamp
         conditions.push(where("lastSnapshotAt", ">", timestamp));
-        
-        // This is the primary order when fetching incrementally
         orderByClause = orderBy("lastSnapshotAt");
     }
-    // END NEW TIMESTAMP FILTER LOGIC
-
 
     if (conditions.length > 0) q = query(q, ...conditions);
-
-    // Apply the single, correct orderBy clause
     q = query(q, orderByClause);
 
     try {
-        // --- *** THIS IS THE FIX *** ---
-        // The line '{ source: 'server' }' has been removed.
-        // We now pass an empty object, which allows Firestore's
-        // persistence-enabled default behavior to work.
-        // It will now correctly serve from the cache when offline.
         const sourceOptions = {};
         const querySnapshot = await getData(q, sourceOptions);
-        // --- *** END OF FIX *** ---
-
         let facilities = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
-        // Post-query filtering (only needed for complex filters not supported by Firestore query)
         if (filters.state === 'NOT_ASSIGNED') facilities = facilities.filter(f => !f['الولاية']);
         if (filters.functioningStatus === 'NOT_SET') facilities = facilities.filter(f => f['هل_المؤسسة_تعمل'] == null || f['هل_المؤسسة_تعمل'] === '');
 
@@ -594,7 +456,6 @@ export async function listHealthFacilities(filters = {}) {
         throw error;
     }
 }
-// --- *** END OF OFFLINE FIX #2 *** ---
 
 export async function getHealthFacilityById(facilityId) {
     const docRef = doc(db, "healthFacilities", facilityId);
@@ -620,18 +481,15 @@ export async function deleteFacilitiesBatch(facilityIds) {
     return deletedCount;
 }
 export async function submitFacilityDataForApproval(payload, submitterIdentifier = 'Unknown User') {
-    const { id, ...dataToSubmit } = payload; // Separate original ID if exists
+    const { id, ...dataToSubmit } = payload; 
     const submissionData = {
          ...dataToSubmit,
-         originalFacilityId: id || null, // Store original ID if updating
+         originalFacilityId: id || null, 
          submittedAt: serverTimestamp(),
          status: 'pending',
-         updated_by: submitterIdentifier // Record who submitted
+         updated_by: submitterIdentifier 
      };
-     // Ensure no 'id' field is sent if it was undefined
-     if (submissionData.id === undefined) {
-         delete submissionData.id;
-     }
+     if (submissionData.id === undefined) delete submissionData.id;
     const newSubmissionRef = await addDoc(collection(db, "facilitySubmissions"), submissionData);
     return newSubmissionRef.id;
 }
@@ -644,127 +502,82 @@ export async function rejectFacilitySubmission(submissionId, rejectorEmail) {
     await updateDoc(doc(db, "facilitySubmissions", submissionId), { status: 'rejected', rejectedBy: rejectorEmail, rejectedAt: serverTimestamp() });
 }
 
-// --- NEW FUNCTION TO ADD/UPDATE A HEALTH WORKER IN A FACILITY ---
-/**
- * Adds a new health worker or updates an existing one in a facility's imnci_staff list.
- * This function creates a new facility snapshot.
- * @param {string} facilityId - The ID of the facility to update.
- * @param {object} newWorkerData - An object with { name, job_title, training_date, phone }.
- * @param {string} mentorIdentifier - The email or name of the user making the change.
- * @returns {Promise<boolean>} True on success.
- */
 export async function addHealthWorkerToFacility(facilityId, newWorkerData, mentorIdentifier = 'Unknown User') {
     if (!facilityId) throw new Error("Facility ID is required.");
     if (!newWorkerData || !newWorkerData.name) throw new Error("New worker data (at least name) is required.");
 
-    // 1. Get the latest facility data
-    const facility = await getHealthFacilityById(facilityId); // Uses wrapped getDoc
+    const facility = await getHealthFacilityById(facilityId); 
     if (!facility) throw new Error(`Facility with ID ${facilityId} not found.`);
 
-    // 2. Prepare the new staff member object
     const newWorker = {
         name: newWorkerData.name.trim(),
         job_title: newWorkerData.job_title || '',
-        training_date: newWorkerData.training_date || '', // Date from form
+        training_date: newWorkerData.training_date || '', 
         phone: newWorkerData.phone || '',
-        // Mark as trained if a training date is provided
         is_trained: newWorkerData.training_date ? 'Yes' : 'No' 
     };
 
-    // 3. Get existing staff list, parsing if necessary
     let existingStaff = [];
     if (facility.imnci_staff) {
         try {
             existingStaff = typeof facility.imnci_staff === 'string'
                 ? JSON.parse(facility.imnci_staff)
-                // Deep copy if already object to avoid modifying cached data
                 : JSON.parse(JSON.stringify(facility.imnci_staff)); 
-            if (!Array.isArray(existingStaff)) existingStaff = []; // Fallback
+            if (!Array.isArray(existingStaff)) existingStaff = []; 
         } catch (e) {
             console.error("Error parsing existing imnci_staff, starting fresh list.", e);
             existingStaff = [];
         }
     }
 
-    // 4. Check if worker exists (by name or phone) and update or add
     const staffIndex = existingStaff.findIndex(s =>
         s.name === newWorker.name || (s.phone && newWorker.phone && s.phone === newWorker.phone)
     );
 
-    if (staffIndex !== -1) {
-        // Update existing worker
-        existingStaff[staffIndex] = newWorker;
-    } else {
-        // Add new worker
-        existingStaff.push(newWorker);
-    }
+    if (staffIndex !== -1) existingStaff[staffIndex] = newWorker;
+    else existingStaff.push(newWorker);
 
-    // 5. Prepare payload for saveFacilitySnapshot
     const payload = {
-        ...facility, // Spread existing data
-        id: facilityId, // Ensure ID is correct
-        imnci_staff: existingStaff, // Set the updated staff list
-        date_of_visit: new Date().toISOString().split('T')[0], // Use today's date for the snapshot
-        updated_by: mentorIdentifier // Record who made the change
+        ...facility, 
+        id: facilityId, 
+        imnci_staff: existingStaff, 
+        date_of_visit: new Date().toISOString().split('T')[0], 
+        updated_by: mentorIdentifier 
     };
 
-    // 6. Save using saveFacilitySnapshot to create historical record and update main doc
-    // This will also automatically update 'lastSnapshotAt'
     await saveFacilitySnapshot(payload);
-
-    return true; // Indicate success
+    return true; 
 }
-// --- END NEW FUNCTION ---
 
-
-// ... (Course, Participant, Facilitator, Coordinator, Funder, etc. functions remain the same) ...
+// --- COURSES & PARTICIPANTS ---
 export async function getCourseById(courseId, source = 'default') {
     const courseRef = doc(db, "courses", courseId);
-    // --- MODIFICATION: Use sourceOptions object ---
     const sourceOptions = source === 'default' ? {} : { source };
     const courseSnap = await getDoc(courseRef, sourceOptions);
-    if (!courseSnap.exists()) {
-        return null;
-    }
+    if (!courseSnap.exists()) return null;
     return { id: courseSnap.id, ...courseSnap.data() };
 }
 export async function getParticipantById(participantId, source = 'default') {
     const participantRef = doc(db, "participants", participantId);
-    // --- MODIFICATION: Use sourceOptions object ---
     const sourceOptions = source === 'default' ? {} : { source };
     const participantSnap = await getDoc(participantRef, sourceOptions);
-    if (!participantSnap.exists()) {
-        return null;
-    }
+    if (!participantSnap.exists()) return null;
     return { id: participantSnap.id, ...participantSnap.data() };
 }
 export async function getPublicCourseReportData(courseId) {
     const course = await getCourseById(courseId, 'server');
+    if (!course) throw new Error("Report not found.");
+    if (!course.isPublic) throw new Error("This report is not publicly accessible.");
 
-    if (!course) {
-        throw new Error("Report not found.");
-    }
-    if (!course.isPublic) {
-        throw new Error("This report is not publicly accessible.");
-    }
-
-    // --- MODIFICATION: Use exported listAllParticipantsForCourse ---
     const [participants, { allObs, allCases }, finalReport] = await Promise.all([
-        listAllParticipantsForCourse(courseId, { source: 'server' }), // Use exported function
+        listAllParticipantsForCourse(courseId, { source: 'server' }), 
         listAllDataForCourse(courseId, { source: 'server' }),
         getFinalReportByCourseId(courseId, { source: 'server' })
     ]);
-    // --- END MODIFICATION ---
 
-    return {
-        course,
-        participants,
-        allObs,
-        allCases,
-        finalReport,
-    };
+    return { course, participants, allObs, allCases, finalReport };
 }
-// --- MODIFIED: listUsers ---
+
 export async function listUsers(sourceOptions = {}) {
     try {
         const querySnapshot = await getDocs(collection(db, "users"), sourceOptions);
@@ -773,11 +586,11 @@ export async function listUsers(sourceOptions = {}) {
             return {
                 id: doc.id,
                 email: data.email || '',
-                isAdmin: data.isAdmin || false, // Consider removing if role is primary
-                role: data.role || 'user', // Add role
-                permissions: data.permissions || {}, // Add permissions
-                assignedState: data.assignedState || '', // Add assignedState
-                assignedLocalities: data.assignedLocalities || [], // Add assignedLocalities
+                isAdmin: data.isAdmin || false,
+                role: data.role || 'user', 
+                permissions: data.permissions || {}, 
+                assignedState: data.assignedState || '', 
+                assignedLocalities: data.assignedLocalities || [], 
                 access: data.access || {},
                 lastLogin: data.lastLogin || null
             };
@@ -791,9 +604,7 @@ export async function updateUserAccess(userId, module, newAccess) {
     try {
         const userRef = doc(db, "users", userId);
         await setDoc(userRef, {
-            access: {
-                [module]: newAccess
-            }
+            access: { [module]: newAccess }
         }, { merge: true });
         return true;
     } catch (error) {
@@ -802,22 +613,14 @@ export async function updateUserAccess(userId, module, newAccess) {
     }
 }
 export async function updateFacilitatorRole(facilitatorId, newRole) {
-    if (!facilitatorId || !newRole) {
-        throw new Error("Facilitator ID and new role are required.");
-    }
+    if (!facilitatorId || !newRole) throw new Error("Facilitator ID and new role are required.");
     const facilitatorRef = doc(db, 'facilitators', facilitatorId);
-    await updateDoc(facilitatorRef, {
-        role: newRole
-    });
+    await updateDoc(facilitatorRef, { role: newRole });
 }
 export async function getFacilitatorByEmail(email) {
     if (!email) return null;
     try {
-        const q = query(
-            collection(db, "facilitators"),
-            where("email", "==", email),
-            limit(1)
-        );
+        const q = query(collection(db, "facilitators"), where("email", "==", email), limit(1));
         const snapshot = await getDocs(q);
         if (!snapshot.empty) {
             const doc = snapshot.docs[0];
@@ -854,7 +657,6 @@ export async function importFacilitators(facilitators) {
     await batch.commit();
     return true;
 }
-// --- MODIFIED: listFacilitators ---
 export async function listFacilitators(sourceOptions = {}) {
     try {
         let q = collection(db, "facilitators");
@@ -870,26 +672,15 @@ export async function deleteFacilitator(facilitatorId) {
     return true;
 }
 export async function getFacilitatorSubmissionByEmail(email) {
-    if (!email) {
-        return null;
-    }
+    if (!email) return null;
     try {
         const submissionsRef = collection(db, "facilitatorSubmissions");
-        const q = query(
-            submissionsRef,
-            where("email", "==", email),
-            orderBy("submittedAt", "desc"),
-            limit(1)
-        );
-
+        const q = query(submissionsRef, where("email", "==", email), orderBy("submittedAt", "desc"), limit(1));
         const querySnapshot = await getDocs(q);
-
         if (!querySnapshot.empty) {
-            // Check correct property access (docs, not doc)
             const docSnap = querySnapshot.docs[0];
             return { id: docSnap.id, ...docSnap.data() };
         }
-
         return null;
     } catch (error) {
         console.error("Error fetching facilitator submission by email:", error);
@@ -902,7 +693,6 @@ export async function submitFacilitatorApplication(payload) {
     const newSubmissionRef = await addDoc(collection(db, "facilitatorSubmissions"), dataToSave);
     return newSubmissionRef.id;
 }
-// --- MODIFIED: listPendingFacilitatorSubmissions ---
 export async function listPendingFacilitatorSubmissions(sourceOptions = {}) {
     const q = query(collection(db, "facilitatorSubmissions"), where("status", "==", "pending"));
     const snapshot = await getDocs(q, sourceOptions);
@@ -914,28 +704,17 @@ export async function approveFacilitatorSubmission(submission, approverEmail) {
     const newFacRef = doc(collection(db, "facilitators"));
     batch.set(newFacRef, facilitatorData);
     const submissionRef = doc(db, "facilitatorSubmissions", submissionId);
-    batch.update(submissionRef, {
-        status: 'approved',
-        approvedBy: approverEmail,
-        approvedAt: serverTimestamp()
-    });
+    batch.update(submissionRef, { status: 'approved', approvedBy: approverEmail, approvedAt: serverTimestamp() });
     await batch.commit();
 }
 export async function rejectFacilitatorSubmission(submissionId, rejectorEmail) {
     const submissionRef = doc(db, "facilitatorSubmissions", submissionId);
-    await updateDoc(submissionRef, {
-        status: 'rejected',
-        rejectedBy: rejectorEmail,
-        rejectedAt: serverTimestamp()
-    });
+    await updateDoc(submissionRef, { status: 'rejected', rejectedBy: rejectorEmail, rejectedAt: serverTimestamp() });
 }
-// --- MODIFIED: getFacilitatorApplicationSettings ---
 export async function getFacilitatorApplicationSettings(sourceOptions = {}) {
     const settingsRef = doc(db, "settings", "facilitatorApplication");
     const docSnap = await getDoc(settingsRef, sourceOptions);
-    if (docSnap.exists()) {
-        return docSnap.data();
-    }
+    if (docSnap.exists()) return docSnap.data();
     return { isActive: false, openCount: 0 };
 }
 export async function updateFacilitatorApplicationStatus(isActive) {
@@ -946,13 +725,10 @@ export async function incrementFacilitatorApplicationOpenCount() {
     const settingsRef = doc(db, "settings", "facilitatorApplication");
     await setDoc(settingsRef, { openCount: increment(1) }, { merge: true });
 }
-// --- MODIFIED: getCoordinatorApplicationSettings ---
 export async function getCoordinatorApplicationSettings(sourceOptions = {}) {
     const docRef = doc(db, 'appSettings', 'coordinatorApplication');
     const docSnap = await getDoc(docRef, sourceOptions);
-    if (docSnap.exists()) {
-        return docSnap.data();
-    }
+    if (docSnap.exists()) return docSnap.data();
     return { isActive: false, openCount: 0 };
 }
 export async function updateCoordinatorApplicationStatus(isActive) {
@@ -965,13 +741,8 @@ export async function incrementCoordinatorApplicationOpenCount() {
 }
 export async function submitCoordinatorApplication(payload) {
     const submissionsRef = collection(db, 'coordinatorSubmissions');
-    await addDoc(submissionsRef, {
-        ...payload,
-        status: 'pending',
-        submittedAt: serverTimestamp()
-    });
+    await addDoc(submissionsRef, { ...payload, status: 'pending', submittedAt: serverTimestamp() });
 }
-// --- MODIFIED: listPendingCoordinatorSubmissions ---
 export async function listPendingCoordinatorSubmissions(sourceOptions = {}) {
     const q = query(collection(db, "coordinatorSubmissions"), where("status", "==", "pending"));
     const snapshot = await getDocs(q, sourceOptions);
@@ -986,56 +757,42 @@ export async function approveCoordinatorSubmission(submission, approverEmail) {
     const newCoordinatorRef = doc(collection(db, "stateCoordinators"));
     batch.set(newCoordinatorRef, coordinatorData);
     const submissionRef = doc(db, "coordinatorSubmissions", submissionId);
-    batch.update(submissionRef, {
-        status: 'approved',
-        approvedBy: approverEmail,
-        approvedAt: serverTimestamp()
-    });
+    batch.update(submissionRef, { status: 'approved', approvedBy: approverEmail, approvedAt: serverTimestamp() });
     if (!userSnapshot.empty) {
         const userDoc = userSnapshot.docs[0];
-        batch.update(userDoc.ref, {
-            role: 'states_manager', // Consider standardizing role names (e.g., state_manager)
-            assignedState: submission.state // Use assignedState for consistency
-        });
+        batch.update(userDoc.ref, { role: 'states_manager', assignedState: submission.state });
     }
     await batch.commit();
 }
-
 export async function rejectCoordinatorSubmission(submissionId, rejectorEmail) {
     const submissionRef = doc(db, "coordinatorSubmissions", submissionId);
-    await updateDoc(submissionRef, {
-        status: 'rejected',
-        rejectedBy: rejectorEmail,
-        rejectedAt: serverTimestamp()
-    });
+    await updateDoc(submissionRef, { status: 'rejected', rejectedBy: rejectorEmail, rejectedAt: serverTimestamp() });
 }
 export async function submitFederalApplication(payload) {
     const submissionsRef = collection(db, 'federalCoordinatorSubmissions');
     await addDoc(submissionsRef, { ...payload, status: 'pending', submittedAt: serverTimestamp() });
 }
-// --- MODIFIED: listPendingFederalSubmissions ---
 export async function listPendingFederalSubmissions(sourceOptions = {}) {
     const q = query(collection(db, "federalCoordinatorSubmissions"), where("status", "==", "pending"));
     const snapshot = await getDocs(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 export async function approveFederalSubmission(submission, approverEmail) {
-    const { id: submissionId, status, submittedAt, ...coordinatorData } = submission; // Remove unused variables
+    const { id: submissionId, status, submittedAt, ...coordinatorData } = submission; 
     const usersRef = collection(db, "users");
     const userQuery = query(usersRef, where("email", "==", submission.email));
     const userSnapshot = await getDocs(userQuery);
     const batch = writeBatch(db);
     const newCoordinatorRef = doc(collection(db, "federalCoordinators"));
-    batch.set(newCoordinatorRef, coordinatorData); // Save coordinator data
+    batch.set(newCoordinatorRef, coordinatorData); 
     const submissionRef = doc(db, "federalCoordinatorSubmissions", submissionId);
     batch.update(submissionRef, { status: 'approved', approvedBy: approverEmail, approvedAt: serverTimestamp() });
     if (!userSnapshot.empty) {
         const userDoc = userSnapshot.docs[0];
-        batch.update(userDoc.ref, { role: 'federal_manager' }); // Use consistent role name
+        batch.update(userDoc.ref, { role: 'federal_manager' }); 
     }
     await batch.commit();
 }
-
 export async function rejectFederalSubmission(submissionId, rejectorEmail) {
     const submissionRef = doc(db, "federalCoordinatorSubmissions", submissionId);
     await updateDoc(submissionRef, { status: 'rejected', rejectedBy: rejectorEmail, rejectedAt: serverTimestamp() });
@@ -1044,42 +801,38 @@ export async function submitLocalityApplication(payload) {
     const submissionsRef = collection(db, 'localityCoordinatorSubmissions');
     await addDoc(submissionsRef, { ...payload, status: 'pending', submittedAt: serverTimestamp() });
 }
-// --- MODIFIED: listPendingLocalitySubmissions ---
 export async function listPendingLocalitySubmissions(sourceOptions = {}) {
     const q = query(collection(db, "localityCoordinatorSubmissions"), where("status", "==", "pending"));
     const snapshot = await getDocs(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 export async function approveLocalitySubmission(submission, approverEmail) {
-    const { id: submissionId, status, submittedAt, ...coordinatorData } = submission; // Remove unused vars
-    const usersRef = collection(db, "users"); // Get users collection ref
-    const userQuery = query(usersRef, where("email", "==", submission.email)); // Query for user by email
-    const userSnapshot = await getDocs(userQuery); // Execute query
+    const { id: submissionId, status, submittedAt, ...coordinatorData } = submission; 
+    const usersRef = collection(db, "users"); 
+    const userQuery = query(usersRef, where("email", "==", submission.email)); 
+    const userSnapshot = await getDocs(userQuery); 
 
     const batch = writeBatch(db);
     const newCoordinatorRef = doc(collection(db, "localityCoordinators"));
-    batch.set(newCoordinatorRef, coordinatorData); // Save coordinator data
+    batch.set(newCoordinatorRef, coordinatorData); 
     const submissionRef = doc(db, "localityCoordinatorSubmissions", submissionId);
     batch.update(submissionRef, { status: 'approved', approvedBy: approverEmail, approvedAt: serverTimestamp() });
 
-    // Update user role and assigned localities if user exists
     if (!userSnapshot.empty) {
         const userDoc = userSnapshot.docs[0];
         batch.update(userDoc.ref, {
-            role: 'locality_manager', // Use consistent role name
-            assignedState: submission.state, // Also store the state
-            assignedLocalities: [submission.locality] // Store locality in the array
+            role: 'locality_manager', 
+            assignedState: submission.state, 
+            assignedLocalities: [submission.locality] 
         });
     }
-
     await batch.commit();
 }
-
 export async function rejectLocalitySubmission(submissionId, rejectorEmail) {
     const submissionRef = doc(db, "localityCoordinatorSubmissions", submissionId);
     await updateDoc(submissionRef, { status: 'rejected', rejectedBy: rejectorEmail, rejectedAt: serverTimestamp() });
 }
-export async function upsertCoordinator(payload) { // Generic coordinator - might deprecate
+export async function upsertCoordinator(payload) { 
     if (payload.id) {
         const coordinatorRef = doc(db, "coordinators", payload.id);
         await setDoc(coordinatorRef, payload, { merge: true });
@@ -1090,13 +843,12 @@ export async function upsertCoordinator(payload) { // Generic coordinator - migh
         return newRef.id;
     }
 }
-// --- MODIFIED: listCoordinators ---
-export async function listCoordinators(sourceOptions = {}) { // Generic coordinator - might deprecate
+export async function listCoordinators(sourceOptions = {}) { 
     const q = query(collection(db, "coordinators"));
     const snapshot = await getData(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
-export async function deleteCoordinator(coordinatorId) { // Generic coordinator - might deprecate
+export async function deleteCoordinator(coordinatorId) { 
     await deleteDoc(doc(db, "coordinators", coordinatorId));
     return true;
 }
@@ -1111,7 +863,6 @@ export async function upsertStateCoordinator(payload) {
         return newRef.id;
     }
 }
-// --- MODIFIED: listStateCoordinators ---
 export async function listStateCoordinators(sourceOptions = {}) {
     const q = query(collection(db, "stateCoordinators"));
     const snapshot = await getData(q, sourceOptions);
@@ -1132,7 +883,6 @@ export async function upsertFederalCoordinator(payload) {
         return newRef.id;
     }
 }
-// --- MODIFIED: listFederalCoordinators ---
 export async function listFederalCoordinators(sourceOptions = {}) {
     const q = query(collection(db, "federalCoordinators"));
     const snapshot = await getData(q, sourceOptions);
@@ -1153,7 +903,6 @@ export async function upsertLocalityCoordinator(payload) {
         return newRef.id;
     }
 }
-// --- MODIFIED: listLocalityCoordinators ---
 export async function listLocalityCoordinators(sourceOptions = {}) {
     const q = query(collection(db, "localityCoordinators"));
     const snapshot = await getData(q, sourceOptions);
@@ -1174,7 +923,6 @@ export async function upsertFunder(payload) {
         return newRef.id;
     }
 }
-// --- MODIFIED: listFunders ---
 export async function listFunders(sourceOptions = {}) {
     const q = query(collection(db, "funders"));
     const snapshot = await getData(q, sourceOptions);
@@ -1196,9 +944,7 @@ export async function upsertCourse(payload) {
     }
 }
 export async function updateCourseSharingSettings(courseId, settings) {
-    if (!courseId) {
-        throw new Error("Course ID is required.");
-    }
+    if (!courseId) throw new Error("Course ID is required.");
     const courseRef = doc(db, "courses", courseId);
     await updateDoc(courseRef, {
         isPublic: settings.isPublic,
@@ -1206,22 +952,16 @@ export async function updateCourseSharingSettings(courseId, settings) {
     });
 }
 export async function updateCoursePublicStatus(courseId, isPublic) {
-    if (!courseId) {
-        throw new Error("Course ID is required.");
-    }
+    if (!courseId) throw new Error("Course ID is required.");
     const courseRef = doc(db, "courses", courseId);
-    await updateDoc(courseRef, {
-        isPublic: isPublic
-    });
+    await updateDoc(courseRef, { isPublic: isPublic });
 }
-// --- MODIFIED: listCoursesByType ---
 export async function listCoursesByType(course_type, userStates, sourceOptions = {}) {
     try {
         let conditions = [where("course_type", "==", course_type)];
         if (userStates && userStates.length > 0) {
             conditions.push(where("state", "in", userStates));
         }
-         // Add ordering for consistency, e.g., by start date descending
          conditions.push(orderBy("start_date", "desc"));
 
         let q = query(collection(db, "courses"), ...conditions);
@@ -1234,10 +974,8 @@ export async function listCoursesByType(course_type, userStates, sourceOptions =
         throw error;
     }
 }
-// --- MODIFIED: listAllCourses ---
 export async function listAllCourses(sourceOptions = {}) {
     try {
-         // Add ordering for consistency
         let q = query(collection(db, "courses"), orderBy("start_date", "desc"));
         const querySnapshot = await getData(q, sourceOptions);
         const courses = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -1259,7 +997,6 @@ export async function deleteCourse(courseId) {
     const casesQuery = query(collection(db, "cases"), where("courseId", "==", courseId));
     const casesSnap = await getDocs(casesQuery);
     casesSnap.forEach(d => batch.delete(d.ref));
-    // Also delete final report if exists
     const finalReportQuery = query(collection(db, "finalReports"), where("courseId", "==", courseId));
     const finalReportSnap = await getDocs(finalReportQuery);
     finalReportSnap.forEach(d => batch.delete(d.ref));
@@ -1268,69 +1005,68 @@ export async function deleteCourse(courseId) {
     return true;
 }
 
-// --- MODIFIED: upsertParticipant ---
+// --- CERTIFICATE APPROVAL FUNCTIONS ---
+export async function approveCourseCertificates(courseId, managerName, signatureUrl = null) {
+    if (!courseId || !managerName) {
+        throw new Error("Course ID and Manager Name are required.");
+    }
+
+    const courseRef = doc(db, "courses", courseId);
+    const updateData = {
+        isCertificateApproved: true,
+        approvedByManagerName: managerName,
+        certificateApprovedAt: serverTimestamp()
+    };
+
+    // Only set the signature URL if one was provided (or explicitly null to clear)
+    if (signatureUrl !== undefined) {
+        updateData.approvedByManagerSignatureUrl = signatureUrl;
+    }
+
+    await updateDoc(courseRef, updateData);
+    
+    return true;
+}
+
+export async function unapproveCourseCertificates(courseId) {
+    if (!courseId) throw new Error("Course ID is required.");
+    const courseRef = doc(db, "courses", courseId);
+    await updateDoc(courseRef, {
+        isCertificateApproved: false,
+        approvedByManagerName: null, 
+        approvedByManagerSignatureUrl: null, 
+        certificateApprovedAt: null
+    });
+    return true;
+}
+// -------------------------------------
+
 export async function upsertParticipant(payload) {
     if (payload.id) {
-        // This is an UPDATE.
         const participantRef = doc(db, "participants", payload.id);
-
-        // Check if the phone number is being changed to one that already exists.
         if (payload.phone && payload.courseId) {
-            const q = query(
-                collection(db, "participants"),
-                where("courseId", "==", payload.courseId),
-                where("phone", "==", payload.phone),
-                limit(1)
-            );
-            const snapshot = await getDocs(q); // Use wrapped getDocs
+            const q = query(collection(db, "participants"), where("courseId", "==", payload.courseId), where("phone", "==", payload.phone), limit(1));
+            const snapshot = await getDocs(q); 
             if (!snapshot.empty) {
                 const existingDoc = snapshot.docs[0];
-                // If a doc was found and it's NOT the one we are currently editing, it's a duplicate.
-                if (existingDoc.id !== payload.id) {
-                    throw new Error(`A participant with phone number '${payload.phone}' already exists in this course.`);
-                }
+                if (existingDoc.id !== payload.id) throw new Error(`A participant with phone number '${payload.phone}' already exists in this course.`);
             }
         }
-        // No collision, or phone not changed, or it's the same doc. Proceed with update.
-        await setDoc(participantRef, payload, { merge: true }); // Uses wrapped setDoc
+        await setDoc(participantRef, payload, { merge: true }); 
         return payload.id;
-
     } else {
-        // This is a CREATE.
         const { id, ...dataToSave } = payload;
-
-        // Phone and courseId are required for the check.
-        if (!dataToSave.phone || !dataToSave.courseId) {
-            throw new Error("Phone number and Course ID are required to check for duplicates.");
-        }
-
-        // Check for phone number collision on CREATE.
-        const q = query(
-            collection(db, "participants"),
-            where("courseId", "==", dataToSave.courseId),
-            where("phone", "==", dataToSave.phone),
-            limit(1)
-        );
-
-        const snapshot = await getDocs(q); // Use wrapped getDocs
-
-        if (!snapshot.empty) {
-            // A duplicate was found.
-            throw new Error(`A participant with phone number '${dataToSave.phone}' already exists in this course.`);
-        }
-
-        // No duplicate found, proceed to create.
-        const newParticipantRef = await addDoc(collection(db, "participants"), dataToSave); // Uses wrapped addDoc
+        if (!dataToSave.phone || !dataToSave.courseId) throw new Error("Phone number and Course ID are required to check for duplicates.");
+        const q = query(collection(db, "participants"), where("courseId", "==", dataToSave.courseId), where("phone", "==", dataToSave.phone), limit(1));
+        const snapshot = await getDocs(q); 
+        if (!snapshot.empty) throw new Error(`A participant with phone number '${dataToSave.phone}' already exists in this course.`);
+        const newParticipantRef = await addDoc(collection(db, "participants"), dataToSave); 
         return newParticipantRef.id;
     }
 }
-// --- END MODIFIED: upsertParticipant ---
-
 
 export async function updateParticipantSharingSettings(participantId, settings) {
-    if (!participantId) {
-        throw new Error("Participant ID is required.");
-    }
+    if (!participantId) throw new Error("Participant ID is required.");
     const participantRef = doc(db, "participants", participantId);
     await updateDoc(participantRef, {
         isPublic: settings.isPublic,
@@ -1338,61 +1074,36 @@ export async function updateParticipantSharingSettings(participantId, settings) 
     });
 }
 
-// --- MODIFIED: importParticipants ---
 export async function importParticipants(participants) {
-    if (!participants || participants.length === 0) {
-        return true; // Nothing to import
-    }
-
-    const batch = writeBatch(db); // Use wrapped writeBatch
-    const phoneCourseSet = new Set(); // To track duplicates *within the batch itself*
-
-    // Fetch existing participants for this course to check against.
+    if (!participants || participants.length === 0) return true; 
+    const batch = writeBatch(db); 
+    const phoneCourseSet = new Set(); 
     const courseId = participants[0]?.courseId;
-    if (!courseId) {
-        throw new Error("Course ID not found on participants for import.");
-    }
+    if (!courseId) throw new Error("Course ID not found on participants for import.");
     
     const existingParticipantsQuery = query(collection(db, "participants"), where("courseId", "==", courseId));
-    const existingSnapshot = await getDocs(existingParticipantsQuery); // Use wrapped getDocs
-    
-    // Map existing phones to their document IDs for quick lookup.
+    const existingSnapshot = await getDocs(existingParticipantsQuery); 
     const existingPhones = new Map(existingSnapshot.docs.map(doc => {
         const data = doc.data();
         return data.phone ? [data.phone, doc.id] : [null, doc.id];
     }));
 
-
     for (const participant of participants) {
-        // --- Duplicate Check Logic ---
-        if (!participant.phone) {
-            throw new Error(`Participant '${participant.name || 'N/A'}' is missing a phone number.`);
-        }
-
+        if (!participant.phone) throw new Error(`Participant '${participant.name || 'N/A'}' is missing a phone number.`);
         const cleanPhone = String(participant.phone).trim();
-
-        if (phoneCourseSet.has(cleanPhone)) {
-            // Duplicate within the batch
-            throw new Error(`Duplicate phone number '${cleanPhone}' (for ${participant.name}) found within the import file.`);
-        }
+        if (phoneCourseSet.has(cleanPhone)) throw new Error(`Duplicate phone number '${cleanPhone}' (for ${participant.name}) found within the import file.`);
         
         const existingDocId = existingPhones.get(cleanPhone);
         if (existingDocId) {
-            // Phone number exists in DB
             if (participant.id && participant.id === existingDocId) {
-                // This is an update to the *correct* participant, allow it.
+                // Update correct participant
             } else if (participant.id) {
-                // This is an update, but it's trying to set a phone number that *another* participant already has.
                 throw new Error(`Phone number '${cleanPhone}' (for ${participant.name}) already belongs to another participant in this course.`);
             } else {
-                // This is a new participant, but their phone number is already in use.
                 throw new Error(`Participant '${participant.name}' has a phone number ('${cleanPhone}') that already exists in this course.`);
             }
         }
-        // --- END Duplicate Check Logic ---
-
-        // If we are here, it's safe to add to batch
-        phoneCourseSet.add(cleanPhone); // Add to set for intra-batch check
+        phoneCourseSet.add(cleanPhone); 
 
         if (participant.id) {
             const participantRef = doc(db, "participants", participant.id);
@@ -1402,37 +1113,21 @@ export async function importParticipants(participants) {
             batch.set(participantRef, participant);
         }
     }
-    
     await batch.commit();
     return true;
 }
-// --- END MODIFIED: importParticipants ---
 
-// --- MODIFIED: listParticipants ---
 export async function listParticipants(courseId, lastVisible = null, sourceOptions = {}) {
     if (!courseId) return { participants: [], lastVisible: null };
-
-    const PAGE_SIZE = 50; // Increased page size slightly
-
-    let q = query(
-        collection(db, "participants"),
-        where("courseId", "==", courseId),
-        orderBy("name"),
-        limit(PAGE_SIZE)
-    );
-
-    if (lastVisible) {
-        q = query(q, startAfter(lastVisible));
-    }
-
+    const PAGE_SIZE = 50; 
+    let q = query(collection(db, "participants"), where("courseId", "==", courseId), orderBy("name"), limit(PAGE_SIZE));
+    if (lastVisible) q = query(q, startAfter(lastVisible));
     const documentSnapshots = await getDocs(q, sourceOptions);
-
     const participants = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     const newLastVisible = documentSnapshots.docs[documentSnapshots.docs.length - 1];
-
     return { participants, lastVisible: newLastVisible };
 }
-// --- MODIFIED: listAllParticipants ---
+
 export async function listAllParticipants(sourceOptions = {}) {
     try {
         const q = collection(db, "participants");
@@ -1445,14 +1140,6 @@ export async function listAllParticipants(sourceOptions = {}) {
     }
 }
 
-// --- NEW: listAllParticipantsForCourse ---
-/**
- * Fetches all participants for a specific course, handling pagination automatically.
- * @param {string} courseId - The ID of the course.
- * @param {object} sourceOptions - 'default', 'cache', or 'server'.
- * @returns {Promise<Array<object>>} A promise that resolves to an array of all participant objects.
- */
-// --- MODIFIED: listAllParticipantsForCourse ---
 export async function listAllParticipantsForCourse(courseId, sourceOptions = {}) {
     if (!courseId) return [];
     let allParticipants = [];
@@ -1460,19 +1147,15 @@ export async function listAllParticipantsForCourse(courseId, sourceOptions = {})
     let hasMore = true;
 
     while(hasMore) {
-        // listParticipants is the paginated function defined above
         const result = await listParticipants(courseId, lastVisible, sourceOptions); 
         if (result.participants && result.participants.length > 0) {
             allParticipants = allParticipants.concat(result.participants);
         }
         lastVisible = result.lastVisible;
-        if (!lastVisible) {
-            hasMore = false;
-        }
+        if (!lastVisible) hasMore = false;
     }
     return allParticipants;
 }
-// --- END NEW FUNCTION ---
 
 export async function deleteParticipant(participantId) {
     const batch = writeBatch(db);
@@ -1489,9 +1172,7 @@ export async function deleteParticipant(participantId) {
 export async function saveParticipantAndSubmitFacilityUpdate(participantData, facilityUpdateData) {
     const participantId = await upsertParticipant(participantData);
     if (facilityUpdateData) {
-        // Assume submitterIdentifier is needed, get from auth or pass as arg
-        // const auth = getAuth(); // <- CORRECTED
-        const user = firebaseAuth.currentUser; // <- CORRECTED
+        const user = firebaseAuth.currentUser; 
         const submitter = user ? (user.displayName || user.email) : 'Participant Form';
         await submitFacilityDataForApproval(facilityUpdateData, submitter);
     }
@@ -1499,9 +1180,7 @@ export async function saveParticipantAndSubmitFacilityUpdate(participantData, fa
 }
 
 export async function bulkMigrateFromMappings(mappings, options = { dryRun: false }) {
-    if (!mappings || mappings.length === 0) {
-        return { message: "No mappings provided." };
-    }
+    if (!mappings || mappings.length === 0) return { message: "No mappings provided." };
 
     const summary = {
         totalProcessed: mappings.length,
@@ -1511,10 +1190,8 @@ export async function bulkMigrateFromMappings(mappings, options = { dryRun: fals
         errorDetails: [],
         previewPayloads: []
     };
-    // const auth = getAuth(); // Get auth instance // <- CORRECTED
-    const currentUser = firebaseAuth.currentUser; // Get current user // <- CORRECTED
-    const submitterIdentifier = currentUser ? (currentUser.displayName || currentUser.email) : 'Bulk Migration'; // Set submitter
-
+    const currentUser = firebaseAuth.currentUser; 
+    const submitterIdentifier = currentUser ? (currentUser.displayName || currentUser.email) : 'Bulk Migration'; 
 
     for (const mapping of mappings) {
         try {
@@ -1527,15 +1204,10 @@ export async function bulkMigrateFromMappings(mappings, options = { dryRun: fals
             }
 
             if (options.dryRun) {
-                 summary.previewPayloads.push({
-                    participantId: participantId,
-                    targetFacilityId: targetFacilityId
-                });
+                 summary.previewPayloads.push({ participantId: participantId, targetFacilityId: targetFacilityId });
                 continue;
             }
 
-            // --- Live Run Logic ---
-            // Fetch necessary data first (using wrapped functions)
             const participant = await getParticipantById(participantId);
             if (!participant) throw new Error(`Participant with ID ${participantId} not found during live run.`);
 
@@ -1546,14 +1218,8 @@ export async function bulkMigrateFromMappings(mappings, options = { dryRun: fals
             if (!facility) throw new Error(`Target facility with ID ${targetFacilityId} not found.`);
             if (!course) throw new Error(`Course for participant ${participantId} not found.`);
 
-            // Prepare participant update
-            const participantUpdate = {
-                state: targetState,
-                locality: targetLocality,
-                center_name: targetFacilityName
-            };
+            const participantUpdate = { state: targetState, locality: targetLocality, center_name: targetFacilityName };
 
-            // Prepare facility update payload
             const participantAsStaff = {
                 name: participant.name,
                 job_title: participant.job_title,
@@ -1561,14 +1227,11 @@ export async function bulkMigrateFromMappings(mappings, options = { dryRun: fals
                 training_date: course.start_date || '',
                 phone: participant.phone || ''
             };
-            // Deep copy to avoid modifying cache, handle stringified JSON
              let existingStaff = [];
              if (facility.imnci_staff) {
                  try {
-                     existingStaff = typeof facility.imnci_staff === 'string'
-                         ? JSON.parse(facility.imnci_staff)
-                         : JSON.parse(JSON.stringify(facility.imnci_staff));
-                     if (!Array.isArray(existingStaff)) existingStaff = []; // Fallback if parse result isn't array
+                     existingStaff = typeof facility.imnci_staff === 'string' ? JSON.parse(facility.imnci_staff) : JSON.parse(JSON.stringify(facility.imnci_staff));
+                     if (!Array.isArray(existingStaff)) existingStaff = []; 
                  } catch (e) {
                      console.error("Error parsing existing staff, starting fresh:", e);
                      existingStaff = [];
@@ -1576,22 +1239,18 @@ export async function bulkMigrateFromMappings(mappings, options = { dryRun: fals
              }
 
             const staffIndex = existingStaff.findIndex(s => s.name === participant.name || (s.phone && participant.phone && s.phone === participant.phone));
-
-            if (staffIndex !== -1) {
-                existingStaff[staffIndex] = participantAsStaff;
-            } else {
-                existingStaff.push(participantAsStaff);
-            }
+            if (staffIndex !== -1) existingStaff[staffIndex] = participantAsStaff;
+            else existingStaff.push(participantAsStaff);
              const numTrained = existingStaff.filter(s => s.is_trained === 'Yes').length;
 
             const facilityUpdatePayload = {
-                ...facility, // Start with existing facility data
-                id: targetFacilityId, // Ensure ID is included
+                ...facility, 
+                id: targetFacilityId, 
                 imnci_staff: existingStaff,
                 "وجود_العلاج_المتكامل_لامراض_الطفولة": 'Yes',
                 "وجود_كتيب_لوحات": 'Yes',
                 "وجود_سجل_علاج_متكامل": 'Yes',
-                "date_of_visit": new Date().toISOString().split('T')[0], // Use today's date for snapshot
+                "date_of_visit": new Date().toISOString().split('T')[0], 
                 "updated_by": `Migrated from Participant ${participantId}`,
                 'growth_monitoring_service_exists': participant.has_growth_monitoring ? 'Yes' : (facility.growth_monitoring_service_exists || 'No'),
                 nutrition_center_exists: participant.has_nutrition_service ? 'Yes' : (facility.nutrition_center_exists || 'No'),
@@ -1600,14 +1259,11 @@ export async function bulkMigrateFromMappings(mappings, options = { dryRun: fals
                 nearest_immunization_center: participant.nearest_immunization_center || facility.nearest_immunization_center || '',
                 'غرفة_إرواء': participant.has_ors_room ? 'Yes' : (facility['غرفة_إرواء'] || 'No'),
                 'العدد_الكلي_للكوادر_طبية_العاملة_أطباء_ومساعدين': participant.num_other_providers ?? (facility['العدد_الكلي_للكوادر_طبية_العاملة_أطباء_ومساعدين'] ?? existingStaff.length),
-                 // Update trained count based on actual staff list
                 'العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل': participant.num_other_providers_imci ?? (facility['العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل'] ?? numTrained),
             };
 
-            // Use separate operations instead of batch to avoid complexity with potential partial failures
-            await upsertParticipant({ id: participantId, ...participantUpdate }); // Update participant
-            await submitFacilityDataForApproval(facilityUpdatePayload, submitterIdentifier); // Submit facility update
-
+            await upsertParticipant({ id: participantId, ...participantUpdate }); 
+            await submitFacilityDataForApproval(facilityUpdatePayload, submitterIdentifier); 
             summary.submitted++;
 
         } catch (error) {
@@ -1616,99 +1272,71 @@ export async function bulkMigrateFromMappings(mappings, options = { dryRun: fals
             summary.errorDetails.push(`Participant ID ${mapping.participantId}: ${error.message}`);
         }
     }
-
     return summary;
 }
 
-// --- MODIFIED: listObservationsForParticipant ---
 export async function listObservationsForParticipant(courseId, participantId, sourceOptions = {}) {
     const q = query(collection(db, "observations"), where("courseId", "==", courseId), where("participant_id", "==", participantId));
     const snapshot = await getDocs(q, sourceOptions);
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 }
-// --- MODIFIED: listCasesForParticipant ---
 export async function listCasesForParticipant(courseId, participantId, sourceOptions = {}) {
     const q = query(collection(db, "cases"), where("courseId", "==", courseId), where("participant_id", "==", participantId));
     const snapshot = await getDocs(q, sourceOptions);
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
-// --- MODIFICATION: Added return statement ---
 export async function upsertCaseAndObservations(caseData, observations, editingCaseId = null) {
-
-    // --- DUPLICATE CHECK REMOVED ---
-    // The client-side hash check in MonitoringView.jsx is now the primary
-    // mechanism for warning about duplicate *content*. The server-side
-    // check for case_serial collisions has been removed per request.
-    // --- END DUPLICATE CHECK REMOVED ---
-
     const batch = writeBatch(db);
-    const caseId = editingCaseId || doc(collection(db, 'temp')).id; // Generate ID locally
+    const caseId = editingCaseId || doc(collection(db, 'temp')).id; 
     const caseRef = doc(db, "cases", caseId);
 
-    // If editing, delete old observations first
     if (editingCaseId) {
         const oldObsQuery = query(collection(db, "observations"), where("caseId", "==", editingCaseId));
-        const oldObsSnapshot = await getDocs(oldObsQuery); // Use wrapped getDocs
+        const oldObsSnapshot = await getDocs(oldObsQuery); 
         oldObsSnapshot.forEach(doc => batch.delete(doc.ref));
     }
 
-    // Set/overwrite the case data
-    // --- FIX: Create the object to be returned ---
     const savedCase = { ...caseData, id: caseId };
-    batch.set(caseRef, savedCase); // Ensure ID is part of the data
+    batch.set(caseRef, savedCase); 
 
-    // Add new observations
-    // --- FIX: Create the array to be returned ---
     const savedObservations = [];
     observations.forEach(obs => {
-        const obsRef = doc(collection(db, "observations")); // Generate new ID for each observation
-        const finalObs = { ...obs, id: obsRef.id, caseId: caseId }; // Create the full object
-        batch.set(obsRef, finalObs); // Ensure obs ID and caseId link are set
-        savedObservations.push(finalObs); // Add to the array
+        const obsRef = doc(collection(db, "observations")); 
+        const finalObs = { ...obs, id: obsRef.id, caseId: caseId }; 
+        batch.set(obsRef, finalObs); 
+        savedObservations.push(finalObs); 
     });
 
-    await batch.commit(); // Commit the batch
-    
-    // --- FIX: Return the saved objects so the frontend can use them ---
+    await batch.commit(); 
     return { savedCase, savedObservations };
 }
-// --- END MODIFICATION ---
 
 export async function deleteCaseAndObservations(caseId) {
     const batch = writeBatch(db);
     batch.delete(doc(db, "cases", caseId));
-
     const q = query(collection(db, "observations"), where("caseId", "==", caseId));
-    const snapshot = await getDocs(q); // Use wrapped getDocs
+    const snapshot = await getDocs(q); 
     snapshot.forEach(d => batch.delete(d.ref));
-
-    await batch.commit(); // Commit the batch
+    await batch.commit(); 
 }
-// --- MODIFIED: listAllDataForCourse ---
 export async function listAllDataForCourse(courseId, sourceOptions = {}) {
     const obsQuery = query(collection(db, "observations"), where("courseId", "==", courseId));
     const casesQuery = query(collection(db, "cases"), where("courseId", "==", courseId));
 
     const [obsSnap, casesSnap] = await Promise.all([
-        getDocs(obsQuery, sourceOptions), // Use wrapped getDocs
-        getDocs(casesQuery, sourceOptions)  // Use wrapped getDocs
+        getDocs(obsQuery, sourceOptions), 
+        getDocs(casesQuery, sourceOptions) 
     ]);
 
     const allObs = obsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     const allCases = casesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-    // Calculate correctness within this function
     const allCasesWithCorrectness = allCases.map(caseItem => {
         const caseObservations = allObs.filter(obs => obs.caseId === caseItem.id);
-        // Ensure item_correct is treated as a number for comparison
         const is_correct = caseObservations.length > 0 && caseObservations.every(obs => Number(obs.item_correct) > 0);
-        return {
-            ...caseItem,
-            is_correct
-        };
+        return { ...caseItem, is_correct };
     });
-
 
     return { allObs, allCases: allCasesWithCorrectness };
 }
@@ -1723,7 +1351,6 @@ export async function upsertFinalReport(payload) {
         return newRef.id;
     }
 }
-// --- MODIFIED: getFinalReportByCourseId ---
 export async function getFinalReportByCourseId(courseId, sourceOptions = {}) {
     if (!courseId) return null;
     const q = query(collection(db, "finalReports"), where("courseId", "==", courseId));
@@ -1734,7 +1361,6 @@ export async function getFinalReportByCourseId(courseId, sourceOptions = {}) {
     }
     return null;
 }
-// --- MODIFIED: listFinalReport ---
 export async function listFinalReport(sourceOptions = {}) {
     try {
         const querySnapshot = await getDocs(collection(db, "finalReports"), sourceOptions);
@@ -1746,9 +1372,7 @@ export async function listFinalReport(sourceOptions = {}) {
 }
 export async function deleteFinalReport(reportId) {
     try {
-        if (!reportId) {
-            throw new Error("Report ID is required to delete a final report.");
-        }
+        if (!reportId) throw new Error("Report ID is required to delete a final report.");
         await deleteDoc(doc(db, "finalReports", reportId));
         return true;
     } catch (error) {
@@ -1757,34 +1381,17 @@ export async function deleteFinalReport(reportId) {
     }
 }
 
-// --- NEW MENTORSHIP FUNCTIONS ---
-
-/**
- * Saves a new skill mentorship session or updates an existing one (if sessionId is provided).
- * Can be used with a batch or as a standalone operation.
- * @param {object} payload - The mentorship session data.
- * @param {string|null} sessionId - The ID of the session to update, or null to create new.
- * @param {object|null} externalBatch - An optional Firestore write batch.
- * @returns {string} The ID of the created or updated document.
- */
 export async function saveMentorshipSession(payload, sessionId = null, externalBatch = null) {
     try {
         const sessionData = {
             ...payload,
-            // Add createdAt only if it's a new document
             ...( !sessionId ? { createdAt: serverTimestamp() } : { lastUpdatedAt: serverTimestamp() } ),
         };
-
-        const docRef = sessionId 
-            ? doc(db, "skillMentorship", sessionId) // Get ref to existing doc
-            : doc(collection(db, "skillMentorship")); // Create ref for new doc
-
+        const docRef = sessionId ? doc(db, "skillMentorship", sessionId) : doc(collection(db, "skillMentorship")); 
         if (externalBatch) {
-            // Use set with merge:true for updates, or set for new
             externalBatch.set(docRef, sessionData, { merge: !!sessionId }); 
             return docRef.id; 
         } else {
-            // Use the wrapped setDoc for standalone operations
             await setDoc(docRef, sessionData, { merge: !!sessionId });
             return docRef.id;
         }
@@ -1794,20 +1401,10 @@ export async function saveMentorshipSession(payload, sessionId = null, externalB
     }
 }
 
-
-/**
- * Lists all skill mentorship sessions from Firestore.
- * @returns {Array<object>} A list of mentorship session documents.
- */
-// --- MODIFIED: listMentorshipSessions ---
 export async function listMentorshipSessions(sourceOptions = {}) {
     try {
         const q = query(collection(db, "skillMentorship"), orderBy("effectiveDate", "desc"));
-        // --- START ENHANCEMENT ---
-        // Use the getData helper to respect the cache-first logic
-        // defined in DataContext.jsx
         const snapshot = await getData(q, sourceOptions);
-        // --- END ENHANCEMENT ---
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
         console.error("Error fetching mentorship sessions:", error);
@@ -1815,128 +1412,70 @@ export async function listMentorshipSessions(sourceOptions = {}) {
     }
 }
 
-// --- NEW MENTORSHIP IMPORT FUNCTION ---
-/**
- * Imports a batch of mentorship sessions from processed Excel data.
- * @param {Array<object>} sessions - Array of session payloads to import.
- * @param {Array<Array<any>>} originalRows - The original raw Excel rows for error reporting.
- * @param {function} onProgress - Callback function for progress updates. ({ processed: number, total: number })
- * @returns {object} An object containing successes, errors, and failedRowsData.
- */
 export async function importMentorshipSessions(sessions, originalRows, onProgress) {
     const errors = [];
     const successes = [];
     const failedRowsData = [];
-    const BATCH_SIZE = 490; // Firestore batch limit is 500
+    const BATCH_SIZE = 490; 
 
     for (let i = 0; i < sessions.length; i += BATCH_SIZE) {
-        const batch = writeBatch(db); // Use wrapped batch
+        const batch = writeBatch(db); 
         const chunk = sessions.slice(i, i + BATCH_SIZE);
         const chunkOriginalRows = originalRows ? originalRows.slice(i, i + BATCH_SIZE) : null;
-
 
         for (let j = 0; j < chunk.length; j++) {
             const sessionData = chunk[j];
             const progressIndex = i + j;
             try {
-                // Basic validation before adding to batch
-                if (!sessionData.effectiveDate || !(sessionData.effectiveDate instanceof Timestamp)) {
-                    throw new Error("Invalid or missing 'session_date'. Expected YYYY-MM-DD.");
-                }
-                 if (!sessionData.facilityId) {
-                     // Attempted lookup failed in the modal, flag as error here.
-                     throw new Error(`Facility '${sessionData.facilityName}' in ${sessionData.locality}, ${sessionData.state} not found.`);
-                }
-                 if (!sessionData.state || !sessionData.locality) {
-                     throw new Error("Missing State or Locality Key.");
-                 }
-                 if (!sessionData.healthWorkerName) {
-                    throw new Error("Missing Health Worker Name.");
-                 }
+                if (!sessionData.effectiveDate || !(sessionData.effectiveDate instanceof Timestamp)) throw new Error("Invalid or missing 'session_date'. Expected YYYY-MM-DD.");
+                 if (!sessionData.facilityId) throw new Error(`Facility '${sessionData.facilityName}' in ${sessionData.locality}, ${sessionData.state} not found.`);
+                 if (!sessionData.state || !sessionData.locality) throw new Error("Missing State or Locality Key.");
+                 if (!sessionData.healthWorkerName) throw new Error("Missing Health Worker Name.");
 
-                // Call saveMentorshipSession with the batch (passing null for sessionId)
                 await saveMentorshipSession(sessionData, null, batch);
-                successes.push({ rowIndex: progressIndex }); // Record success by index
+                successes.push({ rowIndex: progressIndex }); 
 
             } catch (e) {
                 const originalRowForError = chunkOriginalRows ? chunkOriginalRows[j] : null;
                 const errorPayload = { message: e.message || 'Unknown import error.', rowIndex: progressIndex, rowData: originalRowForError };
                 errors.push(errorPayload);
-                if (originalRowForError) {
-                    failedRowsData.push(errorPayload);
-                }
-                 // Continue to next item in chunk even if one fails
+                if (originalRowForError) failedRowsData.push(errorPayload);
             }
-
-            // Report progress after attempting each row
-            if (onProgress) {
-                onProgress({ processed: progressIndex + 1, total: sessions.length });
-            }
+            if (onProgress) onProgress({ processed: progressIndex + 1, total: sessions.length });
         }
 
         try {
-            await batch.commit(); // Commit the processed chunk
+            await batch.commit(); 
         } catch (commitError) {
              console.error(`Batch commit failed starting at index ${i}:`, commitError);
-             // Mark all rows in this chunk *that haven't already failed* as failed due to commit error
              for (let k = 0; k < chunk.length; k++) {
                  const progressIndex = i + k;
-                 // Check if this row index already has an error recorded
                  if (!errors.some(err => err.rowIndex === progressIndex)) {
                      const originalRowForError = chunkOriginalRows ? chunkOriginalRows[k] : null;
                      const errorPayload = { message: `Batch commit failed: ${commitError.message}`, rowIndex: progressIndex, rowData: originalRowForError };
                      errors.push(errorPayload);
-                      if (originalRowForError && !failedRowsData.some(fr => fr.rowIndex === progressIndex)) {
-                         failedRowsData.push(errorPayload);
-                      }
+                      if (originalRowForError && !failedRowsData.some(fr => fr.rowIndex === progressIndex)) failedRowsData.push(errorPayload);
                  }
              }
         }
     }
-
     return { successes, errors, failedRowsData };
 }
-// --- END NEW MENTORSHIP IMPORT FUNCTION ---
 
-// --- NEW FUNCTION TO DELETE A MENTORSHIP SESSION ---
-/**
- * Deletes a skill mentorship session from Firestore.
- * @param {string} sessionId - The ID of the session to delete.
- * @returns {Promise<boolean>} True on success.
- */
 export async function deleteMentorshipSession(sessionId) {
-    if (!sessionId) {
-        throw new Error("Session ID is required to delete.");
-    }
+    if (!sessionId) throw new Error("Session ID is required to delete.");
     const sessionRef = doc(db, "skillMentorship", sessionId);
-    await deleteDoc(sessionRef); // Use the wrapped deleteDoc
+    await deleteDoc(sessionRef); 
     return true;
 }
-// --- END NEW FUNCTION ---
-// --- END NEW MENTORSHIP FUNCTIONS ---
 
-
-// --- NEW IMNCI VISIT REPORT FUNCTIONS ---
-
-/**
- * Saves a new IMNCI visit report or updates an existing one.
- * @param {object} payload - The report data.
- * @param {string|null} reportId - The ID of the report to update, or null to create new.
- * @returns {string} The ID of the created or updated document.
- */
 export async function saveIMNCIVisitReport(payload, reportId = null) {
     try {
         const sessionData = {
             ...payload,
-            // Add createdAt only if it's a new document
             ...( !reportId ? { createdAt: serverTimestamp() } : { lastUpdatedAt: serverTimestamp() } ),
         };
-
-        const docRef = reportId 
-            ? doc(db, "imnciVisitReports", reportId) // Get ref to existing doc
-            : doc(collection(db, "imnciVisitReports")); // Create ref for new doc
-
-        // Use the wrapped setDoc
+        const docRef = reportId ? doc(db, "imnciVisitReports", reportId) : doc(collection(db, "imnciVisitReports")); 
         await setDoc(docRef, sessionData, { merge: !!reportId });
         return docRef.id;
     } catch (error) {
@@ -1945,14 +1484,9 @@ export async function saveIMNCIVisitReport(payload, reportId = null) {
     }
 }
 
-/**
- * Lists all IMNCI visit reports from Firestore.
- * @returns {Array<object>} A list of visit report documents.
- */
 export async function listIMNCIVisitReports(sourceOptions = {}) {
     try {
         const q = query(collection(db, "imnciVisitReports"), orderBy("visit_date", "desc"));
-        // Use the getData helper
         const snapshot = await getData(q, sourceOptions);
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
@@ -1961,43 +1495,20 @@ export async function listIMNCIVisitReports(sourceOptions = {}) {
     }
 }
 
-/**
- * Deletes an IMNCI visit report from Firestore.
- * @param {string} reportId - The ID of the report to delete.
- * @returns {Promise<boolean>} True on success.
- */
 export async function deleteIMNCIVisitReport(reportId) {
-    if (!reportId) {
-        throw new Error("Report ID is required to delete.");
-    }
+    if (!reportId) throw new Error("Report ID is required to delete.");
     const sessionRef = doc(db, "imnciVisitReports", reportId);
-    await deleteDoc(sessionRef); // Use the wrapped deleteDoc
+    await deleteDoc(sessionRef); 
     return true;
 }
-// --- END IMNCI VISIT REPORT FUNCTIONS ---
 
-
-// --- NEW EENC VISIT REPORT FUNCTIONS ---
-
-/**
- * Saves a new EENC visit report or updates an existing one.
- * @param {object} payload - The report data.
- * @param {string|null} reportId - The ID of the report to update, or null to create new.
- * @returns {string} The ID of the created or updated document.
- */
 export async function saveEENCVisitReport(payload, reportId = null) {
     try {
         const sessionData = {
             ...payload,
-            // Add createdAt only if it's a new document
             ...( !reportId ? { createdAt: serverTimestamp() } : { lastUpdatedAt: serverTimestamp() } ),
         };
-
-        const docRef = reportId 
-            ? doc(db, "eencVisitReports", reportId) // Get ref to existing doc
-            : doc(collection(db, "eencVisitReports")); // Create ref for new doc
-
-        // Use the wrapped setDoc
+        const docRef = reportId ? doc(db, "eencVisitReports", reportId) : doc(collection(db, "eencVisitReports")); 
         await setDoc(docRef, sessionData, { merge: !!reportId });
         return docRef.id;
     } catch (error) {
@@ -2006,14 +1517,9 @@ export async function saveEENCVisitReport(payload, reportId = null) {
     }
 }
 
-/**
- * Lists all EENC visit reports from Firestore.
- * @returns {Array<object>} A list of visit report documents.
- */
 export async function listEENCVisitReports(sourceOptions = {}) {
     try {
         const q = query(collection(db, "eencVisitReports"), orderBy("visit_date", "desc"));
-        // Use the getData helper
         const snapshot = await getData(q, sourceOptions);
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
@@ -2022,239 +1528,109 @@ export async function listEENCVisitReports(sourceOptions = {}) {
     }
 }
 
-/**
- * Deletes an EENC visit report from Firestore.
- * @param {string} reportId - The ID of the report to delete.
- * @returns {Promise<boolean>} True on success.
- */
 export async function deleteEENCVisitReport(reportId) {
-    if (!reportId) {
-        throw new Error("Report ID is required to delete.");
-    }
+    if (!reportId) throw new Error("Report ID is required to delete.");
     const sessionRef = doc(db, "eencVisitReports", reportId);
-    await deleteDoc(sessionRef); // Use the wrapped deleteDoc
+    await deleteDoc(sessionRef); 
     return true;
 }
-// --- END EENC VISIT REPORT FUNCTIONS ---
 
-
-// --- NEW FUNCTIONS FOR PUBLIC PROFILES/REPORTS ---
-
-/**
- * Fetches a single facilitator by ID. (Helper for public report)
- * Uses the wrapped getDoc.
- */
 async function getFacilitatorById(facilitatorId, sourceOptions = {}) {
     if (!facilitatorId) return null;
     const docRef = doc(db, "facilitators", facilitatorId);
     const docSnap = await getDoc(docRef, sourceOptions);
-    if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() };
-    }
+    if (docSnap.exists()) return { id: docSnap.id, ...docSnap.data() };
     return null;
 }
 
-/**
- * Fetches all data needed for a public facilitator report.
- * @param {string} facilitatorId - The ID of the facilitator.
- * @returns {Promise<object>} An object containing { facilitator, allCourses }.
- */
 export async function getPublicFacilitatorReportData(facilitatorId) {
-    const sourceOptions = { source: 'server' }; // Always fetch fresh data for public links
-
+    const sourceOptions = { source: 'server' }; 
     const facilitator = await getFacilitatorById(facilitatorId, sourceOptions);
-    if (!facilitator) {
-        throw new Error("Facilitator report not found.");
-    }
-
-    // Fetch all courses to calculate stats (matches internal report logic)
+    if (!facilitator) throw new Error("Facilitator report not found.");
     const courses = await listAllCourses(sourceOptions);
-
-    return {
-        facilitator,
-        allCourses: courses || []
-    };
+    return { facilitator, allCourses: courses || [] };
 }
 
-/**
- * Fetches a single state coordinator by ID. (Helper for public profile)
- * Uses the wrapped getDoc.
- */
 async function getStateCoordinatorById(id, sourceOptions = {}) {
     if (!id) return null;
     const docRef = doc(db, "stateCoordinators", id);
     const docSnap = await getDoc(docRef, sourceOptions);
-    if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() };
-    }
+    if (docSnap.exists()) return { id: docSnap.id, ...docSnap.data() };
     return null;
 }
 
-/**
- * Fetches a single federal coordinator by ID. (Helper for public profile)
- * Uses the wrapped getDoc.
- */
 async function getFederalCoordinatorById(id, sourceOptions = {}) {
     if (!id) return null;
     const docRef = doc(db, "federalCoordinators", id);
     const docSnap = await getDoc(docRef, sourceOptions);
-    if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() };
-    }
+    if (docSnap.exists()) return { id: docSnap.id, ...docSnap.data() };
     return null;
 }
 
-/**
- * Fetches a single locality coordinator by ID. (Helper for public profile)
- * Uses the wrapped getDoc.
- */
 async function getLocalityCoordinatorById(id, sourceOptions = {}) {
     if (!id) return null;
     const docRef = doc(db, "localityCoordinators", id);
     const docSnap = await getDoc(docRef, sourceOptions);
-    if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() };
-    }
+    if (docSnap.exists()) return { id: docSnap.id, ...docSnap.data() };
     return null;
 }
 
-/**
- * Fetches the data for a public team member profile.
- * @param {string} level - 'federal', 'state', or 'locality'.
- * @param {string} memberId - The ID of the team member.
- * @returns {Promise<object>} An object containing { member, level }.
- */
 export async function getPublicTeamMemberProfileData(level, memberId) {
-    const sourceOptions = { source: 'server' }; // Always fetch fresh
+    const sourceOptions = { source: 'server' }; 
     let member = null;
-
     try {
-        if (level === 'federal') {
-            member = await getFederalCoordinatorById(memberId, sourceOptions);
-        } else if (level === 'state') {
-            member = await getStateCoordinatorById(memberId, sourceOptions);
-        } else if (level === 'locality') {
-            member = await getLocalityCoordinatorById(memberId, sourceOptions);
-        } else {
-            throw new Error("Invalid team member level.");
-        }
+        if (level === 'federal') member = await getFederalCoordinatorById(memberId, sourceOptions);
+        else if (level === 'state') member = await getStateCoordinatorById(memberId, sourceOptions);
+        else if (level === 'locality') member = await getLocalityCoordinatorById(memberId, sourceOptions);
+        else throw new Error("Invalid team member level.");
 
-        if (!member) {
-            throw new Error("Team member profile not found.");
-        }
-
+        if (!member) throw new Error("Team member profile not found.");
         return { member, level };
     } catch (error) {
         console.error("Error fetching public team member data:", error);
         throw error;
     }
 }
-// --- END NEW FUNCTIONS ---
 
-// --- *** MODIFICATION: `upsertParticipantTest` *** ---
-/**
- * Saves a participant's test results.
- * This function performs two writes in a batch:
- * 1. Saves the full test record (answers, score, etc.) to the root `participantTests` collection.
- * 2. Updates the `pre_test_score` or `post_test_score` field on the main participant document.
- * @param {object} payload - The test data payload from CourseTestForm.
- * (Requires: participantId, testType, score, total, percentage)
- */
 export async function upsertParticipantTest(payload) {
     const { participantId, testType, percentage } = payload;
-
-    if (!participantId || !testType) {
-        throw new Error("Participant ID and Test Type are required.");
-    }
-
-    // Determine which field to update on the main participant doc
+    if (!participantId || !testType) throw new Error("Participant ID and Test Type are required.");
     const scoreFieldToUpdate = testType === 'pre-test' ? 'pre_test_score' : 'post_test_score';
-
-    // 1. Create a ref to the main participant document
     const participantRef = doc(db, "participants", participantId);
-    
-    // 2. Create a ref for the detailed test result.
-    // We will save this in the root `participantTests` collection
-    // with a predictable ID for easy retrieval and duplicate prevention.
     const testRecordId = `${participantId}_${testType}`;
     const testRecordRef = doc(db, "participantTests", testRecordId);
-
-    // 3. Use a batch to ensure both writes succeed or fail together
-    const batch = writeBatch(db); // Uses wrapped batch for op counting
-
-    // Write 1: Update the main participant document with the percentage
-    batch.update(participantRef, {
-        [scoreFieldToUpdate]: percentage // e.g., { pre_test_score: 80 }
-    });
-
-    // Write 2: Set the full test result in the root collection
-    // We use `set` (not merge) to overwrite any previous attempt for this test.
+    const batch = writeBatch(db); 
+    batch.update(participantRef, { [scoreFieldToUpdate]: percentage });
     batch.set(testRecordRef, payload);
-
-    // 4. Commit the batch
     await batch.commit();
 }
-// --- *** END MODIFICATION *** ---
 
-// --- *** NEW FUNCTION: `listParticipantTestsForCourse` *** ---
-/**
- * Fetches all participant test results for a specific course.
- * @param {string} courseId - The ID of the course.
- * @param {object} sourceOptions - Firestore source options (e.g., { source: 'server' }).
- * @returns {Promise<Array<object>>} A promise that resolves to an array of test result objects.
- */
 export async function listParticipantTestsForCourse(courseId, sourceOptions = {}) {
     if (!courseId) return [];
-    
     try {
-        const q = query(
-            collection(db, "participantTests"), 
-            where("courseId", "==", courseId)
-        );
-        
-        // Use getData to respect cache policy (defaults to cache-first)
+        const q = query(collection(db, "participantTests"), where("courseId", "==", courseId));
         const snapshot = await getData(q, sourceOptions);
-        
         return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
     } catch (error) {
         console.error("Error fetching participant tests for course:", error);
         throw error;
     }
 }
-// --- *** END NEW FUNCTION *** ---
 
-// --- *** NEW FUNCTION: deleteParticipantTest *** ---
 export async function deleteParticipantTest(courseId, participantId, testType) {
-    if (!participantId || !testType) {
-        throw new Error("Participant ID and Test Type are required.");
-    }
-
+    if (!participantId || !testType) throw new Error("Participant ID and Test Type are required.");
     const testRecordId = `${participantId}_${testType}`;
     const testRecordRef = doc(db, "participantTests", testRecordId);
     const participantRef = doc(db, "participants", participantId);
     const scoreFieldToReset = testType === 'pre-test' ? 'pre_test_score' : 'post_test_score';
-
     const batch = writeBatch(db);
-
-    // 1. Delete the test record document
     batch.delete(testRecordRef);
-
-    // 2. Remove the score from the participant document
-    batch.update(participantRef, {
-        [scoreFieldToReset]: deleteField() // Removes the field entirely, or use null
-    });
-
+    batch.update(participantRef, { [scoreFieldToReset]: deleteField() });
     await batch.commit();
 }
-// --- *** END NEW FUNCTION *** ---
 
-// --- NEW: Send/Queue Certificate Email ---
-// Note: This requires the "Trigger Email" Firebase Extension to be installed 
-// and configured to listen to the 'mail' collection.
 export const queueCertificateEmail = async (participant, link, language) => {
-    if (!participant.email) {
-        return { success: false, error: "No email address found for participant." };
-    }
+    if (!participant.email) return { success: false, error: "No email address found for participant." };
 
     const subject = language === 'ar' 
         ? `شهادة إكمال الدورة - ${participant.name}`
@@ -2285,7 +1661,6 @@ export const queueCertificateEmail = async (participant, link, language) => {
         return { success: true };
     } catch (error) {
         console.error("Error queuing email:", error);
-        // Fallback: If firestore write fails, return error so UI can suggest mailto
         return { success: false, error: error.message };
     }
 };

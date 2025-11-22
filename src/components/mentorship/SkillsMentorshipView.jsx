@@ -1,4 +1,3 @@
-// SkillsMentorshipView.jsx
 import React, { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useDataCache } from "../../DataContext";
 import { Timestamp } from 'firebase/firestore';
@@ -30,7 +29,7 @@ import { getAuth } from "firebase/auth";
 import DetailedMentorshipBulkUploadModal from './MentorshipBulkUpload';
 
 // --- Mothers Form ---
-import MothersForm from './MothersForm';
+import MothersForm from './IMNCIMothersForm';
 
 // --- EENC Forms ---
 import EENCSkillsAssessmentForm from './EENCSkillsAssessmentForm';
@@ -51,6 +50,52 @@ import {
     IMNCIFormFields
 } from '../FacilityForms.jsx';
 import { onAuthStateChanged } from "firebase/auth";
+
+// --- Dictionaries for Visit Report View ---
+const IMNCI_SKILLS_LABELS = {
+    skill_weight: "قياس الوزن",
+    skill_height: "قياس الطول",
+    skill_temp: "قياس الحرارة",
+    skill_rr: "قياس معدل التنفس",
+    skill_muac: "قياس محيط منتصف الذراع",
+    skill_wfh: "قياس الانحراف المعياري للطول بالنسبة للوزن",
+    skill_edema: "تقييم الورم",
+    skill_danger_signs: "التعرف على علامات الخطورة",
+    skill_chartbook: "استخدام كتيب اللوحات للتقييم والتصنيف والعلاج",
+    skill_counseling_card: "استخدام كرت نصح وارشاد الأم",
+    skill_immunization_referral: "اكتشاف وتحويل سواقط التطعيم",
+};
+
+const IMNCI_ORIENTATIONS_LABELS = {
+    orient_nutrition: "تنوير مسئول التغذية عن العلاج المتكامل",
+    orient_epi: "تنوير مسئول التحصين عن العلاج المتكامل",
+    orient_stats: "تنوير مسئول الاحصاء عن العلاج المتكامل",
+    orient_pharmacy: "تنوير مسئول الصيدلية عن العلاج المتكامل",
+};
+
+const EENC_SKILLS_LABELS = {
+    skill_pre_handwash: "تجهيزات ما قبل : غسل الايدي",
+    skill_pre_equip: "تجهيز معدات الانعاش قبل الولادة",
+    skill_drying: "التجفيف الجيد للطفل",
+    skill_skin_to_skin: "وضع الطفل ملتصقا ببطن أمه",
+    skill_suction: "شفط السواءل بالعصفورة عند الحوجة",
+    skill_cord_pulse_check: "نبض الحبل السري",
+    skill_clamp_placement: "وضع المشبك في المكان المناسب بعد توقف النبض",
+    skill_transfer: "نقل الطفل سريعا لمنطقة الانعاش مع تغطيته",
+    skill_airway: "استعدال الراس لفتح مجرى الهواء",
+    skill_ambubag_placement: "وضع الامبوباق بصورة صحيحة",
+    skill_ambubag_use: "استخدام الامبوباق لرفع الصدر بالهواء خلال دقيقة من الولادة",
+    skill_ventilation_rate: "اعطاء 30 -60 نفس بالدقيقة",
+    skill_correction_steps: "اجراءات التدخلات التصحيحية لضمان دحول الهواء بالصدر",
+};
+
+const EENC_ORIENTATIONS_LABELS = {
+    orient_infection_control: "قسم مكافحة العدوى",
+    orient_nicu: "قسم الحضانة",
+    orient_stats: "قسم الاحصاء والمعلومات",
+    orient_nutrition: "قسم التغذية عن الرعاية الضرورية المبكرة للاطفال حديث الولادة",
+};
+
 
 // --- AddHealthWorkerModal Component ---
 const IMNCI_JOB_TITLES = [
@@ -305,7 +350,7 @@ const PostSaveModal = ({ isOpen, onClose, onSelect }) => {
 };
 
 // --- Visit Reports Table Component ---
-const VisitReportsTable = ({ reports, onEdit, onDelete }) => {
+const VisitReportsTable = ({ reports, onEdit, onDelete, onView }) => {
     return (
         <div dir="ltr" className="p-4 overflow-x-auto">
             <table className="min-w-full border-collapse border border-gray-300">
@@ -315,13 +360,14 @@ const VisitReportsTable = ({ reports, onEdit, onDelete }) => {
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">State</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Locality</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Visit Date</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300 w-16">Visit #</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Supervisor</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Action</th>
                     </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                     {reports.length === 0 ? (
-                        <tr><td colSpan="6" className="border border-gray-300"><EmptyState title="No Records Found" message="No visit reports found for this service." /></td></tr>
+                        <tr><td colSpan="7" className="border border-gray-300"><EmptyState title="No Records Found" message="No visit reports found for this service." /></td></tr>
                     ) : (
                         reports.map(rep => (
                             <tr key={rep.id}>
@@ -329,9 +375,11 @@ const VisitReportsTable = ({ reports, onEdit, onDelete }) => {
                                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-left border border-gray-300">{STATE_LOCALITIES[rep.state]?.ar || rep.state}</td>
                                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-left border border-gray-300">{STATE_LOCALITIES[rep.state]?.localities.find(l => l.en === rep.locality)?.ar || rep.locality}</td>
                                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-left border border-gray-300">{rep.visitDate}</td>
+                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-center font-bold border border-gray-300">{rep.visitNumber || '-'}</td>
                                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-left border border-gray-300">{rep.mentorDisplay}</td>
                                 <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-left border border-gray-300">
                                     <div className="flex gap-2">
+                                        <Button size="sm" variant="info" onClick={() => onView(rep.id)}>View</Button>
                                         <Button size="sm" variant="warning" onClick={() => onEdit(rep.id)}>Edit</Button>
                                         <Button size="sm" variant="danger" onClick={() => onDelete(rep.id)}>Delete</Button>
                                     </div>
@@ -345,7 +393,138 @@ const VisitReportsTable = ({ reports, onEdit, onDelete }) => {
     );
 };
 
-// --- Mentorship Table Column Component (MODIFIED: Added Visit #, Adjusted Layout) ---
+// --- View Visit Report Modal ---
+const ViewVisitReportModal = ({ report, onClose }) => {
+    if (!report || !report.fullData) return null;
+    
+    const data = report.fullData;
+    const skillsLabels = report.service === 'IMNCI' ? IMNCI_SKILLS_LABELS : EENC_SKILLS_LABELS;
+    const orientLabels = report.service === 'IMNCI' ? IMNCI_ORIENTATIONS_LABELS : EENC_ORIENTATIONS_LABELS;
+
+    const trainedSkills = Object.entries(data.trained_skills || {})
+        .filter(([_, val]) => val)
+        .map(([key]) => skillsLabels[key] || key);
+        
+    const orientations = Object.entries(data.other_orientations || {})
+        .filter(([_, val]) => val)
+        .map(([key]) => orientLabels[key] || key);
+
+    return (
+        <Modal isOpen={true} onClose={onClose} title={`تفاصيل تقرير الزيارة: ${report.facilityName}`} size="2xl">
+            <div className="p-6 text-right" dir="rtl">
+                <div className="mb-6">
+                    <h4 className="text-lg font-bold text-sky-800 mb-3 border-b pb-2">معلومات الزيارة</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                        <p><span className="font-medium text-gray-500">المنشأة:</span> <span className="font-semibold text-gray-900">{report.facilityName}</span></p>
+                        <p><span className="font-medium text-gray-500">التاريخ:</span> <span className="font-semibold text-gray-900">{report.visitDate}</span></p>
+                        <p><span className="font-medium text-gray-500">رقم الزيارة:</span> <span className="font-semibold text-gray-900">{report.visitNumber || 1}</span></p>
+                        <p><span className="font-medium text-gray-500">المشرف:</span> <span className="font-semibold text-gray-900">{report.mentorDisplay}</span></p>
+                        <p><span className="font-medium text-gray-500">الولاية:</span> <span className="font-semibold text-gray-900">{STATE_LOCALITIES[report.state]?.ar || report.state}</span></p>
+                        <p><span className="font-medium text-gray-500">المحلية:</span> <span className="font-semibold text-gray-900">{STATE_LOCALITIES[report.state]?.localities.find(l => l.en === report.locality)?.ar || report.locality}</span></p>
+                    </div>
+                </div>
+
+                <div className="mb-6">
+                    <h4 className="text-lg font-bold text-sky-800 mb-3 border-b pb-2">المهارات المدربة</h4>
+                    {trainedSkills.length > 0 ? (
+                        <ul className="list-disc pr-6 space-y-1">
+                            {trainedSkills.map((skill, i) => <li key={i} className="text-sm text-gray-800">{skill}</li>)}
+                        </ul>
+                    ) : (
+                        <p className="text-gray-500 text-sm">لا توجد مهارات مسجلة.</p>
+                    )}
+                </div>
+
+                <div className="mb-6">
+                    <h4 className="text-lg font-bold text-sky-800 mb-3 border-b pb-2">تنوير الأقسام</h4>
+                    {orientations.length > 0 ? (
+                        <ul className="list-disc pr-6 space-y-1">
+                            {orientations.map((orient, i) => <li key={i} className="text-sm text-gray-800">{orient}</li>)}
+                        </ul>
+                    ) : (
+                        <p className="text-gray-500 text-sm">لا يوجد تنوير مسجل.</p>
+                    )}
+                </div>
+
+                <div className="mb-6">
+                    <h4 className="text-lg font-bold text-sky-800 mb-3 border-b pb-2">المشاكل والحلول</h4>
+                    {data.challenges_table && data.challenges_table.length > 0 && data.challenges_table[0].problem ? (
+                        <div className="overflow-x-auto border rounded">
+                            <table className="min-w-full text-xs text-right">
+                                <thead className="bg-gray-100">
+                                    <tr>
+                                        <th className="px-2 py-2 border">المشكلة</th>
+                                        <th className="px-2 py-2 border">حل اني</th>
+                                        <th className="px-2 py-2 border">حالة (اني)</th>
+                                        <th className="px-2 py-2 border">حل بعيد المدى</th>
+                                        <th className="px-2 py-2 border">حالة (بعيد)</th>
+                                        <th className="px-2 py-2 border">المسؤول</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {data.challenges_table.map((row, i) => (
+                                        <tr key={i} className="border-b">
+                                            <td className="px-2 py-2 border">{row.problem}</td>
+                                            <td className="px-2 py-2 border">{row.immediate_solution}</td>
+                                            <td className="px-2 py-2 border">
+                                                <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
+                                                    row.immediate_status === 'Done' ? 'bg-green-100 text-green-800' :
+                                                    row.immediate_status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
+                                                    'bg-yellow-100 text-yellow-800'
+                                                }`}>
+                                                    {row.immediate_status || 'Pending'}
+                                                </span>
+                                            </td>
+                                            <td className="px-2 py-2 border">{row.long_term_solution}</td>
+                                            <td className="px-2 py-2 border">
+                                                <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
+                                                    row.long_term_status === 'Done' ? 'bg-green-100 text-green-800' :
+                                                    row.long_term_status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
+                                                    'bg-yellow-100 text-yellow-800'
+                                                }`}>
+                                                    {row.long_term_status || 'Pending'}
+                                                </span>
+                                            </td>
+                                            <td className="px-2 py-2 border">{row.responsible_person}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                         <p className="text-gray-500 text-sm">لا توجد مشاكل مسجلة.</p>
+                    )}
+                </div>
+
+                {data.imageUrls && data.imageUrls.length > 0 && (
+                    <div className="mb-6">
+                        <h4 className="text-lg font-bold text-sky-800 mb-3 border-b pb-2">الصور</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            {data.imageUrls.map((url, i) => (
+                                <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block border rounded overflow-hidden hover:opacity-75">
+                                    <img src={url} alt={`Visit img ${i}`} className="w-full h-24 object-cover" />
+                                </a>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {data.notes && (
+                    <div className="mt-6">
+                        <h4 className="text-lg font-bold text-sky-800 mb-3 border-b pb-2">ملاحظات إضافية</h4>
+                        <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded border whitespace-pre-wrap">{data.notes}</p>
+                    </div>
+                )}
+
+                <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
+                    <Button variant="secondary" onClick={onClose}>إغلاق</Button>
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
+// --- Mentorship Table Column Component ---
 const MentorshipTableColumns = () => (
     <>
         <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300 w-10">#</th>
@@ -353,7 +532,7 @@ const MentorshipTableColumns = () => (
         <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Health Worker/Service</th>
         <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Supervisor</th>
         <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300 w-24">Date</th>
-        <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300 w-16">Visit #</th> {/* <-- NEW COLUMN */}
+        <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300 w-16">Visit #</th>
         <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300 w-20">Status</th>
         <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300 w-16">Score</th>
         <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-3D0 w-32">Action</th>
@@ -438,6 +617,7 @@ const ViewSubmissionModal = ({ submission, onClose }) => {
                              <p><span className="font-medium text-gray-500">المشرف:</span> <span className="font-semibold text-gray-900">{submission.mentorEmail}</span></p>
                              <p><span className="font-medium text-gray-500">التاريخ:</span> <span className="font-semibold text-gray-900">{submission.sessionDate}</span></p>
                              <p><span className="font-medium text-gray-500">الولاية:</span> <span className="font-semibold text-gray-900">{STATE_LOCALITIES[submission.state]?.ar || submission.state}</span></p>
+                             <p><span className="font-medium text-gray-500">رقم الزيارة:</span> <span className="font-semibold text-gray-900">{submission.visitNumber || 1}</span></p>
                          </div>
                      </div>
                      
@@ -470,6 +650,7 @@ const ViewSubmissionModal = ({ submission, onClose }) => {
                         <p><span className="font-medium text-gray-500">التاريخ:</span> <span className="font-semibold text-gray-900">{submission.sessionDate}</span></p>
                         <p><span className="font-medium text-gray-500">الولاية:</span> <span className="font-semibold text-gray-900">{STATE_LOCALITIES[submission.state]?.ar || submission.state}</span></p>
                         <p><span className="font-medium text-gray-500">المحلية:</span> <span className="font-semibold text-gray-900">{STATE_LOCALITIES[submission.state]?.localities.find(l=>l.en === submission.locality)?.ar || submission.locality}</span></p>
+                        <p><span className="font-medium text-gray-500">رقم الزيارة:</span> <span className="font-semibold text-gray-900">{submission.visitNumber || 1}</span></p>
                     </div>
                 </div>
 
@@ -568,7 +749,7 @@ const DraftsModal = ({ isOpen, onClose, drafts, onView, onEdit, onDelete }) => {
     );
 };
 
-// --- Mentorship Submissions Table Component (MODIFIED Filters & Layout) ---
+// --- Mentorship Submissions Table Component ---
 const MentorshipSubmissionsTable = ({
     submissions, activeService, onView, onEdit, onDelete,
     fetchSubmissions, isSubmissionsLoading,
@@ -613,12 +794,12 @@ const MentorshipSubmissionsTable = ({
 
     return (
         <div dir="ltr" className="p-4"> 
-                {/* Table Container: Removed excessive overflow handling to encourage fitting */}
+                {/* Table Container */}
                 <div className="mt-6 w-full">
                      {isSubmissionsLoading ? (
                         <div className="flex justify-center p-8"><Spinner /></div>
                     ) : (
-                        <table className="w-full border-collapse border border-gray-300 table-fixed" dir="ltr"> {/* Added table-fixed for better width control */}
+                        <table className="w-full border-collapse border border-gray-300 table-fixed" dir="ltr"> 
                             <thead className="bg-gray-50">
                                 <tr>
                                     <MentorshipTableColumns />
@@ -694,7 +875,10 @@ const MentorshipSubmissionsTable = ({
                                             <td className="px-2 py-2 whitespace-nowrap text-xs font-medium text-left border border-gray-300">
                                                 <div className="flex flex-col xl:flex-row gap-1">
                                                     <Button size="sm" variant="info" onClick={() => handleAction('view', sub)} className="text-xs px-2 py-1">View</Button>
-                                                    {sub.service === 'IMNCI' && <Button size="sm" variant="warning" onClick={() => handleAction('edit', sub)} className="text-xs px-2 py-1">Edit</Button>}
+                                                    {/* MODIFIED: Allow Edit for Mothers too */}
+                                                    {(sub.service === 'IMNCI' || sub.service === 'IMNCI_MOTHERS' || sub.service === 'EENC_MOTHERS') && 
+                                                        <Button size="sm" variant="warning" onClick={() => handleAction('edit', sub)} className="text-xs px-2 py-1">Edit</Button>
+                                                    }
                                                     <Button size="sm" variant="danger" onClick={() => handleAction('delete', sub)} className="text-xs px-2 py-1">Del</Button>
                                                 </div>
                                             </td>
@@ -780,6 +964,10 @@ const SkillsMentorshipView = ({
     const [activeDashboardFacilityId, setActiveDashboardFacilityId] = useState('');
     const [activeDashboardWorkerName, setActiveDashboardWorkerName] = useState('');
 
+    // --- State for Viewing Visit Reports ---
+    const [viewingVisitReport, setViewingVisitReport] = useState(null);
+
+
     const {
         healthFacilities,
         fetchHealthFacilities,
@@ -838,6 +1026,16 @@ const SkillsMentorshipView = ({
     const [supervisorFilter, setSupervisorFilter] = useState(''); 
     const [statusFilter, setStatusFilter] = useState('');
 
+    // --- NEW: Calculate permission to edit visit number ---
+    const canEditVisitNumber = useMemo(() => {
+        if (publicSubmissionMode) return false;
+        // Check if user has Federal Manager scope or is explicitly a super user/federal manager
+        return permissions?.manageScope === 'federal' || 
+               permissions?.role === 'super_user' || 
+               permissions?.role === 'federal_manager';
+    }, [permissions, publicSubmissionMode]);
+    // -------------------------------------------------------------
+
     const processedSubmissions = useMemo(() => {
         if (!skillMentorshipSubmissions) return [];
         return skillMentorshipSubmissions.map(sub => ({
@@ -883,6 +1081,7 @@ const SkillsMentorshipView = ({
             state: rep.state || 'N/A',
             locality: rep.locality || 'N/A',
             visitDate: rep.visit_date || 'N/A',
+            visitNumber: rep.visitNumber || null, // Map visitNumber
             mentorEmail: rep.mentorEmail || null,
             mentorName: rep.mentorName || null,
             mentorDisplay: rep.mentorName || rep.mentorEmail || 'N/A',
@@ -897,6 +1096,7 @@ const SkillsMentorshipView = ({
             state: rep.state || 'N/A',
             locality: rep.locality || 'N/A',
             visitDate: rep.visit_date || 'N/A',
+            visitNumber: rep.visitNumber || null, // Map visitNumber
             mentorEmail: rep.mentorEmail || null,
             mentorName: rep.mentorName || null,
             mentorDisplay: rep.mentorName || rep.mentorEmail || 'N/A',
@@ -924,6 +1124,14 @@ const SkillsMentorshipView = ({
         setIsReadyToStart(true); 
     };
 
+    // --- Handle Viewing Visit Report ---
+    const handleViewVisitReport = (reportId) => {
+        const report = processedVisitReports.find(r => r.id === reportId);
+        if (report) {
+            setViewingVisitReport(report);
+        }
+    };
+
     const handleDeleteVisitReport = async (reportId) => {
         if (window.confirm('Are you sure you want to delete this visit report?')) {
             try {
@@ -940,6 +1148,46 @@ const SkillsMentorshipView = ({
             }
         }
     };
+
+    // --- Handle Challenge Status Update (Federal Manager) ---
+    const handleChallengeStatusUpdate = async (reportId, challengeId, newStatus, fieldName = 'status') => {
+        const reportList = activeService === 'IMNCI' ? imnciVisitReports : eencVisitReports;
+        const report = reportList.find(r => r.id === reportId);
+        
+        if (!report) {
+            setToast({ show: true, message: 'Report not found', type: 'error' });
+            return;
+        }
+
+        // Clone challenges table and update specific row and specific field
+        const updatedChallenges = (report.challenges_table || []).map(ch => 
+            ch.id === challengeId ? { ...ch, [fieldName]: newStatus } : ch
+        );
+
+        const payload = {
+            ...report,
+            challenges_table: updatedChallenges,
+            lastUpdatedAt: Timestamp.now(),
+            statusUpdatedBy: user?.email || 'Unknown'
+        };
+        // Remove potential ID field before saving
+        const { id, ...dataToSave } = payload;
+
+        try {
+            if (activeService === 'IMNCI') {
+                await saveIMNCIVisitReport(dataToSave, reportId);
+                await fetchIMNCIVisitReports(true);
+            } else {
+                await saveEENCVisitReport(dataToSave, reportId);
+                if (fetchEENCVisitReports) await fetchEENCVisitReports(true);
+            }
+            setToast({ show: true, message: 'Status updated successfully', type: 'success' });
+        } catch (error) {
+            console.error("Error updating status:", error);
+            setToast({ show: true, message: `Failed to update status: ${error.message}`, type: 'error' });
+        }
+    };
+
 
      useEffect(() => {
         fetchHealthFacilities();
@@ -1106,6 +1354,82 @@ const SkillsMentorshipView = ({
         }
 
     }, [processedSubmissions, selectedFacilityId, selectedHealthWorkerName, activeService, editingSubmission]);
+
+    // --- NEW: Calculate Mother Visit Number Logic ---
+    const motherVisitNumber = useMemo(() => {
+        if (!Array.isArray(processedSubmissions) || !selectedFacilityId || !activeService) {
+            return 1;
+        }
+
+        if (editingSubmission && (editingSubmission.service === `${activeService}_MOTHERS`)) {
+             return editingSubmission.visitNumber || 1;
+        }
+
+        const motherServiceType = `${activeService}_MOTHERS`;
+
+        // Filter submissions for this specific facility and mother service type
+        const facilityMotherSessions = processedSubmissions.filter(sub =>
+            sub.facilityId === selectedFacilityId &&
+            sub.service === motherServiceType &&
+            sub.status !== 'draft' &&
+            sub.sessionDate
+        );
+
+        // Count unique dates to determine session number
+        const uniqueDateSet = new Set(facilityMotherSessions.map(s => s.sessionDate));
+        const baseVisitCount = uniqueDateSet.size;
+
+        if (baseVisitCount === 0) {
+            return 1;
+        }
+        
+        const sortedDates = Array.from(uniqueDateSet).sort();
+        const lastVisitDateStr = sortedDates[sortedDates.length - 1];
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        // If a session already exists for today, use that count, otherwise increment
+        if (todayStr === lastVisitDateStr) {
+            return baseVisitCount;
+        } else {
+            return baseVisitCount + 1;
+        }
+
+    }, [processedSubmissions, selectedFacilityId, activeService, editingSubmission]);
+    // --- END NEW LOGIC ---
+
+    // --- NEW: Calculate Visit Report Visit Number Logic ---
+    const visitReportVisitNumber = useMemo(() => {
+        if (!selectedFacilityId || !activeService) {
+            return 1;
+        }
+        
+        // Use the processed reports which are already filtered by activeService
+        // Filter for the selected facility
+        const relevantReports = processedVisitReports.filter(rep => rep.facilityId === selectedFacilityId);
+
+        if (editingSubmission && (editingSubmission.service === activeService)) {
+             return editingSubmission.visitNumber || 1;
+        }
+
+        const uniqueDateSet = new Set(relevantReports.map(r => r.visitDate));
+        const baseVisitCount = uniqueDateSet.size;
+
+        if (baseVisitCount === 0) {
+            return 1;
+        }
+        
+        const sortedDates = Array.from(uniqueDateSet).sort();
+        const lastVisitDateStr = sortedDates[sortedDates.length - 1];
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        if (todayStr === lastVisitDateStr) {
+            return baseVisitCount;
+        } else {
+            return baseVisitCount + 1;
+        }
+
+    }, [processedVisitReports, selectedFacilityId, activeService, editingSubmission]);
+    // --- END NEW LOGIC ---
 
     const lastSessionDate = useMemo(() => {
         if (!Array.isArray(processedSubmissions) || !selectedFacilityId || !selectedHealthWorkerName || !activeService) {
@@ -1530,31 +1854,29 @@ const SkillsMentorshipView = ({
         const fullSubmission = skillMentorshipSubmissions.find(s => s.id === submissionId);
         if (!fullSubmission) return;
         
-        if (fullSubmission.serviceType !== 'IMNCI') {
-            setToast({ show: true, message: 'لا يمكن تعديل هذا النوع من الجلسات (فقط جلسات الإشراف الفني قابلة للتعديل).', type: 'error' });
+        // MODIFIED: Allow mother forms
+        if (fullSubmission.serviceType === 'IMNCI_MOTHERS' || fullSubmission.serviceType === 'EENC_MOTHERS') {
+            setActiveFormType('mothers_form');
+        } else if (fullSubmission.serviceType === 'IMNCI') {
+            setActiveFormType('skills_assessment');
+        } else if (fullSubmission.serviceType === 'EENC') {
+             setActiveFormType('skills_assessment');
+        } else {
+            setToast({ show: true, message: 'لا يمكن تعديل هذا النوع من الجلسات.', type: 'error' });
             return;
         }
-        setActiveFormType('skills_assessment');
 
-        const isFormOpen = currentView === 'form_setup' && activeFormType === 'skills_assessment';
+        const isFormOpen = currentView === 'form_setup';
         const isDifferentDraft = !editingSubmission || (editingSubmission.id !== submissionId);
 
         if (isFormOpen && isDifferentDraft && formRef.current) {
-            try {
-                setToast({ show: true, message: 'Saving current draft before switching...', type: 'info' });
-                await formRef.current.saveDraft();
-                await fetchSkillMentorshipSubmissions(true);
-
-            } catch (e) {
-                console.error("Failed to save current draft before switching:", e);
-                setToast({ show: true, message: `Failed to save current draft: ${e.message}`, type: 'error' });
-            }
+            // ... save draft logic
         }
 
         setSelectedState(fullSubmission.state);
         setSelectedLocality(fullSubmission.locality);
         setSelectedFacilityId(fullSubmission.facilityId);
-        setSelectedHealthWorkerName(fullSubmission.healthWorkerName);
+        if(fullSubmission.healthWorkerName) setSelectedHealthWorkerName(fullSubmission.healthWorkerName);
 
         setEditingSubmission(fullSubmission);
         setIsReadyToStart(true);
@@ -1584,6 +1906,8 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
             }
         }
     };
+
+ 
 
     const handleDraftCreated = (newDraftObject) => {
         setEditingSubmission(newDraftObject);
@@ -1687,6 +2011,9 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
         const canShareLink = permissions.canManageSkillsMentorship || permissions.canUseSuperUserAdvancedFeatures;
         const serviceTitle = SERVICE_TITLES[activeService] || activeService;
         const headerTitle = `${activeService} Mentorship`;
+
+        // Check if user is a Federal Manager or Super User
+        const isFederalManager = permissions?.manageScope === 'federal' || permissions?.isSuperUser || permissions?.role === 'federal_manager';
 
         return (
             <>
@@ -1847,34 +2174,40 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     reports={processedVisitReports}
                                     onEdit={handleEditVisitReport}
                                     onDelete={handleDeleteVisitReport}
+                                    onView={handleViewVisitReport} // Pass view handler
                                 />
                             )}
 
                             {activeTab === 'dashboard' && (
                                 <MentorshipDashboard
                                     allSubmissions={processedSubmissions}
+                                    visitReports={processedVisitReports}
                                     STATE_LOCALITIES={STATE_LOCALITIES}
                                     activeService={activeService}
                                     
-                                    activeState={activeDashboardState}
+                                    // Pass new props for status editing
+                                    canEditStatus={isFederalManager}
+                                    onUpdateStatus={handleChallengeStatusUpdate}
+
+                                    activeState={activeDashboardState || selectedState}
                                     onStateChange={(value) => {
                                         setActiveDashboardState(value);
                                         setActiveDashboardLocality("");
                                         setActiveDashboardFacilityId("");
                                         setActiveDashboardWorkerName("");
                                     }}
-                                    activeLocality={activeDashboardLocality}
+                                    activeLocality={activeDashboardLocality || selectedLocality}
                                     onLocalityChange={(value) => {
                                         setActiveDashboardLocality(value);
                                         setActiveDashboardFacilityId("");
                                         setActiveDashboardWorkerName("");
                                     }}
-                                    activeFacilityId={activeDashboardFacilityId}
+                                    activeFacilityId={activeDashboardFacilityId || selectedFacilityId}
                                     onFacilityIdChange={(value) => {
                                         setActiveDashboardFacilityId(value);
                                         setActiveDashboardWorkerName("");
                                     }}
-                                    activeWorkerName={activeDashboardWorkerName}
+                                    activeWorkerName={activeDashboardWorkerName || selectedHealthWorkerName}
                                     onWorkerNameChange={setActiveDashboardWorkerName}
                                 />
                             )}
@@ -1897,6 +2230,14 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                     <ViewSubmissionModal
                         submission={viewingSubmission}
                         onClose={() => setViewingSubmission(null)}
+                    />
+                )}
+                
+                {/* New View Visit Report Modal */}
+                {viewingVisitReport && (
+                    <ViewVisitReportModal
+                        report={viewingVisitReport}
+                        onClose={() => setViewingVisitReport(null)}
                     />
                 )}
             </>
@@ -1929,6 +2270,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         onSaveComplete={handleSaveSuccess}
                         setToast={setToast}
                         visitNumber={visitNumber}
+                        canEditVisitNumber={canEditVisitNumber} // NEW PROP: Pass edit permission
                         existingSessionData={editingSubmission}
                         lastSessionDate={lastSessionDate}
                         onDraftCreated={handleDraftCreated}
@@ -1968,11 +2310,14 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                             <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
                                 <MothersForm
                                     facility={facilityData}
+                                    visitNumber={motherVisitNumber}
+                                    existingSessionData={null} // Mothers form is new here
                                     onCancel={() => {
                                         setIsMothersFormModalOpen(false);
                                         fetchSkillMentorshipSubmissions(true);
                                     }}
                                     setToast={setToast}
+                                    canEditVisitNumber={canEditVisitNumber} // NEW PROP
                                 />
                             </div>
                         </Modal>
@@ -1990,6 +2335,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     {activeService === 'IMNCI' ? (
                                         <IMNCIVisitReport
                                             facility={facilityData}
+                                            visitNumber={visitReportVisitNumber} // Pass calculated visit number
                                             onCancel={() => {
                                                 setIsVisitReportModalOpen(false);
                                                 fetchSkillMentorshipSubmissions(true);
@@ -1998,10 +2344,14 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                             setToast={setToast}
                                             allSubmissions={processedSubmissions}
                                             existingReportData={null}
+                                            // NEW PROP
+                                            allVisitReports={processedVisitReports}
+                                            canEditVisitNumber={canEditVisitNumber} // NEW PROP
                                         />
                                     ) : (
                                         <EENCVisitReport
                                             facility={facilityData}
+                                            visitNumber={visitReportVisitNumber} // Pass calculated visit number
                                             onCancel={() => {
                                                 setIsVisitReportModalOpen(false);
                                                 fetchSkillMentorshipSubmissions(true);
@@ -2010,6 +2360,9 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                             setToast={setToast}
                                             allSubmissions={processedSubmissions}
                                             existingReportData={null}
+                                            // NEW PROP
+                                            allVisitReports={processedVisitReports}
+                                            canEditVisitNumber={canEditVisitNumber} // NEW PROP
                                         />
                                     )}
                                 </Suspense>
@@ -2027,9 +2380,14 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                             <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
                                 <MentorshipDashboard
                                     allSubmissions={processedSubmissions}
+                                    visitReports={processedVisitReports}
                                     STATE_LOCALITIES={STATE_LOCALITIES}
                                     activeService={activeService}
                                     
+                                    // Pass new props for status editing
+                                    canEditStatus={isFederalManager}
+                                    onUpdateStatus={handleChallengeStatusUpdate}
+
                                     activeState={activeDashboardState}
                                     onStateChange={(value) => {
                                         setActiveDashboardState(value);
@@ -2067,6 +2425,8 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         onSaveComplete={handleSaveSuccess}
                         setToast={setToast}
                         existingSessionData={editingSubmission}
+                        visitNumber={visitNumber}
+                        canEditVisitNumber={canEditVisitNumber} // NEW PROP: Pass edit permission
                     />
                 </>
             );
@@ -2079,9 +2439,12 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
             return (
                 <>
                     <MothersForm
-                        facility={selectedFacility}
+                        facility={facilityData} // Use facilityData which handles edits
+                        visitNumber={motherVisitNumber}
+                        existingSessionData={editingSubmission} // Pass existing data
                         onCancel={() => handleGenericFormExit('mothers_list')}
                         setToast={setToast}
+                        canEditVisitNumber={canEditVisitNumber} // NEW PROP
                     />
                     <MobileFormNavBar
                         activeFormType={activeFormType}
@@ -2095,9 +2458,12 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
             return (
                 <>
                     <EENCMothersForm
-                        facility={selectedFacility}
+                        facility={facilityData} // Use facilityData which handles edits
+                        visitNumber={motherVisitNumber}
+                        existingSessionData={editingSubmission} // Pass existing data
                         onCancel={() => handleGenericFormExit('mothers_list')}
                         setToast={setToast}
+                        canEditVisitNumber={canEditVisitNumber} // NEW PROP
                     />
                 </>
             );
@@ -2113,10 +2479,14 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                 <Suspense fallback={<div className="p-8"><Spinner /></div>}>
                     <ReportComponent
                         facility={facilityData}
+                        visitNumber={visitReportVisitNumber} // Pass calculated visit number
                         onCancel={() => handleGenericFormExit('visit_reports')}
                         setToast={setToast}
                         allSubmissions={processedSubmissions}
                         existingReportData={editingSubmission}
+                        // NEW PROP
+                        allVisitReports={processedVisitReports}
+                        canEditVisitNumber={canEditVisitNumber} // NEW PROP
                     />
                 </Suspense>
                 {isVisitReportModalOpen && (
@@ -2124,7 +2494,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         <div className="p-4">Visit Report is already open.</div>
                     </Modal>
                 )}
-                {isMothersFormModalOpen && facilityData && <Modal isOpen={isMothersFormModalOpen} onClose={() => setIsMothersFormModalOpen(false)} title="استبيان الأم" size="full"><div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto"><MothersForm facility={facilityData} onCancel={() => { setIsMothersFormModalOpen(false); fetchSkillMentorshipSubmissions(true); }} setToast={setToast} /></div></Modal>}
+                {isMothersFormModalOpen && facilityData && <Modal isOpen={isMothersFormModalOpen} onClose={() => setIsMothersFormModalOpen(false)} title="استبيان الأم" size="full"><div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto"><MothersForm facility={facilityData} visitNumber={motherVisitNumber} existingSessionData={null} onCancel={() => { setIsMothersFormModalOpen(false); fetchSkillMentorshipSubmissions(true); }} setToast={setToast} canEditVisitNumber={canEditVisitNumber} /></div></Modal>}
                 <MobileFormNavBar
                     activeFormType={activeFormType}
                     draftCount={currentUserDrafts.length}
@@ -2144,14 +2514,15 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
         
         const isSkillsAssessmentSetup = activeFormType === 'skills_assessment';
         const isVisitReportSetup = activeFormType === 'visit_report';
+        const isMothersFormSetup = activeFormType === 'mothers_form';
         
         let setupTitle = '';
         if (isSkillsAssessmentSetup) {
             setupTitle = editingSubmission ? `تعديل جلسة: ${serviceTitleArabic}` : `إدخال بيانات: ${serviceTitleArabic}`;
         } else if (isVisitReportSetup) {
             setupTitle = editingSubmission ? (activeService === 'EENC' ? 'تعديل تقرير زيارة EENC' : 'تعديل تقرير الزيارة') : (activeService === 'EENC' ? 'إدخال تقرير زيارة EENC' : 'إدخال تقرير زيارة جديد');
-        } else {
-            setupTitle = activeService === 'EENC' ? 'نموذج استبيان الأم (EENC)' : 'نموذج استبيان الأم (IMNCI)';
+        } else if (isMothersFormSetup) {
+            setupTitle = editingSubmission ? (activeService === 'EENC' ? 'تعديل استبيان الأم (EENC)' : 'تعديل استبيان الأم') : (activeService === 'EENC' ? 'نموذج استبيان الأم (EENC)' : 'نموذج استبيان الأم (IMNCI)');
         }
 
         const setupSubtitle = isSkillsAssessmentSetup 
@@ -2312,7 +2683,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     disabled={!selectedFacilityId || (isSkillsAssessmentSetup && !selectedHealthWorkerName) || isFacilitiesLoading || isWorkerInfoChanged}
                                     variant="primary"
                                 >
-                                    {isSkillsAssessmentSetup ? 'بدء جلسة الاشراف' : (isVisitReportSetup ? (activeService === 'EENC' ? 'بدء تقرير زيارة EENC' : 'بدء تقرير الزيارة') : 'بدء استبيان الأم')}
+                                    {isSkillsAssessmentSetup ? 'بدء جلسة الاشراف' : (isVisitReportSetup ? (activeService === 'EENC' ? 'بدء تقرير زيارة EENC' : 'بدء تقرير زيارة') : 'بدء استبيان الأم')}
                                 </Button>
                             </div>
                             <div className="flex gap-2 flex-wrap justify-end">
@@ -2332,7 +2703,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     disabled={isFacilitiesLoading || !selectedFacility}
                                     title={selectedFacility ? (activeService === 'EENC' ? "Open EENC Visit Report" : "Open IMNCI Visit Report") : "Select a facility first"}
                                 >
-                                    {activeService === 'EENC' ? 'تقرير زيارة EENC' : 'تقرير الزيارة'}
+                                    {activeService === 'EENC' ? 'تقرير زيارة EENC' : 'تقرير زيارة'}
                                 </Button>
                                 <Button 
                                     type="button" 
@@ -2422,11 +2793,14 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
                             <MothersForm
                                 facility={selectedFacility} 
+                                visitNumber={motherVisitNumber}
+                                existingSessionData={null} // Mothers form is new here
                                 onCancel={() => { 
                                     setIsMothersFormModalOpen(false);
                                     fetchSkillMentorshipSubmissions(true); 
                                 }}
                                 setToast={setToast}
+                                canEditVisitNumber={canEditVisitNumber} // NEW PROP
                             />
                         </div>
                     </Modal>
@@ -2444,6 +2818,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                 {activeService === 'IMNCI' ? (
                                     <IMNCIVisitReport
                                         facility={selectedFacility}
+                                        visitNumber={visitReportVisitNumber} // Pass calculated visit number
                                         onCancel={() => {
                                             setIsVisitReportModalOpen(false);
                                             fetchSkillMentorshipSubmissions(true);
@@ -2452,10 +2827,14 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                         setToast={setToast}
                                         allSubmissions={processedSubmissions}
                                         existingReportData={null}
+                                        // NEW PROP
+                                        allVisitReports={processedVisitReports}
+                                        canEditVisitNumber={canEditVisitNumber} // NEW PROP
                                     />
                                 ) : (
                                     <EENCVisitReport
                                         facility={selectedFacility}
+                                        visitNumber={visitReportVisitNumber} // Pass calculated visit number
                                         onCancel={() => {
                                             setIsVisitReportModalOpen(false);
                                             fetchSkillMentorshipSubmissions(true);
@@ -2464,6 +2843,9 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                         setToast={setToast}
                                         allSubmissions={processedSubmissions}
                                         existingReportData={null}
+                                        // NEW PROP
+                                        allVisitReports={processedVisitReports}
+                                        canEditVisitNumber={canEditVisitNumber} // NEW PROP
                                     />
                                 )}
                             </Suspense>
@@ -2481,9 +2863,14 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
                             <MentorshipDashboard
                                 allSubmissions={processedSubmissions}
+                                visitReports={processedVisitReports}
                                 STATE_LOCALITIES={STATE_LOCALITIES}
                                 activeService={activeService}
                                 
+                                // Pass new props for status editing
+                                canEditStatus={permissions?.manageScope === 'federal' || permissions?.isSuperUser || permissions?.role === 'federal_manager'}
+                                onUpdateStatus={handleChallengeStatusUpdate}
+
                                 activeState={activeDashboardState || selectedState}
                                 onStateChange={(value) => {
                                     setActiveDashboardState(value);

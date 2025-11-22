@@ -4,8 +4,10 @@ import { createRoot } from 'react-dom/client';
 import html2canvas from 'html2canvas';
 import jsPDF from "jspdf";
 import { QRCodeCanvas } from 'qrcode.react';
-import { STATE_LOCALITIES } from './constants';
-import { db } from '../firebase';
+// --- FIX: Corrected Path (Sibling) ---
+import { STATE_LOCALITIES } from './constants'; 
+// --- FIX: Corrected Path (Parent) ---
+import { db } from '../firebase'; 
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
 // --- Constants & Helpers ---
@@ -99,7 +101,8 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
     participantSubCourse,
     language = 'en',
     directorNameAr,      
-    programManagerNameAr 
+    programManagerNameAr,
+    programManagerSignatureUrl 
 }) {
     const isArabic = language === 'ar';
     const courseTitle = getCertificateCourseTitle(course.course_type, language);
@@ -169,20 +172,17 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
         direction: isArabic ? 'rtl' : 'ltr'
     };
 
-    // --- UPDATED: QR Code Container Style (Strict Centering) ---
     const qrContainerStyle = {
         position: 'absolute',
         top: '65mm',
         width: '45mm',
         height: 'auto',
         zIndex: 2,
-        // Flexbox centering
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',     // Horizontally centers children (Text and QR)
-        justifyContent: 'center', // Vertically centers content
+        alignItems: 'center',     
+        justifyContent: 'center', 
         
-        // Explicitly set left/right based on language
         left: isArabic ? '15mm' : 'auto',
         right: isArabic ? 'auto' : '15mm',
     };
@@ -364,7 +364,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                 </div>
             </div>
 
-            {/* === UPDATED: QR Code Section (Text with Border & Blue Background) === */}
+            {/* QR Code Section */}
             <div style={qrContainerStyle}>
                 <div style={{
                     marginBottom: '8px',
@@ -388,7 +388,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                 </div>
             </div>
 
-            {/* Signatures */}
+            {/* Signatures Section */}
             <div style={{
                 position: 'absolute',
                 top: '175mm', 
@@ -400,13 +400,31 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                 zIndex: 2
             }}>
                {isArabic ? (
-                   // Arabic: Program Manager on Right
-                   <>
-                       <div style={{ marginBottom: '1mm' }}>د. {programManagerNameAr || federalProgramManagerName || '...'}</div>
+                   // ARABIC: Program Manager is on the RIGHT
+                   <div style={{ position: 'relative' }}>
+                       {/* --- RENDER SIGNATURE HERE IF EXISTS --- */}
+                       {programManagerSignatureUrl && (
+                           <img 
+                               src={programManagerSignatureUrl} 
+                               alt="Signature" 
+                               style={{ 
+                                   display: 'block', 
+                                   margin: '0 auto', 
+                                   maxHeight: '25mm', 
+                                   maxWidth: '60mm',
+                                   position: 'absolute',
+                                   bottom: '12mm', // Position above text
+                                   left: '50%',
+                                   transform: 'translateX(-50%)',
+                                   zIndex: -1 // Behind text if overlap, or modify bottom to clear text
+                               }} 
+                           />
+                       )}
+                       <div style={{ marginBottom: '1mm', position: 'relative', zIndex: 2 }}>د. {programManagerNameAr || federalProgramManagerName || '...'}</div>
                        <div>مدير البرنامج</div>
-                   </>
+                   </div>
                ) : (
-                   // English: Course Director on Right
+                   // ENGLISH: Course Director is on the RIGHT
                    <>
                        <div style={{ marginBottom: '1mm' }}>Dr. {course.director}</div>
                        <div>Course Director</div>
@@ -425,17 +443,35 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                 zIndex: 2
             }}>
                 {isArabic ? (
-                   // Arabic: Course Director on Left
+                   // ARABIC: Course Director is on the LEFT
                    <>
                        <div style={{ marginBottom: '1mm' }}>د. {directorNameAr || course.director || '...'}</div>
                        <div>مدير الدورة</div>
                    </>
                ) : (
-                   // English: Program Manager on Left
-                   <>
-                       <div style={{ marginBottom: '1mm' }}>Dr. {federalProgramManagerName || 'Federal Program Manager'}</div>
+                   // ENGLISH: Program Manager is on the LEFT
+                   <div style={{ position: 'relative' }}>
+                       {/* --- RENDER SIGNATURE HERE IF EXISTS --- */}
+                       {programManagerSignatureUrl && (
+                           <img 
+                               src={programManagerSignatureUrl} 
+                               alt="Signature" 
+                               style={{ 
+                                   display: 'block', 
+                                   margin: '0 auto', 
+                                   maxHeight: '25mm', 
+                                   maxWidth: '60mm',
+                                   position: 'absolute',
+                                   bottom: '12mm', // Position above text
+                                   left: '50%',
+                                   transform: 'translateX(-50%)',
+                                   zIndex: -1
+                               }} 
+                           />
+                       )}
+                       <div style={{ marginBottom: '1mm', position: 'relative', zIndex: 2 }}>Dr. {federalProgramManagerName || 'Federal Program Manager'}</div>
                        <div>National Program Manager</div>
-                   </>
+                   </div>
                )}
             </div>
         </div>
@@ -445,15 +481,17 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
 // --- Generation Functions ---
 
 export const generateCertificatePdf = async (course, participant, federalProgramManagerName, participantSubCourse, language = 'en') => {
+    
+    // --- Logic to prioritize the approved name & signature ---
+    const finalManagerName = course.approvedByManagerName || federalProgramManagerName;
+    const finalManagerSignature = course.approvedByManagerSignatureUrl || null;
+
     let directorNameAr = null;
     let programManagerNameAr = null;
 
     if (language === 'ar') {
-        // 1. Fetch Director Name from 'facilitators' collection using 'arabicName' field
         directorNameAr = await fetchArabicName('facilitators', course.director, 'arabicName');
-        
-        // 2. Fetch Program Manager Name from 'federalCoordinators' collection using 'nameAr' field
-        programManagerNameAr = await fetchArabicName('federalCoordinators', federalProgramManagerName, 'nameAr');
+        programManagerNameAr = await fetchArabicName('federalCoordinators', finalManagerName, 'nameAr');
     }
 
     try {
@@ -480,15 +518,17 @@ export const generateCertificatePdf = async (course, participant, federalProgram
     
     let canvas = null;
     try {
+        // Render with the new signature prop
         root.render(
             <CertificateTemplate 
                 course={course} 
                 participant={participant} 
-                federalProgramManagerName={federalProgramManagerName} 
+                federalProgramManagerName={finalManagerName} 
                 participantSubCourse={participantSubCourse} 
                 language={language}
                 directorNameAr={directorNameAr}       
                 programManagerNameAr={programManagerNameAr} 
+                programManagerSignatureUrl={finalManagerSignature} // <--- PASS SIGNATURE PROP
             />
         );
 

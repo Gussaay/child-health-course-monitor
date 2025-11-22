@@ -1,21 +1,18 @@
 // MothersForm.jsx
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { saveMentorshipSession } from '../../data';
 import { Timestamp } from 'firebase/firestore';
 import {
     Card, 
-    PageHeader, 
     Button, 
     FormGroup, 
     Select, 
-    Spinner,
     Textarea,
-    // FIX APPLIED: Input must be imported to be defined.
     Input 
 } from '../CommonComponents';
 import { getAuth } from "firebase/auth";
 
-// --- Score Circle Component (Modified for placement next to RTL title) ---
+// --- Score Circle Component ---
 const ScoreCircle = ({ score, maxScore }) => {
     if (maxScore === null || maxScore === undefined || score === null || score === undefined) {
         return null;
@@ -23,7 +20,7 @@ const ScoreCircle = ({ score, maxScore }) => {
 
     let percentage;
     if (maxScore === 0) {
-        percentage = (score === 0) ? 100 : 0; // If max is 0, score 0 means 100% (nothing applicable)
+        percentage = (score === 0) ? 100 : 0; 
     } else {
         percentage = Math.round((score / maxScore) * 100);
     }
@@ -38,10 +35,9 @@ const ScoreCircle = ({ score, maxScore }) => {
             bgColor = 'bg-red-600';
         }
     } else if (maxScore === 0) {
-         bgColor = 'bg-green-600'; // If 0/0, treat as N/A (100% of applicable done)
+         bgColor = 'bg-green-600'; 
     }
 
-    // Aligned to the left of the flex container for RTL title placement
     return (
         <div
             className={`flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full ${bgColor} text-white font-bold text-xs shadow-md ml-2`} 
@@ -51,9 +47,8 @@ const ScoreCircle = ({ score, maxScore }) => {
         </div>
     );
 };
-// --- End Score Circle Component ---
 
-// --- New Sticky Overall Score Component (Fixed left position) ---
+// --- Sticky Overall Score Component ---
 const StickyOverallScore = ({ totalScore, totalMaxScore }) => {
     if (totalScore === null || totalMaxScore === null || totalMaxScore === 0 || totalScore === undefined || totalMaxScore === undefined) return null;
     
@@ -67,7 +62,6 @@ const StickyOverallScore = ({ totalScore, totalMaxScore }) => {
         bgColor = 'bg-red-600';
     }
 
-    // MODIFIED: Ensure fixed positioning is good for mobile
     return (
         <div
             className={`fixed top-4 left-4 z-50 flex flex-col items-center justify-center p-3 w-16 h-16 sm:w-20 sm:h-20 rounded-lg ${bgColor} text-white shadow-2xl transition-all duration-300 transform hover:scale-105 text-xs sm:text-lg`}
@@ -79,10 +73,6 @@ const StickyOverallScore = ({ totalScore, totalMaxScore }) => {
         </div>
     );
 };
-// --- End Sticky Overall Score Component ---
-
-
-// --- Form Structure based on رضاء ومعرفة الامهات.pdf ---
 
 const MOTHER_KNOWLEDGE_QUESTIONS = [
     { key: 'knows_med_details', label: '1. الأم التي طفلها أعطى مضاد حيوي أو دواء ملاريا تعرف كل الأسئلة . إجاباتها صحيحة على : الجرعة، كم مرة في اليوم، عدد الأيام )' },
@@ -104,20 +94,17 @@ const MOTHER_SATISFACTION_QUESTIONS = [
     { key: 'drug_availability', label: '6. توفر الدواء بالوحدة الصحية' },
 ];
 
-const getInitialFormData = () => ({
+const getInitialFormData = (defaultVisitNumber = 1) => ({
     session_date: new Date().toISOString().split('T')[0],
+    visitNumber: defaultVisitNumber,
     mother_name: '',
     child_age: '',
-    child_sex: '', // Optional
-    // Knowledge: 'نعم', 'لا', 'لا ينطبق'
+    child_sex: '', 
     knowledge: MOTHER_KNOWLEDGE_QUESTIONS.reduce((acc, q) => ({ ...acc, [q.key]: '' }), {}),
-    // Satisfaction: 'نعم', 'لا', 'لا ينطبق'
     satisfaction: MOTHER_SATISFACTION_QUESTIONS.reduce((acc, q) => ({ ...acc, [q.key]: '' }), {}),
     notes: '',
 });
 
-
-// --- Calculate Scores Function (Now handles both sections) ---
 const calculateScores = (formData) => {
     const scores = {};
 
@@ -127,9 +114,6 @@ const calculateScores = (formData) => {
         
         questions.forEach(q => {
             const value = sectionData[q.key];
-
-            // Score Logic: 1 point for 'نعم', 0 for 'لا' or 'لا ينطبق'.
-            // Max Score Logic: Only count the question if the answer is 'نعم' or 'لا' (i.e., not 'لا ينطبق').
             if (value === 'نعم' || value === 'لا') {
                 maxScore += 1;
                 if (value === 'نعم') {
@@ -144,7 +128,6 @@ const calculateScores = (formData) => {
     scores.knowledge = scoreSection(formData.knowledge, MOTHER_KNOWLEDGE_QUESTIONS);
     scores.satisfaction = scoreSection(formData.satisfaction, MOTHER_SATISFACTION_QUESTIONS); 
 
-    // Calculate Overall Score
     const totalScore = scores.knowledge.score + scores.satisfaction.score;
     const totalMaxScore = scores.knowledge.maxScore + scores.satisfaction.maxScore;
 
@@ -152,20 +135,13 @@ const calculateScores = (formData) => {
     
     return scores;
 };
-// --- END Calculate Scores Function ---
 
-
-// --- Helper Component for a single row in the tables ---
 const MotherFormRow = ({ name, label, value, onChange, options = ['نعم', 'لا', 'لا ينطبق'] }) => {
     return (
-        // MODIFIED: flex-col on mobile, using text-sm for smaller font
         <div dir="rtl" className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 border-b last:border-b-0 bg-white hover:bg-gray-50 transition-colors">
-            {/* Label (Q-number and text) */}
             <span className="text-sm font-medium text-gray-800 mb-2 sm:mb-0 text-right flex-grow mr-4 w-full sm:w-auto">
                 {label}
             </span>
-
-            {/* Radio Buttons (Aligned to the left in flex-row for RTL) */}
             <div className="flex gap-4 flex-shrink-0 mt-1 sm:mt-0">
                 {options.map(option => (
                     <label key={option} className="flex items-center gap-1 cursor-pointer text-sm">
@@ -184,19 +160,47 @@ const MotherFormRow = ({ name, label, value, onChange, options = ['نعم', 'ل�
         </div>
     );
 };
-// --- End Helper Component ---
 
+// --- Updated Component Signature ---
+const MothersForm = ({ 
+    facility, 
+    onCancel, 
+    setToast, 
+    visitNumber = 1, 
+    existingSessionData = null,
+    canEditVisitNumber = false // <--- New Prop
+}) => {
+    // Initialize State (with Hydration logic for Edit Mode)
+    const [formData, setFormData] = useState(() => {
+        if (existingSessionData) {
+            // Populate form with existing data
+            return {
+                session_date: existingSessionData.sessionDate || new Date().toISOString().split('T')[0],
+                visitNumber: existingSessionData.visitNumber || visitNumber,
+                mother_name: existingSessionData.motherName || '',
+                child_age: existingSessionData.childAge || '',
+                child_sex: existingSessionData.childSex || '',
+                knowledge: existingSessionData.mothersKnowledge || getInitialFormData().knowledge,
+                satisfaction: existingSessionData.mothersSatisfaction || getInitialFormData().satisfaction,
+                notes: existingSessionData.notes || ''
+            };
+        }
+        return getInitialFormData(visitNumber);
+    });
 
-const MothersForm = ({ facility, onCancel, setToast }) => {
-    const [formData, setFormData] = useState(getInitialFormData);
     const [isSaving, setIsSaving] = useState(false);
     const auth = getAuth();
     const user = auth.currentUser;
     const formRef = useRef(null); 
     
-    // Calculate scores whenever formData changes
+    // Sync visitNumber prop if it changes (only in Create mode)
+    useEffect(() => {
+        if (!existingSessionData && visitNumber) {
+            setFormData(prev => ({ ...prev, visitNumber: visitNumber }));
+        }
+    }, [visitNumber, existingSessionData]);
+    
     const scores = useMemo(() => calculateScores(formData), [formData]);
-
 
     const handleFormChange = (section, key, value) => {
         setFormData(prev => ({
@@ -216,11 +220,9 @@ const MothersForm = ({ facility, onCancel, setToast }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Simple validation check: Ensure all knowledge/satisfaction fields are answered
         const allKnowledgeAnswered = MOTHER_KNOWLEDGE_QUESTIONS.every(q => formData.knowledge[q.key] !== '');
         const allSatisfactionAnswered = MOTHER_SATISFACTION_QUESTIONS.every(q => formData.satisfaction[q.key] !== '');
         
-        // Validation for required fields
         if (!allKnowledgeAnswered || !allSatisfactionAnswered) {
              setToast({ 
                  show: true, 
@@ -235,7 +237,9 @@ const MothersForm = ({ facility, onCancel, setToast }) => {
         try {
             const effectiveDateTimestamp = Timestamp.fromDate(new Date(formData.session_date));
             
-            // Construct payload
+            // Determine if updating or creating
+            const sessionId = existingSessionData ? existingSessionData.id : null;
+
             const payload = {
                 serviceType: 'IMNCI_MOTHERS', 
                 state: facility['الولاية'], 
@@ -247,15 +251,14 @@ const MothersForm = ({ facility, onCancel, setToast }) => {
                 sessionDate: formData.session_date, 
                 effectiveDate: effectiveDateTimestamp,
                 
-                motherName: formData.mother_name || 'غير محدد', // Optional
-                childAge: formData.child_age || 'غير محدد', // Optional
-                childSex: formData.child_sex || 'غير محدد', // Optional
+                visitNumber: parseInt(formData.visitNumber) || 1,
+                motherName: formData.mother_name || 'غير محدد',
+                childAge: formData.child_age || 'غير محدد', 
+                childSex: formData.child_sex || 'غير محدد', 
 
-                // Flattening the checklist results
                 mothersKnowledge: formData.knowledge,
                 mothersSatisfaction: formData.satisfaction,
                 
-                // Add score data
                 scores: {
                     knowledge_score: scores.knowledge.score,
                     knowledge_maxScore: scores.knowledge.maxScore,
@@ -266,12 +269,22 @@ const MothersForm = ({ facility, onCancel, setToast }) => {
                 },
 
                 notes: formData.notes,
-                mentorEmail: user?.email || 'unknown', 
-                mentorName: user?.displayName || 'Unknown Mentor',
                 status: 'complete',
             };
 
-            await saveMentorshipSession(payload);
+            // Add Mentor Info / Edit Trail
+            if (sessionId) {
+                payload.mentorEmail = existingSessionData?.mentorEmail || 'unknown';
+                payload.mentorName = existingSessionData?.mentorName || 'Unknown Mentor';
+                payload.edited_by_email = user?.email || 'unknown';
+                payload.edited_by_name = user?.displayName || 'Unknown Mentor';
+                payload.edited_at = Timestamp.now();
+            } else {
+                payload.mentorEmail = user?.email || 'unknown';
+                payload.mentorName = user?.displayName || 'Unknown Mentor';
+            }
+
+            await saveMentorshipSession(payload, sessionId);
 
             setToast({ show: true, message: 'تم حفظ استبيان الأم بنجاح!', type: 'success' });
             onCancel(); 
@@ -283,7 +296,6 @@ const MothersForm = ({ facility, onCancel, setToast }) => {
         }
     };
 
-    // --- Render function ---
     return (
         <Card dir="rtl">
             <StickyOverallScore
@@ -292,20 +304,17 @@ const MothersForm = ({ facility, onCancel, setToast }) => {
             />
             <form ref={formRef} onSubmit={handleSubmit}>
                 <div className="p-6">
-                    {/* --- Centered Title --- */}
                     <div className="text-center mb-4">
                         <h2 className="text-2xl font-bold text-sky-800">
-                            استبيان رضا ومعرفة الأمهات
+                            {existingSessionData ? 'تعديل استبيان الأم (IMNCI)' : 'استبيان رضا ومعرفة الأمهات'}
                         </h2>
                         <h3 className="text-lg font-semibold text-gray-600">
                             (المنهج المتكامل لإدارة أمراض الطفولة حديثي الولادة)
                         </h3>
                     </div>
 
-                    {/* --- Facility and General Info Card (Mobile layout refinement) --- */}
                     <div className="p-3 border rounded-lg bg-gray-50 text-right space-y-0.5 mb-6">
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-1" dir="rtl">
-                            {/* ... Facility Info ... */}
                             <div><span className="text-sm font-medium text-gray-500">الولاية:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility['الولاية'] || 'غير محدد'}</span></div>
                             <div><span className="text-sm font-medium text-gray-500">المحلية:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility['المحلية'] || 'غير محدد'}</span></div>
                             <div><span className="text-sm font-medium text-gray-500">المؤسسة:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility['اسم_المؤسسة'] || 'غير محدد'}</span></div>
@@ -314,6 +323,21 @@ const MothersForm = ({ facility, onCancel, setToast }) => {
                              <FormGroup label="تاريخ الجلسة" className="text-right">
                                 <Input type="date" name="session_date" value={formData.session_date} onChange={handleSimpleChange} required className="p-1 text-sm w-full border rounded" />
                             </FormGroup>
+                            
+                            {/* --- MODIFIED: Visit Number Input --- */}
+                            <FormGroup label="رقم الزيارة" className="text-right">
+                                <Input 
+                                    type="number" 
+                                    name="visitNumber" 
+                                    value={formData.visitNumber} 
+                                    readOnly={!canEditVisitNumber} // Toggle ReadOnly
+                                    onChange={handleSimpleChange} // Allow change if editable
+                                    min="1" 
+                                    className={`p-1 text-sm w-full border rounded text-right font-bold ${canEditVisitNumber ? 'bg-white text-sky-700 border-sky-300' : 'bg-gray-200 cursor-not-allowed text-gray-600'}`} 
+                                />
+                            </FormGroup>
+                            {/* ----------------------------------- */}
+
                             <FormGroup label="اسم الأم / مقدم الرعاية (اختياري)" className="text-right">
                                 <Input type="text" name="mother_name" value={formData.mother_name} onChange={handleSimpleChange} placeholder="اسم الأم" className="p-1 text-sm w-full border rounded text-right" />
                             </FormGroup>
@@ -331,10 +355,7 @@ const MothersForm = ({ facility, onCancel, setToast }) => {
                         </div>
                     </div>
 
-
-                    {/* --- Mother's Knowledge Section (SCORED) --- */}
                     <div className="mb-8 p-0 border border-gray-300 rounded-md bg-white overflow-hidden shadow-sm">
-                        {/* Group Header with Overall Score Circle (RTL aligned) */}
                         <h3 className="flex justify-end items-center text-xl font-bold mb-0 text-white bg-sky-900 p-3 text-right">
                             <span className="mr-2">معرفة الأمهات: هل الأم تعرف؟</span> 
                             <ScoreCircle score={scores.knowledge.score} maxScore={scores.knowledge.maxScore} />
@@ -350,7 +371,6 @@ const MothersForm = ({ facility, onCancel, setToast }) => {
                         ))}
                     </div>
 
-                    {/* --- Mother's Satisfaction Section (SCORED) --- */}
                     <div className="mb-8 p-0 border border-gray-300 rounded-md bg-white overflow-hidden shadow-sm">
                          <h3 className="flex justify-end items-center text-xl font-bold mb-0 text-white bg-sky-900 p-3 text-right">
                             <span className="mr-2">رضاء الأمهات: هل الأم راضية عن؟</span>
@@ -371,21 +391,16 @@ const MothersForm = ({ facility, onCancel, setToast }) => {
                         })}
                     </div>
                     
-                    {/* --- Notes Section --- */}
                     <FormGroup label="ملاحظات عامة حول الاستبيان" className="text-right">
                         <Textarea name="notes" value={formData.notes} onChange={handleSimpleChange} rows={3} placeholder="أضف أي ملاحظات إضافية حول الاستبيان..." className="text-right placeholder:text-right"/>
                     </FormGroup>
                 </div>
 
-                 {/* --- Button Bar (Fixed bottom for mobile) --- */}
-                 {/* --- MODIFICATION: Added hidden sm:flex to hide on mobile --- */}
                  <div className="hidden sm:flex gap-2 justify-end p-4 border-t bg-gray-50 sticky bottom-0 z-10">
                     <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving}> إلغاء </Button>
                     <Button type="submit" disabled={isSaving}> {isSaving ? 'جاري الحفظ...' : 'حفظ وإكمال الاستبيان'} </Button>
                  </div>
 
-                 {/* --- START: NEW Mobile Sticky Action Bar --- */}
-                 {/* This bar is only visible on mobile (flex sm:hidden) */}
                  <div className="flex sm:hidden fixed bottom-0 left-0 right-0 z-20 p-2 bg-gray-50 border-t border-gray-200 shadow-lg justify-around items-center" dir="rtl">
                     <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving} size="sm">
                         إلغاء
@@ -398,7 +413,6 @@ const MothersForm = ({ facility, onCancel, setToast }) => {
                         {isSaving ? 'جاري...' : 'حفظ وإكمال'} 
                     </Button>
                 </div>
-                {/* --- END: NEW Mobile Sticky Action Bar --- */}
             </form>
         </Card>
     );

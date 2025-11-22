@@ -42,7 +42,7 @@ import {
     IMNCI_FORM_STRUCTURE,
     evaluateRelevance
     // --- END ADDITION (FIX) ---
-} from './IMNCIFormPart.jsx';
+} from './IMNCSkillsAssessmentForm.jsx';
 // --- END NEW IMPORTS ---
 
 
@@ -100,7 +100,8 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
         onSaveComplete,
         setToast,
         existingSessionData = null,
-        visitNumber = 1, 
+        visitNumber = 1,
+        canEditVisitNumber = false, // <--- NEW PROP
         lastSessionDate = null,
         onDraftCreated,
         setIsMothersFormModalOpen,
@@ -120,6 +121,15 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
     const [scores, setScores] = useState({});
     const auth = getAuth();
     const user = auth.currentUser;
+    
+    // --- NEW: Visit Number State ---
+    const [currentVisitNumber, setCurrentVisitNumber] = useState(visitNumber);
+
+    // Keep local state in sync if the parent prop changes (e.g., switching facility)
+    useEffect(() => {
+        setCurrentVisitNumber(visitNumber);
+    }, [visitNumber]);
+    // -------------------------------
     
     // (This is the simple state from the previous fix)
     const [isFormFullyComplete, setIsFormFullyComplete] = useState(false);
@@ -458,7 +468,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                 scores: scoresPayload,
                 notes: currentFormData.notes,
                 status: 'draft',
-                visitNumber: visitNumber
+                visitNumber: Number(currentVisitNumber) // <--- USE LOCAL STATE
                 // Mentor/Editor fields will be added below
             };
 
@@ -486,7 +496,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
             console.error("Autosave failed:", error);
             setToast({ show: true, message: `فشل الحفظ التلقائي: ${error.message}`, type: 'error' });
         }
-    }, []); 
+    }, [currentVisitNumber]); // Added currentVisitNumber dependency
 
     // --- useImperativeHandle (Stays in Shell) ---
     useImperativeHandle(ref, () => ({
@@ -646,7 +656,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                 scores: scoresPayload,
                 notes: formData.notes,
                 status: 'complete',
-                visitNumber: visitNumber
+                visitNumber: Number(currentVisitNumber) // <--- USE LOCAL STATE
                 // Mentor/Editor fields will be added below
             };
 
@@ -728,7 +738,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                  scores: scoresPayload,
                  notes: formData.notes,
                  status: 'draft',
-                 visitNumber: visitNumber
+                 visitNumber: Number(currentVisitNumber) // <--- USE LOCAL STATE
                  // Mentor/Editor fields will be added below
              };
 
@@ -818,9 +828,22 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                                     <span className="font-medium text-gray-500">تاريخ الجلسة السابقة:</span>
                                     <span className="font-semibold text-gray-900 mr-2">{lastSessionDate || '---'}</span> 
                                 </div>
-                                <div className="text-sm"><span className="font-medium text-gray-700">رقم الجلسة:</span>
-                                    <span className="text-lg font-bold text-sky-700 mr-2">{visitNumber}</span>
+                                {/* --- REPLACE THE VISIT NUMBER RENDER LOGIC HERE --- */}
+                                <div className="text-sm flex items-center">
+                                    <span className="font-medium text-gray-700 ml-2">رقم الجلسة:</span>
+                                    {canEditVisitNumber ? (
+                                        <Input 
+                                            type="number" 
+                                            min="1"
+                                            value={currentVisitNumber}
+                                            onChange={(e) => setCurrentVisitNumber(e.target.value)}
+                                            className="w-20 p-1 text-center font-bold text-sky-700 border-sky-300 focus:ring-sky-500"
+                                        />
+                                    ) : (
+                                        <span className="text-lg font-bold text-sky-700 mr-2">{currentVisitNumber}</span>
+                                    )}
                                 </div>
+                                {/* -------------------------------------------------- */}
                             </div>
                         </div>
                     </div>
