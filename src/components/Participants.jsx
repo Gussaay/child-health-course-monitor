@@ -5,7 +5,11 @@ import jsPDF from "jspdf";
 import { createRoot } from 'react-dom/client'; 
 
 // --- Icons ---
-import { Mail, Lock } from 'lucide-react'; 
+import { Mail, Lock, RefreshCw } from 'lucide-react'; 
+
+// --- Firebase Imports (For Refresh Logic) ---
+import { db } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 import {
     Card, PageHeader, Button, FormGroup, Input, Select, Textarea, Table, EmptyState, Modal, Spinner, Toast
@@ -20,7 +24,7 @@ import {
     listParticipants,
     submitFacilityDataForApproval, 
     getHealthFacilityById,
-    queueCertificateEmail // <--- Ensure this is exported in data.js
+    queueCertificateEmail
 } from '../data.js';
 import { useDataCache } from '../DataContext';
 
@@ -34,7 +38,7 @@ import { generateCertificatePdf, generateAllCertificatesPdf } from './Certificat
 // ===== 1. MODAL COMPONENTS (Nested) =================================
 // ====================================================================
 
-// --- NEW: Email Certificate Modal (Handles Single & Bulk) ---
+// --- Email Certificate Modal ---
 const EmailCertificateModal = ({ isOpen, onClose, participants = [], isBulk = false, setToast }) => {
     const [language, setLanguage] = useState('en');
     const [isSending, setIsSending] = useState(false);
@@ -57,7 +61,6 @@ const EmailCertificateModal = ({ isOpen, onClose, participants = [], isBulk = fa
             const p = participants[i];
             setProgress({ current: i + 1, total, errors: errorCount });
             
-            // Generate direct public download link
             const downloadLink = `${window.location.origin}/public/certificate/download/${p.id}?lang=${language}`;
 
             if (p.email) {
@@ -67,7 +70,6 @@ const EmailCertificateModal = ({ isOpen, onClose, participants = [], isBulk = fa
                     errorCount++;
                 }
             } else {
-                // No email, count as error/skip
                 console.warn(`Skipping ${p.name}: No email address.`);
                 errorCount++;
             }
@@ -81,7 +83,6 @@ const EmailCertificateModal = ({ isOpen, onClose, participants = [], isBulk = fa
             onClose();
         } else if (errorCount < total) {
             setToast({ show: true, message: `Queued emails. ${errorCount} failed (missing email or error).`, type: 'warning' });
-            // Keep modal open to show result
         } else {
             setToast({ show: true, message: "Failed to send emails. Check if participants have email addresses.", type: 'error' });
         }
@@ -181,7 +182,7 @@ const ShareCoursePageModal = ({ isOpen, onClose, courseId, courseName }) => {
     );
 };
 
-// --- Share Certificate Modal (Single Link Copy) ---
+// --- Share Certificate Modal ---
 const ShareCertificateModal = ({ isOpen, onClose, participantName, participantId }) => {
     const [language, setLanguage] = useState('en');
     const [generatedLink, setGeneratedLink] = useState('');
@@ -390,7 +391,7 @@ const NewParticipantForm = ({ initialName, jobTitleOptions, onCancel, onSave }) 
 };
 
 
-// --- Enhanced Participant Data Cleanup Modal ---
+// --- Participant Data Cleanup Modal ---
 const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, courseType }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
@@ -1390,8 +1391,15 @@ export function ParticipantsView({
     const [lastVisible, setLastVisible] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [hasMore, setHasMore] = useState(true);
+
+    // --- Progress & Approval States ---
     const [isBulkCertLoading, setIsBulkCertLoading] = useState(false);
-    const [certLanguage, setCertLanguage] = useState('en'); // Added state for certificate language
+    const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0 });
+    const [certLanguage, setCertLanguage] = useState('en'); 
+
+    // --- Local Approval State ---
+    const [localApprovalStatus, setLocalApprovalStatus] = useState(course.isCertificateApproved);
+    const [isRefreshingApproval, setIsRefreshingApproval] = useState(false);
 
     const [groupFilter, setGroupFilter] = useState('All');
     const [importModalOpen, setImportModalOpen] = useState(false);
@@ -1400,20 +1408,24 @@ export function ParticipantsView({
 
     const [shareModalOpen, setShareModalOpen] = useState(false);
     const [shareTarget, setShareTarget] = useState({ id: '', name: '' });
-    const [sharePageModalOpen, setSharePageModalOpen] = useState(false); // --- NEW STATE
+    const [sharePageModalOpen, setSharePageModalOpen] = useState(false); 
     
-    // --- NEW STATES FOR EMAIL FUNCTIONALITY ---
+    // --- Email States ---
     const [emailModalOpen, setEmailModalOpen] = useState(false);
     const [emailTargets, setEmailTargets] = useState([]);
     const [isBulkEmail, setIsBulkEmail] = useState(false);
-    const [toast, setToast] = useState({ show: false, message: '', type: '' }); // Local toast
-    // ------------------------------------------
+    const [toast, setToast] = useState({ show: false, message: '', type: '' }); 
 
     const { federalCoordinators, fetchFederalCoordinators, isLoading: isCacheLoading } = useDataCache();
 
     useEffect(() => {
         fetchFederalCoordinators();
     }, [fetchFederalCoordinators]);
+
+    // Sync local state if prop changes
+    useEffect(() => {
+        setLocalApprovalStatus(course.isCertificateApproved);
+    }, [course.isCertificateApproved]);
 
     const federalProgramManagerName = useMemo(() => {
         if (!federalCoordinators || federalCoordinators.length === 0) {
@@ -1473,6 +1485,30 @@ export function ParticipantsView({
 
     const filtered = groupFilter === 'All' ? participants : participants.filter(p => p.group === groupFilter);
 
+    // --- Refresh Approval Handler ---
+    const handleRefreshApproval = async () => {
+        if (!course.id) return;
+        setIsRefreshingApproval(true);
+        try {
+            const courseRef = doc(db, 'courses', course.id); 
+            const snapshot = await getDoc(courseRef);
+            if (snapshot.exists()) {
+                const data = snapshot.data();
+                setLocalApprovalStatus(data.isCertificateApproved === true);
+                if (data.isCertificateApproved) {
+                    setToast({ show: true, message: 'Status updated! Certificates are approved.', type: 'success' });
+                } else {
+                    setToast({ show: true, message: 'Status refreshed. Still pending.', type: 'info' });
+                }
+            }
+        } catch (error) {
+            console.error("Error refreshing status:", error);
+            setToast({ show: true, message: 'Failed to refresh status.', type: 'error' });
+        } finally {
+            setIsRefreshingApproval(false);
+        }
+    };
+
     const handleSaveCleanup = async (participantsToUpdate) => {
         if (!participantsToUpdate || participantsToUpdate.length === 0) return;
         try {
@@ -1491,14 +1527,23 @@ export function ParticipantsView({
             return;
         }
         setIsBulkCertLoading(true);
+        setDownloadProgress({ current: 0, total: participants.length });
+
         try {
-             // Pass language to bulk generator
-             await generateAllCertificatesPdf(course, participants, federalProgramManagerName, certLanguage);
+             // Pass progress callback
+             await generateAllCertificatesPdf(
+                course, 
+                participants, 
+                federalProgramManagerName, 
+                certLanguage,
+                (current, total) => setDownloadProgress({ current, total }) 
+             );
         } catch(error) {
             console.error("Bulk certificate download failed:", error);
             alert("Failed to generate bulk certificates. See console for details.");
         } finally {
             setIsBulkCertLoading(false);
+            setDownloadProgress({ current: 0, total: 0 });
         }
     };
 
@@ -1507,7 +1552,6 @@ export function ParticipantsView({
         setShareModalOpen(true);
     };
 
-    // --- NEW: Email Handlers ---
     const handleOpenSingleEmail = (participant) => {
         setEmailTargets([participant]);
         setIsBulkEmail(false);
@@ -1519,11 +1563,9 @@ export function ParticipantsView({
         setIsBulkEmail(true);
         setEmailModalOpen(true);
     };
-    // ---------------------------
 
     return (
         <Card>
-            {/* --- Toast Component (Local) --- */}
             {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ show: false, message: '', type: '' })} />}
 
             <PageHeader title="Course Participants" subtitle={`${course.state} / ${course.locality}`} />
@@ -1559,7 +1601,6 @@ export function ParticipantsView({
                 participantId={shareTarget.id}
             />
             
-             {/* --- NEW: Share Public Page Modal --- */}
              <ShareCoursePageModal
                 isOpen={sharePageModalOpen}
                 onClose={() => setSharePageModalOpen(false)}
@@ -1567,7 +1608,6 @@ export function ParticipantsView({
                 courseName={course.course_type}
              />
 
-             {/* --- NEW: Email Certificate Modal --- */}
              <EmailCertificateModal 
                 isOpen={emailModalOpen}
                 onClose={() => setEmailModalOpen(false)}
@@ -1602,13 +1642,12 @@ export function ParticipantsView({
                             variant="secondary"
                             onClick={() => onBulkMigrate(course.id)}
                             disabled={!participants || participants.length === 0}
-                            title={(!participants || participants.length === 0) ? "No participants to migrate" : "Update facility records based on these participants"}
+                            title="Update facility records based on these participants"
                         >
                             Bulk Migrate to Facilities
                         </Button>
                     )}
                     
-                    {/* Language Selector */}
                     <div className="flex items-center bg-white border border-gray-300 rounded px-2 h-10">
                         <span className="text-xs font-bold text-gray-600 mr-2 uppercase">Cert. Lang:</span>
                         <select 
@@ -1622,16 +1661,27 @@ export function ParticipantsView({
                         </select>
                     </div>
 
-                    {course.isCertificateApproved ? (
+                    {localApprovalStatus ? (
                         <>
-                            <Button
-                                variant="primary"
-                                onClick={handleBulkCertificateDownload}
-                                disabled={isBulkCertLoading || participants.length === 0 || isCacheLoading.federalCoordinators}
-                                title={isBulkCertLoading ? "Generating PDF..." : "Download all certificates as one PDF"}
-                            >
-                                {isBulkCertLoading ? <Spinner size="sm"/> : 'Download All Certificates'}
-                            </Button>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="primary"
+                                    onClick={handleBulkCertificateDownload}
+                                    disabled={isBulkCertLoading || participants.length === 0 || isCacheLoading.federalCoordinators}
+                                    title="Download all certificates as one PDF"
+                                >
+                                    Download All Certificates
+                                </Button>
+                                
+                                {isBulkCertLoading && (
+                                    <div className="flex items-center gap-2 px-2 py-1 bg-blue-50 text-blue-700 rounded text-sm border border-blue-200">
+                                        <Spinner size="sm" />
+                                        <span className="font-medium whitespace-nowrap">
+                                            Generating {downloadProgress.current} / {downloadProgress.total}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
                             
                             <Button
                                 variant="secondary"
@@ -1654,9 +1704,20 @@ export function ParticipantsView({
                             </Button>
                         </>
                     ) : (
-                        <div className="flex items-center gap-1 bg-orange-50 border border-orange-200 text-orange-700 px-3 py-2 rounded text-sm">
-                            <Lock className="w-4 h-4" />
-                            <span className="font-medium">Certificates Pending Approval</span>
+                         <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1 bg-orange-50 border border-orange-200 text-orange-700 px-3 py-2 rounded text-sm">
+                                <Lock className="w-4 h-4" />
+                                <span className="font-medium">Certificates Pending Approval</span>
+                            </div>
+                            
+                            <button 
+                                onClick={handleRefreshApproval}
+                                disabled={isRefreshingApproval}
+                                className="p-2 bg-white border border-gray-300 rounded hover:bg-gray-100 text-gray-600 transition-colors"
+                                title="Check for approval status update"
+                            >
+                                {isRefreshingApproval ? <Spinner size="sm" /> : <RefreshCw className="w-4 h-4" />}
+                            </button>
                         </div>
                     )}
 
@@ -1679,7 +1740,7 @@ export function ParticipantsView({
                     {filtered.length > 0 && filtered.map(p => {
                         const canEdit = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
                         const canDelete = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
-                        const isCertApproved = course.isCertificateApproved === true;
+                        const isCertApproved = localApprovalStatus === true;
 
                         let participantSubCourse = p.imci_sub_type;
                         if (!participantSubCourse) {
@@ -1744,7 +1805,7 @@ export function ParticipantsView({
                                         ) : (
                                             <div className="flex items-center gap-1 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded border border-orange-200" title="Certificates must be approved by the Federal Program Manager in the Admin Dashboard before downloading.">
                                                 <Lock className="w-3 h-3" />
-                                                <span>Pending Approval</span>
+                                                <span>Pending</span>
                                             </div>
                                         )}
 
@@ -1770,7 +1831,7 @@ export function ParticipantsView({
                 {filtered.length > 0 && filtered.map(p => {
                     const canEdit = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
                     const canDelete = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
-                    const isCertApproved = course.isCertificateApproved === true;
+                    const isCertApproved = localApprovalStatus === true;
 
                     let participantSubCourse = p.imci_sub_type;
                     if (!participantSubCourse) {
@@ -1839,7 +1900,7 @@ export function ParticipantsView({
                                 ) : (
                                     <div className="flex items-center gap-1 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded border border-orange-200 w-full justify-center sm:w-auto" title="Certificates must be approved by the Federal Program Manager in the Admin Dashboard before downloading.">
                                         <Lock className="w-3 h-3" />
-                                        <span>Pending Approval</span>
+                                        <span>Pending</span>
                                     </div>
                                 )}
 

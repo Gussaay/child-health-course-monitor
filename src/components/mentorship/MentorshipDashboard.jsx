@@ -15,6 +15,7 @@ import {
 
 import { 
     IMNCI_FORM_STRUCTURE, 
+    // evaluateRelevance, // Unused imports removed for cleaner code
     calculateScores, 
     rehydrateDraftData, 
     DIARRHEA_CLASSIFICATIONS, 
@@ -111,8 +112,7 @@ const KpiGridItem = ({ title, scoreValue }) => (
 const KpiGridCard = ({ title, kpis, cols = 2 }) => (
     <div className="bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200">
         <h4 className="text-base font-bold text-sky-800 mb-3 text-center" title={title}>{title}</h4>
-        {/* Changed grid to grid-cols-1 on mobile, specific cols on sm+ */}
-        <div className={`grid grid-cols-1 sm:grid-cols-${cols} gap-3`}>{kpis.map(kpi => (<KpiGridItem key={kpi.title} title={kpi.title} scoreValue={kpi.scoreValue} />))}</div>
+        <div className={`grid grid-cols-${cols} gap-3`}>{kpis.map(kpi => (<KpiGridItem key={kpi.title} title={kpi.title} scoreValue={kpi.scoreValue} />))}</div>
     </div>
 );
 
@@ -188,8 +188,7 @@ const KpiCardWithChart = ({ title, kpis, chartData, kpiKeys, cols = 2 }) => {
     return (
         <div className="bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200">
             <h4 className="text-base font-bold text-sky-800 mb-3 text-center" title={title}>{title}</h4>
-            {/* Changed grid to grid-cols-1 on mobile, specific cols on sm+ */}
-            <div className={`grid grid-cols-1 sm:grid-cols-${cols} gap-3 mb-4`}>{kpis.map(kpi => (<KpiGridItem key={kpi.title} title={kpi.title} scoreValue={kpi.scoreValue} />))}</div>
+            <div className={`grid grid-cols-${cols} gap-3 mb-4`}>{kpis.map(kpi => (<KpiGridItem key={kpi.title} title={kpi.title} scoreValue={kpi.scoreValue} />))}</div>
             <div className="relative h-[250px]">{chartData.length > 0 ? <Line options={options} data={data} /> : <div className="flex items-center justify-center h-full text-gray-500">No data available.</div>}</div>
         </div>
     );
@@ -233,31 +232,26 @@ const CompactSkillsTable = ({ overallKpis }) => {
     const subgroupScoreMap = { vitalSigns: overallKpis.avgVitalSigns, dangerSigns: overallKpis.avgDangerSigns, mainSymptoms: overallKpis.avgMainSymptoms, malnutrition: overallKpis.avgMalnutrition, anemia: overallKpis.avgAnemia, immunization: overallKpis.avgImmunization, otherProblems: overallKpis.avgOtherProblems, symptom_cough: overallKpis.avgSymptomCough, symptom_diarrhea: overallKpis.avgSymptomDiarrhea, symptom_fever: overallKpis.avgSymptomFever, symptom_ear: overallKpis.avgSymptomEar, ref_treatment: overallKpis.avgReferralManagement, pneu_treatment: overallKpis.avgPneumoniaManagement, diar_treatment: overallKpis.avgDiarrheaManagement, mal_treatment: overallKpis.avgMalariaManagement, nut_treatment: overallKpis.avgMalnutritionManagement, anemia_treatment: overallKpis.avgAnemiaManagement, dyst_treatment: overallKpis.avgDystTreatment, ear_treatment: overallKpis.avgEarTreatment, fu_treatment: overallKpis.avgFuTreatment };
     const SKILL_LABEL_MAP = { 'skill_ask_cough': 'هل سأل عن وجود الكحة أو ضيق التنفس', 'skill_check_rr': 'هل قاس معدل التنفس بصورة صحيحة', 'skill_classify_cough': 'هل صنف الكحة بصورة صحيحة', 'skill_ask_diarrhea': 'هل سأل عن وجود الاسهال', 'skill_check_dehydration': 'هل قيم فقدان السوائل بصورة صحيحة', 'skill_classify_diarrhea': 'هل صنف الاسهال بصورة صحيحة', 'skill_ask_fever': 'هل سأل عن وجود الحمى', 'skill_check_rdt': 'هل أجرى فحص الملاريا السريع بصورة صحيحة', 'skill_classify_fever': 'هل صنف الحمى بصورة صحيحة', 'skill_ask_ear': 'هل سأل عن وجود مشكلة في الأذن', 'skill_check_ear': 'هل فحص الفحص ورم مؤلم خلف الأذن', 'skill_classify_ear': 'هل صنف مشكلة الأذن بصورة صحيحة' };
     return (
-        <div className="bg-white rounded-lg shadow-lg border-2 border-gray-200 overflow-hidden" dir="rtl">
-            {/* Added overflow-x-auto for mobile scrolling */}
-            <div className="overflow-x-auto">
-                <table className="w-full border-collapse min-w-[600px]">
-                    <thead className="bg-gray-50">
-                        <tr><th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-3/5 text-right">المهارة</th><th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-1/5 text-center">العدد (نعم / الإجمالي)</th><th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-1/5 text-center">النسبة</th></tr>
-                    </thead>
-                    <tbody>
-                        {IMNCI_FORM_STRUCTURE.map(group => {
-                            let groupAggregateScore = null; if (group.group.includes('التقييم والتصنيف')) groupAggregateScore = overallKpis.avgAssessment; else if (group.isDecisionSection) groupAggregateScore = overallKpis.avgDecision; else if (group.group.includes('العلاج والنصح')) groupAggregateScore = overallKpis.avgTreatment;
-                            return (
-                                <React.Fragment key={group.group}>
-                                    <tr className="bg-sky-900 text-white"><td className="p-1 text-sm font-bold text-right border border-gray-300" colSpan="2">{group.group}</td><td className="p-1 border border-gray-300 text-center">{groupAggregateScore !== null && (<div className="bg-white rounded-md px-2 py-0.5 inline-block"><ScoreText value={groupAggregateScore} /></div>)}</td></tr>
-                                    {group.subgroups?.map(subgroup => {
-                                        if (subgroup.isSymptomGroupContainer) { return subgroup.symptomGroups.map(symptomGroup => { const symptomKey = symptomGroup.mainSkill.scoreKey; const symptomScore = subgroupScoreMap[symptomKey]; let skillsToRender = []; if (symptomKey === 'symptom_cough') skillsToRender = ['skill_ask_cough', 'skill_check_rr', 'skill_classify_cough']; else if (symptomKey === 'symptom_diarrhea') skillsToRender = ['skill_ask_diarrhea', 'skill_check_dehydration', 'skill_classify_diarrhea']; else if (symptomKey === 'symptom_fever') skillsToRender = ['skill_ask_fever', 'skill_check_rdt', 'skill_classify_fever']; else if (symptomKey === 'symptom_ear') skillsToRender = ['skill_ask_ear', 'skill_check_ear', 'skill_classify_ear']; return (<React.Fragment key={symptomKey}><tr className="bg-sky-700 text-white"><td className="p-1.5 text-xs font-bold text-right border border-gray-300" colSpan="2">{symptomGroup.mainSkill.label}</td><td className="p-1.5 border border-gray-300 text-center">{symptomScore !== null && (<div className="bg-white rounded-md px-2 py-0.5 inline-block"><ScoreText value={symptomScore} /></div>)}</td></tr>{skillsToRender.map(skillKey => (<CompactSkillRow key={skillKey} label={SKILL_LABEL_MAP[skillKey]} stats={skillStats[skillKey]} />))}</React.Fragment>); }); }
-                                        const subgroupKey = subgroup.scoreKey || subgroup.subgroupTitle; const subgroupScore = subgroup.scoreKey ? subgroupScoreMap[subgroupKey] : null;
-                                        return (<React.Fragment key={subgroup.subgroupTitle}><tr className="bg-sky-700 text-white"><td className="p-1.5 text-xs font-bold text-right border border-gray-300" colSpan="2">{subgroup.subgroupTitle}</td><td className="p-1.5 border border-gray-300 text-center">{subgroupScore !== null && (<div className="bg-white rounded-md px-2 py-0.5 inline-block"><ScoreText value={subgroupScore} /></div>)}</td></tr>{subgroup.skills?.map(skill => (<CompactSkillRow key={skill.key} label={skill.label} stats={skillStats[skill.key]} />))}</React.Fragment>);
-                                    })}
-                                    {group.isDecisionSection && (<CompactSkillRow label="هل يتطابق قرار العامل الصحي مع المشرف؟" stats={skillStats['decisionMatches']} />)}
-                                </React.Fragment>
-                            );
-                        })}
-                    </tbody>
-                </table>
-            </div>
+        <div className="bg-white rounded-lg shadow-lg border-2 border-gray-200" dir="rtl">
+            <table className="w-full border-collapse">
+                <thead className="sticky top-0 z-10"><tr className="bg-gray-50"><th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-3/5 text-right">المهارة</th><th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-1/5 text-center">العدد (نعم / الإجمالي)</th><th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-1/5 text-center">النسبة</th></tr></thead>
+                <tbody>
+                    {IMNCI_FORM_STRUCTURE.map(group => {
+                        let groupAggregateScore = null; if (group.group.includes('التقييم والتصنيف')) groupAggregateScore = overallKpis.avgAssessment; else if (group.isDecisionSection) groupAggregateScore = overallKpis.avgDecision; else if (group.group.includes('العلاج والنصح')) groupAggregateScore = overallKpis.avgTreatment;
+                        return (
+                            <React.Fragment key={group.group}>
+                                <tr className="bg-sky-900 text-white"><td className="p-1 text-sm font-bold text-right border border-gray-300" colSpan="2">{group.group}</td><td className="p-1 border border-gray-300 text-center">{groupAggregateScore !== null && (<div className="bg-white rounded-md px-2 py-0.5 inline-block"><ScoreText value={groupAggregateScore} /></div>)}</td></tr>
+                                {group.subgroups?.map(subgroup => {
+                                    if (subgroup.isSymptomGroupContainer) { return subgroup.symptomGroups.map(symptomGroup => { const symptomKey = symptomGroup.mainSkill.scoreKey; const symptomScore = subgroupScoreMap[symptomKey]; let skillsToRender = []; if (symptomKey === 'symptom_cough') skillsToRender = ['skill_ask_cough', 'skill_check_rr', 'skill_classify_cough']; else if (symptomKey === 'symptom_diarrhea') skillsToRender = ['skill_ask_diarrhea', 'skill_check_dehydration', 'skill_classify_diarrhea']; else if (symptomKey === 'symptom_fever') skillsToRender = ['skill_ask_fever', 'skill_check_rdt', 'skill_classify_fever']; else if (symptomKey === 'symptom_ear') skillsToRender = ['skill_ask_ear', 'skill_check_ear', 'skill_classify_ear']; return (<React.Fragment key={symptomKey}><tr className="bg-sky-700 text-white"><td className="p-1.5 text-xs font-bold text-right border border-gray-300" colSpan="2">{symptomGroup.mainSkill.label}</td><td className="p-1.5 border border-gray-300 text-center">{symptomScore !== null && (<div className="bg-white rounded-md px-2 py-0.5 inline-block"><ScoreText value={symptomScore} /></div>)}</td></tr>{skillsToRender.map(skillKey => (<CompactSkillRow key={skillKey} label={SKILL_LABEL_MAP[skillKey]} stats={skillStats[skillKey]} />))}</React.Fragment>); }); }
+                                    const subgroupKey = subgroup.scoreKey || subgroup.subgroupTitle; const subgroupScore = subgroup.scoreKey ? subgroupScoreMap[subgroupKey] : null;
+                                    return (<React.Fragment key={subgroup.subgroupTitle}><tr className="bg-sky-700 text-white"><td className="p-1.5 text-xs font-bold text-right border border-gray-300" colSpan="2">{subgroup.subgroupTitle}</td><td className="p-1.5 border border-gray-300 text-center">{subgroupScore !== null && (<div className="bg-white rounded-md px-2 py-0.5 inline-block"><ScoreText value={subgroupScore} /></div>)}</td></tr>{subgroup.skills?.map(skill => (<CompactSkillRow key={skill.key} label={skill.label} stats={skillStats[skill.key]} />))}</React.Fragment>);
+                                })}
+                                {group.isDecisionSection && (<CompactSkillRow label="هل يتطابق قرار العامل الصحي مع المشرف؟" stats={skillStats['decisionMatches']} />)}
+                            </React.Fragment>
+                        );
+                    })}
+                </tbody>
+            </table>
         </div>
     );
 };
@@ -272,18 +266,8 @@ const EENCCompactSkillsTable = ({ overallKpis }) => {
     if (!overallKpis || !skillStats || Object.keys(skillStats).length === 0) return (<div className="bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200 text-center text-gray-500">No detailed EENC skill data available.</div>);
     const sections = [{ title: 'تحضيرات ما قبل الولادة', items: PREPARATION_ITEMS, score: overallKpis.avgPreparation }, { title: 'التجفيف، التحفيز، التدفئة والشفط', items: DRYING_STIMULATION_ITEMS, score: overallKpis.avgDrying }, { title: 'متابعة طفل يتنفس طبيعياً', items: NORMAL_BREATHING_ITEMS, score: overallKpis.avgNormalBreathing }, { title: 'إنعاش الوليد (الدقيقة الذهبية)', items: RESUSCITATION_ITEMS, score: overallKpis.avgResuscitation }];
     return (
-        <div className="bg-white rounded-lg shadow-lg border-2 border-gray-200 overflow-hidden" dir="rtl">
-            {/* Added overflow-x-auto for mobile scrolling */}
-            <div className="overflow-x-auto">
-                <table className="w-full border-collapse min-w-[600px]">
-                    <thead className="bg-gray-50">
-                        <tr><th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-3/5 text-right">المهارة (EENC)</th><th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-1/5 text-center">العدد (نعم / جزئياً / لا)</th><th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-1/5 text-center">النسبة</th></tr>
-                    </thead>
-                    <tbody>
-                        {sections.map(section => { const hasData = section.items.some(item => skillStats[item.key] && (skillStats[item.key].yes > 0 || skillStats[item.key].partial > 0 || skillStats[item.key].no > 0)); if (!hasData) return null; return (<React.Fragment key={section.title}><tr className="bg-sky-900 text-white"><td className="p-1 text-sm font-bold text-right border border-gray-300" colSpan="2">{section.title}</td><td className="p-1 border border-gray-300 text-center">{section.score !== null && (<div className="bg-white rounded-md px-2 py-0.5 inline-block"><ScoreText value={section.score} /></div>)}</td></tr>{section.items.map(item => (<EENCCompactSkillRow key={item.key} label={item.label} stats={skillStats[item.key]} />))}</React.Fragment>); })}
-                    </tbody>
-                </table>
-            </div>
+        <div className="bg-white rounded-lg shadow-lg border-2 border-gray-200" dir="rtl">
+            <table className="w-full border-collapse"><thead className="sticky top-0 z-10"><tr className="bg-gray-50"><th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-3/5 text-right">المهارة (EENC)</th><th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-1/5 text-center">العدد (نعم / جزئياً / لا)</th><th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-1/5 text-center">النسبة</th></tr></thead><tbody>{sections.map(section => { const hasData = section.items.some(item => skillStats[item.key] && (skillStats[item.key].yes > 0 || skillStats[item.key].partial > 0 || skillStats[item.key].no > 0)); if (!hasData) return null; return (<React.Fragment key={section.title}><tr className="bg-sky-900 text-white"><td className="p-1 text-sm font-bold text-right border border-gray-300" colSpan="2">{section.title}</td><td className="p-1 border border-gray-300 text-center">{section.score !== null && (<div className="bg-white rounded-md px-2 py-0.5 inline-block"><ScoreText value={section.score} /></div>)}</td></tr>{section.items.map(item => (<EENCCompactSkillRow key={item.key} label={item.label} stats={skillStats[item.key]} />))}</React.Fragment>); })}</tbody></table>
         </div>
     );
 };
@@ -327,27 +311,24 @@ const MothersCompactSkillsTable = ({ motherKpis, serviceType }) => {
     const items = serviceType === 'IMNCI' ? IMNCI_MOTHER_SURVEY_ITEMS : EENC_MOTHER_SURVEY_ITEMS;
 
     return (
-        <div className="bg-white rounded-lg shadow-lg border-2 border-gray-200 overflow-hidden" dir="rtl">
-            {/* Added overflow-x-auto for mobile scrolling */}
-            <div className="overflow-x-auto">
-                <table className="w-full border-collapse min-w-[600px]">
-                    <thead className="bg-gray-50">
-                        <tr className="bg-gray-50">
-                            <th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-3/5 text-right">السؤال (استبيان الأم)</th>
-                            <th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-1/5 text-center">العدد (نعم / الإجمالي)</th>
-                            <th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-1/5 text-center">النسبة</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {items.map(group => (
-                            <React.Fragment key={group.title}>
-                                <tr className="bg-sky-900 text-white"><td className="p-1 text-sm font-bold text-right border border-gray-300" colSpan="3">{group.title}</td></tr>
-                                {group.items.map(item => (<CompactSkillRow key={item.key} label={item.label} stats={skillStats[item.key]} />))}
-                            </React.Fragment>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+        <div className="bg-white rounded-lg shadow-lg border-2 border-gray-200" dir="rtl">
+            <table className="w-full border-collapse">
+                <thead className="sticky top-0 z-10">
+                    <tr className="bg-gray-50">
+                        <th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-3/5 text-right">السؤال (استبيان الأم)</th>
+                        <th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-1/5 text-center">العدد (نعم / الإجمالي)</th>
+                        <th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-1/5 text-center">النسبة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {items.map(group => (
+                        <React.Fragment key={group.title}>
+                            <tr className="bg-sky-900 text-white"><td className="p-1 text-sm font-bold text-right border border-gray-300" colSpan="3">{group.title}</td></tr>
+                            {group.items.map(item => (<CompactSkillRow key={item.key} label={item.label} stats={skillStats[item.key]} />))}
+                        </React.Fragment>
+                    ))}
+                </tbody>
+            </table>
         </div>
     );
 };
@@ -1013,7 +994,7 @@ const MentorshipDashboard = ({
     const eencMotherRegChartKeys = [{ key: 'Civil Reg', title: 'Civil Reg' }, { key: 'Discharge Card', title: 'Card' }];
 
     return (
-        <div className="p-2 md:p-4" dir="ltr"> 
+        <div className="p-4" dir="ltr"> 
             <h3 className="text-xl font-bold text-sky-800 mb-4 text-left">Mentorship Dashboard: {serviceTitle} {scopeTitle}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 p-4 bg-gray-50 rounded-lg border">
                 <FilterSelect label="State" value={activeState} onChange={(v) => { onStateChange(v); onLocalityChange(""); onFacilityIdChange(""); onWorkerNameChange(""); }} options={stateOptions} defaultOption="All States" />
@@ -1024,8 +1005,7 @@ const MentorshipDashboard = ({
             
             {activeService === 'IMNCI' && (
                 <>
-                    {/* Added scroll wrapper for tabs on mobile */}
-                    <div className="flex mb-6 border-b border-gray-200 overflow-x-auto whitespace-nowrap no-scrollbar">
+                    <div className="flex mb-6 border-b border-gray-200">
                         <button className={`py-2 px-4 font-medium text-sm focus:outline-none ${activeImnciTab === 'skills' ? 'border-b-2 border-sky-600 text-sky-600' : 'text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveImnciTab('skills')}>Skills Observation (Provider)</button>
                         <button className={`py-2 px-4 font-medium text-sm focus:outline-none ${activeImnciTab === 'mothers' ? 'border-b-2 border-sky-600 text-sky-600' : 'text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveImnciTab('mothers')}>Mother Interviews</button>
                         <button className={`py-2 px-4 font-medium text-sm focus:outline-none ${activeImnciTab === 'visit_reports' ? 'border-b-2 border-sky-600 text-sky-600' : 'text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveImnciTab('visit_reports')}>Visit Reports (Facility)</button>
@@ -1081,7 +1061,7 @@ const MentorshipDashboard = ({
                             <div className="mb-8 bg-white rounded-lg shadow-lg border-2 border-gray-200 overflow-hidden">
                                 <h4 className="text-lg font-bold text-sky-800 p-4 border-b bg-gray-50">Visit Breakdown & Skills Trained by Facility</h4>
                                 <div className="overflow-x-auto">
-                                <table className="w-full text-sm text-left min-w-[800px]">
+                                <table className="w-full text-sm text-left">
                                     <thead className="bg-gray-100 text-xs uppercase text-gray-700">
                                         <tr>
                                             <th className="px-4 py-3 border">Facility</th>
@@ -1122,7 +1102,7 @@ const MentorshipDashboard = ({
                             <div className="mb-8 bg-white rounded-lg shadow-lg border-2 border-gray-200">
                                 <h4 className="text-lg font-bold text-sky-800 p-4 border-b bg-gray-50">Facility Problems & Solutions (Combined)</h4>
                                 <div className="overflow-x-auto max-h-[600px]">
-                                    <table className="w-full text-sm text-left border-collapse min-w-[900px]">
+                                    <table className="w-full text-sm text-left border-collapse">
                                         <thead className="bg-gray-100 text-xs uppercase text-gray-700 sticky top-0 z-10">
                                             <tr>
                                                 <th className="px-2 py-3 border w-[15%]">Facility & Date</th>
@@ -1172,8 +1152,7 @@ const MentorshipDashboard = ({
 
             {activeService === 'EENC' && (
                 <>
-                     {/* Added scroll wrapper for tabs on mobile */}
-                     <div className="flex mb-6 border-b border-gray-200 overflow-x-auto whitespace-nowrap no-scrollbar">
+                     <div className="flex mb-6 border-b border-gray-200">
                         <button className={`py-2 px-4 font-medium text-sm focus:outline-none ${activeEencTab === 'skills' ? 'border-b-2 border-sky-600 text-sky-600' : 'text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveEencTab('skills')}>Skills Observation (Provider)</button>
                         <button className={`py-2 px-4 font-medium text-sm focus:outline-none ${activeEencTab === 'mothers' ? 'border-b-2 border-sky-600 text-sky-600' : 'text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveEencTab('mothers')}>Mother Interviews</button>
                         <button className={`py-2 px-4 font-medium text-sm focus:outline-none ${activeEencTab === 'visit_reports' ? 'border-b-2 border-sky-600 text-sky-600' : 'text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveEencTab('visit_reports')}>Visit Reports (Facility)</button>
@@ -1224,7 +1203,7 @@ const MentorshipDashboard = ({
                             <div className="mb-8 bg-white rounded-lg shadow-lg border-2 border-gray-200 overflow-hidden">
                                 <h4 className="text-lg font-bold text-sky-800 p-4 border-b bg-gray-50">Visit Breakdown & Skills Trained by Facility</h4>
                                 <div className="overflow-x-auto">
-                                <table className="w-full text-sm text-left min-w-[800px]">
+                                <table className="w-full text-sm text-left">
                                     <thead className="bg-gray-100 text-xs uppercase text-gray-700">
                                         <tr>
                                             <th className="px-4 py-3 border">Facility</th>
@@ -1265,7 +1244,7 @@ const MentorshipDashboard = ({
                             <div className="mb-8 bg-white rounded-lg shadow-lg border-2 border-gray-200">
                                 <h4 className="text-lg font-bold text-sky-800 p-4 border-b bg-gray-50">Facility Problems & Solutions (Combined)</h4>
                                 <div className="overflow-x-auto max-h-[600px]">
-                                    <table className="w-full text-sm text-left border-collapse min-w-[900px]">
+                                    <table className="w-full text-sm text-left border-collapse">
                                         <thead className="bg-gray-100 text-xs uppercase text-gray-700 sticky top-0 z-10">
                                             <tr>
                                                 <th className="px-2 py-3 border w-[15%]">Facility & Date</th>
