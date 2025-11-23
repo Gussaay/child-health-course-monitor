@@ -453,8 +453,8 @@ export default function App() {
                         if (!courseData) throw new Error('Course not found.');
                         if (!participantData) throw new Error('Participants not found.');
 
-                        if (courseData.course_type !== 'ICCM' && courseData.course_type !== 'EENC') {
-                            throw new Error('Test forms are only available for ICCM and EENC courses.');
+                        if (courseData.course_type !== 'ICCM' && courseData.course_type !== 'EENC' && courseData.course_type !== 'Small & Sick Newborn') {
+                            throw new Error('Test forms are only available for ICCM, EENC and Small & Sick Newborn courses.');
                         }
 
                         setPublicTestData({ course: courseData, participants: participantData, tests: testData || [] });
@@ -1519,8 +1519,6 @@ export default function App() {
     else if (isPublicTestView) {
         if (authLoading) {
             mainContent = <Card><Spinner /></Card>;
-        } else if (!user) {
-            mainContent = <SignInBox message="You must sign in to access the public test form." />;
         } else if (publicTestLoading) {
             mainContent = <Card><div className="flex justify-center p-8"><Spinner /></div></Card>;
         } else if (publicTestError) {
