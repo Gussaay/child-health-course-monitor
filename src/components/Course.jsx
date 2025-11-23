@@ -25,6 +25,7 @@ import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/fire
 import { DEFAULT_ROLE_PERMISSIONS, ALL_PERMISSIONS } from './AdminDashboard';
 import { generateCertificatePdf } from './CertificateGenerator'; 
 import { Users, Download } from 'lucide-react'; 
+import { useDataCache } from '../DataContext'; 
 
 // Lazy load components that are not always visible to speed up initial load
 const ReportsView = React.lazy(() => import('./ReportsView').then(module => ({ default: module.ReportsView })));
@@ -58,7 +59,7 @@ const pctBgClass = (value, customClasses) => {
             const num = parseFloat(condition.replace('>', ''));
             if (value > num) return bgClass;
         } else if (condition.includes('<=')) {
-            const num = parseFloat(condition.replace('<=', ''));
+            const num = parseFloat(condition.replace('<', ''));
             if (value <= num) return bgClass;
         } else if (condition.includes('<')) {
             const num = parseFloat(condition.replace('<', ''));
@@ -246,7 +247,7 @@ export function CoursesTable({
                                     <div className="flex gap-2 flex-nowrap justify-end">
                                         <Button variant="primary" onClick={() => onOpen(c.id)}>Open Course</Button>
                                         <Button variant="secondary" onClick={() => onOpenReport(c.id)}>Course Reports</Button>
-                                        {(c.course_type === 'ICCM' || c.course_type === 'EENC') && (
+                                        {(c.course_type === 'ICCM' || c.course_type === 'EENC' || c.course_type === 'Small & Sick Newborn') && (
                                             <Button variant="secondary" onClick={() => onOpenTestForm(c.id)}>
                                                 Test Scores
                                             </Button>
@@ -312,20 +313,28 @@ export function CourseManagementView({
     setActiveCourseType,
     onSaveParticipantTest,
     
-    // --- ADDED HERE ---
-    onSaveParticipant, // <--- Must be included here
-    // ------------------
+    onSaveParticipant, 
 
     facilitatorsList,
-    fundersList,
-    federalCoordinatorsList,
-    stateCoordinatorsList,
-    localityCoordinatorsList,
     onSaveCourse, 
     onAddNewFacilitator,
     onAddNewCoordinator,
     onAddNewFunder
 }) {
+    const { 
+        federalCoordinators, fetchFederalCoordinators,
+        stateCoordinators, fetchStateCoordinators,
+        localityCoordinators, fetchLocalityCoordinators,
+        funders, fetchFunders
+    } = useDataCache();
+
+    useEffect(() => {
+        fetchFederalCoordinators();
+        fetchStateCoordinators();
+        fetchLocalityCoordinators();
+        fetchFunders();
+    }, []); 
+
     const currentParticipant = participants.find(p => p.id === selectedParticipantId);
 
     const [courseToEdit, setCourseToEdit] = useState(null);
@@ -451,7 +460,7 @@ export function CourseManagementView({
                         <Button variant="tab" isActive={activeCoursesTab === 'participants'} onClick={() => { setActiveCoursesTab('participants'); onSetSelectedParticipantId(null); }}>Participants</Button>
                         <Button variant="tab" isActive={activeCoursesTab === 'monitoring'} onClick={() => setActiveCoursesTab('monitoring')} disabled={!currentParticipant}>Monitoring</Button>
                         <Button variant="tab" isActive={activeCoursesTab === 'reports'} onClick={() => setActiveCoursesTab('reports')}>Reports</Button>
-                        {(selectedCourse.course_type === 'ICCM' || selectedCourse.course_type === 'EENC') && (
+                        {(selectedCourse.course_type === 'ICCM' || selectedCourse.course_type === 'EENC' || selectedCourse.course_type === 'Small & Sick Newborn') && (
                             <Button variant="tab" isActive={activeCoursesTab === 'enter-test-scores'} onClick={() => { setActiveCoursesTab('enter-test-scores'); }}>
                                 Test Scores
                             </Button>
@@ -525,10 +534,10 @@ export function CourseManagementView({
                         onCancel={handleCancelCourseForm} 
                         onSave={handleSaveCourseAndReturn} 
                         facilitatorsList={facilitatorsList}
-                        fundersList={fundersList}
-                        federalCoordinatorsList={federalCoordinatorsList}
-                        stateCoordinatorsList={stateCoordinatorsList}
-                        localityCoordinatorsList={localityCoordinatorsList}
+                        fundersList={funders || []}
+                        federalCoordinatorsList={federalCoordinators || []}
+                        stateCoordinatorsList={stateCoordinators || []}
+                        localityCoordinatorsList={localityCoordinators || []}
                         onAddNewFacilitator={onAddNewFacilitator}
                         onAddNewCoordinator={onAddNewCoordinator}
                         onAddNewFunder={onAddNewFunder}
@@ -585,10 +594,8 @@ export function CourseManagementView({
                                     setActiveCoursesTab('participants');
                                     onBatchUpdate();
                                 }}
-                                // --- PASSING PERMISSION & SAVE HANDLER ---
                                 canManageTests={canUseFederalManagerAdvancedFeatures}
                                 onSaveParticipant={onSaveParticipant}
-                                // -----------------------------------------
                             />
                         )}
                     </>
@@ -773,12 +780,14 @@ export function CourseForm({
     ];
 
     const ICCM_SUBCOURSE_TYPES = ['ICCM Community Module'];
+    const SMALL_AND_SICK_SUBCOURSE_TYPES = ['Portable warmer training', 'CPAP training'];
 
     const COURSE_GROUPS = ['Group A', 'Group B', 'Group C', 'Group D'];
 
     const isImnci = courseType === 'IMNCI';
     const isInfectionControl = courseType === 'IPC';
     const isIccm = courseType === 'ICCM';
+    const isSmallAndSick = courseType === 'Small & Sick Newborn';
 
     const [groups, setGroups] = useState(initialData?.facilitatorAssignments ? [...new Set(initialData.facilitatorAssignments.map(a => a.group))] : ['Group A']);
 
@@ -956,7 +965,8 @@ export function CourseForm({
             return;
         }
 
-        if (!isInfectionControl && allFacilitatorAssignments.length === 0) {
+        // --- FIXED: Added !isSmallAndSick to skip facilitator requirement ---
+        if (!isInfectionControl && !isSmallAndSick && allFacilitatorAssignments.length === 0) {
              setError('Please assign at least one facilitator to a subcourse.');
              return;
         }
@@ -1249,7 +1259,12 @@ export function CourseForm({
                                                         className="w-full"
                                                     >
                                                         <option value="">— Select Subcourse —</option>
-                                                        {(isImnci ? IMNCI_SUBCOURSE_TYPES : (isIccm ? ICCM_SUBCOURSE_TYPES : INFECTION_CONTROL_SUBCOURSE_TYPES)).map(type => (
+                                                        {(isImnci ? IMNCI_SUBCOURSE_TYPES : 
+                                                          isIccm ? ICCM_SUBCOURSE_TYPES : 
+                                                          isInfectionControl ? INFECTION_CONTROL_SUBCOURSE_TYPES : 
+                                                          isSmallAndSick ? SMALL_AND_SICK_SUBCOURSE_TYPES :
+                                                          []
+                                                        ).map(type => (
                                                             <option key={type} value={type}>{type}</option>
                                                         ))}
                                                     </Select>

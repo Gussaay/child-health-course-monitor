@@ -14,7 +14,6 @@ import {
 } from '../data.js';
 import { GenericFacilityForm, IMNCIFormFields } from './FacilityForms.jsx'; 
 
-// ... (Keep EENC_TEST_QUESTIONS and ICCM_TEST_QUESTIONS constants as they are)
 export const EENC_TEST_QUESTIONS = [
     { id: 'q1', text: '1. Delivering in the supine position during second stage of labour is best.', type: 'mc', options: [{ id: 'a', text: 'True' }, { id: 'b', text: 'False' }], correctAnswer: 'b' },
     { id: 'q2', text: '2. Applying fundal pressure (pushing down on the top of the uterus) is an effective means of supporting labour.', type: 'mc', options: [{ id: 'a', text: 'True' }, { id: 'b', text: 'False' }], correctAnswer: 'b' },
@@ -46,6 +45,14 @@ export const ICCM_TEST_QUESTIONS = [
     { id: 'q13', text: '13. قبل تحويل طفل لديه علامة خطر ويستطيع الشرب', type: 'mc', options: [{ id: 'a', text: 'التجويل العاجل مع إعطاء ادوية ما قبل التحويل' }, { id: 'b', text: 'تحويل عاجل' }], correctAnswer: 'a' },
     { id: 'q14', text: '14. المتابعة لطفل كحة وتنفس سريع بعد بدء الأموكسيسيلين تكون بعد:', type: 'mc', options: [{ id: 'a', text: 'يومين' }, { id: 'b', text: 'أسبوع' }, { id: 'c', 'لا حاجة': 'لا حاجة' }], correctAnswer: 'a' },
     { id: 'q15', text: '15. أي من العلامات التالية تعتبر علامة خطورة للطفل حديث الولادة', type: 'mc', options: [{ id: 'a', text: 'درجة حرارة اقل من 35.5' }, { id: 'b', text: 'إسهال' }], correctAnswer: 'a' }
+];
+
+export const SSNB_WARMER_TEST_QUESTIONS = [
+    { id: 'q1', text: '1. ما هي الرعاية القياسية لتوفير الدف للاطفال حديثي الولادة حسب توصيات منظمة الصحة العالمية ؟', type: 'mc', options: [{ id: 'a', text: 'استخدام الدفايات الكهربائية' }, { id: 'b', text: 'استخدام الدفايات المتنقلة' }, { id: 'c', text: 'وضع الطفل ملتصقا جلد بجلد' }, { id: 'd', text: 'استخدام الملابس القطنية' }], correctAnswer: 'c' },
+    { id: 'q2', text: '2. ما هي درجة الحرارة المناسبة للطفل حديث الولادة :', type: 'mc', options: [{ id: 'a', text: 'اكثر من 37 درجة' }, { id: 'b', text: 'من 36.5 الى 37.5 درجة' }, { id: 'c', text: 'اقل من 36.5 درجة' }], correctAnswer: 'b' },
+    { id: 'q3', text: '3. ما هي اسباب استخدام الدفايات المتنقلة :', type: 'mc', options: [{ id: 'a', text: 'وضع كل الاطفال الخدج وناقصي الوزن' }, { id: 'b', text: 'استخدام الدفاية في حالة النقل من مكان لمكان' }], correctAnswer: 'b' },
+    { id: 'q4', text: '4. في تقديرك كم من الزمن سوف تحتفظ الدفاية بالحرارة عند وضع الطفل بداخلها', type: 'mc', options: [{ id: 'a', text: 'ساعة واحدة' }, { id: 'b', text: '4 ساعات - 6 ساعات' }, { id: 'c', text: 'اكثر من 10 ساعات' }], correctAnswer: 'b' },
+    { id: 'q5', text: '5. كيف يتم تعقيم لبسة الدفاية', type: 'mc', options: [{ id: 'a', text: 'غسلها بالماء والصابون ثم المسح بالكجول قبل الاستخدام' }, { id: 'b', text: 'نقعها في محلول الكلور' }], correctAnswer: 'a' }
 ];
 
 const initializeAnswers = (questions) => {
@@ -263,6 +270,10 @@ export function CourseTestForm({
         if (course.course_type === 'EENC') {
             titles = JOB_TITLES_EENC;
             return { testQuestions: EENC_TEST_QUESTIONS, testTitle: 'EENC Pre/Post Test Entry', isRtl: false, jobTitleOptions: titles, isIccm: isIccm };
+        }
+        if (course.course_type === 'Small & Sick Newborn') {
+            titles = JOB_TITLES_EENC; // Using EENC titles as default for SSNB
+            return { testQuestions: SSNB_WARMER_TEST_QUESTIONS, testTitle: 'SSNB Portable Warmer Test', isRtl: true, jobTitleOptions: titles, isIccm: false };
         }
         return { testQuestions: [], testTitle: 'Test Entry', isRtl: false, jobTitleOptions: [], isIccm: false }; 
     }, [course.course_type]);
