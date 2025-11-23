@@ -284,11 +284,11 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                 left: '60mm',
                 right: '60mm',
                 textAlign: 'center',
-                fontSize: '30px',
+                fontSize: '35px',
                 fontWeight: 'bold',
                 zIndex: 2,
-                borderBottom: '2px dotted #000', // <--- ADDED: Long dotted line
-                paddingBottom: '2px'             // <--- ADDED: Spacing
+                borderBottom: '3px dotted #000', // <--- ADDED: Long dotted line
+                paddingBottom: '10px'             // <--- ADDED: Spacing
             }}>
                 {isArabic ? `${participant.name}` : `Dr. ${participant.name}`}
             </div>
@@ -296,7 +296,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
             {/* Completion Text */}
             <div style={{
                 position: 'absolute',
-                top: isArabic ? '100mm' : '100mm', 
+                top: isArabic ? '105mm' : '105mm', 
                 left: '50mm',
                 right: '50mm',
                 textAlign: 'center',
@@ -304,13 +304,13 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                 fontStyle: isArabic ? 'normal' : 'italic',
                 zIndex: 2
             }}>
-                {isArabic ? 'أكمل/ ت بنجاح الدورة التدريبية على : ' : 'Has successfully completed:'}
+                {isArabic ? 'أكمل/ت بنجاح الدورة التدريبية على : ' : 'Has successfully completed:'}
             </div>
 
             {/* Course Title */}
             <div style={{
                 position: 'absolute',
-                top: isArabic ? '110mm' : '110mm', 
+                top: isArabic ? '117mm' : '117mm', 
                 left: '10mm',
                 right: '10mm',
                 textAlign: 'center',
@@ -326,7 +326,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
             {(displaySubCourse) && (
                 <div style={{
                     position: 'absolute',
-                    top: isArabic ? '125mm' : '125mm', 
+                    top: isArabic ? '128mm' : '128mm', 
                     left: '10mm',
                     right: '10mm',
                     textAlign: 'center',
@@ -342,7 +342,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
             {/* Location & Date */}
             <div style={{
                 position: 'absolute',
-                top: '135mm', 
+                top: '140mm', 
                 left: '50%', 
                 transform: 'translateX(-50%)', 
                 textAlign: 'center', 
