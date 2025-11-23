@@ -8,15 +8,16 @@ import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Toolti
 // Import separate dashboards as named exports, including EENCCoverageDashboard
 import { NeonatalCoverageDashboard, IMNCICoverageDashboard, EENCCoverageDashboard } from "./ServiceCoverageDashboard.jsx";
 import { useDataCache } from '../DataContext';
+import CompiledReportView from './CompiledReportView.jsx';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
 
-// Constants and helper components (Card, PageHeader, etc.) remain the same
+// Constants and helper components
 const COURSE_TYPES_FACILITATOR = ["IMNCI", "ETAT", "EENC", "IPC"];
 const Card = ({ children, className = '' }) => <div className={`bg-white rounded-lg shadow-md p-4 md:p-6 ${className}`}>{children}</div>;
-// PageHeader removed
+
 const Button = ({ onClick, children, variant = 'primary', className = '', disabled = false }) => <button onClick={onClick} disabled={disabled} className={`px-4 py-2 rounded-md font-semibold text-sm transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 flex items-center gap-2 justify-center ${variant === 'primary' ? 'bg-sky-600 text-white hover:bg-sky-700 focus:ring-sky-500 disabled:opacity-50 disabled:cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300 focus:ring-gray-400 disabled:opacity-50 disabled:cursor-not-allowed'} ${className}`}>{children}</button>;
-// Compact Filters (Unchanged from previous mod)
+
 const FormGroup = ({ label, children }) => (<div className="flex flex-col gap-0.5"><label className="font-semibold text-gray-700 text-xs">{label}</label>{children}</div>);
 const Select = (props) => <select {...props} className={`border border-gray-300 rounded-md p-1.5 text-sm w-full focus:ring-2 focus:ring-sky-500 focus:border-sky-500 ${props.className || ''}`}>{props.children}</select>;
 const Table = ({ headers, children }) => (
@@ -31,8 +32,7 @@ const Input = (props) => <input {...props} className={`border border-gray-300 ro
 const EmptyState = ({ message, colSpan = 100 }) => (<tr><td colSpan={colSpan} className="py-12 text-center text-gray-500 border border-gray-200">{message}</td></tr>);
 const Spinner = () => <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-600 mx-auto"></div>;
 
-// Helper functions (exportToExcel, exportTableToPdf) remain the same
-// ... (exportToExcel and exportTableToPdf functions) ...
+// Helper functions 
 const exportToExcel = (tableData, headers, fileName) => {
     const csvContent = "data:text/csv;charset=utf-8,"
         + headers.join(',') + '\n'
@@ -77,15 +77,15 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
 
     const { courses: allCourses, participants: allParticipants, facilitators: allFacilitators, fetchCourses, fetchParticipants, fetchFacilitators, isLoading } = useDataCache();
 
-    // Updated primary view types to include the EENC coverage dashboard
-    const [viewType, setViewType] = useState('neonatalCoverage'); // Set Neonatal as the default initial view
+    // Updated primary view types to include the EENC coverage dashboard and Compiled Reports
+    const [viewType, setViewType] = useState('neonatalCoverage'); 
 
     const [fetchedCourses, setFetchedCourses] = useState([]);
     const [fetchedParticipants, setFetchedParticipants] = useState([]);
     const [fetchedFacilitators, setFetchedFacilitators] = useState([]);
     const [fetchingDetailed, setFetchingDetailed] = useState(false);
 
-    // Other states for filtering courses/participants/facilitators (omitted for brevity)
+    // Other states for filtering courses/participants/facilitators
     const [courseTypeFilter, setCourseTypeFilter] = useState('All');
     const [stateFilter, setStateFilter] = useState('All');
     const [localityFilter, setLocalityFilter] = useState('All');
@@ -97,22 +97,13 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
     const [facRoleFilter, setFacRoleFilter] = useState('All');
     const [facCourseFilter, setFacCourseFilter] = useState('All');
 
-    // useEffect(() => {
-    //     fetchCourses();
-    //     fetchParticipants();
-    //     fetchFacilitators();
-    // }, [fetchCourses, fetchParticipants, fetchFacilitators]);
-    // NOTE: Fetches are now triggered by App.jsx when view changes to 'dashboard'
-
     const fetchDetailedData = async () => {
         setFetchingDetailed(true);
         
-        // --- START OF FIX: Add null guard for allCourses and allParticipants ---
         if (!allCourses || !allParticipants) {
             setFetchingDetailed(false);
             return;
         }
-        // --- END OF FIX ---
         
         const courseMap = new Map(allCourses.map(c => [c.id, c]));
         const participantsWithCourseInfo = allParticipants.map(p => {
@@ -131,15 +122,13 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
         setFetchingDetailed(false);
     };
 
-    // All useMemo hooks for filtering (omitted for brevity, they remain the same)
+    // All useMemo hooks for filtering
     const allStates = useMemo(() => ['All', ...Object.keys(STATE_LOCALITIES).sort()], [STATE_LOCALITIES]);
     const allLocalities = useMemo(() => stateFilter === 'All' ? [] : ['All', ...STATE_LOCALITIES[stateFilter].localities.map(l => l.en).sort()], [stateFilter, STATE_LOCALITIES]);
     const allCourseTypes = useMemo(() => ['All', ...COURSE_TYPES_FACILITATOR], []);
     const allYears = useMemo(() => {
-        // --- START OF FIX: Add null guard for allCourses ---
         const coursesList = allCourses || [];
         const years = [...new Set(coursesList.map(c => new Date(c.start_date).getFullYear()))].sort().map(String);
-        // --- END OF FIX ---
         return ['All', ...years];
     }, [allCourses]);
     const allMonths = useMemo(() => {
@@ -148,10 +137,8 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
     }, []);
 
     const filteredCourses = useMemo(() => {
-        // --- START OF FIX: Add null guard for allCourses ---
         const coursesList = allCourses || [];
         return coursesList.filter(course => {
-        // --- END OF FIX ---
             const courseDate = new Date(course.start_date);
             const matchesCourseType = courseTypeFilter === 'All' || course.course_type === courseTypeFilter;
             const matchesState = stateFilter === 'All' || course.state === stateFilter;
@@ -164,20 +151,16 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
     }, [allCourses, courseTypeFilter, stateFilter, localityFilter, yearFilter, monthFilter, allMonths]);
 
     const filteredParticipants = useMemo(() => {
-        // --- START OF FIX: Add null guard for allParticipants (resolves the TypeError) ---
         if (!allParticipants) {
             return [];
         }
-        // --- END OF FIX ---
         const matchingCourseIds = new Set(filteredCourses.map(c => c.id));
         return allParticipants.filter(p => matchingCourseIds.has(p.courseId));
     }, [filteredCourses, allParticipants]);
 
     const filteredFacilitators = useMemo(() => {
-        // --- START OF FIX: Add null guard for allFacilitators ---
         const facilitatorsList = allFacilitators || [];
         return facilitatorsList.filter(f => {
-        // --- END OF FIX ---
             const matchesSearch = facSearchQuery === '' || f.name.toLowerCase().includes(facSearchQuery.toLowerCase());
             const matchesCourse = facCourseFilter === 'All' || (f.courses && f.courses.includes(facCourseFilter));
             const matchesState = facStateFilter === 'All' || f.currentState === facStateFilter;
@@ -250,14 +233,12 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
 
     const participantKPIs = useMemo(() => {
         const totalParticipants = filteredParticipants.length;
-        // --- START OF FIX: Add null guard for allParticipants in reduction ---
         const participantsByCourse = filteredCourses.reduce((acc, c) => {
             const courseName = c.course_type || 'Unknown Course';
             const count = (allParticipants || []).filter(p => p.courseId === c.id).length;
             acc[courseName] = (acc[courseName] || 0) + count;
             return acc;
         }, {});
-        // --- END OF FIX ---
         return { totalParticipants, participantsByCourse };
     }, [filteredParticipants, filteredCourses, allParticipants]);
 
@@ -415,11 +396,9 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
 
         const facilitatorTableHeaders = ["Name", "Phone", "Email", "IMNCI Director?", "Clinical Instructor?", "Team Leader?", "Follow-up?", "Courses Instructed", "Courses Directed", "Actions"];
         const facilitatorTableData = fetchedFacilitators.map(f => {
-            // --- START OF FIX: Add null guard for fetchedCourses ---
             const coursesList = fetchedCourses || [];
             const instructed = coursesList.filter(c => Array.isArray(c.facilitators) && c.facilitators.includes(f.name)).length;
             const directed = coursesList.filter(c => c.director === f.name).length;
-            // --- END OF FIX ---
             return {
                 id: f.id,
                 row: [f.name, f.phone, f.email || 'N/A', f.directorCourse === 'Yes' ? 'Yes' : 'No', f.isClinicalInstructor === 'Yes' ? 'Yes' : 'No', f.teamLeaderCourse === 'Yes' ? 'Yes' : 'No', f.followUpCourse === 'Yes' ? 'Yes' : 'No', instructed, directed]
@@ -435,60 +414,63 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
     // The entire JSX render block of the component
     return (
         <Card className="p-0">
-            {/* PageHeader removed */}
-
-            {/* MODIFICATION: Smaller padding/font, flex-wrap added */}
             <div className="border-b border-gray-200 px-4 md:px-6">
-                <nav className="-mb-px flex flex-wrap space-x-4 overflow-x-auto"> {/* Added flex-wrap */}
+                <nav className="-mb-px flex flex-wrap space-x-4 overflow-x-auto">
                     {/* Neonatal Coverage Tab */}
                     <button
                         onClick={() => setViewType('neonatalCoverage')}
-                        className={`${viewType === 'neonatalCoverage' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-4 px-3 border-b-2 font-medium text-sm transition-colors`} // Changed px-4 to px-3, text-base to text-sm
+                        className={`${viewType === 'neonatalCoverage' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-4 px-3 border-b-2 font-medium text-sm transition-colors`} 
                     >
                         Neonatal Care Coverage
                     </button>
                     {/* EENC Coverage Tab */}
                     <button
                         onClick={() => setViewType('eencCoverage')}
-                        className={`${viewType === 'eencCoverage' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-4 px-3 border-b-2 font-medium text-sm transition-colors`} // Changed px-4 to px-3, text-base to text-sm
+                        className={`${viewType === 'eencCoverage' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-4 px-3 border-b-2 font-medium text-sm transition-colors`} 
                     >
                         EENC Coverage
                     </button>
                     {/* IMNCI Coverage Tab */}
                     <button
                         onClick={() => setViewType('imnciCoverage')}
-                        className={`${viewType === 'imnciCoverage' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-4 px-3 border-b-2 font-medium text-sm transition-colors`} // Changed px-4 to px-3, text-base to text-sm
+                        className={`${viewType === 'imnciCoverage' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-4 px-3 border-b-2 font-medium text-sm transition-colors`} 
                     >
                         IMNCI Coverage
+                    </button>
+                    {/* NEW: Compiled Reports Tab */}
+                    <button 
+                        onClick={() => setViewType('compiledReport')} 
+                        className={`${viewType === 'compiledReport' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-4 px-3 border-b-2 font-medium text-sm transition-colors`}
+                    >
+                        Compiled Reports
                     </button>
                     {/* Course Dashboard Tab */}
                     <button
                         onClick={() => setViewType('courses')}
-                        className={`${viewType === 'courses' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-4 px-3 border-b-2 font-medium text-sm transition-colors`} // Changed px-4 to px-3, text-base to text-sm
+                        className={`${viewType === 'courses' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-4 px-3 border-b-2 font-medium text-sm transition-colors`} 
                     >
                         Course Dashboard
                     </button>
                     {/* Participant Dashboard Tab */}
                     <button
                         onClick={() => setViewType('participants')}
-                        className={`${viewType === 'participants' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-4 px-3 border-b-2 font-medium text-sm transition-colors`} // Changed px-4 to px-3, text-base to text-sm
+                        className={`${viewType === 'participants' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-4 px-3 border-b-2 font-medium text-sm transition-colors`} 
                     >
                         Participant Dashboard
                     </button>
                     {/* Facilitator Dashboard Tab */}
                     <button
                         onClick={() => setViewType('facilitators')}
-                        className={`${viewType === 'facilitators' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-4 px-3 border-b-2 font-medium text-sm transition-colors`} // Changed px-4 to px-3, text-base to text-sm
+                        className={`${viewType === 'facilitators' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-4 px-3 border-b-2 font-medium text-sm transition-colors`} 
                     >
                         Facilitator Dashboard
                     </button>
                 </nav>
             </div>
-            {/* --- END MODIFICATION --- */}
 
-            {/* Compact Filters (Unchanged) */}
+            {/* Compact Filters */}
             {['courses', 'participants', 'facilitators'].includes(viewType) && (
-                <div className="p-3 bg-gray-50 rounded-md mb-4 mx-4 md:mx-6 mt-4"> {/* Added mt-4 */}
+                <div className="p-3 bg-gray-50 rounded-md mb-4 mx-4 md:mx-6 mt-4"> 
                     <h3 className="text-base font-semibold mb-2">Filters</h3>
                     <div className="grid md:grid-cols-4 lg:grid-cols-5 gap-3">
                         {viewType === 'facilitators' ? (
@@ -512,7 +494,6 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
                 </div>
             )}
 
-            {/* --- MODIFICATION: Add isLoading.healthFacilities to the check --- */}
             {isLoading.courses || isLoading.participants || isLoading.facilitators || isLoading.healthFacilities ? (
                 <div className="text-center py-12">
                     <Spinner />
@@ -524,6 +505,14 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
                     {viewType === 'neonatalCoverage' && <NeonatalCoverageDashboard />}
                     {viewType === 'eencCoverage' && <EENCCoverageDashboard />}
                     {viewType === 'imnciCoverage' && <IMNCICoverageDashboard />}
+
+                    {/* NEW: Compiled Reports View */}
+                    {viewType === 'compiledReport' && (
+                        <CompiledReportView 
+                            allCourses={allCourses || []} 
+                            allParticipants={allParticipants || []} 
+                        />
+                    )}
 
                     {/* Render Course Dashboard */}
                     {viewType === 'courses' && (allCourses || []).length > 0 && (

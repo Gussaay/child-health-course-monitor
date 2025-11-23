@@ -3,13 +3,13 @@ import { createRoot } from 'react-dom/client';
 import html2canvas from 'html2canvas';
 import jsPDF from "jspdf";
 import { QRCodeCanvas } from 'qrcode.react';
-// --- FIX: Corrected Path (Sibling) ---
 import { STATE_LOCALITIES } from './constants'; 
-// --- FIX: Corrected Path (Parent) ---
 import { db } from '../firebase'; 
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
-// --- Constants & Helpers ---
+// -----------------------------------------------------------------------------
+// HELPER FUNCTIONS
+// -----------------------------------------------------------------------------
 
 const getArabicMonthName = (monthIndex) => {
     const months = [
@@ -64,7 +64,6 @@ const getCertificateCourseTitle = (courseType, language = 'en') => {
     }
 };
 
-// --- SIMPLIFIED HELPER ---
 const fetchArabicName = async (collectionName, englishName, fieldName) => {
     if (!englishName) return null;
     
@@ -91,7 +90,9 @@ const fetchArabicName = async (collectionName, englishName, fieldName) => {
     return null;
 };
 
-// --- Component ---
+// -----------------------------------------------------------------------------
+// COMPONENT: CertificateTemplate
+// -----------------------------------------------------------------------------
 
 const CertificateTemplate = React.memo(function CertificateTemplate({ 
     course, 
@@ -287,8 +288,8 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                 fontSize: '35px',
                 fontWeight: 'bold',
                 zIndex: 2,
-                borderBottom: '3px dotted #000', // <--- ADDED: Long dotted line
-                paddingBottom: '10px'             // <--- ADDED: Spacing
+                borderBottom: '3px dotted #000', 
+                paddingBottom: '10px'             
             }}>
                 {isArabic ? `${participant.name}` : `Dr. ${participant.name}`}
             </div>
@@ -410,6 +411,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                     <img 
                         src={programStampUrl} 
                         alt="Program Stamp" 
+                        crossOrigin="anonymous" 
                         style={{ 
                             width: '40mm', 
                             height: 'auto',
@@ -437,6 +439,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                            <img 
                                src={programManagerSignatureUrl} 
                                alt="Signature" 
+                               crossOrigin="anonymous" 
                                style={{ 
                                    display: 'block', margin: '0 auto', maxHeight: '20mm', maxWidth: '30mm',
                                    position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', zIndex: -1
@@ -453,6 +456,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                            <img 
                                src={directorSignatureUrl} 
                                alt="Signature" 
+                               crossOrigin="anonymous" 
                                style={{ 
                                    display: 'block', margin: '0 auto', maxHeight: '20mm', maxWidth: '30mm',
                                    position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', zIndex: -1
@@ -483,6 +487,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                            <img 
                                src={directorSignatureUrl} 
                                alt="Signature" 
+                               crossOrigin="anonymous" 
                                style={{ 
                                    display: 'block', margin: '0 auto', maxHeight: '20mm', maxWidth: '30mm',
                                    position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', zIndex: -1
@@ -499,6 +504,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                            <img 
                                src={programManagerSignatureUrl} 
                                alt="Signature" 
+                               crossOrigin="anonymous" 
                                style={{ 
                                    display: 'block', margin: '0 auto', maxHeight: '20mm', maxWidth: '30mm',
                                    position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', zIndex: -1
@@ -514,7 +520,9 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
     );
 });
 
-// --- Generation Functions ---
+// -----------------------------------------------------------------------------
+// GENERATION FUNCTIONS
+// -----------------------------------------------------------------------------
 
 export const generateCertificatePdf = async (course, participant, federalProgramManagerName, participantSubCourse, language = 'en') => {
     
@@ -603,7 +611,6 @@ export const generateCertificatePdf = async (course, participant, federalProgram
     }
 };
 
-// --- UPDATED: Accepts onProgress callback and yields to Event Loop ---
 export const generateAllCertificatesPdf = async (course, participants, federalProgramManagerName, language = 'en', onProgress = null) => {
     if (!participants || participants.length === 0) {
         alert("No participants found to generate certificates.");
@@ -616,10 +623,10 @@ export const generateAllCertificatesPdf = async (course, participants, federalPr
     let firstPage = true;
 
     for (let i = 0; i < participants.length; i++) {
-        // Report progress if callback is provided
+        // Report progress
         if (onProgress) {
             onProgress(i + 1, participants.length);
-            // Critical: Yield to event loop to allow React UI to update (spinner/counter)
+            // Allow UI to update
             await new Promise(resolve => setTimeout(resolve, 0));
         }
 
