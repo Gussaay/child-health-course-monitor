@@ -515,7 +515,7 @@ const MentorshipDashboard = ({
         });
     }, [allSubmissions]);
 
-    const imnciKpiHelper = useCallback((submissions) => {
+   const imnciKpiHelper = useCallback((submissions) => {
         const scores = {
             overall: [], assessment: [], decision: [], treatment: [], coughClassification: [], pneumoniaManagement: [], diarrheaClassification: [], diarrheaManagement: [],
             handsOnWeight: [], handsOnTemp: [], handsOnHeight: [], handsOnRR: [], handsOnRDT: [], handsOnMUAC: [], handsOnWFH: [], referralCaseCount: [], referralManagement: [], malariaClassification: [], malariaManagement: [], malnutritionCaseCount: [], malnutritionManagement: [], anemiaManagement: [],
@@ -524,11 +524,34 @@ const MentorshipDashboard = ({
             ref_treatment: [], pneu_treatment: [], diar_treatment: [], dyst_treatment: [], mal_treatment: [], ear_treatment: [], nut_treatment: [], anemia_treatment: [], fu_treatment: [],
             handsOnPallor: [], measurementSkills: [], malnutritionAnemiaSkills: [],
         };
+        
         let totalVisits = submissions.length;
+        
+        // --- FIX START: Initialize skillStats with 0 values ---
         const skillStats = {};
+        
+        // Helper to safely initialize a key
+        const initStat = (key) => { if (!skillStats[key]) skillStats[key] = { yes: 0, no: 0 }; };
+
+        // 1. Initialize keys for Symptom specific skills
+        ['skill_ask_cough', 'skill_check_rr', 'skill_classify_cough',
+         'skill_ask_diarrhea', 'skill_check_dehydration', 'skill_classify_diarrhea',
+         'skill_ask_fever', 'skill_check_rdt', 'skill_classify_fever',
+         'skill_ask_ear', 'skill_check_ear', 'skill_classify_ear', 'decisionMatches'
+        ].forEach(k => initStat(k));
+
+        // 2. Initialize keys from the Form Structure
+        IMNCI_FORM_STRUCTURE.forEach(group => {
+            group.subgroups?.forEach(sub => {
+                sub.skills?.forEach(skill => initStat(skill.key));
+            });
+        });
+        // --- FIX END ---
 
         submissions.forEach(sub => {
-            const s = sub.scores; if (!s) return;
+            const s = sub.scores; 
+            if (!s) return;
+
             if (s.overallScore_maxScore > 0) scores.overall.push(s.overallScore_score / s.overallScore_maxScore);
             if (s.assessment_total_score_maxScore > 0) scores.assessment.push(s.assessment_total_score_score / s.assessment_total_score_maxScore);
             if (s.finalDecision_maxScore > 0) scores.decision.push(s.finalDecision_score / s.finalDecision_maxScore);
@@ -539,18 +562,36 @@ const MentorshipDashboard = ({
                 if (s[maxKey] > 0 && !['overall', 'assessment', 'decision', 'treatment'].includes(key)) scores[key].push(s[scKey] / s[maxKey]);
             });
 
-            const as = sub.fullData?.assessmentSkills;
-            const ts = sub.fullData?.treatmentSkills;
-            if (as && ts) {
-                 if (as['skill_anemia_pallor'] === 'yes') scores.handsOnPallor.push(1); else if (as['skill_anemia_pallor'] === 'no') scores.handsOnPallor.push(0);
-                 if (s.handsOnWeight_maxScore > 0) scores.measurementSkills.push(s.handsOnWeight_score / s.handsOnWeight_maxScore);
-                 if (s.handsOnTemp_maxScore > 0) scores.measurementSkills.push(s.handsOnTemp_score / s.handsOnTemp_maxScore);
-                 if (s.handsOnHeight_maxScore > 0) scores.measurementSkills.push(s.handsOnHeight_score / s.handsOnHeight_maxScore);
-                 if (s.handsOnRR_maxScore > 0) scores.measurementSkills.push(s.handsOnRR_score / s.handsOnRR_maxScore);
-                 if (s.handsOnMUAC_maxScore > 0) scores.malnutritionAnemiaSkills.push(s.handsOnMUAC_score / s.handsOnMUAC_maxScore);
-                 if (s.handsOnWFH_maxScore > 0) scores.malnutritionAnemiaSkills.push(s.handsOnWFH_score / s.handsOnWFH_maxScore);
-                 if (as['skill_anemia_pallor'] === 'yes') scores.malnutritionAnemiaSkills.push(1); else if (as['skill_anemia_pallor'] === 'no') scores.malnutritionAnemiaSkills.push(0);
-            }
+            const as = sub.fullData?.assessmentSkills || {};
+            const ts = sub.fullData?.treatmentSkills || {};
+            
+            if (as['skill_anemia_pallor'] === 'yes') scores.handsOnPallor.push(1); else if (as['skill_anemia_pallor'] === 'no') scores.handsOnPallor.push(0);
+            if (s.handsOnWeight_maxScore > 0) scores.measurementSkills.push(s.handsOnWeight_score / s.handsOnWeight_maxScore);
+            if (s.handsOnTemp_maxScore > 0) scores.measurementSkills.push(s.handsOnTemp_score / s.handsOnTemp_maxScore);
+            if (s.handsOnHeight_maxScore > 0) scores.measurementSkills.push(s.handsOnHeight_score / s.handsOnHeight_maxScore);
+            if (s.handsOnRR_maxScore > 0) scores.measurementSkills.push(s.handsOnRR_score / s.handsOnRR_maxScore);
+            if (s.handsOnMUAC_maxScore > 0) scores.malnutritionAnemiaSkills.push(s.handsOnMUAC_score / s.handsOnMUAC_maxScore);
+            if (s.handsOnWFH_maxScore > 0) scores.malnutritionAnemiaSkills.push(s.handsOnWFH_score / s.handsOnWFH_maxScore);
+            if (as['skill_anemia_pallor'] === 'yes') scores.malnutritionAnemiaSkills.push(1); else if (as['skill_anemia_pallor'] === 'no') scores.malnutritionAnemiaSkills.push(0);
+
+            // --- FIX START: Populate skillStats ---
+            const allSkills = { ...as, ...ts };
+
+            Object.keys(skillStats).forEach(key => {
+                if (key === 'decisionMatches') return; 
+
+                const val = allSkills[key];
+                if (val === 'yes' || val === 'correct' || val === true) {
+                    skillStats[key].yes++;
+                } else if (val === 'no' || val === 'incorrect' || val === false) {
+                    skillStats[key].no++;
+                }
+            });
+
+            const decisionMatch = sub.fullData?.decision_agreement || sub.fullData?.decision_score_agreement; 
+            if (decisionMatch === 'yes' || decisionMatch === true) skillStats['decisionMatches'].yes++;
+            else if (decisionMatch === 'no' || decisionMatch === false) skillStats['decisionMatches'].no++;
+            // --- FIX END ---
         });
 
         const avg = (arr) => calculateAverage(arr);

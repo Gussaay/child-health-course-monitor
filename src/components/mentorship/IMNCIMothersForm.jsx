@@ -401,7 +401,7 @@ const MothersForm = ({
                     <Button type="submit" disabled={isSaving}> {isSaving ? 'جاري الحفظ...' : 'حفظ وإكمال الاستبيان'} </Button>
                  </div>
 
-                 <div className="flex sm:hidden fixed bottom-0 left-0 right-0 z-20 p-2 bg-gray-50 border-t border-gray-200 shadow-lg justify-around items-center" dir="rtl">
+                 <div className="flex sm:hidden fixed bottom-16 left-0 right-0 z-20 p-2 bg-gray-50 border-t border-gray-200 shadow-lg justify-around items-center" dir="rtl">
                     <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving} size="sm">
                         إلغاء
                     </Button>
