@@ -229,15 +229,26 @@ const CompactSkillRow = ({ label, stats }) => {
 const CompactSkillsTable = ({ overallKpis }) => {
     const skillStats = overallKpis?.skillStats;
     if (!overallKpis || !skillStats || Object.keys(skillStats).length === 0) return (<div className="bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200 text-center text-gray-500">No detailed skill data available.</div>);
+    
     const subgroupScoreMap = { vitalSigns: overallKpis.avgVitalSigns, dangerSigns: overallKpis.avgDangerSigns, mainSymptoms: overallKpis.avgMainSymptoms, malnutrition: overallKpis.avgMalnutrition, anemia: overallKpis.avgAnemia, immunization: overallKpis.avgImmunization, otherProblems: overallKpis.avgOtherProblems, symptom_cough: overallKpis.avgSymptomCough, symptom_diarrhea: overallKpis.avgSymptomDiarrhea, symptom_fever: overallKpis.avgSymptomFever, symptom_ear: overallKpis.avgSymptomEar, ref_treatment: overallKpis.avgReferralManagement, pneu_treatment: overallKpis.avgPneumoniaManagement, diar_treatment: overallKpis.avgDiarrheaManagement, mal_treatment: overallKpis.avgMalariaManagement, nut_treatment: overallKpis.avgMalnutritionManagement, anemia_treatment: overallKpis.avgAnemiaManagement, dyst_treatment: overallKpis.avgDystTreatment, ear_treatment: overallKpis.avgEarTreatment, fu_treatment: overallKpis.avgFuTreatment };
     const SKILL_LABEL_MAP = { 'skill_ask_cough': 'هل سأل عن وجود الكحة أو ضيق التنفس', 'skill_check_rr': 'هل قاس معدل التنفس بصورة صحيحة', 'skill_classify_cough': 'هل صنف الكحة بصورة صحيحة', 'skill_ask_diarrhea': 'هل سأل عن وجود الاسهال', 'skill_check_dehydration': 'هل قيم فقدان السوائل بصورة صحيحة', 'skill_classify_diarrhea': 'هل صنف الاسهال بصورة صحيحة', 'skill_ask_fever': 'هل سأل عن وجود الحمى', 'skill_check_rdt': 'هل أجرى فحص الملاريا السريع بصورة صحيحة', 'skill_classify_fever': 'هل صنف الحمى بصورة صحيحة', 'skill_ask_ear': 'هل سأل عن وجود مشكلة في الأذن', 'skill_check_ear': 'هل فحص الفحص ورم مؤلم خلف الأذن', 'skill_classify_ear': 'هل صنف مشكلة الأذن بصورة صحيحة' };
+    
     return (
         <div className="bg-white rounded-lg shadow-lg border-2 border-gray-200" dir="rtl">
             <table className="w-full border-collapse">
                 <thead className="sticky top-0 z-10"><tr className="bg-gray-50"><th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-3/5 text-right">المهارة</th><th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-1/5 text-center">العدد (نعم / الإجمالي)</th><th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-1/5 text-center">النسبة</th></tr></thead>
                 <tbody>
                     {IMNCI_FORM_STRUCTURE.map(group => {
-                        let groupAggregateScore = null; if (group.group.includes('التقييم والتصنيف')) groupAggregateScore = overallKpis.avgAssessment; else if (group.isDecisionSection) groupAggregateScore = overallKpis.avgDecision; else if (group.group.includes('العلاج والنصح')) groupAggregateScore = overallKpis.avgTreatment;
+                        let groupAggregateScore = null; 
+                        
+                        // --- Mapping Logic ---
+                        if (group.group.includes('التقييم والتصنيف')) groupAggregateScore = overallKpis.avgAssessment; 
+                        else if (group.isDecisionSection) groupAggregateScore = overallKpis.avgDecision; 
+                        else if (group.group.includes('العلاج والنصح')) groupAggregateScore = overallKpis.avgTreatment;
+                        // Added Fixes:
+                        else if (group.group.includes('القياسات')) groupAggregateScore = overallKpis.avgMeasurementSkills;
+                        else if (group.group.includes('الخطورة')) groupAggregateScore = overallKpis.avgDangerSigns;
+
                         return (
                             <React.Fragment key={group.group}>
                                 <tr className="bg-sky-900 text-white"><td className="p-1 text-sm font-bold text-right border border-gray-300" colSpan="2">{group.group}</td><td className="p-1 border border-gray-300 text-center">{groupAggregateScore !== null && (<div className="bg-white rounded-md px-2 py-0.5 inline-block"><ScoreText value={groupAggregateScore} /></div>)}</td></tr>
@@ -255,7 +266,6 @@ const CompactSkillsTable = ({ overallKpis }) => {
         </div>
     );
 };
-
 const EENCCompactSkillRow = ({ label, stats }) => {
     const yes = stats?.yes || 0; const partial = stats?.partial || 0; const no = stats?.no || 0; const totalResponses = yes + partial + no; const score = (yes * 2) + (partial * 1); const maxScore = totalResponses * 2; const percentage = maxScore > 0 ? (score / maxScore) : null;
     return (<tr className="bg-white hover:bg-gray-50"><td className="p-1.5 text-xs font-medium text-gray-700 border border-gray-300 w-3/5">{label}</td><td className="p-1.5 text-xs font-semibold text-gray-800 border border-gray-300 w-1/5 text-center"><span title="نعم">{yes}</span> / <span title="جزئياً">{partial}</span> / <span title="لا">{no}</span></td><td className="p-1.5 border border-gray-300 w-1/5 text-center"><ScoreText value={percentage} /></td></tr>);
@@ -526,32 +536,30 @@ const MentorshipDashboard = ({
         };
         
         let totalVisits = submissions.length;
-        
-        // --- FIX START: Initialize skillStats with 0 values ---
         const skillStats = {};
         
         // Helper to safely initialize a key
         const initStat = (key) => { if (!skillStats[key]) skillStats[key] = { yes: 0, no: 0 }; };
 
-        // 1. Initialize keys for Symptom specific skills
+        // Initialize keys
         ['skill_ask_cough', 'skill_check_rr', 'skill_classify_cough',
          'skill_ask_diarrhea', 'skill_check_dehydration', 'skill_classify_diarrhea',
          'skill_ask_fever', 'skill_check_rdt', 'skill_classify_fever',
          'skill_ask_ear', 'skill_check_ear', 'skill_classify_ear', 'decisionMatches'
         ].forEach(k => initStat(k));
 
-        // 2. Initialize keys from the Form Structure
         IMNCI_FORM_STRUCTURE.forEach(group => {
             group.subgroups?.forEach(sub => {
                 sub.skills?.forEach(skill => initStat(skill.key));
             });
         });
-        // --- FIX END ---
 
         submissions.forEach(sub => {
-            const s = sub.scores; 
-            if (!s) return;
+            const s = sub.scores || {}; 
+            const as = sub.fullData?.assessmentSkills || {};
+            const ts = sub.fullData?.treatmentSkills || {};
 
+            // --- 1. Standard Score Pushes ---
             if (s.overallScore_maxScore > 0) scores.overall.push(s.overallScore_score / s.overallScore_maxScore);
             if (s.assessment_total_score_maxScore > 0) scores.assessment.push(s.assessment_total_score_score / s.assessment_total_score_maxScore);
             if (s.finalDecision_maxScore > 0) scores.decision.push(s.finalDecision_score / s.finalDecision_maxScore);
@@ -559,39 +567,47 @@ const MentorshipDashboard = ({
             
             Object.keys(scores).forEach(key => {
                 const maxKey = `${key}_maxScore`; const scKey = `${key}_score`;
-                if (s[maxKey] > 0 && !['overall', 'assessment', 'decision', 'treatment'].includes(key)) scores[key].push(s[scKey] / s[maxKey]);
+                if (s[maxKey] > 0 && !['overall', 'assessment', 'decision', 'treatment', 'measurementSkills', 'malnutritionAnemiaSkills'].includes(key)) {
+                    scores[key].push(s[scKey] / s[maxKey]);
+                }
             });
 
-            const as = sub.fullData?.assessmentSkills || {};
-            const ts = sub.fullData?.treatmentSkills || {};
+            // --- 2. Robust Measurement Score Logic (with Fallback) ---
+            const pushSkillWithFallback = (scoreVal, maxVal, skillKey, targetArr) => {
+                if (maxVal > 0) {
+                    targetArr.push(scoreVal / maxVal);
+                } else if (as[skillKey]) {
+                    // Fallback: Use raw data if score is missing
+                    const val = as[skillKey];
+                    targetArr.push((val === 'yes' || val === 'correct' || val === true) ? 1 : 0);
+                }
+            };
+
+            pushSkillWithFallback(s.handsOnWeight_score, s.handsOnWeight_maxScore, 'skill_weight', scores.measurementSkills);
+            pushSkillWithFallback(s.handsOnTemp_score, s.handsOnTemp_maxScore, 'skill_temp', scores.measurementSkills);
+            pushSkillWithFallback(s.handsOnHeight_score, s.handsOnHeight_maxScore, 'skill_height', scores.measurementSkills);
+            pushSkillWithFallback(s.handsOnRR_score, s.handsOnRR_maxScore, 'skill_rr', scores.measurementSkills);
             
-            if (as['skill_anemia_pallor'] === 'yes') scores.handsOnPallor.push(1); else if (as['skill_anemia_pallor'] === 'no') scores.handsOnPallor.push(0);
-            if (s.handsOnWeight_maxScore > 0) scores.measurementSkills.push(s.handsOnWeight_score / s.handsOnWeight_maxScore);
-            if (s.handsOnTemp_maxScore > 0) scores.measurementSkills.push(s.handsOnTemp_score / s.handsOnTemp_maxScore);
-            if (s.handsOnHeight_maxScore > 0) scores.measurementSkills.push(s.handsOnHeight_score / s.handsOnHeight_maxScore);
-            if (s.handsOnRR_maxScore > 0) scores.measurementSkills.push(s.handsOnRR_score / s.handsOnRR_maxScore);
-            if (s.handsOnMUAC_maxScore > 0) scores.malnutritionAnemiaSkills.push(s.handsOnMUAC_score / s.handsOnMUAC_maxScore);
-            if (s.handsOnWFH_maxScore > 0) scores.malnutritionAnemiaSkills.push(s.handsOnWFH_score / s.handsOnWFH_maxScore);
-            if (as['skill_anemia_pallor'] === 'yes') scores.malnutritionAnemiaSkills.push(1); else if (as['skill_anemia_pallor'] === 'no') scores.malnutritionAnemiaSkills.push(0);
+            pushSkillWithFallback(s.handsOnMUAC_score, s.handsOnMUAC_maxScore, 'skill_muac', scores.malnutritionAnemiaSkills);
+            pushSkillWithFallback(s.handsOnWFH_score, s.handsOnWFH_maxScore, 'skill_wfh', scores.malnutritionAnemiaSkills);
+            
+            // Pallor is a special case (often boolean in 'as' but missing in scores)
+            const pallorVal = as['skill_anemia_pallor'];
+            if (pallorVal === 'yes') { scores.handsOnPallor.push(1); scores.malnutritionAnemiaSkills.push(1); }
+            else if (pallorVal === 'no') { scores.handsOnPallor.push(0); scores.malnutritionAnemiaSkills.push(0); }
 
-            // --- FIX START: Populate skillStats ---
+            // --- 3. Populate skillStats for Table Rows ---
             const allSkills = { ...as, ...ts };
-
             Object.keys(skillStats).forEach(key => {
                 if (key === 'decisionMatches') return; 
-
                 const val = allSkills[key];
-                if (val === 'yes' || val === 'correct' || val === true) {
-                    skillStats[key].yes++;
-                } else if (val === 'no' || val === 'incorrect' || val === false) {
-                    skillStats[key].no++;
-                }
+                if (val === 'yes' || val === 'correct' || val === true) skillStats[key].yes++;
+                else if (val === 'no' || val === 'incorrect' || val === false) skillStats[key].no++;
             });
 
             const decisionMatch = sub.fullData?.decision_agreement || sub.fullData?.decision_score_agreement; 
             if (decisionMatch === 'yes' || decisionMatch === true) skillStats['decisionMatches'].yes++;
             else if (decisionMatch === 'no' || decisionMatch === false) skillStats['decisionMatches'].no++;
-            // --- FIX END ---
         });
 
         const avg = (arr) => calculateAverage(arr);

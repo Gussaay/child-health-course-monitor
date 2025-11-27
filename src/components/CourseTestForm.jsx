@@ -298,7 +298,10 @@ export function CourseTestForm({
     }, [localParticipants]);
 
     const sortedParticipants = useMemo(() => {
-        return [...localParticipants].sort((a, b) => a.name.localeCompare(b.name));
+        // Defensive check: Filter out any invalid participants (null, undefined, missing name) to prevent crash
+        return [...localParticipants]
+            .filter(p => p && p.name) 
+            .sort((a, b) => a.name.localeCompare(b.name));
     }, [localParticipants]);
 
     const filteredSetupParticipants = useMemo(() => {
@@ -453,13 +456,28 @@ export function CourseTestForm({
                 ...(isIccm && { trained_before: false, last_imci_training: null, nearest_health_facility: null, hours_to_facility: null })
             };
             
-            const newParticipant = await onSaveParticipant(participantPayload, null);
-            setLocalParticipants(prev => [...prev, newParticipant]);
-            setSelectedParticipantId(newParticipant.id); 
-            setParticipantNameForDisplay(newParticipant.name); 
+            const savedData = await onSaveParticipant(participantPayload, null);
+            
+            // Safe Merge: If the server returns just an ID (or partial data), use our local payload for the UI
+            // This prevents "undefined" errors in the dropdown/header immediately after save.
+            const safeParticipantForState = {
+                ...participantPayload,
+                id: savedData?.id || savedData // Handle if it returns object or just ID
+            };
+            
+            if (!safeParticipantForState.id) throw new Error("Participant saved, but no ID was returned. Please refresh.");
+
+            setLocalParticipants(prev => [...prev, safeParticipantForState]);
+            setSelectedParticipantId(safeParticipantForState.id); 
+            setParticipantNameForDisplay(safeParticipantForState.name); 
+            
+            // CRITICAL: Initialize answers and test type immediately so the test form can render
+            setAnswers(initializeAnswers(testQuestions));
+            if (!testType) setTestType('pre-test'); 
+            
             setIsParticipantInfoSaved(true); 
             setIsNewParticipantModalOpen(false);
-            setIsSetupModalOpen(false);
+            setIsSetupModalOpen(false); // Close setup, show questions
         } catch (err) { setError(`Failed to save participant: ${err.message}`); } finally { setIsSaving(false); }
     };
 
