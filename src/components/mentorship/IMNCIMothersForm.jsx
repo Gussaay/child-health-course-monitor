@@ -1,4 +1,4 @@
-// MothersForm.jsx
+// IMNCIMothersForm.jsx
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { saveMentorshipSession } from '../../data';
 import { Timestamp } from 'firebase/firestore';
@@ -164,11 +164,12 @@ const MotherFormRow = ({ name, label, value, onChange, options = ['نعم', 'ل�
 // --- Updated Component Signature ---
 const MothersForm = ({ 
     facility, 
-    onCancel, 
+    onCancel,
+    onSaveComplete, // <--- New Prop
     setToast, 
     visitNumber = 1, 
     existingSessionData = null,
-    canEditVisitNumber = false // <--- New Prop
+    canEditVisitNumber = false 
 }) => {
     // Initialize State (with Hydration logic for Edit Mode)
     const [formData, setFormData] = useState(() => {
@@ -287,7 +288,14 @@ const MothersForm = ({
             await saveMentorshipSession(payload, sessionId);
 
             setToast({ show: true, message: 'تم حفظ استبيان الأم بنجاح!', type: 'success' });
-            onCancel(); 
+            
+            // --- SUCCESS HANDLER ---
+            if (onSaveComplete) {
+                onSaveComplete('complete', payload);
+            } else if (onCancel) {
+                onCancel(); 
+            }
+
         } catch (error) {
             console.error("Error saving Mother's Form session:", error);
             setToast({ show: true, message: `فشل الحفظ: ${error.message}`, type: 'error' });

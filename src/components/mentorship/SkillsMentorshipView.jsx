@@ -1,7 +1,8 @@
+// SkillsMentorshipView.jsx
 import React, { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useDataCache } from "../../DataContext";
 import { Timestamp } from 'firebase/firestore';
-import { PlusCircle, Trash2, FileText, Users, Building, ClipboardCheck, Archive, LayoutDashboard } from 'lucide-react';
+import { PlusCircle, Trash2, FileText, Users, Building, ClipboardCheck, Archive, LayoutDashboard, Search } from 'lucide-react';
 import {
     saveMentorshipSession,
     importMentorshipSessions,
@@ -156,141 +157,54 @@ const AddHealthWorkerModal = ({ isOpen, onClose, onSave, facilityName }) => {
     );
 };
 
-// --- Custom Searchable Select Component ---
-const SearchableSelect = ({ options, value, onChange, placeholder = "اختر من القائمة...", disabled = false }) => {
-    const [isOpen, setIsOpen] = useState(false);
+// --- NEW: Facility Selection Modal ---
+const FacilitySelectionModal = ({ isOpen, onClose, facilities, onSelect }) => {
     const [searchTerm, setSearchTerm] = useState('');
-    const dropdownRef = useRef(null);
-
-    const selectedOption = options.find(option => option.value === value);
-
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
-    }, []);
-
-    const handleSelect = (optionValue) => {
-        onChange({ target: { name: 'facilityId', value: optionValue } });
-        setIsOpen(false);
-        setSearchTerm('');
-    };
-
-    const filteredOptions = useMemo(() => {
-        if (!searchTerm) return options;
-        return options.filter(option =>
-            option.value === 'addNew' ||
-            (option.label && option.label.toLowerCase().includes(searchTerm.toLowerCase()))
-        );
-    }, [searchTerm, options]);
-
-    const groupedOptions = useMemo(() => {
-        const groups = { ungrouped: [] };
-        filteredOptions.forEach(option => {
-            const groupName = option.group || 'ungrouped';
-            if (!groups[groupName]) {
-                groups[groupName] = [];
-            }
-            groups[groupName].push(option);
-        });
-        return { ungrouped: groups.ungrouped, ...Object.fromEntries(Object.entries(groups).filter(([key]) => key !== 'ungrouped')) };
-    }, [filteredOptions]);
+    
+    // Filter facilities based on search term
+    const filteredList = useMemo(() => {
+        if (!searchTerm) return facilities;
+        const lowerTerm = searchTerm.toLowerCase();
+        return facilities.filter(f => (f['اسم_المؤسسة'] || '').toLowerCase().includes(lowerTerm));
+    }, [facilities, searchTerm]);
 
     return (
-        <div className="relative" ref={dropdownRef}>
-            <button
-                type="button"
-                className="w-full text-right bg-white border border-gray-300 rounded-md shadow-sm pl-3 pr-10 py-2 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
-                onClick={() => setIsOpen(!isOpen)}
-                disabled={disabled}
-            >
-                <span className="block truncate">
-                    {selectedOption ? selectedOption.label : <span className="text-gray-500">{placeholder}</span>}
-                </span>
-                <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                    <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="http://www.w3.org/2000/svg" fill="currentColor" aria-hidden="true">
-                        <path fillRule="evenodd" d="M10 3a1 1 0 01.707.293l3 3a1 1 0 01-1.414 1.414L10 5.414 7.707 7.707a1 1 0 01-1.414-1.414l3-3A1 1 0 0110 3zm-3.707 9.293a1 1 0 011.414 0L10 14.586l2.293-2.293a1 1 0 011.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                </span>
-            </button>
-            {isOpen && (
-                <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
-                    <div className="p-2 sticky top-0 bg-white z-10">
-                        <Input
-                            type="search"
-                            placeholder="ابحث..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full"
-                            autoFocus
-                        />
-                    </div>
-                    <ul role="listbox">
-                        {Object.entries(groupedOptions).map(([groupName, opts]) => (
-                            <React.Fragment key={groupName}>
-                                {groupName !== 'ungrouped' && opts.length > 0 && (
-                                    <li className="text-gray-500 cursor-default select-none relative py-2 px-3 font-bold">{groupName}</li>
-                                )}
-                                {opts.map(option => (
-                                    <li
-                                        key={option.value}
-                                        className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-sky-100 ${option.className || ''}`}
-                                        onClick={() => handleSelect(option.value)}
-                                    >
-                                        <span className={`block truncate ${value === option.value ? 'font-semibold' : 'font-normal'}`}>
-                                            {option.label}
-                                        </span>
-                                    </li>
-                                ))}
-                            </React.Fragment>
-                        ))}
-                         {filteredOptions.length === 0 && searchTerm && (
-                            <li className="text-gray-500 cursor-default select-none relative py-2 px-3">لا توجد نتائج</li>
-                        )}
-                    </ul>
+        <Modal isOpen={isOpen} onClose={onClose} title="اختر المؤسسة الصحية">
+            <div className="p-4 text-right" dir="rtl">
+                <div className="mb-4 relative">
+                    <Input 
+                        autoFocus
+                        placeholder="ابحث عن المؤسسة..." 
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        className="pl-10 pr-4 w-full"
+                    />
+                    <Search className="absolute left-3 top-2.5 text-gray-400 w-5 h-5" />
                 </div>
-            )}
-        </div>
-    );
-};
-
-// --- Add Facility Modal Component ---
-const AddFacilityModal = ({ isOpen, onClose, onSaveComplete, setToast, initialState, initialLocality }) => {
-   const handleSave = async (formData) => {
-        try {
-            await submitFacilityDataForApproval(formData);
-            setToast({ show: true, message: "Submission successful! Your new facility is pending approval.", type: 'success' });
-            onSaveComplete();
-        } catch (error) {
-            setToast({ show: true, message: `Submission failed: ${error.message}`, type: 'error' });
-        }
-    };
-
-    const initialData = {
-        'الولاية': initialState,
-        'المحلية': initialLocality
-    };
-
-    return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`إضافة منشأة صحية جديدة في: ${initialLocality}`} size="3xl">
-            <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
-                <GenericFacilityForm
-                    initialData={initialData}
-                    onSave={handleSave}
-                    onCancel={onClose}
-                    setToast={setToast}
-                    title="بيانات المنشأة الصحية"
-                    subtitle="الرجاء إدخال تفاصيل المنشأة الجديدة. سيتم إرسالها للموافقة."
-                    isPublicForm={true}
-                >
-                    {(props) => <IMNCIFormFields {...props} />}
-                </GenericFacilityForm>
+                
+                <div className="max-h-96 overflow-y-auto border rounded-md bg-white shadow-inner">
+                    {filteredList.length === 0 ? (
+                        <div className="p-8 text-center text-gray-500">
+                            {searchTerm ? 'لا توجد نتائج مطابقة' : 'لا توجد مؤسسات متاحة'}
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-gray-100">
+                            {filteredList.map(f => (
+                                <div 
+                                    key={f.id} 
+                                    onClick={() => onSelect(f.id)}
+                                    className="p-3 hover:bg-sky-50 cursor-pointer transition-colors duration-150 flex justify-between items-center group"
+                                >
+                                    <span className="font-medium text-gray-700 group-hover:text-sky-700">{f['اسم_المؤسسة']}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+                
+                <div className="mt-4 flex justify-end pt-2 border-t">
+                    <Button variant="secondary" onClick={onClose}>إغلاق</Button>
+                </div>
             </div>
         </Modal>
     );
@@ -355,8 +269,10 @@ const PostSaveModal = ({ isOpen, onClose, onSelect }) => {
 // --- Visit Reports Table Component ---
 const VisitReportsTable = ({ reports, onEdit, onDelete, onView }) => {
     return (
-        <div dir="ltr" className="p-4 overflow-x-auto">
-            <table className="min-w-full border-collapse border border-gray-300">
+        // Added border and rounded-lg for better visual containment on scroll
+        <div dir="ltr" className="p-4 overflow-x-auto border rounded-lg bg-white">
+            {/* Added min-w-[900px] to force horizontal scrolling on mobile */}
+            <table className="min-w-[900px] w-full border-collapse border border-gray-300">
                 <thead className="bg-gray-50">
                     <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Facility</th>
@@ -797,12 +713,13 @@ const MentorshipSubmissionsTable = ({
 
     return (
         <div dir="ltr" className="p-4"> 
-                {/* Table Container */}
-                <div className="mt-6 w-full">
+                {/* Table Container - Added overflow-x-auto and shadow for better UI */}
+                <div className="mt-6 w-full overflow-x-auto border border-gray-300 rounded-lg shadow-sm">
                      {isSubmissionsLoading ? (
                         <div className="flex justify-center p-8"><Spinner /></div>
                     ) : (
-                        <table className="w-full border-collapse border border-gray-300 table-fixed" dir="ltr"> 
+                        // Added min-w-[1200px] so fixed columns render correctly on mobile
+                        <table className="min-w-[1200px] w-full border-collapse table-fixed" dir="ltr"> 
                             <thead className="bg-gray-50">
                                 <tr>
                                     <MentorshipTableColumns />
@@ -836,13 +753,13 @@ const MentorshipSubmissionsTable = ({
                                             <td className="px-2 py-2 text-sm font-medium text-gray-900 text-left border border-gray-300">{index + 1}</td>
                                             
                                             {/* Facility - Allow wrapping */}
-                                            <td className="px-2 py-2 text-xs text-gray-500 text-left border border-gray-300 break-words">{sub.facility}</td>
+                                            <td className="px-2 py-2 text-xs text-gray-500 text-left border border-gray-300 break-words whitespace-normal">{sub.facility}</td>
                                             
                                             {/* Worker - Allow wrapping */}
-                                            <td className="px-2 py-2 text-xs text-gray-500 text-left font-semibold border border-gray-300 break-words">{workerDisplay}</td>
+                                            <td className="px-2 py-2 text-xs text-gray-500 text-left font-semibold border border-gray-300 break-words whitespace-normal">{workerDisplay}</td>
                                             
                                             {/* Supervisor - Allow wrapping */}
-                                            <td className="px-2 py-2 text-xs text-gray-500 text-left border border-gray-300 break-words">{sub.supervisorDisplay}</td> 
+                                            <td className="px-2 py-2 text-xs text-gray-500 text-left border border-gray-300 break-words whitespace-normal">{sub.supervisorDisplay}</td> 
                                             
                                             {/* Date - No wrap */}
                                             <td className="px-2 py-2 whitespace-nowrap text-xs text-gray-500 text-left border border-gray-300">{sub.date}</td>
@@ -898,6 +815,7 @@ const MentorshipSubmissionsTable = ({
         </div>
     );
 };
+
 
 // --- Service Selection Component ---
 const ServiceSelector = ({ onSelectService }) => {
@@ -970,6 +888,8 @@ const SkillsMentorshipView = ({
     // --- State for Viewing Visit Reports ---
     const [viewingVisitReport, setViewingVisitReport] = useState(null);
 
+    // --- State for Facility Selection Modal ---
+    const [isFacilitySelectionModalOpen, setIsFacilitySelectionModalOpen] = useState(false);
 
     const {
         healthFacilities,
@@ -1014,7 +934,8 @@ const SkillsMentorshipView = ({
     const [isUpdatingWorker, setIsUpdatingWorker] = useState(false);
 
     const [isDraftsModalOpen, setIsDraftsModalOpen] = useState(false);
-    const [isAddFacilityModalOpen, setIsAddFacilityModalOpen] = useState(false);
+    
+    // --- REMOVED: isAddFacilityModalOpen State ---
 
     const [isMothersFormModalOpen, setIsMothersFormModalOpen] = useState(false);
     const [isDashboardModalOpen, setIsDashboardModalOpen] = useState(false);
@@ -1281,21 +1202,18 @@ const SkillsMentorshipView = ({
                .sort((a, b) => (a['اسم_المؤسسة'] || '').localeCompare(b['اسم_المؤسسة'] || ''));
     }, [localHealthFacilities, selectedState, selectedLocality]);
 
-    const facilityOptions = useMemo(() => {
-        const options = [
-            {
-                value: 'addNew',
-                label: '--- إضافة منشأة جديدة ---',
-                className: 'font-bold text-sky-600 bg-sky-50'
-            }
-        ];
-        filteredFacilities.forEach(f => options.push({
-            value: f.id,
-            label: f['اسم_المؤسسة'],
-            group: ''
-        }));
-        return options;
-    }, [filteredFacilities]);
+    // --- Facility Selection Handler ---
+    const handleFacilitySelect = (facilityId) => {
+        setSelectedFacilityId(facilityId);
+        setSelectedHealthWorkerName('');
+        setSelectedWorkerOriginalData(null); 
+        setWorkerJobTitle(''); 
+        setWorkerTrainingDate(''); 
+        setWorkerPhone(''); 
+        setIsWorkerInfoChanged(false);
+        setIsReadyToStart(false);
+        setIsFacilitySelectionModalOpen(false);
+    };
 
     const selectedFacility = useMemo(() => {
         return filteredFacilities.find(f => f.id === selectedFacilityId);
@@ -2578,24 +2496,20 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     </div>
                                 ) : (
                                     <FormGroup label="المؤسسة الصحية" className="text-right">
-                                        <SearchableSelect
-                                            value={selectedFacilityId}
-                                            onChange={(e) => {
-                                                const newFacilityId = e.target.value;
-                                                if (newFacilityId === 'addNew') {
-                                                    setIsAddFacilityModalOpen(true);
-                                                } else {
-                                                    setSelectedFacilityId(newFacilityId);
-                                                    setSelectedHealthWorkerName('');
-                                                    setSelectedWorkerOriginalData(null); setWorkerJobTitle(''); setWorkerTrainingDate(''); setWorkerPhone(''); setIsWorkerInfoChanged(false);
-                                                    setIsReadyToStart(false);
+                                        <div 
+                                            onClick={() => {
+                                                if (selectedLocality && !editingSubmission) {
+                                                    setIsFacilitySelectionModalOpen(true);
                                                 }
                                             }}
-                                            options={facilityOptions}
-                                            placeholder="-- اختر أو ابحث عن المؤسسة --"
-                                            disabled={!selectedLocality || !!editingSubmission}
-                                        />
-                                        {selectedState && selectedLocality && filteredFacilities.length === 0 && !isFacilitiesLoading && ( <p className="text-xs text-red-600 mt-1">لا توجد مؤسسات مسجلة. أضف واحدة جديدة.</p> )}
+                                            className={`w-full p-2 border rounded flex justify-between items-center text-sm ${(!selectedLocality || !!editingSubmission) ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white cursor-pointer hover:border-sky-500'}`}
+                                        >
+                                            <span className="truncate pl-2">
+                                                {selectedFacility ? selectedFacility['اسم_المؤسسة'] : (editingSubmission ? editingSubmission.facilityName : '-- اختر أو ابحث عن المؤسسة --')}
+                                            </span>
+                                            <Search className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                        </div>
+                                        {selectedState && selectedLocality && filteredFacilities.length === 0 && !isFacilitiesLoading && ( <p className="text-xs text-red-600 mt-1">لا توجد مؤسسات مسجلة.</p> )}
                                     </FormGroup>
                                 )}
                             </div>
@@ -2744,20 +2658,6 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                     </div>
                 </Card>
 
-       {isAddFacilityModalOpen && (
-                    <AddFacilityModal
-                        isOpen={isAddFacilityModalOpen}
-                        onClose={() => setIsAddFacilityModalOpen(false)}
-                        onSaveComplete={() => {
-                            fetchHealthFacilities(true); 
-                            setIsAddFacilityModalOpen(false);
-                        }}
-                        setToast={setToast}
-                        initialState={selectedState}
-                        initialLocality={selectedLocality}
-                    />
-                )}
-
                  {isAddWorkerModalOpen && (
                     <AddHealthWorkerModal
                         isOpen={isAddWorkerModalOpen}
@@ -2766,6 +2666,16 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         facilityName={selectedFacility?.['اسم_المؤسسة'] || 'المؤسسة المحددة'}
                     />
                 )}
+                
+                {isFacilitySelectionModalOpen && (
+                    <FacilitySelectionModal
+                        isOpen={isFacilitySelectionModalOpen}
+                        onClose={() => setIsFacilitySelectionModalOpen(false)}
+                        facilities={filteredFacilities}
+                        onSelect={handleFacilitySelect}
+                    />
+                )}
+
                  <DraftsModal
                     isOpen={isDraftsModalOpen}
                     onClose={() => setIsDraftsModalOpen(false)}
@@ -2871,28 +2781,28 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                 activeService={activeService}
                                 
                                 // Pass new props for status editing
-                                canEditStatus={permissions?.manageScope === 'federal' || permissions?.isSuperUser || permissions?.role === 'federal_manager'}
+                                canEditStatus={isFederalManager}
                                 onUpdateStatus={handleChallengeStatusUpdate}
 
-                                activeState={activeDashboardState || selectedState}
+                                activeState={activeDashboardState}
                                 onStateChange={(value) => {
                                     setActiveDashboardState(value);
                                     setActiveDashboardLocality("");
                                     setActiveDashboardFacilityId("");
                                     setActiveDashboardWorkerName("");
                                 }}
-                                activeLocality={activeDashboardLocality || selectedLocality}
+                                activeLocality={activeDashboardLocality}
                                 onLocalityChange={(value) => {
                                     setActiveDashboardLocality(value);
                                     setActiveDashboardFacilityId("");
                                     setActiveDashboardWorkerName("");
                                 }}
-                                activeFacilityId={activeDashboardFacilityId || selectedFacilityId}
+                                activeFacilityId={activeDashboardFacilityId}
                                 onFacilityIdChange={(value) => {
                                     setActiveDashboardFacilityId(value);
                                     setActiveDashboardWorkerName("");
                                 }}
-                                activeWorkerName={activeDashboardWorkerName || selectedHealthWorkerName}
+                                activeWorkerName={activeDashboardWorkerName}
                                 onWorkerNameChange={setActiveDashboardWorkerName}
                             />
                         </div>

@@ -118,8 +118,9 @@ const DEFAULT_ROLE_PERMISSIONS = {
         'canManageCourse',
         'canManageFacilities'
     ],
+    // UPDATED: Removed 'canViewSkillsMentorship' from standard user permissions
     'user': [
-        'canViewDashboard', 'canViewCourse', 'canViewHumanResource', 'canViewFacilities', 'canViewSkillsMentorship'
+        'canViewDashboard', 'canViewCourse', 'canViewHumanResource', 'canViewFacilities'
     ]
 };
 
@@ -453,7 +454,8 @@ export default function App() {
                         if (!courseData) throw new Error('Course not found.');
                         if (!participantData) throw new Error('Participants not found.');
 
-                        if (courseData.course_type !== 'ICCM' && courseData.course_type !== 'EENC' && courseData.course_type !== 'Small & Sick Newborn') {
+                        if (courseData.course_type !== 'ICCM' && courseData.course_type !== 'EENC' && courseData.course_type !== 'Small & Sick Newborn' && 
+    courseData.course_type !== 'IMNCI') {
                             throw new Error('Test forms are only available for ICCM, EENC and Small & Sick Newborn courses.');
                         }
 

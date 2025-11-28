@@ -76,7 +76,8 @@ const FEDERAL_COORDINATOR_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...F
 const FACILITATOR_PERMS = { ...FEDERAL_COORDINATOR_PERMS };
 const STATE_COORDINATOR_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_VIEW_ONLY, ...HR_MGMT_VIEW_ONLY, ...MENTORSHIP_MGMT_VIEW_ONLY, ...ADVANCED_PERMS_NONE, manageScope: 'course', manageLocation: 'user_state', manageTimePeriod: 'course_period_only' };
 const COURSE_COORDINATOR_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_VIEW_ONLY, ...HR_MGMT_NONE, ...MENTORSHIP_MGMT_VIEW_ONLY, ...ADVANCED_PERMS_NONE, manageScope: 'course', manageTimePeriod: 'course_period_only' };
-const USER_PERMS = { ...BASE_PERMS, canViewCourse: true, canViewFacilities: true, canViewSkillsMentorship: true, canViewDashboard: true };
+// UPDATED: canViewSkillsMentorship is now false for standard users
+const USER_PERMS = { ...BASE_PERMS, canViewCourse: true, canViewFacilities: true, canViewSkillsMentorship: false, canViewDashboard: true };
 
 export const DEFAULT_ROLE_PERMISSIONS = {
     'super_user': applyDerivedPermissions(SUPER_USER_PERMS),

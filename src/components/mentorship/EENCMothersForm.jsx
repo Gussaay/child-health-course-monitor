@@ -152,11 +152,12 @@ const REQUIRED_CLINICAL_FIELDS = [
 // --- Updated Component Signature ---
 const EENCMothersForm = ({ 
     facility, 
-    onCancel, 
+    onCancel,
+    onSaveComplete, // <--- New Prop
     setToast, 
     visitNumber = 1, 
     existingSessionData = null,
-    canEditVisitNumber = false // <--- New Prop
+    canEditVisitNumber = false 
 }) => {
     // Initialize State
     const [formData, setFormData] = useState(() => {
@@ -294,7 +295,13 @@ const EENCMothersForm = ({
         try {
             await saveMentorshipSession(payload, sessionId);
             setToast({ show: true, message: 'تم حفظ استبيان الأم بنجاح!', type: 'success' });
-            if (onCancel) onCancel(); 
+            
+            // --- SUCCESS HANDLER ---
+            if (onSaveComplete) {
+                onSaveComplete('complete', payload);
+            } else if (onCancel) {
+                onCancel(); 
+            }
         } catch (error) {
             setToast({ show: true, message: `فشل الحفظ: ${error.message}`, type: 'error' });
         } finally {

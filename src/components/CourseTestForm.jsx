@@ -1,7 +1,7 @@
 // CourseTestForm.jsx
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import {
-    Card, PageHeader, Button, FormGroup, Select, Spinner, Input, Modal, CardBody, CardFooter
+    Card, PageHeader, Button, FormGroup, Select, Spinner, Input, Modal, CardBody, CardFooter, Table, EmptyState
 } from "./CommonComponents"; 
 import {
     JOB_TITLES_ETAT, JOB_TITLES_EENC, STATE_LOCALITIES
@@ -13,6 +13,7 @@ import {
     deleteParticipantTest
 } from '../data.js';
 import { GenericFacilityForm, IMNCIFormFields } from './FacilityForms.jsx'; 
+import { Edit, Trash2, PlusCircle, Eye, Share2, CheckCircle } from 'lucide-react'; 
 
 export const EENC_TEST_QUESTIONS = [
     { id: 'q1', text: '1. Delivering in the supine position during second stage of labour is best.', type: 'mc', options: [{ id: 'a', text: 'True' }, { id: 'b', text: 'False' }], correctAnswer: 'b' },
@@ -55,6 +56,29 @@ export const SSNB_WARMER_TEST_QUESTIONS = [
     { id: 'q5', text: '5. كيف يتم تعقيم لبسة الدفاية', type: 'mc', options: [{ id: 'a', text: 'غسلها بالماء والصابون ثم المسح بالكجول قبل الاستخدام' }, { id: 'b', text: 'نقعها في محلول الكلور' }], correctAnswer: 'a' }
 ];
 
+export const IMNCI_TEST_QUESTIONS = [
+    { id: 'q1', text: '1. Which of the following signs are "general danger sign" in a sick child aged 2 months up to five years?', type: 'mc', options: [{ id: 'a', text: 'Axillary temperature ≥39.0°c' }, { id: 'b', text: 'Lethargy' }, { id: 'c', text: 'Blood in the stool' }, { id: 'd', text: 'Axillary temperature ≥37.5°c for more than 7 days' }], correctAnswer: 'b' },
+    { id: 'q2', text: '2. All of the following are the main causes of mortality in under-five children in the country except?', type: 'mc', options: [{ id: 'a', text: 'Diarrheal diseases' }, { id: 'b', text: 'Pneumonia' }, { id: 'c', text: 'Road traffic injuries' }, { id: 'd', text: 'Malnutrition' }], correctAnswer: 'c' },
+    { id: 'q3', text: '3. For which setting are the IMCI guidelines suitable for use?', type: 'mc', options: [{ id: 'a', text: 'Inpatient ward of a district hospital' }, { id: 'b', text: 'Critical care services (PICUs, NICUs…)' }, { id: 'c', text: 'First-level health facilities' }, { id: 'd', text: 'Inpatient ward of a specialized hospital' }], correctAnswer: 'c' },
+    { id: 'q4', text: '4. All of the following are needed to count the respiratory rate correctly in a child with cough except?', type: 'mc', options: [{ id: 'a', text: 'child should be calm' }, { id: 'b', text: 'the count should always be repeated' }, { id: 'c', text: 'the count should be for a full minute' }, { id: 'd', text: 'A timer should be used' }], correctAnswer: 'b' },
+    { id: 'q5', text: '5. Which of the following statements best describes wheezing?', type: 'mc', options: [{ id: 'a', text: 'It is a harsh sound during inspiration' }, { id: 'b', text: 'It is a soft musical sound that is heard during the expiration' }, { id: 'c', text: 'It is a soft musical sound during inspiration' }, { id: 'd', text: 'If heard leaning close to the child\'s mouth, it should be confirmed by auscultation' }], correctAnswer: 'b' },
+    { id: 'q6', text: '6. Which of the following signs would make you classify a 5-month-old child with difficulty breathing as having severe pneumonia or very severe disease?', type: 'mc', options: [{ id: 'a', text: 'restlessness' }, { id: 'b', text: 'vomiting' }, { id: 'c', text: 'irritability' }, { id: 'd', text: 'stridor in a calm baby' }], correctAnswer: 'd' },
+    { id: 'q7', text: '7. Which of the following signs in a 12-month-old child with a cough are an indication for urgent referral?', type: 'mc', options: [{ id: 'a', text: 'severe palmar pallor' }, { id: 'b', text: 'respiratory rate of 65 per minute' }, { id: 'c', text: 'axillary temperature ≥ 39.0°c' }, { id: 'd', text: 'restlessness' }], correctAnswer: 'a' },
+    { id: 'q8', text: '8. To classify dehydration status for an 8-month-old child with diarrhea all of the following signs are needed except?', type: 'mc', options: [{ id: 'a', text: 'lethargic or unconscious' }, { id: 'b', text: 'skin pinch returns back slowly' }, { id: 'c', text: 'more than 3 watery stools' }, { id: 'd', text: 'restless, irritable' }], correctAnswer: 'c' },
+    { id: 'q9', text: '9. How do you classify a 23-month-old child who has been having diarrhea for 5 days has no general danger signs, is alert, has no sunken eyes, and drinks normally, and in whom the skin pinch goes back slowly?', type: 'mc', options: [{ id: 'a', text: 'severe dehydration' }, { id: 'b', text: 'some dehydration' }, { id: 'c', text: 'no dehydration' }, { id: 'd', text: 'persistent diarrhea' }], correctAnswer: 'c' },
+    { id: 'q10', text: '10. How do you classify a 3-year-old child who has a history of fever for 2 days, has an axillary temperature of 39.5°c, and in whom there is resistance when you try to bend his neck forward toward his chest?', type: 'mc', options: [{ id: 'a', text: 'very severe febrile disease' }, { id: 'b', text: 'malaria' }, { id: 'c', text: 'fever– malaria unlikely' }, { id: 'd', text: 'mastoiditis' }], correctAnswer: 'a' },
+    { id: 'q11', text: '11. Which of the following signs classify a 3-year-old child as having mastoiditis?', type: 'mc', options: [{ id: 'a', text: 'pus draining from the ear for 5 days' }, { id: 'b', text: 'redness of ear pinna (auricle)' }, { id: 'c', text: 'tender swelling behind the ear' }, { id: 'd', text: 'ear pain' }], correctAnswer: 'c' },
+    { id: 'q12', text: '12. Which of the following signs are used to classify the child as having SAM malnutrition?', type: 'mc', options: [{ id: 'a', text: 'mouth ulcers' }, { id: 'b', text: 'edema of both feet' }, { id: 'c', text: 'skin pigmentation' }, { id: 'd', text: 'Hair changes' }], correctAnswer: 'b' },
+    { id: 'q13', text: '13. In a 12-month-old child with cough and diarrhea, which of the following signs is an indication for an urgent referral?', type: 'mc', options: [{ id: 'a', text: 'restless, irritable' }, { id: 'b', text: 'respiratory rate of 65 per minute' }, { id: 'c', text: 'axillary temperature ≥ 39.0°c' }, { id: 'd', text: 'child unable to breastfeed' }], correctAnswer: 'd' },
+    { id: 'q14', text: '14. Which of the following statements are true?', type: 'mc', options: [{ id: 'a', text: 'a child who is immunocompromised should not be given BCG vaccine' }, { id: 'b', text: 'a child who has a fever should not be immunized' }, { id: 'c', text: 'a child who is being referred for severe classification should be immunized before referral.' }, { id: 'd', text: 'a child who is low weight should not be immunized' }], correctAnswer: 'a' },
+    { id: 'q15', text: '15. Which treatment is not given to a 2-year-old child who is having convulsions at the PHC health facility?', type: 'mc', options: [{ id: 'a', text: 'diazepam rectally' }, { id: 'b', text: 'first dose of an appropriate antibiotic' }, { id: 'c', text: 'first dose of IV calcium' }, { id: 'd', text: 'sugar water to prevent low blood sugar' }], correctAnswer: 'c' },
+    { id: 'q16', text: '16. How can a zinc tablet be given? All of the following are correct except?', type: 'mc', options: [{ id: 'a', text: 'dissolved in a small amount of expressed breast milk' }, { id: 'b', text: 'dissolved in ORS' }, { id: 'c', text: 'dissolved in clean water' }, { id: 'd', text: 'let the child chew it if less than 12 months old' }], correctAnswer: 'd' },
+    { id: 'q17', text: '17. 4 yr-old child classified as having pneumonia which dose of amoxicillin syrup 250mg/5ml is correct?', type: 'mc', options: [{ id: 'a', text: '15 ml every 12 hours for 5 days' }, { id: 'b', text: '10 ml every 8 hours for 5 days' }, { id: 'c', text: '5 ml every 12 hours for 5 days' }, { id: 'd', text: '15 ml every 8 hours for 5 days' }], correctAnswer: 'a' },
+    { id: 'q18', text: '18. How do you classify a 4-day-old newborn who has yellow palms and soles?', type: 'mc', options: [{ id: 'a', text: 'severe jaundice' }, { id: 'b', text: 'jaundice' }, { id: 'c', text: 'local bacterial infection' }, { id: 'd', text: 'no jaundice' }], correctAnswer: 'a' },
+    { id: 'q19', text: '19. Which of the following are criteria for good positioning of the baby to his mother?', type: 'mc', options: [{ id: 'a', text: 'chin touching the breast' }, { id: 'b', text: 'mouth wide open' }, { id: 'c', text: 'baby held close to his mother\'s body' }, { id: 'd', text: 'lower lip turned in' }], correctAnswer: 'c' },
+    { id: 'q20', text: '20. How do you classify a 5-day-old infant who has severe chest indrawing and an axillary temperature of 36.8°c?', type: 'mc', options: [{ id: 'a', text: 'very severe disease or possible serious bacterial infection' }, { id: 'b', text: 'local bacterial infection' }, { id: 'c', text: 'severe disease or local bacterial infection unlikely' }, { id: 'd', text: 'fever– malaria unlikely' }], correctAnswer: 'a' }
+];
+
 const initializeAnswers = (questions) => {
     const initialAnswers = {};
     questions.forEach(q => {
@@ -67,6 +91,7 @@ const initializeAnswers = (questions) => {
     return initialAnswers;
 };
 
+// ... [Keep TestResultScreen, SearchableSelect, and AddFacilityModal components exactly as they were] ...
 const TestResultScreen = ({ 
     participantName, testType, score, total, percentage, onBack, 
     canManageTests, onEdit, onDelete, isExistingResult 
@@ -247,6 +272,223 @@ const AddFacilityModal = ({ isOpen, onClose, onSaveSuccess, initialState, initia
     );
 };
 
+// --- NEW COMPONENT: Test Scores Dashboard ---
+const TestScoresDashboard = ({ 
+    courseId,
+    participants, 
+    participantTests, 
+    onOpenEntry,
+    onEdit,
+    onDelete,
+    canManageTests
+}) => {
+    // Helper to get a specific test result
+    const getTest = (participantId, type) => {
+        return participantTests.find(t => t.participantId === participantId && t.testType === type);
+    };
+
+    // Helper for Percentage Styling
+    const getScoreStyle = (percentage) => {
+        if (percentage >= 80) return "text-green-700 font-bold bg-green-50 px-2 py-1 rounded";
+        if (percentage >= 60) return "text-yellow-700 font-bold bg-yellow-50 px-2 py-1 rounded";
+        return "text-red-700 font-bold bg-red-50 px-2 py-1 rounded";
+    };
+
+    return (
+        <div className="space-y-4">
+             <div className="flex justify-between items-center">
+                 <h2 className="text-xl font-bold text-gray-800">Test Scores Overview</h2>
+                 <div className="flex gap-2">
+                     <Button 
+                        variant="secondary" 
+                        className="inline-flex items-center gap-2"
+                        onClick={() => { 
+                            const link = `${window.location.origin}/public/test/course/${courseId}`; 
+                            navigator.clipboard.writeText(link)
+                                .then(() => alert('Public test link copied to clipboard!'))
+                                .catch(() => alert('Failed to copy link.')); 
+                        }} 
+                        title="Copy public link for test entry"
+                     >
+                        <Share2 size={16} />
+                        Share Test Form
+                     </Button>
+                     {canManageTests && (
+                         <Button onClick={() => onOpenEntry('pre-test', null, true)}>
+                             <PlusCircle size={16} className="mr-2" />
+                             Register New Participant
+                         </Button>
+                     )}
+                 </div>
+             </div>
+
+             <Table headers={["Name", "Group", "Pre-Test Result", "Post-Test Result"]}>
+                {participants.length === 0 ? (
+                    <tr><td colSpan="4" className="text-center p-4">No participants found.</td></tr>
+                ) : (
+                    participants.map(p => {
+                        const preTest = getTest(p.id, 'pre-test');
+                        const postTest = getTest(p.id, 'post-test');
+
+                        return (
+                            <tr key={p.id} className="hover:bg-gray-50">
+                                <td className="p-4 border font-medium">{p.name}</td>
+                                <td className="p-4 border">{p.group || '-'}</td>
+                                
+                                {/* Pre-Test Column */}
+                                <td className="p-4 border">
+                                    <div className="flex items-center gap-4">
+                                        {preTest ? (
+                                            <>
+                                                <span className={getScoreStyle(preTest.percentage)}>
+                                                    {preTest.percentage.toFixed(1)}%
+                                                </span>
+                                                <div className="flex gap-1">
+                                                    <Button 
+                                                        variant="icon" 
+                                                        onClick={() => onEdit(p.id, 'pre-test')}
+                                                        title="View/Edit Test"
+                                                        className="text-gray-500 hover:text-blue-600"
+                                                    >
+                                                        <Eye size={18} />
+                                                    </Button>
+                                                    {canManageTests && (
+                                                        <Button 
+                                                            variant="icon" 
+                                                            onClick={() => onDelete(p.id, 'pre-test')}
+                                                            title="Delete Test"
+                                                            className="text-gray-500 hover:text-red-600"
+                                                        >
+                                                            <Trash2 size={18} />
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            </>
+                                        ) : (
+                                            canManageTests ? (
+                                                <Button 
+                                                    size="sm" 
+                                                    variant="secondary" 
+                                                    onClick={() => onOpenEntry('pre-test', p.id)}
+                                                    className="text-xs"
+                                                >
+                                                    + Add Score
+                                                </Button>
+                                            ) : <span className="text-gray-400">-</span>
+                                        )}
+                                    </div>
+                                </td>
+
+                                {/* Post-Test Column */}
+                                <td className="p-4 border">
+                                    <div className="flex items-center gap-4">
+                                        {postTest ? (
+                                            <>
+                                                <span className={getScoreStyle(postTest.percentage)}>
+                                                    {postTest.percentage.toFixed(1)}%
+                                                </span>
+                                                <div className="flex gap-1">
+                                                    <Button 
+                                                        variant="icon" 
+                                                        onClick={() => onEdit(p.id, 'post-test')}
+                                                        title="View/Edit Test"
+                                                        className="text-gray-500 hover:text-blue-600"
+                                                    >
+                                                        <Eye size={18} />
+                                                    </Button>
+                                                    {canManageTests && (
+                                                        <Button 
+                                                            variant="icon" 
+                                                            onClick={() => onDelete(p.id, 'post-test')}
+                                                            title="Delete Test"
+                                                            className="text-gray-500 hover:text-red-600"
+                                                        >
+                                                            <Trash2 size={18} />
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            </>
+                                        ) : (
+                                            canManageTests ? (
+                                                <Button 
+                                                    size="sm" 
+                                                    variant="secondary" 
+                                                    onClick={() => onOpenEntry('post-test', p.id)}
+                                                    className="text-xs"
+                                                >
+                                                    + Add Score
+                                                </Button>
+                                            ) : <span className="text-gray-400">-</span>
+                                        )}
+                                    </div>
+                                </td>
+                            </tr>
+                        );
+                    })
+                )}
+             </Table>
+        </div>
+    );
+};
+
+// --- NEW COMPONENT: Facility Selection Popup ---
+const FacilitySelectionModal = ({ 
+    isOpen, 
+    onClose, 
+    options, 
+    onSelect
+}) => {
+    const [searchTerm, setSearchTerm] = useState('');
+
+    // Reset search when modal opens
+    useEffect(() => {
+        if (isOpen) setSearchTerm('');
+    }, [isOpen]);
+
+    const filteredOptions = useMemo(() => {
+        if (!searchTerm) return options;
+        return options.filter(opt => 
+            opt.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [options, searchTerm]);
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Select Health Facility">
+            <div className="p-4 flex flex-col h-[60vh]">
+                <div className="mb-4">
+                    <Input 
+                        placeholder="Search for a facility..." 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        autoFocus
+                    />
+                </div>
+                
+                <div className="flex-1 overflow-y-auto border rounded-md divide-y">
+                    {filteredOptions.length > 0 ? (
+                        filteredOptions.map(opt => (
+                            <button
+                                key={opt.id}
+                                className="w-full text-left p-3 hover:bg-sky-50 transition-colors focus:outline-none focus:bg-sky-50"
+                                onClick={() => {
+                                    onSelect(opt);
+                                    onClose();
+                                }}
+                            >
+                                {opt.name}
+                            </button>
+                        ))
+                    ) : (
+                        <div className="p-4 text-center text-gray-500">
+                            No facilities found matching "{searchTerm}"
+                        </div>
+                    )}
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
 export function CourseTestForm({ 
     course, 
     participants, 
@@ -259,6 +501,10 @@ export function CourseTestForm({
     isPublicView = false,
     canManageTests = false 
 }) {
+    // --- MAIN STATE: Controls View Mode (Dashboard vs Entry Form) ---
+    // If it's a public view, default to 'entry'. If admin view, default to 'dashboard'
+    const [viewMode, setViewMode] = useState(isPublicView ? 'entry' : 'dashboard'); 
+
     const { testQuestions, testTitle, isRtl, jobTitleOptions, isIccm } = useMemo(() => {
         let titles = [];
         let isIccm = false;
@@ -275,11 +521,15 @@ export function CourseTestForm({
             titles = JOB_TITLES_EENC; // Using EENC titles as default for SSNB
             return { testQuestions: SSNB_WARMER_TEST_QUESTIONS, testTitle: 'SSNB Portable Warmer Test', isRtl: true, jobTitleOptions: titles, isIccm: false };
         }
+        if (course.course_type === 'IMNCI') {
+             titles = JOB_TITLES_EENC; // Use generic EENC titles (Doctor, Nurse, etc) for IMNCI
+             return { testQuestions: IMNCI_TEST_QUESTIONS, testTitle: 'IMNCI Pre/Post Test Entry', isRtl: false, jobTitleOptions: titles, isIccm: false };
+        }
         return { testQuestions: [], testTitle: 'Test Entry', isRtl: false, jobTitleOptions: [], isIccm: false }; 
     }, [course.course_type]);
 
     const [selectedParticipantId, setSelectedParticipantId] = useState(initialParticipantId);
-    const [testType, setTestType] = useState(isPublicView ? '' : 'pre-test'); 
+    const [testType, setTestType] = useState('pre-test'); 
     const [answers, setAnswers] = useState(() => initializeAnswers(testQuestions));
     const [error, setError] = useState('');
     const [isSaving, setIsSaving] = useState(false);
@@ -289,6 +539,14 @@ export function CourseTestForm({
     const [isEditing, setIsEditing] = useState(false);
     const [isNewParticipantModalOpen, setIsNewParticipantModalOpen] = useState(false);
     const [localParticipants, setLocalParticipants] = useState(participants);
+
+    // --- NEW STATE for Facility Selector ---
+    const [isFacilitySelectorOpen, setIsFacilitySelectorOpen] = useState(false);
+    
+    // --- NEW STATE for Success Popups ---
+    const [showParticipantSuccessModal, setShowParticipantSuccessModal] = useState(false);
+    const [showTestSubmitSuccessModal, setShowTestSubmitSuccessModal] = useState(false);
+    const [lastSubmissionStats, setLastSubmissionStats] = useState(null);
 
     useEffect(() => { setLocalParticipants(participants); }, [participants]);
 
@@ -337,15 +595,58 @@ export function CourseTestForm({
         return results;
     }, [selectedParticipantId, participantTests]);
 
-    useEffect(() => {
-        if (!isPublicView && selectedParticipantId && selectedParticipantId !== 'addNew') {
-            const hasPreTest = !!existingResults['pre-test'];
-            const hasPostTest = !!existingResults['post-test'];
-            if (!hasPreTest) setTestType('pre-test'); 
-            else if (!hasPostTest) setTestType('post-test'); 
-            else setTestType('pre-test'); 
+    // Handle "View/Edit" click from Dashboard
+    const handleDashboardEdit = (pId, type) => {
+        setSelectedParticipantId(pId);
+        setTestType(type);
+        setViewMode('entry');
+        
+        // Find existing result to load
+        const result = participantTests.find(t => t.participantId === pId && t.testType === type);
+        if (result) {
+            setAnswers(result.answers || initializeAnswers(testQuestions));
+            setIsEditing(true);
+            setIsSetupModalOpen(false); // Skip modal, go straight to form
         }
-    }, [isPublicView, selectedParticipantId, existingResults]);
+    };
+
+    // Handle "Add Score" click from Dashboard
+    const handleDashboardAdd = (type, pId = null, isNewUser = false) => {
+        setTestType(type);
+        if (isNewUser) {
+             setIsNewParticipantModalOpen(true);
+             setSelectedParticipantId('');
+        } else {
+             setSelectedParticipantId(pId);
+        }
+        setViewMode('entry');
+        setIsEditing(false);
+        setIsSetupModalOpen(isNewUser ? false : true); // If add existing, confirm in modal (or skip if we want direct entry)
+        if(pId && !isNewUser) setIsSetupModalOpen(false); // Direct entry if ID known
+        setAnswers(initializeAnswers(testQuestions));
+        setSubmissionResult(null);
+    };
+
+    const handleDashboardDelete = async (pId, type) => {
+        if (!window.confirm(`Are you sure you want to delete the ${type} result?`)) return;
+        try {
+            await deleteParticipantTest(course.id, pId, type);
+            // Trigger parent refresh
+            const refreshPayload = { participantId: pId, deleted: true };
+            if (onSaveTest) await onSaveTest(refreshPayload); else onSave(refreshPayload);
+        } catch (err) {
+            alert(`Failed to delete: ${err.message}`);
+        }
+    };
+
+    // --- EFFECT HOOKS ---
+
+    useEffect(() => {
+        if (!isPublicView && viewMode === 'entry' && selectedParticipantId && selectedParticipantId !== 'addNew' && !isEditing) {
+            // Auto-detect test type logic only if not explicitly set by dashboard action
+            // (We skip this if coming from Dashboard Actions usually)
+        }
+    }, [isPublicView, selectedParticipantId, existingResults, viewMode, isEditing]);
 
     useEffect(() => {
         if (!isEditing) {
@@ -353,14 +654,12 @@ export function CourseTestForm({
         }
         setError('');
         setSubmissionResult(null); 
-        if (!isEditing) setIsEditing(false);
-    }, [selectedParticipantId, testType, testQuestions]); 
+    }, [selectedParticipantId, testType, testQuestions, isEditing]); 
 
     useEffect(() => {
         setIsParticipantInfoSaved(false); 
         setParticipantNameForDisplay(''); 
         setNewParticipantName(''); setNewParticipantPhone(''); setNewParticipantState(course.state || ''); setNewParticipantLocality(course.locality || ''); setNewParticipantCenter(''); setSelectedFacilityId(null); setFacilitiesInLocality([]); setNewParticipantGroup('Group A'); setNewParticipantJob(''); setNewParticipantJobOther('');
-        setIsEditing(false);
     }, [testType, isPublicView, course.state, course.locality]); 
 
     useEffect(() => {
@@ -383,6 +682,8 @@ export function CourseTestForm({
             if (participant) setParticipantNameForDisplay(participant.name);
         }
     }, [selectedParticipantId, localParticipants]);
+
+    // --- HANDLERS ---
 
     const handleSetupGroupChange = (e) => {
         setSelectedSetupGroup(e.target.value);
@@ -407,12 +708,12 @@ export function CourseTestForm({
         setAnswers(prev => ({ ...prev, [questionId]: prev[questionId].map((item, i) => (i === lineIndex ? textValue : item)) }));
     };
 
-    const handleFacilitySelect = (facilityIdOrAction) => {
+    // MODIFIED: Updated handler to accept the facility object directly from the new modal
+    const handleFacilitySelect = (facility) => {
         setError('');
-        if (facilityIdOrAction === 'addNewFacility') { setIsAddFacilityModalOpen(true); return; }
-        const facility = facilitiesInLocality.find(f => f.id === facilityIdOrAction);
-        setSelectedFacilityId(facility ? facility.id : null);
-        setNewParticipantCenter(facility ? facility['اسم_المؤسسة'] : '');
+        // No need to check for 'addNewFacility' string here anymore, handled by specific button
+        setSelectedFacilityId(facility.id);
+        setNewParticipantCenter(facility.name); // or facility['اسم_المؤسسة'] depending on object passed
     };
 
     const handleNewFacilitySaved = (newlySubmittedFacilityData) => {
@@ -423,10 +724,11 @@ export function CourseTestForm({
         setIsAddFacilityModalOpen(false); 
     };
     
+    // UPDATED: Removed "Add New" from options list
     const facilityOptionsForSelect = useMemo(() => {
         if (isIccm) return [];
         const options = (facilitiesInLocality || []).map(f => ({ id: f.id, name: f['اسم_المؤسسة'] }));
-        options.unshift({ id: 'addNewFacility', name: "+ Add New Facility..." });
+        // Removed: options.unshift({ id: 'addNewFacility', name: "+ Add New Facility..." });
         return options;
     }, [facilitiesInLocality, isIccm]);
 
@@ -458,11 +760,9 @@ export function CourseTestForm({
             
             const savedData = await onSaveParticipant(participantPayload, null);
             
-            // Safe Merge: If the server returns just an ID (or partial data), use our local payload for the UI
-            // This prevents "undefined" errors in the dropdown/header immediately after save.
             const safeParticipantForState = {
                 ...participantPayload,
-                id: savedData?.id || savedData // Handle if it returns object or just ID
+                id: savedData?.id || savedData 
             };
             
             if (!safeParticipantForState.id) throw new Error("Participant saved, but no ID was returned. Please refresh.");
@@ -471,13 +771,14 @@ export function CourseTestForm({
             setSelectedParticipantId(safeParticipantForState.id); 
             setParticipantNameForDisplay(safeParticipantForState.name); 
             
-            // CRITICAL: Initialize answers and test type immediately so the test form can render
             setAnswers(initializeAnswers(testQuestions));
             if (!testType) setTestType('pre-test'); 
             
             setIsParticipantInfoSaved(true); 
             setIsNewParticipantModalOpen(false);
-            setIsSetupModalOpen(false); // Close setup, show questions
+            // MODIFIED: Do NOT close setup modal yet, show success modal instead
+            // setIsSetupModalOpen(false); 
+            setShowParticipantSuccessModal(true);
         } catch (err) { setError(`Failed to save participant: ${err.message}`); } finally { setIsSaving(false); }
     };
 
@@ -486,6 +787,7 @@ export function CourseTestForm({
         if (resultToEdit) {
             setAnswers(resultToEdit.answers || initializeAnswers(testQuestions));
             setIsEditing(true);
+            setSubmissionResult(null); // Clear result screen to show form
         }
     };
 
@@ -496,8 +798,11 @@ export function CourseTestForm({
             await deleteParticipantTest(course.id, selectedParticipantId, testType);
             const refreshPayload = { participantId: selectedParticipantId, deleted: true };
             if (onSaveTest) await onSaveTest(refreshPayload); else onSave(refreshPayload);
+            
+            // Go back to Dashboard after delete
+            setViewMode('dashboard');
             setIsEditing(false);
-            setIsSetupModalOpen(true);
+            setSubmissionResult(null);
             setSelectedParticipantId('');
         } catch (err) { setError(`Failed to delete test: ${err.message}`); } finally { setIsSaving(false); }
     };
@@ -528,22 +833,52 @@ export function CourseTestForm({
                 submittedAt: new Date().toISOString()
             };
             if (onSaveTest) await onSaveTest(payload); else await new Promise(resolve => setTimeout(resolve, 1000));
-            setSubmissionResult(payload); 
+            // MODIFIED: Instead of setting submissionResult immediately (which changes view), show success modal first
+            // setSubmissionResult(payload); 
+            setLastSubmissionStats(payload);
+            setShowTestSubmitSuccessModal(true);
             setIsEditing(false); 
         } catch (err) { setError(`Failed to save test: ${err.message}`); } finally { setIsSaving(false); }
     };
 
-    const handleCancelForm = () => {
-        if (isEditing) { setIsEditing(false); } else {
+    const handleBackToDashboard = () => {
+        if(isPublicView) {
             setIsSetupModalOpen(true);
-            setTestType(isPublicView ? '' : 'pre-test'); 
+            setTestType('');
             setSelectedParticipantId('');
-            setSelectedSetupGroup('');
+        } else {
+            setViewMode('dashboard');
+            setIsEditing(false);
+            setSubmissionResult(null);
+            setSelectedParticipantId('');
         }
-    }
+    };
 
     // --- RENDER LOGIC ---
     
+    // 1. DASHBOARD VIEW (Default for Admin)
+    if (viewMode === 'dashboard' && !isPublicView) {
+        return (
+            <Card>
+                <div className="p-6">
+                    <TestScoresDashboard 
+                        courseId={course.id}
+                        participants={sortedParticipants}
+                        participantTests={participantTests}
+                        canManageTests={canManageTests}
+                        onOpenEntry={handleDashboardAdd}
+                        onEdit={handleDashboardEdit}
+                        onDelete={handleDashboardDelete}
+                    />
+                    <div className="mt-4 border-t pt-4">
+                        <Button variant="secondary" onClick={onCancel}>Back to Course</Button>
+                    </div>
+                </div>
+            </Card>
+        );
+    }
+
+    // 2. RESULT SCREEN
     if (submissionResult) {
         return (
             <TestResultScreen
@@ -552,7 +887,7 @@ export function CourseTestForm({
                 score={submissionResult.score}
                 total={submissionResult.total}
                 percentage={submissionResult.percentage}
-                onBack={() => { setSubmissionResult(null); setIsSetupModalOpen(true); setSelectedParticipantId(''); onSave(submissionResult); }}
+                onBack={handleBackToDashboard}
                 canManageTests={canManageTests}
                 onEdit={() => { setSubmissionResult(null); setIsEditing(true); }}
                 onDelete={handleDeleteTest}
@@ -560,8 +895,11 @@ export function CourseTestForm({
         );
     }
     
+    // 3. EXISTING RESULT (When entering Edit mode)
     const existingTestResult = existingResults[testType];
-    if (!isSetupModalOpen && existingTestResult && !isNewParticipantModalOpen && !isEditing) {
+    if (!isSetupModalOpen && existingTestResult && !isNewParticipantModalOpen && !isEditing && viewMode === 'entry') {
+        // If we are in entry mode but not editing, and result exists, show result screen
+        // (This happens if we select a participant in setup who already has a score)
         const participantName = localParticipants.find(p => p.id === existingTestResult.participantId)?.name || 'Participant';
         return (
             <TestResultScreen
@@ -570,7 +908,7 @@ export function CourseTestForm({
                 score={existingTestResult.score}
                 total={existingTestResult.total}
                 percentage={existingTestResult.percentage}
-                onBack={() => { setIsSetupModalOpen(true); setSelectedParticipantId(''); }}
+                onBack={handleBackToDashboard}
                 canManageTests={canManageTests}
                 onEdit={handleEditTest}
                 onDelete={handleDeleteTest}
@@ -579,26 +917,16 @@ export function CourseTestForm({
         );
     }
 
-    const hasPreTest = !!existingResults['pre-test'];
-    const hasPostTest = !!existingResults['post-test'];
     if (testQuestions.length === 0) return <Card><div className="p-6">No questions</div></Card>;
     const centerNameLabel = isIccm ? "Village Name" : "Facility Name";
     const showQuestions = !isSetupModalOpen; 
     const submitDisabled = isSaving || !showQuestions;
 
+    // 4. ENTRY FORM (Questions)
     return (
         <Card>
-            <AddFacilityModal
-                isOpen={isAddFacilityModalOpen}
-                onClose={() => setIsAddFacilityModalOpen(false)}
-                onSaveSuccess={handleNewFacilitySaved}
-                initialState={newParticipantState}
-                initialLocality={newParticipantLocality}
-                initialName={newParticipantCenter} 
-                setToast={(toastConfig) => setError(toastConfig.message)} 
-            />
-
-            <Modal isOpen={isSetupModalOpen && !isNewParticipantModalOpen} onClose={onCancel} title="Select Test" size="lg">
+            {/* SETUP MODAL: Choose Test Type and Participant (Always First) */}
+            <Modal isOpen={isSetupModalOpen && !isNewParticipantModalOpen && viewMode === 'entry'} onClose={handleBackToDashboard} title="Select Test Details" size="lg">
                 <CardBody className="p-6">
                     <div className="grid gap-6">
                         <FormGroup label="Select Test Type">
@@ -609,6 +937,7 @@ export function CourseTestForm({
                             </Select>
                         </FormGroup>
 
+                        {/* Only show participant select if not pre-selected by Dashboard */}
                         {((isPublicView && testType) || !isPublicView) && (
                             <>
                                 <FormGroup label="Select Group (Optional)">
@@ -637,11 +966,13 @@ export function CourseTestForm({
                     </div>
                 </CardBody>
                 <CardFooter className="p-4 border-t flex justify-end gap-3">
-                    <Button variant="secondary" onClick={onCancel}>Cancel</Button>
+                    <Button variant="secondary" onClick={handleBackToDashboard}>Cancel</Button>
                     <Button onClick={() => setIsSetupModalOpen(false)} disabled={!testType || !selectedParticipantId}>Start</Button>
                 </CardFooter>
             </Modal>
 
+            {/* REGISTER NEW PARTICIPANT MODAL */}
+            {/* Note: This comes second, so it sits on top of SetupModal if both were open (unlikely), but crucially acts as the "base" for the subsequent popups */}
             <Modal isOpen={isNewParticipantModalOpen} onClose={() => setIsNewParticipantModalOpen(false)} title="Register New Participant" size="2xl">
                  <div className="p-4 border-b">
                      <h3 className="text-lg font-medium">New Participant Information</h3>
@@ -661,11 +992,40 @@ export function CourseTestForm({
                              <FormGroup label="Group">
                                 <Select value={newParticipantGroup} onChange={(e) => setNewParticipantGroup(e.target.value)}><option>Group A</option><option>Group B</option><option>Group C</option><option>Group D</option></Select>
                             </FormGroup>
+                            
+                            {/* FACILITY SELECTION UI */}
                             {isIccm ? (
-                                <FormGroup label={centerNameLabel}><Input value={newParticipantCenter} onChange={(e) => setNewParticipantCenter(e.target.value)} placeholder={`Enter ${centerNameLabel}`} disabled={!newParticipantLocality} /></FormGroup>
+                                <FormGroup label={centerNameLabel}>
+                                    <Input value={newParticipantCenter} onChange={(e) => setNewParticipantCenter(e.target.value)} placeholder={`Enter ${centerNameLabel}`} disabled={!newParticipantLocality} />
+                                </FormGroup>
                             ) : (
-                                <FormGroup label={centerNameLabel}><SearchableSelect value={selectedFacilityId} onChange={handleFacilitySelect} options={facilityOptionsForSelect} placeholder={isLoadingFacilities ? "Loading..." : (!newParticipantLocality ? "Select Locality first" : "Search or Add New Facility...")} disabled={isLoadingFacilities || !newParticipantLocality} /></FormGroup>
+                                <FormGroup label={centerNameLabel}>
+                                    <div 
+                                        onClick={() => {
+                                            if (!isLoadingFacilities && newParticipantLocality) {
+                                                setIsFacilitySelectorOpen(true);
+                                            }
+                                        }}
+                                        className={`
+                                            w-full border rounded-md p-2 flex justify-between items-center bg-white 
+                                            ${(!newParticipantLocality || isLoadingFacilities) ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'cursor-pointer hover:border-blue-400'}
+                                        `}
+                                    >
+                                        <span className="truncate">
+                                            {isLoadingFacilities 
+                                                ? "Loading..." 
+                                                : (!newParticipantLocality 
+                                                    ? "Select Locality first" 
+                                                    : (newParticipantCenter || "Click to search facility...")
+                                                )
+                                            }
+                                        </span>
+                                        <span className="text-gray-400 ml-2">🔍</span>
+                                    </div>
+                                    {/* Hidden input to ensure logic relying on selectedFacilityId still works if needed, though state is managed directly */}
+                                </FormGroup>
                             )}
+
                             <FormGroup label="Participant Name"><Input value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} placeholder="Enter name" /></FormGroup>
                             <FormGroup label="Phone Number"><Input type="tel" value={newParticipantPhone} onChange={(e) => setNewParticipantPhone(e.target.value)} /></FormGroup>
                             <FormGroup label="Job Title"><Select value={newParticipantJob} onChange={(e) => setNewParticipantJob(e.target.value)}><option value="">— Select Job —</option>{jobTitleOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}<option value="Other">Other</option></Select></FormGroup>
@@ -678,46 +1038,93 @@ export function CourseTestForm({
                  </CardFooter>
             </Modal>
 
-            {!isSetupModalOpen && (
+            {/* FACILITY SELECTION POPUP */}
+            {/* Defined AFTER NewParticipantModal so it renders ON TOP of it */}
+            <FacilitySelectionModal 
+                isOpen={isFacilitySelectorOpen}
+                onClose={() => setIsFacilitySelectorOpen(false)}
+                options={facilityOptionsForSelect}
+                onSelect={handleFacilitySelect}
+            />
+
+            {/* ADD FACILITY MODAL */}
+            {/* Defined LAST so it renders ON TOP of everything if needed */}
+            <AddFacilityModal
+                isOpen={isAddFacilityModalOpen}
+                onClose={() => setIsAddFacilityModalOpen(false)}
+                onSaveSuccess={handleNewFacilitySaved}
+                initialState={newParticipantState}
+                initialLocality={newParticipantLocality}
+                initialName={newParticipantCenter} 
+                setToast={(toastConfig) => setError(toastConfig.message)} 
+            />
+
+            {/* NEW: PARTICIPANT SUCCESS MODAL */}
+            <Modal isOpen={showParticipantSuccessModal} onClose={() => {}} title="Registration Successful" size="sm">
+                <div className="p-6 text-center">
+                    <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
+                        <CheckCircle className="h-10 w-10 text-green-600" />
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Participant Registered!</h3>
+                    <p className="text-gray-500 mb-6">
+                        {participantNameForDisplay} has been successfully registered to the course.
+                    </p>
+                    <Button 
+                        className="w-full justify-center" 
+                        onClick={() => {
+                            setShowParticipantSuccessModal(false);
+                            setIsSetupModalOpen(false); // Close setup to reveal questions
+                        }}
+                    >
+                        Start Pre-Test
+                    </Button>
+                </div>
+            </Modal>
+
+            {/* NEW: TEST SUBMIT SUCCESS MODAL */}
+            <Modal isOpen={showTestSubmitSuccessModal} onClose={() => {}} title="Test Submitted" size="sm">
+                <div className="p-6 text-center">
+                    <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
+                        <CheckCircle className="h-10 w-10 text-green-600" />
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Submission Successful!</h3>
+                    
+                    {lastSubmissionStats && (
+                        <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                            <p className="text-sm text-gray-500 mb-1">Score Achieved</p>
+                            <div className="text-3xl font-bold text-gray-800">
+                                {lastSubmissionStats.percentage.toFixed(1)}%
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                                ({lastSubmissionStats.score} out of {lastSubmissionStats.total} correct)
+                            </p>
+                        </div>
+                    )}
+                    
+                    <Button 
+                        className="w-full justify-center" 
+                        onClick={() => {
+                            setShowTestSubmitSuccessModal(false);
+                            setSubmissionResult(lastSubmissionStats); // This triggers view switch to TestResultScreen
+                        }}
+                    >
+                        View Result Details
+                    </Button>
+                </div>
+            </Modal>
+
+            {!isSetupModalOpen && !submissionResult && (
                 <div className="p-6">
                     <div className="flex flex-wrap justify-between items-start gap-4">
-                        <PageHeader title={testTitle} subtitle={`Course: ${course.state} / ${course.locality} [${course.start_date}]`} className="p-0 m-0" />
+                        <PageHeader 
+                            title={`${isEditing ? 'Editing' : 'Enter'} ${testType === 'pre-test' ? 'Pre-Test' : 'Post-Test'}`} 
+                            subtitle={`${participantNameForDisplay || 'Unknown Participant'} - ${course.course_type}`} 
+                            className="p-0 m-0" 
+                        />
                         <div><Button variant="secondary" onClick={() => { const link = `${window.location.origin}/public/test/course/${course.id}`; navigator.clipboard.writeText(link).then(() => alert('Link copied!')).catch(() => alert('Failed to copy.')); }} title="Copy link">Share Test Form</Button></div>
                     </div>
                     
                     {error && <div className="p-3 my-4 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
-
-                    {/* Fallback Dropdowns (Required if user refreshes/cancels back to form without modal) */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6">
-                        {isPublicView && (
-                            <FormGroup label="Select Test Type">
-                                <Select value={testType} onChange={(e) => setTestType(e.target.value)}>
-                                    <option value="">-- Select Test Type --</option>
-                                    <option value="pre-test">Pre-Test</option>
-                                    <option value="post-test">Post-Test</option>
-                                </Select>
-                            </FormGroup>
-                        )}
-                        {(!isPublicView || (isPublicView && testType)) && (
-                             <FormGroup label="Select Participant">
-                                <Select value={selectedParticipantId} onChange={handleParticipantSelectChange} disabled={isEditing || (isPublicView && !testType)}>
-                                    <option value="">-- Select a Participant --</option>
-                                    {onSaveParticipant && !isEditing && testType === 'pre-test' && (
-                                        <option value="addNew" className="font-bold text-sky-600">+ Register New Participant</option>
-                                    )}
-                                    {sortedParticipants.map(p => (<option key={p.id} value={p.id}>{p.name} ({p.group})</option>))}
-                                </Select>
-                            </FormGroup>
-                        )}
-                        {!isPublicView && (
-                            <FormGroup label="Select Test Type">
-                                <Select value={testType} onChange={(e) => setTestType(e.target.value)} disabled={!selectedParticipantId || (hasPreTest && hasPostTest && !isEditing) || isEditing}>
-                                    <option value="pre-test" disabled={hasPreTest && !isEditing}>Pre-Test {hasPreTest && !isEditing && "(Completed)"}</option>
-                                    <option value="post-test" disabled={hasPostTest && !isEditing}>Post-Test {hasPostTest && !isEditing && "(Completed)"}</option>
-                                </Select>
-                            </FormGroup>
-                        )}
-                    </div>
 
                     <hr className="my-6" />
 
@@ -738,7 +1145,7 @@ export function CourseTestForm({
                     </fieldset>
 
                     <div className="flex gap-2 justify-end mt-8 border-t pt-6">
-                        <Button variant="secondary" onClick={handleCancelForm} disabled={isSaving}>{isEditing ? "Cancel Edit" : "Cancel"}</Button>
+                        <Button variant="secondary" onClick={handleBackToDashboard} disabled={isSaving}>Cancel</Button>
                         <Button onClick={handleSubmit} disabled={submitDisabled}>{isSaving ? <Spinner /> : (isEditing ? 'Update Score' : 'Submit & View Score')}</Button>
                     </div>
                 </div>

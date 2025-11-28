@@ -181,6 +181,9 @@ export function CoursesTable({
     courses, onOpen, onEdit, onDelete, onOpenReport, onOpenTestForm, 
     canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates, onAddFinalReport, canManageFinalReport 
 }) {
+    const [reportModalCourse, setReportModalCourse] = useState(null);
+    const [monitorModalCourse, setMonitorModalCourse] = useState(null);
+
     const isCourseActive = (course) => {
         if (!course.start_date || !course.course_duration || course.course_duration <= 0) {
             return false;
@@ -216,7 +219,7 @@ export function CoursesTable({
         sortedCourses.length === 0 ? <EmptyState message="No courses found matching the selected filters." /> : ( 
             <div>
                 <h3 className="text-xl font-bold mb-4">{courseType} Courses</h3>
-                <Table headers={["#", "State", "Locality", "Subcourses", "# Participants", "Status", "Actions"]}>
+                <Table headers={["State", "Subcourses", "Status", "Actions"]}>
                     {sortedCourses.map((c, index) => {
                         const active = isCourseActive(c);
                         const canEdit = active ? canEditDeleteActiveCourse : canEditDeleteInactiveCourse;
@@ -227,11 +230,8 @@ export function CoursesTable({
 
                         return (
                             <tr key={c.id} className="hover:bg-gray-50">
-                                <td className="p-4 border font-medium text-gray-800">{index + 1}</td>
                                 <td className="p-4 border">{c.state}</td>
-                                <td className="p-4 border">{c.locality}</td>
                                 <td className="p-4 border">{subcourses}</td>
-                                <td className="p-4 border">{c.participants_count}</td>
                                 <td className="p-4 border">
                                     {active ? (
                                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -243,29 +243,29 @@ export function CoursesTable({
                                         </span>
                                     )}
                                 </td>
-                                <td className="p-4 border text-right">
-                                    <div className="flex gap-2 flex-nowrap justify-end">
-                                        <Button variant="primary" onClick={() => onOpen(c.id)}>Open Course</Button>
-                                        <Button variant="secondary" onClick={() => onOpenReport(c.id)}>Course Reports</Button>
-                                        {(c.course_type === 'ICCM' || c.course_type === 'EENC' || c.course_type === 'Small & Sick Newborn') && (
-                                            <Button variant="secondary" onClick={() => onOpenTestForm(c.id)}>
-                                                Test Scores
-                                            </Button>
-                                        )}
-                                        <Button
-                                            variant="secondary"
-                                            onClick={() => {
-                                                const link = `${window.location.origin}/monitor/course/${c.id}`;
-                                                navigator.clipboard.writeText(link)
-                                                    .then(() => alert('Public monitoring link copied to clipboard!'))
-                                                    .catch(() => alert('Failed to copy link.'));
-                                            }}
-                                            title="Copy public monitoring link for this course"
+                                <td className="p-2 border text-right whitespace-nowrap">
+                                    <div className="flex gap-1 flex-nowrap justify-end items-center">
+                                        <Button variant="primary" className="px-2 py-1 text-xs" onClick={() => onOpen(c.id)}>Open</Button>
+                                        
+                                        <Button 
+                                            variant="secondary" 
+                                            className="px-2 py-1 text-xs" 
+                                            onClick={() => setReportModalCourse(c)}
                                         >
-                                            Share Monitoring
+                                            Report
                                         </Button>
+                                        
+                                        <Button 
+                                            variant="secondary" 
+                                            className="px-2 py-1 text-xs" 
+                                            onClick={() => setMonitorModalCourse(c)}
+                                        >
+                                            Share Monitor & Test
+                                        </Button>
+
                                         <Button
                                             variant="secondary"
+                                            className="px-2 py-1 text-xs"
                                             onClick={() => onEdit(c)}
                                             disabled={!canEdit}
                                             title={!canEdit ? "You do not have permission to edit this course." : ""}
@@ -274,21 +274,70 @@ export function CoursesTable({
                                         </Button>
                                         <Button
                                             variant="danger"
+                                            className="px-2 py-1 text-xs"
                                             onClick={() => onDelete(c.id)}
                                             disabled={!canDelete}
                                             title={!canDelete ? "You do not have permission to delete this course." : ""}
                                         >
                                             Delete
                                         </Button>
-                                        {canManageFinalReport && (
-                                            <Button variant="secondary" onClick={() => onAddFinalReport(c.id)}>Final Report</Button>
-                                        )}
                                     </div>
                                 </td>
                             </tr>
                         );
                     })}
                 </Table>
+
+                {reportModalCourse && (
+                    <Modal isOpen={!!reportModalCourse} onClose={() => setReportModalCourse(null)} title="Course Reports">
+                        <CardBody className="flex flex-col gap-3">
+                             <Button variant="secondary" onClick={() => {
+                                 onOpenReport(reportModalCourse.id);
+                                 setReportModalCourse(null);
+                             }}>
+                                 View Course Analytics
+                             </Button>
+                             {canManageFinalReport && (
+                                 <Button variant="secondary" onClick={() => {
+                                     onAddFinalReport(reportModalCourse.id);
+                                     setReportModalCourse(null);
+                                 }}>
+                                     Final Report
+                                 </Button>
+                             )}
+                        </CardBody>
+                        <CardFooter>
+                            <Button variant="secondary" onClick={() => setReportModalCourse(null)}>Close</Button>
+                        </CardFooter>
+                    </Modal>
+                )}
+
+                {monitorModalCourse && (
+                    <Modal isOpen={!!monitorModalCourse} onClose={() => setMonitorModalCourse(null)} title="Monitoring & Testing">
+                        <CardBody className="flex flex-col gap-3">
+                            {(monitorModalCourse.course_type === 'ICCM' || monitorModalCourse.course_type === 'EENC' || monitorModalCourse.course_type === 'Small & Sick Newborn' || monitorModalCourse.course_type === 'IMNCI') && (
+                                <Button variant="secondary" onClick={() => {
+                                    onOpenTestForm(monitorModalCourse.id);
+                                    setMonitorModalCourse(null);
+                                }}>
+                                    Pre & Post Test
+                                </Button>
+                            )}
+                            <Button variant="secondary" onClick={() => {
+                                const link = `${window.location.origin}/monitor/course/${monitorModalCourse.id}`;
+                                navigator.clipboard.writeText(link)
+                                    .then(() => alert('Public monitoring link copied to clipboard!'))
+                                    .catch(() => alert('Failed to copy link.'));
+                                setMonitorModalCourse(null);
+                            }}>
+                                Share Monitoring Link
+                            </Button>
+                        </CardBody>
+                        <CardFooter>
+                            <Button variant="secondary" onClick={() => setMonitorModalCourse(null)}>Close</Button>
+                        </CardFooter>
+                    </Modal>
+                )}
             </div>
         )
     );
@@ -460,7 +509,7 @@ export function CourseManagementView({
                         <Button variant="tab" isActive={activeCoursesTab === 'participants'} onClick={() => { setActiveCoursesTab('participants'); onSetSelectedParticipantId(null); }}>Participants</Button>
                         <Button variant="tab" isActive={activeCoursesTab === 'monitoring'} onClick={() => setActiveCoursesTab('monitoring')} disabled={!currentParticipant}>Monitoring</Button>
                         <Button variant="tab" isActive={activeCoursesTab === 'reports'} onClick={() => setActiveCoursesTab('reports')}>Reports</Button>
-                        {(selectedCourse.course_type === 'ICCM' || selectedCourse.course_type === 'EENC' || selectedCourse.course_type === 'Small & Sick Newborn') && (
+                        {(selectedCourse.course_type === 'ICCM' || selectedCourse.course_type === 'EENC' || selectedCourse.course_type === 'Small & Sick Newborn' || selectedCourse.course_type === 'IMNCI') && (
                             <Button variant="tab" isActive={activeCoursesTab === 'enter-test-scores'} onClick={() => { setActiveCoursesTab('enter-test-scores'); }}>
                                 Test Scores
                             </Button>

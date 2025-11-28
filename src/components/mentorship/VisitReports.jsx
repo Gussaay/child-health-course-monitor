@@ -9,9 +9,25 @@ import {
     saveEENCVisitReport 
 } from '../../data';
 import { 
-    Card, PageHeader, Button, FormGroup, Spinner, Input, Textarea, Select 
+    Card, PageHeader, Button, FormGroup, Spinner, Input, Textarea, Select, Modal 
 } from '../CommonComponents';
-import { PlusCircle, Trash2, Camera, Save, Clock } from 'lucide-react';
+import { PlusCircle, Trash2, Camera, Save, Clock, CheckCircle } from 'lucide-react';
+
+// --- Helper Component: Success Modal ---
+const SuccessModal = ({ isOpen, onClose, message }) => {
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Success" size="sm">
+            <div className="p-6 flex flex-col items-center justify-center text-center">
+                <CheckCircle className="w-16 h-16 text-green-500 mb-4" />
+                <h3 className="text-xl font-bold text-gray-900 mb-2">تم الحفظ بنجاح!</h3>
+                <p className="text-gray-600 mb-6">{message}</p>
+                <Button onClick={onClose} variant="primary" className="w-full justify-center">
+                    موافق (OK)
+                </Button>
+            </div>
+        </Modal>
+    );
+};
 
 // --- Helper Component for Previous Problems ---
 const PreviousProblemsTable = ({ reports, currentFacilityId, currentReportId, onUpdateStatus, serviceType }) => {
@@ -105,7 +121,7 @@ export const IMNCIVisitReport = ({
     existingReportData = null, 
     visitNumber = 1, 
     allVisitReports = [],
-    canEditVisitNumber = false // <--- New Prop
+    canEditVisitNumber = false 
 }) => {
     const auth = getAuth();
     const user = auth.currentUser;
@@ -147,6 +163,7 @@ export const IMNCIVisitReport = ({
     const [newImageFiles, setNewImageFiles] = useState([]); 
     const [isSaving, setIsSaving] = useState(false);
     const [previousUpdates, setPreviousUpdates] = useState({}); 
+    const [showSuccessModal, setShowSuccessModal] = useState(false); // Success Modal State
 
     useEffect(() => {
         if (!existingReportData && visitNumber) {
@@ -206,6 +223,26 @@ export const IMNCIVisitReport = ({
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        // --- DUPLICATE CHECK ---
+        if (!existingReportData) {
+            const isDuplicate = allVisitReports.some(rep => 
+                rep.facilityId === facility.id && 
+                rep.visitDate === formData.visit_date && 
+                rep.service === 'IMNCI'
+            );
+
+            if (isDuplicate) {
+                setToast({ 
+                    show: true, 
+                    message: 'يوجد بالفعل تقرير زيارة IMNCI لهذه المنشأة في هذا التاريخ. يرجى تعديل التقرير الموجود بدلاً من إنشاء تقرير جديد.', 
+                    type: 'error' 
+                });
+                return;
+            }
+        }
+        // ------------------------
+
         setIsSaving(true);
         try {
             // 1. Save Current Report
@@ -264,8 +301,8 @@ export const IMNCIVisitReport = ({
 
             await Promise.all(updatePromises);
 
-            setToast({ show: true, message: 'تم حفظ التقرير وتحديث الحالات السابقة بنجاح!', type: 'success' });
-            onCancel();
+            // Show Success Modal instead of immediate exit
+            setShowSuccessModal(true);
 
         } catch (error) {
             console.error(error);
@@ -273,6 +310,11 @@ export const IMNCIVisitReport = ({
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const handleCloseSuccessModal = () => {
+        setShowSuccessModal(false);
+        onCancel(); // Navigate back
     };
 
     const skillsList = { skill_weight: "قياس الوزن", skill_height: "قياس الطول", skill_temp: "قياس الحرارة", skill_rr: "قياس معدل التنفس", skill_muac: "قياس محيط منتصف الذراع", skill_wfh: "قياس الانحراف المعياري للطول بالنسبة للوزن", skill_edema: "تقييم الورم", skill_danger_signs: "علامات الخطورة", skill_chartbook: "استخدام كتيب اللوحات", skill_counseling_card: "استخدام كرت النصح", skill_immunization_referral: "سواقط التطعيم" };
@@ -290,7 +332,6 @@ export const IMNCIVisitReport = ({
                         <div className="flex flex-col sm:flex-row gap-4 mb-4 justify-end">
                              <div className="w-full sm:w-auto">
                                 <FormGroup label="رقم الزيارة" className="text-right">
-                                    {/* --- MODIFIED INPUT: Apply ReadOnly logic --- */}
                                     <Input 
                                         type="number" 
                                         name="visitNumber" 
@@ -309,7 +350,7 @@ export const IMNCIVisitReport = ({
                         <div className="mb-6"><h3 className="text-lg font-bold text-sky-800 mb-2 border-b pb-1">المهارات المدربة</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-2">{Object.entries(skillsList).map(([k, l]) => <label key={k} className="cursor-pointer"><span>{l}</span><input type="checkbox" checked={!!formData.trained_skills[k]} onChange={() => handleCheckboxChange('trained_skills', k)} className="ms-3" /></label>)}</div></div>
                         <div className="mb-6"><h3 className="text-lg font-bold text-sky-800 mb-2 border-b pb-1">تنوير الأقسام</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-2">{Object.entries(orientationsList).map(([k, l]) => <label key={k} className="cursor-pointer"><span>{l}</span><input type="checkbox" checked={!!formData.other_orientations[k]} onChange={() => handleCheckboxChange('other_orientations', k)} className="ms-3" /></label>)}</div></div>
 
-                        {/* --- NEW CHALLENGES TABLE --- */}
+                        {/* --- CHALLENGES TABLE --- */}
                         <div className="mb-6">
                             <h3 className="text-lg font-bold text-sky-800 mb-2 border-b pb-1">المشاكل والمعوقات والحلول (الحالية)</h3>
                             <div className="overflow-x-auto">
@@ -375,6 +416,13 @@ export const IMNCIVisitReport = ({
                         </div>
                     </div>
                 </form>
+                
+                {/* --- SUCCESS POPUP --- */}
+                <SuccessModal 
+                    isOpen={showSuccessModal} 
+                    onClose={handleCloseSuccessModal} 
+                    message="تم حفظ تقرير الزيارة وتحديث الحالات بنجاح." 
+                />
             </Card>
         </Suspense>
     );
@@ -389,7 +437,7 @@ export const EENCVisitReport = ({
     existingReportData = null, 
     visitNumber = 1, 
     allVisitReports = [],
-    canEditVisitNumber = false // <--- New Prop
+    canEditVisitNumber = false 
 }) => {
     const auth = getAuth();
     const user = auth.currentUser;
@@ -414,6 +462,7 @@ export const EENCVisitReport = ({
     const [newImageFiles, setNewImageFiles] = useState([]); 
     const [isSaving, setIsSaving] = useState(false);
     const [previousUpdates, setPreviousUpdates] = useState({}); 
+    const [showSuccessModal, setShowSuccessModal] = useState(false); // Success Modal State
 
     useEffect(() => { if (!existingReportData && visitNumber) setFormData(prev => ({ ...prev, visitNumber: visitNumber })); }, [visitNumber, existingReportData]);
 
@@ -434,6 +483,26 @@ export const EENCVisitReport = ({
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // --- DUPLICATE CHECK ---
+        if (!existingReportData) {
+            const isDuplicate = allVisitReports.some(rep => 
+                rep.facilityId === facility.id && 
+                rep.visitDate === formData.visit_date && 
+                rep.service === 'EENC'
+            );
+
+            if (isDuplicate) {
+                setToast({ 
+                    show: true, 
+                    message: 'يوجد بالفعل تقرير زيارة EENC لهذه المنشأة في هذا التاريخ. يرجى تعديل التقرير الموجود بدلاً من إنشاء تقرير جديد.', 
+                    type: 'error' 
+                });
+                return;
+            }
+        }
+        // ------------------------
+
         setIsSaving(true);
         try {
             const originalUrls = existingReportData?.imageUrls || [];
@@ -462,9 +531,15 @@ export const EENCVisitReport = ({
             });
             await Promise.all(updatePromises);
 
-            setToast({ show: true, message: 'تم حفظ التقرير بنجاح!', type: 'success' });
-            onCancel();
+            // Show Success Modal
+            setShowSuccessModal(true);
+
         } catch (error) { setToast({ show: true, message: `فشل: ${error.message}`, type: 'error' }); } finally { setIsSaving(false); }
+    };
+
+    const handleCloseSuccessModal = () => {
+        setShowSuccessModal(false);
+        onCancel(); // Navigate back
     };
 
     const skillsList = { skill_pre_handwash: "غسل الايدي", skill_pre_equip: "تجهيز المعدات", skill_drying: "التجفيف", skill_skin_to_skin: "جلد بجلد", skill_suction: "الشفط", skill_cord_pulse_check: "نبض الحبل السري", skill_clamp_placement: "وضع المشبك", skill_transfer: "نقل الطفل", skill_airway: "فتح مجرى الهواء", skill_ambubag_placement: "وضع الامبوباق", skill_ambubag_use: "استخدام الامبوباق", skill_ventilation_rate: "معدل التهوية", skill_correction_steps: "التدخلات التصحيحية" };
@@ -479,7 +554,6 @@ export const EENCVisitReport = ({
                         <div className="flex flex-col sm:flex-row gap-4 mb-4 justify-end">
                              <div className="w-full sm:w-auto">
                                 <FormGroup label="رقم الزيارة" className="text-right">
-                                    {/* --- MODIFIED INPUT: Apply ReadOnly logic --- */}
                                     <Input 
                                         type="number" 
                                         name="visitNumber" 
@@ -560,6 +634,13 @@ export const EENCVisitReport = ({
                         </div>
                     </div>
                 </form>
+
+                {/* --- SUCCESS POPUP --- */}
+                <SuccessModal 
+                    isOpen={showSuccessModal} 
+                    onClose={handleCloseSuccessModal} 
+                    message="تم حفظ تقرير الزيارة وتحديث الحالات بنجاح." 
+                />
             </Card>
         </Suspense>
     );

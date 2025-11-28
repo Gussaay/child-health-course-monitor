@@ -1,7 +1,7 @@
 // MonitoringView.jsx
 import React, { useState, useEffect, useMemo } from "react";
 import {
-    Card, PageHeader, Button, FormGroup, Input, Select, Table, EmptyState, Spinner
+    Card, PageHeader, Button, FormGroup, Input, Select, Table, EmptyState, Spinner, Modal
 } from "./CommonComponents";
 import {
     pctBgClass, fmtPct, calcPct,
@@ -83,7 +83,10 @@ export function ObservationView({ course, participant, participants, onChangePar
     const [editingCase, setEditingCase] = useState(null);
     const [eencScenario, setEencScenario] = useState('breathing');
     const [isSaving, setIsSaving] = useState(false);
-    const [showSuccess, setShowSuccess] = useState(false);
+    
+    // --- MODIFICATION: Changed to modal state ---
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    
     const isImnci = course.course_type === 'IMNCI';
     const isEenc = course.course_type === 'EENC';
     const isEtat = course.course_type === 'ETAT';
@@ -141,10 +144,11 @@ export function ObservationView({ course, participant, participants, onChangePar
 
     useEffect(() => {
         if (editingCase) return;
-        const sameDayCases = cases.filter(c => c.encounter_date === encounterDate);
+        // --- MODIFICATION: Calculate serial based on Day of Course, not Encounter Date ---
+        const sameDayCases = cases.filter(c => c.day_of_course === dayOfCourse);
         const maxS = sameDayCases.reduce((m, x) => Math.max(m, x.case_serial || 0), 0);
         setCaseSerial(Math.max(1, maxS + 1));
-    }, [cases, encounterDate, editingCase]);
+    }, [cases, dayOfCourse, editingCase]);
 
     const toggle = (d, cls, v) => {
         const k = `${d}|${cls}`;
@@ -249,8 +253,8 @@ export function ObservationView({ course, participant, participants, onChangePar
                 setObservations(prevObs => [...prevObs, ...savedObservations]);
             }
 
-            setShowSuccess(true);
-            setTimeout(() => setShowSuccess(false), 3000);
+            // --- MODIFICATION: Show Success Modal ---
+            setShowSuccessModal(true);
             
             setBuffer({});
             setCaseAgeMonths('');
@@ -282,11 +286,24 @@ export function ObservationView({ course, participant, participants, onChangePar
             
             {error && <Card><div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">{error}</div></Card>}
             
-            {showSuccess && (
-                <div className="p-3 bg-green-100 border border-green-300 text-green-700 rounded-md mb-3">
-                    Case saved successfully!
+            {/* --- MODIFICATION: Success Modal Pop-up --- */}
+            <Modal isOpen={showSuccessModal} onClose={() => setShowSuccessModal(false)} title="Submission Successful">
+                <div className="p-6 text-center">
+                    <div className="flex justify-center mb-4">
+                        <div className="rounded-full bg-green-100 p-3">
+                            <svg className="h-10 w-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">Case Saved Successfully!</h3>
+                    <p className="text-gray-600 mb-6">The clinical observation has been recorded.</p>
+                    <Button onClick={() => setShowSuccessModal(false)} className="w-full bg-green-600 hover:bg-green-700 border-green-600">
+                        Continue to Next Case
+                    </Button>
                 </div>
-            )}
+            </Modal>
+            {/* --- END MODIFICATION --- */}
 
             <Card className="-mt-3 p-4">
                 {/* --- MODIFICATION: Changed grid columns for mobile-first layout --- */}
@@ -341,10 +358,8 @@ export function ObservationView({ course, participant, participants, onChangePar
                 </div>
             </Card>
             
-            {/* --- MODIFICATION: Conditionally hide submitted cases list --- */}
-            {!isPublicView && (
-                loading ? <Card><Spinner /></Card> : <SubmittedCases course={course} participant={participant} observations={observations} cases={cases} onEditCase={(caseToEdit) => handleEditCase(caseToEdit, observations)} onDeleteCase={handleDeleteCase} />
-            )}
+            {/* --- MODIFICATION: Show submitted cases list (unconditionally) --- */}
+            {loading ? <Card><Spinner /></Card> : <SubmittedCases course={course} participant={participant} observations={observations} cases={cases} onEditCase={(caseToEdit) => handleEditCase(caseToEdit, observations)} onDeleteCase={handleDeleteCase} />}
             {/* --- END MODIFICATION --- */}
         </div>
     );
@@ -603,7 +618,7 @@ function EencMonitoringGrid({ scenario, buffer, toggle }) {
                                         <tr key={`${d}-${i}`} className="hover:bg-sky-50">
                                             {/* --- MODIFICATION: Combined text and action into one <td> using flex --- */}
                                             <td className="p-1 pl-6 border border-slate-300">
-                                                {/* --- MODIFICATION: Changed to flex-col/sm:flex-row for mobile responsiveness --- */}
+                                                {/* --- MODIFICATION: Combined text and action into one <td> using flex --- */}
                                                 <div className="flex flex-col sm:flex-row justify-between sm:items-center w-full gap-2">
                                                     {/* --- MODIFICATION: Made skill text bold --- */}
                                                     <span className="break-words font-bold">{skill.text}</span>
@@ -745,7 +760,8 @@ function SubmittedCases({ course, participant, observations, cases, onEditCase, 
             return dayMatch && settingMatch && correctnessMatch;
         });
 
-        return mappedAndFiltered.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0) || b.serial - a.serial);
+        // --- MODIFICATION: Sort by Course Day (Descending) first, then by Serial ---
+        return mappedAndFiltered.sort((a, b) => (b.day - a.day) || (b.serial - a.serial));
     }, [cases, observations, isEenc, dayFilter, settingFilter, correctnessFilter]);
 
 
