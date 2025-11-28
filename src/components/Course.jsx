@@ -315,7 +315,7 @@ export function CoursesTable({
                 {monitorModalCourse && (
                     <Modal isOpen={!!monitorModalCourse} onClose={() => setMonitorModalCourse(null)} title="Monitoring & Testing">
                         <CardBody className="flex flex-col gap-3">
-                            {(monitorModalCourse.course_type === 'ICCM' || monitorModalCourse.course_type === 'EENC' || monitorModalCourse.course_type === 'Small & Sick Newborn' || monitorModalCourse.course_type === 'IMNCI') && (
+                            {(monitorModalCourse.course_type === 'ICCM' || monitorModalCourse.course_type === 'EENC' || monitorModalCourse.course_type === 'Small & Sick Newborn' || monitorModalCourse.course_type === 'IMNCI' || monitorModalCourse.course_type === 'ETAT') && (
                                 <Button variant="secondary" onClick={() => {
                                     onOpenTestForm(monitorModalCourse.id);
                                     setMonitorModalCourse(null);
@@ -509,7 +509,7 @@ export function CourseManagementView({
                         <Button variant="tab" isActive={activeCoursesTab === 'participants'} onClick={() => { setActiveCoursesTab('participants'); onSetSelectedParticipantId(null); }}>Participants</Button>
                         <Button variant="tab" isActive={activeCoursesTab === 'monitoring'} onClick={() => setActiveCoursesTab('monitoring')} disabled={!currentParticipant}>Monitoring</Button>
                         <Button variant="tab" isActive={activeCoursesTab === 'reports'} onClick={() => setActiveCoursesTab('reports')}>Reports</Button>
-                        {(selectedCourse.course_type === 'ICCM' || selectedCourse.course_type === 'EENC' || selectedCourse.course_type === 'Small & Sick Newborn' || selectedCourse.course_type === 'IMNCI') && (
+                        {(selectedCourse.course_type === 'ICCM' || selectedCourse.course_type === 'EENC' || selectedCourse.course_type === 'Small & Sick Newborn' || selectedCourse.course_type === 'IMNCI' || selectedCourse.course_type === 'ETAT') && (
                             <Button variant="tab" isActive={activeCoursesTab === 'enter-test-scores'} onClick={() => { setActiveCoursesTab('enter-test-scores'); }}>
                                 Test Scores
                             </Button>
@@ -831,12 +831,28 @@ export function CourseForm({
     const ICCM_SUBCOURSE_TYPES = ['ICCM Community Module'];
     const SMALL_AND_SICK_SUBCOURSE_TYPES = ['Portable warmer training', 'CPAP training'];
 
+    const EENC_SUBCOURSE_TYPES = [
+        'EENC EmONC', 
+        'EENC Orientation', 
+        'EENC TOT', 
+        'EENC Mentorship'
+    ];
+
+    const ETAT_SUBCOURSE_TYPES = [
+        'ETAT Standard', 
+        'ETAT Orientation', 
+        'ETAT Plus', 
+        'ETAT Mentorship'
+    ];
+
     const COURSE_GROUPS = ['Group A', 'Group B', 'Group C', 'Group D'];
 
     const isImnci = courseType === 'IMNCI';
     const isInfectionControl = courseType === 'IPC';
     const isIccm = courseType === 'ICCM';
     const isSmallAndSick = courseType === 'Small & Sick Newborn';
+    const isEenc = courseType === 'EENC';
+    const isEtat = courseType === 'ETAT';
 
     const [groups, setGroups] = useState(initialData?.facilitatorAssignments ? [...new Set(initialData.facilitatorAssignments.map(a => a.group))] : ['Group A']);
 
@@ -1312,6 +1328,8 @@ export function CourseForm({
                                                           isIccm ? ICCM_SUBCOURSE_TYPES : 
                                                           isInfectionControl ? INFECTION_CONTROL_SUBCOURSE_TYPES : 
                                                           isSmallAndSick ? SMALL_AND_SICK_SUBCOURSE_TYPES :
+                                                          isEenc ? EENC_SUBCOURSE_TYPES :
+                                                          isEtat ? ETAT_SUBCOURSE_TYPES :
                                                           []
                                                         ).map(type => (
                                                             <option key={type} value={type}>{type}</option>

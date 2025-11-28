@@ -13,7 +13,7 @@ import {
     deleteParticipantTest
 } from '../data.js';
 import { GenericFacilityForm, IMNCIFormFields } from './FacilityForms.jsx'; 
-import { Edit, Trash2, PlusCircle, Eye, Share2, CheckCircle } from 'lucide-react'; 
+import { Edit, Trash2, PlusCircle, Eye, Share2, CheckCircle, Save, Check, X } from 'lucide-react'; 
 
 export const EENC_TEST_QUESTIONS = [
     { id: 'q1', text: '1. Delivering in the supine position during second stage of labour is best.', type: 'mc', options: [{ id: 'a', text: 'True' }, { id: 'b', text: 'False' }], correctAnswer: 'b' },
@@ -79,6 +79,87 @@ export const IMNCI_TEST_QUESTIONS = [
     { id: 'q20', text: '20. How do you classify a 5-day-old infant who has severe chest indrawing and an axillary temperature of 36.8°c?', type: 'mc', options: [{ id: 'a', text: 'very severe disease or possible serious bacterial infection' }, { id: 'b', text: 'local bacterial infection' }, { id: 'c', text: 'severe disease or local bacterial infection unlikely' }, { id: 'd', text: 'fever– malaria unlikely' }], correctAnswer: 'a' }
 ];
 
+export const ETAT_TEST_QUESTIONS = [
+    { 
+        id: 'q1', 
+        text: '1. Define triage?', 
+        type: 'open', 
+        lines: 1 
+    },
+    { 
+        id: 'q2', 
+        text: '2. What do the letters A, B, C and D in the "ABCD" stand for?', 
+        type: 'open', 
+        lines: 4 
+    },
+    { 
+        id: 'q3', 
+        text: '3. List the three things you do to check airway and breathing?', 
+        type: 'open', 
+        lines: 3 
+    },
+    { 
+        id: 'q4', 
+        text: '4. At what flow (volume/time) should oxygen be started?', 
+        type: 'open', 
+        lines: 1 
+    },
+    { 
+        id: 'q5', 
+        text: '5. Define a normal capillary refill time?', 
+        type: 'open', 
+        lines: 1 
+    },
+    { 
+        id: 'q6', 
+        text: '6. If you cannot feel the radial pulse in an older child, which pulse should you look for next?', 
+        type: 'open', 
+        lines: 1 
+    },
+    { 
+        id: 'q7', 
+        text: '7. Name the two types of fluid you can give to treat shock initially?', 
+        type: 'open', 
+        lines: 2 
+    },
+    { 
+        id: 'q8', 
+        text: '8. What volume of fluid would you give to a well-nourished one-year old weighing 11kg who is in shock?', 
+        type: 'open', 
+        lines: 1 
+    },
+    { 
+        id: 'q9', 
+        text: '9. What do the letters AVPU stand for?', 
+        type: 'open', 
+        lines: 4 
+    },
+    { 
+        id: 'q10', 
+        text: '10. A child who is unconscious, with no history of trauma, but maintaining the airway should be put in which position?', 
+        type: 'open', 
+        lines: 1 
+    },
+    { 
+        id: 'q11', 
+        text: '11. How much rectal diazepam (in ml of the 10mg/2ml solution) would you give to a four-year old weighing 15kg who is having a convulsion? How long should you wait before giving a second dose if the convulsion does not stop?', 
+        type: 'open', 
+        lines: 2 
+    },
+    { 
+        id: 'q12', 
+        text: '12. An eight-month old weighing 6kg is severely dehydrated. How much fluid would you give in the first hour? For how long you give the second lot of fluid in the same child?', 
+        type: 'open', 
+        lines: 2 
+    },
+    { 
+        id: 'q13', 
+        text: '13. A three-year old weighing 15kg is severely dehydrated. He has received 450 ml of fluid in 30 minutes. How much fluid are you going to give him next, and over what period of time?', 
+        type: 'open', 
+        lines: 2 
+    }
+];
+
 const initializeAnswers = (questions) => {
     const initialAnswers = {};
     questions.forEach(q => {
@@ -89,6 +170,23 @@ const initializeAnswers = (questions) => {
         }
     });
     return initialAnswers;
+};
+
+// Initialize manual scores array. 
+// For open questions with 'n' lines, we store an array of size 'n'.
+const initializeManualScores = (questions, existingScores = {}) => {
+    const scores = {};
+    questions.forEach(q => {
+        if (q.type === 'open') {
+            if (existingScores[q.id] && Array.isArray(existingScores[q.id])) {
+                 scores[q.id] = existingScores[q.id];
+            } else {
+                 // Initialize with 0s for all lines
+                 scores[q.id] = Array(q.lines).fill(0);
+            }
+        }
+    });
+    return scores;
 };
 
 // ... [Keep TestResultScreen, SearchableSelect, and AddFacilityModal components exactly as they were] ...
@@ -110,14 +208,14 @@ const TestResultScreen = ({
                 )}
                 <div className="my-8">
                     <div className={`text-6xl font-bold ${scoreClass}`}>{percent}%</div>
-                    <div className="text-xl text-gray-700 mt-2">({score} / {total} Correct)</div>
-                    <p className="text-sm text-gray-500 mt-4">Note: Score only includes multiple-choice questions.</p>
+                    <div className="text-xl text-gray-700 mt-2">({score} / {total} Total Points)</div>
+                    <p className="text-sm text-gray-500 mt-4">Score includes both multiple-choice and manually graded questions.</p>
                 </div>
                 <div className="flex justify-center gap-3">
                     <Button variant="secondary" onClick={onBack}>Back</Button>
                     {canManageTests && (
                         <>
-                            <Button variant="primary" onClick={onEdit}>Edit Test</Button>
+                            <Button variant="primary" onClick={onEdit}>Edit / Grade Test</Button>
                             <Button variant="danger" onClick={onDelete}>Delete Test</Button>
                         </>
                     )}
@@ -508,6 +606,17 @@ export function CourseTestForm({
     const { testQuestions, testTitle, isRtl, jobTitleOptions, isIccm } = useMemo(() => {
         let titles = [];
         let isIccm = false;
+        if (course.course_type === 'ETAT') {
+             titles = JOB_TITLES_ETAT;
+             return { 
+                 testQuestions: ETAT_TEST_QUESTIONS, 
+                 testTitle: 'ETAT Pre/Post Test Entry', 
+                 isRtl: false, 
+                 jobTitleOptions: titles, 
+                 isIccm: false 
+             };
+        }
+
         if (course.course_type === 'ICCM') {
             titles = ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
             isIccm = true;
@@ -531,6 +640,10 @@ export function CourseTestForm({
     const [selectedParticipantId, setSelectedParticipantId] = useState(initialParticipantId);
     const [testType, setTestType] = useState('pre-test'); 
     const [answers, setAnswers] = useState(() => initializeAnswers(testQuestions));
+    
+    // --- Manual Grading State ---
+    const [manualScores, setManualScores] = useState({});
+
     const [error, setError] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [submissionResult, setSubmissionResult] = useState(null);
@@ -605,6 +718,7 @@ export function CourseTestForm({
         const result = participantTests.find(t => t.participantId === pId && t.testType === type);
         if (result) {
             setAnswers(result.answers || initializeAnswers(testQuestions));
+            setManualScores(initializeManualScores(testQuestions, result.manualScores));
             setIsEditing(true);
             setIsSetupModalOpen(false); // Skip modal, go straight to form
         }
@@ -624,6 +738,7 @@ export function CourseTestForm({
         setIsSetupModalOpen(isNewUser ? false : true); // If add existing, confirm in modal (or skip if we want direct entry)
         if(pId && !isNewUser) setIsSetupModalOpen(false); // Direct entry if ID known
         setAnswers(initializeAnswers(testQuestions));
+        setManualScores(initializeManualScores(testQuestions)); // Initialize fresh scores
         setSubmissionResult(null);
     };
 
@@ -708,6 +823,16 @@ export function CourseTestForm({
         setAnswers(prev => ({ ...prev, [questionId]: prev[questionId].map((item, i) => (i === lineIndex ? textValue : item)) }));
     };
 
+    // --- UPDATED: Handle Manual Scoring per Line ---
+    const handleLineScoreChange = (questionId, lineIndex, score) => {
+        setManualScores(prev => {
+            // Ensure we have an array for this question
+            const currentScores = prev[questionId] ? [...prev[questionId]] : Array(testQuestions.find(q=>q.id === questionId).lines).fill(0);
+            currentScores[lineIndex] = score; // Set 1 for Correct, 0 for Wrong
+            return { ...prev, [questionId]: currentScores };
+        });
+    };
+
     // MODIFIED: Updated handler to accept the facility object directly from the new modal
     const handleFacilitySelect = (facility) => {
         setError('');
@@ -786,6 +911,7 @@ export function CourseTestForm({
         const resultToEdit = existingResults[testType];
         if (resultToEdit) {
             setAnswers(resultToEdit.answers || initializeAnswers(testQuestions));
+            setManualScores(initializeManualScores(testQuestions, resultToEdit.manualScores));
             setIsEditing(true);
             setSubmissionResult(null); // Clear result screen to show form
         }
@@ -810,16 +936,41 @@ export function CourseTestForm({
     const handleSubmit = async () => {
         setError('');
         if (!selectedParticipantId) { setError('A participant must be selected or saved before submitting the test.'); return; }
+        
         const mcQuestions = testQuestions.filter(q => q.type === 'mc');
         const unanswered = mcQuestions.filter(q => !answers[q.id]);
-        if (unanswered.length > 0) { setError(`Please answer all multiple-choice questions.`); return; }
+        
+        // Only block if it is public view (user taking test), otherwise allow partial updates by admin
+        if (isPublicView && unanswered.length > 0) { setError(`Please answer all multiple-choice questions.`); return; }
+        
         setIsSaving(true);
         try {
+            // 1. Calculate MCQ Score
             const scorableQuestions = testQuestions.filter(q => q.type === 'mc');
-            let score = 0;
-            scorableQuestions.forEach(q => { if (answers[q.id] === q.correctAnswer) score++; });
-            const total = scorableQuestions.length;
-            const percentage = total > 0 ? (score / total) * 100 : 0;
+            let correctMCQ = 0;
+            scorableQuestions.forEach(q => { if (answers[q.id] === q.correctAnswer) correctMCQ++; });
+            
+            // 2. Calculate Manual Score (Open Ended)
+            let manualTotal = 0;
+            let openQuestionsTotalLines = 0;
+            
+            const openQuestions = testQuestions.filter(q => q.type === 'open');
+            openQuestions.forEach(q => {
+                openQuestionsTotalLines += q.lines;
+                
+                const qScores = manualScores[q.id];
+                if (Array.isArray(qScores)) {
+                    // Sum up 1s and 0s in the array
+                    manualTotal += qScores.reduce((acc, curr) => acc + (parseFloat(curr) || 0), 0);
+                }
+            });
+
+            // 3. Total Score Calculation
+            // Total points = Number of MCQs (1 pt each) + Total number of lines in open questions (1 pt each)
+            const total = scorableQuestions.length + openQuestionsTotalLines; 
+            const finalScore = correctMCQ + manualTotal;
+            const percentage = total > 0 ? (finalScore / total) * 100 : 0;
+
             const payload = {
                 participantId: selectedParticipantId, 
                 participantName: participantNameForDisplay, 
@@ -827,7 +978,8 @@ export function CourseTestForm({
                 courseType: course.course_type,
                 testType: testType,
                 answers: answers, 
-                score: score,
+                manualScores: manualScores,
+                score: finalScore,
                 total: total,
                 percentage: percentage,
                 submittedAt: new Date().toISOString()
@@ -1089,14 +1241,22 @@ export function CourseTestForm({
                     </div>
                     <h3 className="text-lg font-medium text-gray-900 mb-2">Submission Successful!</h3>
                     
-                    {lastSubmissionStats && (
-                        <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                            <p className="text-sm text-gray-500 mb-1">Score Achieved</p>
-                            <div className="text-3xl font-bold text-gray-800">
-                                {lastSubmissionStats.percentage.toFixed(1)}%
+                    {course.course_type !== 'ETAT' ? (
+                        lastSubmissionStats && (
+                            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                                <p className="text-sm text-gray-500 mb-1">Score Achieved</p>
+                                <div className="text-3xl font-bold text-gray-800">
+                                    {lastSubmissionStats.percentage.toFixed(1)}%
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    ({lastSubmissionStats.score} out of {lastSubmissionStats.total} Total Points)
+                                </p>
                             </div>
-                            <p className="text-xs text-gray-500 mt-1">
-                                ({lastSubmissionStats.score} out of {lastSubmissionStats.total} correct)
+                        )
+                    ) : (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                            <p className="text-sm text-blue-800">
+                                Your test has been submitted for manual grading. Your score will be available once reviewed by a facilitator.
                             </p>
                         </div>
                     )}
@@ -1105,10 +1265,15 @@ export function CourseTestForm({
                         className="w-full justify-center" 
                         onClick={() => {
                             setShowTestSubmitSuccessModal(false);
-                            setSubmissionResult(lastSubmissionStats); // This triggers view switch to TestResultScreen
+                            // If ETAT, don't show result screen, just go back
+                            if (course.course_type === 'ETAT') {
+                                handleBackToDashboard();
+                            } else {
+                                setSubmissionResult(lastSubmissionStats); 
+                            }
                         }}
                     >
-                        View Result Details
+                        {course.course_type === 'ETAT' ? 'Return to Dashboard' : 'View Result Details'}
                     </Button>
                 </div>
             </Modal>
@@ -1126,18 +1291,92 @@ export function CourseTestForm({
                     
                     {error && <div className="p-3 my-4 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
 
+                    {/* Grading Mode Banner */}
+                    {isEditing && canManageTests && (
+                        <div className="bg-blue-50 border border-blue-200 text-blue-800 p-4 mb-6 rounded-md flex justify-between items-center mt-4">
+                            <div className="font-semibold flex items-center gap-2">
+                                <Edit size={20} />
+                                <span>Grading Mode Enabled</span>
+                            </div>
+                            <div className="text-sm">
+                                Review answers and use the checks/crosses to grade open-ended questions.
+                            </div>
+                        </div>
+                    )}
+
                     <hr className="my-6" />
 
                     <fieldset disabled={isSaving}>
                         <legend className="text-xl font-semibold mb-4 text-gray-800">Test Questions</legend>
-                        {isEditing && <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-3 mb-4 rounded-md font-semibold">Editing existing {testType} submission.</div>}
+                        {isEditing && !canManageTests && <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-3 mb-4 rounded-md font-semibold">Editing existing {testType} submission.</div>}
                         <div className="space-y-6" style={{ direction: isRtl ? 'rtl' : 'ltr', textAlign: isRtl ? 'right' : 'left' }}>
                             {testQuestions.map((q) => (
-                                <div key={q.id} className="p-4 border rounded-md shadow-sm bg-white">
-                                    <label className="block text-base font-semibold text-gray-800 mb-3">{q.text}</label>
+                                <div key={q.id} className={`p-4 border rounded-md shadow-sm ${isEditing && canManageTests && q.type === 'open' ? 'bg-blue-50/30 border-blue-200' : 'bg-white'}`}>
+                                    {/* Question Header */}
+                                    <div className="flex justify-between items-start mb-3">
+                                        <label className="block text-base font-semibold text-gray-800 w-3/4">{q.text}</label>
+                                        
+                                        {/* Auto-Grade Badge for MCQs */}
+                                        {canManageTests && isEditing && q.type === 'mc' && (
+                                            <div className={`px-2 py-1 rounded text-xs font-bold border ${answers[q.id] === q.correctAnswer ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
+                                                {answers[q.id] === q.correctAnswer ? 'Correct (+1)' : 'Incorrect (0)'}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Question Body (Inputs) */}
                                     {q.imageSrc && <div className="my-3"><img src={q.imageSrc} alt="Visual" className="max-w-full h-auto rounded-lg border border-gray-200" /></div>}
+                                    
                                     {q.type === 'mc' && (<div className="flex flex-col gap-2 mt-2">{q.options.map(opt => (<label key={opt.id} className="flex items-center gap-3 p-2 rounded hover:bg-sky-50 cursor-pointer"><input type="radio" name={q.id} value={opt.id} checked={answers[q.id] === opt.id} onChange={() => handleRadioChange(q.id, opt.id)} className="w-4 h-4" /><span className="text-sm text-gray-700">{opt.text}</span></label>))}</div>)}
-                                    {q.type === 'open' && (<div className="flex flex-col gap-2 mt-2">{Array.from({ length: q.lines }).map((_, index) => (<Input key={index} type="text" placeholder={`Answer ${index + 1}...`} value={answers[q.id]?.[index] || ''} onChange={(e) => handleTextChange(q.id, index, e.target.value)} className="w-full" />))}</div>)}
+                                    
+                                    {/* Open-Ended Question Rendering with Grading UI */}
+                                    {q.type === 'open' && (
+                                        <div className="flex flex-col gap-3 mt-2">
+                                            {Array.from({ length: q.lines }).map((_, index) => {
+                                                const isGradingMode = canManageTests && isEditing;
+                                                const currentScore = manualScores[q.id]?.[index] || 0; // Default 0 (Incorrect)
+
+                                                return (
+                                                    <div key={index} className="flex items-center gap-2 w-full">
+                                                        {/* Answer Input - Takes Full Width */}
+                                                        {/* Wrapper div to force flex expansion */}
+                                                        <div className="flex-1 relative">
+                                                            <Input 
+                                                                type="text" 
+                                                                placeholder={`Answer line ${index + 1}...`} 
+                                                                value={answers[q.id]?.[index] || ''} 
+                                                                onChange={(e) => handleTextChange(q.id, index, e.target.value)} 
+                                                                className={`w-full transition-colors ${isGradingMode ? (currentScore === 1 ? 'border-green-400 bg-green-50/10' : 'border-red-300 bg-red-50/10') : ''}`}
+                                                                style={{ width: '100%' }}
+                                                            />
+                                                        </div>
+
+                                                        {/* Grading Controls - Right Side - Visible Only in Edit Mode for Admins */}
+                                                        {isGradingMode && (
+                                                            <div className="flex gap-1 shrink-0 ml-2">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleLineScoreChange(q.id, index, 1)}
+                                                                    className={`p-1.5 rounded-full border transition-all ${currentScore === 1 ? 'bg-green-100 border-green-500 text-green-600 ring-2 ring-green-200' : 'bg-white border-gray-200 text-gray-300 hover:border-green-300 hover:text-green-400'}`}
+                                                                    title="Mark Correct (+1)"
+                                                                >
+                                                                    <Check size={16} strokeWidth={3} />
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleLineScoreChange(q.id, index, 0)}
+                                                                    className={`p-1.5 rounded-full border transition-all ${currentScore === 0 ? 'bg-red-100 border-red-500 text-red-600 ring-2 ring-red-200' : 'bg-white border-gray-200 text-gray-300 hover:border-red-300 hover:text-red-400'}`}
+                                                                    title="Mark Incorrect (0)"
+                                                                >
+                                                                    <X size={16} strokeWidth={3} />
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                     {q.type === 'unsupported' && (<div className="p-3 text-sm text-gray-500 bg-gray-100 rounded-md">Unsupported question type.</div>)}
                                 </div>
                             ))}
@@ -1146,7 +1385,9 @@ export function CourseTestForm({
 
                     <div className="flex gap-2 justify-end mt-8 border-t pt-6">
                         <Button variant="secondary" onClick={handleBackToDashboard} disabled={isSaving}>Cancel</Button>
-                        <Button onClick={handleSubmit} disabled={submitDisabled}>{isSaving ? <Spinner /> : (isEditing ? 'Update Score' : 'Submit & View Score')}</Button>
+                        <Button onClick={handleSubmit} disabled={submitDisabled}>
+                            {isSaving ? <Spinner /> : (isEditing ? 'Save Grading & Score' : 'Submit & View Score')}
+                        </Button>
                     </div>
                 </div>
             )}

@@ -454,9 +454,12 @@ export default function App() {
                         if (!courseData) throw new Error('Course not found.');
                         if (!participantData) throw new Error('Participants not found.');
 
-                        if (courseData.course_type !== 'ICCM' && courseData.course_type !== 'EENC' && courseData.course_type !== 'Small & Sick Newborn' && 
-    courseData.course_type !== 'IMNCI') {
-                            throw new Error('Test forms are only available for ICCM, EENC and Small & Sick Newborn courses.');
+                        if (courseData.course_type !== 'ICCM' && 
+                            courseData.course_type !== 'EENC' && 
+                            courseData.course_type !== 'Small & Sick Newborn' && 
+                            courseData.course_type !== 'IMNCI' && 
+                            courseData.course_type !== 'ETAT') {
+                            throw new Error('Test forms are only available for ICCM, EENC, Small & Sick Newborn, IMNCI, and ETAT courses.');
                         }
 
                         setPublicTestData({ course: courseData, participants: participantData, tests: testData || [] });
