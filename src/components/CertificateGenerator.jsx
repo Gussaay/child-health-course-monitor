@@ -264,7 +264,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
             {/* Certificate Word */}
              <div style={{
                 position: 'absolute',
-                top: '55mm',
+                top: '60mm',
                 left: '0',
                 right: '0',
                 textAlign: 'center',
@@ -281,7 +281,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
             {/* Participant Name - WITH DOTTED LINE */}
             <div style={{
                 position: 'absolute',
-                top: isArabic ? '85mm' : '85mm',
+                top: isArabic ? '90mm' : '90mm',
                 left: '60mm',
                 right: '60mm',
                 textAlign: 'center',
@@ -291,7 +291,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                 borderBottom: '3px dotted #000', 
                 paddingBottom: '10px'             
             }}>
-                {isArabic ? `${participant.name}` : `Dr. ${participant.name}`}
+                {isArabic ? `${participant.name}` : `${participant.name}`}
             </div>
 
             {/* Completion Text */}
@@ -426,7 +426,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                 position: 'absolute',
                 top: '175mm', 
                 right: '20mm',
-                width: '80mm', 
+                width: '85mm', 
                 textAlign: 'center',
                 fontSize: '20px',
                 fontWeight: 'bold',
@@ -474,7 +474,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                 position: 'absolute',
                 top: '175mm', 
                 left: '20mm', 
-                width: '80mm', 
+                width: '85mm', 
                 textAlign: 'center',
                 fontSize: '20px', 
                 fontWeight: 'bold',

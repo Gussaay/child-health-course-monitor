@@ -5,7 +5,7 @@ import jsPDF from "jspdf";
 import { createRoot } from 'react-dom/client'; 
 
 // --- Icons ---
-import { Mail, Lock, RefreshCw } from 'lucide-react'; 
+import { Mail, Lock, RefreshCw, Search } from 'lucide-react'; 
 
 // --- Firebase Imports (For Refresh Logic) ---
 import { db } from '../firebase';
@@ -22,13 +22,10 @@ import {
     importParticipants,
     bulkMigrateFromMappings,
     listParticipants,
-    submitFacilityDataForApproval, 
     getHealthFacilityById,
     queueCertificateEmail
 } from '../data.js';
 import { useDataCache } from '../DataContext';
-
-import { GenericFacilityForm, IMNCIFormFields } from './FacilityForms.jsx';
 
 // --- Import Certificate Generators ---
 import { generateCertificatePdf, generateAllCertificatesPdf } from './CertificateGenerator';
@@ -242,7 +239,7 @@ const ShareCertificateModal = ({ isOpen, onClose, participantName, participantId
     );
 };
 
-// --- Reusable Searchable Select Component ---
+// --- Reusable Searchable Select Component (Used in Migration View) ---
 const SearchableSelect = ({ options, value, onChange, placeholder, disabled }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [inputValue, setInputValue] = useState('');
@@ -270,9 +267,6 @@ const SearchableSelect = ({ options, value, onChange, placeholder, disabled }) =
         const selectedOption = options.find(opt => opt.id === value);
         if (selectedOption && selectedOption.name === inputValue) {
             return options;
-        }
-        if (value === 'addNewFacility' && options[0]?.id === 'addNewFacility') {
-             return options.filter(opt => opt.id === 'addNewFacility' || opt.name.toLowerCase().includes(inputValue.toLowerCase()));
         }
 
         return options.filter(opt => opt.name.toLowerCase().includes(inputValue.toLowerCase()));
@@ -306,24 +300,14 @@ const SearchableSelect = ({ options, value, onChange, placeholder, disabled }) =
                         filteredOptions.map(opt => (
                             <div
                                 key={opt.id}
-                                className={`p-2 cursor-pointer hover:bg-gray-100 ${opt.id === 'addNewFacility' ? 'font-bold text-sky-600 bg-sky-50' : ''}`}
+                                className="p-2 cursor-pointer hover:bg-gray-100"
                                 onClick={() => handleSelect(opt)}
                             >
                                 {opt.name}
                             </div>
                         ))
                     ) : (
-                         inputValue && options[0]?.id === 'addNewFacility' ? (
-                            <div
-                                key={options[0].id}
-                                className={`p-2 cursor-pointer hover:bg-gray-100 ${options[0].id === 'addNewFacility' ? 'font-bold text-sky-600 bg-sky-50' : ''}`}
-                                onClick={() => handleSelect(options[0])}
-                            >
-                                {options[0].name}
-                            </div>
-                         ) : (
-                            <div className="p-2 text-gray-500">No results found.</div>
-                         )
+                        <div className="p-2 text-gray-500">No results found.</div>
                     )}
                 </div>
             )}
@@ -1140,77 +1124,71 @@ const CreatableNameInput = ({ value, onChange, options, onSelect, disabled }) =>
     );
 };
 
-// --- Add Facility Modal Component ---
-const AddFacilityModal = ({ isOpen, onClose, onSaveSuccess, initialState, initialLocality, initialName = '', setToast }) => {
-    const [isSubmitting, setIsSubmitting] =useState(false);
+// --- Facility Search Popup Modal ---
+const FacilitySearchModal = ({ isOpen, onClose, facilities, onSelect }) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const inputRef = useRef(null);
 
-    const facilityInitialData = useMemo(() => ({
-        'الولاية': initialState || '',
-        'المحلية': initialLocality || '',
-        'اسم_المؤسسة': initialName || '',
-        'هل_المؤسسة_تعمل': 'Yes',
-        'date_of_visit': new Date().toISOString().split('T')[0],
-        ' وجود_العلاج_المتكامل_لامراض_الطفولة': 'No',
-        'وجود_سجل_علاج_متكامل': 'No',
-        'وجود_كتيب_لوحات': 'No',
-        'ميزان_وزن': 'No',
-        'ميزان_طول': 'No',
-        'ميزان_حرارة': 'No',
-        'ساعة_مؤقت': 'No',
-        'غرفة_إرواء': 'No',
-        'immunization_office_exists': 'No',
-        'nutrition_center_exists': 'No',
-        'growth_monitoring_service_exists': 'No',
-        'imnci_staff': [], // Start with empty staff list
-    }), [initialState, initialLocality, initialName]);
-
-    const handleSaveFacility = async (formData) => {
-        setIsSubmitting(true);
-        try {
-            const submitterIdentifier = 'Participant Form - New Facility';
-            const { id, ...dataToSubmit } = formData;
-
-            if (!dataToSubmit['اسم_المؤسسة'] || !dataToSubmit['الولاية'] || !dataToSubmit['المحلية']) {
-                throw new Error("Facility Name, State, and Locality are required.");
-            }
-
-            // Ensure imnci_staff is an array before submitting
-             dataToSubmit.imnci_staff = Array.isArray(dataToSubmit.imnci_staff) ? dataToSubmit.imnci_staff : [];
-
-            await submitFacilityDataForApproval(dataToSubmit, submitterIdentifier);
-
-            setToast({ show: true, message: "New facility submitted for approval. It may take time to appear in the list.", type: 'info' });
-
-            onSaveSuccess({
-                id: `pending_${Date.now()}`,
-                ...dataToSubmit
-            });
-            onClose();
-
-        } catch (error) {
-            console.error("Failed to submit new facility:", error);
-            setToast({ show: true, message: `Error submitting facility: ${error.message}`, type: 'error' });
-        } finally {
-            setIsSubmitting(false);
+    // Auto-focus the search input when modal opens
+    useEffect(() => {
+        if (isOpen) {
+            setSearchTerm('');
+            setTimeout(() => {
+                if (inputRef.current) inputRef.current.focus();
+            }, 100);
         }
-    };
+    }, [isOpen]);
+
+    const filteredFacilities = useMemo(() => {
+        if (!facilities) return [];
+        return facilities.filter(f => 
+            f['اسم_المؤسسة'] && f['اسم_المؤسسة'].toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [facilities, searchTerm]);
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Add New Health Facility">
-             <div className="p-1 max-h-[80vh] overflow-y-auto">
-                <GenericFacilityForm
-                    initialData={facilityInitialData}
-                    onSave={handleSaveFacility}
-                    onCancel={onClose}
-                    setToast={setToast}
-                    title="بيانات المنشأة الصحية الجديدة"
-                    subtitle={`Adding a new facility in ${STATE_LOCALITIES[initialState]?.ar || initialState}, ${STATE_LOCALITIES[initialState]?.localities.find(l=>l.en === initialLocality)?.ar || initialLocality}`}
-                    isPublicForm={false}
-                    saveButtonText="Submit New Facility for Approval"
-                    isSubmitting={isSubmitting}
-                >
-                    {(props) => <IMNCIFormFields {...props} />}
-                </GenericFacilityForm>
+        <Modal isOpen={isOpen} onClose={onClose} title="Select Health Facility">
+            <div className="p-4 h-[60vh] flex flex-col">
+                <div className="mb-4">
+                    <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Search className="h-5 w-5 text-gray-400" />
+                        </div>
+                        <Input
+                            ref={inputRef}
+                            type="text"
+                            placeholder="Type to search facilities..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10"
+                        />
+                    </div>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto border rounded-md bg-gray-50">
+                    {filteredFacilities.length > 0 ? (
+                        filteredFacilities.map(facility => (
+                            <div
+                                key={facility.id}
+                                className="p-3 border-b bg-white cursor-pointer hover:bg-gray-100 transition-colors"
+                                onClick={() => {
+                                    onSelect(facility);
+                                    onClose();
+                                }}
+                            >
+                                <div className="font-medium text-gray-800">{facility['اسم_المؤسسة']}</div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="p-4 text-center text-gray-500">
+                            No facilities match "{searchTerm}".
+                        </div>
+                    )}
+                </div>
+                
+                <div className="mt-4 flex justify-end">
+                    <Button variant="secondary" onClick={onClose}>Cancel</Button>
+                </div>
             </div>
         </Modal>
     );
@@ -1964,11 +1942,10 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
     const [isLoadingFacilities, setIsLoadingFacilities] = useState(false);
     const [selectedFacility, setSelectedFacility] = useState(null); 
     const [isEditingExistingWorker, setIsEditingExistingWorker] = useState(false);
+    const [isFacilitySearchOpen, setIsFacilitySearchOpen] = useState(false);
 
     const [showNewParticipantForm, setShowNewParticipantForm] = useState(false);
-    const [isAddFacilityModalOpen, setIsAddFacilityModalOpen] = useState(false);
-    const [newFacilityNameSuggestion, setNewFacilityNameSuggestion] = useState('');
-
+    
     const initialJobTitle = initialData?.job_title || '';
     const isInitialJobOther = initialJobTitle && !jobTitleOptions.includes(initialJobTitle);
     const [job, setJob] = useState(isInitialJobOther ? 'Other' : initialJobTitle);
@@ -2065,16 +2042,11 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
     }, [state, locality, initialData?.facilityId, initialData?.center_name, isIccm]); 
 
 
-    // Handle Facility Selection or "Add New"
-    const handleFacilitySelect = (facilityIdOrAction) => {
+    // Handle Facility Selection
+    const handleFacilitySelect = (facilityId) => {
         setError('');
-        if (facilityIdOrAction === 'addNewFacility') {
-            setNewFacilityNameSuggestion(''); 
-            setIsAddFacilityModalOpen(true);
-            return;
-        }
 
-        const facility = facilitiesInLocality.find(f => f.id === facilityIdOrAction);
+        const facility = facilitiesInLocality.find(f => f.id === facilityId);
         setSelectedFacility(facility || null);
         
         setCenter(facility ? String(facility['اسم_المؤسسة'] || '') : '');
@@ -2115,16 +2087,8 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
         }
     };
 
-     const handleNewFacilitySaved = (newlySubmittedFacilityData) => {
-        const representation = {
-            id: `pending_${Date.now()}`, 
-            'اسم_المؤسسة': newlySubmittedFacilityData['اسم_المؤسسة'],
-            'الولاية': newlySubmittedFacilityData['الولاية'],
-            'المحلية': newlySubmittedFacilityData['المحلية'],
-             ...newlySubmittedFacilityData 
-        };
-        setFacilitiesInLocality(prev => [...prev, representation]);
-        handleFacilitySelect(representation.id);
+    const handleFacilitySelectFromModal = (facility) => {
+        handleFacilitySelect(facility.id);
     };
 
     const handleHealthWorkerSelect = (worker) => {
@@ -2250,22 +2214,13 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
         onSave(p, facilityUpdatePayload);
     };
 
-    const facilityOptionsForSelect = useMemo(() => {
-        const options = (facilitiesInLocality || []).map(f => ({ id: f.id, name: f['اسم_المؤسسة'] }));
-        options.unshift({ id: 'addNewFacility', name: "+ Add New Facility..." });
-        return options;
-    }, [facilitiesInLocality]);
-
     return (
         <>
-            <AddFacilityModal
-                isOpen={isAddFacilityModalOpen}
-                onClose={() => setIsAddFacilityModalOpen(false)}
-                onSaveSuccess={handleNewFacilitySaved}
-                initialState={state}
-                initialLocality={locality}
-                initialName={newFacilityNameSuggestion}
-                setToast={setError} 
+            <FacilitySearchModal 
+                isOpen={isFacilitySearchOpen}
+                onClose={() => setIsFacilitySearchOpen(false)}
+                facilities={facilitiesInLocality}
+                onSelect={handleFacilitySelectFromModal}
             />
 
              {showNewParticipantForm && (
@@ -2328,13 +2283,25 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                             </FormGroup>
                         ) : (
                             <FormGroup label={isEtat ? "Hospital Name" : "Health Facility Name"}>
-                                <SearchableSelect
-                                    value={selectedFacility?.id || ''}
-                                    onChange={handleFacilitySelect}
-                                    options={facilityOptionsForSelect}
-                                    placeholder={isLoadingFacilities ? "Loading..." : (!locality ? "Select Locality first" : "Search or Add New Facility...")}
-                                    disabled={isLoadingFacilities || !locality}
-                                />
+                                <div 
+                                    onClick={() => {
+                                        if (!isLoadingFacilities && locality) {
+                                            setIsFacilitySearchOpen(true);
+                                        }
+                                    }}
+                                    className={`relative ${!locality ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+                                >
+                                    <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                                        <Search className="w-5 h-5 text-gray-400" />
+                                    </div>
+                                    <Input
+                                        value={selectedFacility ? selectedFacility['اسم_المؤسسة'] : center}
+                                        readOnly
+                                        placeholder={isLoadingFacilities ? "Loading..." : (!locality ? "Select Locality first" : "Click to search facility...")}
+                                        className="cursor-pointer bg-white pr-10" 
+                                        disabled={isLoadingFacilities || !locality}
+                                    />
+                                </div>
                             </FormGroup>
                         )}
                         
