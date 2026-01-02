@@ -654,8 +654,8 @@ export const generateAllCertificatesPdf = async (course, participants, federalPr
             }
             firstPage = false;
             
-            const imgData = canvas.toDataURL('image/png');
-            doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+            const imgData = canvas.toDataURL('image/jpeg', 1); // 100% quality JPEG
+                     doc.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight, undefined, 'FAST');
         }
     }
 
