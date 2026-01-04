@@ -46,10 +46,10 @@ const getCertificateCourseTitle = (courseType, language = 'en') => {
         switch (courseType) {
             case 'ICCM': return 'العلاج المتكامل للأطفال أقل من 5 سنوات في المجتمع';
             case 'IMNCI': return 'العلاج المتكامل للاطفال اقل من 5 سنوات (IMNCI)';
-            case 'ETAT': return 'الفرز والتقييم والعلاج في حالات الطوارئ (ETAT)';
-            case 'EENC': return 'الرعاية الأساسية المبكرة لحديثي الولادة (EENC)';
+            case 'ETAT': return 'الفرز والتقييم والعلاج للاطفال اقل من 5 سنوات (ETAT)';
+            case 'EENC': return 'الرعاية الضرورية المبكرة لحديثي الولادة (EENC)';
             case 'IPC': return 'مكافحة العدوى (وحدة حديثي الولادة)';
-            case 'Small & Sick Newborn': return 'إدارة حالات حديثي الولادة المرضى وصغار الحجم';
+            case 'Small & Sick Newborn': return 'رعاية الاطفال حديثي الولادة المرضى ةالصغار';
             default: return courseType;
         }
     }
@@ -282,8 +282,8 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
             <div style={{
                 position: 'absolute',
                 top: isArabic ? '90mm' : '90mm',
-                left: '60mm',
-                right: '60mm',
+                left: '30mm',
+                right: '30mm',
                 textAlign: 'center',
                 fontSize: '35px',
                 fontWeight: 'bold',
@@ -297,7 +297,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
             {/* Completion Text */}
             <div style={{
                 position: 'absolute',
-                top: isArabic ? '105mm' : '105mm', 
+                top: isArabic ? '108mm' : '108mm', 
                 left: '50mm',
                 right: '50mm',
                 textAlign: 'center',
