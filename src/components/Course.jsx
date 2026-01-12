@@ -19,7 +19,8 @@ import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES,
 } from './constants.js';
 import html2canvas from 'html2canvas';
-import { FacilitatorDataForm } from './Facilitator.jsx';
+// FacilitatorDataForm is no longer needed in this view as adding is disabled
+// import { FacilitatorDataForm } from './Facilitator.jsx'; 
 import { db } from '../firebase';
 import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { DEFAULT_ROLE_PERMISSIONS, ALL_PERMISSIONS } from './AdminDashboard';
@@ -366,6 +367,7 @@ export function CourseManagementView({
 
     facilitatorsList,
     onSaveCourse, 
+    // These are no longer needed as adding new is disabled
     onAddNewFacilitator,
     onAddNewCoordinator,
     onAddNewFunder
@@ -587,9 +589,6 @@ export function CourseManagementView({
                         federalCoordinatorsList={federalCoordinators || []}
                         stateCoordinatorsList={stateCoordinators || []}
                         localityCoordinatorsList={localityCoordinators || []}
-                        onAddNewFacilitator={onAddNewFacilitator}
-                        onAddNewCoordinator={onAddNewCoordinator}
-                        onAddNewFunder={onAddNewFunder}
                     />
                 )}
                 
@@ -654,55 +653,6 @@ export function CourseManagementView({
     );
 }
 
-
-const NewCoordinatorForm = ({ initialName, onCancel, onSave }) => {
-    const [name, setName] = useState(initialName || '');
-    const [state, setState] = useState('');
-    const [locality, setLocality] = useState('');
-    const [phoneNumber, setPhoneNumber] = useState('');
-
-    const handleSave = () => {
-        onSave({ name, state, locality, phoneNumber });
-    };
-
-    return (
-        <Card>
-            <h3 className="text-xl font-bold mb-4">Add New Coordinator</h3>
-            <FormGroup label="Name"><Input value={name} onChange={(e) => setName(e.target.value)} /></FormGroup>
-            <FormGroup label="State"><Select value={state} onChange={(e) => { setState(e.target.value); setLocality(''); }}><option value="">— Select State —</option>{Object.keys(STATE_LOCALITIES).sort().map(s => <option key={s} value={s}>{s}</option>)}</Select></FormGroup>
-            <FormGroup label="Locality"><Select value={locality} onChange={(e) => setLocality(e.target.value)} disabled={!state}><option value="">— Select Locality —</option>{(STATE_LOCALITIES[state]?.localities || []).sort((a,b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}</Select></FormGroup>
-            <FormGroup label="Phone Number"><Input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} /></FormGroup>
-            <div className="flex gap-2 justify-end mt-4">
-                <Button variant="secondary" onClick={onCancel}>Cancel</Button>
-                <Button onClick={handleSave}>Save Coordinator</Button>
-            </div>
-        </Card>
-    );
-};
-
-const NewFunderForm = ({ initialOrgName, onCancel, onSave }) => {
-    const [orgName, setOrgName] = useState(initialOrgName || '');
-    const [focalPerson, setFocalPerson] = useState('');
-    const [phoneNumber, setPhoneNumber] = useState('');
-
-    const handleSave = () => {
-        onSave({ orgName, focalPerson, phoneNumber });
-    };
-
-    return (
-        <Card>
-            <h3 className="text-xl font-bold mb-4">Add New Funding Partner</h3>
-            <FormGroup label="Organization Name"><Input value={orgName} onChange={(e) => setOrgName(e.target.value)} /></FormGroup>
-            <FormGroup label="Focal Person for Health"><Input value={focalPerson} onChange={(e) => setFocalPerson(e.target.value)} /></FormGroup>
-            <FormGroup label="Phone Number"><Input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} /></FormGroup>
-            <div className="flex gap-2 justify-end mt-4">
-                <Button variant="secondary" onClick={onCancel}>Cancel</Button>
-                <Button onClick={handleSave}>Save Partner</Button>
-            </div>
-        </Card>
-    );
-};
-
 const SearchableSelect = ({ label, options, value, onChange, onOpenNewForm, placeholder }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [inputValue, setInputValue] = useState(value || '');
@@ -737,8 +687,10 @@ const SearchableSelect = ({ label, options, value, onChange, onOpenNewForm, plac
     };
 
     const handleAddNew = () => {
-        onOpenNewForm(inputValue);
-        setIsOpen(false);
+        if (onOpenNewForm) {
+            onOpenNewForm(inputValue);
+            setIsOpen(false);
+        }
     };
 
     return (
@@ -758,12 +710,14 @@ const SearchableSelect = ({ label, options, value, onChange, onOpenNewForm, plac
             />
             {isOpen && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                    <div
-                        className={`p-2 cursor-pointer font-medium text-indigo-600 hover:bg-gray-100 ${isNewEntry ? 'border-b' : ''}`}
-                        onClick={handleAddNew}
-                    >
-                       {`+ Add "${isNewEntry ? inputValue : `New ${label ? label.replace(':', '') : ''}`}"`}
-                    </div>
+                    {onOpenNewForm && (
+                        <div
+                            className={`p-2 cursor-pointer font-medium text-indigo-600 hover:bg-gray-100 ${isNewEntry ? 'border-b' : ''}`}
+                            onClick={handleAddNew}
+                        >
+                           {`+ Add "${isNewEntry ? inputValue : `New ${label ? label.replace(':', '') : ''}`}"`}
+                        </div>
+                    )}
                     {filteredOptions.length > 0 ? (
                         filteredOptions.map(opt => (
                             <div
@@ -786,7 +740,6 @@ const SearchableSelect = ({ label, options, value, onChange, onOpenNewForm, plac
 
 export function CourseForm({ 
     courseType, initialData, facilitatorsList, fundersList, onCancel, onSave, 
-    onAddNewFacilitator, onAddNewCoordinator, onAddNewFunder, 
     federalCoordinatorsList = [], stateCoordinatorsList = [], localityCoordinatorsList = []
 }) {
     const [state, setState] = useState(initialData?.state || '');
@@ -804,20 +757,6 @@ export function CourseForm({
     const [localityCoordinator, setLocalityCoordinator] = useState(initialData?.locality_coordinator || '');
     const [courseProject, setCourseProject] = useState(initialData?.course_project || '');
     const [implementedBy, setImplementedBy] = useState(initialData?.implemented_by || '');
-
-
-    const [isNewFacilitatorModalOpen, setIsNewFacilitatorModalOpen] = useState(false);
-    const [newFacilitatorName, setNewFacilitatorName] = useState(''); 
-    const initialModalData = {
-        name: '', phone: '', email: '', courses: [], totDates: {}, certificateUrls: {}, currentState: '',
-        currentLocality: '', directorCourse: 'No', directorCourseDate: '', followUpCourse: 'No', 
-        followUpCourseDate: '', teamLeaderCourse: 'No', teamLeaderCourseDate: '', isClinicalInstructor: 'No', comments: '',
-        backgroundQualification: '', backgroundQualificationOther: '',
-    };
-    const [newFacilitatorData, setNewFacilitatorData] = useState(initialModalData);
-    const [newFacilitatorFiles, setNewFacilitatorFiles] = useState({});
-    const [modalError, setModalError] = useState('');
-    const [isModalLoading, setIsModalLoading] = useState(false);
 
     const [directorImciSubType, setDirectorImciSubType] = useState(initialData?.director_imci_sub_type || IMNCI_SUBCOURSE_TYPES[0]);
     const [clinicalImciSubType, setClinicalImciSubType] = useState(initialData?.clinical_instructor_imci_sub_type || IMNCI_SUBCOURSE_TYPES[0]);
@@ -1061,125 +1000,6 @@ export function CourseForm({
         onSave(payload);
     };
 
-    const [showNewCoordinatorForm, setShowNewCoordinatorForm] = useState(false);
-    const [newCoordinatorName, setNewCoordinatorName] = useState('');
-    const [showNewFunderForm, setShowNewFunderForm] = useState(false);
-    const [newFunderOrgName, setNewFunderOrgName] = useState('');
-
-    const handleOpenNewFacilitatorForm = (name) => {
-        setNewFacilitatorName(name); 
-        setNewFacilitatorData({ ...initialModalData, name: name }); 
-        setNewFacilitatorFiles({});
-        setModalError('');
-        setIsNewFacilitatorModalOpen(true); 
-    }
-
-    const handleModalFileChange = (certKey, file) => {
-        if (file) {
-            setNewFacilitatorFiles(prev => ({ ...prev, [certKey]: file }));
-        }
-    };
-
-    const handleSaveModalFacilitator = async () => {
-        const formData = newFacilitatorData;
-        const files = newFacilitatorFiles;
-
-        if (!formData.name || !formData.phone) {
-            setModalError('Facilitator Name and Phone Number are required.');
-            return;
-        }
-        const missingDates = formData.courses.filter(course => !formData.totDates[course]);
-        if (missingDates.length > 0) {
-            setModalError(`Please provide a ToT date for the following selected course(s): ${missingDates.join(', ')}.`);
-            return;
-        }
-        
-        setModalError('');
-        setIsModalLoading(true);
-
-        try {
-            let urls = {}; 
-            if (files) { 
-                for (const key in files) { 
-                    urls[key] = await uploadFile(files[key]); 
-                } 
-            } 
-            
-            const finalPayload = { ...formData, certificateUrls: urls };
-            
-            await onAddNewFacilitator(finalPayload); 
-
-            const email = finalPayload.email;
-            if (email) {
-                const facilitatorRole = 'facilitator';
-                const newPermissions = DEFAULT_ROLE_PERMISSIONS[facilitatorRole];
-
-                if (!newPermissions) {
-                    console.warn(`[RoleSync] Default permissions for role '${facilitatorRole}' not found.`);
-                } else {
-                    const usersRef = collection(db, "users");
-                    const q = query(usersRef, where("email", "==", email));
-                    const querySnapshot = await getDocs(q);
-
-                    if (!querySnapshot.empty) {
-                        const userDoc = querySnapshot.docs[0];
-                        await updateDoc(userDoc.ref, {
-                            role: facilitatorRole,
-                            permissions: { ...ALL_PERMISSIONS, ...newPermissions }
-                        });
-                        console.log(`[RoleSync] Successfully assigned 'facilitator' role to ${email}`);
-                    } else {
-                        console.warn(`[RoleSync] Could not find user with email ${email} to assign role.`);
-                    }
-                }
-            } else {
-                console.warn(`[RoleSync] New facilitator has no email. Skipping role assignment.`);
-            }
-
-            setIsNewFacilitatorModalOpen(false);
-            
-            setDirector(finalPayload.name);
-            setClinical(finalPayload.name);
-            
-        } catch (error) {
-            setModalError(`Error saving: ${error.message}`);
-        } finally {
-            setIsModalLoading(false);
-        }
-    };
-    
-    const handleCloseModal = () => {
-        if (isModalLoading) return;
-        setIsNewFacilitatorModalOpen(false);
-    };
-
-    const handleOpenNewCoordinatorForm = (name) => {
-        setNewCoordinatorName(name);
-        setShowNewCoordinatorForm(true);
-    }
-    const handleSaveNewCoordinator = async (coordinatorData) => {
-        await onAddNewCoordinator(coordinatorData);
-        setShowNewCoordinatorForm(false);
-        setCoordinator(coordinatorData.name);
-    }
-
-    const handleOpenNewFunderForm = (orgName) => {
-        setNewFunderOrgName(orgName);
-        setShowNewFunderForm(true);
-    }
-    const handleSaveNewFunder = async (funderData) => {
-        await onAddNewFunder(funderData);
-        setShowNewFunderForm(false);
-        setSupporter(funderData.orgName);
-    }
-
-    if (showNewCoordinatorForm) {
-        return <NewCoordinatorForm initialName={newCoordinatorName} onCancel={() => setShowNewCoordinatorForm(false)} onSave={handleSaveNewCoordinator} />;
-    }
-    if (showNewFunderForm) {
-        return <NewFunderForm initialOrgName={newFunderOrgName} onCancel={() => setShowNewFunderForm(false)} onSave={handleSaveNewFunder} />;
-    }
-
     return (
         <Card>
             <div className="p-6">
@@ -1198,7 +1018,6 @@ export function CourseForm({
                             value={coordinator}
                             onChange={setCoordinator}
                             options={federalCoordinatorOptions}
-                            onOpenNewForm={handleOpenNewCoordinatorForm}
                             placeholder="Type to search..."
                             label="Federal Course Coordinator"
                         />
@@ -1208,7 +1027,6 @@ export function CourseForm({
                             value={stateCoordinator}
                             onChange={setStateCoordinator}
                             options={stateCoordinatorOptions}
-                            onOpenNewForm={handleOpenNewCoordinatorForm}
                             placeholder="Type to search..."
                             label="State Course Coordinator"
                         />
@@ -1218,7 +1036,6 @@ export function CourseForm({
                             value={localityCoordinator}
                             onChange={setLocalityCoordinator}
                             options={localityCoordinatorOptions}
-                            onOpenNewForm={handleOpenNewCoordinatorForm}
                             placeholder="Type to search..."
                             label="Locality Course Coordinator"
                         />
@@ -1229,8 +1046,7 @@ export function CourseForm({
                             value={supporter}
                             onChange={setSupporter}
                             options={funderOptions}
-                            onOpenNewForm={handleOpenNewFunderForm}
-                            placeholder="Type to search or add a funder"
+                            placeholder="Type to search..."
                             label="Funded by"
                         />
                     </FormGroup>
@@ -1239,8 +1055,7 @@ export function CourseForm({
                             value={implementedBy}
                             onChange={setImplementedBy}
                             options={funderOptions}
-                            onOpenNewForm={handleOpenNewFunderForm}
-                            placeholder="Type to search or add an implementer"
+                            placeholder="Type to search..."
                             label="Implemented by"
                         />
                     </FormGroup>
@@ -1249,7 +1064,6 @@ export function CourseForm({
                             value={courseProject}
                             onChange={setCourseProject}
                             options={projectOptions}
-                            onOpenNewForm={() => alert('Please add new projects via the Partners page in Human Resources.')}
                             placeholder="Type to search for a project"
                             label="Course Project"
                         />
@@ -1269,7 +1083,6 @@ export function CourseForm({
                                             value={director}
                                             onChange={setDirector}
                                             options={directorOptions}
-                                            onOpenNewForm={handleOpenNewFacilitatorForm}
                                             placeholder="Select Director"
                                             label="Course Director"
                                         />
@@ -1290,7 +1103,6 @@ export function CourseForm({
                                                 value={clinical}
                                                 onChange={setClinical}
                                                 options={clinicalInstructorOptions}
-                                                onOpenNewForm={handleOpenNewFacilitatorForm}
                                                 placeholder="Select Instructor"
                                                 label="Clinical Instructor"
                                             />
@@ -1342,7 +1154,6 @@ export function CourseForm({
                                                     value={assignment.name}
                                                     onChange={(value) => updateFacilitatorAssignment(groupName, index, 'name', value)}
                                                     options={facilitatorOptions}
-                                                    onOpenNewForm={handleOpenNewFacilitatorForm}
                                                     placeholder="Select Facilitator"
                                                     label="Facilitator"
                                                 />
@@ -1369,30 +1180,6 @@ export function CourseForm({
                     <Button variant="secondary" onClick={onCancel}>Cancel</Button>
                     <Button onClick={submit}>Save Course</Button>
                 </div>
-
-                <Modal isOpen={isNewFacilitatorModalOpen} onClose={handleCloseModal} title="Add New Facilitator" size="2xl">
-                    {isModalLoading && <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-20"><Spinner /></div>}
-                    <CardBody>
-                        <p className="mb-4 text-sm text-gray-600">
-                            Fill in the full details for the new facilitator. This will create a new facilitator profile and add them to the list.
-                        </p>
-                        {modalError && <div className="p-3 mb-4 rounded-md bg-red-50 text-red-800">{modalError}</div>}
-                        
-                        <div className="max-h-[60vh] overflow-y-auto p-1">
-                            <FacilitatorDataForm 
-                                data={newFacilitatorData} 
-                                onDataChange={setNewFacilitatorData}
-                                onFileChange={handleModalFileChange}
-                            />
-                        </div>
-                    </CardBody>
-                    <CardFooter>
-                        <Button variant="secondary" onClick={handleCloseModal} disabled={isModalLoading}>Cancel</Button>
-                        <Button onClick={handleSaveModalFacilitator} disabled={isModalLoading}>
-                            {isModalLoading ? 'Saving...' : 'Save Facilitator'}
-                        </Button>
-                    </CardFooter>
-                </Modal>
             </div>
         </Card>
     );

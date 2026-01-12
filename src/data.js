@@ -419,6 +419,48 @@ export async function approveFacilitySubmission(submission, approverEmail) {
     await updateDoc(submissionRef, { status: 'approved', approvedBy: approverEmail, approvedAt: serverTimestamp() });
 }
 
+/**
+ * Fetches all health facilities for a specific locality.
+ * Used for the Locality Bulk Update public view.
+ */
+export async function listFacilitiesByLocality(state, locality) {
+    try {
+        const q = query(
+            collection(db, "healthFacilities"), 
+            where("الولاية", "==", state), 
+            where("المحلية", "==", locality)
+        );
+        const snapshot = await getDocs(q); // Uses the existing dispatchOpEvent tracking
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error fetching facilities by locality:", error);
+        throw error;
+    }
+}
+
+/**
+ * Submits a batch of facility updates for approval.
+ */
+export async function submitLocalityBatchUpdate(updates, localityName) {
+    const batch = writeBatch(db); // Uses the tracked writeBatch wrapper
+    const submissionDate = serverTimestamp();
+    
+    for (const update of updates) {
+        const submissionData = {
+            ...update,
+            submittedAt: submissionDate,
+            status: 'pending',
+            updated_by: `Locality Bulk Update: ${localityName}`
+        };
+        const submissionRef = doc(collection(db, "facilitySubmissions"));
+        batch.set(submissionRef, submissionData);
+    }
+    
+    await batch.commit(); // Dispatches 'write' op events
+    return true;
+}
+
+
 export async function listHealthFacilities(filters = {}) {
     let q = collection(db, "healthFacilities");
     const conditions = [];

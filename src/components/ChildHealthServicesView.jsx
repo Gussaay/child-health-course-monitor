@@ -1,32 +1,23 @@
 // ChildHealthServicesView.jsx
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable'; // --- MODIFICATION: Added autotable import ---
 import { getAuth } from "firebase/auth";
 import { writeBatch } from "firebase/firestore";
 import { db } from "../firebase";
 import { useDataCache } from '../DataContext';
 import { amiriFontBase64 } from './AmiriFont.js';
 
-// --- NEW: Imports for html2canvas PDF export ---
-import html2canvas from 'html2canvas';
-import { Capacitor } from '@capacitor/core';
-import { Filesystem, Directory } from '@capacitor/filesystem';
-import { FileOpener } from '@capacitor-community/file-opener';
-// --- END NEW IMPORTS ---
+// --- ICONS ---
+import { PdfIcon } from './CommonComponents';
 
-// --- MODIFICATION: Import the new map modal ---
 import LocationMapModal from './ChildHealthServicesMap.jsx';
 
-// Turf.js for location checking (still needed for mismatch check)
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { point } from '@turf/helpers';
 
 import {
     Card, PageHeader, Button, FormGroup, Select, Table,
-    Modal, Spinner, EmptyState, Checkbox, Input,
-    PdfIcon // --- NEW: Added PdfIcon ---
+    Modal, Spinner, EmptyState, Checkbox, Input
 } from './CommonComponents';
 import {
     saveFacilitySnapshot,
@@ -40,6 +31,7 @@ import {
     approveFacilitySubmission,
     rejectFacilitySubmission,
     submitFacilityDataForApproval,
+    listFacilitiesByLocality
 } from "../data.js";
 import {
     GenericFacilityForm,
@@ -50,18 +42,50 @@ import {
 } from './FacilityForms.jsx';
 import { STATE_LOCALITIES } from "./constants.js";
 
-// ... (Removed map/leaflet components remain removed) ...
-
-// --- TABS & TITLES ---
-// ... (TABS and ARABIC_TITLES remain unchanged) ...
 const TABS = {
     PENDING: 'Pending Submissions',
     ALL: 'All Facilities',
 };
-const ARABIC_TITLES = {}; // Removed service-specific titles
+const ARABIC_TITLES = {};
 
-// --- HELPER for Template/Download Configuration ---
-// ... (getServiceConfig remains unchanged) ...
+// --- HELPER FUNCTIONS ---
+
+const deepEqual = (obj1, obj2) => JSON.stringify(obj1) === JSON.stringify(obj2);
+
+const getDisplayableValue = (value) => {
+    if (value === null || value === undefined) return 'N/A';
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (value instanceof Date) return value.toLocaleDateString();
+    if (typeof value === 'object' && value !== null) {
+         if (Array.isArray(value)) { return value.length > 0 ? value.map(v => v.name || JSON.stringify(v)).join(', ') : 'N/A'; }
+         if ('primary' in value || 'secondary' in value || 'tertiary' in value) {
+             const levels = [];
+             if (value.primary) levels.push('Primary');
+             if (value.secondary) levels.push('Special Care');
+             if (value.tertiary) levels.push('NICU');
+             return levels.length > 0 ? levels.join(', ') : 'N/A';
+         }
+         return JSON.stringify(value);
+    }
+    return String(value);
+};
+
+const FIELD_LABELS_FOR_COMPARISON = {
+    'اسم_المؤسسة': 'Facility Name', 'الولاية': 'State', 'المحلية': 'Locality', 'نوع_المؤسسةالصحية': 'Facility Type', 'هل_المؤسسة_تعمل': 'Functioning', '_الإحداثيات_latitude': 'Latitude', '_الإحداثيات_longitude': 'Longitude', 'وجود_العلاج_المتكامل_لامراض_الطفولة': 'IMNCI Service', 'العدد_الكلي_لكوادر_طبية_العاملة_أطباء_ومساعدين': 'IMNCI Total Staff', 'العدد_الكلي_للكودار_ المدربة_على_العلاج_المتكامل': 'IMNCI Trained Staff', 'eenc_provides_essential_care': 'EENC Service', 'eenc_trained_workers': 'EENC Trained Workers', 'neonatal_level_of_care': 'Neonatal Level of Care', 'neonatal_total_beds': 'Neonatal Total Beds', 'neonatal_total_incubators': 'Neonatal Incubators', 'etat_has_service': 'ETAT Service', 'hdu_has_service': 'HDU Service', 'picu_has_service': 'PICU Service', 'imnci_staff': 'IMNCI Staff List'
+};
+
+const compareFacilities = (oldData, newData) => {
+    const changes = [];
+    const allKeys = new Set([...Object.keys(oldData || {}), ...Object.keys(newData || {})]);
+    allKeys.forEach(key => {
+        if (key.startsWith('_') || key === 'id' || key === 'submissionId' || key === 'submittedAt' || key === 'updated_by' || key === 'اخر تحديث' || key === 'date_of_visit') { return; }
+        const oldValue = oldData?.[key];
+        const newValue = newData?.[key];
+        if (!deepEqual(oldValue, newValue)) { changes.push({ key: key, label: FIELD_LABELS_FOR_COMPARISON[key] || key.replace(/_/g, ' '), from: getDisplayableValue(oldValue), to: getDisplayableValue(newValue) }); }
+    });
+    return changes;
+};
+
 const getServiceConfig = (serviceType) => {
     const baseConfig = { headers: ["ID", "الولاية", "المحلية", "اسم المؤسسة", "نوع المؤسسةالصحية", "نوع الخدمات", "Date of Visit"], dataKeys: ["id", "الولاية", "المحلية", "اسم_المؤسسة", "نوع_المؤسسةالصحية", "eenc_service_type", "date_of_visit"] };
     const baseImnciHeaders = ["هل المؤسسة تعمل", "هل توجد حوافز للاستاف", "ما هي المنظمة المقدم للحوافز", "هل تشارك المؤسسة في أي مشروع", "ما هو اسم المشروع", "رقم هاتف المسئول من المؤسسة", "وجود العلاج المتكامل لامراض الطفولة", "العدد الكلي للكوادر الطبية العاملة (أطباء ومساعدين)", "العدد الكلي للكودار المدربة על العلاج المتكامل", "وجود سجل علاج متكامل", "وجود كتيب لوحات", "ميزان وزن", "ميزان طول", "ميزان حرارة", "ساعة مؤقت", "غرفة إرواء", "وجود الدعم المادي", "_الإحداثيات_latitude", "_الإحداثيات_longitude", "هل يوجد مكتب تحصين", "اين يقع اقرب مركز تحصين", "هل يوجد مركز تغذية خارجي", "اين يقع اقرب مركز تغذية خارجي", "هل يوجد خدمة متابعة النمو"];
@@ -88,23 +112,11 @@ const LOCALITY_EN_TO_AR_MAP = Object.values(STATE_LOCALITIES).flatMap(s => s.loc
     return acc;
 }, {});
 
-// --- MODIFICATION: Moved helper functions to top-level ---
 const getStateName = (stateKey) => STATE_LOCALITIES[stateKey]?.ar || stateKey || 'N/A';
 const getLocalityName = (stateKey, localityKey) => { if (!stateKey || !localityKey) return 'N/A'; const state = STATE_LOCALITIES[stateKey]; if (!state) return localityKey; const locality = state.localities.find(l => l.en === localityKey); return locality?.ar || localityKey; };
 
-// --- NEW: Text-based helper for PDF export ---
-const getServiceBadgesText = (f) => {
-    const services = [];
-    if (f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes') services.push('IMNCI');
-    if (f.eenc_provides_essential_care === 'Yes') services.push('EENC');
-    if (f.neonatal_level_of_care && (f.neonatal_level_of_care.primary || f.neonatal_level_of_care.secondary || f.neonatal_level_of_care.tertiary)) services.push('Neonatal');
-    if (f.etat_has_service === 'Yes' || f.hdu_has_service === 'Yes' || f.picu_has_service === 'Yes') services.push('Critical');
-    if (services.length === 0) return 'None';
-    return services.join(', ');
-};
+// --- SUB-COMPONENTS ---
 
-// --- SERVICE-SPECIFIC TAB COMPONENTS ---
-// --- MODIFIED: AllFacilitiesTab ---
 const AllFacilitiesTab = ({ facilities, onEdit, onDelete, onGenerateLink, onOpenMap, emptyMessage, canApproveSubmissions, canManageFacilities }) => {
     const getServiceBadges = (f) => {
         const services = [];
@@ -115,9 +127,6 @@ const AllFacilitiesTab = ({ facilities, onEdit, onDelete, onGenerateLink, onOpen
         if (services.length === 0) return <span className="text-xs text-gray-500">None</span>;
         return <div className="flex flex-wrap gap-1">{services.map(s => <span key={s.name} className={`px-2 py-1 text-xs font-medium rounded-full ${s.color}`}>{s.name}</span>)}</div>;
     };
-    // --- MODIFICATION: Uses top-level helpers now ---
-    // const getStateName = ... (removed)
-    // const getLocalityName = ... (removed)
 
     return (
         <Table headers={['State', 'Locality', 'Facility Name', 'Functioning', 'Services Available', 'Last Update', 'Actions']}>
@@ -153,7 +162,6 @@ const AllFacilitiesTab = ({ facilities, onEdit, onDelete, onGenerateLink, onOpen
     );
 };
 
-// ... (PendingSubmissionsTab remains unchanged) ...
 const PendingSubmissionsTab = ({ submissions, onApprove, onReject }) => {
     return (
         <Table headers={['Submission Date', 'Facility Name', 'State', 'Locality', 'Submitted By', 'Actions']}>
@@ -165,9 +173,7 @@ const PendingSubmissionsTab = ({ submissions, onApprove, onReject }) => {
                         <td>{s.submittedAt?.toDate ? s.submittedAt.toDate().toLocaleDateString() : 'N/A'}</td>
                         <td>
                             {s['اسم_المؤسسة']}
-                            {s._action === 'DELETE' && (
-                                <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">Deletion Request</span>
-                            )}
+                            {s._action === 'DELETE' && <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">Deletion Request</span>}
                         </td>
                         <td>{s['الولاية']}</td>
                         <td>{s['المحلية']}</td>
@@ -183,7 +189,126 @@ const PendingSubmissionsTab = ({ submissions, onApprove, onReject }) => {
     );
 };
 
-// ... (BulkUploadModal, DuplicateFinderModal, DataCleanupModal, LocationMismatchModal implementations - unchanged) ...
+// --- ApprovalComparisonModal ---
+const ApprovalComparisonModal = ({ submission, allFacilities, onClose, onConfirm, setToast }) => {
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const formRef = useRef(null);
+    const [isEditing, setIsEditing] = useState(false);
+    useEffect(() => { setIsEditing(false); }, [submission]);
+    const comparison = useMemo(() => {
+        if (!submission) return null;
+        const existingFacility = (allFacilities || []).find(f => String(f?.['اسم_المؤسسة'] || '').trim().toLowerCase() === String(submission['اسم_المؤسسة'] || '').trim().toLowerCase() && f?.['الولاية'] === submission['الولاية'] && f?.['المحلية'] === submission['المحلية'] );
+        if (existingFacility) { const changes = compareFacilities(existingFacility, submission); return { isUpdate: true, changes, hasChanges: changes.length > 0 }; }
+        return { isUpdate: false, changes: compareFacilities({}, submission), hasChanges: true };
+    }, [submission, allFacilities]);
+    const handleSaveFromForm = async (formData) => {
+        setIsSubmitting(true);
+        try {
+            if (submission?._action === 'DELETE') { formData._action = 'DELETE'; }
+            await onConfirm(formData);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+    const handleDirectApprove = async () => {
+         setIsSubmitting(true);
+         try { await onConfirm({ ...submission }); } finally { setIsSubmitting(false); }
+     };
+    const handleCancelEdit = () => { setIsEditing(false); };
+    if (!submission) return null;
+    const isDeletionRequest = submission?._action === 'DELETE';
+    const modalTitle = isDeletionRequest ? `Review Deletion Request: ${submission['اسم_المؤسسة']}` : `Review Submission: ${submission['اسم_المؤسسة']}`;
+    return (
+        <Modal isOpen={!!submission} onClose={onClose} title={modalTitle} size="full">
+            <div className="p-6 h-full flex flex-col relative">
+                 <div className="absolute top-4 right-4 z-10 flex gap-2">
+                     {(!isEditing || isDeletionRequest) && (
+                         <Button variant={isDeletionRequest ? "danger" : "success"} onClick={handleDirectApprove} disabled={isSubmitting}>
+                             {isSubmitting ? (isDeletionRequest ? 'Deleting...' : 'Approving...') : (isDeletionRequest ? 'Confirm Deletion' : 'Approve') }
+                         </Button>
+                     )}
+                     {!isSubmitting && ( <Button variant="secondary" onClick={onClose} > Close </Button> )}
+                 </div>
+                {isDeletionRequest && (
+                    <div className="p-4 bg-red-100 border border-red-300 rounded-md mb-4 mt-12 flex-shrink-0">
+                        <h4 className="font-semibold text-lg text-red-800">DELETION REQUEST</h4>
+                        <p className="text-red-700">A user has requested to **permanently delete** this facility. Review the details below. Approving will remove the facility.</p>
+                    </div>
+                )}
+                {!isDeletionRequest && comparison && (
+                     <div className={`p-4 border rounded-md mb-4 mt-12 flex-shrink-0 ${comparison.isUpdate ? 'bg-yellow-50 border-yellow-200' : 'bg-blue-50 border-blue-200'}`}>
+                        <h4 className={`font-semibold text-lg ${comparison.isUpdate ? 'text-yellow-800' : 'text-blue-800'}`}>
+                             {comparison.isUpdate ? "Summary of Changes" : "New Facility Submission"}
+                        </h4>
+                            {comparison.hasChanges ? (
+                            <div className="max-h-60 overflow-y-auto mt-2">
+                                <Table headers={comparison.isUpdate ? ['Field', 'Previous Value', 'New Value'] : ['Field', 'Submitted Value']}>
+                                     {comparison.changes .filter(c => c.to !== 'N/A') .map(({ label, from, to }) => (
+                                        <tr key={label}>
+                                            <td className="font-medium capitalize align-top py-2">{label}</td>
+                                            {comparison.isUpdate && <td className="align-top py-2"><div className="text-sm bg-red-100 text-red-800 p-2 rounded">{from}</div></td>}
+                                            <td className="align-top py-2"><div className="text-sm bg-green-100 text-green-800 p-2 rounded">{to}</div></td>
+                                        </tr>
+                                    ))}
+                                </Table>
+                            </div>
+                            ) : <p className={`mt-1 ${comparison.isUpdate ? 'text-yellow-700' : 'text-blue-700'}`}>
+                                 {comparison.isUpdate ? "No changes were detected compared to the existing record." : "No data submitted?"}
+                                </p>}
+                    </div>
+                )}
+                {(isEditing || isDeletionRequest) && (
+                    <div className={`flex-grow overflow-y-auto mb-4 ${!isDeletionRequest && !comparison?.isUpdate ? 'mt-12' : ''}`}>
+                        <GenericFacilityForm
+                            ref={formRef}
+                            initialData={submission}
+                            onSave={handleSaveFromForm}
+                            onCancel={handleCancelEdit}
+                            setToast={setToast}
+                            title={isDeletionRequest ? "Facility Details (Read-Only)" : "Edit & Approve Submission"}
+                            subtitle={isDeletionRequest ? "Review the data below before approving deletion." : "Make necessary corrections and click 'Approve'." }
+                            isReadOnly={isDeletionRequest}
+                            saveButtonText="Approve Changes"
+                            saveButtonVariant="success"
+                            cancelButtonText="Cancel Edit"
+                            isSubmitting={isSubmitting}
+                             userAssignedState={null}
+                             userAssignedLocality={null}
+                        >
+                            {(props) => (
+                                <>
+                                    <h3 className="text-lg font-semibold text-sky-700 border-b pb-2 mb-4">IMNCI Services (خدمات العلاج المتكامل لأمراض الطفولة)</h3>
+                                    <IMNCIFormFields {...props} isReadOnly={isDeletionRequest} />
+                                    <hr className="my-6 border-t-2 border-gray-200" />
+                                    
+                                    <h3 className="text-lg font-semibold text-teal-700 border-b pb-2 mb-4">EENC Services (خدمات الرعاية الطارئة لحديثي الولادة)</h3>
+                                    <EENCFormFields {...props} isReadOnly={isDeletionRequest} />
+                                    <hr className="my-6 border-t-2 border-gray-200" />
+
+                                    <h3 className="text-lg font-semibold text-indigo-700 border-b pb-2 mb-4">Neonatal Care Unit (وحدة رعاية حديثي الولادة)</h3>
+                                    <NeonatalFormFields {...props} isReadOnly={isDeletionRequest} />
+                                    <hr className="my-6 border-t-2 border-gray-200" />
+
+                                    <h3 className="text-lg font-semibold text-red-700 border-b pb-2 mb-4">Emergency & Critical Care (الطوارئ والرعاية الحرجة)</h3>
+                                    <CriticalCareFormFields {...props} isReadOnly={isDeletionRequest} />
+                                </>
+                            )}
+                        </GenericFacilityForm>
+                    </div>
+                )}
+                 {!isEditing && !isDeletionRequest && (
+                     <div className="flex justify-end gap-2 pt-4 border-t flex-shrink-0">
+                          <Button variant="info" onClick={() => setIsEditing(true)} disabled={isSubmitting}>
+                              Edit Before Approving
+                          </Button>
+                     </div>
+                 )}
+                 {(isEditing || isDeletionRequest) && <div className="pt-4 flex-shrink-0"></div>}
+            </div>
+        </Modal>
+    );
+};
+
 const MappingRow = React.memo(({ field, headers, selectedValue, onMappingChange }) => ( <div className="flex items-center"><label className="w-1/2 font-medium text-sm capitalize">{field.label}{field.key === 'اسم_المؤسسة' && '*'}</label><Select value={selectedValue || ''} onChange={(e) => onMappingChange(field.key, e.target.value)} className="flex-1"><option value="">-- Select Excel Column --</option>{headers.map(header => <option key={header} value={header}>{header}</option>)}</Select></div> ));
 const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, filteredData, cleanupConfig }) => {
      const [currentPage, setCurrentPage] = useState(0);
@@ -435,151 +560,7 @@ const LocationMismatchModal = ({ isOpen, onClose, mismatches, onFix }) => {
     );
 };
 
-
-// --- *** CODE REPLACED *** ---
-// --- MODIFICATION: PDF Export Helper (Adapted from CourseReportView & Rewritten to use jsPDF-autotable) ---
-const generateFacilityListPdf = async (filteredFacilities, activeTab, serviceTypeFilter, quality = 'print', onSuccess, onError) => {
-    // Define quality profiles for different export needs
-    const qualityProfiles = {
-        print: {
-            fileSuffix: '_Print_Quality'
-        },
-        screen: {
-            fileSuffix: '_Screen_Quality'
-        }
-    };
-
-    const profile = qualityProfiles[quality] || qualityProfiles.print;
-
-    // Use a dynamic name based on the current view
-    const filterName = serviceTypeFilter || activeTab || 'All';
-    const fileName = `Facility_List_${filterName}${profile.fileSuffix}.pdf`;
-
-    const doc = new jsPDF('portrait', 'mm', 'a4');
-    
-    // --- *** MODIFICATION: ADD FONT TO JSDPF *** ---
-    // 1. Add the font file (from AmiriFont.js) to the virtual file system
-    // We give it a name, e.g., "Amiri-Regular.ttf"
-    doc.addFileToVFS('Amiri-Regular.ttf', amiriFontBase64);
-    // 2. Add the font to jsPDF, linking the VFS file to a font name ("Amiri")
-    doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
-    // --- *** END MODIFICATION *** ---
-
-    // --- NEW: Group facilities by locality ---
-    const localityMap = new Map();
-    filteredFacilities.forEach(f => {
-        const localityKey = f['المحلية'] || 'Unassigned';
-        if (!localityMap.has(localityKey)) {
-            localityMap.set(localityKey, []);
-        }
-        localityMap.get(localityKey).push(f);
-    });
-
-    // Sort localities alphabetically based on their Arabic name
-    const sortedLocalityKeys = Array.from(localityMap.keys()).sort((a, b) => {
-        // Find state key from first facility in each group to get AR name
-        const stateKeyA = localityMap.get(a)[0]?.['الولاية'];
-        const stateKeyB = localityMap.get(b)[0]?.['الولاية'];
-        const nameA = getLocalityName(stateKeyA, a);
-        const nameB = getLocalityName(stateKeyB, b);
-        return nameA.localeCompare(nameB);
-    });
-
-    const headers = ['State', 'Locality', 'Facility Name', 'Functioning', 'Services Available', 'Last Update'];
-
-    // --- Loop through each locality and add a page ---
-    sortedLocalityKeys.forEach((localityKey, index) => {
-        const facilitiesInLocality = localityMap.get(localityKey);
-        const stateKey = facilitiesInLocality[0]['الولاية'];
-        const stateName = getStateName(stateKey);
-        const localityName = getLocalityName(stateKey, localityKey);
-
-        if (index > 0) {
-            doc.addPage();
-        }
-
-        // --- *** MODIFICATION: SET FONT FOR TITLE *** ---
-        doc.setFont('Amiri'); // Set the font before rendering text
-        doc.setFontSize(16);
-        
-        // Add Title for the page
-        // We use 'right' align for RTL text, placing it at the right margin (210 - 14)
-        doc.text(`Facility List: ${stateName} - ${localityName}`, 210 - 14, 15, { align: 'right' });
-
-        // Prepare body data
-        const body = facilitiesInLocality.map(f => [
-            getStateName(f['الولاية']),
-            getLocalityName(f['الولاية'], f['المحلية']),
-            f['اسم_المؤسسة'],
-            (f['هل_المؤسسة_تعمل'] === 'Yes' ? 'Yes' : (f['هل_المؤسسة_تعمل'] === 'No' ? 'No' : 'Not Set')),
-            getServiceBadgesText(f),
-            f.lastSnapshotAt?.toDate ? f.lastSnapshotAt.toDate().toLocaleDateString() : 'N/A'
-        ]);
-
-        // --- *** MODIFICATION: SET FONT FOR AUTOTABLE *** ---
-        autoTable(doc, {
-            head: [headers],
-            body: body,
-            startY: 22, // Start after the title
-            theme: 'grid',
-            styles: {
-                fontSize: 8,
-                cellPadding: 2,
-                font: 'Amiri', // Set font for the table body
-            },
-            headStyles: {
-                fillColor: [22, 160, 133], // Theme color
-                textColor: [255, 255, 255],
-                fontStyle: 'bold',
-                font: 'Amiri', // Set font for the table header
-            },
-            columnStyles: {
-                0: { cellWidth: 25 }, // State
-                1: { cellWidth: 30 }, // Locality
-                2: { cellWidth: 'auto' }, // Facility Name
-                3: { cellWidth: 20 }, // Functioning
-                4: { cellWidth: 30 }, // Services
-                5: { cellWidth: 22 }, // Last Update
-            },
-            // --- *** NEW: Add hook to handle Arabic text direction *** ---
-            didParseCell: function (data) {
-                // Check if the cell content contains Arabic characters
-                const arabicRegex = /[\u0600-\u06FF]/;
-                if (data.cell.raw && arabicRegex.test(data.cell.raw.toString())) {
-                    // If it's Arabic, align right
-                    data.cell.styles.halign = 'right';
-                }
-            }
-        });
-    });
-
-    try {
-        // --- SAVE LOGIC (unchanged from html2canvas version) ---
-        if (Capacitor.isNativePlatform()) {
-            const base64Data = doc.output('datauristring').split('base64,')[1];
-            const writeResult = await Filesystem.writeFile({
-                path: fileName,
-                data: base64Data,
-                directory: Directory.Downloads,
-            });
-            await FileOpener.open({
-                filePath: writeResult.uri,
-                contentType: 'application/pdf',
-            });
-            onSuccess(`PDF saved to Downloads folder: ${fileName}`);
-        } else {
-            doc.save(fileName);
-            onSuccess("PDF download initiated.");
-        }
-    } catch (e) {
-        console.error("Error generating or saving PDF:", e);
-        onError(`Failed to save PDF: ${e.message || 'Unknown error'}`);
-    }
-};
-// --- *** END CODE REPLACED *** ---
-
-
-// --- MAIN COMPONENT ---
+// --- MAIN COMPONENT: ChildHealthServicesView ---
 const ChildHealthServicesView = ({
     permissions = {},
     setToast,
@@ -590,7 +571,22 @@ const ChildHealthServicesView = ({
     canFindFacilityDuplicates,
     canCheckFacilityLocations
 }) => {
-    // ... (State declarations - unchanged) ...
+    const handleShareLocalityUpdateLink = () => {
+        if (!stateFilter || !localityFilter) {
+            setToast({ show: true, message: "Please select a State and Locality first.", type: "error" });
+            return;
+        }
+        
+        let url = `${window.location.origin}/public/locality-update/${stateFilter}/${localityFilter}`;
+        if (serviceTypeFilter) {
+            url += `?service=${encodeURIComponent(serviceTypeFilter)}`;
+        }
+        
+        navigator.clipboard.writeText(url).then(() => {
+            setToast({ show: true, message: "Locality update link copied to clipboard!", type: "success" });
+        });
+    };
+
     const { 
         healthFacilities, 
         fetchHealthFacilities, 
@@ -628,51 +624,37 @@ const ChildHealthServicesView = ({
     const [mismatchedFacilities, setMismatchedFacilities] = useState([]);
     const [isCheckingLocations, setIsCheckingLocations] = useState(false);
     const auth = getAuth();
-    
     const [hasManuallySelected, setHasManuallySelected] = useState(false);
-    
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(25);
-    
     const [isRefreshing, setIsRefreshing] = useState(false);
-
-    // --- NEW: State for PDF generation ---
     const [isPdfGenerating, setIsPdfGenerating] = useState(false);
 
-
-    // --- NEW: Notification helper ---
     const notify = (message, type = 'info') => {
         if (setToast) {
             setToast({ show: true, message, type });
         } else {
-            // Fallback for when setToast is not provided
             alert(message);
         }
     };
 
-    // --- MODIFICATION: Wrapper function to handle PDF generation state ---
    const handlePdfListGeneration = async (quality) => {
-        // --- Ensure we have data to export ---
         if (!filteredFacilities || filteredFacilities.length === 0) {
             notify("No facilities to export.", 'info');
             return;
         }
-        
         setIsPdfGenerating(true);
-        // Add a small delay to allow the UI to update to the loading state
         await new Promise(resolve => setTimeout(resolve, 100));
         try {
-            // Pass the notify functions as callbacks
             await generateFacilityListPdf(
-                filteredFacilities, // --- MODIFICATION: Pass all filtered data ---
+                filteredFacilities, 
                 activeTab,
                 serviceTypeFilter, 
                 quality,
-                (message) => notify(message, 'success'), // OnSuccess callback
-                (message) => notify(message, 'error')    // OnError callback
+                (message) => notify(message, 'success'), 
+                (message) => notify(message, 'error')    
             );
         } catch (error) {
-            // This catch is a fallback, but the helper should handle its own errors
             console.error("Failed to generate PDF:", error);
             notify("Sorry, there was an error generating the PDF.", 'error');
         } finally {
@@ -680,8 +662,6 @@ const ChildHealthServicesView = ({
         }
     };
 
-
-    // ... (Hooks and helper functions: availableStates, getCurrentFilters, handleOpenMapModal, handleSaveLocation, handleCheckLocations, handleFixMismatch, CLEANABLE_FIELDS_CONFIG, refreshSubmissions - all unchanged) ...
     const availableStates = useMemo(() => {
         const allStates = Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar) );
         if (!userStates || userStates.length === 0) {
@@ -722,7 +702,7 @@ const ChildHealthServicesView = ({
 
     const handleSaveLocation = async (newLocation) => {
         if (!facilityForMap) return;
-        const payload = { ...facilityForMap, _الإحداثيات_latitude: newLocation._الإحداثDates_latitude, _الإحداثيات_longitude: newLocation._الإحداثيات_longitude, date_of_visit: facilityForMap.date_of_visit || new Date().toISOString().split('T')[0], };
+        const payload = { ...facilityForMap, _الإحداثيات_latitude: newLocation._الإحداثيات_latitude, _الإحداثيات_longitude: newLocation._الإحداثيات_longitude, date_of_visit: facilityForMap.date_of_visit || new Date().toISOString().split('T')[0], };
         try {
             if (permissions.canApproveSubmissions) {
                 await saveFacilitySnapshot(payload);
@@ -803,7 +783,6 @@ const ChildHealthServicesView = ({
         }
     }, [ permissions, setToast, fetchPendingFacilitatorSubmissions, fetchPendingFederalSubmissions, fetchPendingStateSubmissions, fetchPendingLocalitySubmissions ]);
 
-    // ... (Data Fetching useEffect - unchanged) ...
     useEffect(() => {
         if (view === 'list') {
             const isLocalityMgr = permissions.manageScope === 'locality';
@@ -822,7 +801,6 @@ const ChildHealthServicesView = ({
         }
     }, [ view, stateFilter, localityFilter, facilityTypeFilter, functioningFilter, projectFilter, activeTab, fetchHealthFacilities, refreshSubmissions, userStates, userLocalities, permissions.manageScope, hasManuallySelected ]);
 
-    // ... (Memos: projectNames, uniquePendingSubmissions, filteredFacilities - unchanged) ...
     const projectNames = useMemo(() => {
         if (!healthFacilities) return [];
         const names = new Set();
@@ -874,7 +852,6 @@ const ChildHealthServicesView = ({
         return filtered;
     }, [ healthFacilities, stateFilter, localityFilter, facilityTypeFilter, functioningFilter, projectFilter, searchQuery, serviceTypeFilter, userStates, userLocalities, permissions.manageScope, hasManuallySelected ]);
 
-    // ... (Pagination logic: useEffect, paginatedFacilities - unchanged) ...
     useEffect(() => { setCurrentPage(1); }, [filteredFacilities]);
     
     const paginatedFacilities = useMemo(() => {
@@ -884,7 +861,6 @@ const ChildHealthServicesView = ({
         return filteredFacilities.slice(startIndex, endIndex);
     }, [filteredFacilities, currentPage, itemsPerPage]);
 
-    // ... (Handlers: handleStateChange, handleRefresh, handleSaveFacility, handleEditFacility, handleDeleteFacility, handleImport, handleConfirmApproval, handleReject, handleReviewSubmission, handleGenerateLink, handleShareLink, handleExportExcel - unchanged) ...
     const handleStateChange = (e) => { setStateFilter(e.target.value); setHasManuallySelected(true); if (permissions.manageScope !== 'locality') { setLocalityFilter(''); } };
      
     const handleRefresh = async () => {
@@ -1070,8 +1046,6 @@ const ChildHealthServicesView = ({
         XLSX.writeFile(workbook, `Export_${fileName}`);
     };
 
-    // --- MODIFICATION: handleExportPDF (autotable) is removed ---
-
     const formInitialData = useMemo(() => {
         if (editingFacility) { return editingFacility; }
         const prefilledData = {};
@@ -1081,7 +1055,6 @@ const ChildHealthServicesView = ({
     }, [editingFacility, userStates, userLocalities]);
 
 
-    // --- UPDATED: renderListView ---
     const renderListView = () => {
         const FACILITY_TYPES = ["مركز صحة الاسرة", "مستشفى ريفي", "وحدة صحة الاسرة", "مستشفى"];
         const SERVICE_TYPES = ['IMNCI', 'EENC', 'Neonatal', 'Critical Care'];
@@ -1177,11 +1150,10 @@ const ChildHealthServicesView = ({
                             {permissions.canManageFacilities && ( <Button onClick={() => { setEditingFacility(null); setView('form'); }}>Add New</Button> )}
                             {canBulkUploadFacilities && ( <Button onClick={() => setIsBulkUploadModalOpen(true)}>Bulk Upload</Button> )}
                             <Button variant="info" onClick={handleShareLink}>Share Entry Link</Button>
+                            <Button variant="info" onClick={handleShareLocalityUpdateLink}>Share Locality Update Link</Button>
+                            
                             <Button variant="secondary" onClick={handleExportExcel} disabled={!filteredFacilities || filteredFacilities.length === 0}>Export Excel</Button>
                             
-                            {/* --- MODIFICATION: "Export PDF (Data)" button is removed --- */}
-                            
-                            {/* --- MODIFICATION: PDF Export buttons now call the new data-based PDF generator --- */}
                             {isPdfGenerating ? (
                                 <Button disabled variant="secondary"><Spinner size="sm" /> Generating PDF...</Button>
                             ) : (
@@ -1194,7 +1166,6 @@ const ChildHealthServicesView = ({
                                     </Button>
                                 </>
                             )}
-                            {/* --- END MODIFICATION --- */}
                         </div>
                          
                         <div className="flex flex-wrap gap-2">
@@ -1215,7 +1186,6 @@ const ChildHealthServicesView = ({
                 {isFacilitiesLoading || isReviewLoading || (activeTab === TABS.PENDING && isSubmissionsLoading) ? (
                     <div className="flex justify-center items-center h-48"><Spinner /></div>
                 ) : (
-                    // --- MODIFICATION: ID remains for potential future use, but is no longer used by PDF export ---
                     <div className="mt-4" id="facility-list-content">
                         {tabsContent[activeTab]}
                     </div>
@@ -1255,7 +1225,6 @@ const ChildHealthServicesView = ({
         </Card>);
     };
 
-    // ... (renderFormView - unchanged) ...
     const renderFormView = () => {
         const formFields = { 'IMNCI': IMNCIFormFields, 'EENC': EENCFormFields, 'Neonatal': NeonatalFormFields, 'Critical Care': CriticalCareFormFields, };
         const currentTabForForm = serviceTypeFilter || 'IMNCI'; 
@@ -1296,7 +1265,6 @@ const ChildHealthServicesView = ({
         );
     };
     
-    // ... (Main return and Modals - unchanged) ...
     return (
         <>
             {view === 'list' ? renderListView() : renderFormView()}
@@ -1355,159 +1323,6 @@ const ChildHealthServicesView = ({
                 onFix={handleFixMismatch}
             />
         </>
-    );
-};
-
-// --- Comparison and Approval Modal Components ---
-// ... (deepEqual, getDisplayableValue, FIELD_LABELS_FOR_COMPARISON, compareFacilities, ApprovalComparisonModal - all unchanged) ...
-const deepEqual = (obj1, obj2) => JSON.stringify(obj1) === JSON.stringify(obj2);
-const getDisplayableValue = (value) => {
-    if (value === null || value === undefined) return 'N/A';
-    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-    if (value instanceof Date) return value.toLocaleDateString();
-    if (typeof value === 'object' && value !== null) {
-         if (Array.isArray(value)) { return value.length > 0 ? value.map(v => v.name || JSON.stringify(v)).join(', ') : 'N/A'; }
-         if ('primary' in value || 'secondary' in value || 'tertiary' in value) {
-             const levels = [];
-             if (value.primary) levels.push('Primary');
-             if (value.secondary) levels.push('Special Care');
-             if (value.tertiary) levels.push('NICU');
-             return levels.length > 0 ? levels.join(', ') : 'N/A';
-         }
-         return JSON.stringify(value);
-    }
-    return String(value);
-};
-const FIELD_LABELS_FOR_COMPARISON = {
-    'اسم_المؤسسة': 'Facility Name', 'الولاية': 'State', 'المحلية': 'Locality', 'نوع_المؤسسةالصحية': 'Facility Type', 'هل_المؤسسة_تعمل': 'Functioning', '_الإحداثيات_latitude': 'Latitude', '_الإحداثيات_longitude': 'Longitude', 'وجود_العلاج_المتكامل_لامراض_الطفولة': 'IMNCI Service', 'العدد_الكلي_لكوادر_طبية_العاملة_أطباء_ومساعدين': 'IMNCI Total Staff', 'العدد_الكلي_للكودار_ المدربة_على_العلاج_المتكامل': 'IMNCI Trained Staff', 'eenc_provides_essential_care': 'EENC Service', 'eenc_trained_workers': 'EENC Trained Workers', 'neonatal_level_of_care': 'Neonatal Level of Care', 'neonatal_total_beds': 'Neonatal Total Beds', 'neonatal_total_incubators': 'Neonatal Incubators', 'etat_has_service': 'ETAT Service', 'hdu_has_service': 'HDU Service', 'picu_has_service': 'PICU Service', 'imnci_staff': 'IMNCI Staff List'
-};
-const compareFacilities = (oldData, newData) => {
-    const changes = [];
-    const allKeys = new Set([...Object.keys(oldData || {}), ...Object.keys(newData || {})]);
-    allKeys.forEach(key => {
-        if (key.startsWith('_') || key === 'id' || key === 'submissionId' || key === 'submittedAt' || key === 'updated_by' || key === 'اخر تحديث' || key === 'date_of_visit') { return; }
-        const oldValue = oldData?.[key];
-        const newValue = newData?.[key];
-        if (!deepEqual(oldValue, newValue)) { changes.push({ key: key, label: FIELD_LABELS_FOR_COMPARISON[key] || key.replace(/_/g, ' '), from: getDisplayableValue(oldValue), to: getDisplayableValue(newValue) }); }
-    });
-    return changes;
-};
-const ApprovalComparisonModal = ({ submission, allFacilities, onClose, onConfirm, setToast }) => {
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const formRef = useRef(null);
-    const [isEditing, setIsEditing] = useState(false);
-    useEffect(() => { setIsEditing(false); }, [submission]);
-    const comparison = useMemo(() => {
-        if (!submission) return null;
-        const existingFacility = (allFacilities || []).find(f => String(f?.['اسم_المؤسسة'] || '').trim().toLowerCase() === String(submission['اسم_المؤسسة'] || '').trim().toLowerCase() && f?.['الولاية'] === submission['الولاية'] && f?.['المحلية'] === submission['المحلية'] );
-        if (existingFacility) { const changes = compareFacilities(existingFacility, submission); return { isUpdate: true, changes, hasChanges: changes.length > 0 }; }
-        return { isUpdate: false, changes: compareFacilities({}, submission), hasChanges: true };
-    }, [submission, allFacilities]);
-    const handleSaveFromForm = async (formData) => {
-        setIsSubmitting(true);
-        try {
-            if (submission?._action === 'DELETE') { formData._action = 'DELETE'; }
-            await onConfirm(formData);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-    const handleDirectApprove = async () => {
-         setIsSubmitting(true);
-         try { await onConfirm({ ...submission }); } finally { setIsSubmitting(false); }
-     };
-    const handleCancelEdit = () => { setIsEditing(false); };
-    if (!submission) return null;
-    const isDeletionRequest = submission?._action === 'DELETE';
-    const modalTitle = isDeletionRequest ? `Review Deletion Request: ${submission['اسم_المؤسسة']}` : `Review Submission: ${submission['اسم_المؤسسة']}`;
-    return (
-        <Modal isOpen={!!submission} onClose={onClose} title={modalTitle} size="full">
-            <div className="p-6 h-full flex flex-col relative">
-                 <div className="absolute top-4 right-4 z-10 flex gap-2">
-                     {(!isEditing || isDeletionRequest) && (
-                         <Button variant={isDeletionRequest ? "danger" : "success"} onClick={handleDirectApprove} disabled={isSubmitting}>
-                             {isSubmitting ? (isDeletionRequest ? 'Deleting...' : 'Approving...') : (isDeletionRequest ? 'Confirm Deletion' : 'Approve') }
-                         </Button>
-                     )}
-                     {!isSubmitting && ( <Button variant="secondary" onClick={onClose} > Close </Button> )}
-                 </div>
-                {isDeletionRequest && (
-                    <div className="p-4 bg-red-100 border border-red-300 rounded-md mb-4 mt-12 flex-shrink-0">
-                        <h4 className="font-semibold text-lg text-red-800">DELETION REQUEST</h4>
-                        <p className="text-red-700">A user has requested to **permanently delete** this facility. Review the details below. Approving will remove the facility.</p>
-                    </div>
-                )}
-                {!isDeletionRequest && comparison && (
-                     <div className={`p-4 border rounded-md mb-4 mt-12 flex-shrink-0 ${comparison.isUpdate ? 'bg-yellow-50 border-yellow-200' : 'bg-blue-50 border-blue-200'}`}>
-                        <h4 className={`font-semibold text-lg ${comparison.isUpdate ? 'text-yellow-800' : 'text-blue-800'}`}>
-                             {comparison.isUpdate ? "Summary of Changes" : "New Facility Submission"}
-                        </h4>
-                            {comparison.hasChanges ? (
-                            <div className="max-h-60 overflow-y-auto mt-2">
-                                <Table headers={comparison.isUpdate ? ['Field', 'Previous Value', 'New Value'] : ['Field', 'Submitted Value']}>
-                                     {comparison.changes .filter(c => c.to !== 'N/A') .map(({ label, from, to }) => (
-                                        <tr key={label}>
-                                            <td className="font-medium capitalize align-top py-2">{label}</td>
-                                            {comparison.isUpdate && <td className="align-top py-2"><div className="text-sm bg-red-100 text-red-800 p-2 rounded">{from}</div></td>}
-                                            <td className="align-top py-2"><div className="text-sm bg-green-100 text-green-800 p-2 rounded">{to}</div></td>
-                                        </tr>
-                                    ))}
-                                </Table>
-                            </div>
-                            ) : <p className={`mt-1 ${comparison.isUpdate ? 'text-yellow-700' : 'text-blue-700'}`}>
-                                 {comparison.isUpdate ? "No changes were detected compared to the existing record." : "No data submitted?"}
-                                </p>}
-                    </div>
-                )}
-                {(isEditing || isDeletionRequest) && (
-                    <div className={`flex-grow overflow-y-auto mb-4 ${!isDeletionRequest && !comparison?.isUpdate ? 'mt-12' : ''}`}>
-                        <GenericFacilityForm
-                            ref={formRef}
-                            initialData={submission}
-                            onSave={handleSaveFromForm}
-                            onCancel={handleCancelEdit}
-                            setToast={setToast}
-                            title={isDeletionRequest ? "Facility Details (Read-Only)" : "Edit & Approve Submission"}
-                            subtitle={isDeletionRequest ? "Review the data below before approving deletion." : "Make necessary corrections and click 'Approve'." }
-                            isReadOnly={isDeletionRequest}
-                            saveButtonText="Approve Changes"
-                            saveButtonVariant="success"
-                            cancelButtonText="Cancel Edit"
-                            isSubmitting={isSubmitting}
-                             userAssignedState={null}
-                             userAssignedLocality={null}
-                        >
-                            {(props) => (
-                                <>
-                                    <h3 className="text-lg font-semibold text-sky-700 border-b pb-2 mb-4">IMNCI Services (خدمات العلاج المتكامل لأمراض الطفولة)</h3>
-                                    <IMNCIFormFields {...props} isReadOnly={isDeletionRequest} />
-                                    <hr className="my-6 border-t-2 border-gray-200" />
-                                    
-                                    <h3 className="text-lg font-semibold text-teal-700 border-b pb-2 mb-4">EENC Services (خدمات الرعاية الطارئة لحديثي الولادة)</h3>
-                                    <EENCFormFields {...props} isReadOnly={isDeletionRequest} />
-                                    <hr className="my-6 border-t-2 border-gray-200" />
-
-                                    <h3 className="text-lg font-semibold text-indigo-700 border-b pb-2 mb-4">Neonatal Care Unit (وحدة رعاية حديثي الولادة)</h3>
-                                    <NeonatalFormFields {...props} isReadOnly={isDeletionRequest} />
-                                    <hr className="my-6 border-t-2 border-gray-200" />
-
-                                    <h3 className="text-lg font-semibold text-red-700 border-b pb-2 mb-4">Emergency & Critical Care (الطوارئ والرعاية الحرجة)</h3>
-                                    <CriticalCareFormFields {...props} isReadOnly={isDeletionRequest} />
-                                </>
-                            )}
-                        </GenericFacilityForm>
-                    </div>
-                )}
-                 {!isEditing && !isDeletionRequest && (
-                     <div className="flex justify-end gap-2 pt-4 border-t flex-shrink-0">
-                          <Button variant="info" onClick={() => setIsEditing(true)} disabled={isSubmitting}>
-                              Edit Before Approving
-                          </Button>
-                     </div>
-                 )}
-                 {(isEditing || isDeletionRequest) && <div className="pt-4 flex-shrink-0"></div>}
-            </div>
-        </Modal>
     );
 };
 

@@ -29,6 +29,11 @@ const ReportsView = lazy(() => import('./components/ReportsView'));
 const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
 const ParticipantReportView = lazy(() => import('./components/ParticipantReport').then(module => ({ default: module.ParticipantReportView })));
 const ChildHealthServicesView = lazy(() => import('./components/ChildHealthServicesView.jsx'));
+
+// --- UPDATED: Import from the new separate file ---
+// Note: Ensure the file is named 'child_helathservice_bulk-update.jsx' inside your components folder
+const LocalityBulkUpdateView = lazy(() => import('./components/child_helathservice_bulk-update'));
+
 const HumanResourcesPage = lazy(() => import('./components/HumanResources').then(module => ({ default: module.HumanResourcesPage })));
 const FacilitatorForm = lazy(() => import('./components/Facilitator').then(module => ({ default: module.FacilitatorForm })));
 const FacilitatorReportView = lazy(() => import('./components/Facilitator').then(module => ({ default: module.FacilitatorReportView })));
@@ -46,7 +51,6 @@ const ParticipantMigrationMappingView = lazy(() => import('./components/Particip
 // --- Import Certificate Views ---
 const CertificateVerificationView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.CertificateVerificationView })));
 const PublicCertificateDownloadView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicCertificateDownloadView })));
-// --- ADDED: Import for the Course Certificates Page ---
 const PublicCourseCertificatesView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicCourseCertificatesView }))); 
 
 const CourseTestForm = lazy(() => import('./components/CourseTestForm.jsx').then(module => ({ default: module.CourseTestForm })));
@@ -84,6 +88,7 @@ import { useDataCache } from './DataContext';
 import { useAuth } from './hooks/useAuth';
 import { SignInBox } from './auth-ui.jsx';
 
+
 // --- Permissions Defined Locally ---
 const ALL_PERMISSIONS = {
     canViewDashboard: true,
@@ -118,7 +123,6 @@ const DEFAULT_ROLE_PERMISSIONS = {
         'canManageCourse',
         'canManageFacilities'
     ],
-    // UPDATED: Removed 'canViewSkillsMentorship' from standard user permissions
     'user': [
         'canViewDashboard', 'canViewCourse', 'canViewHumanResource', 'canViewFacilities'
     ]
@@ -316,6 +320,10 @@ export default function App() {
     const [publicTestLoading, setPublicTestLoading] = useState(false);
     const [publicTestError, setPublicTestError] = useState(null);
 
+    // --- NEW STATE FOR LOCALITY BULK UPDATE ---
+    const [isLocalityBulkUpdateView, setIsLocalityBulkUpdateView] = useState(false);
+    const [publicLocalityData, setPublicLocalityData] = useState({ state: null, locality: null });
+
     const [operationCounts, setOperationCounts] = useState({ reads: 0, writes: 0 });
     const [isMonitorVisible, setIsMonitorVisible] = useState(true);
 
@@ -372,6 +380,9 @@ export default function App() {
             setPublicTestError(null);
             setPublicTestData({ course: null, participants: [], tests: [] });
 
+            setIsLocalityBulkUpdateView(false);
+            setPublicLocalityData({ state: null, locality: null });
+
 
             const facilityUpdateMatch = path.match(/^\/facilities\/data-entry\/([a-zA-Z0-9]+)\/?$/);
             if (path.startsWith('/facilities/data-entry/new')) {
@@ -417,6 +428,18 @@ export default function App() {
                 fetchData();
                 return; 
             }
+            
+            // --- NEW: Route check for Locality Bulk Update ---
+            const localityUpdateMatch = path.match(/^\/public\/locality-update\/([^\/]+)\/([^\/]+)\/?$/);
+            if (localityUpdateMatch) {
+                setIsLocalityBulkUpdateView(true);
+                setPublicLocalityData({
+                    state: decodeURIComponent(localityUpdateMatch[1]),
+                    locality: decodeURIComponent(localityUpdateMatch[2])
+                });
+                return;
+            }
+            // ------------------------------------------------
 
             const publicMentorshipMatch = path.match(/^\/mentorship\/submit\/([a-zA-Z0-9_]+)\/?$/);
             if (publicMentorshipMatch && publicMentorshipMatch[1]) {
@@ -1348,15 +1371,11 @@ export default function App() {
     
     const isPublicReportView = !!publicViewType; 
 
-    // --- FIX START: Define verification path synchronously ---
     const isVerificationPath = typeof window !== 'undefined' && window.location.pathname.startsWith('/verify/certificate/');
-    // --- NEW: Define certificate download path synchronously ---
     const isCertDownloadPath = typeof window !== 'undefined' && window.location.pathname.startsWith('/public/certificate/download/');
-    // --- NEW: Define course certificates page path synchronously ---
     const isCourseCertPagePath = typeof window !== 'undefined' && window.location.pathname.startsWith('/public/course/certificates/');
 
-    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath || isCertDownloadPath || isCourseCertPagePath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage';
-    // --- FIX END ---
+    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath || isCertDownloadPath || isCourseCertPagePath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || isLocalityBulkUpdateView;
 
     let mainContent;
 
@@ -1393,8 +1412,23 @@ export default function App() {
             else mainContent = <div className="p-8 text-center">Invalid form link.</div>;
         }
     }
+
+    else if (isLocalityBulkUpdateView) {
+        if (publicLocalityData.state && publicLocalityData.locality) {
+            mainContent = (
+                <Suspense fallback={<Card><Spinner /></Card>}>
+                    <LocalityBulkUpdateView 
+                        stateParam={publicLocalityData.state}
+                        localityParam={publicLocalityData.locality}
+                        setToast={setToast}
+                    />
+                </Suspense>
+            );
+        } else {
+             mainContent = <Card><div className="p-4 text-center">Invalid Link Parameters</div></Card>;
+        }
+    }
     
-    // --- FIX START: Modified public report view logic ---
     else if (isPublicReportView || isVerificationPath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage') { 
         if (publicViewLoading || ((isVerificationPath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage') && !publicViewData && !sharedViewError)) {
             mainContent = <Card><div className="flex justify-center p-8"><Spinner /></div></Card>;
@@ -1479,7 +1513,6 @@ export default function App() {
              mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">Could not load report data.</div></Card>;
         }
     }
-    // --- FIX END ---
     
     else if (isPublicMonitoringView) {
         if (authLoading) {

@@ -15,7 +15,7 @@ const localitiesGeoUrl = "/sudan_localities.json";
 // Maps app state names to the names used in the localities GeoJSON file.
 const STATE_NAME_MAP = {
   "Gezira": "Al Jazirah",
-  "Gedarif": "Al Qadarif",
+  "Gedarif": "Gedaref",
 };
 
 

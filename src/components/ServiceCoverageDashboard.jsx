@@ -15,7 +15,7 @@ const mapCoordinates = {
     "White Nile":     { lat: 13.16, lng: 32.66, scale: 9000 },
     "Blue Nile":      { lat: 11.76, lng: 34.35, scale: 12000 },
     "Sennar":         { lat: 13.15, lng: 33.93, scale: 12000 },
-    "Gedarif":        { lat: 14.03, lng: 35.38, scale: 11000 },
+    "Gedaref":        { lat: 14.03, lng: 35.38, scale: 11000 },
     "Kassala":        { lat: 15.45, lng: 36.40, scale: 10000 },
     "Red Sea":        { lat: 19.61, lng: 37.21, scale: 6000 },
     "Northern":       { lat: 19.16, lng: 30.47, scale: 5000 },
