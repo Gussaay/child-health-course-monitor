@@ -1,4 +1,4 @@
-// Course.jsx
+// components/Course.jsx
 import React, { useState, useMemo, useRef, useEffect, Suspense } from 'react';
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -19,13 +19,11 @@ import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES,
 } from './constants.js';
 import html2canvas from 'html2canvas';
-// FacilitatorDataForm is no longer needed in this view as adding is disabled
-// import { FacilitatorDataForm } from './Facilitator.jsx'; 
 import { db } from '../firebase';
 import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { DEFAULT_ROLE_PERMISSIONS, ALL_PERMISSIONS } from './AdminDashboard';
 import { generateCertificatePdf } from './CertificateGenerator'; 
-import { Users, Download } from 'lucide-react'; 
+import { Users, Download, Calendar, Clock } from 'lucide-react'; 
 import { useDataCache } from '../DataContext'; 
 
 // Lazy load components that are not always visible to speed up initial load
@@ -180,10 +178,15 @@ const Landing = React.memo(function Landing({ active, onPick }) {
 
 export function CoursesTable({ 
     courses, onOpen, onEdit, onDelete, onOpenReport, onOpenTestForm, 
-    canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates, onAddFinalReport, canManageFinalReport 
+    canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates, onAddFinalReport, canManageFinalReport,
+    onOpenAttendanceManager // Prop received from parent
 }) {
     const [reportModalCourse, setReportModalCourse] = useState(null);
     const [monitorModalCourse, setMonitorModalCourse] = useState(null);
+    
+    // --- STATE for Attendance Modals ---
+    const [attendanceModalCourse, setAttendanceModalCourse] = useState(null); // The modal to pick action (Link or Report)
+    const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
 
     const isCourseActive = (course) => {
         if (!course.start_date || !course.course_duration || course.course_duration <= 0) {
@@ -256,6 +259,15 @@ export function CoursesTable({
                                             Report
                                         </Button>
                                         
+                                        {/* --- UPDATED: New Attendance Button --- */}
+                                        <Button 
+                                            variant="secondary" 
+                                            className="px-2 py-1 text-xs" 
+                                            onClick={() => setAttendanceModalCourse(c)}
+                                        >
+                                            Attendance
+                                        </Button>
+
                                         <Button 
                                             variant="secondary" 
                                             className="px-2 py-1 text-xs" 
@@ -313,26 +325,86 @@ export function CoursesTable({
                     </Modal>
                 )}
 
+                {/* --- NEW: Attendance Action Modal --- */}
+                {attendanceModalCourse && (
+                    <Modal isOpen={!!attendanceModalCourse} onClose={() => setAttendanceModalCourse(null)} title="Attendance Management">
+                        <CardBody className="flex flex-col gap-4">
+                            <div className="space-y-2 pb-4 border-b">
+                                <h4 className="font-semibold text-gray-700">Share Attendance Link</h4>
+                                <div className="bg-gray-50 p-3 rounded-md border">
+                                    <label className="block text-sm text-gray-600 mb-1">Select Session Date</label>
+                                    <Input 
+                                        type="date" 
+                                        value={attendanceDate} 
+                                        onChange={(e) => setAttendanceDate(e.target.value)}
+                                        className="mb-2"
+                                    />
+                                    <p className="text-xs text-gray-500 mb-2">
+                                        The link generated will <strong>only work on this specific date</strong>.
+                                    </p>
+                                    <Button variant="secondary" className="w-full justify-start" onClick={() => {
+                                        const link = `${window.location.origin}/attendance/course/${attendanceModalCourse.id}?date=${attendanceDate}`;
+                                        navigator.clipboard.writeText(link)
+                                            .then(() => alert(`Attendance link for ${attendanceDate} copied!`))
+                                            .catch(() => alert('Failed to copy link.'));
+                                        setAttendanceModalCourse(null);
+                                    }}>
+                                        <Calendar className="w-4 h-4 mr-2" /> Copy Attendance Link
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <h4 className="font-semibold text-gray-700">Reports & Management</h4>
+                                <Button 
+                                    variant="secondary" 
+                                    className="w-full justify-start"
+                                    onClick={() => {
+                                        if (onOpenAttendanceManager) {
+                                            onOpenAttendanceManager(attendanceModalCourse.id);
+                                        } else {
+                                            console.error("onOpenAttendanceManager is not defined");
+                                        }
+                                        setAttendanceModalCourse(null);
+                                    }}
+                                >
+                                    <Clock className="w-4 h-4 mr-2" /> Open Attendance Dashboard
+                                </Button>
+                            </div>
+                        </CardBody>
+                        <CardFooter>
+                            <Button variant="secondary" onClick={() => setAttendanceModalCourse(null)}>Close</Button>
+                        </CardFooter>
+                    </Modal>
+                )}
+
                 {monitorModalCourse && (
                     <Modal isOpen={!!monitorModalCourse} onClose={() => setMonitorModalCourse(null)} title="Monitoring & Testing">
-                        <CardBody className="flex flex-col gap-3">
-                            {(monitorModalCourse.course_type === 'ICCM' || monitorModalCourse.course_type === 'EENC' || monitorModalCourse.course_type === 'Small & Sick Newborn' || monitorModalCourse.course_type === 'IMNCI' || monitorModalCourse.course_type === 'ETAT') && (
-                                <Button variant="secondary" onClick={() => {
-                                    onOpenTestForm(monitorModalCourse.id);
+                        <CardBody className="flex flex-col gap-4">
+                            <div className="space-y-2 pb-4 border-b">
+                                <h4 className="font-semibold text-gray-700">General Monitoring</h4>
+                                <Button variant="secondary" className="w-full justify-start" onClick={() => {
+                                    const link = `${window.location.origin}/monitor/course/${monitorModalCourse.id}`;
+                                    navigator.clipboard.writeText(link)
+                                        .then(() => alert('Public monitoring link copied to clipboard!'))
+                                        .catch(() => alert('Failed to copy link.'));
                                     setMonitorModalCourse(null);
                                 }}>
-                                    Pre & Post Test
+                                    <Users className="w-4 h-4 mr-2" /> Share Monitoring Link
                                 </Button>
+                            </div>
+
+                            {(monitorModalCourse.course_type === 'ICCM' || monitorModalCourse.course_type === 'EENC' || monitorModalCourse.course_type === 'Small & Sick Newborn' || monitorModalCourse.course_type === 'IMNCI' || monitorModalCourse.course_type === 'ETAT') && (
+                                <div className="space-y-2">
+                                    <h4 className="font-semibold text-gray-700">Testing</h4>
+                                    <Button variant="secondary" className="w-full justify-start" onClick={() => {
+                                        onOpenTestForm(monitorModalCourse.id);
+                                        setMonitorModalCourse(null);
+                                    }}>
+                                        <Clock className="w-4 h-4 mr-2" /> Open Pre & Post Test
+                                    </Button>
+                                </div>
                             )}
-                            <Button variant="secondary" onClick={() => {
-                                const link = `${window.location.origin}/monitor/course/${monitorModalCourse.id}`;
-                                navigator.clipboard.writeText(link)
-                                    .then(() => alert('Public monitoring link copied to clipboard!'))
-                                    .catch(() => alert('Failed to copy link.'));
-                                setMonitorModalCourse(null);
-                            }}>
-                                Share Monitoring Link
-                            </Button>
                         </CardBody>
                         <CardFooter>
                             <Button variant="secondary" onClick={() => setMonitorModalCourse(null)}>Close</Button>
@@ -344,6 +416,8 @@ export function CoursesTable({
     );
 }
 
+// Export PublicAttendanceView from here so App.jsx (which imports from Course.jsx) doesn't break
+export { PublicAttendanceView, AttendanceManagerView } from './CourseAttendanceView';
 
 export function CourseManagementView({
     allCourses, onOpen, onDelete, onOpenReport,
@@ -370,7 +444,8 @@ export function CourseManagementView({
     // These are no longer needed as adding new is disabled
     onAddNewFacilitator,
     onAddNewCoordinator,
-    onAddNewFunder
+    onAddNewFunder,
+    onOpenAttendanceManager // Receive prop
 }) {
     const { 
         federalCoordinators, fetchFederalCoordinators,
@@ -567,6 +642,7 @@ export function CourseManagementView({
                                     onDelete={onDelete}
                                     onOpenReport={onOpenReport}
                                     onOpenTestForm={handleOpenTestForm}
+                                    onOpenAttendanceManager={onOpenAttendanceManager} // Pass prop
                                     canEditDeleteActiveCourse={canEditDeleteActiveCourse}
                                     canEditDeleteInactiveCourse={canEditDeleteInactiveCourse}
                                     userStates={userStates}
@@ -650,1009 +726,5 @@ export function CourseManagementView({
                 )}
             </div>
         </Card>
-    );
-}
-
-const SearchableSelect = ({ label, options, value, onChange, onOpenNewForm, placeholder }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [inputValue, setInputValue] = useState(value || '');
-    const ref = useRef(null);
-
-    useEffect(() => {
-        setInputValue(value || '');
-    }, [value]);
-
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (ref.current && !ref.current.contains(event.target)) {
-                setIsOpen(false);
-                setInputValue(value || '');
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [ref, value]);
-
-    const filteredOptions = useMemo(() => {
-        if (!inputValue) return options;
-        return options.filter(opt => opt.name.toLowerCase().includes(inputValue.toLowerCase()));
-    }, [options, inputValue]);
-
-    const isNewEntry = inputValue && !options.some(opt => opt.name.toLowerCase() === inputValue.toLowerCase());
-
-    const handleSelect = (option) => {
-        onChange(option.name);
-        setInputValue(option.name);
-        setIsOpen(false);
-    };
-
-    const handleAddNew = () => {
-        if (onOpenNewForm) {
-            onOpenNewForm(inputValue);
-            setIsOpen(false);
-        }
-    };
-
-    return (
-        <div className="relative" ref={ref}>
-            <Input
-                type="text"
-                value={inputValue}
-                onChange={(e) => {
-                    setInputValue(e.target.value);
-                    setIsOpen(true);
-                    if (e.target.value === '') {
-                        onChange('');
-                    }
-                }}
-                onFocus={() => setIsOpen(true)}
-                placeholder={placeholder}
-            />
-            {isOpen && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                    {onOpenNewForm && (
-                        <div
-                            className={`p-2 cursor-pointer font-medium text-indigo-600 hover:bg-gray-100 ${isNewEntry ? 'border-b' : ''}`}
-                            onClick={handleAddNew}
-                        >
-                           {`+ Add "${isNewEntry ? inputValue : `New ${label ? label.replace(':', '') : ''}`}"`}
-                        </div>
-                    )}
-                    {filteredOptions.length > 0 ? (
-                        filteredOptions.map(opt => (
-                            <div
-                                key={opt.id}
-                                className="p-2 cursor-pointer hover:bg-gray-100"
-                                onClick={() => handleSelect(opt)}
-                            >
-                                {opt.name}
-                            </div>
-                        ))
-                    ) : (
-                        <div className="p-2 text-gray-500">No results found.</div>
-                    )}
-                </div>
-            )}
-        </div>
-    );
-};
-
-
-export function CourseForm({ 
-    courseType, initialData, facilitatorsList, fundersList, onCancel, onSave, 
-    federalCoordinatorsList = [], stateCoordinatorsList = [], localityCoordinatorsList = []
-}) {
-    const [state, setState] = useState(initialData?.state || '');
-    const [locality, setLocality] = useState(initialData?.locality || '');
-    const [hall, setHall] = useState(initialData?.hall || '');
-    const [startDate, setStartDate] = useState(initialData?.start_date || '');
-    const [courseDuration, setCourseDuration] = useState(initialData?.course_duration || 7);
-    const [coordinator, setCoordinator] = useState(initialData?.coordinator || '');
-    const [participantsCount, setParticipantsCount] = useState(initialData?.participants_count || 0);
-    const [courseBudget, setCourseBudget] = useState(initialData?.course_budget || '');
-    const [director, setDirector] = useState(initialData?.director || '');
-    const [clinical, setClinical] = useState(initialData?.clinical_instructor || '');
-    const [supporter, setSupporter] = useState(initialData?.funded_by || '');
-    const [stateCoordinator, setStateCoordinator] = useState(initialData?.state_coordinator || '');
-    const [localityCoordinator, setLocalityCoordinator] = useState(initialData?.locality_coordinator || '');
-    const [courseProject, setCourseProject] = useState(initialData?.course_project || '');
-    const [implementedBy, setImplementedBy] = useState(initialData?.implemented_by || '');
-
-    const [directorImciSubType, setDirectorImciSubType] = useState(initialData?.director_imci_sub_type || IMNCI_SUBCOURSE_TYPES[0]);
-    const [clinicalImciSubType, setClinicalImciSubType] = useState(initialData?.clinical_instructor_imci_sub_type || IMNCI_SUBCOURSE_TYPES[0]);
-
-    const INFECTION_CONTROL_SUBCOURSE_TYPES = [
-        'IPC in Delivery room',
-        'IPC in Neonatal unit',
-        'Neonatal Sepsis Surveillance',
-    ];
-
-    const ICCM_SUBCOURSE_TYPES = ['ICCM Community Module'];
-    const SMALL_AND_SICK_SUBCOURSE_TYPES = [
-        'Portable warmer training', 
-        'CPAP training',
-        'Kangaroo Mother Care',
-        'Module (1) Emergency and Essential Newborn Care',
-        'Module (2) Special Newborn Care',
-        'Module (3) Intensive Newborn Care'
-    ];
-
-    const EENC_SUBCOURSE_TYPES = [
-        'EENC EmONC', 
-        'EENC Orientation', 
-        'EENC TOT', 
-        'EENC Mentorship'
-    ];
-
-    const ETAT_SUBCOURSE_TYPES = [
-        'ETAT Standard', 
-        'ETAT Orientation', 
-        'ETAT Plus', 
-        'ETAT Mentorship'
-    ];
-
-    const COURSE_GROUPS = ['Group A', 'Group B', 'Group C', 'Group D'];
-
-    const isImnci = courseType === 'IMNCI';
-    const isInfectionControl = courseType === 'IPC';
-    const isIccm = courseType === 'ICCM';
-    const isSmallAndSick = courseType === 'Small & Sick Newborn';
-    const isEenc = courseType === 'EENC';
-    const isEtat = courseType === 'ETAT';
-
-    const [groups, setGroups] = useState(initialData?.facilitatorAssignments ? [...new Set(initialData.facilitatorAssignments.map(a => a.group))] : ['Group A']);
-
-    const [facilitatorGroups, setFacilitatorGroups] = useState(() => {
-        const defaultSubcourse = isIccm ? ICCM_SUBCOURSE_TYPES[0] : '';
-        if (initialData?.facilitatorAssignments?.length > 0) {
-            const groups = {};
-            initialData.facilitatorAssignments.forEach(assignment => {
-                if (!groups[assignment.group]) {
-                    groups[assignment.group] = [];
-                }
-                groups[assignment.group].push({
-                    name: assignment.name,
-                    imci_sub_type: assignment.imci_sub_type,
-                });
-            });
-            const initialGroups = [...new Set(initialData.facilitatorAssignments.map(a => a.group))];
-            initialGroups.forEach(group => {
-                if (!groups[group]) {
-                    groups[group] = [];
-                }
-            });
-            return groups;
-        }
-        return { 'Group A': [{ imci_sub_type: defaultSubcourse, name: '' }] };
-    });
-
-    const [error, setError] = useState('');
-
-    const directorOptions = useMemo(() => {
-        return facilitatorsList
-            .filter(f => f.directorCourse === 'Yes')
-            .sort((a, b) => a.name.localeCompare(b.name));
-    }, [facilitatorsList]);
-
-    const clinicalInstructorOptions = useMemo(() => {
-        return facilitatorsList
-            .filter(f => f.isClinicalInstructor === 'Yes' || f.directorCourse === 'Yes')
-            .sort((a, b) => a.name.localeCompare(b.name));
-    }, [facilitatorsList]);
-
-  const facilitatorOptions = useMemo(() => {
-        return facilitatorsList
-            .filter(f => {
-                const fCourses = Array.isArray(f.courses) ? f.courses : [];
-                
-                if (isIccm) {
-                    return fCourses.includes('ICCM') || fCourses.includes('IMNCI');
-                }
-
-                if (isInfectionControl) {
-                    return fCourses.includes('IPC');
-                }
-
-                if (isSmallAndSick) {
-                    return fCourses.includes('Small & Sick Newborn');
-                }
-                
-                return fCourses.includes(courseType);
-            })
-            .sort((a, b) => a.name.localeCompare(b.name));
-    }, [facilitatorsList, courseType, isInfectionControl, isIccm, isSmallAndSick]);
-
-    const federalCoordinatorOptions = useMemo(() => {
-        return federalCoordinatorsList.map(c => ({ id: c.id, name: c.name }));
-    }, [federalCoordinatorsList]);
-
-    const stateCoordinatorOptions = useMemo(() => {
-        const sortedList = [...stateCoordinatorsList].sort((a, b) => {
-            const aIsMatch = a.state === state;
-            const bIsMatch = b.state === state;
-            if (aIsMatch && !bIsMatch) return -1;
-            if (!aIsMatch && bIsMatch) return 1;
-            return a.name.localeCompare(b.name);
-        });
-        return sortedList.map(c => ({ id: c.id, name: `${c.name} (${c.state})` }));
-    }, [stateCoordinatorsList, state]);
-
-    const localityCoordinatorOptions = useMemo(() => {
-        const sortedList = [...localityCoordinatorsList].sort((a, b) => {
-            const aIsExact = a.state === state && a.locality === locality;
-            const bIsExact = b.state === state && b.locality === locality;
-            if (aIsExact && !bIsExact) return -1;
-            if (!aIsExact && bIsExact) return 1;
-
-            const aIsStateMatch = a.state === state;
-            const bIsStateMatch = b.state === state;
-            if (aIsStateMatch && !bIsStateMatch) return -1;
-            if (!aIsStateMatch && bIsStateMatch) return 1;
-
-            return a.name.localeCompare(b.name);
-        });
-        return sortedList.map(c => ({ id: c.id, name: `${c.name} (${c.locality}, ${c.state})` }));
-    }, [localityCoordinatorsList, state, locality]);
-
-    const funderOptions = useMemo(() => {
-        return (fundersList || []).map(f => ({ id: f.id, name: f.orgName }));
-    }, [fundersList]);
-
-    const projectOptions = useMemo(() => {
-        if (!fundersList) return [];
-        const allProjects = fundersList.flatMap(partner => partner.projects || []);
-        const uniqueProjects = [...new Set(allProjects)].sort();
-        return uniqueProjects.map(proj => ({ id: proj, name: proj }));
-    }, [fundersList]);
-
-
-
-    const addFacilitatorToGroup = (groupName) => {
-        const defaultSubcourse = isIccm ? ICCM_SUBCOURSE_TYPES[0] : '';
-        setFacilitatorGroups(prev => ({
-            ...prev,
-            [groupName]: [...prev[groupName], { imci_sub_type: defaultSubcourse, name: '' }]
-        }));
-    };
-
-    const removeFacilitatorFromGroup = (groupName, index) => {
-        setFacilitatorGroups(prev => ({
-            ...prev,
-            [groupName]: prev[groupName].filter((_, i) => i !== index)
-        }));
-    };
-
-    const updateFacilitatorAssignment = (groupName, index, field, value) => {
-        setFacilitatorGroups(prev => ({
-            ...prev,
-            [groupName]: prev[groupName].map((item, i) => (i === index ? { ...item, [field]: value } : item))
-        }));
-    };
-
-    const addGroup = () => {
-        const nextGroupIndex = groups.length;
-        if (nextGroupIndex < COURSE_GROUPS.length) {
-            const defaultSubcourse = isIccm ? ICCM_SUBCOURSE_TYPES[0] : '';
-            const newGroup = COURSE_GROUPS[nextGroupIndex];
-            setGroups(prev => [...prev, newGroup]);
-            setFacilitatorGroups(prev => ({
-                ...prev,
-                [newGroup]: [{ imci_sub_type: defaultSubcourse, name: '' }]
-            }));
-        }
-    };
-
-    const removeGroup = (groupName) => {
-        setGroups(prev => prev.filter(g => g !== groupName));
-        setFacilitatorGroups(prev => {
-            const newGroups = { ...prev };
-            delete newGroups[groupName];
-            return newGroups;
-        });
-    };
-
-    const submit = () => {
-        const allFacilitatorAssignments = groups.reduce((acc, group) => {
-            const groupAssignments = facilitatorGroups[group].map(assignment => ({
-                ...assignment,
-                group: group
-            })).filter(assignment => assignment.name && (assignment.imci_sub_type || isIccm));
-            
-            if (isIccm) {
-                groupAssignments.forEach(a => a.imci_sub_type = ICCM_SUBCOURSE_TYPES[0]);
-            }
-            
-            return [...acc, ...groupAssignments];
-        }, []);
-
-        if (!state || !locality || !hall || !coordinator || !participantsCount || !supporter || !startDate || !implementedBy) {
-            setError('Please complete all required fields.');
-            return;
-        }
-        
-        if (!courseType) {
-            setError('Could not determine course type. Please go back to the courses page and select a package before adding a new course.');
-            return;
-        }
-
-        if (!isInfectionControl && !director) {
-            setError('Please select a Course Director. This is a mandatory field for this course type.');
-            return;
-        }
-
-        // --- FIXED: Added !isSmallAndSick to skip facilitator requirement ---
-        if (!isInfectionControl && !isSmallAndSick && allFacilitatorAssignments.length === 0) {
-             setError('Please assign at least one facilitator to a subcourse.');
-             return;
-        }
-
-        const payload = {
-            ...(initialData?.id && { id: initialData.id }),
-            state, locality, hall, coordinator, start_date: startDate,
-            course_duration: courseDuration,
-            participants_count: participantsCount, director,
-            funded_by: supporter,
-            implemented_by: implementedBy,
-            course_budget: courseBudget,
-            state_coordinator: stateCoordinator,
-            locality_coordinator: localityCoordinator,
-            course_project: courseProject,
-            facilitators: allFacilitatorAssignments.map(f => f.name),
-            facilitatorAssignments: allFacilitatorAssignments,
-            course_type: courseType, 
-        };
-
-        if (isImnci || isIccm) {
-            payload.clinical_instructor = clinical;
-            payload.director_imci_sub_type = isIccm ? ICCM_SUBCOURSE_TYPES[0] : directorImciSubType;
-            payload.clinical_instructor_imci_sub_type = isIccm ? ICCM_SUBCOURSE_TYPES[0] : clinicalImciSubType;
-        }
-
-        onSave(payload);
-    };
-
-    return (
-        <Card>
-            <div className="p-6">
-                <PageHeader title={`${initialData ? 'Edit' : 'Add New'} Course`} subtitle={`Package: ${courseType || 'N/A'}`} className="mb-6" />
-                {error && <div className="p-3 mb-6 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <FormGroup label="State"><Select value={state} onChange={(e) => { setState(e.target.value); setLocality(''); }}><option value="">— Select State —</option>{Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(b.ar)).map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar}</option>)}</Select></FormGroup>
-                    <FormGroup label="Locality"><Select value={locality} onChange={(e) => setLocality(e.target.value)} disabled={!state}><option value="">— Select Locality —</option>{(STATE_LOCALITIES[state]?.localities || []).sort((a,b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}</Select></FormGroup>
-                    <FormGroup label="Course Hall"><Input value={hall} onChange={(e) => setHall(e.target.value)} /></FormGroup>
-                    <FormGroup label="Start Date of Course"><Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></FormGroup>
-                    <FormGroup label="Course Duration (days)"><Input type="number" value={courseDuration} onChange={(e) => setCourseDuration(Number(e.target.value))} /></FormGroup>
-                    <FormGroup label="# of Participants"><Input type="number" value={participantsCount} onChange={(e) => setParticipantsCount(Number(e.target.value))} /></FormGroup>
-
-                    <FormGroup label="Federal Course Coordinator">
-                        <SearchableSelect
-                            value={coordinator}
-                            onChange={setCoordinator}
-                            options={federalCoordinatorOptions}
-                            placeholder="Type to search..."
-                            label="Federal Course Coordinator"
-                        />
-                    </FormGroup>
-                    <FormGroup label="State Course Coordinator">
-                        <SearchableSelect
-                            value={stateCoordinator}
-                            onChange={setStateCoordinator}
-                            options={stateCoordinatorOptions}
-                            placeholder="Type to search..."
-                            label="State Course Coordinator"
-                        />
-                    </FormGroup>
-                    <FormGroup label="Locality Course Coordinator">
-                        <SearchableSelect
-                            value={localityCoordinator}
-                            onChange={setLocalityCoordinator}
-                            options={localityCoordinatorOptions}
-                            placeholder="Type to search..."
-                            label="Locality Course Coordinator"
-                        />
-                    </FormGroup>
-                    
-                    <FormGroup label="Funded by:">
-                        <SearchableSelect
-                            value={supporter}
-                            onChange={setSupporter}
-                            options={funderOptions}
-                            placeholder="Type to search..."
-                            label="Funded by"
-                        />
-                    </FormGroup>
-                    <FormGroup label="Implemented by:">
-                        <SearchableSelect
-                            value={implementedBy}
-                            onChange={setImplementedBy}
-                            options={funderOptions}
-                            placeholder="Type to search..."
-                            label="Implemented by"
-                        />
-                    </FormGroup>
-                    <FormGroup label="Course Project">
-                         <SearchableSelect
-                            value={courseProject}
-                            onChange={setCourseProject}
-                            options={projectOptions}
-                            placeholder="Type to search for a project"
-                            label="Course Project"
-                        />
-                    </FormGroup>
-
-                    <FormGroup label="Course Budget (USD)"><Input type="number" value={courseBudget} onChange={(e) => setCourseBudget(Number(e.target.value))} /></FormGroup>
-
-                    <div className="lg:col-span-3" /> 
-
-                    {!isInfectionControl && (
-                        <div className="md:col-span-2 lg:col-span-3">
-                            <h3 className="text-lg font-bold mb-2">Leadership Assignments</h3>
-                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 p-4 border rounded-md bg-gray-50">
-                                <div className="space-y-2">
-                                    <FormGroup label="Course Director">
-                                        <SearchableSelect
-                                            value={director}
-                                            onChange={setDirector}
-                                            options={directorOptions}
-                                            placeholder="Select Director"
-                                            label="Course Director"
-                                        />
-                                    </FormGroup>
-                                    {isImnci && (
-                                        <FormGroup label="IMNCI Subcourse for Director">
-                                            <Select value={directorImciSubType} onChange={(e) => setDirectorImciSubType(e.target.value)} className="w-full">
-                                                {IMNCI_SUBCOURSE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
-                                            </Select>
-                                        </FormGroup>
-                                    )}
-                                </div>
-
-                                {(isImnci || isIccm) && (
-                                    <div className="space-y-2">
-                                        <FormGroup label="Clinical Instructor (Optional)">
-                                            <SearchableSelect
-                                                value={clinical}
-                                                onChange={setClinical}
-                                                options={clinicalInstructorOptions}
-                                                placeholder="Select Instructor"
-                                                label="Clinical Instructor"
-                                            />
-                                        </FormGroup>
-                                        {isImnci && (
-                                            <FormGroup label="IMNCI Subcourse for Clinical Instructor (Optional)">
-                                                <Select value={clinicalImciSubType} onChange={(e) => setClinicalImciSubType(e.target.value)} className="w-full">
-                                                    {IMNCI_SUBCOURSE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
-                                                </Select>
-                                            </FormGroup>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="md:col-span-2 lg:col-span-3 mt-4">
-                        <h3 className="text-lg font-bold mb-2">Facilitator Assignments</h3>
-                        <div className="space-y-6">
-                            {groups.map(groupName => (
-                                <div key={groupName} className="p-4 border rounded-md bg-gray-50">
-                                    <h4 className="text-md font-semibold mb-2">{groupName}</h4>
-                                    {facilitatorGroups[groupName]?.map((assignment, index) => (
-                                        <div key={index} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                                            {!isIccm && (
-                                                <FormGroup label="Subcourse Type">
-                                                    <Select
-                                                        value={assignment.imci_sub_type || ''}
-                                                        onChange={(e) => updateFacilitatorAssignment(groupName, index, 'imci_sub_type', e.target.value)}
-                                                        className="w-full"
-                                                    >
-                                                        <option value="">— Select Subcourse —</option>
-                                                        {(isImnci ? IMNCI_SUBCOURSE_TYPES : 
-                                                          isIccm ? ICCM_SUBCOURSE_TYPES : 
-                                                          isInfectionControl ? INFECTION_CONTROL_SUBCOURSE_TYPES : 
-                                                          isSmallAndSick ? SMALL_AND_SICK_SUBCOURSE_TYPES :
-                                                          isEenc ? EENC_SUBCOURSE_TYPES :
-                                                          isEtat ? ETAT_SUBCOURSE_TYPES :
-                                                          []
-                                                        ).map(type => (
-                                                            <option key={type} value={type}>{type}</option>
-                                                        ))}
-                                                    </Select>
-                                                </FormGroup>
-                                            )}
-                                            <FormGroup label="Facilitator Name" className={isIccm ? "lg:col-span-2" : ""}>
-                                                <SearchableSelect
-                                                    value={assignment.name}
-                                                    onChange={(value) => updateFacilitatorAssignment(groupName, index, 'name', value)}
-                                                    options={facilitatorOptions}
-                                                    placeholder="Select Facilitator"
-                                                    label="Facilitator"
-                                                />
-                                            </FormGroup>
-                                            <div className="flex items-end">
-                                                <Button type="button" variant="danger" onClick={() => removeFacilitatorFromGroup(groupName, index)} disabled={facilitatorGroups[groupName]?.length <= 1}>Remove</Button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                    <div className="flex justify-end mt-2">
-                                        <Button type="button" variant="secondary" onClick={() => addFacilitatorToGroup(groupName)}>+ Add another facilitator to {groupName}</Button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        {groups.length < COURSE_GROUPS.length && (
-                            <div className="flex justify-start mt-4">
-                                <Button type="button" variant="secondary" onClick={addGroup}>+ Add another group</Button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-                <div className="flex gap-2 justify-end mt-8 border-t pt-6">
-                    <Button variant="secondary" onClick={onCancel}>Cancel</Button>
-                    <Button onClick={submit}>Save Course</Button>
-                </div>
-            </div>
-        </Card>
-    );
-}
-
-export function PublicCourseMonitoringView({ course, allParticipants }) {
-    const [selectedGroup, setSelectedGroup] = useState('All');
-    const [selectedParticipantId, setSelectedParticipantId] = useState('');
-
-    const groups = useMemo(() => {
-        const groupSet = new Set(allParticipants.map(p => p.group || 'N/A'));
-        return ['All', ...Array.from(groupSet).sort()];
-    }, [allParticipants]);
-
-    const filteredParticipants = useMemo(() => {
-        if (selectedGroup === 'All') {
-            return allParticipants.sort((a, b) => a.name.localeCompare(b.name));
-        }
-        return allParticipants
-            .filter(p => (p.group || 'N/A') === selectedGroup)
-            .sort((a, b) => a.name.localeCompare(b.name));
-    }, [allParticipants, selectedGroup]);
-
-    const selectedParticipant = useMemo(() => {
-        if (!selectedParticipantId) {
-            return null;
-        }
-        return allParticipants.find(p => p.id === selectedParticipantId);
-    }, [allParticipants, selectedParticipantId]);
-
-    const handleGroupChange = (e) => {
-        setSelectedGroup(e.target.value);
-        setSelectedParticipantId(''); 
-    };
-
-    const handleParticipantChange = (e) => {
-        setSelectedParticipantId(e.target.value);
-    };
-
-    return (
-        <div className="grid gap-4">
-            <PageHeader
-                title={`Data Entry for: ${course.course_type}`}
-                subtitle={`${course.state} / ${course.locality} (Started: ${course.start_date})`}
-            />
-
-            <Card>
-                <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormGroup label="Select Group">
-                        <Select value={selectedGroup} onChange={handleGroupChange}>
-                            {groups.map(g => (
-                                <option key={g} value={g}>{g}</option>
-                            ))}
-                        </Select>
-                    </FormGroup>
-                    <FormGroup label="Select Participant">
-                        <Select value={selectedParticipantId} onChange={handleParticipantChange} disabled={selectedGroup === ''}>
-                            <option value="">-- Select a participant --</option>
-                            {filteredParticipants.map(p => (
-                                <option key={p.id} value={p.id}>
-                                    {p.name}
-                                </option>
-                            ))}
-                        </Select>
-                    </FormGroup>
-                </div>
-            </Card>
-
-            {selectedParticipant ? (
-                <Suspense fallback={<Card><Spinner /></Card>}>
-                    <ObservationView
-                        course={course}
-                        participant={selectedParticipant}
-                        participants={filteredParticipants} 
-                        onChangeParticipant={handleParticipantChange} 
-                        initialCaseToEdit={null} 
-                        isPublicView={true} 
-                    />
-                </Suspense>
-            ) : (
-                <Card>
-                    <div className="p-6 text-center text-gray-500">
-                        Please select a group and participant to begin data entry.
-                    </div>
-                </Card>
-            )}
-        </div>
-    );
-}
-
-// --- NEW: Certificate Verification View Component ---
-export function CertificateVerificationView({ participant, course }) {
-    if (!participant || !course) return <EmptyState message="Invalid certificate data." />;
-
-    const courseTypeTitle = course.course_type === 'IMNCI' ? 'Integrated Management of Newborn and Childhood Illnesses (IMNCI)' :
-                            course.course_type === 'ICCM' ? 'Integrated Community case management for under 5 children (iCCM)' :
-                            course.course_type === 'ETAT' ? 'Emergency Triage, Assessment & Treatment (ETAT)' :
-                            course.course_type === 'EENC' ? 'Early Essential Newborn Care (EENC)' :
-                            course.course_type;
-
-    return (
-        <div className="flex flex-col items-center justify-center min-h-[50vh] p-4">
-            <Card className="w-full max-w-lg border-t-4 border-green-500">
-                <div className="p-8 text-center">
-                    <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
-                        <svg className="h-10 w-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                        </svg>
-                    </div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Certificate Verified</h2>
-                    <p className="text-gray-600 mb-6">This certificate is valid and issued by the National Child Health Program.</p>
-                    
-                    <div className="bg-gray-50 rounded-lg p-4 text-left space-y-3 border border-gray-200">
-                        <div>
-                            <p className="text-xs font-semibold text-gray-500 uppercase">Participant Name</p>
-                            <p className="text-lg font-medium text-gray-900">{participant.name}</p>
-                        </div>
-                        <div>
-                            <p className="text-xs font-semibold text-gray-500 uppercase">Course</p>
-                            <p className="text-md font-medium text-gray-900">{courseTypeTitle}</p>
-                        </div>
-                        <div>
-                            <p className="text-xs font-semibold text-gray-500 uppercase">Location</p>
-                            <p className="text-md font-medium text-gray-900">{course.state} - {course.locality}</p>
-                        </div>
-                        <div>
-                            <p className="text-xs font-semibold text-gray-500 uppercase">Date</p>
-                            <p className="text-md font-medium text-gray-900">{course.start_date}</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-center">
-                    <p className="text-xs text-gray-500">Verified by NCHP System</p>
-                </div>
-            </Card>
-        </div>
-    );
-}
-
-// --- NEW: Public Certificate Download View ---
-export function PublicCertificateDownloadView({ participantId }) {
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [data, setData] = useState(null);
-    const [generating, setGenerating] = useState(false);
-
-    // Extract language from URL query params
-    const searchParams = new URLSearchParams(window.location.search);
-    const language = searchParams.get('lang') || 'en';
-
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                // 1. Fetch Participant
-                const participant = await getParticipantById(participantId, 'server'); 
-                if (!participant) throw new Error("Participant not found.");
-
-                // 2. Fetch Course
-                const course = await getCourseById(participant.courseId, 'server');
-                if (!course) throw new Error("Course not found.");
-
-                // --- NEW CHECK: Ensure Certificate is Approved ---
-                if (!course.isCertificateApproved) {
-                    throw new Error("Certificates for this course have not yet been approved/released by the National Child Health Program.");
-                }
-                // -----------------------------------------------
-
-                // 3. Fetch Federal Manager Name (Handle Permission Error Gracefully)
-                let managerName = "Federal Program Manager";
-                try {
-                    const coords = await listCoordinators('federalCoordinators');
-                    const manager = coords.find(c => c.role === 'مدير البرنامج');
-                    if (manager) managerName = manager.name;
-                } catch (e) {
-                    console.warn("Could not fetch coordinators (likely permission issue). Using default.", e);
-                    // Fallback is already set
-                }
-
-                // 4. Determine Subcourse
-                let subCourse = participant.imci_sub_type;
-                if (!subCourse && course.facilitatorAssignments) {
-                    const assignment = course.facilitatorAssignments.find(a => a.group === participant.group);
-                    subCourse = assignment?.imci_sub_type;
-                }
-
-                setData({ participant, course, managerName, subCourse });
-            } catch (err) {
-                console.error(err);
-                setError(err.message);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        if (participantId) fetchData();
-    }, [participantId]);
-
-    const handleDownload = async () => {
-        if (!data) return;
-        setGenerating(true);
-        try {
-            const canvas = await generateCertificatePdf(
-                data.course, 
-                data.participant, 
-                data.managerName, 
-                data.subCourse, 
-                language // Use the language from URL
-            );
-            
-            if (canvas) {
-                const doc = new jsPDF('landscape', 'mm', 'a4');
-                const imgWidth = 297;
-                const imgHeight = 210;
-                const imgData = canvas.toDataURL('image/png');
-                doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-                const fileName = `Certificate_${data.participant.name.replace(/ /g, '_')}_${language}.pdf`;
-                doc.save(fileName);
-            }
-        } catch (err) {
-            alert("Failed to generate certificate: " + err.message);
-        } finally {
-            setGenerating(false);
-        }
-    };
-
-    if (loading) return <div className="flex justify-center items-center h-screen"><Spinner /></div>;
-    if (error) return <EmptyState message={`Error: ${error}`} />;
-    if (!data) return <EmptyState message="No data found." />;
-
-    const isArabic = language === 'ar';
-
-    return (
-        <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-            <Card className="max-w-2xl w-full">
-                <div className="p-8 text-center space-y-6">
-                    <div className="mx-auto h-20 w-20 bg-sky-100 rounded-full flex items-center justify-center">
-                        <PdfIcon className="h-10 w-10 text-sky-600" />
-                    </div>
-                    
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900">
-                            {isArabic ? 'تحميل الشهادة' : 'Download Certificate'}
-                        </h1>
-                        <p className="text-gray-600 mt-2">
-                            {isArabic 
-                                ? `شهادة اكمال دورة لـ: ${data.participant.name}` 
-                                : `Course Completion Certificate for: ${data.participant.name}`}
-                        </p>
-                    </div>
-
-                    <div className="bg-gray-50 p-4 rounded-lg border text-left space-y-2">
-                        <div className="flex justify-between">
-                            <span className="text-gray-500 text-sm">{isArabic ? 'الدورة' : 'Course'}:</span>
-                            <span className="font-medium">{data.course.course_type}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-gray-500 text-sm">{isArabic ? 'التاريخ' : 'Date'}:</span>
-                            <span className="font-medium">{data.course.start_date}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-gray-500 text-sm">{isArabic ? 'اللغة' : 'Language'}:</span>
-                            <span className="font-medium uppercase">{language}</span>
-                        </div>
-                    </div>
-
-                    <Button 
-                        onClick={handleDownload} 
-                        disabled={generating}
-                        className="w-full py-3 text-lg justify-center"
-                    >
-                        {generating 
-                            ? (isArabic ? 'جاري التحميل...' : 'Generating PDF...') 
-                            : (isArabic ? 'تحميل الشهادة (PDF)' : 'Download Certificate (PDF)')}
-                    </Button>
-                </div>
-            </Card>
-        </div>
-    );
-}
-
-// --- NEW: Public Course Certificates Page ---
-export function PublicCourseCertificatesView({ courseId }) {
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [data, setData] = useState({ course: null, participants: [], managerName: '' });
-    const [downloadingId, setDownloadingId] = useState(null);
-    const [searchTerm, setSearchTerm] = useState('');
-    
-    // Read 'lang' from URL to set initial language
-    const searchParams = new URLSearchParams(window.location.search);
-    const initialLang = searchParams.get('lang') || 'en';
-    
-    // State for language is initialized but NOT updated by user UI (locked)
-    const [language] = useState(initialLang);
-
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                // 1. Fetch Course
-                const course = await getCourseById(courseId, 'server');
-                if (!course) throw new Error("Course not found.");
-
-                // --- NEW CHECK: Ensure Certificate is Approved ---
-                if (!course.isCertificateApproved) {
-                    throw new Error("Certificates for this course have not yet been approved/released.");
-                }
-                // -----------------------------------------------
-
-                // 2. Fetch All Participants
-                const participants = await listAllParticipantsForCourse(courseId, 'server');
-
-                // 3. Fetch Federal Manager Name (Handle Permission Error Gracefully)
-                let managerName = "Federal Program Manager";
-                try {
-                    const coords = await listCoordinators('federalCoordinators');
-                    const manager = coords.find(c => c.role === 'مدير البرنامج');
-                    if (manager) managerName = manager.name;
-                } catch (e) {
-                    console.warn("Could not fetch coordinators (likely permission issue). Using default.", e);
-                    // Fallback is already set
-                }
-
-                setData({ course, participants: participants || [], managerName });
-            } catch (err) {
-                console.error(err);
-                setError(err.message);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        if (courseId) fetchData();
-    }, [courseId]);
-
-    const handleDownload = async (participant) => {
-        setDownloadingId(participant.id);
-        try {
-            // Determine Subcourse
-            let subCourse = participant.imci_sub_type;
-            if (!subCourse && data.course.facilitatorAssignments) {
-                const assignment = data.course.facilitatorAssignments.find(a => a.group === participant.group);
-                subCourse = assignment?.imci_sub_type;
-            }
-
-            const canvas = await generateCertificatePdf(
-                data.course, 
-                participant, 
-                data.managerName, 
-                subCourse, 
-                language
-            );
-            
-            if (canvas) {
-                const doc = new jsPDF('landscape', 'mm', 'a4');
-                const imgWidth = 297;
-                const imgHeight = 210;
-                const imgData = canvas.toDataURL('image/png');
-                doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-                const fileName = `Certificate_${participant.name.replace(/ /g, '_')}_${language}.pdf`;
-                doc.save(fileName);
-            }
-        } catch (err) {
-            alert("Failed to generate certificate: " + err.message);
-        } finally {
-            setDownloadingId(null);
-        }
-    };
-
-    const filteredParticipants = useMemo(() => {
-        if (!searchTerm) return data.participants;
-        return data.participants.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
-    }, [data.participants, searchTerm]);
-
-    if (loading) return <div className="flex justify-center items-center h-screen"><Spinner /></div>;
-    if (error) return <EmptyState message={`Error: ${error}`} />;
-    if (!data.course) return <EmptyState message="Course not found." />;
-
-    const isArabic = language === 'ar';
-
-    return (
-        <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-            <div className="max-w-5xl mx-auto space-y-6">
-                <Card className="p-6 border-t-4 border-sky-500">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-900">{data.course.course_type} Course Certificates</h1>
-                            <p className="text-gray-600 mt-1">
-                                {data.course.state} - {data.course.locality} | {data.course.start_date}
-                            </p>
-                        </div>
-                        
-                        <div className="flex items-center bg-white border border-gray-300 rounded-md px-3 py-2 shadow-sm">
-                            <span className="text-sm font-bold text-gray-600 mr-2 uppercase">Certificate Language:</span>
-                            <span className="text-sm font-medium text-sky-700">
-                                {language === 'ar' ? 'Arabic (عربي)' : 'English'}
-                            </span>
-                        </div>
-                    </div>
-                </Card>
-
-                <Card>
-                    <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row justify-between items-center gap-4">
-                        <div className="flex items-center gap-2 text-gray-700">
-                            <Users className="w-5 h-5" />
-                            <span className="font-semibold">{filteredParticipants.length} Participants</span>
-                        </div>
-                        <Input 
-                            placeholder="Search by name..." 
-                            value={searchTerm} 
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="max-w-xs bg-white"
-                        />
-                    </div>
-                    
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-100">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Name</th>
-                                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Group</th>
-                                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Job Title</th>
-                                    <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                                {filteredParticipants.map((p) => (
-                                    <tr key={p.id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                            {p.name}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {p.group || '-'}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {p.job_title}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <Button 
-                                                onClick={() => handleDownload(p)}
-                                                disabled={!!downloadingId}
-                                                className={`inline-flex items-center gap-2 ${downloadingId === p.id ? 'opacity-70' : ''}`}
-                                                size="sm"
-                                                variant={downloadingId === p.id ? 'secondary' : 'primary'}
-                                            >
-                                                {downloadingId === p.id ? <Spinner size="sm" /> : <Download className="w-4 h-4" />}
-                                                {downloadingId === p.id ? (isArabic ? 'جاري...' : 'Generating...') : (isArabic ? 'تحميل' : 'Download')}
-                                            </Button>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {filteredParticipants.length === 0 && (
-                                    <tr>
-                                        <td colSpan="4" className="px-6 py-8 text-center text-gray-500">
-                                            No participants found.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </Card>
-            </div>
-        </div>
     );
 }
