@@ -68,11 +68,9 @@ const fetchArabicName = async (collectionName, englishName, fieldName) => {
     if (!englishName) return null;
     
     try {
-        // 1. Try finding the name exactly as it is
         let q = query(collection(db, collectionName), where("name", "==", englishName));
         let snapshot = await getDocs(q);
 
-        // 2. If not found, try removing "Dr." prefix
         if (snapshot.empty && englishName.includes("Dr.")) {
             const cleanName = englishName.replace(/^Dr\.?\s*/i, '').trim();
             q = query(collection(db, collectionName), where("name", "==", cleanName));
@@ -81,13 +79,31 @@ const fetchArabicName = async (collectionName, englishName, fieldName) => {
 
         if (!snapshot.empty) {
             const data = snapshot.docs[0].data();
-            const arName = data[fieldName]; // 'nameAr' or 'arabicName'
+            const arName = data[fieldName]; 
             if (arName) return arName;
         }
     } catch (error) {
         console.error(`Error fetching Arabic name from ${collectionName}:`, error);
     }
     return null;
+};
+
+// Helper to convert URL to Base64 to bypass CORS/Loading issues in html2canvas
+const imageUrlToBase64 = async (url) => {
+    if (!url) return null;
+    try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    } catch (error) {
+        console.error("Error converting image to base64:", error);
+        return null; 
+    }
 };
 
 // -----------------------------------------------------------------------------
@@ -185,7 +201,6 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
         flexDirection: 'column',
         alignItems: 'center',     
         justifyContent: 'center', 
-        
         left: isArabic ? '15mm' : 'auto',
         right: isArabic ? 'auto' : '15mm',
     };
@@ -278,7 +293,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                 {isArabic ? 'شهادة' : 'CERTIFICATE'}
             </div>
 
-            {/* Participant Name - WITH DOTTED LINE */}
+            {/* Participant Name */}
             <div style={{
                 position: 'absolute',
                 top: isArabic ? '90mm' : '90mm',
@@ -379,7 +394,6 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                     fontSize: '16px',
                     fontWeight: 'bold',
                     fontFamily: isArabic ? 'Arial, sans-serif' : 'sans-serif',
-                  
                 }}>
                     {isArabic ? 'أمسح وتحقق' : 'Scan & Verify'}
                 </div>
@@ -442,7 +456,8 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                                crossOrigin="anonymous" 
                                style={{ 
                                    display: 'block', margin: '0 auto', maxHeight: '20mm', maxWidth: '30mm',
-                                   position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', zIndex: -1
+                                   position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', 
+                                   zIndex: 1 // CHANGED FROM -1 to 1
                                }} 
                            />
                        )}
@@ -459,7 +474,8 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                                crossOrigin="anonymous" 
                                style={{ 
                                    display: 'block', margin: '0 auto', maxHeight: '20mm', maxWidth: '30mm',
-                                   position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', zIndex: -1
+                                   position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', 
+                                   zIndex: 1 // CHANGED FROM -1 to 1
                                }} 
                            />
                        )}
@@ -490,7 +506,8 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                                crossOrigin="anonymous" 
                                style={{ 
                                    display: 'block', margin: '0 auto', maxHeight: '20mm', maxWidth: '30mm',
-                                   position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', zIndex: -1
+                                   position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', 
+                                   zIndex: 1 // CHANGED FROM -1 to 1
                                }} 
                            />
                        )}
@@ -507,7 +524,8 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                                crossOrigin="anonymous" 
                                style={{ 
                                    display: 'block', margin: '0 auto', maxHeight: '20mm', maxWidth: '30mm',
-                                   position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', zIndex: -1
+                                   position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', 
+                                   zIndex: 1 // CHANGED FROM -1 to 1
                                }} 
                            />
                        )}
@@ -528,12 +546,17 @@ export const generateCertificatePdf = async (course, participant, federalProgram
     
     // --- Logic to prioritize the approved name & signature ---
     const finalManagerName = course.approvedByManagerName || federalProgramManagerName;
-    const finalManagerSignature = course.approvedByManagerSignatureUrl || null;
+    const rawManagerSignature = course.approvedByManagerSignatureUrl || null;
 
     // --- New Fields ---
     const finalDirectorName = course.approvedDirectorName || course.director;
-    const finalDirectorSignature = course.approvedDirectorSignatureUrl || null;
-    const finalProgramStamp = course.approvedProgramStampUrl || null;
+    const rawDirectorSignature = course.approvedDirectorSignatureUrl || null;
+    const rawProgramStamp = course.approvedProgramStampUrl || null;
+
+    // --- CONVERT IMAGES TO BASE64 (Fixes CORS/Loading issues) ---
+    const finalManagerSignature = await imageUrlToBase64(rawManagerSignature);
+    const finalDirectorSignature = await imageUrlToBase64(rawDirectorSignature);
+    const finalProgramStamp = await imageUrlToBase64(rawProgramStamp);
 
     let directorNameAr = null;
     let programManagerNameAr = null;
@@ -585,7 +608,8 @@ export const generateCertificatePdf = async (course, participant, federalProgram
             />
         );
 
-        await new Promise(resolve => setTimeout(resolve, 800)); 
+        // Wait slightly longer to ensure rendering
+        await new Promise(resolve => setTimeout(resolve, 1000)); 
 
         const element = container.querySelector('#certificate-template');
         if (!element) throw new Error("Certificate template element not found.");
@@ -655,7 +679,7 @@ export const generateAllCertificatesPdf = async (course, participants, federalPr
             firstPage = false;
             
             const imgData = canvas.toDataURL('image/jpeg', 1); // 100% quality JPEG
-                     doc.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight, undefined, 'FAST');
+            doc.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight, undefined, 'FAST');
         }
     }
 
