@@ -26,12 +26,17 @@ const LOCALITY_EN_TO_AR_MAP = Object.values(STATE_LOCALITIES).flatMap(s => s.loc
     return acc;
 }, {});
 
+const OWNERSHIP_OPTIONS = ['حكومي', 'خاص', 'منظمات', 'اهلي'];
+const FACILITY_TYPE_OPTIONS = ["مستشفى", "مستشفى ريفي", "مستشفى تخصصي", "مركز صحة الاسرة", "وحدة صحة الاسرة", "شفخانه", "نقطة غيار"];
+
 // --- HELPER: CALCULATE KPIS ---
 const calculateKPIs = (facilities, updates, config) => {
     let targetFacilities = facilities;
+    
+    // Filter based on Facility Type (Checking updates first)
     if (config.facilityTypes) {
          targetFacilities = facilities.filter(f => {
-            const type = f['نوع_المؤسسةالصحية'];
+            const type = updates[f.id]?.['نوع_المؤسسةالصحية'] ?? f['نوع_المؤسسةالصحية'];
             return config.facilityTypes.some(t => t === type || type?.includes(t));
         });
     }
@@ -186,6 +191,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
     const [loading, setLoading] = useState(true);
     const [updates, setUpdates] = useState({}); 
     const [searchTerm, setSearchTerm] = useState('');
+    const [ownershipFilter, setOwnershipFilter] = useState(''); // New State for Ownership Filter
     const tableRef = useRef(null);
     
     // Staff Modal State
@@ -204,6 +210,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
             label: 'بيانات عامة',
             facilityTypes: null, 
             columns: [
+                { key: 'facility_ownership', label: 'ملكية المؤسسة', type: 'select', options: OWNERSHIP_OPTIONS },
                 { key: 'هل_المؤسسة_تعمل', label: 'هل المؤسسة تعمل', type: 'select', options: ['Yes', 'No'] },
                 { key: 'وجود_العلاج_المتكامل_لامراض_الطفولة', label: 'العلاج المتكامل', type: 'select', options: ['Yes', 'No'] },
                 { key: 'eenc_provides_essential_care', label: 'رعاية حديثي الولادة', type: 'select', options: ['Yes', 'No'] },
@@ -214,9 +221,11 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
             label: 'العلاج المتكامل لأمراض الطفولة (IMNCI)',
             facilityTypes: ["مركز صحة الاسرة", "وحدة صحة الاسرة", "شفخانه", "Health Unit", "Family Health Center", "Primary Health Center"],
             columns: [
+                { key: 'facility_ownership', label: 'ملكية المؤسسة', type: 'select', options: OWNERSHIP_OPTIONS },
                 { key: 'هل_المؤسسة_تعمل', label: 'هل المؤسسة تعمل', type: 'select', options: ['Yes', 'No'] },
                 { key: 'وجود_العلاج_المتكامل_لامراض_الطفولة', label: 'وجود العلاج المتكامل', type: 'select', options: ['Yes', 'No'] },
-                { key: 'STAFF_MANAGEMENT_ACTION', label: 'الكوادر الصحية', type: 'action_button' },
+                { key: 'STAFF_NAMES', label: 'اسم الكادر', type: 'staff_names' },
+                { key: 'STAFF_TRAINING', label: 'هل الكادر مدرب', type: 'staff_training' },
                 { key: 'STAFF_PHONES', label: 'رقم الهاتف', type: 'staff_phones' },
                 { key: 'وجود_سجل_علاج_متكامل', label: 'وجود سجل علاج متكامل', type: 'select', options: ['Yes', 'No'] },
                 { key: 'وجود_كتيب_لوحات', label: 'وجود كتيب لوحات', type: 'select', options: ['Yes', 'No'] },
@@ -231,6 +240,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
             label: 'رعاية حديثي الولادة (Neonatal)',
             facilityTypes: ["مستشفى", "مستشفى ريفي", "مستشفى تخصصي", "Hospital", "Rural Hospital"],
             columns: [
+                { key: 'facility_ownership', label: 'ملكية المؤسسة', type: 'select', options: OWNERSHIP_OPTIONS },
                 { key: 'هل_المؤسسة_تعمل', label: 'هل المؤسسة تعمل', type: 'select', options: ['Yes', 'No'] },
                 { key: 'neonatal_level_of_care_primary', label: 'رعاية أولية', type: 'select', options: ['Yes', 'No'] },
                 { key: 'neonatal_level_of_care_secondary', label: 'رعاية ثانوية', type: 'select', options: ['Yes', 'No'] },
@@ -243,6 +253,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
             label: 'الرعاية المبكرة لحديثي الولادة (EENC)',
             facilityTypes: ["مستشفى", "مستشفى ريفي", "مستشفى تخصصي", "Hospital", "Rural Hospital"],
             columns: [
+                { key: 'facility_ownership', label: 'ملكية المؤسسة', type: 'select', options: OWNERSHIP_OPTIONS },
                 { key: 'هل_المؤسسة_تعمل', label: 'هل المؤسسة تعمل', type: 'select', options: ['Yes', 'No'] },
                 { key: 'eenc_provides_essential_care', label: 'تقدم خدمة EENC', type: 'select', options: ['Yes', 'No'] },
                 { key: 'eenc_ambu_bags', label: 'عدد الامبوباق', type: 'number' },
@@ -254,6 +265,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
             label: 'الرعاية الحرجة (Critical Care)',
             facilityTypes: ["مستشفى", "مستشفى ريفي", "مستشفى تخصصي", "Hospital", "Rural Hospital"],
             columns: [
+                { key: 'facility_ownership', label: 'ملكية المؤسسة', type: 'select', options: OWNERSHIP_OPTIONS },
                 { key: 'هل_المؤسسة_تعمل', label: 'هل المؤسسة تعمل', type: 'select', options: ['Yes', 'No'] },
                 { key: 'etat_has_service', label: 'فرز الحالات (ETAT)', type: 'select', options: ['Yes', 'No'] },
                 { key: 'hdu_has_service', label: 'عناية وسيطة (HDU)', type: 'select', options: ['Yes', 'No'] },
@@ -370,7 +382,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
         let filtered = facilities;
         if (config.facilityTypes) {
             filtered = filtered.filter(f => {
-                const type = f['نوع_المؤسسةالصحية'];
+                const type = updates[f.id]?.['نوع_المؤسسةالصحية'] ?? f['نوع_المؤسسةالصحية'];
                 return config.facilityTypes.some(t => t === type || type?.includes(t));
             });
         }
@@ -378,8 +390,15 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
             const term = searchTerm.toLowerCase();
             filtered = filtered.filter(f => f['اسم_المؤسسة']?.toLowerCase().includes(term));
         }
+        // Ownership Filter Logic
+        if (ownershipFilter) {
+            filtered = filtered.filter(f => {
+                const ownership = updates[f.id]?.facility_ownership ?? f.facility_ownership;
+                return ownership === ownershipFilter;
+            });
+        }
         return filtered;
-    }, [facilities, config, searchTerm]);
+    }, [facilities, config, searchTerm, ownershipFilter, updates]);
 
     // Use Helper for View KPIs
     const viewKpiData = useMemo(() => calculateKPIs(displayedFacilities, updates, config), [displayedFacilities, updates, config]);
@@ -444,16 +463,19 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
             
             const tableBody = currentFacilities.map((f, i) => {
                 const dynamicVals = pdfColumns.map(col => {
-                    if (col.type === 'staff_phones') {
+                    // --- CHANGED: Handle specific staff columns for PDF ---
+                    if (col.type === 'staff_names' || col.type === 'staff_training' || col.type === 'staff_phones') {
                         const staffArr = getFacilityStaff(f);
-                        const phones = staffArr.map(s => s.phone).filter(Boolean).join('، ');
-                        return phones || '';
+                        if (!staffArr || staffArr.length === 0) return '-';
+                        return staffArr.map(s => {
+                            if (col.type === 'staff_names') return s.name || '-';
+                            if (col.type === 'staff_training') return s.is_trained === 'Yes' ? 'نعم' : 'لا';
+                            if (col.type === 'staff_phones') return s.phone || '-';
+                            return '';
+                        }).join('\n'); // Separate by newline for PDF
                     }
-                    if (col.type === 'action_button') {
-                        const staffArr = getFacilityStaff(f);
-                        const names = staffArr.map(s => s.name).filter(Boolean).join('\n');
-                        return names || '-';
-                    }
+                    if (col.type === 'action_button') return ''; // Deprecated but kept for safety
+                    
                     let val = updates[f.id]?.[col.key];
                     if (val === undefined) {
                         if (col.key === 'neonatal_level_of_care_primary') val = f.neonatal_level_of_care?.primary ? 'Yes' : 'No';
@@ -465,20 +487,22 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
                     if (val === false || val === 'No') return 'لا';
                     return val || '';
                 });
-                return [...dynamicVals.reverse(), f['نوع_المؤسسةالصحية'] || '', f['اسم_المؤسسة'] || '', (i + 1).toString()];
+                
+                const type = updates[f.id]?.['نوع_المؤسسةالصحية'] ?? f['نوع_المؤسسةالصحية'];
+                return [...dynamicVals.reverse(), type || '', f['اسم_المؤسسة'] || '', (i + 1).toString()];
             });
 
             const columnStyles = {};
-            const hwIndex = config.columns.findIndex(c => c.key === 'STAFF_MANAGEMENT_ACTION');
-            if (hwIndex > -1) {
-                const pdfHwIndex = (config.columns.length - 1) - hwIndex;
-                columnStyles[pdfHwIndex] = { cellWidth: 30 }; 
-            }
-            const phoneIndex = config.columns.findIndex(c => c.key === 'STAFF_PHONES');
-            if (phoneIndex > -1) {
-                const pdfPhoneIndex = (config.columns.length - 1) - phoneIndex;
-                columnStyles[pdfPhoneIndex] = { cellWidth: 25 }; 
-            }
+            // Set widths for staff columns
+            const nameIndex = config.columns.findIndex(c => c.type === 'staff_names');
+            if (nameIndex > -1) columnStyles[(config.columns.length - 1) - nameIndex] = { cellWidth: 35 }; 
+            
+            const trainIndex = config.columns.findIndex(c => c.type === 'staff_training');
+            if (trainIndex > -1) columnStyles[(config.columns.length - 1) - trainIndex] = { cellWidth: 15 }; 
+
+            const phoneIndex = config.columns.findIndex(c => c.type === 'staff_phones');
+            if (phoneIndex > -1) columnStyles[(config.columns.length - 1) - phoneIndex] = { cellWidth: 25 }; 
+
             const typeColIndex = config.columns.length;
             columnStyles[typeColIndex] = { cellWidth: 25 }; 
             const nameColIndex = config.columns.length + 1;
@@ -498,6 +522,41 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
                         const text = data.cell.text[0];
                         if (text === 'نعم') data.cell.styles.fillColor = [220, 252, 231]; 
                         if (text === 'لا') data.cell.styles.fillColor = [254, 226, 226]; 
+                    }
+                },
+                didDrawCell: function (data) {
+                    // Draw horizontal lines between staff members in the same cell
+                    if (data.section === 'body' && data.cell.raw && typeof data.cell.raw === 'string') {
+                         // Find which configuration column matches this current table column index
+                         // The table structure in PDF is [ ...reversedDynamicCols, Type, Name, # ]
+                         // Since reversedDynamicCols corresponds to config.columns reversed:
+                         // Column 0 in PDF = Last Column in config.columns
+                         const configIndex = (config.columns.length - 1) - data.column.index;
+            
+                         if (configIndex >= 0 && configIndex < config.columns.length) {
+                             const colType = config.columns[configIndex].type;
+                             if (['staff_names', 'staff_training', 'staff_phones'].includes(colType)) {
+                                 const lineCount = data.cell.raw.split('\n').length;
+                                 if (lineCount > 1) {
+                                     const cellHeight = data.cell.height;
+                                     const lineHeight = cellHeight / lineCount;
+                                     const x = data.cell.x;
+                                     const w = data.cell.width;
+                                     const startY = data.cell.y;
+            
+                                     const doc = data.doc;
+                                     doc.saveGraphicsState();
+                                     doc.setDrawColor(200, 200, 200); // Light gray
+                                     doc.setLineWidth(0.1);
+            
+                                     for (let i = 1; i < lineCount; i++) {
+                                         const y = startY + (lineHeight * i);
+                                         doc.line(x, y, x + w, y);
+                                     }
+                                     doc.restoreGraphicsState();
+                                 }
+                             }
+                         }
                     }
                 }
             });
@@ -562,31 +621,45 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
                     </div>
                 )}
 
-                <div className="p-4 bg-slate-50 border-b border-slate-200 rounded-lg flex flex-col md:flex-row justify-between items-center gap-4" dir="rtl">
-                    <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto flex-1">
-                        <div className="w-full md:w-64">
-                            <Input 
-                                placeholder="أدخل اسم المؤسسة..." 
-                                value={searchTerm} 
-                                onChange={(e) => setSearchTerm(e.target.value)} 
-                                className="w-full" 
-                            />
-                        </div>
-                        <div className="flex items-center gap-2 w-full md:w-auto">
-                            <label className="text-sm font-medium whitespace-nowrap text-gray-700">اختر المحلية:</label>
-                            <Select 
-                                value={activeLocality} 
-                                onChange={(e) => setActiveLocality(e.target.value)} 
-                                className="bg-white border-gray-300 w-full md:w-64"
-                            >
-                                <option value="All">كل الولاية (All State Facilities)</option>
-                                {stateLocalities.map(loc => (
-                                    <option key={loc.en} value={loc.en}>{loc.ar} ({loc.en})</option>
-                                ))}
-                            </Select>
+                <div className="p-4 bg-slate-50 border-b border-slate-200 rounded-lg flex flex-col gap-4" dir="rtl">
+                    <div className="flex flex-col md:flex-row items-center gap-4 w-full justify-between">
+                        <div className="flex flex-col md:flex-row gap-4 w-full">
+                            <div className="w-full md:w-64">
+                                <Input 
+                                    placeholder="أدخل اسم المؤسسة..." 
+                                    value={searchTerm} 
+                                    onChange={(e) => setSearchTerm(e.target.value)} 
+                                    className="w-full" 
+                                />
+                            </div>
+                            
+                            <div className="w-full md:w-64">
+                                <Select 
+                                    value={ownershipFilter} 
+                                    onChange={(e) => setOwnershipFilter(e.target.value)} 
+                                    className="w-full"
+                                >
+                                    <option value="">كل الملكيات (All Ownerships)</option>
+                                    {OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </Select>
+                            </div>
+
+                            <div className="flex items-center gap-2 w-full md:w-auto">
+                                <label className="text-sm font-medium whitespace-nowrap text-gray-700">اختر المحلية:</label>
+                                <Select 
+                                    value={activeLocality} 
+                                    onChange={(e) => setActiveLocality(e.target.value)} 
+                                    className="bg-white border-gray-300 w-full md:w-64"
+                                >
+                                    <option value="All">كل الولاية (All State Facilities)</option>
+                                    {stateLocalities.map(loc => (
+                                        <option key={loc.en} value={loc.en}>{loc.ar} ({loc.en})</option>
+                                    ))}
+                                </Select>
+                            </div>
                         </div>
                     </div>
-                    <div className="flex gap-2 w-full md:w-auto justify-end">
+                    <div className="flex gap-2 w-full justify-end mt-2">
                         <Button onClick={handleExportPDF} variant="secondary" className="flex items-center gap-1" disabled={displayedFacilities.length === 0}>
                             <PdfIcon /> تحميل الملف
                         </Button>
@@ -606,7 +679,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
                                 <th className="px-1 py-1 text-right text-xs font-bold text-slate-800 uppercase w-48 whitespace-normal break-words align-bottom border border-slate-300">اسم المؤسسة</th>
                                 <th className="px-1 py-1 text-right text-xs font-bold text-slate-800 uppercase w-20 whitespace-normal break-words align-bottom border border-slate-300">النوع</th>
                                 {config.columns.map(col => (
-                                    <th key={col.key} className={`px-1 py-1 text-right text-xs font-bold text-slate-800 uppercase whitespace-normal break-words align-bottom border border-slate-300 ${col.key === 'STAFF_MANAGEMENT_ACTION' ? 'w-40' : ''}`}>{col.label}</th>
+                                    <th key={col.key} className={`px-1 py-1 text-right text-xs font-bold text-slate-800 uppercase whitespace-normal break-words align-bottom border border-slate-300 ${col.type === 'staff_names' ? 'w-40' : ''}`}>{col.label}</th>
                                 ))}
                                 <th className="px-1 py-1 text-right text-xs font-bold text-slate-800 uppercase w-16 whitespace-normal break-words align-bottom border border-slate-300">الحالة</th>
                             </tr>
@@ -616,47 +689,52 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
                                 <tr key={f.id} className={updates[f.id] ? "bg-blue-50" : "hover:bg-gray-50"}>
                                     <td className="px-1 py-1 text-center text-xs text-gray-500 font-medium border border-slate-300 align-top">{index + 1}</td>
                                     <td className="px-1 py-1 text-xs font-medium text-right border border-slate-300 whitespace-normal break-words leading-tight">{f['اسم_المؤسسة']}</td>
-                                    <td className="px-1 py-1 text-[10px] text-gray-500 text-right border border-slate-300 whitespace-normal break-words leading-tight">{f['نوع_المؤسسةالصحية']}</td>
+                                    <td className="px-1 py-1 border border-slate-300">
+                                        <Select
+                                            value={updates[f.id]?.['نوع_المؤسسةالصحية'] ?? f['نوع_المؤسسةالصحية'] ?? ''}
+                                            onChange={(e) => handleInputChange(f.id, 'نوع_المؤسسةالصحية', e.target.value)}
+                                            className="text-[10px] py-0 px-1 h-7 w-full border rounded-sm focus:ring-1 focus:ring-sky-500 text-gray-700"
+                                        >
+                                            <option value="">-</option>
+                                            {FACILITY_TYPE_OPTIONS.map(opt => (
+                                                <option key={opt} value={opt}>{opt}</option>
+                                            ))}
+                                        </Select>
+                                    </td>
                                     {config.columns.map(col => {
-                                        if (col.type === 'action_button') {
+                                        // --- CHANGED: Render specific staff columns with lines ---
+                                        if (col.type === 'staff_names' || col.type === 'staff_training' || col.type === 'staff_phones') {
                                             const staffArr = getFacilityStaff(f);
                                             return (
                                                 <td key={`${f.id}-${col.key}`} className="px-0 py-0 border border-slate-300 align-top relative group">
                                                     <button 
                                                         onClick={() => openStaffModal(f)} 
-                                                        className="w-full h-full text-right p-1 min-h-[40px] hover:bg-sky-50 transition-colors flex flex-col items-start gap-1"
+                                                        className="w-full h-full text-right p-1 min-h-[40px] hover:bg-sky-50 transition-colors flex flex-col items-start gap-0"
                                                     >
-                                                        <div className="w-full pr-5"> 
-                                                            {staffArr.length > 0 ? (
-                                                                <div className="flex flex-col w-full">
-                                                                    {staffArr.map((s, idx) => (
-                                                                        <div key={idx} className="text-[10px] whitespace-normal leading-tight w-full border-b border-gray-200 last:border-0 py-1">
-                                                                            {s.name}
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            ) : (
-                                                                <span className="text-gray-400 italic text-[10px]">لا يوجد</span>
-                                                            )}
-                                                        </div>
+                                                        {staffArr.length > 0 ? (
+                                                            <div className="flex flex-col w-full">
+                                                                {staffArr.map((s, idx) => (
+                                                                    <div key={idx} className="text-[10px] h-7 flex items-center whitespace-nowrap w-full border-b border-gray-200 last:border-0 overflow-hidden text-ellipsis px-1">
+                                                                        {col.type === 'staff_names' && (s.name || '-')}
+                                                                        {col.type === 'staff_training' && (s.is_trained === 'Yes' ? 'نعم' : 'لا')}
+                                                                        {col.type === 'staff_phones' && (s.phone || '-')}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-gray-400 italic text-[10px] p-1 block">-</span>
+                                                        )}
                                                     </button>
-                                                    <div className="absolute top-1 left-1 pointer-events-none text-sky-600 opacity-50 group-hover:opacity-100">
-                                                        <Edit size={14} />
-                                                    </div>
+                                                    {col.type === 'staff_names' && (
+                                                        <div className="absolute top-1 left-1 pointer-events-none text-sky-600 opacity-50 group-hover:opacity-100">
+                                                            <Edit size={14} />
+                                                        </div>
+                                                    )}
                                                 </td>
                                             );
                                         }
                                         
-                                        if (col.type === 'staff_phones') {
-                                            const staffArr = getFacilityStaff(f);
-                                            const phones = staffArr.map(s => s.phone).filter(Boolean).join('، ');
-                                            return (
-                                                <td key={`${f.id}-${col.key}`} className="px-1 py-1 text-right border border-slate-300 min-w-[100px]">
-                                                    <span className="text-[10px] whitespace-normal leading-tight">{phones || '-'}</span>
-                                                </td>
-                                            );
-                                        }
-
+                                        // Standard cells
                                         let val = updates[f.id]?.[col.key];
                                         if (val === undefined) {
                                             if (col.key === 'neonatal_level_of_care_primary') val = f.neonatal_level_of_care?.primary ? 'Yes' : 'No';
@@ -669,11 +747,15 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
                                         if (val === 'No' || val === false) selectColorClass = "bg-red-100 text-red-800 border-red-200 font-semibold";
                                         
                                         return (
-                                            <td key={`${f.id}-${col.key}`} className="px-1 py-1 border border-slate-300">
+                                            <td key={`${f.id}-${col.key}`} className="px-1 py-1 border border-slate-300 align-top">
                                                 {col.type === 'select' ? (
                                                     <Select value={val ?? ''} onChange={(e) => handleInputChange(f.id, col.key, e.target.value)} className={`text-[10px] py-0 px-1 h-7 w-full border rounded-sm focus:ring-1 focus:ring-sky-500 ${selectColorClass}`}>
                                                         <option value="">-</option>
-                                                        {col.options.map(opt => <option key={opt} value={opt}>{opt === 'Yes' ? 'نعم' : 'لا'}</option>)}
+                                                        {col.options.map(opt => (
+                                                            <option key={opt} value={opt}>
+                                                                {opt === 'Yes' ? 'نعم' : (opt === 'No' ? 'لا' : opt)}
+                                                            </option>
+                                                        ))}
                                                     </Select>
                                                 ) : (
                                                     <Input type={col.type} value={val ?? ''} onChange={(e) => handleInputChange(f.id, col.key, e.target.value)} className="text-[10px] py-0 px-1 h-7 w-full border border-gray-200 rounded-sm focus:ring-1 focus:ring-sky-500" />

@@ -1,3 +1,4 @@
+// CertificateGenerator.jsx
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import html2canvas from 'html2canvas';
@@ -42,25 +43,40 @@ const getDayWithSuffix = (day) => {
 };
 
 const getCertificateCourseTitle = (courseType, language = 'en') => {
+    const normalizedType = courseType ? courseType.trim() : '';
     if (language === 'ar') {
-        switch (courseType) {
+        switch (normalizedType) {
             case 'ICCM': return 'العلاج المتكامل للأطفال أقل من 5 سنوات في المجتمع';
             case 'IMNCI': return 'العلاج المتكامل للاطفال اقل من 5 سنوات (IMNCI)';
             case 'ETAT': return 'الفرز والتقييم والعلاج للاطفال اقل من 5 سنوات (ETAT)';
             case 'EENC': return 'الرعاية الضرورية المبكرة لحديثي الولادة (EENC)';
             case 'IPC': return 'مكافحة العدوى (وحدة حديثي الولادة)';
-            case 'Small & Sick Newborn': return 'رعاية الاطفال حديثي الولادة المرضى ةالصغار';
-            default: return courseType;
+            case 'Small & Sick Newborn': return 'رعاية الاطفال حديثي الولادة المرضى والصغار';
+            default: return normalizedType;
         }
     }
-    switch (courseType) {
+    switch (normalizedType) {
         case 'IMNCI': return 'Integrated Management of Newborn and Childhood Illnesses (IMNCI)';
         case 'ICCM': return 'Integrated Community case management for under 5 children (iCCM)';
         case 'ETAT': return 'Emergency Triage, Assessment & Treatment (ETAT)';
         case 'EENC': return 'Early Essential Newborn Care (EENC)';
         case 'IPC': return 'Infection Prevention & Control (Neonatal Unit)';
         case 'Small & Sick Newborn': return 'Small & Sick Newborn Case Management';
-        default: return courseType;
+        default: return normalizedType;
+    }
+};
+
+const getSmallAndSickSubCourseArabic = (subCourse) => {
+    if (!subCourse) return '';
+    const normalized = subCourse.trim();
+    switch (normalized) {
+        case 'Portable warmer training': return 'التدريب على المدفأة المحمولة';
+        case 'CPAP training': return 'التدريب على جهاز CPAP';
+        case 'Kangaroo Mother Care': return 'رعاية الأم الكنغر (KMC)';
+        case 'Module (1) Emergency and Essential Newborn Care': return 'الوحدة (1) الطوارئ والرعاية الأساسية لحديثي الولادة';
+        case 'Module (2) Special Newborn Care': return 'الوحدة (2) رعاية حديثي الولادة الخاصة';
+        case 'Module (3) Intensive Newborn Care': return 'الوحدة (3) العناية المكثفة لحديثي الولادة';
+        default: return subCourse; 
     }
 };
 
@@ -121,14 +137,25 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
     programManagerSignatureUrl,
     directorName,          
     directorSignatureUrl,  
-    programStampUrl        
+    programStampUrl,
+    isTemplate = false 
 }) {
     const isArabic = language === 'ar';
-    const courseTitle = getCertificateCourseTitle(course.course_type, language);
+    const courseType = course.course_type ? course.course_type.trim() : '';
+    const courseTitle = getCertificateCourseTitle(courseType, language);
     
+    // Logic to determine what to display for the sub-course
     let displaySubCourse = participantSubCourse;
-    if (isArabic && course.course_type === 'ICCM') {
-        displaySubCourse = "تدريب العامل الصحي المجتمعي";
+    
+    if (participantSubCourse) {
+        if (isArabic) {
+            // Arabic Translation Logic
+            if (courseType === 'ICCM') {
+                displaySubCourse = "تدريب العامل الصحي المجتمعي";
+            } else if (courseType === 'Small & Sick Newborn') {
+                displaySubCourse = getSmallAndSickSubCourseArabic(participantSubCourse);
+            }
+        }
     }
 
     let stateDisplay = course.state;
@@ -178,7 +205,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
         courseDate = course.start_date ? course.start_date.split('-').reverse().join('/') : 'N/A';
     }
     
-    const verificationUrl = `${window.location.origin}/verify/certificate/${participant.id}`;
+    const verificationUrl = isTemplate ? '' : `${window.location.origin}/verify/certificate/${participant?.id}`;
 
     const containerStyle = { 
         width: '297mm', 
@@ -304,9 +331,10 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                 fontWeight: 'bold',
                 zIndex: 2,
                 borderBottom: '3px dotted #000', 
-                paddingBottom: '10px'             
+                paddingBottom: '10px',
+                minHeight: '40px'
             }}>
-                {isArabic ? `${participant.name}` : `${participant.name}`}
+                {!isTemplate && (isArabic ? `${participant.name}` : `${participant.name}`)}
             </div>
 
             {/* Completion Text */}
@@ -326,25 +354,27 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
             {/* Course Title */}
             <div style={{
                 position: 'absolute',
-                top: isArabic ? '117mm' : '117mm', 
+                top: '117mm', 
                 left: '10mm',
                 right: '10mm',
                 textAlign: 'center',
                 fontSize: '28px', 
                 fontWeight: 'bold',
                 color: 'red',
-                zIndex: 2
+                zIndex: 2,
+                lineHeight: '1.3' 
             }}>
                 {courseTitle}
             </div>
             
-            {/* Sub Course */}
+            {/* Sub Course - Explicitly Centered and Positioned */}
             {(displaySubCourse) && (
                 <div style={{
                     position: 'absolute',
-                    top: isArabic ? '128mm' : '128mm', 
-                    left: '10mm',
-                    right: '10mm',
+                    top: '135mm', 
+                    left: '0',
+                    right: '0',
+                    width: '100%',
                     textAlign: 'center',
                     fontSize: '20px',
                     fontWeight: 'normal',
@@ -358,11 +388,11 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
             {/* Location & Date */}
             <div style={{
                 position: 'absolute',
-                top: '140mm', 
-                left: '50%', 
-                transform: 'translateX(-50%)', 
-                textAlign: 'center', 
+                top: '148mm', 
+                left: '0',
+                right: '0',
                 width: '100%',
+                textAlign: 'center', 
                 zIndex: 2
             }}>
                 <div style={{
@@ -387,27 +417,29 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
             </div>
 
             {/* QR Code Section */}
-            <div style={qrContainerStyle}>
-                <div style={{
-                    marginBottom: '8px',
-                    lineHeight: '1.5',
-                    fontSize: '16px',
-                    fontWeight: 'bold',
-                    fontFamily: isArabic ? 'Arial, sans-serif' : 'sans-serif',
-                }}>
-                    {isArabic ? 'أمسح وتحقق' : 'Scan & Verify'}
+            {!isTemplate && (
+                <div style={qrContainerStyle}>
+                    <div style={{
+                        marginBottom: '8px',
+                        lineHeight: '1.5',
+                        fontSize: '16px',
+                        fontWeight: 'bold',
+                        fontFamily: isArabic ? 'Arial, sans-serif' : 'sans-serif',
+                    }}>
+                        {isArabic ? 'أمسح وتحقق' : 'Scan & Verify'}
+                    </div>
+                    <div style={{ display: 'block' }}>
+                        <QRCodeCanvas
+                            value={verificationUrl}
+                            size={87} 
+                            bgColor={"#ffffff"}
+                            fgColor={"#000000"}
+                            level={"L"} 
+                            includeMargin={false}
+                        />
+                    </div>
                 </div>
-                <div style={{ display: 'block' }}>
-                    <QRCodeCanvas
-                        value={verificationUrl}
-                        size={87} 
-                        bgColor={"#ffffff"}
-                        fgColor={"#000000"}
-                        level={"L"} 
-                        includeMargin={false}
-                    />
-                </div>
-            </div>
+            )}
 
             {/* Signatures & Stamp Section */}
             
@@ -415,7 +447,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
             {programStampUrl && (
                 <div style={{
                     position: 'absolute',
-                    top: '158mm',
+                    top: '162mm', 
                     left: '50%',
                     transform: 'translateX(-50%)',
                     zIndex: 1, 
@@ -440,7 +472,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                 position: 'absolute',
                 top: '175mm', 
                 right: '20mm',
-                width: '85mm', 
+                width: '100mm', 
                 textAlign: 'center',
                 fontSize: '20px',
                 fontWeight: 'bold',
@@ -457,7 +489,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                                style={{ 
                                    display: 'block', margin: '0 auto', maxHeight: '20mm', maxWidth: '30mm',
                                    position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', 
-                                   zIndex: 1 // CHANGED FROM -1 to 1
+                                   zIndex: 1 
                                }} 
                            />
                        )}
@@ -475,7 +507,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                                style={{ 
                                    display: 'block', margin: '0 auto', maxHeight: '20mm', maxWidth: '30mm',
                                    position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', 
-                                   zIndex: 1 // CHANGED FROM -1 to 1
+                                   zIndex: 1 
                                }} 
                            />
                        )}
@@ -490,7 +522,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                 position: 'absolute',
                 top: '175mm', 
                 left: '20mm', 
-                width: '85mm', 
+                width: '100mm', 
                 textAlign: 'center',
                 fontSize: '20px', 
                 fontWeight: 'bold',
@@ -507,7 +539,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                                style={{ 
                                    display: 'block', margin: '0 auto', maxHeight: '20mm', maxWidth: '30mm',
                                    position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', 
-                                   zIndex: 1 // CHANGED FROM -1 to 1
+                                   zIndex: 1 
                                }} 
                            />
                        )}
@@ -525,7 +557,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                                style={{ 
                                    display: 'block', margin: '0 auto', maxHeight: '20mm', maxWidth: '30mm',
                                    position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', 
-                                   zIndex: 1 // CHANGED FROM -1 to 1
+                                   zIndex: 1 
                                }} 
                            />
                        )}
@@ -626,6 +658,115 @@ export const generateCertificatePdf = async (course, participant, federalProgram
     } catch (error) {
         console.error("Error generating certificate:", error);
         alert(`Could not generate certificate for ${participant.name}. See console for details.`);
+        return null;
+    } finally {
+        if (container.parentNode === document.body) {
+             root.unmount();
+             document.body.removeChild(container);
+        }
+    }
+};
+
+// NEW FUNCTION: Generate Blank Template
+export const generateBlankCertificatePdf = async (course, federalProgramManagerName, language = 'en') => {
+    // --- Logic to prioritize the approved name & signature ---
+    const finalManagerName = course.approvedByManagerName || federalProgramManagerName;
+    const rawManagerSignature = course.approvedByManagerSignatureUrl || null;
+
+    // --- New Fields ---
+    const finalDirectorName = course.approvedDirectorName || course.director;
+    const rawDirectorSignature = course.approvedDirectorSignatureUrl || null;
+    const rawProgramStamp = course.approvedProgramStampUrl || null;
+
+    // --- CONVERT IMAGES TO BASE64 ---
+    const finalManagerSignature = await imageUrlToBase64(rawManagerSignature);
+    const finalDirectorSignature = await imageUrlToBase64(rawDirectorSignature);
+    const finalProgramStamp = await imageUrlToBase64(rawProgramStamp);
+
+    let directorNameAr = null;
+    let programManagerNameAr = null;
+
+    if (language === 'ar') {
+        directorNameAr = await fetchArabicName('facilitators', finalDirectorName, 'arabicName');
+        programManagerNameAr = await fetchArabicName('federalCoordinators', finalManagerName, 'nameAr');
+    }
+
+    try {
+        await new Promise((resolve, reject) => {
+            const img = new Image();
+            img.src = '/certificate/border.jpg';
+            img.onload = resolve;
+            img.onerror = () => reject(new Error("Failed to load certificate background image."));
+        });
+    } catch (error) {
+        console.error(error);
+        alert(error.message);
+        return null;
+    }
+
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.left = '-9999px'; 
+    container.style.top = '0';
+    container.style.zIndex = '-1'; 
+    document.body.appendChild(container);
+
+    const root = createRoot(container);
+    
+    let canvas = null;
+    try {
+        // Mock participant for structure
+        const dummyParticipant = { name: '', id: 'template' };
+
+        // --- NEW: Derive a sample sub-course for the template ---
+        let sampleSubCourse = null;
+        if (course.facilitatorAssignments && course.facilitatorAssignments.length > 0) {
+            const assignment = course.facilitatorAssignments.find(a => a.imci_sub_type);
+            if (assignment) {
+                sampleSubCourse = assignment.imci_sub_type;
+            }
+        }
+        
+        // Fallback for visual confirmation in template if no assignment found
+        if (!sampleSubCourse && course.course_type === 'Small & Sick Newborn') {
+            sampleSubCourse = "Module (1) Emergency and Essential Newborn Care";
+        }
+        // -----------------------------------------------------------
+
+        root.render(
+            <CertificateTemplate 
+                course={course} 
+                participant={dummyParticipant} 
+                federalProgramManagerName={finalManagerName} 
+                participantSubCourse={sampleSubCourse} // <--- UPDATED
+                language={language}
+                directorNameAr={directorNameAr}       
+                programManagerNameAr={programManagerNameAr} 
+                programManagerSignatureUrl={finalManagerSignature} 
+                directorName={finalDirectorName}
+                directorSignatureUrl={finalDirectorSignature}
+                programStampUrl={finalProgramStamp}
+                isTemplate={true} 
+            />
+        );
+
+        await new Promise(resolve => setTimeout(resolve, 1000)); 
+
+        const element = container.querySelector('#certificate-template');
+        if (!element) throw new Error("Certificate template element not found.");
+
+        canvas = await html2canvas(element, { 
+            scale: 2, 
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#ffffff' 
+        });
+        
+        return canvas;
+
+    } catch (error) {
+        console.error("Error generating certificate template:", error);
+        alert("Could not generate certificate template.");
         return null;
     } finally {
         if (container.parentNode === document.body) {

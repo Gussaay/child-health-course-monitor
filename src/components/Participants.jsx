@@ -5,7 +5,7 @@ import jsPDF from "jspdf";
 import { createRoot } from 'react-dom/client'; 
 
 // --- Icons ---
-import { Mail, Lock, RefreshCw, Search } from 'lucide-react'; 
+import { Mail, Lock, RefreshCw, Search, Printer } from 'lucide-react'; 
 
 // --- Firebase Imports (For Refresh Logic) ---
 import { db } from '../firebase';
@@ -28,7 +28,7 @@ import {
 import { useDataCache } from '../DataContext';
 
 // --- Import Certificate Generators ---
-import { generateCertificatePdf, generateAllCertificatesPdf } from './CertificateGenerator';
+import { generateCertificatePdf, generateAllCertificatesPdf, generateBlankCertificatePdf } from './CertificateGenerator';
 
 
 // ====================================================================
@@ -1372,6 +1372,7 @@ export function ParticipantsView({
 
     // --- Progress & Approval States ---
     const [isBulkCertLoading, setIsBulkCertLoading] = useState(false);
+    const [isGeneratingTemplate, setIsGeneratingTemplate] = useState(false);
     const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0 });
     const [certLanguage, setCertLanguage] = useState('en'); 
 
@@ -1525,6 +1526,29 @@ export function ParticipantsView({
         }
     };
 
+    // --- Handle Design Certificate Template ---
+    const handleDesignCertificate = async () => {
+        setIsGeneratingTemplate(true);
+        try {
+            // Determine language (using existing state `certLanguage`)
+            const canvas = await generateBlankCertificatePdf(course, federalProgramManagerName, certLanguage);
+            if (canvas) {
+                const doc = new jsPDF('landscape', 'mm', 'a4');
+                const imgWidth = 297;
+                const imgHeight = 210;
+                const imgData = canvas.toDataURL('image/jpeg', 1.0);
+                doc.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+                const fileName = `Certificate_Template_${course.course_type}.pdf`;
+                doc.save(fileName);
+            }
+        } catch (error) {
+            console.error("Error generating template:", error);
+            setToast({ show: true, message: "Failed to generate template.", type: 'error' });
+        } finally {
+            setIsGeneratingTemplate(false);
+        }
+    };
+
     const handleShareClick = (p) => {
         setShareTarget({ id: p.id, name: p.name });
         setShareModalOpen(true);
@@ -1638,6 +1662,16 @@ export function ParticipantsView({
                             <option value="ar">Arabic (عربي)</option>
                         </select>
                     </div>
+
+                    {/* ALWAYS VISIBLE: Design Certificate Button (Green) */}
+                    <Button
+                        onClick={handleDesignCertificate}
+                        disabled={isGeneratingTemplate || isCacheLoading.federalCoordinators}
+                        className="bg-green-600 hover:bg-green-700 text-white border-transparent focus:ring-green-500"
+                        title="Download a blank certificate template for printing"
+                    >
+                        {isGeneratingTemplate ? <Spinner size="sm" /> : 'Design Certificate'}
+                    </Button>
 
                     {localApprovalStatus ? (
                         <>

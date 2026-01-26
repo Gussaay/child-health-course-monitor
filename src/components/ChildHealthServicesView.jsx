@@ -71,7 +71,26 @@ const getDisplayableValue = (value) => {
 };
 
 const FIELD_LABELS_FOR_COMPARISON = {
-    'اسم_المؤسسة': 'Facility Name', 'الولاية': 'State', 'المحلية': 'Locality', 'نوع_المؤسسةالصحية': 'Facility Type', 'هل_المؤسسة_تعمل': 'Functioning', '_الإحداثيات_latitude': 'Latitude', '_الإحداثيات_longitude': 'Longitude', 'وجود_العلاج_المتكامل_لامراض_الطفولة': 'IMNCI Service', 'العدد_الكلي_لكوادر_طبية_العاملة_أطباء_ومساعدين': 'IMNCI Total Staff', 'العدد_الكلي_للكودار_ المدربة_على_العلاج_المتكامل': 'IMNCI Trained Staff', 'eenc_provides_essential_care': 'EENC Service', 'eenc_trained_workers': 'EENC Trained Workers', 'neonatal_level_of_care': 'Neonatal Level of Care', 'neonatal_total_beds': 'Neonatal Total Beds', 'neonatal_total_incubators': 'Neonatal Incubators', 'etat_has_service': 'ETAT Service', 'hdu_has_service': 'HDU Service', 'picu_has_service': 'PICU Service', 'imnci_staff': 'IMNCI Staff List'
+    'اسم_المؤسسة': 'Facility Name', 
+    'الولاية': 'State', 
+    'المحلية': 'Locality', 
+    'facility_ownership': 'Facility Ownership', // ADDED
+    'نوع_المؤسسةالصحية': 'Facility Type', 
+    'هل_المؤسسة_تعمل': 'Functioning', 
+    '_الإحداثيات_latitude': 'Latitude', 
+    '_الإحداثيات_longitude': 'Longitude', 
+    'وجود_العلاج_المتكامل_لامراض_الطفولة': 'IMNCI Service', 
+    'العدد_الكلي_لكوادر_طبية_العاملة_أطباء_ومساعدين': 'IMNCI Total Staff', 
+    'العدد_الكلي_للكودار_ المدربة_على_العلاج_المتكامل': 'IMNCI Trained Staff', 
+    'eenc_provides_essential_care': 'EENC Service', 
+    'eenc_trained_workers': 'EENC Trained Workers', 
+    'neonatal_level_of_care': 'Neonatal Level of Care', 
+    'neonatal_total_beds': 'Neonatal Total Beds', 
+    'neonatal_total_incubators': 'Neonatal Incubators', 
+    'etat_has_service': 'ETAT Service', 
+    'hdu_has_service': 'HDU Service', 
+    'picu_has_service': 'PICU Service', 
+    'imnci_staff': 'IMNCI Staff List'
 };
 
 const compareFacilities = (oldData, newData) => {
@@ -87,7 +106,12 @@ const compareFacilities = (oldData, newData) => {
 };
 
 const getServiceConfig = (serviceType) => {
-    const baseConfig = { headers: ["ID", "الولاية", "المحلية", "اسم المؤسسة", "نوع المؤسسةالصحية", "نوع الخدمات", "Date of Visit"], dataKeys: ["id", "الولاية", "المحلية", "اسم_المؤسسة", "نوع_المؤسسةالصحية", "eenc_service_type", "date_of_visit"] };
+    const baseConfig = { 
+        // ADDED "ملكية المؤسسة" to headers
+        headers: ["ID", "الولاية", "المحلية", "اسم المؤسسة", "ملكية المؤسسة", "نوع المؤسسةالصحية", "نوع الخدمات", "Date of Visit"], 
+        // ADDED "facility_ownership" to keys
+        dataKeys: ["id", "الولاية", "المحلية", "اسم_المؤسسة", "facility_ownership", "نوع_المؤسسةالصحية", "eenc_service_type", "date_of_visit"] 
+    };
     const baseImnciHeaders = ["هل المؤسسة تعمل", "هل توجد حوافز للاستاف", "ما هي المنظمة المقدم للحوافز", "هل تشارك المؤسسة في أي مشروع", "ما هو اسم المشروع", "رقم هاتف المسئول من المؤسسة", "وجود العلاج المتكامل لامراض الطفولة", "العدد الكلي للكوادر الطبية العاملة (أطباء ومساعدين)", "العدد الكلي للكودار المدربة על العلاج المتكامل", "وجود سجل علاج متكامل", "وجود كتيب لوحات", "ميزان وزن", "ميزان طول", "ميزان حرارة", "ساعة مؤقت", "غرفة إرواء", "وجود الدعم المادي", "_الإحداثيات_latitude", "_الإحداثيات_longitude", "هل يوجد مكتب تحصين", "اين يقع اقرب مركز تحصين", "هل يوجد مركز تغذية خارجي", "اين يقع اقرب مركز تغذية خارجي", "هل يوجد خدمة متابعة النمو"];
     const baseImnciDataKeys = ["هل_المؤسسة_تعمل", "staff_incentives", "staff_incentives_organization", "project_participation", "project_name", "person_in_charge_phone", "وجود_العلاج_المتكامل_لامراض_الطفولة", "العدد_الكلي_لكوادر_طبية_العاملة_أطباء_ومساعدين", "العدد_Kلي_للكودار_ المدربة_على_العلاج_المتكامل", "وجود_سجل_علاج_متكامل", "وجود_كتيب_لوحات", "ميزان_وزن", "ميزان_طول", "ميزان_حرارة", "ساعة_ مؤقت", "غرفة_إرواء", "وجود_الدعمادي", "_الإحداثيات_latitude", "_الإحداثيات_longitude", "immunization_office_exists", "nearest_immunization_center", "nutrition_center_exists", "nearest_nutrition_center", "growth_monitoring_service_exists"];
     const MAX_STAFF = 5;
@@ -129,12 +153,27 @@ const AllFacilitiesTab = ({ facilities, onEdit, onDelete, onGenerateLink, onOpen
     };
 
     return (
-        <Table headers={['State', 'Locality', 'Facility Name', 'Functioning', 'Services Available', 'Last Update', 'Actions']}>
+        // UPDATED HEADERS: Added "Ownership"
+        <Table headers={['State', 'Locality', 'Facility Name', 'Ownership', 'Functioning', 'Services Available', 'Last Update', 'Actions']}>
             {facilities.length > 0 ? (
                 facilities.map((f, index) => (
                     <tr key={f.id}>
-                        <td>{getStateName(f['الولاية'])}</td><td>{getLocalityName(f['الولاية'], f['المحلية'])}</td><td>{f['اسم_المؤسسة']}</td>
-                        <td>{ (f['هل_المؤسسة_تعمل'] === 'Yes' || f['هل_المؤسسة_تعمل'] === 'No') ? <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${f['هل_المؤسسة_تعمل'] === 'Yes' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{f['هل_المؤسسة_تعمل']}</span> : <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">Not Set</span> }</td><td>{getServiceBadges(f)}</td><td>{f.lastSnapshotAt?.toDate ? f.lastSnapshotAt.toDate().toLocaleDateString() : 'N/A'}</td>
+                        <td>{getStateName(f['الولاية'])}</td>
+                        <td>{getLocalityName(f['الولاية'], f['المحلية'])}</td>
+                        <td>{f['اسم_المؤسسة']}</td>
+                        {/* UPDATED ROW: Added Ownership cell */}
+                        <td>
+                            {f.facility_ownership ? (
+                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-50 text-blue-800">
+                                    {f.facility_ownership}
+                                </span>
+                            ) : (
+                                <span className="text-gray-400 text-xs">-</span>
+                            )}
+                        </td>
+                        <td>{ (f['هل_المؤسسة_تعمل'] === 'Yes' || f['هل_المؤسسة_تعمل'] === 'No') ? <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${f['هل_المؤسسة_تعمل'] === 'Yes' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{f['هل_المؤسسة_تعمل']}</span> : <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">Not Set</span> }</td>
+                        <td>{getServiceBadges(f)}</td>
+                        <td>{f.lastSnapshotAt?.toDate ? f.lastSnapshotAt.toDate().toLocaleDateString() : 'N/A'}</td>
                         <td className="min-w-[280px]">
                             <div className="flex flex-nowrap gap-2">
                                 {canManageFacilities && (
@@ -156,7 +195,7 @@ const AllFacilitiesTab = ({ facilities, onEdit, onDelete, onGenerateLink, onOpen
                     </tr>
                 ))
             ) : (
-                <EmptyState message={emptyMessage} colSpan={7} />
+                <EmptyState message={emptyMessage} colSpan={8} />
               )}
         </Table>
     );
@@ -744,9 +783,11 @@ const ChildHealthServicesView = ({
 
     const handleFixMismatch = (facility) => { setIsMismatchModalOpen(false); handleOpenMapModal(facility); };
 
+    // UPDATED CONFIG: Added facility_ownership
     const CLEANABLE_FIELDS_CONFIG = {
         'الولاية': { label: 'State', standardValues: Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar)), isStaffField: false },
         'المحلية': { label: 'Locality', standardValues: Object.values(STATE_LOCALITIES).flatMap(s => s.localities.map(l => l.en)).sort((a, b) => (LOCALITY_EN_TO_AR_MAP[a] || a).localeCompare(LOCALITY_EN_TO_AR_MAP[b] || b)), isStaffField: false },
+        'facility_ownership': { label: 'Facility Ownership (ملكية المؤسسة)', standardValues: ['حكومي', 'خاص', 'منظمات', 'اهلي'], isStaffField: false },
         'job_title': { label: 'Staff Job Title', standardValues: ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"], isStaffField: true },
         'نوع_المؤسسةالصحية': { label: 'Facility Type', standardValues: ["مركز صحة الاسرة", "مستشفى ريفي", "وحدة صحة الاسرة", "مستشفى"], isStaffField: false },
         'eenc_service_type': { label: 'Service Type', standardValues: ["CEmONC", "BEmONC", "general", "pediatric"], isStaffField: false },

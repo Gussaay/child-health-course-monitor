@@ -768,7 +768,14 @@ export function CourseForm({
     ];
 
     const ICCM_SUBCOURSE_TYPES = ['ICCM Community Module'];
-    const SMALL_AND_SICK_SUBCOURSE_TYPES = ['Portable warmer training', 'CPAP training'];
+    const SMALL_AND_SICK_SUBCOURSE_TYPES = [
+        'Portable warmer training', 
+        'CPAP training',
+        'Kangaroo Mother Care',
+        'Module (1) Emergency and Essential Newborn Care',
+        'Module (2) Special Newborn Care',
+        'Module (3) Intensive Newborn Care'
+    ];
 
     const EENC_SUBCOURSE_TYPES = [
         'EENC EmONC', 
@@ -845,11 +852,15 @@ export function CourseForm({
                 if (isInfectionControl) {
                     return fCourses.includes('IPC');
                 }
+
+                if (isSmallAndSick) {
+                    return fCourses.includes('Small & Sick Newborn');
+                }
                 
                 return fCourses.includes(courseType);
             })
             .sort((a, b) => a.name.localeCompare(b.name));
-    }, [facilitatorsList, courseType, isInfectionControl, isIccm]);
+    }, [facilitatorsList, courseType, isInfectionControl, isIccm, isSmallAndSick]);
 
     const federalCoordinatorOptions = useMemo(() => {
         return federalCoordinatorsList.map(c => ({ id: c.id, name: c.name }));

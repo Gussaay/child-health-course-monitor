@@ -17,7 +17,6 @@ import {
 
 // --- PUBLIC-FACING FORMS ---
 
-// --- MODIFIED: To accept and use the serviceType prop ---
 export function PublicFacilityUpdateForm({ setToast, serviceType }) {
     const [initialData, setInitialData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -49,7 +48,6 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
         }
     }, []);
 
-    // --- NEW: Logic to select form component based on prop ---
     const FORM_KEY_TO_COMPONENT = {
         'imnci': IMNCIFormFields,
         'eenc': EENCFormFields,
@@ -57,10 +55,7 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
         'critical': CriticalCareFormFields,
     };
     
-    // Default to IMNCI if no serviceType is provided or it's invalid
-    // Use toLowerCase() to match the keys
     const FormComponent = FORM_KEY_TO_COMPONENT[serviceType?.toLowerCase()] || IMNCIFormFields;
-    // --- END NEW ---
 
     const handleSave = async (formData) => {
         try {
@@ -86,7 +81,6 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
                     subtitle={`Please review and update the details for ${initialData?.['اسم_المؤسسة'] || 'this facility'}.`}
                     isPublicForm={true}
                 >
-                    {/* --- MODIFIED: Render dynamic component --- */}
                     {(props) => <FormComponent {...props} />}
                 </GenericFacilityForm>
             </div>
@@ -123,7 +117,7 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "اختر م
     const filteredOptions = useMemo(() => {
         if (!searchTerm) return options;
         return options.filter(option =>
-            option.value === 'addNew' || // Always keep the "Add New" option
+            option.value === 'addNew' || 
             (option.label && option.label.toLowerCase().includes(searchTerm.toLowerCase()))
         );
     }, [searchTerm, options]);
@@ -137,7 +131,6 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "اختر م
             }
             groups[groupName].push(option);
         });
-        // Ensure "ungrouped" (like 'Add New') comes first
         return { ungrouped: groups.ungrouped, ...Object.fromEntries(Object.entries(groups).filter(([key]) => key !== 'ungrouped')) };
     }, [filteredOptions]);
 
@@ -199,13 +192,9 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "اختر م
     );
 };
 
-
-// --- MODIFIED: To accept serviceType prop ---
 export function NewFacilityEntryForm({ setToast, serviceType }) {
-    // --- MODIFIED: Use prop instead of searchParams for formTypeKey ---
     const [searchParams] = useState(new URLSearchParams(window.location.search));
     const formTypeKey = serviceType?.toLowerCase() || 'imnci';
-    // --- END MODIFICATION ---
 
     const TABS = { IMNCI: 'IMNCI Services', EENC: 'EENC Services', NEONATAL: 'Neonatal Care Unit', CRITICAL: 'Emergency & Critical Care' };
     const ARABIC_TITLES = { [TABS.IMNCI]: "خدمات العلاج المتكامل لأمراض الطفولة", [TABS.EENC]: "خدمات الرعاية الطارئة لحديثي الولادة", [TABS.NEONATAL]: "وحدة رعاية حديثي الولادة", [TABS.CRITICAL]: "الطوارئ والرعاية الحرجة" };
@@ -282,7 +271,6 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
         fetchAndPartitionFacilities();
     }, [selectionData.state, selectionData.locality, setToast, formTypeKey]);
 
-    // --- HOOK MOVED HERE ---
     const facilityOptions = useMemo(() => {
         const options = [];
         
@@ -312,7 +300,6 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
         
         return options;
     }, [showOtherFacilities, facilitiesWithService, facilitiesWithoutService, serviceTitle]);
-    // --- END HOOK MOVE ---
 
     const handleSelectionChange = (e) => {
         const { name, value } = e.target;
@@ -373,7 +360,6 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
     };
 
     const renderSelectionScreen = () => {
-        // --- The useMemo hook that was here has been moved to the top level ---
         return (
             <div dir="rtl">
                 <Card>
@@ -519,6 +505,17 @@ export const SharedFacilityFields = ({ formData, handleChange, handleStateChange
                     <option value="pediatric">مستشفى اطفال متخصص</option>
                 </Select>
             </FormGroup>
+            {/* --- ADDED: Ownership Field --- */}
+            <FormGroup label="ملكية المؤسسة">
+                <Select name="facility_ownership" value={formData.facility_ownership || ''} onChange={handleChange} disabled={isReadOnly}>
+                    <option value="">اختر الملكية</option>
+                    <option value="حكومي">حكومي</option>
+                    <option value="خاص">خاص</option>
+                    <option value="منظمات">منظمات</option>
+                    <option value="اهلي">اهلي</option>
+                </Select>
+            </FormGroup>
+            {/* --- END ADD --- */}
         </div>
         <FormGroup label="هل المؤسسة تعمل؟">
             <Select name="هل_المؤسسة_تعمل" value={formData['هل_المؤسسة_تعمل'] || 'Yes'} onChange={handleChange} disabled={isReadOnly}>

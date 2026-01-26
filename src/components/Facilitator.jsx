@@ -373,6 +373,13 @@ export function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublic
         onDataChange({ ...data, courses: newCourses });
     };
 
+    // Ensure Small & Sick Newborn is included in the options even if missing from imports
+    const displayCourseTypes = useMemo(() => {
+        const types = new Set(COURSE_TYPES_FACILITATOR);
+        types.add('Small & Sick Newborn');
+        return Array.from(types);
+    }, []);
+
     return (
         <div className="space-y-6">
             <Card className="shadow-none border">
@@ -444,7 +451,7 @@ export function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublic
                  <CardHeader>Course Qualifications & Certificates</CardHeader>
                  <CardBody>
                     <div className="space-y-4">
-                        {COURSE_TYPES_FACILITATOR.map(course => (
+                        {displayCourseTypes.map(course => (
                             <Fragment key={course}>
                                 <div className="p-4 border rounded-lg bg-white">
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
