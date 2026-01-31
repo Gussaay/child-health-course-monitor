@@ -11,7 +11,9 @@ import {
     listAllDataForCourse, listParticipants, listCoordinators, upsertCoordinator, 
     deleteCoordinator, listFunders, upsertFunder, deleteFunder, listFinalReport, 
     upsertFinalReport, deleteFinalReport, uploadFile, getParticipantById, 
-    getCourseById, listAllParticipantsForCourse 
+    getCourseById, listAllParticipantsForCourse,
+    listHealthFacilities,
+    saveParticipantAndSubmitFacilityUpdate
 } from '../data.js'; 
 import { ParticipantsView, ParticipantForm } from './Participants';
 import { CourseTestForm } from './CourseTestForm'; 
@@ -23,7 +25,7 @@ import { db } from '../firebase';
 import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { DEFAULT_ROLE_PERMISSIONS, ALL_PERMISSIONS } from './AdminDashboard';
 import { generateCertificatePdf } from './CertificateGenerator'; 
-import { Users, Download, Calendar, Clock, Share2 } from 'lucide-react'; 
+import { Users, Download, Calendar, Clock, Share2, UserPlus, CheckCircle } from 'lucide-react'; 
 import { useDataCache } from '../DataContext'; 
 
 // Lazy load components that are not always visible to speed up initial load
@@ -141,6 +143,227 @@ const IccmIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" w
 const IpcIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M12 11v4"></path><path d="M10 13h4"></path></svg>;
 const NewbornIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 9c0-2-1.5-3.5-4-3.5C7.5 5.5 6 7 6 9c0 1.5.5 2.5 1 3.5h0l-1 4.5h10L17 17l-1-4.5h0c.5-1 1-2.5 1-3.5z"></path><path d="M12 18h.01"></path><path d="M10.5 21v-1.5h3V21"></path></svg>;
 
+// --- UPDATED: Public Participant Registration Modal ---
+export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, onSuccess }) => {
+    const [name, setName] = useState('');
+    const [phone, setPhone] = useState('');
+    const [jobTitle, setJobTitle] = useState('');
+    const [group, setGroup] = useState('Group A');
+    const [facilityId, setFacilityId] = useState('');
+    const [facilityName, setFacilityName] = useState(''); 
+    
+    const [facilities, setFacilities] = useState([]);
+    const [loadingFacilities, setLoadingFacilities] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState('');
+    const [isFacilitySelectorOpen, setIsFacilitySelectorOpen] = useState(false);
+
+    // Load job titles based on course type
+    const jobOptions = useMemo(() => {
+        if (course.course_type === 'ICCM') return ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
+        return ['Medical Doctor', 'Nurse', 'Midwife', 'Medical Assistant', 'Health Visitor', 'Nutritionist', 'Vaccinator'];
+    }, [course.course_type]);
+
+    useEffect(() => {
+        if (course.state && course.locality && isOpen) {
+            setLoadingFacilities(true);
+            listHealthFacilities({ state: course.state, locality: course.locality }, 'server')
+                .then(data => {
+                    const formatted = data.map(f => ({ id: f.id, name: f['اسم_المؤسسة'] }));
+                    setFacilities(formatted);
+                })
+                .catch(err => console.error("Failed to load facilities", err))
+                .finally(() => setLoadingFacilities(false));
+        }
+    }, [course.state, course.locality, isOpen]);
+
+    const handleSave = async () => {
+        setError('');
+        if (!name.trim()) return setError('Name is required');
+        if (!phone.trim()) return setError('Phone is required');
+        if (!jobTitle) return setError('Job Title is required');
+        if (!facilityId) return setError('Please select a valid Facility from the list'); 
+
+        setIsSaving(true);
+        try {
+            const participantData = {
+                name: name.trim(),
+                phone: phone.trim(),
+                job_title: jobTitle,
+                group: group,
+                state: course.state,
+                locality: course.locality,
+                center_name: facilityName, 
+                courseId: course.id,
+                facilityId: facilityId 
+            };
+
+            await saveParticipantAndSubmitFacilityUpdate(participantData, null);
+            
+            if (onSuccess) onSuccess(participantData);
+            onClose();
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleFacilitySelect = (fac) => {
+        setFacilityId(fac.id);
+        setFacilityName(fac.name);
+        setIsFacilitySelectorOpen(false);
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Register New Participant" size="lg">
+            <CardBody className="p-6">
+                {error && <div className="mb-4 p-3 bg-red-50 text-red-700 rounded border border-red-200">{error}</div>}
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormGroup label="Full Name">
+                        <Input value={name} onChange={e => setName(e.target.value)} placeholder="Enter full name" />
+                    </FormGroup>
+                    <FormGroup label="Phone Number">
+                        <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="0xxxxxxxxx" />
+                    </FormGroup>
+                    
+                    <FormGroup label="Job Title">
+                        <Select value={jobTitle} onChange={e => setJobTitle(e.target.value)}>
+                            <option value="">-- Select Job --</option>
+                            {jobOptions.map(j => <option key={j} value={j}>{j}</option>)}
+                        </Select>
+                    </FormGroup>
+
+                    <FormGroup label="Group">
+                        <Select value={group} onChange={e => setGroup(e.target.value)}>
+                            <option>Group A</option>
+                            <option>Group B</option>
+                            <option>Group C</option>
+                            <option>Group D</option>
+                        </Select>
+                    </FormGroup>
+
+                    <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Health Facility (in {course.locality})
+                        </label>
+                        
+                        {/* Searchable Select for Facility (Read-only selection from list) */}
+                        <div className="relative">
+                            <Input 
+                                value={facilityName} 
+                                onChange={(e) => {
+                                    setFacilityName(e.target.value);
+                                    setFacilityId(''); // Clear ID if user types something new
+                                    setIsFacilitySelectorOpen(true);
+                                }}
+                                onFocus={() => setIsFacilitySelectorOpen(true)}
+                                placeholder="Search facility name..."
+                                disabled={loadingFacilities}
+                            />
+                            {loadingFacilities && <div className="absolute right-3 top-2.5"><Spinner size="sm" /></div>}
+                            
+                            {isFacilitySelectorOpen && (
+                                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                                    {facilities.length > 0 ? (
+                                        facilities
+                                            .filter(f => f.name.toLowerCase().includes(facilityName.toLowerCase()))
+                                            .map(f => (
+                                                <div 
+                                                    key={f.id} 
+                                                    className="p-2 cursor-pointer hover:bg-gray-100"
+                                                    onClick={() => handleFacilitySelect(f)}
+                                                >
+                                                    {f.name}
+                                                </div>
+                                            ))
+                                    ) : (
+                                        <div className="p-2 text-gray-500">No facilities found.</div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </CardBody>
+            <CardFooter className="flex justify-end gap-2">
+                <Button variant="secondary" onClick={onClose} disabled={isSaving}>Cancel</Button>
+                <Button onClick={handleSave} disabled={isSaving}>
+                    {isSaving ? <Spinner size="sm" /> : 'Register & Save'}
+                </Button>
+            </CardFooter>
+        </Modal>
+    );
+};
+
+// --- NEW COMPONENT: Public Registration Page (Route Target) ---
+export function PublicParticipantRegistrationView({ courseId }) {
+    const [course, setCourse] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [showModal, setShowModal] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
+
+    useEffect(() => {
+        getCourseById(courseId, 'server')
+            .then(data => {
+                if (!data) throw new Error("Course not found");
+                setCourse(data);
+            })
+            .catch(err => setError(err.message))
+            .finally(() => setLoading(false));
+    }, [courseId]);
+
+    if (loading) return <div className="flex justify-center p-10"><Spinner /></div>;
+    if (error) return <EmptyState message={error} />;
+    if (!course) return <EmptyState message="Course data unavailable" />;
+
+    if (successMessage) {
+        return (
+            <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-lg text-center">
+                <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
+                    <CheckCircle className="h-10 w-10 text-green-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">Registration Successful</h2>
+                <p className="text-gray-600 mb-6">{successMessage}</p>
+                <Button onClick={() => setSuccessMessage('')}>Register Another Participant</Button>
+            </div>
+        );
+    }
+
+    return (
+        <div className="max-w-2xl mx-auto mt-6 p-4">
+            <Card className="text-center p-8">
+                <div className="mx-auto h-20 w-20 bg-sky-100 rounded-full flex items-center justify-center mb-6">
+                    <UserPlus className="h-10 w-10 text-sky-600" />
+                </div>
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">Course Registration</h1>
+                <p className="text-lg text-gray-600 mb-1">{course.course_type}</p>
+                <p className="text-sm text-gray-500 mb-8">{course.state} - {course.locality} ({course.start_date})</p>
+
+                <div className="bg-blue-50 border border-blue-200 rounded p-4 mb-6 text-left text-sm text-blue-800">
+                    <p><strong>Note:</strong> Use this form to register yourself or a participant if you are not already on the list.</p>
+                </div>
+
+                <Button size="lg" className="w-full justify-center" onClick={() => setShowModal(true)}>
+                    Register New Participant
+                </Button>
+            </Card>
+
+            <PublicParticipantRegistrationModal 
+                isOpen={showModal}
+                onClose={() => setShowModal(false)}
+                course={course}
+                onSuccess={(participant) => {
+                    setSuccessMessage(`Successfully registered ${participant.name}.`);
+                    setShowModal(false);
+                }}
+            />
+        </div>
+    );
+}
+
 const Landing = React.memo(function Landing({ active, onPick }) {
     const items = [
         { key: 'IMNCI', title: 'Integrated Management of Newborn and Childhood Illnesses (IMNCI)', enabled: true },
@@ -179,7 +402,7 @@ const Landing = React.memo(function Landing({ active, onPick }) {
 export function CoursesTable({ 
     courses, onOpen, onEdit, onDelete, onOpenReport, onOpenTestForm, 
     canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates, onAddFinalReport, canManageFinalReport,
-    onOpenAttendanceManager // Prop received from parent
+    onOpenAttendanceManager 
 }) {
     const [reportModalCourse, setReportModalCourse] = useState(null);
     const [monitorModalCourse, setMonitorModalCourse] = useState(null);
@@ -328,6 +551,24 @@ export function CoursesTable({
                 {attendanceModalCourse && (
                     <Modal isOpen={!!attendanceModalCourse} onClose={() => setAttendanceModalCourse(null)} title="Attendance Management">
                         <CardBody className="flex flex-col gap-4">
+                            {/* --- MOVED UP: Share Registration Link --- */}
+                            <div className="space-y-2 pb-4 border-b">
+                                <h4 className="font-semibold text-gray-700">Registration</h4>
+                                <Button 
+                                    variant="secondary" 
+                                    className="w-full justify-start"
+                                    onClick={() => {
+                                        const link = `${window.location.origin}/public/register/course/${attendanceModalCourse.id}`;
+                                        navigator.clipboard.writeText(link)
+                                            .then(() => alert('Public registration link copied!'))
+                                            .catch(() => alert('Failed to copy link.'));
+                                        setAttendanceModalCourse(null);
+                                    }}
+                                >
+                                    <UserPlus className="w-4 h-4 mr-2" /> Share Registration Link
+                                </Button>
+                            </div>
+
                             <div className="space-y-2 pb-4 border-b">
                                 <h4 className="font-semibold text-gray-700">Share Attendance Link</h4>
                                 <div className="bg-gray-50 p-3 rounded-md border">
@@ -397,7 +638,6 @@ export function CoursesTable({
                                 <div className="space-y-2">
                                     <h4 className="font-semibold text-gray-700">Testing</h4>
                                     
-                                    {/* --- NEW: Split Share Buttons --- */}
                                     <div className="grid grid-cols-2 gap-2">
                                         <Button variant="secondary" className="w-full justify-center" onClick={() => {
                                             const link = `${window.location.origin}/public/test/course/${monitorModalCourse.id}?type=pre`;
@@ -437,7 +677,8 @@ export function CoursesTable({
         )
     );
 }
-// ... rest of the file exports ...
+
+// ... [The rest of the Course.jsx exports (CourseManagementView, CourseForm, etc.) remain unchanged] ...
 export { PublicAttendanceView, AttendanceManagerView } from './CourseAttendanceView';
 export function CourseManagementView({
     allCourses, onOpen, onDelete, onOpenReport,

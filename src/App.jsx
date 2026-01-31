@@ -44,12 +44,14 @@ const ParticipantsView = lazy(() => import('./components/Participants').then(mod
 const ParticipantForm = lazy(() => import('./components/Participants').then(module => ({ default: module.ParticipantForm })));
 const ParticipantMigrationMappingView = lazy(() => import('./components/Participants').then(module => ({ default: module.ParticipantMigrationMappingView })));
 
-// --- Import Certificate & Attendance Views (New Features Preserved) ---
+// --- Import Certificate, Attendance & Registration Views ---
 const CertificateVerificationView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.CertificateVerificationView })));
 const PublicCertificateDownloadView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicCertificateDownloadView })));
 const PublicCourseCertificatesView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicCourseCertificatesView }))); 
 const PublicAttendanceView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicAttendanceView })));
 const AttendanceManagerView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.AttendanceManagerView })));
+// --- NEW IMPORT ---
+const PublicParticipantRegistrationView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicParticipantRegistrationView })));
 
 const CourseTestForm = lazy(() => import('./components/CourseTestForm.jsx').then(module => ({ default: module.CourseTestForm })));
 
@@ -318,8 +320,11 @@ export default function App() {
     const [publicTestData, setPublicTestData] = useState({ course: null, participants: [], tests: [] });
     const [publicTestLoading, setPublicTestLoading] = useState(false);
     const [publicTestError, setPublicTestError] = useState(null);
-    // --- NEW: State for public test type (pre/post) ---
     const [publicTestType, setPublicTestType] = useState(null);
+
+    // --- NEW STATE for Public Registration ---
+    const [isPublicRegistrationView, setIsPublicRegistrationView] = useState(false);
+    const [publicRegistrationCourseId, setPublicRegistrationCourseId] = useState(null);
 
     const [isLocalityBulkUpdateView, setIsLocalityBulkUpdateView] = useState(false);
     const [publicLocalityData, setPublicLocalityData] = useState({ state: null, locality: null });
@@ -379,7 +384,11 @@ export default function App() {
             setIsPublicTestView(false);
             setPublicTestError(null);
             setPublicTestData({ course: null, participants: [], tests: [] });
-            setPublicTestType(null); // Reset test type
+            setPublicTestType(null); 
+
+            // --- Reset Registration View ---
+            setIsPublicRegistrationView(false);
+            setPublicRegistrationCourseId(null);
 
             setIsLocalityBulkUpdateView(false);
             setPublicLocalityData({ state: null, locality: null });
@@ -446,7 +455,6 @@ export default function App() {
                 return;
             }
 
-            // --- RESTORED: Facilitator Application Route ---
             const facilitatorAppMatch = path.match(/^\/public\/facilitator-application\/?$/);
             if (facilitatorAppMatch) {
                 setIsPublicSubmissionView(true);
@@ -454,7 +462,6 @@ export default function App() {
                 return;
             }
 
-            // --- RESTORED: Team Member Application Route ---
             const teamAppMatch = path.match(/^\/public\/team-member-application\/?$/);
             if (teamAppMatch) {
                 setIsPublicSubmissionView(true);
@@ -462,16 +469,23 @@ export default function App() {
                 return;
             }
             
+            // --- NEW: Public Registration Route ---
+            const publicRegistrationMatch = path.match(/^\/public\/register\/course\/([a-zA-Z0-9]+)\/?$/);
+            if (publicRegistrationMatch && publicRegistrationMatch[1]) {
+                setIsPublicRegistrationView(true);
+                setPublicRegistrationCourseId(publicRegistrationMatch[1]);
+                return;
+            }
+            // -------------------------------------
+
             const publicTestMatch = path.match(/^\/public\/test\/course\/([a-zA-Z0-9]+)\/?$/);
             if (publicTestMatch && publicTestMatch[1]) {
                 setIsPublicTestView(true);
                 const courseId = publicTestMatch[1];
                 
-                // --- NEW: Parse query param for specific test type ---
                 const searchParams = new URLSearchParams(window.location.search);
                 const testTypeParam = searchParams.get('type');
                 setPublicTestType(testTypeParam);
-                // ----------------------------------------------------
 
                 setPublicTestLoading(true);
                 const fetchData = async () => {
@@ -635,6 +649,7 @@ export default function App() {
         }
     }, [user, permissionsLoading]);
 
+    // ... [Authentication and Permissions effects remain unchanged] ...
     useEffect(() => {
         const checkUserRoleAndPermissions = async () => {
             setPermissionsLoading(true);
@@ -761,6 +776,7 @@ export default function App() {
         }
     }, [selectedCourseId, courseDetails.allObs, courseDetailsLoading]); 
 
+    // ... [Data calculations and handlers remain unchanged] ...
     const canSeeAllData = useMemo(() => {
         return permissions.canUseSuperUserAdvancedFeatures || permissions.canUseFederalManagerAdvancedFeatures;
     }, [permissions]);
@@ -1404,7 +1420,7 @@ export default function App() {
     const isCourseCertPagePath = typeof window !== 'undefined' && window.location.pathname.startsWith('/public/course/certificates/');
     const isAttendancePath = typeof window !== 'undefined' && window.location.pathname.startsWith('/attendance/course/');
 
-    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath || isCertDownloadPath || isCourseCertPagePath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || isLocalityBulkUpdateView || publicViewType === 'attendance';
+    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath || isCertDownloadPath || isCourseCertPagePath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || isLocalityBulkUpdateView || publicViewType === 'attendance' || isPublicRegistrationView;
 
     let mainContent;
 
@@ -1460,6 +1476,21 @@ export default function App() {
         }
     }
     
+    // --- NEW: Public Participant Registration View ---
+    else if (isPublicRegistrationView) {
+        if (publicRegistrationCourseId) {
+            mainContent = (
+                <Suspense fallback={<Card><Spinner /></Card>}>
+                    <PublicParticipantRegistrationView 
+                        courseId={publicRegistrationCourseId} 
+                    />
+                </Suspense>
+            );
+        } else {
+            mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">Invalid Registration Link.</div></Card>;
+        }
+    }
+
     else if (isPublicReportView || isVerificationPath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || publicViewType === 'attendance') { 
         if (publicViewLoading || ((isVerificationPath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage') && !publicViewData && !sharedViewError)) {
             mainContent = <Card><div className="flex justify-center p-8"><Spinner /></div></Card>;

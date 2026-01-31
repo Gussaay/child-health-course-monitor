@@ -8,11 +8,9 @@ import {
 } from './constants.js';
 import {
     listHealthFacilities,
-    submitFacilityDataForApproval,
     upsertParticipantTest, 
     deleteParticipantTest
 } from '../data.js';
-import { GenericFacilityForm, IMNCIFormFields } from './FacilityForms.jsx'; 
 import { Edit, Trash2, PlusCircle, Eye, Share2, CheckCircle, Save, Check, X } from 'lucide-react'; 
 
 export const EENC_TEST_QUESTIONS = [
@@ -189,7 +187,7 @@ const initializeManualScores = (questions, existingScores = {}) => {
     return scores;
 };
 
-// ... [Keep TestResultScreen, SearchableSelect, and AddFacilityModal components exactly as they were] ...
+// ... [Keep TestResultScreen, SearchableSelect exactly as they were] ...
 const TestResultScreen = ({ 
     participantName, testType, score, total, percentage, onBack, 
     canManageTests, onEdit, onDelete, isExistingResult 
@@ -303,70 +301,6 @@ const SearchableSelect = ({ options, value, onChange, placeholder, disabled }) =
                 </div>
             )}
         </div>
-    );
-};
-
-const AddFacilityModal = ({ isOpen, onClose, onSaveSuccess, initialState, initialLocality, initialName = '', setToast }) => {
-    const [isSubmitting, setIsSubmitting] =useState(false);
-    const facilityInitialData = useMemo(() => ({
-        'الولاية': initialState || '',
-        'المحلية': initialLocality || '',
-        'اسم_المؤسسة': initialName || '',
-        'هل_المؤسسة_تعمل': 'Yes',
-        'date_of_visit': new Date().toISOString().split('T')[0],
-        'وجود_العلاج_المتكامل_لامراض_الطفولة': 'No',
-        'وجود_سجل_علاج_متكامل': 'No',
-        'وجود_كتيب_لوحات': 'No',
-        'ميزان_وزن': 'No',
-        'ميزان_طول': 'No',
-        'ميزان_حرارة': 'No',
-        'ساعة_مؤقت': 'No',
-        'غرفة_إرواء': 'No',
-        'immunization_office_exists': 'No',
-        'nutrition_center_exists': 'No',
-        'growth_monitoring_service_exists': 'No',
-        'imnci_staff': [],
-    }), [initialState, initialLocality, initialName]);
-
-    const handleSaveFacility = async (formData) => {
-        setIsSubmitting(true);
-        try {
-            const submitterIdentifier = 'Participant Form - New Facility';
-            const { id, ...dataToSubmit } = formData;
-            if (!dataToSubmit['اسم_المؤسسة'] || !dataToSubmit['الولاية'] || !dataToSubmit['المحلية']) {
-                throw new Error("Facility Name, State, and Locality are required.");
-            }
-             dataToSubmit.imnci_staff = Array.isArray(dataToSubmit.imnci_staff) ? dataToSubmit.imnci_staff : [];
-            await submitFacilityDataForApproval(dataToSubmit, submitterIdentifier);
-            if (setToast) setToast({ show: true, message: "New facility submitted for approval.", type: 'info' });
-            onSaveSuccess({ id: `pending_${Date.now()}`, ...dataToSubmit });
-            onClose();
-        } catch (error) {
-            console.error("Failed to submit new facility:", error);
-            if (setToast) setToast({ show: true, message: `Error submitting facility: ${error.message}`, type: 'error' });
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Add New Health Facility">
-             <div className="p-1 max-h-[80vh] overflow-y-auto">
-                <GenericFacilityForm
-                    initialData={facilityInitialData}
-                    onSave={handleSaveFacility}
-                    onCancel={onClose}
-                    setToast={setToast}
-                    title="بيانات المنشأة الصحية الجديدة"
-                    subtitle={`Adding a new facility in ${STATE_LOCALITIES[initialState]?.ar || initialState}, ${STATE_LOCALITIES[initialState]?.localities.find(l=>l.en === initialLocality)?.ar || initialLocality}`}
-                    isPublicForm={false}
-                    saveButtonText="Submit New Facility for Approval"
-                    isSubmitting={isSubmitting}
-                >
-                    {(props) => <IMNCIFormFields {...props} />}
-                </GenericFacilityForm>
-            </div>
-        </Modal>
     );
 };
 
@@ -698,7 +632,6 @@ export function CourseTestForm({
     const [selectedFacilityId, setSelectedFacilityId] = useState(null);
     const [facilitiesInLocality, setFacilitiesInLocality] = useState([]);
     const [isLoadingFacilities, setIsLoadingFacilities] = useState(false);
-    const [isAddFacilityModalOpen, setIsAddFacilityModalOpen] = useState(false);
     const [newParticipantName, setNewParticipantName] = useState('');
     const [newParticipantPhone, setNewParticipantPhone] = useState('');
     const [newParticipantGroup, setNewParticipantGroup] = useState('Group A');
@@ -851,20 +784,11 @@ export function CourseTestForm({
         setSelectedFacilityId(facility.id);
         setNewParticipantCenter(facility.name); // or facility['اسم_المؤسسة'] depending on object passed
     };
-
-    const handleNewFacilitySaved = (newlySubmittedFacilityData) => {
-        const representation = { id: newlySubmittedFacilityData.id, 'اسم_المؤسسة': newlySubmittedFacilityData['اسم_المؤسسة'] };
-        setFacilitiesInLocality(prev => [...prev, representation]);
-        setSelectedFacilityId(representation.id);
-        setNewParticipantCenter(representation['اسم_المؤسسة']);
-        setIsAddFacilityModalOpen(false); 
-    };
     
     // UPDATED: Removed "Add New" from options list
     const facilityOptionsForSelect = useMemo(() => {
         if (isIccm) return [];
         const options = (facilitiesInLocality || []).map(f => ({ id: f.id, name: f['اسم_المؤسسة'] }));
-        // Removed: options.unshift({ id: 'addNewFacility', name: "+ Add New Facility..." });
         return options;
     }, [facilitiesInLocality, isIccm]);
 
@@ -1212,18 +1136,6 @@ export function CourseTestForm({
                 onClose={() => setIsFacilitySelectorOpen(false)}
                 options={facilityOptionsForSelect}
                 onSelect={handleFacilitySelect}
-            />
-
-            {/* ADD FACILITY MODAL */}
-            {/* Defined LAST so it renders ON TOP of everything if needed */}
-            <AddFacilityModal
-                isOpen={isAddFacilityModalOpen}
-                onClose={() => setIsAddFacilityModalOpen(false)}
-                onSaveSuccess={handleNewFacilitySaved}
-                initialState={newParticipantState}
-                initialLocality={newParticipantLocality}
-                initialName={newParticipantCenter} 
-                setToast={(toastConfig) => setError(toastConfig.message)} 
             />
 
             {/* NEW: PARTICIPANT SUCCESS MODAL */}
