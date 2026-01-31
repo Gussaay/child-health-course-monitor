@@ -44,12 +44,11 @@ const ParticipantsView = lazy(() => import('./components/Participants').then(mod
 const ParticipantForm = lazy(() => import('./components/Participants').then(module => ({ default: module.ParticipantForm })));
 const ParticipantMigrationMappingView = lazy(() => import('./components/Participants').then(module => ({ default: module.ParticipantMigrationMappingView })));
 
-// --- Import Certificate & Attendance Views ---
+// --- Import Certificate & Attendance Views (New Features Preserved) ---
 const CertificateVerificationView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.CertificateVerificationView })));
 const PublicCertificateDownloadView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicCertificateDownloadView })));
 const PublicCourseCertificatesView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicCourseCertificatesView }))); 
 const PublicAttendanceView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicAttendanceView })));
-// --- NEW IMPORT ---
 const AttendanceManagerView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.AttendanceManagerView })));
 
 const CourseTestForm = lazy(() => import('./components/CourseTestForm.jsx').then(module => ({ default: module.CourseTestForm })));
@@ -258,7 +257,6 @@ export default function App() {
     } = useDataCache();
     const { user, userStates, authLoading, userLocalities } = useAuth();
 
-    // ... [Keep existing state variables and effects] ...
     const isProfileIncomplete = useMemo(() => {
         if (!authLoading && user && (!user.displayName || user.displayName.trim().length === 0)) {
             return true;
@@ -320,6 +318,8 @@ export default function App() {
     const [publicTestData, setPublicTestData] = useState({ course: null, participants: [], tests: [] });
     const [publicTestLoading, setPublicTestLoading] = useState(false);
     const [publicTestError, setPublicTestError] = useState(null);
+    // --- NEW: State for public test type (pre/post) ---
+    const [publicTestType, setPublicTestType] = useState(null);
 
     const [isLocalityBulkUpdateView, setIsLocalityBulkUpdateView] = useState(false);
     const [publicLocalityData, setPublicLocalityData] = useState({ state: null, locality: null });
@@ -379,6 +379,7 @@ export default function App() {
             setIsPublicTestView(false);
             setPublicTestError(null);
             setPublicTestData({ course: null, participants: [], tests: [] });
+            setPublicTestType(null); // Reset test type
 
             setIsLocalityBulkUpdateView(false);
             setPublicLocalityData({ state: null, locality: null });
@@ -445,6 +446,7 @@ export default function App() {
                 return;
             }
 
+            // --- RESTORED: Facilitator Application Route ---
             const facilitatorAppMatch = path.match(/^\/public\/facilitator-application\/?$/);
             if (facilitatorAppMatch) {
                 setIsPublicSubmissionView(true);
@@ -452,6 +454,7 @@ export default function App() {
                 return;
             }
 
+            // --- RESTORED: Team Member Application Route ---
             const teamAppMatch = path.match(/^\/public\/team-member-application\/?$/);
             if (teamAppMatch) {
                 setIsPublicSubmissionView(true);
@@ -463,6 +466,13 @@ export default function App() {
             if (publicTestMatch && publicTestMatch[1]) {
                 setIsPublicTestView(true);
                 const courseId = publicTestMatch[1];
+                
+                // --- NEW: Parse query param for specific test type ---
+                const searchParams = new URLSearchParams(window.location.search);
+                const testTypeParam = searchParams.get('type');
+                setPublicTestType(testTypeParam);
+                // ----------------------------------------------------
+
                 setPublicTestLoading(true);
                 const fetchData = async () => {
                     try {
@@ -625,7 +635,6 @@ export default function App() {
         }
     }, [user, permissionsLoading]);
 
-    // ... [Keep user role checks and navigation logic] ...
     useEffect(() => {
         const checkUserRoleAndPermissions = async () => {
             setPermissionsLoading(true);
@@ -1358,7 +1367,6 @@ export default function App() {
                         canUseFederalManagerAdvancedFeatures={permissions.canUseFederalManagerAdvancedFeatures}
                     />
                 );
-            // --- NEW CASE: Attendance Manager View ---
             case 'attendanceManager':
                 return permissions.canManageCourse ? (
                     selectedCourse && (
@@ -1375,7 +1383,6 @@ export default function App() {
         }
     };
 
-    // ... [Keep navItems, render and other existing parts of App component] ...
     const navItems = useMemo(() => [
         { label: 'Home', view: 'landing', active: view === 'landing', disabled: false },
         { label: 'Dashboard', view: 'dashboard', active: view === 'dashboard', disabled: false },
@@ -1404,7 +1411,7 @@ export default function App() {
     if ((authLoading || permissionsLoading) && !isMinimalUILayout) {
         mainContent = <SplashScreen />;
     }
-    // ... [Keep existing public view conditions] ...
+    
     else if (isPublicFacilityUpdateView) {
         if (authLoading) {
             mainContent = <Card><Spinner /></Card>;
@@ -1414,7 +1421,45 @@ export default function App() {
             mainContent = <PublicFacilityUpdateForm setToast={setToast} serviceType={publicServiceType} />;
         }
     }
-    // ... [Other conditions omitted for brevity, they remain unchanged] ...
+    else if (isNewFacilityView) {
+        if (authLoading) {
+            mainContent = <Card><Spinner /></Card>;
+        } else if (!user) {
+            mainContent = <SignInBox message="You must sign in to use this new facility entry form." />;
+        } else {
+            mainContent = <NewFacilityEntryForm setToast={setToast} serviceType={publicServiceType} />;
+        }
+    }
+    // --- RESTORED: Public Submission View Handling ---
+    else if (isPublicSubmissionView) {
+        if (authLoading) {
+            mainContent = <Card><Spinner /></Card>;
+        } else if (!user) {
+            mainContent = <SignInBox message="You must sign in to submit an application." />;
+        } else {
+            if (submissionType === 'facilitator-application') mainContent = <FacilitatorApplicationForm />;
+            else if (submissionType === 'team-member-application') mainContent = <TeamMemberApplicationForm />;
+            else mainContent = <div className="p-8 text-center">Invalid form link.</div>;
+        }
+    }
+
+    // --- RESTORED: Locality Bulk Update View Handling ---
+    else if (isLocalityBulkUpdateView) {
+        if (publicLocalityData.state && publicLocalityData.locality) {
+            mainContent = (
+                <Suspense fallback={<Card><Spinner /></Card>}>
+                    <LocalityBulkUpdateView 
+                        stateParam={publicLocalityData.state}
+                        localityParam={publicLocalityData.locality}
+                        setToast={setToast}
+                    />
+                </Suspense>
+            );
+        } else {
+             mainContent = <Card><div className="p-4 text-center">Invalid Link Parameters</div></Card>;
+        }
+    }
+    
     else if (isPublicReportView || isVerificationPath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || publicViewType === 'attendance') { 
         if (publicViewLoading || ((isVerificationPath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage') && !publicViewData && !sharedViewError)) {
             mainContent = <Card><div className="flex justify-center p-8"><Spinner /></div></Card>;
@@ -1426,7 +1471,6 @@ export default function App() {
             const viewType = publicViewType || (isVerificationPath ? 'certificateVerification' : null);
             
             switch (viewType) {
-                // ... [Existing cases] ...
                 case 'courseReport':
                     mainContent = (
                         <CourseReportView
@@ -1510,7 +1554,105 @@ export default function App() {
              mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">Could not load report data.</div></Card>;
         }
     }
-    // ... [Rest of App component logic] ...
+    
+    // --- RESTORED: Public Monitoring View Handling ---
+    else if (isPublicMonitoringView) {
+        if (authLoading) {
+             mainContent = <Card><Spinner /></Card>;
+        } else if (!user) {
+            mainContent = <SignInBox message="You must sign in to access the public monitoring page." />;
+        } else if (publicMonitorLoading) {
+            mainContent = <Card><div className="flex justify-center p-8"><Spinner /></div></Card>;
+        } else if (publicMonitorError) {
+            mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">{publicMonitorError}</div></Card>;
+        } else if (publicMonitorData.course && publicMonitorData.participants) {
+            mainContent = (
+                <PublicCourseMonitoringView
+                    course={publicMonitorData.course}
+                    allParticipants={publicMonitorData.participants}
+                />
+            );
+        } else {
+             mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">Could not load monitoring session.</div></Card>;
+        }
+    }
+
+    // --- RESTORED: Public Mentorship View Handling ---
+    else if (isMentorshipPublicView) {
+        if (authLoading) {
+            mainContent = <Card><Spinner /></Card>;
+        } else if (!user) { 
+            mainContent = <SignInBox message="You must sign in to use the mentorship submission link." />;
+        } else {
+            mainContent = (
+                <SkillsMentorshipView
+                    setToast={setToast}
+                    permissions={permissions} 
+                    userStates={userStates} 
+                    userLocalities={userLocalities} 
+                    publicSubmissionMode={true} 
+                    publicServiceType={publicMentorshipProps.serviceType}
+                    canBulkUploadMentorships={permissions.canUseSuperUserAdvancedFeatures}
+                />
+            );
+        }
+    }
+
+    // --- RESTORED: Public Test View Handling ---
+    else if (isPublicTestView) {
+        if (authLoading) {
+            mainContent = <Card><Spinner /></Card>;
+        } else if (publicTestLoading) {
+            mainContent = <Card><div className="flex justify-center p-8"><Spinner /></div></Card>;
+        } else if (publicTestError) {
+            mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">{publicTestError}</div></Card>;
+        } else if (publicTestData.course) {
+            mainContent = (
+                <Suspense fallback={<Card><Spinner /></Card>}>
+                    <CourseTestForm
+                        course={publicTestData.course}
+                        participants={publicTestData.participants}
+                        participantTests={publicTestData.tests}
+                        onSaveTest={upsertParticipantTest} 
+                        
+                        onSaveParticipant={handleSaveParticipantFromTestForm}
+                        
+                        onCancel={() => {}} 
+                        onSave={(savedTest) => { 
+                            setToast({ show: true, message: 'Test saved successfully!', type: 'success' });
+                            const refetchData = async () => {
+                                setPublicTestLoading(true);
+                                try {
+                                    const [testData, participantData] = await Promise.all([
+                                        listParticipantTestsForCourse(publicTestData.course.id, 'server'),
+                                        listAllParticipantsForCourse(publicTestData.course.id, 'server')
+                                    ]);
+                                    setPublicTestData(prev => ({ ...prev, tests: testData || [], participants: participantData || [] }));
+                                } catch (err) {
+                                    setToast({ show: true, message: 'Failed to refresh test data.', type: 'error' });
+                                } finally {
+                                    setPublicTestLoading(false);
+                                }
+                            };
+                            refetchData();
+                        }}
+                        initialParticipantId={''} 
+                        isPublicView={true} 
+
+                        canManageTests={permissions.canUseFederalManagerAdvancedFeatures}
+                        
+                        // --- NEW: Pass the test type to ensure correct test opens ---
+                        testType={publicTestType}
+                        // ------------------------------------------------------------
+                    />
+                </Suspense>
+            );
+        } else {
+             mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">Could not load test session.</div></Card>;
+        }
+    }
+
+
     else if (!user && !authLoading) {
         mainContent = <SignInBox />;
     }

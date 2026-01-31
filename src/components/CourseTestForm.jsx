@@ -597,7 +597,8 @@ export function CourseTestForm({
     onSaveTest,
     onSaveParticipant, 
     isPublicView = false,
-    canManageTests = false 
+    canManageTests = false,
+    testType: initialTestType
 }) {
     // --- MAIN STATE: Controls View Mode (Dashboard vs Entry Form) ---
     // If it's a public view, default to 'entry'. If admin view, default to 'dashboard'
@@ -638,7 +639,10 @@ export function CourseTestForm({
     }, [course.course_type]);
 
     const [selectedParticipantId, setSelectedParticipantId] = useState(initialParticipantId);
-    const [testType, setTestType] = useState('pre-test'); 
+    
+    // --- UPDATED: If initialTestType provided (from public link params), use it. Default to 'pre-test' ---
+    const [testType, setTestType] = useState(initialTestType || 'pre-test'); 
+    
     const [answers, setAnswers] = useState(() => initializeAnswers(testQuestions));
     
     // --- Manual Grading State ---
@@ -660,6 +664,13 @@ export function CourseTestForm({
     const [showParticipantSuccessModal, setShowParticipantSuccessModal] = useState(false);
     const [showTestSubmitSuccessModal, setShowTestSubmitSuccessModal] = useState(false);
     const [lastSubmissionStats, setLastSubmissionStats] = useState(null);
+
+    // --- UPDATED: Update testType if prop changes (e.g. navigation via link with different param) ---
+    useEffect(() => {
+        if (initialTestType) {
+            setTestType(initialTestType);
+        }
+    }, [initialTestType]);
 
     useEffect(() => { setLocalParticipants(participants); }, [participants]);
 
@@ -996,7 +1007,7 @@ export function CourseTestForm({
     const handleBackToDashboard = () => {
         if(isPublicView) {
             setIsSetupModalOpen(true);
-            setTestType('');
+            setTestType(initialTestType || ''); // Reset to initial prop value if exists, else empty
             setSelectedParticipantId('');
         } else {
             setViewMode('dashboard');
@@ -1082,7 +1093,11 @@ export function CourseTestForm({
                 <CardBody className="p-6">
                     <div className="grid gap-6">
                         <FormGroup label="Select Test Type">
-                            <Select value={testType} onChange={(e) => setTestType(e.target.value)}>
+                            <Select 
+                                value={testType} 
+                                onChange={(e) => setTestType(e.target.value)}
+                                disabled={!!initialTestType} // Disable if type is forced by public link
+                            >
                                 <option value="">-- Select Test Type --</option>
                                 <option value="pre-test">Pre-Test</option>
                                 <option value="post-test">Post-Test</option>

@@ -23,7 +23,7 @@ import { db } from '../firebase';
 import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { DEFAULT_ROLE_PERMISSIONS, ALL_PERMISSIONS } from './AdminDashboard';
 import { generateCertificatePdf } from './CertificateGenerator'; 
-import { Users, Download, Calendar, Clock } from 'lucide-react'; 
+import { Users, Download, Calendar, Clock, Share2 } from 'lucide-react'; 
 import { useDataCache } from '../DataContext'; 
 
 // Lazy load components that are not always visible to speed up initial load
@@ -259,7 +259,6 @@ export function CoursesTable({
                                             Report
                                         </Button>
                                         
-                                        {/* --- UPDATED: New Attendance Button --- */}
                                         <Button 
                                             variant="secondary" 
                                             className="px-2 py-1 text-xs" 
@@ -325,7 +324,7 @@ export function CoursesTable({
                     </Modal>
                 )}
 
-                {/* --- NEW: Attendance Action Modal --- */}
+                {/* --- Attendance Action Modal --- */}
                 {attendanceModalCourse && (
                     <Modal isOpen={!!attendanceModalCourse} onClose={() => setAttendanceModalCourse(null)} title="Attendance Management">
                         <CardBody className="flex flex-col gap-4">
@@ -397,6 +396,29 @@ export function CoursesTable({
                             {(monitorModalCourse.course_type === 'ICCM' || monitorModalCourse.course_type === 'EENC' || monitorModalCourse.course_type === 'Small & Sick Newborn' || monitorModalCourse.course_type === 'IMNCI' || monitorModalCourse.course_type === 'ETAT') && (
                                 <div className="space-y-2">
                                     <h4 className="font-semibold text-gray-700">Testing</h4>
+                                    
+                                    {/* --- NEW: Split Share Buttons --- */}
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <Button variant="secondary" className="w-full justify-center" onClick={() => {
+                                            const link = `${window.location.origin}/public/test/course/${monitorModalCourse.id}?type=pre`;
+                                            navigator.clipboard.writeText(link)
+                                                .then(() => alert('Public Pre-Test link copied!'))
+                                                .catch(() => alert('Failed to copy link.'));
+                                            setMonitorModalCourse(null);
+                                        }}>
+                                            <Share2 className="w-4 h-4 mr-2" /> Share Pre-Test
+                                        </Button>
+                                        <Button variant="secondary" className="w-full justify-center" onClick={() => {
+                                            const link = `${window.location.origin}/public/test/course/${monitorModalCourse.id}?type=post`;
+                                            navigator.clipboard.writeText(link)
+                                                .then(() => alert('Public Post-Test link copied!'))
+                                                .catch(() => alert('Failed to copy link.'));
+                                            setMonitorModalCourse(null);
+                                        }}>
+                                            <Share2 className="w-4 h-4 mr-2" /> Share Post-Test
+                                        </Button>
+                                    </div>
+
                                     <Button variant="secondary" className="w-full justify-start" onClick={() => {
                                         onOpenTestForm(monitorModalCourse.id);
                                         setMonitorModalCourse(null);
@@ -415,10 +437,8 @@ export function CoursesTable({
         )
     );
 }
-
-// Export PublicAttendanceView from here so App.jsx (which imports from Course.jsx) doesn't break
+// ... rest of the file exports ...
 export { PublicAttendanceView, AttendanceManagerView } from './CourseAttendanceView';
-
 export function CourseManagementView({
     allCourses, onOpen, onDelete, onOpenReport,
     onOpenTestForm,
