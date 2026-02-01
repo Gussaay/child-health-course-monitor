@@ -1,4 +1,3 @@
-// CertificateGenerator.jsx
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import html2canvas from 'html2canvas';
@@ -83,12 +82,16 @@ const getSmallAndSickSubCourseArabic = (subCourse) => {
 const fetchArabicName = async (collectionName, englishName, fieldName) => {
     if (!englishName) return null;
     
+    // Normalize string to avoid mismatches due to spaces
+    const searchName = englishName.trim();
+
     try {
-        let q = query(collection(db, collectionName), where("name", "==", englishName));
+        let q = query(collection(db, collectionName), where("name", "==", searchName));
         let snapshot = await getDocs(q);
 
-        if (snapshot.empty && englishName.includes("Dr.")) {
-            const cleanName = englishName.replace(/^Dr\.?\s*/i, '').trim();
+        if (snapshot.empty && searchName.includes("Dr.")) {
+            // Try stripping "Dr." or "Dr" case-insensitive
+            const cleanName = searchName.replace(/^Dr\.?\s*/i, '').trim();
             q = query(collection(db, collectionName), where("name", "==", cleanName));
             snapshot = await getDocs(q);
         }
@@ -147,11 +150,13 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
     // Logic to determine what to display for the sub-course
     let displaySubCourse = participantSubCourse;
     
-    if (participantSubCourse) {
+   if (participantSubCourse) {
         if (isArabic) {
             // Arabic Translation Logic
             if (courseType === 'ICCM') {
                 displaySubCourse = "تدريب العامل الصحي المجتمعي";
+            } else if (courseType === 'IMNCI') {
+                displaySubCourse = "المعالجة القياسية للاطفال اقل من 5 سنوات";
             } else if (courseType === 'Small & Sick Newborn') {
                 displaySubCourse = getSmallAndSickSubCourseArabic(participantSubCourse);
             }
@@ -288,7 +293,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                     <>
                         جمهورية السودان<br />
                         وزارة الصحة الاتحادية<br />
-                        الادارة العامة للرعاية الصحية الاساسية<br />
+                        الإدارة العامة للرعاية الصحية الاساسية<br />
                         إدارة صحة الأم والطفل<br />
                         البرنامج القومي لصحة الطفل
                     </>
@@ -354,7 +359,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
             {/* Course Title */}
             <div style={{
                 position: 'absolute',
-                top: '117mm', 
+                top: '120mm', 
                 left: '10mm',
                 right: '10mm',
                 textAlign: 'center',
@@ -471,8 +476,8 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
             <div style={{
                 position: 'absolute',
                 top: '175mm', 
-                right: '20mm',
-                width: '100mm', 
+                right: '5mm',
+                width: '90mm', 
                 textAlign: 'center',
                 fontSize: '20px',
                 fontWeight: 'bold',
@@ -521,8 +526,8 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
             <div style={{
                 position: 'absolute',
                 top: '175mm', 
-                left: '20mm', 
-                width: '100mm', 
+                left: '5mm', 
+                width: '90mm', 
                 textAlign: 'center',
                 fontSize: '20px', 
                 fontWeight: 'bold',
@@ -543,7 +548,10 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                                }} 
                            />
                        )}
-                       <div style={{ marginBottom: '1mm', position: 'relative', zIndex: 2 }}>د. {directorNameAr || finalDirectorName || '...'}</div>
+                       {/* Ensure "Dr." is displayed correctly. If directorNameAr is missing, fallback to English name */}
+                       <div style={{ marginBottom: '1mm', position: 'relative', zIndex: 2 }}>
+                           {directorNameAr ? `د. ${directorNameAr}` : `د. ${finalDirectorName || '...'}`}
+                       </div>
                        <div>مدير الدورة</div>
                    </div>
                ) : (
@@ -577,11 +585,12 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
 export const generateCertificatePdf = async (course, participant, federalProgramManagerName, participantSubCourse, language = 'en') => {
     
     // --- Logic to prioritize the approved name & signature ---
-    const finalManagerName = course.approvedByManagerName || federalProgramManagerName;
+    // Ensure names are trimmed to match database records effectively
+    const finalManagerName = (course.approvedByManagerName || federalProgramManagerName || '').trim();
     const rawManagerSignature = course.approvedByManagerSignatureUrl || null;
 
     // --- New Fields ---
-    const finalDirectorName = course.approvedDirectorName || course.director;
+    const finalDirectorName = (course.approvedDirectorName || course.director || '').trim();
     const rawDirectorSignature = course.approvedDirectorSignatureUrl || null;
     const rawProgramStamp = course.approvedProgramStampUrl || null;
 
@@ -594,6 +603,7 @@ export const generateCertificatePdf = async (course, participant, federalProgram
     let programManagerNameAr = null;
 
     if (language === 'ar') {
+        // Fetch Arabic names from the collections
         directorNameAr = await fetchArabicName('facilitators', finalDirectorName, 'arabicName');
         programManagerNameAr = await fetchArabicName('federalCoordinators', finalManagerName, 'nameAr');
     }
@@ -670,11 +680,11 @@ export const generateCertificatePdf = async (course, participant, federalProgram
 // NEW FUNCTION: Generate Blank Template
 export const generateBlankCertificatePdf = async (course, federalProgramManagerName, language = 'en') => {
     // --- Logic to prioritize the approved name & signature ---
-    const finalManagerName = course.approvedByManagerName || federalProgramManagerName;
+    const finalManagerName = (course.approvedByManagerName || federalProgramManagerName || '').trim();
     const rawManagerSignature = course.approvedByManagerSignatureUrl || null;
 
     // --- New Fields ---
-    const finalDirectorName = course.approvedDirectorName || course.director;
+    const finalDirectorName = (course.approvedDirectorName || course.director || '').trim();
     const rawDirectorSignature = course.approvedDirectorSignatureUrl || null;
     const rawProgramStamp = course.approvedProgramStampUrl || null;
 
