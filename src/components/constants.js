@@ -341,12 +341,12 @@ export const SKILLS_ICCM = {
         "Cough/cold"
     ],
     diarrhoea: [
-        "Diarrhea more than 2 weeks",
-        "Dysentery"
+        "Diarrhea less than 2 weeks", "Diarrhea more than 2 weeks",
+        "Skin pinch return very slowly", "Dysentery"
     ],
     fever: [
         "Fever more than 1 week",
-        "Malaria",
+        "Neck stiffness","Measls Rash", "Malaria",
         "Fever - malaria unlikely"
     ],
     malnutrition: [
