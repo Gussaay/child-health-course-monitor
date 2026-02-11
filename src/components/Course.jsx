@@ -553,6 +553,19 @@ export function CoursesTable({
                                     </div>
                                 </Button>
                             )}
+
+                             {/* --- NEW SHARE REPORT BUTTON --- */}
+                            <Button variant="secondary" className="flex items-center gap-3 p-4 justify-start" onClick={() => {
+                                const link = `${window.location.origin}/public/report/course/${reportModalCourse.id}`;
+                                navigator.clipboard.writeText(link).then(() => alert('Report link copied to clipboard!'));
+                            }}>
+                                <div className="bg-indigo-100 p-2 rounded-full"><LinkIcon className="text-indigo-600" size={20} /></div>
+                                <div className="text-left">
+                                    <div className="font-semibold text-gray-800">Share Report Link</div>
+                                    <div className="text-xs text-gray-500">Copy public link to course report</div>
+                                </div>
+                            </Button>
+
                         </CardBody>
                         <CardFooter>
                              <Button variant="secondary" onClick={() => setReportModalCourse(null)}>Close</Button>

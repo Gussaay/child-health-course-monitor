@@ -269,9 +269,7 @@ const PostSaveModal = ({ isOpen, onClose, onSelect }) => {
 // --- Visit Reports Table Component ---
 const VisitReportsTable = ({ reports, onEdit, onDelete, onView }) => {
     return (
-        // Added border and rounded-lg for better visual containment on scroll
         <div dir="ltr" className="p-4 overflow-x-auto border rounded-lg bg-white">
-            {/* Added min-w-[900px] to force horizontal scrolling on mobile */}
             <table className="min-w-[900px] w-full border-collapse border border-gray-300">
                 <thead className="bg-gray-50">
                     <tr>
@@ -985,6 +983,19 @@ const SkillsMentorshipView = ({
             fullData: sub 
         }));
     }, [skillMentorshipSubmissions]);
+
+    // --- NEW: Calculate Worker History to pass to Form ---
+    const workerHistory = useMemo(() => {
+        if (!processedSubmissions || !selectedFacilityId || !selectedHealthWorkerName || !activeService) return [];
+        return processedSubmissions.filter(sub =>
+            sub.facilityId === selectedFacilityId &&
+            sub.staff === selectedHealthWorkerName &&
+            sub.service === activeService &&
+            sub.status !== 'draft' &&
+            sub.sessionDate
+        );
+    }, [processedSubmissions, selectedFacilityId, selectedHealthWorkerName, activeService]);
+    // ---------------------------------------------------
 
     const currentUserDrafts = useMemo(() => {
         if (!user || !processedSubmissions || !activeService) return [];
@@ -2190,8 +2201,11 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         onExit={handleExitForm}
                         onSaveComplete={handleSaveSuccess}
                         setToast={setToast}
+                        
                         visitNumber={visitNumber}
-                        canEditVisitNumber={canEditVisitNumber} // NEW PROP: Pass edit permission
+                        workerHistory={workerHistory} // Pass history for date checks
+                        
+                        canEditVisitNumber={canEditVisitNumber} // Pass permission
                         existingSessionData={editingSubmission}
                         lastSessionDate={lastSessionDate}
                         onDraftCreated={handleDraftCreated}
@@ -2347,7 +2361,8 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         setToast={setToast}
                         existingSessionData={editingSubmission}
                         visitNumber={visitNumber}
-                        canEditVisitNumber={canEditVisitNumber} // NEW PROP: Pass edit permission
+                        workerHistory={workerHistory} // Pass history to EENC too
+                        canEditVisitNumber={canEditVisitNumber} // Pass permission
                     />
                 </>
             );

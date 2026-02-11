@@ -12,15 +12,14 @@ import { getAuth } from "firebase/auth";
 import { GenericFacilityForm, IMNCIFormFields } from '../FacilityForms.jsx';
 import { submitFacilityDataForApproval } from '../../data';
 
-// --- NEW: Import all IMNCI-specific logic and the renderer ---
+// --- Import all IMNCI-specific logic and the renderer ---
 import {
     IMNCIFormRenderer,
     getInitialFormData,
     rehydrateDraftData,
     calculateScores,
     findIncompleteTreatmentSkills,
-    ensureArrayOfKeys, // <-- Helper needed for rehydration
-    // --- All validation/step helpers ---
+    ensureArrayOfKeys,
     isVitalSignsComplete,
     isDangerSignsComplete,
     isCoughBlockComplete,
@@ -33,26 +32,15 @@ import {
     isImmunizationComplete,
     isOtherProblemsComplete,
     isDecisionComplete,
-    // --- Constants needed for rehydration ---
     DIARRHEA_CLASSIFICATIONS,
     FEVER_CLASSIFICATIONS,
     COUGH_CLASSIFICATIONS,
     EAR_CLASSIFICATIONS,
-    // --- ADD THESE TWO LINES (FIX) ---
     IMNCI_FORM_STRUCTURE,
     evaluateRelevance
-    // --- END ADDITION (FIX) ---
 } from './IMNCSkillsAssessmentForm.jsx';
-// --- END NEW IMPORTS ---
 
-
-// --- COMPONENT MOVED TO IMNCIFORMPART.JSX ---
-// const SkillChecklistItem = (...)
-
-// --- COMPONENT MOVED TO IMNCIFORMPART.JSX ---
-// const ScoreCircle = (...)
-
-// --- Sticky Overall Score Component (Stays in Shell) ---
+// --- Sticky Overall Score Component ---
 const StickyOverallScore = ({ score, maxScore }) => {
     if (score === null || maxScore === null || maxScore === 0 || score === undefined || maxScore === undefined) return null;
     let percentage = Math.round((score / maxScore) * 100);
@@ -77,18 +65,7 @@ const StickyOverallScore = ({ score, maxScore }) => {
     );
 };
 
-// --- LOGIC MOVED TO IMNCIFORMPART.JSX ---
-// const evaluateRelevance = (...)
-// const IMNCI_FORM_STRUCTURE = [...]
-// const COUGH_CLASSIFICATIONS = [...]
-// const createInitialClassificationState = (...)
-// const getInitialFormData = (...)
-// const rehydrateDraftData = (...)
-// const calculateScores = (...)
-// const findIncompleteTreatmentSkills = (...)
-
-
-// --- Form Component Start (MODIFIED) ---
+// --- Form Component Start ---
 const SkillsAssessmentForm = forwardRef((props, ref) => {
     const {
         facility,
@@ -101,16 +78,17 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
         setToast,
         existingSessionData = null,
         visitNumber = 1,
-        canEditVisitNumber = false, // <--- NEW PROP
+        canEditVisitNumber = false, // Permission prop from parent
         lastSessionDate = null,
         onDraftCreated,
         setIsMothersFormModalOpen,
         setIsDashboardModalOpen,
-        setIsVisitReportModalOpen, // <-- ADD THIS
-        draftCount
+        setIsVisitReportModalOpen,
+        draftCount,
+        workerHistory = [] // NEW: Worker history for dynamic visit number calculation
     } = props;
 
-    // --- State Management (Stays in Shell) ---
+    // --- State Management ---
     const [formData, setFormData] = useState(() => 
         existingSessionData ? rehydrateDraftData(existingSessionData, DIARRHEA_CLASSIFICATIONS, FEVER_CLASSIFICATIONS) : getInitialFormData()
     );
@@ -122,39 +100,62 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
     const auth = getAuth();
     const user = auth.currentUser;
     
-    // --- NEW: Visit Number State ---
-    const [currentVisitNumber, setCurrentVisitNumber] = useState(visitNumber);
+    // --- Visit Number State Logic ---
+    // Initialize with existing data if present, otherwise use the calculated prop (default)
+    const [currentVisitNumber, setCurrentVisitNumber] = useState(() => 
+        existingSessionData?.visitNumber ? existingSessionData.visitNumber : visitNumber
+    );
 
-    // Keep local state in sync if the parent prop changes (e.g., switching facility)
+    // --- NEW: Dynamic Visit Number Calculation ---
     useEffect(() => {
-        setCurrentVisitNumber(visitNumber);
-    }, [visitNumber]);
-    // -------------------------------
+        // If editing, respect the saved value unless manually changed. 
+        // We only auto-calculate for new sessions.
+        if (existingSessionData) return;
+
+        const currentSessionDate = formData.session_date;
+        if (!currentSessionDate) return;
+
+        // Get all unique dates from history for this worker
+        const uniqueDates = [...new Set(
+            workerHistory.map(s => s.sessionDate || (s.effectiveDate ? new Date(s.effectiveDate.seconds * 1000).toISOString().split('T')[0] : ''))
+        )].filter(d => d).sort();
+
+        // Check if current date exists in history
+        if (uniqueDates.includes(currentSessionDate)) {
+            // If date exists, use its sequence number
+            const index = uniqueDates.indexOf(currentSessionDate);
+            setCurrentVisitNumber(index + 1); 
+        } else {
+            // If new date, append to sequence
+            setCurrentVisitNumber(uniqueDates.length + 1);
+        }
+
+    }, [formData.session_date, workerHistory, existingSessionData]);
+    // ---------------------------------------------
     
-    // (This is the simple state from the previous fix)
     const [isFormFullyComplete, setIsFormFullyComplete] = useState(false);
 
-    // --- Refs for Autosave (Stays in Shell) ---
+    // --- Refs for Autosave ---
     const formDataRef = useRef(formData);
     useEffect(() => {
         formDataRef.current = formData;
     }, [formData]);
 
     const allPropsRef = useRef({
-        facility, healthWorkerName, user, visitNumber, existingSessionData,
+        facility, healthWorkerName, user, visitNumber: currentVisitNumber, existingSessionData,
         isSaving, isSavingDraft, setToast,
         healthWorkerJobTitle,
         onDraftCreated
     });
     useEffect(() => {
         allPropsRef.current = {
-            facility, healthWorkerName, user, visitNumber, existingSessionData,
+            facility, healthWorkerName, user, visitNumber: currentVisitNumber, existingSessionData,
             isSaving, isSavingDraft, setToast,
             healthWorkerJobTitle,
             onDraftCreated
         };
     }, [
-        facility, healthWorkerName, user, visitNumber, existingSessionData,
+        facility, healthWorkerName, user, currentVisitNumber, existingSessionData,
         isSaving, isSavingDraft, setToast,
         healthWorkerJobTitle,
         onDraftCreated
@@ -162,21 +163,17 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
     
     const editingIdRef = useRef(null); 
 
-    // (This is the useEffect from the previous fix)
-    // --- Effect for loading/rehydrating data (Stays in Shell) ---
+    // --- Effect for loading/rehydrating data ---
     useEffect(() => {
         const newId = existingSessionData ? existingSessionData.id : null;
         const oldId = editingIdRef.current;
 
         if (newId !== oldId) {
             if (newId) {
-                // We are loading an existing session.
-                // 1. Rehydrate the data.
                 const rehydratedData = rehydrateDraftData(existingSessionData, DIARRHEA_CLASSIFICATIONS, FEVER_CLASSIFICATIONS);
                 setFormData(rehydratedData);
                 setVisibleStep(9);
                 
-                // 2. Check its completeness *immediately*.
                 const { assessment_skills: newAssessmentSkills } = rehydratedData;
                 const vitalSignsComplete = isVitalSignsComplete(rehydratedData);
                 const dangerSignsComplete = isDangerSignsComplete(rehydratedData);
@@ -198,26 +195,17 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                                      decisionComplete &&
                                      treatmentComplete;
 
-                // 3. Set the completeness state.
                 setIsFormFullyComplete(allComplete);
             } else {
-                // This is a new session.
                 setFormData(getInitialFormData());
                 setVisibleStep(1);
-                // A new form is never complete by default.
                 setIsFormFullyComplete(false);
             }
             editingIdRef.current = newId;
         }
     }, [existingSessionData]);
 
-
-    // --- HELPERS MOVED TO IMNCIFORMPART.JSX ---
-    // const isMultiSelectGroupEmpty = (...)
-    // const isVitalSignsComplete = (...)
-    // ... all other is...Complete helpers
-
-    // --- Main effect for cleanup, visibility, and scoring (Stays in Shell) ---
+    // --- Main effect for cleanup, visibility, and scoring ---
     useEffect(() => {
         let needsUpdate = false;
         const newFormData = JSON.parse(JSON.stringify(formData));
@@ -225,11 +213,11 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
 
         // --- Step Visibility Logic ---
         let maxStep = 1;
-        // Use imported helpers
         if (isVitalSignsComplete(formData)) { maxStep = 2;
             if (isDangerSignsComplete(formData)) { maxStep = 3;
                 if (isMainSymptomsComplete(newAssessmentSkills)) { maxStep = 4;
                     if (isMalnutritionComplete(formData)) { maxStep = 5;
+                        if (isMalnutritionComplete(formData)) { maxStep = 5;
                         if (isAnemiaComplete(formData)) { maxStep = 6;
                             if (isImmunizationComplete(formData)) { maxStep = 7;
                                 if (isOtherProblemsComplete(formData)) { maxStep = 8;
@@ -241,16 +229,14 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                 }
             }
         }
+    }
         const targetVisibleStep = editingIdRef.current ? 9 : Math.max(visibleStep, maxStep);
         if (targetVisibleStep !== visibleStep) {
             setVisibleStep(targetVisibleStep);
         }
 
-        // --- Cleanup Logic (Stays in Shell, as it modifies state) ---
-        
-        // Helper to reset symptom sub-questions if main symptom is 'no'
+        // --- Cleanup Logic ---
         const resetSymptomSubquestions = (prefix, classifications, isMulti) => {
-            // (This internal helper function is fine to keep here)
             const createInitialState = (classifications) => classifications.reduce((acc, c) => { acc[c] = false; return acc; }, {});
 
             const mainSkillKey = `skill_ask_${prefix}`;
@@ -274,9 +260,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
         resetSymptomSubquestions('fever', FEVER_CLASSIFICATIONS, true);
         resetSymptomSubquestions('ear', EAR_CLASSIFICATIONS, false);
 
-        // Helper for cleanup based on supervisor confirmation
         const symptomCleanup = (symptomPrefix, classifications, isMulti = false) => {
-            // (This internal helper function is fine to keep here)
             const createInitialState = (classifications) => classifications.reduce((acc, c) => { acc[c] = false; return acc; }, {});
             
             const mainSkillKey = `skill_ask_${symptomPrefix}`;
@@ -313,9 +297,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
         symptomCleanup('fever', FEVER_CLASSIFICATIONS, true);
         symptomCleanup('ear', EAR_CLASSIFICATIONS);
 
-        // Helper for Malnutrition/Anemia classification cleanup
         const classificationCleanup = (prefix, isMulti = false, classifications = []) => {
-            // (This internal helper function is fine to keep here)
             const createInitialState = (classifications) => classifications.reduce((acc, c) => { acc[c] = false; return acc; }, {});
 
             const classifySkillKey = `skill_${prefix}_classify`;
@@ -333,10 +315,6 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
         classificationCleanup('malnutrition');
         classificationCleanup('anemia');
 
-        // Treatment relevance cleanup
-        
-        // This now works because IMNCI_FORM_STRUCTURE and evaluateRelevance
-        // are imported at the top of the file.
         IMNCI_FORM_STRUCTURE.forEach(group => {
             if (group.sectionKey !== 'treatment_skills' || !newTreatmentSkills) return;
             if(Array.isArray(group.subgroups)) {
@@ -372,18 +350,13 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
             }
         });
 
-
-        // Apply updates if any cleanup occurred
         if (needsUpdate) {
             setFormData(newFormData);
         }
 
-        // --- Completion Check (uses imported helpers) ---
-        // This code will now run on *every* render, ensuring
-        // the button state is always in sync with the data.
         const vitalSignsComplete = isVitalSignsComplete(newFormData);
         const dangerSignsComplete = isDangerSignsComplete(newFormData);
-        const mainSymptomsComplete = isMainSymptomsComplete(newAssessmentSkills); // Pass skills directly
+        const mainSymptomsComplete = isMainSymptomsComplete(newAssessmentSkills);
         const malnutritionComplete = isMalnutritionComplete(newFormData);
         const anemiaComplete = isAnemiaComplete(newFormData);
         const immunizationComplete = isImmunizationComplete(newFormData);
@@ -403,16 +376,15 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
 
         setIsFormFullyComplete(allStepsComplete);
 
-        // Calculate scores using imported function
         setScores(calculateScores(newFormData)); 
 
     }, [formData, visibleStep]);
 
 
-    // --- Autosave Logic (Stays in Shell) ---
+    // --- Autosave Logic ---
     const silentSaveDraft = useCallback(async () => {
         const {
-            facility, healthWorkerName, user, visitNumber, existingSessionData,
+            facility, healthWorkerName, user, visitNumber: currentVisitNum, existingSessionData,
             isSaving, isSavingDraft, setToast, healthWorkerJobTitle,
             onDraftCreated
         } = allPropsRef.current;
@@ -430,11 +402,6 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                 supervisor_correct_fever_classification: getSelectedKeys(currentFormData.assessment_skills.supervisor_correct_fever_classification),
             };
             
-            // ================== BEGIN FIX ==================
-            // REMOVED the 4 delete lines
-            // =================== END FIX ===================
-
-            // Use imported calculator
             const calculatedScores = calculateScores(currentFormData);
             const scoresPayload = {};
             for (const key in calculatedScores) { 
@@ -443,15 +410,12 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                     scoresPayload[`${key}_maxScore`] = calculatedScores[key].maxScore;
                 }
             }
-            // --- *** THIS IS THE FIX (Part 2) *** ---
-            // scoresPayload['treatment_score'] = calculatedScores.treatmentScoreForSave ?? 0; // <-- THIS LINE IS DELETED
-            // scoresPayload['treatment_maxScore'] = calculatedScores['treatment']?.maxScore ?? 0; // <-- THIS LINE IS DELETED
 
             const effectiveDateTimestamp = Timestamp.fromDate(new Date(currentFormData.session_date));
-            const sessionId = editingIdRef.current; // Get sessionId first
+            const sessionId = editingIdRef.current;
 
             const payload = {
-                serviceType: 'IMNCI', // <-- This would be a prop in a truly generic form
+                serviceType: 'IMNCI',
                 state: facility?.['الولاية'] || null,
                 locality: facility?.['المحلية'] || null,
                 facilityId: facility?.id || null,
@@ -468,22 +432,18 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                 scores: scoresPayload,
                 notes: currentFormData.notes,
                 status: 'draft',
-                visitNumber: Number(currentVisitNumber) // <--- USE LOCAL STATE
-                // Mentor/Editor fields will be added below
+                visitNumber: Number(currentVisitNum) // Use local state
             };
 
             if (sessionId) {
-                // This is an EDIT of an existing session
-                // Use 'existingSessionData' from allPropsRef
-                payload.mentorEmail = existingSessionData?.mentorEmail || 'unknown'; // Keep original mentor
-                payload.mentorName = existingSessionData?.mentorName || 'Unknown Mentor'; // Keep original mentor
-                payload.edited_by_email = user?.email || 'unknown'; // Add editor's email
-                payload.edited_by_name = user?.displayName || 'Unknown Mentor'; // Add editor's name
-                payload.edited_at = Timestamp.now(); // Add edit timestamp
+                payload.mentorEmail = existingSessionData?.mentorEmail || 'unknown';
+                payload.mentorName = existingSessionData?.mentorName || 'Unknown Mentor';
+                payload.edited_by_email = user?.email || 'unknown';
+                payload.edited_by_name = user?.displayName || 'Unknown Mentor';
+                payload.edited_at = Timestamp.now();
             } else {
-                // This is a NEW session
-                payload.mentorEmail = user?.email || 'unknown'; // Set current user as mentor
-                payload.mentorName = user?.displayName || 'Unknown Mentor'; // Set current user as mentor
+                payload.mentorEmail = user?.email || 'unknown';
+                payload.mentorName = user?.displayName || 'Unknown Mentor';
             }
 
             const savedDraft = await saveMentorshipSession(payload, sessionId);
@@ -496,9 +456,9 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
             console.error("Autosave failed:", error);
             setToast({ show: true, message: `فشل الحفظ التلقائي: ${error.message}`, type: 'error' });
         }
-    }, [currentVisitNumber]); // Added currentVisitNumber dependency
+    }, [currentVisitNumber]);
 
-    // --- useImperativeHandle (Stays in Shell) ---
+    // --- useImperativeHandle ---
     useImperativeHandle(ref, () => ({
         saveDraft: async () => {
             const { isSaving, isSavingDraft } = allPropsRef.current;
@@ -511,9 +471,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
     }));
 
 
-    // --- Handlers (Stay in Shell) ---
-    
-    // --- NEW HANDLER (FIX) ---
+    // --- Handlers ---
     const handleMultiClassificationChange = (stateKey, classificationName, isChecked) => {
         setFormData(prev => ({
             ...prev,
@@ -526,13 +484,10 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
             }
         }));
     };
-    // --- END NEW HANDLER (FIX) ---
 
-    // --- MODIFIED HANDLER (FIX) ---
     const handleFormChange = (e) => {
         const { name, value, type, checked } = e.target;
         
-        // This list contains all simple form fields (Selects)
         const simpleAssessmentFields = [
             'supervisor_confirms_cough', 'worker_cough_classification', 'supervisor_correct_cough_classification',
             'supervisor_confirms_diarrhea',
@@ -551,7 +506,6 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
              setFormData(prev => ({ ...prev, [name]: value }));
          }
     };
-    // --- END MODIFIED HANDLER (FIX) ---
 
     const handleSkillChange = (section, key, value) => {
         setFormData(prev => ({
@@ -573,11 +527,10 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
         }
     };
 
-    // --- Final Submit Handler (Stays in Shell) ---
+    // --- Final Submit Handler ---
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Use imported helper
         if (!isFormFullyComplete) {
              const validationMessages = [];
              if (!isVitalSignsComplete(formData)) validationMessages.push('خطوة 1: القياسات الجسمانية والحيوية');
@@ -588,7 +541,6 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
              if (!isImmunizationComplete(formData)) validationMessages.push('خطوة 6: التطعيم وفيتامين أ');
              if (!isOtherProblemsComplete(formData)) validationMessages.push('خطوة 7: الأمراض الأخرى');
              if (!isDecisionComplete(formData)) validationMessages.push('خطوة 8: القرار النهائي');
-             // Use imported helper
              const incompleteTreatment = findIncompleteTreatmentSkills(formData);
              if (incompleteTreatment.length > 0) {
                 validationMessages.push(`خطوة 9: حقول العلاج والنصح (ناقص: ${incompleteTreatment[0]}...)`);
@@ -601,7 +553,6 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
 
         setIsSaving(true);
         try {
-            // Payload processing (stays, uses imported helpers)
             const getSelectedKeys = (obj) => Object.entries(obj || {}).filter(([, isSelected]) => isSelected).map(([key]) => key);
             const assessmentSkillsPayload = {
                 ...formData.assessment_skills,
@@ -611,10 +562,6 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                 supervisor_correct_fever_classification: getSelectedKeys(formData.assessment_skills.supervisor_correct_fever_classification),
             };
 
-            // ================== BEGIN FIX ==================
-            // REMOVED the 4 delete lines
-            // =================== END FIX ===================
-            
             delete assessmentSkillsPayload.supervisor_agrees_cough_classification;
             delete assessmentSkillsPayload.supervisor_agrees_diarrhea_classification;
             delete assessmentSkillsPayload.supervisor_agrees_fever_classification;
@@ -622,7 +569,6 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
             delete assessmentSkillsPayload.supervisor_agrees_malnutrition_classification;
             delete assessmentSkillsPayload.supervisor_agrees_anemia_classification;
 
-            // Use imported calculator
             const calculatedScores = calculateScores(formData);
             const scoresPayload = {};
             for (const key in calculatedScores) { 
@@ -631,15 +577,12 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                     scoresPayload[`${key}_maxScore`] = calculatedScores[key].maxScore;
                 }
             }
-            // --- *** THIS IS THE FIX (Part 2) *** ---
-            // scoresPayload['treatment_score'] = calculatedScores.treatmentScoreForSave ?? 0; // <-- THIS LINE IS DELETED
-            // scoresPayload['treatment_maxScore'] = calculatedScores['treatment']?.maxScore ?? 0; // <-- THIS LINE IS DELETED
 
             const effectiveDateTimestamp = Timestamp.fromDate(new Date(formData.session_date));
-            const sessionId = editingIdRef.current; // Get sessionId first
+            const sessionId = editingIdRef.current;
 
             const payload = {
-                serviceType: 'IMNCI', // <-- This would be a prop in a truly generic form
+                serviceType: 'IMNCI',
                 state: facility?.['الولاية'] || null,
                 locality: facility?.['المحلية'] || null,
                 facilityId: facility?.id || null,
@@ -656,21 +599,18 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                 scores: scoresPayload,
                 notes: formData.notes,
                 status: 'complete',
-                visitNumber: Number(currentVisitNumber) // <--- USE LOCAL STATE
-                // Mentor/Editor fields will be added below
+                visitNumber: Number(currentVisitNumber) // Use local state
             };
 
             if (sessionId) {
-                // This is an EDIT of an existing session
-                payload.mentorEmail = existingSessionData?.mentorEmail || 'unknown'; // Keep original mentor
-                payload.mentorName = existingSessionData?.mentorName || 'Unknown Mentor'; // Keep original mentor
-                payload.edited_by_email = user?.email || 'unknown'; // Add editor's email
-                payload.edited_by_name = user?.displayName || 'Unknown Mentor'; // Add editor's name
-                payload.edited_at = Timestamp.now(); // Add edit timestamp
+                payload.mentorEmail = existingSessionData?.mentorEmail || 'unknown';
+                payload.mentorName = existingSessionData?.mentorName || 'Unknown Mentor';
+                payload.edited_by_email = user?.email || 'unknown';
+                payload.edited_by_name = user?.displayName || 'Unknown Mentor';
+                payload.edited_at = Timestamp.now();
             } else {
-                // This is a NEW session
-                payload.mentorEmail = user?.email || 'unknown'; // Set current user as mentor
-                payload.mentorName = user?.displayName || 'Unknown Mentor'; // Set current user as mentor
+                payload.mentorEmail = user?.email || 'unknown';
+                payload.mentorName = user?.displayName || 'Unknown Mentor';
             }
 
             const savedSession = await saveMentorshipSession(payload, sessionId);
@@ -685,12 +625,11 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
         }
     };
 
-    // --- Draft Save Handler (Stays in Shell) ---
+    // --- Draft Save Handler ---
     const handleSaveDraft = async (e) => {
          e.preventDefault();
          setIsSavingDraft(true);
          try {
-             // Payload processing
              const getSelectedKeys = (obj) => Object.entries(obj || {}).filter(([, isSelected]) => isSelected).map(([key]) => key);
              const assessmentSkillsPayload = {
                  ...formData.assessment_skills,
@@ -700,11 +639,6 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                  supervisor_correct_fever_classification: getSelectedKeys(formData.assessment_skills.supervisor_correct_fever_classification),
              };
             
-            // ================== BEGIN FIX ==================
-            // REMOVED the 4 delete lines
-            // =================== END FIX ===================
-
-            // Use imported calculator
             const calculatedScores = calculateScores(formData);
             const scoresPayload = {};
             for (const key in calculatedScores) { 
@@ -713,15 +647,12 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                     scoresPayload[`${key}_maxScore`] = calculatedScores[key].maxScore;
                 }
             }
-            // --- *** THIS IS THE FIX (Part 2) *** ---
-            // scoresPayload['treatment_score'] = calculatedScores.treatmentScoreForSave ?? 0; // <-- THIS LINE IS DELETED
-            // scoresPayload['treatment_maxScore'] = calculatedScores['treatment']?.maxScore ?? 0; // <-- THIS LINE IS DELETED
 
              const effectiveDateTimestamp = Timestamp.fromDate(new Date(formData.session_date));
-             const sessionId = editingIdRef.current; // Get sessionId first
+             const sessionId = editingIdRef.current;
 
              const payload = {
-                 serviceType: 'IMNCI', // <-- This would be a prop in a truly generic form
+                 serviceType: 'IMNCI',
                  state: facility?.['الولاية'] || null,
                  locality: facility?.['المحلية'] || null,
                  facilityId: facility?.id || null,
@@ -738,21 +669,18 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                  scores: scoresPayload,
                  notes: formData.notes,
                  status: 'draft',
-                 visitNumber: Number(currentVisitNumber) // <--- USE LOCAL STATE
-                 // Mentor/Editor fields will be added below
+                 visitNumber: Number(currentVisitNumber) // Use local state
              };
 
             if (sessionId) {
-                // This is an EDIT of an existing session
-                payload.mentorEmail = existingSessionData?.mentorEmail || 'unknown'; // Keep original mentor
-                payload.mentorName = existingSessionData?.mentorName || 'Unknown Mentor'; // Keep original mentor
-                payload.edited_by_email = user?.email || 'unknown'; // Add editor's email
-                payload.edited_by_name = user?.displayName || 'Unknown Mentor'; // Add editor's name
-                payload.edited_at = Timestamp.now(); // Add edit timestamp
+                payload.mentorEmail = existingSessionData?.mentorEmail || 'unknown';
+                payload.mentorName = existingSessionData?.mentorName || 'Unknown Mentor';
+                payload.edited_by_email = user?.email || 'unknown';
+                payload.edited_by_name = user?.displayName || 'Unknown Mentor';
+                payload.edited_at = Timestamp.now();
             } else {
-                // This is a NEW session
-                payload.mentorEmail = user?.email || 'unknown'; // Set current user as mentor
-                payload.mentorName = user?.displayName || 'Unknown Mentor'; // Set current user as mentor
+                payload.mentorEmail = user?.email || 'unknown';
+                payload.mentorName = user?.displayName || 'Unknown Mentor';
             }
 
              const savedDraft = await saveMentorshipSession(payload, sessionId);
@@ -773,7 +701,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
     };
 
 
-    // --- Render function (Stays in Shell) ---
+    // --- Render function ---
     return (
         <Card dir="rtl">
             <StickyOverallScore
@@ -782,14 +710,14 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
             />
             <form onSubmit={handleSubmit}>
                 <div className="p-6">
-                    {/* --- Centered Title (Generic) --- */}
+                    {/* --- Centered Title --- */}
                     <div className="text-center mb-4">
                         <h2 className="text-2xl font-bold text-sky-800">
                             متابعة مهارات العلاج المتكامل للأطفال اقل من 5 سنوات
                         </h2>
                     </div>
 
-                    {/* --- Info Cards Wrapper (Generic) --- */}
+                    {/* --- Info Cards Wrapper --- */}
                     <div className="space-y-2 mb-4">
                         {/* Facility Info */}
                         <div className="p-2 border rounded-lg bg-gray-50 text-right space-y-0.5">
@@ -828,7 +756,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                                     <span className="font-medium text-gray-500">تاريخ الجلسة السابقة:</span>
                                     <span className="font-semibold text-gray-900 mr-2">{lastSessionDate || '---'}</span> 
                                 </div>
-                                {/* --- REPLACE THE VISIT NUMBER RENDER LOGIC HERE --- */}
+                                {/* --- VISIT NUMBER RENDER LOGIC --- */}
                                 <div className="text-sm flex items-center">
                                     <span className="font-medium text-gray-700 ml-2">رقم الجلسة:</span>
                                     {canEditVisitNumber ? (
@@ -843,14 +771,13 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                                         <span className="text-lg font-bold text-sky-700 mr-2">{currentVisitNumber}</span>
                                     )}
                                 </div>
-                                {/* -------------------------------------------------- */}
+                                {/* ---------------------------------- */}
                             </div>
                         </div>
                     </div>
 
 
-                    {/* --- NEW: Form Structure Mapping --- */}
-                    {/* This is where the specific form part is rendered */}
+                    {/* --- Form Structure Mapping --- */}
                     <IMNCIFormRenderer
                         formData={formData}
                         visibleStep={visibleStep}
@@ -858,12 +785,10 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                         handleFormChange={handleFormChange}
                         handleSkillChange={handleSkillChange}
                         handleMultiClassificationChange={handleMultiClassificationChange} 
-                        isEditing={!!editingIdRef.current} // Pass isEditing flag
+                        isEditing={!!editingIdRef.current} 
                     />
-                    {/* --- END: Form Structure Mapping --- */}
                     
-
-                    {/* --- Notes Section (Generic) --- */}
+                    {/* --- Notes Section --- */}
                     {(visibleStep >= 9 || !!editingIdRef.current) && (
                         <>
                            <FormGroup label="ملاحظات عامة" className="text-right">
@@ -873,7 +798,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                     )}
                 </div>
 
-                 {/* --- Button Bar (Generic) --- */}
+                 {/* --- Button Bar --- */}
                  <div className="hidden sm:flex flex-col gap-2 items-end p-4 border-t bg-gray-50 sticky bottom-0 z-10">
                      {/* Row 1: Action Buttons */}
                      <div className="flex gap-2 flex-wrap justify-end">
@@ -910,7 +835,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                         <Button 
                             type="button" 
                             variant="info"
-                            onClick={() => setIsVisitReportModalOpen(true)} // <-- ADD THIS
+                            onClick={() => setIsVisitReportModalOpen(true)} 
                             disabled={isSaving || isSavingDraft || !facility}
                             title={facility ? "Open IMNCI Visit Report" : "No facility selected"}
                         >
@@ -928,7 +853,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                      </div>
                  </div>
 
-                {/* --- Mobile Bar (Generic) --- */}
+                {/* --- Mobile Bar --- */}
                 <div className="flex sm:hidden fixed bottom-16 left-0 right-0 z-20 h-16 justify-around items-center bg-gray-900 text-white border-t border-gray-700 shadow-lg" dir="rtl">
                     <Button type="button" variant="secondary" onClick={onExit} disabled={isSaving || isSavingDraft} size="sm">
                         إلغاء
@@ -947,7 +872,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                 </div>
             </form>
 
-            {/* --- Facility Modal (Generic) --- */}
+            {/* --- Facility Modal --- */}
             {isFacilityModalOpen && facility && (
                 <Modal 
                     isOpen={isFacilityModalOpen} 
