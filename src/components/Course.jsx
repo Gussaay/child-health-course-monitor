@@ -1,4 +1,4 @@
-// components/Course.jsx
+// src/components/Course.jsx
 import React, { useState, useMemo, useRef, useEffect, Suspense } from 'react';
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -84,11 +84,8 @@ const IccmIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" w
 const IpcIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M12 11v4"></path><path d="M10 13h4"></path></svg>;
 const NewbornIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 9c0-2-1.5-3.5-4-3.5C7.5 5.5 6 7 6 9c0 1.5.5 2.5 1 3.5h0l-1 4.5h10L17 17l-1-4.5h0c.5-1 1-2.5 1-3.5z"></path><path d="M12 18h.01"></path><path d="M10.5 21v-1.5h3V21"></path></svg>;
 
-// ... [Keep Registration Modal, Public Views, Landing, etc.] ...
-
 export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, onSuccess }) => {
-    // ... [Implementation remains the same]
-     const [name, setName] = useState('');
+    const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
     const [jobTitle, setJobTitle] = useState('');
     const [group, setGroup] = useState('Group A');
@@ -241,7 +238,6 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
 };
 
 export function PublicParticipantRegistrationView({ courseId }) {
-    // ... [Implementation remains the same]
     const [course, setCourse] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -308,7 +304,6 @@ export function PublicParticipantRegistrationView({ courseId }) {
 }
 
 const Landing = React.memo(function Landing({ active, onPick }) {
-   // ... [Implementation remains the same]
    const items = [
         { key: 'IMNCI', title: 'Integrated Management of Newborn and Childhood Illnesses (IMNCI)', enabled: true },
         { key: 'ICCM', title: 'Integrated Community case management for under 5 children (iCCM)', enabled: true },
@@ -350,7 +345,7 @@ export function CoursesTable({
     onOpenAttendanceManager 
 }) {
     const [shareModalCourse, setShareModalCourse] = useState(null);
-    const [reportModalCourse, setReportModalCourse] = useState(null); // NEW: State for Report Modal
+    const [reportModalCourse, setReportModalCourse] = useState(null);
     const [deleteRequestCourse, setDeleteRequestCourse] = useState(null); 
     const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
 
@@ -1647,5 +1642,55 @@ export function CourseForm({
                 </div>
             </div>
         </Card>
+    );
+}
+
+// --- ADDED THIS COMPONENT TO FIX THE ERROR ---
+export function PublicCourseMonitoringView({ course, allParticipants }) {
+    const [selectedParticipantId, setSelectedParticipantId] = useState(
+        allParticipants && allParticipants.length > 0 ? allParticipants[0].id : null
+    );
+    
+    const currentParticipant = allParticipants.find(p => p.id === selectedParticipantId);
+
+    if (!course) return <EmptyState message="Course data unavailable." />;
+
+    return (
+        <div className="space-y-6">
+            <Card>
+                <div className="p-6 border-b border-gray-100">
+                     <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-sky-100 rounded-lg">
+                            <Eye className="w-6 h-6 text-sky-600" />
+                        </div>
+                        <h1 className="text-2xl font-bold text-gray-900">Course Monitoring</h1>
+                     </div>
+                     <div className="text-gray-600">
+                        <span className="font-semibold text-gray-900">{course.course_type}</span>
+                        <span className="mx-2">•</span>
+                        <span>{course.state} - {course.locality}</span>
+                        <span className="mx-2">•</span>
+                        <span>{course.start_date}</span>
+                     </div>
+                </div>
+            </Card>
+
+            <Suspense fallback={<div className="flex justify-center p-10"><Spinner /></div>}>
+                {allParticipants && allParticipants.length > 0 ? (
+                    currentParticipant ? (
+                        <ObservationView 
+                            course={course} 
+                            participant={currentParticipant} 
+                            participants={allParticipants}
+                            onChangeParticipant={setSelectedParticipantId}
+                        />
+                    ) : (
+                         <div className="flex justify-center p-10"><Spinner /></div>
+                    )
+                ) : (
+                    <EmptyState message="No participants found for this course." />
+                )}
+            </Suspense>
+        </div>
     );
 }
