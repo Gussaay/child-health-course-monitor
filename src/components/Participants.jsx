@@ -32,7 +32,77 @@ import { generateCertificatePdf, generateAllCertificatesPdf, generateBlankCertif
 
 
 // ====================================================================
-// ===== 1. MODAL COMPONENTS (Nested) =================================
+// ===== 1. CUSTOM UI COMPONENTS ======================================
+// ====================================================================
+
+// --- Multi-Select Dropdown Component for Filters ---
+const MultiSelectDropdown = ({ options, selected, onChange, label, placeholder }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const ref = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (ref.current && !ref.current.contains(event.target)) setIsOpen(false);
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [ref]);
+
+    const toggleOption = (option) => {
+        if (selected.includes(option)) {
+            onChange(selected.filter(item => item !== option));
+        } else {
+            onChange([...selected, option]);
+        }
+    };
+
+    const displayValue = selected.length === 0 
+        ? placeholder 
+        : selected.length === 1 
+            ? selected[0] 
+            : `${selected.length} selected`;
+
+    return (
+        <div className="relative flex flex-col gap-1" ref={ref}>
+            <label className="font-semibold text-gray-700 text-xs uppercase">{label}</label>
+            <div 
+                className="border border-gray-300 rounded px-3 py-1.5 bg-white text-sm cursor-pointer min-w-[160px] flex justify-between items-center hover:border-blue-400"
+                onClick={() => setIsOpen(!isOpen)}
+            >
+                <span className="truncate mr-2 text-gray-700">{displayValue}</span>
+                <span className="text-gray-500 text-[10px]">▼</span>
+            </div>
+            {isOpen && (
+                <div className="absolute top-full left-0 z-20 mt-1 w-full min-w-[220px] bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                    {selected.length > 0 && (
+                        <div 
+                            className="p-2 border-b border-gray-200 cursor-pointer bg-gray-50 hover:bg-gray-100 text-xs font-semibold text-red-600 text-center"
+                            onClick={() => { onChange([]); setIsOpen(false); }}
+                        >
+                            Clear Selection
+                        </div>
+                    )}
+                    {options.length > 0 ? options.map((opt, i) => (
+                        <label key={i} className="flex items-center p-2.5 hover:bg-blue-50 cursor-pointer text-sm border-b border-gray-50 last:border-none">
+                            <input 
+                                type="checkbox" 
+                                className="mr-3 rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
+                                checked={selected.includes(opt)}
+                                onChange={() => toggleOption(opt)}
+                            />
+                            <span className="text-gray-700 select-none truncate" title={opt}>{opt}</span>
+                        </label>
+                    )) : (
+                        <div className="p-3 text-sm text-gray-500 text-center">No options available</div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ====================================================================
+// ===== 2. MODAL COMPONENTS (Nested) =================================
 // ====================================================================
 
 // --- Email Certificate Modal ---
@@ -1380,7 +1450,13 @@ export function ParticipantsView({
     const [localApprovalStatus, setLocalApprovalStatus] = useState(course.isCertificateApproved);
     const [isRefreshingApproval, setIsRefreshingApproval] = useState(false);
 
-    const [groupFilter, setGroupFilter] = useState('All');
+    // --- Filter States (Multi-Select Arrays) ---
+    const [groupFilter, setGroupFilter] = useState([]);
+    const [jobTitleFilter, setJobTitleFilter] = useState([]);
+    const [facilityFilter, setFacilityFilter] = useState([]);
+    const [localityFilter, setLocalityFilter] = useState([]);
+    const [subTypeFilter, setSubTypeFilter] = useState([]);
+
     const [importModalOpen, setImportModalOpen] = useState(false);
     const [isCleanupModalOpen, setIsCleanupModalOpen] = useState(false);
     const [isBulkChangeModalOpen, setIsBulkChangeModalOpen] = useState(false);
@@ -1462,7 +1538,51 @@ export function ParticipantsView({
     }, [course.id]);
 
 
-    const filtered = groupFilter === 'All' ? participants : participants.filter(p => p.group === groupFilter);
+    // --- Filtering Logic ---
+    const uniqueGroups = useMemo(() => {
+        return [...new Set(participants.map(p => p.group).filter(Boolean))].sort();
+    }, [participants]);
+
+    const uniqueJobTitles = useMemo(() => {
+        return [...new Set(participants.map(p => p.job_title).filter(Boolean))].sort();
+    }, [participants]);
+
+    const uniqueFacilities = useMemo(() => {
+        return [...new Set(participants.map(p => p.center_name).filter(Boolean))].sort();
+    }, [participants]);
+
+    const uniqueLocalities = useMemo(() => {
+        return [...new Set(participants.map(p => p.locality).filter(Boolean))].sort();
+    }, [participants]);
+
+    const uniqueSubTypes = useMemo(() => {
+        return [...new Set(participants.map(p => {
+             let subType = p.imci_sub_type;
+             if (!subType && course.facilitatorAssignments) {
+                 const assignment = course.facilitatorAssignments.find(a => a.group === p.group);
+                 subType = assignment?.imci_sub_type;
+             }
+             return subType;
+        }).filter(Boolean))].sort();
+    }, [participants, course.facilitatorAssignments]);
+
+    const filtered = useMemo(() => {
+        return participants.filter(p => {
+            const matchGroup = groupFilter.length === 0 || groupFilter.includes(p.group);
+            const matchJob = jobTitleFilter.length === 0 || jobTitleFilter.includes(p.job_title);
+            const matchFacility = facilityFilter.length === 0 || facilityFilter.includes(p.center_name);
+            const matchLocality = localityFilter.length === 0 || localityFilter.includes(p.locality);
+            
+            let pSubType = p.imci_sub_type;
+            if (!pSubType && course.facilitatorAssignments) {
+                const assignment = course.facilitatorAssignments.find(a => a.group === p.group);
+                pSubType = assignment?.imci_sub_type;
+            }
+            const matchSubType = subTypeFilter.length === 0 || subTypeFilter.includes(pSubType);
+            
+            return matchGroup && matchJob && matchFacility && matchLocality && matchSubType;
+        });
+    }, [participants, groupFilter, jobTitleFilter, facilityFilter, localityFilter, subTypeFilter, course.facilitatorAssignments]);
 
     // --- Refresh Approval Handler ---
     const handleRefreshApproval = async () => {
@@ -1501,18 +1621,18 @@ export function ParticipantsView({
     const centerNameLabel = course.course_type === 'ICCM' ? 'Village Name' : 'Facility Name';
 
     const handleBulkCertificateDownload = async () => {
-        if (participants.length === 0) {
+        if (filtered.length === 0) {
             alert("No participants available for bulk certificate download.");
             return;
         }
         setIsBulkCertLoading(true);
-        setDownloadProgress({ current: 0, total: participants.length });
+        setDownloadProgress({ current: 0, total: filtered.length }); // Update to track filtered count
 
         try {
-             // Pass progress callback
+             // Pass filtered array instead of full participants array
              await generateAllCertificatesPdf(
                 course, 
-                participants, 
+                filtered, 
                 federalProgramManagerName, 
                 certLanguage,
                 (current, total) => setDownloadProgress({ current, total }) 
@@ -1618,131 +1738,190 @@ export function ParticipantsView({
                 setToast={setToast}
              />
 
-
-            <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
-                <div className="flex flex-wrap gap-2 items-center">
-                    {canAddParticipant && (
-                        <Button onClick={onAdd}>Add Participant</Button>
-                    )}
-                    {canImportParticipants && (
-                        <Button variant="secondary" onClick={() => setImportModalOpen(true)}>
-                            Import from Excel
-                        </Button>
-                    )}
-                    {canCleanParticipantData && (
-                         <Button variant="secondary" onClick={() => setIsCleanupModalOpen(true)}>
-                            Clean Data
-                        </Button>
-                    )}
-                    {canBulkChangeParticipants && (
-                        <Button variant="secondary" onClick={() => setIsBulkChangeModalOpen(true)}>
-                            Bulk Change
-                        </Button>
-                    )}
-                    {canBulkMigrateParticipants && (
-                        <Button
-                            variant="secondary"
-                            onClick={() => onBulkMigrate(course.id)}
-                            disabled={!participants || participants.length === 0}
-                            title="Update facility records based on these participants"
-                        >
-                            Bulk Migrate to Facilities
-                        </Button>
-                    )}
-                    
-                    <div className="flex items-center bg-white border border-gray-300 rounded px-2 h-10">
-                        <span className="text-xs font-bold text-gray-600 mr-2 uppercase">Cert. Lang:</span>
-                        <select 
-                            value={certLanguage} 
-                            onChange={(e) => setCertLanguage(e.target.value)}
-                            className="border-none text-sm focus:ring-0 py-1 cursor-pointer bg-transparent"
-                            style={{ outline: 'none' }}
-                        >
-                            <option value="en">English</option>
-                            <option value="ar">Arabic (عربي)</option>
-                        </select>
-                    </div>
-
-                    {/* ALWAYS VISIBLE: Design Certificate Button (Green) */}
-                    <Button
-                        onClick={handleDesignCertificate}
-                        disabled={isGeneratingTemplate || isCacheLoading.federalCoordinators}
-                        className="bg-green-600 hover:bg-green-700 text-white border-transparent focus:ring-green-500"
-                        title="Download a blank certificate template for printing"
-                    >
-                        {isGeneratingTemplate ? <Spinner size="sm" /> : 'Design Certificate'}
-                    </Button>
-
-                    {localApprovalStatus ? (
-                        <>
-                            <div className="flex items-center gap-2">
-                                <Button
-                                    variant="primary"
-                                    onClick={handleBulkCertificateDownload}
-                                    disabled={isBulkCertLoading || participants.length === 0 || isCacheLoading.federalCoordinators}
-                                    title="Download all certificates as one PDF"
-                                >
-                                    Download All Certificates
-                                </Button>
-                                
-                                {isBulkCertLoading && (
-                                    <div className="flex items-center gap-2 px-2 py-1 bg-blue-50 text-blue-700 rounded text-sm border border-blue-200">
-                                        <Spinner size="sm" />
-                                        <span className="font-medium whitespace-nowrap">
-                                            Generating {downloadProgress.current} / {downloadProgress.total}
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
-                            
+            <div className="flex flex-col gap-4 mb-4">
+                {/* Action Buttons */}
+                <div className="flex flex-wrap justify-between items-center gap-4">
+                    <div className="flex flex-wrap gap-2 items-center">
+                        {canAddParticipant && (
+                            <Button onClick={onAdd}>Add Participant</Button>
+                        )}
+                        {canImportParticipants && (
+                            <Button variant="secondary" onClick={() => setImportModalOpen(true)}>
+                                Import from Excel
+                            </Button>
+                        )}
+                        {canCleanParticipantData && (
+                            <Button variant="secondary" onClick={() => setIsCleanupModalOpen(true)}>
+                                Clean Data
+                            </Button>
+                        )}
+                        {canBulkChangeParticipants && (
+                            <Button variant="secondary" onClick={() => setIsBulkChangeModalOpen(true)}>
+                                Bulk Change
+                            </Button>
+                        )}
+                        {canBulkMigrateParticipants && (
                             <Button
                                 variant="secondary"
-                                onClick={() => setSharePageModalOpen(true)}
-                                title="Share a public link where all participants can download their certificates"
-                                className="border-sky-600 text-sky-700 hover:bg-sky-50"
+                                onClick={() => onBulkMigrate(course.id)}
+                                disabled={!participants || participants.length === 0}
+                                title="Update facility records based on these participants"
                             >
-                                Share Public Page
+                                Bulk Migrate to Facilities
                             </Button>
-
-                            <Button
-                                variant="secondary"
-                                onClick={handleOpenBulkEmail}
-                                disabled={!filtered || filtered.length === 0}
-                                title="Send certificate emails to all visible participants"
-                                className="border-green-600 text-green-700 hover:bg-green-50 flex items-center gap-1"
+                        )}
+                        
+                        <div className="flex items-center bg-white border border-gray-300 rounded px-2 h-10">
+                            <span className="text-xs font-bold text-gray-600 mr-2 uppercase">Cert. Lang:</span>
+                            <select 
+                                value={certLanguage} 
+                                onChange={(e) => setCertLanguage(e.target.value)}
+                                className="border-none text-sm focus:ring-0 py-1 cursor-pointer bg-transparent"
+                                style={{ outline: 'none' }}
                             >
-                                <Mail className="w-4 h-4" />
-                                Email All Certs
-                            </Button>
-                        </>
-                    ) : (
-                         <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-1 bg-orange-50 border border-orange-200 text-orange-700 px-3 py-2 rounded text-sm">
-                                <Lock className="w-4 h-4" />
-                                <span className="font-medium">Certificates Pending Approval</span>
-                            </div>
-                            
-                            <button 
-                                onClick={handleRefreshApproval}
-                                disabled={isRefreshingApproval}
-                                className="p-2 bg-white border border-gray-300 rounded hover:bg-gray-100 text-gray-600 transition-colors"
-                                title="Check for approval status update"
-                            >
-                                {isRefreshingApproval ? <Spinner size="sm" /> : <RefreshCw className="w-4 h-4" />}
-                            </button>
+                                <option value="en">English</option>
+                                <option value="ar">Arabic (عربي)</option>
+                            </select>
                         </div>
-                    )}
 
+                        {/* ALWAYS VISIBLE: Design Certificate Button (Green) */}
+                        <Button
+                            onClick={handleDesignCertificate}
+                            disabled={isGeneratingTemplate || isCacheLoading.federalCoordinators}
+                            className="bg-green-600 hover:bg-green-700 text-white border-transparent focus:ring-green-500"
+                            title="Download a blank certificate template for printing"
+                        >
+                            {isGeneratingTemplate ? <Spinner size="sm" /> : 'Design Certificate'}
+                        </Button>
+
+                        {localApprovalStatus ? (
+                            <>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="primary"
+                                        onClick={handleBulkCertificateDownload}
+                                        disabled={isBulkCertLoading || filtered.length === 0 || isCacheLoading.federalCoordinators}
+                                        title="Download filtered certificates as one PDF"
+                                    >
+                                        Download Filtered Certificates
+                                    </Button>
+                                    
+                                    {isBulkCertLoading && (
+                                        <div className="flex items-center gap-2 px-2 py-1 bg-blue-50 text-blue-700 rounded text-sm border border-blue-200">
+                                            <Spinner size="sm" />
+                                            <span className="font-medium whitespace-nowrap">
+                                                Generating {downloadProgress.current} / {downloadProgress.total}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => setSharePageModalOpen(true)}
+                                    title="Share a public link where all participants can download their certificates"
+                                    className="border-sky-600 text-sky-700 hover:bg-sky-50"
+                                >
+                                    Share Public Page
+                                </Button>
+
+                                <Button
+                                    variant="secondary"
+                                    onClick={handleOpenBulkEmail}
+                                    disabled={!filtered || filtered.length === 0}
+                                    title="Send certificate emails to all visible participants"
+                                    className="border-green-600 text-green-700 hover:bg-green-50 flex items-center gap-1"
+                                >
+                                    <Mail className="w-4 h-4" />
+                                    Email All Certs
+                                </Button>
+                            </>
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1 bg-orange-50 border border-orange-200 text-orange-700 px-3 py-2 rounded text-sm">
+                                    <Lock className="w-4 h-4" />
+                                    <span className="font-medium">Certificates Pending Approval</span>
+                                </div>
+                                
+                                <button 
+                                    onClick={handleRefreshApproval}
+                                    disabled={isRefreshingApproval}
+                                    className="p-2 bg-white border border-gray-300 rounded hover:bg-gray-100 text-gray-600 transition-colors"
+                                    title="Check for approval status update"
+                                >
+                                    {isRefreshingApproval ? <Spinner size="sm" /> : <RefreshCw className="w-4 h-4" />}
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <label className="font-semibold text-gray-700 text-sm">Filter by Group:</label>
-                    <Select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}>
-                        <option value="All">All Groups</option>
-                        <option>Group A</option>
-                        <option>Group B</option>
-                        <option>Group C</option>
-                        <option>Group D</option>
-                    </Select>
+
+                {/* Multi-Filter Bar */}
+                <div className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <div className="flex flex-wrap items-end gap-3">
+                        
+                        <MultiSelectDropdown 
+                            label="Group" 
+                            placeholder="All Groups" 
+                            options={uniqueGroups.length > 0 ? uniqueGroups : ['Group A', 'Group B', 'Group C', 'Group D']} 
+                            selected={groupFilter} 
+                            onChange={setGroupFilter} 
+                        />
+
+                        <MultiSelectDropdown 
+                            label="Job Title" 
+                            placeholder="All Job Titles" 
+                            options={uniqueJobTitles} 
+                            selected={jobTitleFilter} 
+                            onChange={setJobTitleFilter} 
+                        />
+
+                        <MultiSelectDropdown 
+                            label="Locality" 
+                            placeholder="All Localities" 
+                            options={uniqueLocalities} 
+                            selected={localityFilter} 
+                            onChange={setLocalityFilter} 
+                        />
+
+                        <MultiSelectDropdown 
+                            label="Facility" 
+                            placeholder="All Facilities" 
+                            options={uniqueFacilities} 
+                            selected={facilityFilter} 
+                            onChange={setFacilityFilter} 
+                        />
+
+                        {uniqueSubTypes.length > 0 && (
+                            <MultiSelectDropdown 
+                                label="Course Sub Type" 
+                                placeholder="All Sub Types" 
+                                options={uniqueSubTypes} 
+                                selected={subTypeFilter} 
+                                onChange={setSubTypeFilter} 
+                            />
+                        )}
+
+                        {/* Clear Filters Button (Only shows if a filter is active) */}
+                        {(groupFilter.length > 0 || jobTitleFilter.length > 0 || localityFilter.length > 0 || facilityFilter.length > 0 || subTypeFilter.length > 0) && (
+                            <div className="flex flex-col justify-end pb-0.5">
+                                <Button 
+                                    variant="secondary" 
+                                    onClick={() => {
+                                        setGroupFilter([]);
+                                        setJobTitleFilter([]);
+                                        setLocalityFilter([]);
+                                        setFacilityFilter([]);
+                                        setSubTypeFilter([]);
+                                    }}
+                                    className="text-xs py-1.5 px-3 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+                                >
+                                    Clear Filters
+                                </Button>
+                            </div>
+                        )}
+                        
+                    </div>
                 </div>
             </div>
 
@@ -1834,7 +2013,7 @@ export function ParticipantsView({
                             </tr>
                         );
                     })}
-                    {filtered.length === 0 && !isLoading && <EmptyState message="No participants found for this group." />}
+                    {filtered.length === 0 && !isLoading && <EmptyState message="No participants found matching the current filters." />}
                 </Table>
             </div>
 
@@ -1930,7 +2109,7 @@ export function ParticipantsView({
                 })}
                  {filtered.length === 0 && !isLoading && (
                     <div className="p-4 text-center text-gray-500 bg-white rounded-lg shadow-md border border-gray-200">
-                        No participants found for this group.
+                        No participants found matching the current filters.
                     </div>
                  )}
             </div>
