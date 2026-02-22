@@ -10,7 +10,7 @@ import { FileOpener } from '@capacitor-community/file-opener';
 import { Plus, Trash2, Edit } from 'lucide-react';
 
 // --- DATA & CONFIG ---
-import { submitFacilityDataForApproval, listFacilitiesByLocality } from "../data.js";
+import { submitFacilityDataForApproval, listHealthFacilities } from "../data.js";
 import { STATE_LOCALITIES } from "./constants.js";
 import { amiriFontBase64 } from './AmiriFont.js';
 
@@ -33,7 +33,6 @@ const FACILITY_TYPE_OPTIONS = ["مستشفى", "مستشفى ريفي", "مست�
 const calculateKPIs = (facilities, updates, config) => {
     let targetFacilities = facilities;
     
-    // Filter based on Facility Type (Checking updates first)
     if (config.facilityTypes) {
          targetFacilities = facilities.filter(f => {
             const type = updates[f.id]?.['نوع_المؤسسةالصحية'] ?? f['نوع_المؤسسةالصحية'];
@@ -184,14 +183,28 @@ const StaffManagementModal = ({ isOpen, onClose, facilityName, initialStaff, onS
     );
 };
 
-// --- MAIN EXPORT: LOCALITY BULK UPDATE VIEW ---
-const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
-    const [activeLocality, setActiveLocality] = useState(localityParam);
+// --- MAIN EXPORT: BULK UPDATE VIEW ---
+const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }) => {
+    const currentFilters = useMemo(() => {
+        if (filters && Object.keys(filters).length > 0) return filters;
+        return { state: stateParam, locality: localityParam };
+    }, [filters, stateParam, localityParam]);
+
+    const activeService = currentFilters.service || 'General';
+    
+    // States
     const [facilities, setFacilities] = useState([]);
     const [loading, setLoading] = useState(true);
     const [updates, setUpdates] = useState({}); 
+    
+    // Search & Filter States
     const [searchTerm, setSearchTerm] = useState('');
-    const [ownershipFilter, setOwnershipFilter] = useState(''); // New State for Ownership Filter
+    const [ownershipFilter, setOwnershipFilter] = useState(''); 
+    
+    // NEW: UI Filters to narrow down the fetched results
+    const [localStateFilter, setLocalStateFilter] = useState(currentFilters.state && currentFilters.state !== 'ALL_STATES' ? currentFilters.state : 'All');
+    const [localLocalityFilter, setLocalLocalityFilter] = useState(currentFilters.locality || 'All');
+    
     const tableRef = useRef(null);
     
     // Staff Modal State
@@ -199,10 +212,6 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
     const [selectedFacilityId, setSelectedFacilityId] = useState(null);
     const [selectedFacilityName, setSelectedFacilityName] = useState('');
     const [currentStaffList, setCurrentStaffList] = useState([]);
-
-    const searchParams = new URLSearchParams(window.location.search);
-    const initialService = searchParams.get('service') || 'General';
-    const activeService = initialService;
 
     // --- CONFIG ---
     const BULK_VIEW_CONFIG = useMemo(() => ({
@@ -275,26 +284,24 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
         }
     }), []);
 
-    const stateLocalities = useMemo(() => STATE_LOCALITIES[stateParam]?.localities || [], [stateParam]);
+    const filtersString = JSON.stringify(currentFilters);
 
     useEffect(() => {
         const load = async () => {
             setLoading(true);
             setFacilities([]); 
             try {
-                let data = [];
-                if (activeLocality === 'All') {
-                    // Inject 'locality' into objects so we can group them later in PDF
-                    const promises = stateLocalities.map(async loc => {
-                        const raw = await listFacilitiesByLocality(stateParam, loc.en);
-                        return raw.map(r => ({ ...r, locality: loc.en }));
-                    });
-                    const results = await Promise.all(promises);
-                    data = results.flat();
-                } else {
-                    const raw = await listFacilitiesByLocality(stateParam, activeLocality);
-                    data = raw.map(r => ({ ...r, locality: activeLocality }));
-                }
+                const fetchFilters = {
+                    state: currentFilters.state,
+                    locality: currentFilters.locality,
+                    facilityType: currentFilters.facilityType,
+                    functioningStatus: currentFilters.functioning,
+                    project: currentFilters.project
+                };
+                
+                const raw = await listHealthFacilities(fetchFilters);
+                const data = raw.map(r => ({ ...r, locality: r['المحلية'] || 'Unknown' }));
+                
                 setFacilities(data);
             } catch (err) {
                 console.error("Load Error:", err);
@@ -304,7 +311,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
             }
         };
         load();
-    }, [stateParam, activeLocality, setToast, stateLocalities]);
+    }, [filtersString, setToast]);
 
     const handleInputChange = (id, field, value) => {
         setUpdates(prev => {
@@ -359,7 +366,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
                     delete cleanData.neonatal_level_of_care_tertiary;
                 }
                 const payload = { ...original, ...cleanData, date_of_visit: new Date().toISOString().split('T')[0] };
-                return submitFacilityDataForApproval(payload, `Bulk Update: ${activeLocality} (${activeService})`);
+                return submitFacilityDataForApproval(payload, `Bulk Update (${activeService})`);
             });
             await Promise.all(submissionPromises);
             setToast({ show: true, message: `Successfully submitted ${changeCount} updates for approval.`, type: "success" });
@@ -374,63 +381,96 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
 
     const config = BULK_VIEW_CONFIG[activeService] || BULK_VIEW_CONFIG['General'];
     
-    const stateAr = STATE_LOCALITIES[stateParam]?.ar || stateParam;
-    const localityAr = activeLocality === 'All' ? 'كل الولاية' : (LOCALITY_EN_TO_AR_MAP[activeLocality] || activeLocality);
-    const arabicTitle = `${stateAr} - ${localityAr} - معلومات العلاج المتكامل للاطفال اقل من 5 سنوات`;
+    // --- DYNAMIC ARABIC TITLE ---
+    const stateAr = currentFilters.state && currentFilters.state !== 'ALL_STATES' 
+        ? (STATE_LOCALITIES[currentFilters.state]?.ar || currentFilters.state) 
+        : 'كل الولايات';
+        
+    const localityAr = currentFilters.locality 
+        ? (LOCALITY_EN_TO_AR_MAP[currentFilters.locality] || currentFilters.locality) 
+        : (currentFilters.state && currentFilters.state !== 'ALL_STATES' ? 'كل المحليات' : '');
+
+    let filterTitleParts = [];
+    if (currentFilters.project) filterTitleParts.push(`مشروع: ${currentFilters.project}`);
+    if (currentFilters.facilityType) filterTitleParts.push(`نوع: ${currentFilters.facilityType}`);
+    if (currentFilters.functioning && currentFilters.functioning !== 'NOT_SET') filterTitleParts.push(`حالة: ${currentFilters.functioning}`);
+
+    const filterTitleStr = filterTitleParts.length > 0 ? ` (${filterTitleParts.join(' | ')})` : '';
+    const arabicTitle = `${stateAr}${localityAr ? ` - ${localityAr}` : ''}${filterTitleStr}`;
+    
+    // Get localities for the currently selected UI State Filter
+    const availableLocalities = localStateFilter !== 'All' && STATE_LOCALITIES[localStateFilter] 
+        ? STATE_LOCALITIES[localStateFilter].localities 
+        : [];
 
     const displayedFacilities = useMemo(() => {
         let filtered = facilities;
+        
+        // 1. UI Filter: State
+        if (localStateFilter !== 'All') {
+            filtered = filtered.filter(f => f['الولاية'] === localStateFilter);
+        }
+
+        // 2. UI Filter: Locality
+        if (localLocalityFilter !== 'All') {
+            filtered = filtered.filter(f => f['المحلية'] === localLocalityFilter);
+        }
+        
+        // 3. System Filter: Facility Types based on Service
         if (config.facilityTypes) {
             filtered = filtered.filter(f => {
                 const type = updates[f.id]?.['نوع_المؤسسةالصحية'] ?? f['نوع_المؤسسةالصحية'];
                 return config.facilityTypes.some(t => t === type || type?.includes(t));
             });
         }
+
+        // 4. UI Filter: Text Search
         if (searchTerm) {
             const term = searchTerm.toLowerCase();
             filtered = filtered.filter(f => f['اسم_المؤسسة']?.toLowerCase().includes(term));
         }
-        // Ownership Filter Logic
+
+        // 5. UI Filter: Ownership
         if (ownershipFilter) {
             filtered = filtered.filter(f => {
                 const ownership = updates[f.id]?.facility_ownership ?? f.facility_ownership;
                 return ownership === ownershipFilter;
             });
         }
-        return filtered;
-    }, [facilities, config, searchTerm, ownershipFilter, updates]);
 
-    // Use Helper for View KPIs
+        return filtered;
+    }, [facilities, config, searchTerm, ownershipFilter, updates, localStateFilter, localLocalityFilter]);
+
     const viewKpiData = useMemo(() => calculateKPIs(displayedFacilities, updates, config), [displayedFacilities, updates, config]);
 
     const handleExportPDF = async () => {
-        const fileName = `${activeService}_${stateParam}_${activeLocality}.pdf`;
+        const safeStateName = currentFilters.state || 'All_States';
+        const fileName = `${activeService}_${safeStateName}.pdf`;
         const doc = new jsPDF('landscape', 'mm', 'a4');
         doc.addFileToVFS('Amiri-Regular.ttf', amiriFontBase64);
         doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
         doc.addFont('Amiri-Regular.ttf', 'Amiri', 'bold'); 
         
-        // Group Facilities by Locality
         const groupedFacilities = displayedFacilities.reduce((acc, f) => {
-            const loc = f.locality || 'Unknown';
-            if (!acc[loc]) acc[loc] = [];
-            acc[loc].push(f);
+            const locName = f['المحلية'] ? (LOCALITY_EN_TO_AR_MAP[f['المحلية']] || f['المحلية']) : 'غير محدد';
+            const stateName = f['الولاية'] ? (STATE_LOCALITIES[f['الولاية']]?.ar || f['الولاية']) : 'غير محدد';
+            const groupKey = `${stateName} - ${locName}`;
+            
+            if (!acc[groupKey]) acc[groupKey] = [];
+            acc[groupKey].push(f);
             return acc;
         }, {});
 
         const localityKeys = Object.keys(groupedFacilities);
 
         localityKeys.forEach((locKey, index) => {
-            if (index > 0) doc.addPage('landscape', 'a4'); // New Page for subsequent localities
+            if (index > 0) doc.addPage('landscape', 'a4');
 
-            // 1. Specific Locality Title
-            const pageLocalityAr = LOCALITY_EN_TO_AR_MAP[locKey] || locKey;
-            const pageTitle = `${stateAr} - ${pageLocalityAr} - معلومات العلاج المتكامل للاطفال اقل من 5 سنوات`;
+            const pageTitle = `${locKey} - ${config.label}`;
             doc.setFont('Amiri', 'bold');
             doc.setFontSize(16);
             doc.text(pageTitle, 148.5, 15, { align: 'center' });
 
-            // 2. Local KPIs
             const currentFacilities = groupedFacilities[locKey];
             const localKpi = calculateKPIs(currentFacilities, updates, config);
             
@@ -456,14 +496,12 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
                 mainTableStartY = doc.lastAutoTable.finalY + 10;
             }
 
-            // 3. Main Table for this locality
             doc.setFont('Amiri', 'normal');
             const pdfColumns = config.columns; 
             const tableHeaders = [[...pdfColumns.map(c => c.label).reverse(), 'النوع', 'اسم المؤسسة', '#']];
             
             const tableBody = currentFacilities.map((f, i) => {
                 const dynamicVals = pdfColumns.map(col => {
-                    // --- CHANGED: Handle specific staff columns for PDF ---
                     if (col.type === 'staff_names' || col.type === 'staff_training' || col.type === 'staff_phones') {
                         const staffArr = getFacilityStaff(f);
                         if (!staffArr || staffArr.length === 0) return '-';
@@ -472,9 +510,9 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
                             if (col.type === 'staff_training') return s.is_trained === 'Yes' ? 'نعم' : 'لا';
                             if (col.type === 'staff_phones') return s.phone || '-';
                             return '';
-                        }).join('\n'); // Separate by newline for PDF
+                        }).join('\n'); 
                     }
-                    if (col.type === 'action_button') return ''; // Deprecated but kept for safety
+                    if (col.type === 'action_button') return ''; 
                     
                     let val = updates[f.id]?.[col.key];
                     if (val === undefined) {
@@ -493,7 +531,6 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
             });
 
             const columnStyles = {};
-            // Set widths for staff columns
             const nameIndex = config.columns.findIndex(c => c.type === 'staff_names');
             if (nameIndex > -1) columnStyles[(config.columns.length - 1) - nameIndex] = { cellWidth: 35 }; 
             
@@ -525,14 +562,8 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
                     }
                 },
                 didDrawCell: function (data) {
-                    // Draw horizontal lines between staff members in the same cell
                     if (data.section === 'body' && data.cell.raw && typeof data.cell.raw === 'string') {
-                         // Find which configuration column matches this current table column index
-                         // The table structure in PDF is [ ...reversedDynamicCols, Type, Name, # ]
-                         // Since reversedDynamicCols corresponds to config.columns reversed:
-                         // Column 0 in PDF = Last Column in config.columns
                          const configIndex = (config.columns.length - 1) - data.column.index;
-            
                          if (configIndex >= 0 && configIndex < config.columns.length) {
                              const colType = config.columns[configIndex].type;
                              if (['staff_names', 'staff_training', 'staff_phones'].includes(colType)) {
@@ -546,7 +577,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
             
                                      const doc = data.doc;
                                      doc.saveGraphicsState();
-                                     doc.setDrawColor(200, 200, 200); // Light gray
+                                     doc.setDrawColor(200, 200, 200); 
                                      doc.setLineWidth(0.1);
             
                                      for (let i = 1; i < lineCount; i++) {
@@ -622,43 +653,65 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
                 )}
 
                 <div className="p-4 bg-slate-50 border-b border-slate-200 rounded-lg flex flex-col gap-4" dir="rtl">
-                    <div className="flex flex-col md:flex-row items-center gap-4 w-full justify-between">
-                        <div className="flex flex-col md:flex-row gap-4 w-full">
-                            <div className="w-full md:w-64">
-                                <Input 
-                                    placeholder="أدخل اسم المؤسسة..." 
-                                    value={searchTerm} 
-                                    onChange={(e) => setSearchTerm(e.target.value)} 
-                                    className="w-full" 
-                                />
-                            </div>
-                            
-                            <div className="w-full md:w-64">
-                                <Select 
-                                    value={ownershipFilter} 
-                                    onChange={(e) => setOwnershipFilter(e.target.value)} 
-                                    className="w-full"
-                                >
-                                    <option value="">كل الملكيات (All Ownerships)</option>
-                                    {OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                </Select>
-                            </div>
+                    <div className="flex flex-wrap items-center gap-4 w-full">
+                        
+                        {/* Text Search */}
+                        <div className="w-full md:w-48">
+                            <Input 
+                                placeholder="أدخل اسم المؤسسة..." 
+                                value={searchTerm} 
+                                onChange={(e) => setSearchTerm(e.target.value)} 
+                                className="w-full" 
+                            />
+                        </div>
+                        
+                        {/* Ownership Filter */}
+                        <div className="w-full md:w-40">
+                            <Select 
+                                value={ownershipFilter} 
+                                onChange={(e) => setOwnershipFilter(e.target.value)} 
+                                className="w-full"
+                            >
+                                <option value="">كل الملكيات</option>
+                                {OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </Select>
+                        </div>
 
-                            <div className="flex items-center gap-2 w-full md:w-auto">
-                                <label className="text-sm font-medium whitespace-nowrap text-gray-700">اختر المحلية:</label>
+                        {/* NEW: Client-side State Filter */}
+                        <div className="w-full md:w-48">
+                            <Select 
+                                value={localStateFilter} 
+                                onChange={(e) => {
+                                    setLocalStateFilter(e.target.value);
+                                    setLocalLocalityFilter('All');
+                                }} 
+                                className="bg-white border-gray-300 w-full"
+                            >
+                                <option value="All">كل الولايات (All States)</option>
+                                {Object.keys(STATE_LOCALITIES).sort((a,b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar)).map(s => (
+                                    <option key={s} value={s}>{STATE_LOCALITIES[s].ar} ({s})</option>
+                                ))}
+                            </Select>
+                        </div>
+
+                        {/* NEW: Client-side Locality Filter (Shows only if State is selected) */}
+                        {localStateFilter !== 'All' && availableLocalities.length > 0 && (
+                            <div className="w-full md:w-48">
                                 <Select 
-                                    value={activeLocality} 
-                                    onChange={(e) => setActiveLocality(e.target.value)} 
-                                    className="bg-white border-gray-300 w-full md:w-64"
+                                    value={localLocalityFilter} 
+                                    onChange={(e) => setLocalLocalityFilter(e.target.value)} 
+                                    className="bg-white border-gray-300 w-full"
                                 >
-                                    <option value="All">كل الولاية (All State Facilities)</option>
-                                    {stateLocalities.map(loc => (
+                                    <option value="All">كل المحليات (All Localities)</option>
+                                    {availableLocalities.map(loc => (
                                         <option key={loc.en} value={loc.en}>{loc.ar} ({loc.en})</option>
                                     ))}
                                 </Select>
                             </div>
-                        </div>
+                        )}
+
                     </div>
+                    
                     <div className="flex gap-2 w-full justify-end mt-2">
                         <Button onClick={handleExportPDF} variant="secondary" className="flex items-center gap-1" disabled={displayedFacilities.length === 0}>
                             <PdfIcon /> تحميل الملف
@@ -702,7 +755,6 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
                                         </Select>
                                     </td>
                                     {config.columns.map(col => {
-                                        // --- CHANGED: Render specific staff columns with lines ---
                                         if (col.type === 'staff_names' || col.type === 'staff_training' || col.type === 'staff_phones') {
                                             const staffArr = getFacilityStaff(f);
                                             return (
@@ -768,7 +820,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, setToast }) => {
                                     </td>
                                 </tr>
                             )) : (
-                                <tr><td colSpan={config.columns.length + 4} className="px-4 py-8 text-center text-gray-500 border border-slate-300">لا توجد مؤسسات مطابقة للبحث في هذه المحلية.</td></tr>
+                                <tr><td colSpan={config.columns.length + 4} className="px-4 py-8 text-center text-gray-500 border border-slate-300">لا توجد مؤسسات مطابقة للبحث. (No facilities match these filters)</td></tr>
                             )}
                         </tbody>
                     </table>

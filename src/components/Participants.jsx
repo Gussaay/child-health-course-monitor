@@ -2265,11 +2265,15 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
         setCenter(facility ? String(facility['اسم_المؤسسة'] || '') : '');
 
         setIsEditingExistingWorker(false);
-        setName('');
-        setJob('');
-        setOtherJobTitle('');
-        setPhone('');
-        setEmail('');
+        
+        // FIX 1: Only clear form data if we are NOT editing an existing participant
+        if (!initialData) {
+            setName('');
+            setJob('');
+            setOtherJobTitle('');
+            setPhone('');
+            setEmail('');
+        }
 
         if (isImnci) {
             if (facility) {
@@ -2348,7 +2352,8 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
         return 'provider';
      }, [job, otherJobTitle]);
 
-    const submit = () => {
+    // FIX 2 & 3: Make async, preserve initialData, and handle Old Facility Cleanup
+    const submit = async () => { 
         setError('');
         const finalJobTitle = job === 'Other' ? otherJobTitle : job;
 
@@ -2360,6 +2365,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
         if (!phone.trim()) { setError('Phone Number is required.'); return; }
 
         let p = {
+            ...(initialData || {}), // Preserves ID and test scores
             name: name.trim(), group, state, locality,
             center_name: center.trim(),
             facilityId: (isIccm || selectedFacility?.id.startsWith('pending_')) ? null : selectedFacility?.id || null, 
@@ -2393,38 +2399,70 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
         }
 
         let facilityUpdatePayload = null;
-        if (isImnci && selectedFacility && !selectedFacility.id.startsWith('pending_')) {
-            const staffMemberData = { name: name.trim(), job_title: finalJobTitle, phone: phone.trim(), is_trained: 'Yes', training_date: course.start_date || '' };
-            let existingStaff = [];
-             try {
-                 existingStaff = selectedFacility.imnci_staff ? (typeof selectedFacility.imnci_staff === 'string' ? JSON.parse(selectedFacility.imnci_staff) : JSON.parse(JSON.stringify(selectedFacility.imnci_staff))) : [];
-                if (!Array.isArray(existingStaff)) existingStaff = [];
-            } catch (e) { console.error("Error parsing staff list:", e); existingStaff = []; }
+        let oldFacilityUpdatePayload = null; // New payload to clear from old facility
 
-            let updatedStaffList = [...existingStaff];
-            const existingIndex = updatedStaffList.findIndex(staff => staff.name === staffMemberData.name || (staff.phone && staff.phone === staffMemberData.phone));
-            if (existingIndex > -1) updatedStaffList[existingIndex] = staffMemberData; else updatedStaffList.push(staffMemberData);
+        if (isImnci) {
+            // NEW Facility Update
+            if (selectedFacility && !selectedFacility.id.startsWith('pending_')) {
+                const staffMemberData = { name: name.trim(), job_title: finalJobTitle, phone: phone.trim(), is_trained: 'Yes', training_date: course.start_date || '' };
+                let existingStaff = [];
+                 try {
+                     existingStaff = selectedFacility.imnci_staff ? (typeof selectedFacility.imnci_staff === 'string' ? JSON.parse(selectedFacility.imnci_staff) : JSON.parse(JSON.stringify(selectedFacility.imnci_staff))) : [];
+                    if (!Array.isArray(existingStaff)) existingStaff = [];
+                } catch (e) { console.error("Error parsing staff list:", e); existingStaff = []; }
 
-            const facilityHadImnci = selectedFacility['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes';
-            if (!facilityHadImnci) {
-                p.introduced_imci_to_facility = true;
+                let updatedStaffList = [...existingStaff];
+                const existingIndex = updatedStaffList.findIndex(staff => staff.name === staffMemberData.name || (staff.phone && staff.phone === staffMemberData.phone));
+                if (existingIndex > -1) updatedStaffList[existingIndex] = staffMemberData; else updatedStaffList.push(staffMemberData);
+
+                const facilityHadImnci = selectedFacility['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes';
+                if (!facilityHadImnci) {
+                    p.introduced_imci_to_facility = true;
+                }
+
+                const baseFacilityPayload = {
+                    ' وجود_العلاج_المتكامل_لامراض_الطفولة': 'Yes', 
+                    'نوع_المؤسسةالصحية': facilityType || selectedFacility['نوع_المؤسسةالصحية'] || 'no data',
+                    'nutrition_center_exists': hasNutri ? 'Yes' : 'No', 'nearest_nutrition_center': !hasNutri ? (nearestNutri || selectedFacility.nearest_nutrition_center || '') : '',
+                    'immunization_office_exists': hasImm ? 'Yes' : 'No', 'nearest_immunization_center': !hasImm ? (nearestImm || selectedFacility.nearest_immunization_center || '') : '',
+                    'غرفة_إرواء': hasORS ? 'Yes' : 'No', 'growth_monitoring_service_exists': hasGrowthMonitoring ? 'Yes' : 'No',
+                    'العدد_الكلي_للكوادر_طبية_العاملة_أطباء_ومساعدين': numProv ?? selectedFacility['العدد_الكلي_للكوادر_طبية_العاملة_أطباء_ومساعدين'] ?? updatedStaffList.length,
+                    'العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل': numProvIMNCI ?? selectedFacility['العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل'] ?? updatedStaffList.filter(s => s.is_trained === 'Yes').length,
+                    'ميزان_وزن': hasWeightScale ? 'Yes' : 'No', 'ميزان_طول': hasHeightScale ? 'Yes' : 'No', 'ميزان_حرارة': hasThermometer ? 'Yes' : 'No', 'ساعة_مؤقت': hasTimer ? 'Yes' : 'No',
+                };
+
+                facilityUpdatePayload = { ...selectedFacility, ...baseFacilityPayload, id: selectedFacility.id, date_of_visit: new Date().toISOString().split('T')[0], imnci_staff: updatedStaffList };
             }
 
-            const baseFacilityPayload = {
-                ' وجود_العلاج_المتكامل_لامراض_الطفولة': 'Yes', 
-                'نوع_المؤسسةالصحية': facilityType || selectedFacility['نوع_المؤسسةالصحية'] || 'no data',
-                'nutrition_center_exists': hasNutri ? 'Yes' : 'No', 'nearest_nutrition_center': !hasNutri ? (nearestNutri || selectedFacility.nearest_nutrition_center || '') : '',
-                'immunization_office_exists': hasImm ? 'Yes' : 'No', 'nearest_immunization_center': !hasImm ? (nearestImm || selectedFacility.nearest_immunization_center || '') : '',
-                'غرفة_إرواء': hasORS ? 'Yes' : 'No', 'growth_monitoring_service_exists': hasGrowthMonitoring ? 'Yes' : 'No',
-                'العدد_الكلي_للكوادر_طبية_العاملة_أطباء_ومساعدين': numProv ?? selectedFacility['العدد_الكلي_للكوادر_طبية_العاملة_أطباء_ومساعدين'] ?? updatedStaffList.length,
-                'العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل': numProvIMNCI ?? selectedFacility['العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل'] ?? updatedStaffList.filter(s => s.is_trained === 'Yes').length,
-                'ميزان_وزن': hasWeightScale ? 'Yes' : 'No', 'ميزان_طول': hasHeightScale ? 'Yes' : 'No', 'ميزان_حرارة': hasThermometer ? 'Yes' : 'No', 'ساعة_مؤقت': hasTimer ? 'Yes' : 'No',
-            };
+            // OLD Facility Cleanup Logic
+            if (initialData?.facilityId && selectedFacility?.id && initialData.facilityId !== selectedFacility.id) {
+                try {
+                    const oldFacility = await getHealthFacilityById(initialData.facilityId);
+                    if (oldFacility) {
+                        let existingOldStaff = [];
+                        try {
+                            existingOldStaff = oldFacility.imnci_staff ? (typeof oldFacility.imnci_staff === 'string' ? JSON.parse(oldFacility.imnci_staff) : JSON.parse(JSON.stringify(oldFacility.imnci_staff))) : [];
+                            if (!Array.isArray(existingOldStaff)) existingOldStaff = [];
+                        } catch (e) { existingOldStaff = []; }
 
-            facilityUpdatePayload = { ...selectedFacility, ...baseFacilityPayload, id: selectedFacility.id, date_of_visit: new Date().toISOString().split('T')[0], imnci_staff: updatedStaffList };
+                        // Filter out the participant from the old facility's staff array
+                        const updatedOldStaff = existingOldStaff.filter(
+                            staff => staff.name !== initialData.name && staff.phone !== initialData.phone
+                        );
+
+                        oldFacilityUpdatePayload = {
+                            ...oldFacility,
+                            imnci_staff: updatedOldStaff
+                        };
+                    }
+                } catch (err) {
+                    console.error("Failed to fetch old facility for cleanup:", err);
+                }
+            }
         }
 
-        onSave(p, facilityUpdatePayload);
+        // Pass all 3 arguments to onSave in parent component
+        onSave(p, facilityUpdatePayload, oldFacilityUpdatePayload);
     };
 
     return (

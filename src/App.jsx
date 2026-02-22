@@ -480,8 +480,9 @@ export default function App() {
     const [isPublicRegistrationView, setIsPublicRegistrationView] = useState(false);
     const [publicRegistrationCourseId, setPublicRegistrationCourseId] = useState(null);
 
-    const [isLocalityBulkUpdateView, setIsLocalityBulkUpdateView] = useState(false);
-    const [publicLocalityData, setPublicLocalityData] = useState({ state: null, locality: null });
+    // --- REPLACED LocalityBulkUpdate WITH BulkUpdate ---
+    const [isBulkUpdateView, setIsBulkUpdateView] = useState(false);
+    const [publicBulkUpdateParams, setPublicBulkUpdateParams] = useState({});
 
     const [operationCounts, setOperationCounts] = useState({ reads: 0, writes: 0 });
     const [isMonitorVisible, setIsMonitorVisible] = useState(true);
@@ -544,8 +545,9 @@ export default function App() {
             setIsPublicRegistrationView(false);
             setPublicRegistrationCourseId(null);
 
-            setIsLocalityBulkUpdateView(false);
-            setPublicLocalityData({ state: null, locality: null });
+            // --- Reset Bulk Update View ---
+            setIsBulkUpdateView(false);
+            setPublicBulkUpdateParams({});
 
 
             const facilityUpdateMatch = path.match(/^\/facilities\/data-entry\/([a-zA-Z0-9_-]+)\/?$/);
@@ -593,12 +595,18 @@ export default function App() {
                 return; 
             }
             
-            const localityUpdateMatch = path.match(/^\/public\/locality-update\/([^\/]+)\/([^\/]+)\/?$/);
-            if (localityUpdateMatch) {
-                setIsLocalityBulkUpdateView(true);
-                setPublicLocalityData({
-                    state: decodeURIComponent(localityUpdateMatch[1]),
-                    locality: decodeURIComponent(localityUpdateMatch[2])
+            // --- NEW: Public Bulk Update Route (Query Parameters) ---
+            const bulkUpdateMatch = path.match(/^\/public\/bulk-update\/?$/);
+            if (bulkUpdateMatch) {
+                setIsBulkUpdateView(true);
+                const searchParams = new URLSearchParams(window.location.search);
+                setPublicBulkUpdateParams({
+                    state: searchParams.get('state') || '',
+                    locality: searchParams.get('locality') || '',
+                    facilityType: searchParams.get('facilityType') || '',
+                    functioning: searchParams.get('functioning') || '',
+                    project: searchParams.get('project') || '',
+                    service: searchParams.get('service') || ''
                 });
                 return;
             }
@@ -1574,7 +1582,7 @@ export default function App() {
     const isCourseCertPagePath = typeof window !== 'undefined' && window.location.pathname.startsWith('/public/course/certificates/');
     const isAttendancePath = typeof window !== 'undefined' && window.location.pathname.startsWith('/attendance/course/');
 
-    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath || isCertDownloadPath || isCourseCertPagePath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || isLocalityBulkUpdateView || publicViewType === 'attendance' || isPublicRegistrationView;
+    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath || isCertDownloadPath || isCourseCertPagePath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || isBulkUpdateView || publicViewType === 'attendance' || isPublicRegistrationView;
 
     let mainContent;
 
@@ -1613,21 +1621,18 @@ export default function App() {
         }
     }
 
-    // --- RESTORED: Locality Bulk Update View Handling ---
-    else if (isLocalityBulkUpdateView) {
-        if (publicLocalityData.state && publicLocalityData.locality) {
-            mainContent = (
-                <Suspense fallback={<Card><Spinner /></Card>}>
-                    <LocalityBulkUpdateView 
-                        stateParam={publicLocalityData.state}
-                        localityParam={publicLocalityData.locality}
-                        setToast={setToast}
-                    />
-                </Suspense>
-            );
-        } else {
-             mainContent = <Card><div className="p-4 text-center">Invalid Link Parameters</div></Card>;
-        }
+    // --- REPLACED: Bulk Update View Handling ---
+    else if (isBulkUpdateView) {
+        mainContent = (
+            <Suspense fallback={<Card><Spinner /></Card>}>
+                <LocalityBulkUpdateView 
+                    stateParam={publicBulkUpdateParams.state}
+                    localityParam={publicBulkUpdateParams.locality}
+                    filters={publicBulkUpdateParams}
+                    setToast={setToast}
+                />
+            </Suspense>
+        );
     }
     
     // --- NEW: Public Participant Registration View ---

@@ -74,7 +74,7 @@ const FIELD_LABELS_FOR_COMPARISON = {
     'اسم_المؤسسة': 'Facility Name', 
     'الولاية': 'State', 
     'المحلية': 'Locality', 
-    'facility_ownership': 'Facility Ownership', // ADDED
+    'facility_ownership': 'Facility Ownership', 
     'نوع_المؤسسةالصحية': 'Facility Type', 
     'هل_المؤسسة_تعمل': 'Functioning', 
     '_الإحداثيات_latitude': 'Latitude', 
@@ -86,7 +86,7 @@ const FIELD_LABELS_FOR_COMPARISON = {
     'eenc_trained_workers': 'EENC Trained Workers', 
     'neonatal_level_of_care': 'Neonatal Level of Care', 
     'neonatal_total_beds': 'Neonatal Total Beds', 
-    'neonatal_total_incubators': 'Neonatal Incubators', 
+    'neonatal_incubators': 'Neonatal Incubators', 
     'etat_has_service': 'ETAT Service', 
     'hdu_has_service': 'HDU Service', 
     'picu_has_service': 'PICU Service', 
@@ -107,9 +107,7 @@ const compareFacilities = (oldData, newData) => {
 
 const getServiceConfig = (serviceType) => {
     const baseConfig = { 
-        // ADDED "ملكية المؤسسة" to headers
         headers: ["ID", "الولاية", "المحلية", "اسم المؤسسة", "ملكية المؤسسة", "نوع المؤسسةالصحية", "نوع الخدمات", "Date of Visit"], 
-        // ADDED "facility_ownership" to keys
         dataKeys: ["id", "الولاية", "المحلية", "اسم_المؤسسة", "facility_ownership", "نوع_المؤسسةالصحية", "eenc_service_type", "date_of_visit"] 
     };
     const baseImnciHeaders = ["هل المؤسسة تعمل", "هل توجد حوافز للاستاف", "ما هي المنظمة المقدم للحوافز", "هل تشارك المؤسسة في أي مشروع", "ما هو اسم المشروع", "رقم هاتف المسئول من المؤسسة", "وجود العلاج المتكامل لامراض الطفولة", "العدد الكلي للكوادر الطبية العاملة (أطباء ومساعدين)", "العدد الكلي للكودار المدربة על العلاج المتكامل", "وجود سجل علاج متكامل", "وجود كتيب لوحات", "ميزان وزن", "ميزان طول", "ميزان حرارة", "ساعة مؤقت", "غرفة إرواء", "وجود الدعم المادي", "_الإحداثيات_latitude", "_الإحداثيات_longitude", "هل يوجد مكتب تحصين", "اين يقع اقرب مركز تحصين", "هل يوجد مركز تغذية خارجي", "اين يقع اقرب مركز تغذية خارجي", "هل يوجد خدمة متابعة النمو"];
@@ -153,7 +151,6 @@ const AllFacilitiesTab = ({ facilities, onEdit, onDelete, onGenerateLink, onOpen
     };
 
     return (
-        // UPDATED HEADERS: Added "Ownership"
         <Table headers={['State', 'Locality', 'Facility Name', 'Ownership', 'Functioning', 'Services Available', 'Last Update', 'Actions']}>
             {facilities.length > 0 ? (
                 facilities.map((f, index) => (
@@ -161,7 +158,6 @@ const AllFacilitiesTab = ({ facilities, onEdit, onDelete, onGenerateLink, onOpen
                         <td>{getStateName(f['الولاية'])}</td>
                         <td>{getLocalityName(f['الولاية'], f['المحلية'])}</td>
                         <td>{f['اسم_المؤسسة']}</td>
-                        {/* UPDATED ROW: Added Ownership cell */}
                         <td>
                             {f.facility_ownership ? (
                                 <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-50 text-blue-800">
@@ -349,8 +345,9 @@ const ApprovalComparisonModal = ({ submission, allFacilities, onClose, onConfirm
 };
 
 const MappingRow = React.memo(({ field, headers, selectedValue, onMappingChange }) => ( <div className="flex items-center"><label className="w-1/2 font-medium text-sm capitalize">{field.label}{field.key === 'اسم_المؤسسة' && '*'}</label><Select value={selectedValue || ''} onChange={(e) => onMappingChange(field.key, e.target.value)} className="flex-1"><option value="">-- Select Excel Column --</option>{headers.map(header => <option key={header} value={header}>{header}</option>)}</Select></div> ));
+
 const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, filteredData, cleanupConfig }) => {
-     const [currentPage, setCurrentPage] = useState(0);
+    const [currentPage, setCurrentPage] = useState(0);
     const [error, setError] = useState('');
     const [excelData, setExcelData] = useState([]);
     const [headers, setHeaders] = useState([]);
@@ -358,20 +355,74 @@ const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, f
     const [validationIssues, setValidationIssues] = useState([]);
     const [userCorrections, setUserCorrections] = useState({});
     const [failedRows, setFailedRows] = useState([]);
+    
+    // Filters for Bulk Upload
+    const [uploadState, setUploadState] = useState('');
+    const [uploadLocality, setUploadLocality] = useState('');
+
     const fileInputRef = useRef(null);
     const MAX_STAFF = 5;
-    useEffect(() => { if (uploadStatus.inProgress) { setCurrentPage(2); } else if (uploadStatus.message) { const detailedErrors = uploadStatus.errors?.filter(e => e.rowData); if (detailedErrors && detailedErrors.length > 0) { setFailedRows(detailedErrors); setCurrentPage('correction'); } else { setCurrentPage(3); } } }, [uploadStatus.inProgress, uploadStatus.message, uploadStatus.errors]);
-    useEffect(() => { if (isOpen) { setCurrentPage(0); setError(''); setExcelData([]); setHeaders([]); setFieldMappings({}); setValidationIssues([]); setUserCorrections({}); setFailedRows([]); } }, [isOpen]);
+
+    useEffect(() => { 
+        if (uploadStatus.inProgress) { setCurrentPage(2); } 
+        else if (uploadStatus.message) { 
+            const detailedErrors = uploadStatus.errors?.filter(e => e.rowData); 
+            if (detailedErrors && detailedErrors.length > 0) { 
+                setFailedRows(detailedErrors); setCurrentPage('correction'); 
+            } else { setCurrentPage(3); } 
+        } 
+    }, [uploadStatus.inProgress, uploadStatus.message, uploadStatus.errors]);
+
+    useEffect(() => { 
+        if (isOpen) { 
+            setCurrentPage(0); setError(''); setExcelData([]); setHeaders([]); 
+            setFieldMappings({}); setValidationIssues([]); setUserCorrections({}); setFailedRows([]); 
+            setUploadState(''); setUploadLocality(''); // Reset filters on open
+        } 
+    }, [isOpen]);
+
     const FIELD_LABELS = useMemo(() => ({ 'eenc_service_type': 'نوع الخدمات المقدمة', }), []);
-    const allFacilityFields = useMemo(() => { if (!activeTab) return []; const config = getServiceConfig(activeTab); return [{ key: 'id', label: 'ID (for updates)' }, ...config.dataKeys.filter(key => key !== 'id').map(key => ({ key, label: FIELD_LABELS[key] || key.replace(/_/g, ' ') }))]; }, [activeTab, FIELD_LABELS]);
-    const handleFileUpload = (e) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (event) => { try { const data = new Uint8Array(event.target.result); const workbook = XLSX.read(data, { type: 'array' }); const worksheet = workbook.Sheets[workbook.SheetNames[0]]; const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "", cellDates: true }); if (jsonData.length < 1) { setError('Excel file appears to be empty.'); return; } setHeaders(jsonData[0].map(h => String(h).trim())); setExcelData(jsonData.slice(1)); setCurrentPage(1); setError(''); } catch (err) { setError('Error reading Excel file: ' + err.message); } }; reader.readAsArrayBuffer(file); };
+    
+    const allFacilityFields = useMemo(() => { 
+        if (!activeTab) return []; 
+        const config = getServiceConfig(activeTab); 
+        return [{ key: 'id', label: 'ID (for updates)' }, ...config.dataKeys.filter(key => key !== 'id').map(key => ({ key, label: FIELD_LABELS[key] || key.replace(/_/g, ' ') }))]; 
+    }, [activeTab, FIELD_LABELS]);
+
+    const handleFileUpload = (e) => { 
+        const file = e.target.files[0]; if (!file) return; 
+        const reader = new FileReader(); 
+        reader.onload = (event) => { 
+            try { 
+                const data = new Uint8Array(event.target.result); 
+                const workbook = XLSX.read(data, { type: 'array' }); 
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]]; 
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "", cellDates: true }); 
+                if (jsonData.length < 1) { setError('Excel file appears to be empty.'); return; } 
+                setHeaders(jsonData[0].map(h => String(h).trim())); 
+                setExcelData(jsonData.slice(1)); 
+                setCurrentPage(1); setError(''); 
+            } catch (err) { setError('Error reading Excel file: ' + err.message); } 
+        }; 
+        reader.readAsArrayBuffer(file); 
+    };
+
     const handleDownloadTemplate = () => {
         const { headers: finalHeaders, dataKeys: finalDataKeys, fileName } = getServiceConfig(activeTab);
         let downloadFileName = `New_Facilities_${fileName}`;
         let worksheetData = [finalHeaders];
-        if (filteredData && filteredData.length > 0) {
+
+        let dataToDownload = filteredData || [];
+        if (uploadState) {
+            dataToDownload = dataToDownload.filter(f => f['الولاية'] === uploadState);
+        }
+        if (uploadLocality) {
+            dataToDownload = dataToDownload.filter(f => f['المحلية'] === uploadLocality);
+        }
+
+        if (dataToDownload && dataToDownload.length > 0) {
             downloadFileName = `Update_Template_For_${fileName}`;
-            const rowsData = filteredData.map(facility => {
+            const rowsData = dataToDownload.map(facility => {
                 const flatFacilityData = { ...facility };
                 if (facility.imnci_staff && Array.isArray(facility.imnci_staff)) {
                     facility.imnci_staff.slice(0, MAX_STAFF).forEach((staff, index) => {
@@ -397,7 +448,9 @@ const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, f
         XLSX.utils.book_append_sheet(workbook, worksheet, "Facilities");
         XLSX.writeFile(workbook, downloadFileName);
     };
+
     const handleMappingChange = useCallback((appField, excelHeader) => { setFieldMappings(prev => { const newMappings = { ...prev }; if (excelHeader) newMappings[appField] = excelHeader; else delete newMappings[appField]; return newMappings; }); }, []);
+
     const handleValidation = () => {
         if (!fieldMappings['اسم_المؤسسة']) { setError('The "Facility Name" (اسم_المؤسسة) field must be mapped to an Excel column.'); return; }
         setError('');
@@ -417,7 +470,9 @@ const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, f
         }
         if (issues.length > 0) { setValidationIssues(issues); setCurrentPage('validation'); } else { startImportProcess(); }
     };
+
     const handleCorrectionChange = (originalValue, mappedValue) => { setUserCorrections(prev => ({ ...prev, [originalValue]: mappedValue })); };
+
     const processAndStartImport = (dataForProcessing, originalRawData) => {
         const normalizeBoolean = (value) => { if (value === null || value === undefined) return value; const strValue = String(value).toLowerCase().trim(); const yesValues = ['yes', 'نعم', 'توجد', 'يوجد', true]; const noValues = ['no', 'لا', 'لاتوجد', 'لا توجد', false]; if (yesValues.includes(strValue)) return 'Yes'; if (noValues.includes(strValue)) return 'No'; return value; };
         const serviceGroups = { eenc: { dateKey: 'eenc_delivery_room_visit_date', dataKeys: getServiceConfig(TABS.EENC).dataKeys.filter(k => k.startsWith('eenc_')) }, neonatal: { dateKey: 'neonatal_unit_visit_date', dataKeys: getServiceConfig(TABS.NEONATAL).dataKeys.filter(k => k.startsWith('neonatal_')) }, critical: { dateKey: 'date_of_visit', dataKeys: getServiceConfig(TABS.CRITICAL).dataKeys.filter(k => k.startsWith('etat_') || k.startsWith('hdu_') || k.startsWith('picu_')) }, imnci: { dateKey: 'date_of_visit', dataKeys: getServiceConfig(TABS.IMNCI).dataKeys.filter(k => !k.startsWith('eenc_') && !k.startsWith('neonatal_') && !k.startsWith('etat_') && !k.startsWith('hdu_') && !k.startsWith('picu_')) } };
@@ -425,8 +480,25 @@ const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, f
         let allPayloads = [];
         dataForProcessing.forEach(row => {
             const facilityFromRow = {};
-            if (Array.isArray(row)) { Object.entries(fieldMappings).forEach(([appFieldKey, excelHeader]) => { const headerIndex = headers.indexOf(excelHeader); if (headerIndex !== -1) { let cellValue = row[headerIndex]; if (cellValue !== null && cellValue !== undefined && cellValue !== '') { const finalValue = cellValue instanceof Date ? cellValue.toISOString().split('T')[0] : userCorrections[String(cellValue).trim()] ?? cellValue; facilityFromRow[appFieldKey] = finalValue; } } }); } else { Object.assign(facilityFromRow, row); }
+            if (Array.isArray(row)) { 
+                Object.entries(fieldMappings).forEach(([appFieldKey, excelHeader]) => { 
+                    const headerIndex = headers.indexOf(excelHeader); 
+                    if (headerIndex !== -1) { 
+                        let cellValue = row[headerIndex]; 
+                        if (cellValue !== null && cellValue !== undefined && cellValue !== '') { 
+                            const finalValue = cellValue instanceof Date ? cellValue.toISOString().split('T')[0] : userCorrections[String(cellValue).trim()] ?? cellValue; 
+                            facilityFromRow[appFieldKey] = finalValue; 
+                        } 
+                    } 
+                }); 
+            } else { Object.assign(facilityFromRow, row); }
+            
             if (!facilityFromRow['اسم_المؤسسة']) return;
+
+            // Apply Selected State and Locality if missing
+            if (uploadState && !facilityFromRow['الولاية']) facilityFromRow['الولاية'] = uploadState;
+            if (uploadLocality && !facilityFromRow['المحلية']) facilityFromRow['المحلية'] = uploadLocality;
+
             const commonData = Object.keys(facilityFromRow).filter(key => !allServiceDataKeys.includes(key)).reduce((obj, key) => { obj[key] = facilityFromRow[key]; return obj; }, {});
             const payloadsByDate = new Map();
             Object.values(serviceGroups).forEach(group => { const visitDate = facilityFromRow[group.dateKey]; if (visitDate) { const serviceDataForDate = group.dataKeys.reduce((obj, key) => { if (facilityFromRow[key] !== undefined) obj[key] = facilityFromRow[key]; return obj; }, {}); if (Object.keys(serviceDataForDate).length > 0) { const existingPayload = payloadsByDate.get(visitDate) || { ...commonData }; const updatedPayload = { ...existingPayload, ...serviceDataForDate, date_of_visit: visitDate }; payloadsByDate.set(visitDate, updatedPayload); } } });
@@ -447,6 +519,7 @@ const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, f
         if (processedFacilities.length === 0) { setError('No valid facilities with a name were found after mapping and filtering.'); setCurrentPage(1); return; }
         onImport(processedFacilities, originalRawData);
     };
+
     const startImportProcess = () => processAndStartImport(excelData, excelData);
     const handleRetryUpload = () => {
         const dataToRetry = failedRows.map(failedRow => { const correctedObject = {}; headers.forEach((header, index) => { const appField = Object.keys(fieldMappings).find(key => fieldMappings[key] === header); if(appField) { correctedObject[appField] = failedRow.rowData[index]; } }); return correctedObject; });
@@ -455,13 +528,82 @@ const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, f
         processAndStartImport(dataToRetry, originalFailedRows);
     };
     const handleCorrectionDataChange = (errorIndex, cellIndex, value) => { const updatedFailedRows = [...failedRows]; const newRowData = [...updatedFailedRows[errorIndex].rowData]; newRowData[cellIndex] = value; updatedFailedRows[errorIndex].rowData = newRowData; setFailedRows(updatedFailedRows); };
+    
     const renderPreview = () => (excelData.length === 0) ? null : (<div className="mt-4 overflow-auto max-h-60"><h4 className="font-medium mb-2">Data Preview (first 5 rows)</h4><table className="min-w-full border border-gray-200"><thead><tr className="bg-gray-100">{headers.map((header, idx) => <th key={idx} className="border border-gray-300 p-2 text-left text-xs">{header}</th>)}</tr></thead><tbody>{excelData.slice(0, 5).map((row, rowIdx) => <tr key={rowIdx}>{row.map((cell, cellIdx) => <td key={cellIdx} className="border border-gray-300 p-2 text-xs">{cell instanceof Date ? cell.toLocaleDateString() : cell}</td>)}</tr>)}</tbody></table></div>);
     const renderValidationScreen = () => { const allCorrectionsMade = validationIssues.every(issue => issue.invalidValues.every(val => userCorrections[val])); return (<div><h4 className="font-medium text-lg mb-2">Review Data Mismatches</h4><p className="text-sm text-gray-600 mb-4">Some values in your file don't match the expected options. Please map your values to the correct ones.</p><div className="space-y-4 max-h-96 overflow-y-auto p-2 border rounded bg-gray-50">{validationIssues.map(issue => (<div key={issue.columnName}><h5 className="font-semibold text-gray-800">Mismatches for Column: <span className="font-bold">"{issue.columnName}"</span></h5>{issue.invalidValues.map(val => (<div key={val} className="grid grid-cols-1 md:grid-cols-3 items-center gap-2 mt-2 p-2 bg-white rounded border"><span className="bg-red-50 text-red-800 p-2 rounded text-sm truncate" title={val}>Your value: "{val}"</span><span className="text-center font-bold text-gray-500 hidden md:block">&rarr;</span><Select value={userCorrections[val] || ''} onChange={(e) => handleCorrectionChange(val, e.target.value)}><option value="">-- Choose correct option --</option>{issue.options.map(opt => <option key={opt} value={opt}>{STATE_LOCALITIES[opt]?.ar || opt}</option>)}</Select></div>))}</div>))}</div><div className="flex justify-end mt-6 space-x-2"><Button variant="secondary" onClick={() => setCurrentPage(1)}>Back to Mapping</Button><Button onClick={startImportProcess} disabled={!allCorrectionsMade}>Apply and Import</Button></div>{!allCorrectionsMade && <p className="text-right text-sm text-red-600 mt-2">Please resolve all mismatches.</p>}</div>); };
     const renderProgressView = () => (<div><h4 className="font-medium text-lg mb-2">Import in Progress...</h4><p className="text-sm text-gray-600 mb-4">Please wait while the facilities are being uploaded.</p><div className="w-full bg-gray-200 rounded-full h-4"><div className="bg-blue-600 h-4 rounded-full transition-all duration-500" style={{ width: `${uploadStatus.total > 0 ? (uploadStatus.processed / uploadStatus.total) * 100 : 0}%` }}></div></div><p className="text-center mt-2 font-medium">{uploadStatus.processed} / {uploadStatus.total}</p></div>);
     const renderResultView = () => (<div><h4 className="font-medium text-lg mb-2">Import Complete</h4><div className="bg-gray-50 p-4 rounded-md"><p className="font-semibold whitespace-pre-wrap">{uploadStatus.message}</p>{uploadStatus.errors && uploadStatus.errors.length > 0 && !uploadStatus.errors.some(e => e.rowData) && (<div className="mt-4 max-h-40 overflow-y-auto"><h5 className="font-semibold text-red-700">Errors encountered (unrecoverable):</h5><ul className="list-disc list-inside text-sm text-red-600">{uploadStatus.errors.map((err, index) => <li key={index}>{err.message || err.toString()}</li>)}</ul></div>)}</div><div className="flex justify-end mt-6"><Button onClick={onClose}>Close</Button></div></div>);
     const renderCorrectionScreen = () => ( <div><h4 className="font-medium text-lg text-red-700 mb-2">Import Errors</h4><p className="text-sm text-gray-600 mb-4">Some rows failed to import. You can correct the data below and retry uploading only the failed rows.</p><div className="overflow-x-auto max-h-[60vh] border rounded-md"><table className="min-w-full text-sm"><thead className="bg-gray-100 sticky top-0"><tr><th className="p-2 border-r text-left">Row #</th><th className="p-2 border-r text-left">Error</th>{headers.map(header => <th key={header} className="p-2 border-r text-left whitespace-nowrap">{header}</th>)}</tr></thead><tbody>{failedRows.map((error, errorIndex) => ( <tr key={error.rowIndex} className="bg-white hover:bg-red-50"><td className="p-1 border-r font-medium">{error.rowIndex + 2}</td><td className="p-1 border-r text-red-600 max-w-xs">{error.message}</td>{error.rowData.map((cell, cellIndex) => ( <td key={cellIndex} className="p-0 border-r"><Input type="text" value={cell || ''} onChange={(e) => handleCorrectionDataChange(errorIndex, cellIndex, e.target.value)} className="w-full border-0 rounded-none focus:ring-2 focus:ring-blue-500" /></td> ))}</tr> ))}</tbody></table></div><div className="flex justify-end mt-6 space-x-2"><Button variant="secondary" onClick={onClose}>Cancel</Button><Button onClick={handleRetryUpload}>Retry Upload for {failedRows.length} Corrected Row(s)</Button></div></div> );
-    return (<Modal isOpen={isOpen} onClose={onClose} title="Bulk Upload" size="full"><div className="p-4">{error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}{currentPage === 0 && (<div><p className="mb-4">Download the template to get started. If you have filtered the facility list, the template will be pre-filled for easy updates.</p><Button variant="secondary" onClick={handleDownloadTemplate} className="mb-4">Download Template</Button><hr className="my-4"/><p className="mb-2">Or, upload your own Excel file (first row must be headers).</p><input type="file" accept=".xlsx,.xls" onChange={handleFileUpload} ref={fileInputRef} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/></div>)}{currentPage === 1 && (<div><h4 className="font-medium mb-4">Map Excel columns to application fields</h4><p className="text-sm text-gray-600 mb-4">Match the columns from your Excel file to the application fields. To update existing records, ensure the 'ID' field is correctly mapped.</p><div className="grid grid-cols-2 gap-3 mb-4 max-h-80 overflow-y-auto p-2 border rounded">{allFacilityFields.map(field => <MappingRow key={field.key} field={field} headers={headers} selectedValue={fieldMappings[field.key]} onMappingChange={handleMappingChange}/>)}</div>{renderPreview()}<div className="flex justify-end mt-6 space-x-2"><Button variant="secondary" onClick={() => setCurrentPage(0)}>Back</Button><Button onClick={handleValidation}>Validate and Continue</Button></div></div>)}{currentPage === 'validation' && renderValidationScreen()}{currentPage === 'correction' && renderCorrectionScreen()}{currentPage === 2 && renderProgressView()}{currentPage === 3 && renderResultView()}</div></Modal>);
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Bulk Upload" size="full">
+            <div className="p-4">
+                {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
+                
+                {currentPage === 0 && (
+                    <div>
+                        <p className="mb-4">Download the template to get started. You can select a State and Locality to restrict the template to specific facilities.</p>
+                        
+                        <div className="flex flex-col md:flex-row gap-4 mb-4 p-4 border rounded bg-gray-50">
+                            <FormGroup label="Filter Template by State (Optional)" className="flex-1">
+                                <Select 
+                                    value={uploadState} 
+                                    onChange={e => { setUploadState(e.target.value); setUploadLocality(''); }}
+                                >
+                                    <option value="">-- All States --</option>
+                                    {Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar)).map(s => (
+                                        <option key={s} value={s}>{STATE_LOCALITIES[s].ar}</option>
+                                    ))}
+                                </Select>
+                            </FormGroup>
+                            <FormGroup label="Filter Template by Locality (Optional)" className="flex-1">
+                                <Select 
+                                    value={uploadLocality} 
+                                    onChange={e => setUploadLocality(e.target.value)} 
+                                    disabled={!uploadState}
+                                >
+                                    <option value="">-- All Localities --</option>
+                                    {uploadState && STATE_LOCALITIES[uploadState]?.localities.map(l => (
+                                        <option key={l.en} value={l.en}>{l.ar}</option>
+                                    ))}
+                                </Select>
+                            </FormGroup>
+                        </div>
+                        <p className="text-xs text-gray-500 italic mb-4">Note: Selecting a State/Locality above will also auto-assign uploaded facilities to them if they are missing from your Excel file.</p>
+
+                        <Button variant="secondary" onClick={handleDownloadTemplate} className="mb-4">
+                            Download Template
+                        </Button>
+                        <hr className="my-4"/>
+                        <p className="mb-2">Or, upload your own Excel file (first row must be headers).</p>
+                        <input type="file" accept=".xlsx,.xls" onChange={handleFileUpload} ref={fileInputRef} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
+                    </div>
+                )}
+                
+                {currentPage === 1 && (
+                    <div>
+                        <h4 className="font-medium mb-4">Map Excel columns to application fields</h4>
+                        <p className="text-sm text-gray-600 mb-4">Match the columns from your Excel file to the application fields. To update existing records, ensure the 'ID' field is correctly mapped.</p>
+                        <div className="grid grid-cols-2 gap-3 mb-4 max-h-80 overflow-y-auto p-2 border rounded">
+                            {allFacilityFields.map(field => <MappingRow key={field.key} field={field} headers={headers} selectedValue={fieldMappings[field.key]} onMappingChange={handleMappingChange}/>)}
+                        </div>
+                        {renderPreview()}
+                        <div className="flex justify-end mt-6 space-x-2">
+                            <Button variant="secondary" onClick={() => setCurrentPage(0)}>Back</Button>
+                            <Button onClick={handleValidation}>Validate and Continue</Button>
+                        </div>
+                    </div>
+                )}
+                
+                {currentPage === 'validation' && renderValidationScreen()}
+                {currentPage === 'correction' && renderCorrectionScreen()}
+                {currentPage === 2 && renderProgressView()}
+                {currentPage === 3 && renderResultView()}
+            </div>
+        </Modal>
+    );
 };
+
 const DuplicateFinderModal = ({ isOpen, onClose, facilities, onDuplicatesDeleted }) => {
      const [isLoading, setIsLoading] = useState(false); const [duplicateGroups, setDuplicateGroups] = useState([]); const [selectedGroups, setSelectedGroups] = useState({});
     const findDuplicates = useCallback(() => { setIsLoading(true); const groups = new Map(); facilities.forEach(facility => { const key = `${facility['الولاية'] || 'N/A'}-${facility['المحلية'] || 'N/A'}-${facility['اسم_المؤسسة'] || 'N/A'}`.toLowerCase(); if (!groups.has(key)) groups.set(key, []); groups.get(key).push(facility); }); const foundDuplicates = []; groups.forEach((group, key) => { if (group.length > 1) { group.sort((a, b) => (b.lastSnapshotAt?.toMillis() || 0) - (a.lastSnapshotAt?.toMillis() || 0)); foundDuplicates.push({ key, original: group[0], duplicates: group.slice(1) }); } }); setDuplicateGroups(foundDuplicates); const initialSelection = {}; foundDuplicates.forEach(group => { initialSelection[group.key] = true; }); setSelectedGroups(initialSelection); setIsLoading(false); }, [facilities]);
@@ -610,19 +752,40 @@ const ChildHealthServicesView = ({
     canFindFacilityDuplicates,
     canCheckFacilityLocations
 }) => {
-    const handleShareLocalityUpdateLink = () => {
-        if (!stateFilter || !localityFilter) {
-            setToast({ show: true, message: "Please select a State and Locality first.", type: "error" });
+    const handleShareBulkUpdateLink = () => {
+        const params = new URLSearchParams();
+
+        // Add any active filters to the query parameters
+        if (stateFilter && stateFilter !== 'ALL_STATES' && stateFilter !== 'NOT_ASSIGNED') {
+            params.append('state', stateFilter);
+        }
+        if (localityFilter) {
+            params.append('locality', localityFilter);
+        }
+        if (facilityTypeFilter) {
+            params.append('facilityType', facilityTypeFilter);
+        }
+        if (functioningFilter && functioningFilter !== 'NOT_SET') {
+            params.append('functioning', functioningFilter);
+        }
+        if (projectFilter) {
+            params.append('project', projectFilter);
+        }
+        if (serviceTypeFilter) {
+            params.append('service', serviceTypeFilter);
+        }
+
+        // Ensure at least one filter is applied so users don't accidentally share the entire database
+        if (Array.from(params.keys()).length === 0) {
+            setToast({ show: true, message: "Please select at least one filter first.", type: "error" });
             return;
         }
         
-        let url = `${window.location.origin}/public/locality-update/${stateFilter}/${localityFilter}`;
-        if (serviceTypeFilter) {
-            url += `?service=${encodeURIComponent(serviceTypeFilter)}`;
-        }
+        // Use a generic route and attach query parameters
+        const url = `${window.location.origin}/public/bulk-update?${params.toString()}`;
         
         navigator.clipboard.writeText(url).then(() => {
-            setToast({ show: true, message: "Locality update link copied to clipboard!", type: "success" });
+            setToast({ show: true, message: "Bulk update link copied to clipboard!", type: "success" });
         });
     };
 
@@ -783,7 +946,6 @@ const ChildHealthServicesView = ({
 
     const handleFixMismatch = (facility) => { setIsMismatchModalOpen(false); handleOpenMapModal(facility); };
 
-    // UPDATED CONFIG: Added facility_ownership
     const CLEANABLE_FIELDS_CONFIG = {
         'الولاية': { label: 'State', standardValues: Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar)), isStaffField: false },
         'المحلية': { label: 'Locality', standardValues: Object.values(STATE_LOCALITIES).flatMap(s => s.localities.map(l => l.en)).sort((a, b) => (LOCALITY_EN_TO_AR_MAP[a] || a).localeCompare(LOCALITY_EN_TO_AR_MAP[b] || b)), isStaffField: false },
@@ -1191,7 +1353,8 @@ const ChildHealthServicesView = ({
                             {permissions.canManageFacilities && ( <Button onClick={() => { setEditingFacility(null); setView('form'); }}>Add New</Button> )}
                             {canBulkUploadFacilities && ( <Button onClick={() => setIsBulkUploadModalOpen(true)}>Bulk Upload</Button> )}
                             <Button variant="info" onClick={handleShareLink}>Share Entry Link</Button>
-                            <Button variant="info" onClick={handleShareLocalityUpdateLink}>Share Locality Update Link</Button>
+                            
+                            <Button variant="info" onClick={handleShareBulkUpdateLink}>Share Bulk Update Link</Button>
                             
                             <Button variant="secondary" onClick={handleExportExcel} disabled={!filteredFacilities || filteredFacilities.length === 0}>Export Excel</Button>
                             
