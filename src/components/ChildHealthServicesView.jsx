@@ -1002,7 +1002,8 @@ const ChildHealthServicesView = ({
             const facilityPoint = point([lng, lat]);
             const stateEn = stateKeyToEnName[stateKey];
             if (!stateEn) return false;
-            const preciseBoundaryFeature = localityBoundaries.features.find(f => f.properties.state_en?.toLowerCase() === stateEn.toLowerCase() && f.properties.locality_e?.toLowerCase() === localityKey.toLowerCase() );
+            // UPDATE: Safe string cast before toLowerCase
+            const preciseBoundaryFeature = localityBoundaries.features.find(f => f.properties.state_en?.toLowerCase() === stateEn.toLowerCase() && f.properties.locality_e?.toLowerCase() === String(localityKey || '').toLowerCase() );
             if (preciseBoundaryFeature) { return !booleanPointInPolygon(facilityPoint, preciseBoundaryFeature.geometry); }
             const stateBoundaryFeatures = localityBoundaries.features.filter(f => f.properties.state_en?.toLowerCase() === stateEn.toLowerCase() );
             if (stateBoundaryFeatures.length > 0) { const isWithinState = stateBoundaryFeatures.some(f => booleanPointInPolygon(facilityPoint, f.geometry) ); if (!isWithinState) { return true; } } else { console.warn(`No boundary features found for state: ${stateEn}`); }
@@ -1177,7 +1178,8 @@ const ChildHealthServicesView = ({
             if (projectFilter && f.project_name !== projectFilter) return false;
             if (functioningFilter && functioningFilter !== 'NOT_SET' && f['هل_المؤسسة_تعمل'] !== functioningFilter) return false;
             if (functioningFilter === 'NOT_SET' && (f['هل_المؤسسة_تعمل'] != null && f['هل_المؤسسة_تعمل'] !== '')) return false;
-            if (searchQuery) { const lowerQuery = searchQuery.toLowerCase(); if (!f['اسم_المؤسسة']?.toLowerCase().includes(lowerQuery)) return false; }
+            // UPDATE: Safe string cast before toLowerCase
+            if (searchQuery) { const lowerQuery = searchQuery.toLowerCase(); if (!String(f['اسم_المؤسسة'] || '').toLowerCase().includes(lowerQuery)) return false; }
             if (serviceTypeFilter) {
                  switch (serviceTypeFilter) {
                     case 'IMNCI': if (f['وجود_العلاج_المتكامل_لامراض_الطفولة'] !== 'Yes') return false; break;
