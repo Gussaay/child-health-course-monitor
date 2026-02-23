@@ -110,7 +110,7 @@ const getServiceConfig = (serviceType) => {
         headers: ["ID", "الولاية", "المحلية", "اسم المؤسسة", "ملكية المؤسسة", "نوع المؤسسةالصحية", "نوع الخدمات", "Date of Visit"], 
         dataKeys: ["id", "الولاية", "المحلية", "اسم_المؤسسة", "facility_ownership", "نوع_المؤسسةالصحية", "eenc_service_type", "date_of_visit"] 
     };
-    const baseImnciHeaders = ["هل المؤسسة تعمل", "هل توجد حوافز للاستاف", "ما هي المنظمة المقدم للحوافز", "هل تشارك المؤسسة في أي مشروع", "ما هو اسم المشروع", "رقم هاتف المسئول من المؤسسة", "وجود العلاج المتكامل لامراض الطفولة", "العدد الكلي للكوادر الطبية العاملة (أطباء ومساعدين)", "العدد الكلي للكودار المدربة על العلاج المتكامل", "وجود سجل علاج متكامل", "وجود كتيب لوحات", "ميزان وزن", "ميزان طول", "ميزان حرارة", "ساعة مؤقت", "غرفة إرواء", "وجود الدعم المادي", "_الإحداثيات_latitude", "_الإحداثيات_longitude", "هل يوجد مكتب تحصين", "اين يقع اقرب مركز تحصين", "هل يوجد مركز تغذية خارجي", "اين يقع اقرب مركز تغذية خارجي", "هل يوجد خدمة متابعة النمو"];
+    const baseImnciHeaders = ["هل المؤسسة تعمل", "هل توجد حوافز للاستاف", "ما هي المنظمة المقدم للحوافز", "هل تشارك المؤسسة في أي مشروع", "ما هو اسم المشروع", "رقم هاتف المسئول من المؤسسة", "وجود العلاج المتكامل لامراض الطفولة", "العدد الكلي للكوادر الطبية العاملة (أطباء ومساعدين)", "العدد الكلي للكودار المدربة على العلاج المتكامل", "وجود سجل علاج متكامل", "وجود كتيب لوحات", "ميزان وزن", "ميزان طول", "ميزان حرارة", "ساعة مؤقت", "غرفة إرواء", "وجود الدعم المادي", "_الإحداثيات_latitude", "_الإحداثيات_longitude", "هل يوجد مكتب تحصين", "اين يقع اقرب مركز تحصين", "هل يوجد مركز تغذية خارجي", "اين يقع اقرب مركز تغذية خارجي", "هل يوجد خدمة متابعة النمو"];
     const baseImnciDataKeys = ["هل_المؤسسة_تعمل", "staff_incentives", "staff_incentives_organization", "project_participation", "project_name", "person_in_charge_phone", "وجود_العلاج_المتكامل_لامراض_الطفولة", "العدد_الكلي_لكوادر_طبية_العاملة_أطباء_ومساعدين", "العدد_Kلي_للكودار_ المدربة_على_العلاج_المتكامل", "وجود_سجل_علاج_متكامل", "وجود_كتيب_لوحات", "ميزان_وزن", "ميزان_طول", "ميزان_حرارة", "ساعة_ مؤقت", "غرفة_إرواء", "وجود_الدعمادي", "_الإحداثيات_latitude", "_الإحداثيات_longitude", "immunization_office_exists", "nearest_immunization_center", "nutrition_center_exists", "nearest_nutrition_center", "growth_monitoring_service_exists"];
     const MAX_STAFF = 5;
     for (let i = 1; i <= MAX_STAFF; i++) { baseImnciHeaders.push(`اسم الكادر ${i}`, `الوصف الوظيفي للكادر ${i}`, `هل الكادر ${i} مدرب`, `تاريخ تدريب الكادر ${i}`, `رقم هاتف الكادر ${i}`); baseImnciDataKeys.push(`imnci_staff_${i}_name`, `imnci_staff_${i}_job_title`, `imnci_staff_${i}_is_trained`, `imnci_staff_${i}_training_date`, `imnci_staff_${i}_phone`); }
@@ -215,7 +215,13 @@ const PendingSubmissionsTab = ({ submissions, onApprove, onReject }) => {
                         <td>{s.updated_by || 'Public Submission'}</td>
                         <td className="flex flex-wrap gap-2">
                             <Button variant="success" size="sm" onClick={() => onApprove(s)}>View / Approve</Button>
-                            <Button variant="danger" size="sm" onClick={() => onReject(s.submissionId, s._action === 'DELETE')}>Reject</Button>
+                            <Button 
+                                variant="danger" 
+                                size="sm" 
+                                onClick={() => onReject(s._mergedSubmissionIds || [s.submissionId], s._action === 'DELETE')}
+                            >
+                                Reject
+                            </Button>
                         </td>
                     </tr>
                 ))
@@ -457,7 +463,7 @@ const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, f
         const issues = []; const checkedFields = {}; const mappedFields = Object.keys(fieldMappings);
         for (const appField of mappedFields) {
             const config = cleanupConfig[appField];
-            if (config && config.standardValues && !checkedFields[appField]) {
+            if (config && config.standardValues && !checkedFields[appField] && !config.isDynamicText) {
                 const excelHeader = fieldMappings[appField];
                 const headerIndex = headers.indexOf(excelHeader);
                 if (headerIndex === -1) continue;
@@ -620,6 +626,7 @@ const DuplicateFinderModal = ({ isOpen, onClose, facilities, onDuplicatesDeleted
         <span>Clean up</span>
     </label></div><div className="text-xs space-y-1"><p className="p-1 rounded bg-green-100 text-green-800"><strong>Keep (Original):</strong> ID {group.original.id} <span className="text-gray-600 italic ml-2"> (Last updated: {group.original.lastSnapshotAt?.toDate().toLocaleString() || 'N/A'})</span></p>{group.duplicates.map(dup => <p key={dup.id} className="p-1 rounded bg-red-100 text-red-800"><strong>Delete (Duplicate):</strong> ID {dup.id}<span className="text-gray-600 italic ml-2"> (Last updated: {dup.lastSnapshotAt?.toDate().toLocaleString() || 'N/A'})</span></p>)}</div></div>))}</div><div className="flex justify-end mt-6"><Button variant="danger" onClick={handleDeleteSelected}>Delete Selected ({Object.values(selectedGroups).filter(Boolean).length})</Button></div></div>)}</div></Modal>);
 };
+
 const DataCleanupModal = ({ isOpen, onClose, facilities, onCleanupComplete, setToast, cleanupConfig }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
@@ -627,7 +634,9 @@ const DataCleanupModal = ({ isOpen, onClose, facilities, onCleanupComplete, setT
     const [nonStandardValues, setNonStandardValues] = useState([]);
     const [mappings, setMappings] = useState({});
     const auth = getAuth();
+    
     useEffect(() => { if (!isOpen) { setSelectedFieldKey(''); } setNonStandardValues([]); setMappings({}); }, [isOpen]);
+    
     useEffect(() => {
         if (selectedFieldKey) {
             setIsLoading(true);
@@ -637,13 +646,13 @@ const DataCleanupModal = ({ isOpen, onClose, facilities, onCleanupComplete, setT
                 if (config.isStaffField && Array.isArray(facility.imnci_staff)) {
                     facility.imnci_staff.forEach(staff => {
                         const value = staff[selectedFieldKey];
-                        if (value && !config.standardValues.includes(value)) {
+                        if (value && (config.isDynamicText || !config.standardValues.includes(value))) {
                             values.add(value);
                         }
                     });
                 } else if (!config.isStaffField) {
                     const value = facility[selectedFieldKey];
-                    if (value && !config.standardValues.includes(value)) {
+                    if (value && (config.isDynamicText || !config.standardValues.includes(value))) {
                         values.add(value);
                     }
                 }
@@ -653,7 +662,19 @@ const DataCleanupModal = ({ isOpen, onClose, facilities, onCleanupComplete, setT
             setIsLoading(false);
         }
     }, [selectedFieldKey, facilities, cleanupConfig]);
-    const handleMappingChange = (oldValue, newValue) => { setMappings(prev => ({ ...prev, [oldValue]: newValue })); };
+
+    const handleMappingChange = (oldValue, newValue) => { 
+        if (newValue.trim() === '' || newValue === oldValue) {
+            setMappings(prev => {
+                const newMap = { ...prev };
+                delete newMap[oldValue];
+                return newMap;
+            });
+        } else {
+            setMappings(prev => ({ ...prev, [oldValue]: newValue })); 
+        }
+    };
+
     const handleApplyFixes = async () => {
         const user = auth.currentUser;
         if (!user) { setToast({ show: true, message: 'You must be logged in to perform this action.', type: 'error' }); return; }
@@ -689,20 +710,68 @@ const DataCleanupModal = ({ isOpen, onClose, facilities, onCleanupComplete, setT
             onClose();
         }
     };
+    
     const renderSelectionScreen = () => ( <div><FormGroup label="Select a data field to clean"><Select value={selectedFieldKey} onChange={(e) => setSelectedFieldKey(e.target.value)}><option value="">-- Choose field --</option>{Object.entries(cleanupConfig).map(([key, config]) => ( <option key={key} value={key}>{config.label}</option> ))}</Select></FormGroup></div> );
+    
     const renderMappingScreen = () => {
         const config = cleanupConfig[selectedFieldKey];
         return (
             <div>
                 {isLoading && <div className="text-center"><Spinner /></div>}
                 {!isLoading && nonStandardValues.length === 0 && ( <div className="text-center p-4"><EmptyState message={`All values for "${config.label}" are already standardized.`} /></div> )}
-                {!isLoading && nonStandardValues.length > 0 && ( <div><p className="mb-4 text-sm text-gray-700"> Found <strong>{nonStandardValues.length}</strong> non-standard value(s) for <strong>{config.label}</strong>. Map them to a standard value to clean up your data. </p><div className="space-y-3 max-h-80 overflow-y-auto p-2 border rounded bg-gray-50">{nonStandardValues.map(value => ( <div key={value} className="grid grid-cols-1 md:grid-cols-3 items-center gap-2 p-2 bg-white rounded border"><span className="bg-yellow-50 text-yellow-800 p-2 rounded text-sm truncate" title={value}> Current: "{value}" </span><span className="text-center font-bold text-gray-500 hidden md:block">&rarr;</span><Select value={mappings[value] || ''} onChange={(e) => handleMappingChange(value, e.target.value)}><option value="">-- Map to standard value --</option>{config.standardValues.map(opt => { let displayValue = opt; if (selectedFieldKey === 'الولاية') { displayValue = STATE_LOCALITIES[opt]?.ar || opt; } else if (selectedFieldKey === 'المحلية') { displayValue = LOCALITY_EN_TO_AR_MAP[opt] || opt; } return <option key={opt} value={opt}>{displayValue}</option>; })}</Select></div> ))}</div></div> )}
-                <div className="flex justify-between items-center mt-6"><Button variant="secondary" onClick={() => setSelectedFieldKey('')}>Back to Selection</Button><Button onClick={handleApplyFixes} disabled={isUpdating || Object.keys(mappings).length === 0 || nonStandardValues.length === 0}>{isUpdating ? 'Applying Fixes...' : `Apply Fixes for ${Object.keys(mappings).length} Value(s)`}</Button></div>
+                {!isLoading && nonStandardValues.length > 0 && ( 
+                    <div>
+                        <p className="mb-4 text-sm text-gray-700"> 
+                            Found <strong>{nonStandardValues.length}</strong> {config.isDynamicText ? 'unique' : 'non-standard'} value(s) for <strong>{config.label}</strong>. Map them to a standard value to clean up your data. 
+                        </p>
+                        <div className="space-y-3 max-h-80 overflow-y-auto p-2 border rounded bg-gray-50">
+                            {nonStandardValues.map(value => ( 
+                                <div key={value} className="grid grid-cols-1 md:grid-cols-3 items-center gap-2 p-2 bg-white rounded border">
+                                    <span className="bg-yellow-50 text-yellow-800 p-2 rounded text-sm truncate" title={value}> Current: "{value}" </span>
+                                    <span className="text-center font-bold text-gray-500 hidden md:block">&rarr;</span>
+                                    
+                                    {config.isDynamicText ? (
+                                        <div className="flex-1 w-full">
+                                            <Input 
+                                                type="text" 
+                                                list={`${selectedFieldKey}-options`}
+                                                placeholder="Type unified name..." 
+                                                value={mappings[value] || ''} 
+                                                onChange={(e) => handleMappingChange(value, e.target.value)} 
+                                            />
+                                            <datalist id={`${selectedFieldKey}-options`}>
+                                                {config.standardValues.map(opt => <option key={opt} value={opt} />)}
+                                            </datalist>
+                                        </div>
+                                    ) : (
+                                        <Select value={mappings[value] || ''} onChange={(e) => handleMappingChange(value, e.target.value)}>
+                                            <option value="">-- Map to standard value --</option>
+                                            {config.standardValues.map(opt => { 
+                                                let displayValue = opt; 
+                                                if (selectedFieldKey === 'الولاية') { displayValue = STATE_LOCALITIES[opt]?.ar || opt; } 
+                                                else if (selectedFieldKey === 'المحلية') { displayValue = LOCALITY_EN_TO_AR_MAP[opt] || opt; } 
+                                                return <option key={opt} value={opt}>{displayValue}</option>; 
+                                            })}
+                                        </Select>
+                                    )}
+                                </div> 
+                            ))}
+                        </div>
+                    </div> 
+                )}
+                <div className="flex justify-between items-center mt-6">
+                    <Button variant="secondary" onClick={() => setSelectedFieldKey('')}>Back to Selection</Button>
+                    <Button onClick={handleApplyFixes} disabled={isUpdating || Object.keys(mappings).length === 0 || nonStandardValues.length === 0}>
+                        {isUpdating ? 'Applying Fixes...' : `Apply Fixes for ${Object.keys(mappings).length} Value(s)`}
+                    </Button>
+                </div>
             </div>
         );
     };
+    
     return ( <Modal isOpen={isOpen} onClose={onClose} title="Clean Facility Data"><div className="p-4">{!selectedFieldKey ? renderSelectionScreen() : renderMappingScreen()}</div></Modal> );
 };
+
 const LocationMismatchModal = ({ isOpen, onClose, mismatches, onFix }) => {
     if (!isOpen) return null;
     return (
@@ -946,7 +1015,14 @@ const ChildHealthServicesView = ({
 
     const handleFixMismatch = (facility) => { setIsMismatchModalOpen(false); handleOpenMapModal(facility); };
 
-    const CLEANABLE_FIELDS_CONFIG = {
+    const projectNames = useMemo(() => {
+        if (!healthFacilities) return [];
+        const names = new Set();
+        healthFacilities.forEach(f => { if (f.project_name) { names.add(f.project_name); } });
+        return Array.from(names).sort();
+    }, [healthFacilities]);
+
+    const CLEANABLE_FIELDS_CONFIG = useMemo(() => ({
         'الولاية': { label: 'State', standardValues: Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar)), isStaffField: false },
         'المحلية': { label: 'Locality', standardValues: Object.values(STATE_LOCALITIES).flatMap(s => s.localities.map(l => l.en)).sort((a, b) => (LOCALITY_EN_TO_AR_MAP[a] || a).localeCompare(LOCALITY_EN_TO_AR_MAP[b] || b)), isStaffField: false },
         'facility_ownership': { label: 'Facility Ownership (ملكية المؤسسة)', standardValues: ['حكومي', 'خاص', 'منظمات', 'اهلي'], isStaffField: false },
@@ -956,6 +1032,7 @@ const ChildHealthServicesView = ({
         'هل_المؤسسة_تعمل': { label: 'Is Facility Functioning', standardValues: ['Yes', 'No'], isStaffField: false },
         'staff_incentives': { label: 'Staff Incentives', standardValues: ['Yes', 'No'], isStaffField: false },
         'project_participation': { label: 'Project Participation', standardValues: ['Yes', 'No'], isStaffField: false },
+        'project_name': { label: 'Project Name (اسم المشروع)', standardValues: projectNames, isDynamicText: true, isStaffField: false },
         'وجود_العلاج_المتكامل_لامراض_الطفولة': { label: 'IMNCI Service Availability', standardValues: ['Yes', 'No'], isStaffField: false },
         'وجود_سجل_علاج_متكامل': { label: 'IMNCI Register Availability (السجلات)', standardValues: ['Yes', 'No'], isStaffField: false },
         'وجود_كتيب_لوحات': { label: 'Chart Booklet Availability (كتيب اللوحات)', standardValues: ['Yes', 'No'], isStaffField: false },
@@ -964,9 +1041,20 @@ const ChildHealthServicesView = ({
         'ميزان_حرارة': { label: 'Thermometer Availability', standardValues: ['Yes', 'No'], isStaffField: false },
         'ساعة_مؤقت': { label: 'Timer Availability', standardValues: ['Yes', 'No'], isStaffField: false },
         'غرفة_إرواء': { label: 'ORS Corner Availability', standardValues: ['Yes', 'No'], isStaffField: false },
+        'immunization_office_exists': { label: 'Immunization Office Exists', standardValues: ['Yes', 'No'], isStaffField: false }, 
+        'nutrition_center_exists': { label: 'Nutrition Center Exists', standardValues: ['Yes', 'No'], isStaffField: false }, 
+        'growth_monitoring_service_exists': { label: 'Growth Monitoring Service Exists', standardValues: ['Yes', 'No'], isStaffField: false }, 
         'eenc_provides_essential_care': { label: 'EENC Service Provided', standardValues: ['Yes', 'No'], isStaffField: false },
+        'eenc_steam_sterilizer': { label: 'EENC Steam Sterilizer', standardValues: ['Yes', 'No'], isStaffField: false },
+        'eenc_wall_clock': { label: 'EENC Wall Clock', standardValues: ['Yes', 'No'], isStaffField: false },
         'neonatal_sepsis_surveillance': { label: 'Sepsis Surveillance and Prevention', standardValues: ['Yes', 'No'], isStaffField: false },
-    };
+        'neonatal_kmc_unit': { label: 'KMC Unit (وحدة رعاية الكنغر)', standardValues: ['Yes', 'No'], isStaffField: false },
+        'neonatal_breastfeeding_unit': { label: 'Breastfeeding Unit', standardValues: ['Yes', 'No'], isStaffField: false },
+        'neonatal_sterilization_unit': { label: 'Sterilization Unit', standardValues: ['Yes', 'No'], isStaffField: false },
+        'etat_has_service': { label: 'ETAT Service Availability', standardValues: ['Yes', 'No'], isStaffField: false },
+        'hdu_has_service': { label: 'HDU Service Availability', standardValues: ['Yes', 'No'], isStaffField: false },
+        'picu_has_service': { label: 'PICU Service Availability', standardValues: ['Yes', 'No'], isStaffField: false },
+    }), [projectNames]);
 
     const refreshSubmissions = useCallback(async (force = false) => {
         if (!permissions.canManageFacilities) return;
@@ -1004,21 +1092,71 @@ const ChildHealthServicesView = ({
         }
     }, [ view, stateFilter, localityFilter, facilityTypeFilter, functioningFilter, projectFilter, activeTab, fetchHealthFacilities, refreshSubmissions, userStates, userLocalities, permissions.manageScope, hasManuallySelected ]);
 
-    const projectNames = useMemo(() => {
-        if (!healthFacilities) return [];
-        const names = new Set();
-        healthFacilities.forEach(f => { if (f.project_name) { names.add(f.project_name); } });
-        return Array.from(names).sort();
-    }, [healthFacilities]);
-
     const uniquePendingSubmissions = useMemo(() => {
         if (!pendingSubmissions) return [];
         const unique = new Map();
-        pendingSubmissions.forEach(s => { const key = `${s['اسم_المؤسسة']}-${s['الولاية']}-${s['المحلية']}`; if (!unique.has(key) || s.submittedAt > unique.get(key).submittedAt) { unique.set(key, s); } });
+
+        // 1. Sort submissions ascending (oldest first) so newer updates merge on top
+        const sortedSubmissions = [...pendingSubmissions].sort((a, b) => {
+            const timeA = a.submittedAt?.toMillis ? a.submittedAt.toMillis() : 0;
+            const timeB = b.submittedAt?.toMillis ? b.submittedAt.toMillis() : 0;
+            return timeA - timeB;
+        });
+
+        // 2. Merge overlapping fields
+        sortedSubmissions.forEach(s => {
+            const key = `${s['اسم_المؤسسة']}-${s['الولاية']}-${s['المحلية']}`;
+            
+            if (!unique.has(key)) {
+                // First time seeing this facility in pending
+                unique.set(key, { ...s, _mergedSubmissionIds: [s.submissionId] });
+            } else {
+                const existing = unique.get(key);
+                
+                if (s._action === 'DELETE') {
+                    // Deletion overrides data, but keep track of previous IDs for cleanup
+                    unique.set(key, { 
+                        ...s, 
+                        _mergedSubmissionIds: [...existing._mergedSubmissionIds, s.submissionId] 
+                    });
+                } else {
+                    // Standard merge: new fields overwrite old, but non-overlapping old fields are kept
+                    const merged = { ...existing, ...s };
+                    
+                    // Deep merge specific nested objects like neonatal care
+                    if (existing.neonatal_level_of_care || s.neonatal_level_of_care) {
+                        merged.neonatal_level_of_care = {
+                            ...(existing.neonatal_level_of_care || {}),
+                            ...(s.neonatal_level_of_care || {})
+                        };
+                    }
+                    
+                    // Accumulate all the submission IDs that built this final record
+                    merged._mergedSubmissionIds = [...existing._mergedSubmissionIds, s.submissionId];
+                    merged.submissionId = s.submissionId; // main reference points to latest
+                    
+                    unique.set(key, merged);
+                }
+            }
+        });
+
         let filtered = Array.from(unique.values());
-        if (pendingStartDate) { const start = new Date(pendingStartDate); start.setHours(0, 0, 0, 0); filtered = filtered.filter(s => s.submittedAt?.toDate() >= start); }
-        if (pendingEndDate) { const end = new Date(pendingEndDate); end.setHours(23, 59, 59, 999); filtered = filtered.filter(s => s.submittedAt?.toDate() <= end); }
-        return filtered.sort((a, b) => b.submittedAt?.toMillis() - a.submittedAt?.toMillis());
+        
+        if (pendingStartDate) { 
+            const start = new Date(pendingStartDate); start.setHours(0, 0, 0, 0); 
+            filtered = filtered.filter(s => s.submittedAt?.toDate && s.submittedAt.toDate() >= start); 
+        }
+        if (pendingEndDate) { 
+            const end = new Date(pendingEndDate); end.setHours(23, 59, 59, 999); 
+            filtered = filtered.filter(s => s.submittedAt?.toDate && s.submittedAt.toDate() <= end); 
+        }
+        
+        // 3. Sort descending (newest first) for UI display
+        return filtered.sort((a, b) => {
+            const timeA = a.submittedAt?.toMillis ? a.submittedAt.toMillis() : 0;
+            const timeB = b.submittedAt?.toMillis ? b.submittedAt.toMillis() : 0;
+            return timeB - timeA;
+        });
     }, [pendingSubmissions, pendingStartDate, pendingEndDate]);
 
     const filteredFacilities = useMemo(() => {
@@ -1162,10 +1300,22 @@ const ChildHealthServicesView = ({
         try {
             if (submissionData._action === 'DELETE') {
                  await deleteHealthFacility(submissionData.id);
-                 await rejectFacilitySubmission(submissionData.submissionId, auth.currentUser?.email || 'Unknown Approver');
+                 
+                 // Clean up ALL pending requests associated with this deletion
+                 const idsToClean = submissionData._mergedSubmissionIds || [submissionData.submissionId];
+                 await Promise.all(idsToClean.map(id => rejectFacilitySubmission(id, auth.currentUser?.email || 'Unknown Approver')));
+                 
                  setToast({ show: true, message: "Facility deletion approved and completed.", type: "success" });
             } else {
+                // Process the combined submission using the main ID
                 await approveFacilitySubmission(submissionData, auth.currentUser?.email || 'Unknown Approver');
+                
+                // Reject/Delete the older redundant submissions that were merged into this one
+                if (submissionData._mergedSubmissionIds && submissionData._mergedSubmissionIds.length > 1) {
+                    const redundantIds = submissionData._mergedSubmissionIds.filter(id => id !== submissionData.submissionId);
+                    await Promise.all(redundantIds.map(id => rejectFacilitySubmission(id, 'Merged into a combined submission')));
+                }
+
                 setToast({ show: true, message: "Submission approved and facility data updated.", type: "success" });
             }
             setSubmissionForReview(null);
@@ -1178,12 +1328,17 @@ const ChildHealthServicesView = ({
         }
     };
 
-    const handleReject = async (submissionId, isDeletionRequest = false) => {
+    const handleReject = async (submissionIds, isDeletionRequest = false) => {
         if (!permissions.canApproveSubmissions) return;
         const action = isDeletionRequest ? "deletion request" : "submission";
         if (window.confirm(`Are you sure you want to reject this ${action}?`)) {
             try {
-                await rejectFacilitySubmission(submissionId, auth.currentUser?.email || 'Unknown Rejector');
+                // Force into an array if a single ID sneaks through
+                const idsArray = Array.isArray(submissionIds) ? submissionIds : [submissionIds];
+                
+                // Reject all merged parts at once
+                await Promise.all(idsArray.map(id => rejectFacilitySubmission(id, auth.currentUser?.email || 'Unknown Rejector')));
+                
                 setToast({ show: true, message: "Submission rejected.", type: "success" });
                 refreshSubmissions(true);
             } catch (error) {

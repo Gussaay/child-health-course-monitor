@@ -1012,7 +1012,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
                 'هل_المؤسسة_تعمل': 'Yes',
                 date_of_visit: new Date().toISOString().split('T')[0],
                 imnci_staff: staffList,
-                ' وجود_العلاج_المتكامل_لامراض_الطفولة': 'Yes',
+                'وجود_العلاج_المتكامل_لامراض_الطفولة': 'Yes', // FIX: Removed leading space
                 'وجود_كتيب_لوحات': 'Yes',
                 'وجود_سجل_علاج_متكامل': 'Yes',
                 'نوع_المؤسسةالصحية': participant.facility_type,
@@ -1022,8 +1022,8 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
                 'nearest_immunization_center': participant.nearest_immunization_center || '',
                 'غرفة_إرواء': participant.has_ors_room ? 'Yes' : 'No',
                 'growth_monitoring_service_exists': participant.has_growth_monitoring ? 'Yes' : 'No',
-                'العدد_الكلي_للكوادر_طبية_العاملة_أطباء_ومساعدين': participant.num_other_providers ?? staffList.length,
-                'العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل': participant.num_other_providers_imci ?? staffList.filter(s => s.is_trained === 'Yes').length,
+                'العدد_الكلي_لكوادر_طبية_العاملة_أطباء_ومساعدين': participant.num_other_providers ?? staffList.length, // FIX: Corrected key typography
+                'العدد_Kلي_للكودار_ المدربة_على_العلاج_المتكامل': participant.num_other_providers_imci ?? staffList.filter(s => s.is_trained === 'Yes').length, // FIX: Corrected key typography
             };
 
             facilityUpdatesMap.set(facilityKey, payload);
@@ -2124,6 +2124,12 @@ export function ParticipantsView({
     );
 }
 
+// --- Helpers for parsing empty state booleans ---
+const getBoolState = (val) => val === undefined || val === null ? '' : (val ? 'yes' : 'no');
+const getStrState = (val) => val === 'Yes' ? 'yes' : (val === 'No' ? 'no' : '');
+const parseBool = (val) => val === 'yes' ? true : (val === 'no' ? false : null);
+const parseStr = (val) => val === 'yes' ? 'Yes' : (val === 'no' ? 'No' : '');
+
 // --- Participant Form Component (Main logic) ---
 export function ParticipantForm({ course, initialData, onCancel, onSave }) {
     const isImnci = course.course_type === 'IMNCI';
@@ -2148,8 +2154,8 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
     const [phone, setPhone] = useState(String(initialData?.phone || ''));
     const [group, setGroup] = useState(initialData?.group || 'Group A');
     const [error, setError] = useState('');
-    const [preTestScore, setPreTestScore] = useState(initialData?.pre_test_score || '');
-    const [postTestScore, setPostTestScore] = useState(initialData?.post_test_score || '');
+    const [preTestScore, setPreTestScore] = useState(initialData?.pre_test_score ?? '');
+    const [postTestScore, setPostTestScore] = useState(initialData?.post_test_score ?? '');
 
     const [facilitiesInLocality, setFacilitiesInLocality] = useState([]);
     const [isLoadingFacilities, setIsLoadingFacilities] = useState(false);
@@ -2166,39 +2172,47 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
 
     const [imciSubType, setImciSubType] = useState(initialData?.imci_sub_type || (isIccm ? 'ICCM Community Module' : 'Standard 7 days course')); 
     const [facilityType, setFacilityType] = useState(initialData?.facility_type || '');
-    const [trainedIMNCI, setTrainedIMNCI] = useState(initialData?.trained_before ? 'yes' : 'no');
+    const [trainedIMNCI, setTrainedIMNCI] = useState(getBoolState(initialData?.trained_before));
     const [lastTrainIMNCI, setLastTrainIMNCI] = useState(initialData?.last_imci_training || '');
-    const [numProv, setNumProv] = useState(initialData?.num_other_providers || 1);
-    const [numProvIMNCI, setNumProvIMNCI] = useState(initialData?.num_other_providers_imci || 0);
-    const [hasNutri, setHasNutri] = useState(initialData?.has_nutrition_service || false);
+    
+    // Numbers updated to allow empty instead of defaulting to 1 or 0
+    const [numProv, setNumProv] = useState(initialData?.num_other_providers ?? '');
+    const [numProvIMNCI, setNumProvIMNCI] = useState(initialData?.num_other_providers_imci ?? '');
+    
+    // Booleans updated to allow empty state
+    const [hasNutri, setHasNutri] = useState(getBoolState(initialData?.has_nutrition_service));
     const [nearestNutri, setNearestNutri] = useState(initialData?.nearest_nutrition_center || '');
-    const [hasImm, setHasImm] = useState(initialData?.has_immunization_service || false);
+    const [hasImm, setHasImm] = useState(getBoolState(initialData?.has_immunization_service));
     const [nearestImm, setNearestImm] = useState(initialData?.nearest_immunization_center || '');
-    const [hasORS, setHasORS] = useState(initialData?.has_ors_room || false);
-    const [hasWeightScale, setHasWeightScale] = useState(initialData?.['ميزان_وزن'] === 'Yes');
-    const [hasHeightScale, setHasHeightScale] = useState(initialData?.['ميزان_طول'] === 'Yes');
-    const [hasThermometer, setHasThermometer] = useState(initialData?.['ميزان_حرارة'] === 'Yes');
-    const [hasTimer, setHasTimer] = useState(initialData?.['ساعة_مؤقت'] === 'Yes');
-    const [hasGrowthMonitoring, setHasGrowthMonitoring] = useState(initialData?.has_growth_monitoring || false);
+    const [hasORS, setHasORS] = useState(getBoolState(initialData?.has_ors_room));
+    const [hasWeightScale, setHasWeightScale] = useState(getStrState(initialData?.['ميزان_وزن']));
+    const [hasHeightScale, setHasHeightScale] = useState(getStrState(initialData?.['ميزان_طول']));
+    const [hasThermometer, setHasThermometer] = useState(getStrState(initialData?.['ميزان_حرارة']));
+    const [hasTimer, setHasTimer] = useState(getStrState(initialData?.['ساعة_ مؤقت'])); 
+    const [hasGrowthMonitoring, setHasGrowthMonitoring] = useState(getBoolState(initialData?.has_growth_monitoring));
+    const [hasImnciRegister, setHasImnciRegister] = useState(getStrState(initialData?.['وجود_سجل_علاج_متكامل']));
+    const [hasChartBooklet, setHasChartBooklet] = useState(getStrState(initialData?.['وجود_كتيب_لوحات']));
+
     const [nearestHealthFacility, setNearestHealthFacility] = useState(initialData?.nearest_health_facility || '');
-    const [hoursToFacility, setHoursToFacility] = useState(initialData?.hours_to_facility || '');
+    const [hoursToFacility, setHoursToFacility] = useState(initialData?.hours_to_facility ?? '');
     const [hospitalTypeEtat, setHospitalTypeEtat] = useState(initialData?.hospital_type || '');
-    const [trainedEtat, setTrainedEtat] = useState(initialData?.trained_etat_before ? 'yes' : 'no');
+    const [trainedEtat, setTrainedEtat] = useState(getBoolState(initialData?.trained_etat_before));
     const [lastTrainEtat, setLastTrainEtat] = useState(initialData?.last_etat_training || '');
-    const [hasTriageSystem, setHasTriageSystem] = useState(initialData?.has_triage_system || false);
-    const [hasStabilizationCenter, setHasStabilizationCenter] = useState(initialData?.has_stabilization_center || false);
-    const [hasHdu, setHasHdu] = useState(initialData?.has_hdu || false);
-    const [numStaffInEr, setNumStaffInEr] = useState(initialData?.num_staff_in_er || 0);
-    const [numStaffTrainedInEtat, setNumStaffTrainedInEtat] = useState(initialData?.num_staff_trained_in_etat || 0);
+    const [hasTriageSystem, setHasTriageSystem] = useState(getBoolState(initialData?.has_triage_system));
+    const [hasStabilizationCenter, setHasStabilizationCenter] = useState(getBoolState(initialData?.has_stabilization_center));
+    const [hasHdu, setHasHdu] = useState(getBoolState(initialData?.has_hdu));
+    const [numStaffInEr, setNumStaffInEr] = useState(initialData?.num_staff_in_er ?? '');
+    const [numStaffTrainedInEtat, setNumStaffTrainedInEtat] = useState(initialData?.num_staff_trained_in_etat ?? '');
+    
     const [hospitalTypeEenc, setHospitalTypeEenc] = useState(initialData?.hospital_type || '');
     const [otherHospitalTypeEenc, setOtherHospitalTypeEenc] = useState(initialData?.other_hospital_type || '');
-    const [trainedEENC, setTrainedEENC] = useState(initialData?.trained_eenc_before ? 'yes' : 'no');
+    const [trainedEENC, setTrainedEENC] = useState(getBoolState(initialData?.trained_eenc_before));
     const [lastTrainEENC, setLastTrainEENC] = useState(initialData?.last_eenc_training || '');
-    const [hasSncu, setHasSncu] = useState(initialData?.has_sncu || false);
-    const [hasIycfCenter, setHasIycfCenter] = useState(initialData?.has_iycf_center || false);
-    const [numStaffInDelivery, setNumStaffInDelivery] = useState(initialData?.num_staff_in_delivery || 0);
-    const [numStaffTrainedInEenc, setNumStaffTrainedInEenc] = useState(initialData?.num_staff_trained_in_eenc || 0);
-    const [hasKangaroo, setHasKangaroo] = useState(initialData?.has_kangaroo_room || false);
+    const [hasSncu, setHasSncu] = useState(getBoolState(initialData?.has_sncu));
+    const [hasIycfCenter, setHasIycfCenter] = useState(getBoolState(initialData?.has_iycf_center));
+    const [numStaffInDelivery, setNumStaffInDelivery] = useState(initialData?.num_staff_in_delivery ?? '');
+    const [numStaffTrainedInEenc, setNumStaffTrainedInEenc] = useState(initialData?.num_staff_trained_in_eenc ?? '');
+    const [hasKangaroo, setHasKangaroo] = useState(getBoolState(initialData?.has_kangaroo_room));
 
     const isInitialLoad = useRef(true);
 
@@ -2266,7 +2280,6 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
 
         setIsEditingExistingWorker(false);
         
-        // FIX 1: Only clear form data if we are NOT editing an existing participant
         if (!initialData) {
             setName('');
             setJob('');
@@ -2278,28 +2291,31 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
         if (isImnci) {
             if (facility) {
                  setFacilityType(facility['نوع_المؤسسةالصحية'] || '');
-                 setHasNutri(facility.nutrition_center_exists === 'Yes');
+                 setHasNutri(getStrState(facility.nutrition_center_exists));
                  setNearestNutri(facility.nearest_nutrition_center || '');
-                 setHasImm(facility.immunization_office_exists === 'Yes');
+                 setHasImm(getStrState(facility.immunization_office_exists));
                  setNearestImm(facility.nearest_immunization_center || '');
-                 setHasORS(facility['غرفة_إرواء'] === 'Yes');
-                 setNumProv(facility['العدد_الكلي_للكوادر_طبية_العاملة_أطباء_ومساعدين'] || 1);
-                 setNumProvIMNCI(facility['العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل'] || 0);
-                 setHasWeightScale(facility['ميزان_وزن'] === 'Yes');
-                 setHasHeightScale(facility['ميزان_طول'] === 'Yes');
-                 setHasThermometer(facility['ميزان_حرارة'] === 'Yes');
-                 setHasTimer(facility['ساعة_مؤقت'] === 'Yes');
-                 setHasGrowthMonitoring(facility.growth_monitoring_service_exists === 'Yes');
-                 setTrainedIMNCI('no');
+                 setHasORS(getStrState(facility['غرفة_إرواء']));
+                 setNumProv(facility['العدد_الكلي_لكوادر_طبية_العاملة_أطباء_ومساعدين'] ?? ''); 
+                 setNumProvIMNCI(facility['العدد_Kلي_للكودار_ المدربة_على_العلاج_المتكامل'] ?? ''); 
+                 setHasWeightScale(getStrState(facility['ميزان_وزن']));
+                 setHasHeightScale(getStrState(facility['ميزان_طول']));
+                 setHasThermometer(getStrState(facility['ميزان_حرارة']));
+                 setHasTimer(getStrState(facility['ساعة_ مؤقت'])); 
+                 setHasImnciRegister(getStrState(facility['وجود_سجل_علاج_متكامل']));
+                 setHasChartBooklet(getStrState(facility['وجود_كتيب_لوحات']));
+                 setHasGrowthMonitoring(getStrState(facility.growth_monitoring_service_exists));
+                 setTrainedIMNCI('');
                  setLastTrainIMNCI('');
             } else {
                  setFacilityType('');
-                 setHasNutri(false); setNearestNutri('');
-                 setHasImm(false); setNearestImm('');
-                 setHasORS(false);
-                 setNumProv(1); setNumProvIMNCI(0);
-                 setHasWeightScale(false); setHasHeightScale(false); setHasThermometer(false); setHasTimer(false); setHasGrowthMonitoring(false);
-                 setTrainedIMNCI('no'); setLastTrainIMNCI('');
+                 setHasNutri(''); setNearestNutri('');
+                 setHasImm(''); setNearestImm('');
+                 setHasORS('');
+                 setNumProv(''); setNumProvIMNCI('');
+                 setHasWeightScale(''); setHasHeightScale(''); setHasThermometer(''); setHasTimer(''); setHasGrowthMonitoring('');
+                 setHasImnciRegister(''); setHasChartBooklet('');
+                 setTrainedIMNCI(''); setLastTrainIMNCI('');
             }
         }
     };
@@ -2352,7 +2368,6 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
         return 'provider';
      }, [job, otherJobTitle]);
 
-    // FIX 2 & 3: Make async, preserve initialData, and handle Old Facility Cleanup
     const submit = async () => { 
         setError('');
         const finalJobTitle = job === 'Other' ? otherJobTitle : job;
@@ -2365,7 +2380,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
         if (!phone.trim()) { setError('Phone Number is required.'); return; }
 
         let p = {
-            ...(initialData || {}), // Preserves ID and test scores
+            ...(initialData || {}), 
             name: name.trim(), group, state, locality,
             center_name: center.trim(),
             facilityId: (isIccm || selectedFacility?.id.startsWith('pending_')) ? null : selectedFacility?.id || null, 
@@ -2377,32 +2392,59 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
         }
 
         if (isImnci || isIccm) {
-             p = { ...p, trained_before: trainedIMNCI === 'yes', last_imci_training: trainedIMNCI === 'yes' ? (lastTrainIMNCI || null) : null };
+             p = { ...p, trained_before: parseBool(trainedIMNCI), last_imci_training: trainedIMNCI === 'yes' ? (lastTrainIMNCI || null) : null };
             
             if (isImnci) {
                 if (!imciSubType) { setError('IMCI Course Sub-type is required.'); return; }
                 const currentFacilityType = facilityType || selectedFacility?.['نوع_المؤسسةالصحية'];
                 if (!currentFacilityType) { setError('Facility Type is required.'); return; }
-                if (numProv === null || numProv < 1) { setError('Number of providers must be 1 or more.'); return; }
-                if (numProvIMNCI === null || numProvIMNCI < 0) { setError('Number of trained providers cannot be negative.'); return; }
-                p = { ...p, imci_sub_type: imciSubType, facility_type: currentFacilityType, num_other_providers: numProv, num_other_providers_imci: numProvIMNCI, has_nutrition_service: hasNutri, has_immunization_service: hasImm, has_ors_room: hasORS, nearest_nutrition_center: !hasNutri ? (nearestNutri || null) : null, nearest_immunization_center: !hasImm ? (nearestImm || null) : null, has_growth_monitoring: hasGrowthMonitoring };
+                if (numProv !== '' && numProv < 1) { setError('Number of providers must be 1 or more.'); return; }
+                if (numProvIMNCI !== '' && numProvIMNCI < 0) { setError('Number of trained providers cannot be negative.'); return; }
+                p = { 
+                    ...p, imci_sub_type: imciSubType, facility_type: currentFacilityType, 
+                    num_other_providers: numProv !== '' ? Number(numProv) : null, 
+                    num_other_providers_imci: numProvIMNCI !== '' ? Number(numProvIMNCI) : null, 
+                    has_nutrition_service: parseBool(hasNutri), 
+                    has_immunization_service: parseBool(hasImm), 
+                    has_ors_room: parseBool(hasORS), 
+                    nearest_nutrition_center: hasNutri === 'no' ? (nearestNutri || null) : null, 
+                    nearest_immunization_center: hasImm === 'no' ? (nearestImm || null) : null, 
+                    has_growth_monitoring: parseBool(hasGrowthMonitoring) 
+                };
             } else if (isIccm) {
-                p = { ...p, imci_sub_type: imciSubType, nearest_health_facility: nearestHealthFacility || null, hours_to_facility: hoursToFacility || null }; 
+                p = { ...p, imci_sub_type: imciSubType, nearest_health_facility: nearestHealthFacility || null, hours_to_facility: hoursToFacility !== '' ? Number(hoursToFacility) : null }; 
             }
         } else if (isEtat) {
             if (!hospitalTypeEtat) { setError('Hospital Type is required for ETAT.'); return; }
-            p = { ...p, hospital_type: hospitalTypeEtat, trained_etat_before: trainedEtat === 'yes', last_etat_training: trainedEtat === 'yes' ? (lastTrainEtat || null) : null, has_triage_system: hasTriageSystem, has_stabilization_center: hasStabilizationCenter, has_hdu: hasHdu, num_staff_in_er: numStaffInEr || 0, num_staff_trained_in_etat: numStaffTrainedInEtat || 0 };
+            p = { 
+                ...p, hospital_type: hospitalTypeEtat, 
+                trained_etat_before: parseBool(trainedEtat), 
+                last_etat_training: trainedEtat === 'yes' ? (lastTrainEtat || null) : null, 
+                has_triage_system: parseBool(hasTriageSystem), 
+                has_stabilization_center: parseBool(hasStabilizationCenter), 
+                has_hdu: parseBool(hasHdu), 
+                num_staff_in_er: numStaffInEr !== '' ? Number(numStaffInEr) : null, 
+                num_staff_trained_in_etat: numStaffTrainedInEtat !== '' ? Number(numStaffTrainedInEtat) : null 
+            };
         } else if (isEenc) {
             if (!hospitalTypeEenc) { setError('Hospital Type is required for EENC.'); return; }
             if (hospitalTypeEenc === 'other' && !otherHospitalTypeEenc) { setError('Please specify the Hospital Type for EENC.'); return; }
-            p = { ...p, hospital_type: hospitalTypeEenc === 'other' ? otherHospitalTypeEenc : hospitalTypeEenc, trained_eenc_before: trainedEENC === 'yes', last_eenc_training: trainedEENC === 'yes' ? (lastTrainEENC || null) : null, has_sncu: hasSncu, has_iycf_center: hasIycfCenter, num_staff_in_delivery: numStaffInDelivery || 0, num_staff_trained_in_eenc: numStaffTrainedInEenc || 0, has_kangaroo_room: hasKangaroo };
+            p = { 
+                ...p, hospital_type: hospitalTypeEenc === 'other' ? otherHospitalTypeEenc : hospitalTypeEenc, 
+                trained_eenc_before: parseBool(trainedEENC), 
+                last_eenc_training: trainedEENC === 'yes' ? (lastTrainEENC || null) : null, 
+                has_sncu: parseBool(hasSncu), 
+                has_iycf_center: parseBool(hasIycfCenter), 
+                num_staff_in_delivery: numStaffInDelivery !== '' ? Number(numStaffInDelivery) : null, 
+                num_staff_trained_in_eenc: numStaffTrainedInEenc !== '' ? Number(numStaffTrainedInEenc) : null, 
+                has_kangaroo_room: parseBool(hasKangaroo) 
+            };
         }
 
         let facilityUpdatePayload = null;
-        let oldFacilityUpdatePayload = null; // New payload to clear from old facility
+        let oldFacilityUpdatePayload = null; 
 
         if (isImnci) {
-            // NEW Facility Update
             if (selectedFacility && !selectedFacility.id.startsWith('pending_')) {
                 const staffMemberData = { name: name.trim(), job_title: finalJobTitle, phone: phone.trim(), is_trained: 'Yes', training_date: course.start_date || '' };
                 let existingStaff = [];
@@ -2421,20 +2463,27 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                 }
 
                 const baseFacilityPayload = {
-                    ' وجود_العلاج_المتكامل_لامراض_الطفولة': 'Yes', 
+                    'وجود_العلاج_المتكامل_لامراض_الطفولة': 'Yes', 
                     'نوع_المؤسسةالصحية': facilityType || selectedFacility['نوع_المؤسسةالصحية'] || 'no data',
-                    'nutrition_center_exists': hasNutri ? 'Yes' : 'No', 'nearest_nutrition_center': !hasNutri ? (nearestNutri || selectedFacility.nearest_nutrition_center || '') : '',
-                    'immunization_office_exists': hasImm ? 'Yes' : 'No', 'nearest_immunization_center': !hasImm ? (nearestImm || selectedFacility.nearest_immunization_center || '') : '',
-                    'غرفة_إرواء': hasORS ? 'Yes' : 'No', 'growth_monitoring_service_exists': hasGrowthMonitoring ? 'Yes' : 'No',
-                    'العدد_الكلي_للكوادر_طبية_العاملة_أطباء_ومساعدين': numProv ?? selectedFacility['العدد_الكلي_للكوادر_طبية_العاملة_أطباء_ومساعدين'] ?? updatedStaffList.length,
-                    'العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل': numProvIMNCI ?? selectedFacility['العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل'] ?? updatedStaffList.filter(s => s.is_trained === 'Yes').length,
-                    'ميزان_وزن': hasWeightScale ? 'Yes' : 'No', 'ميزان_طول': hasHeightScale ? 'Yes' : 'No', 'ميزان_حرارة': hasThermometer ? 'Yes' : 'No', 'ساعة_مؤقت': hasTimer ? 'Yes' : 'No',
+                    'nutrition_center_exists': parseStr(hasNutri), 
+                    'nearest_nutrition_center': hasNutri === 'no' ? (nearestNutri || selectedFacility.nearest_nutrition_center || '') : '',
+                    'immunization_office_exists': parseStr(hasImm), 
+                    'nearest_immunization_center': hasImm === 'no' ? (nearestImm || selectedFacility.nearest_immunization_center || '') : '',
+                    'غرفة_إرواء': parseStr(hasORS), 
+                    'growth_monitoring_service_exists': parseStr(hasGrowthMonitoring),
+                    'العدد_الكلي_لكوادر_طبية_العاملة_أطباء_ومساعدين': numProv !== '' ? Number(numProv) : (selectedFacility['العدد_الكلي_لكوادر_طبية_العاملة_أطباء_ومساعدين'] ?? updatedStaffList.length), 
+                    'العدد_Kلي_للكودار_ المدربة_على_العلاج_المتكامل': numProvIMNCI !== '' ? Number(numProvIMNCI) : (selectedFacility['العدد_Kلي_للكودار_ المدربة_على_العلاج_المتكامل'] ?? updatedStaffList.filter(s => s.is_trained === 'Yes').length), 
+                    'ميزان_وزن': parseStr(hasWeightScale), 
+                    'ميزان_طول': parseStr(hasHeightScale), 
+                    'ميزان_حرارة': parseStr(hasThermometer), 
+                    'ساعة_ مؤقت': parseStr(hasTimer), 
+                    'وجود_سجل_علاج_متكامل': parseStr(hasImnciRegister), 
+                    'وجود_كتيب_لوحات': parseStr(hasChartBooklet), 
                 };
 
                 facilityUpdatePayload = { ...selectedFacility, ...baseFacilityPayload, id: selectedFacility.id, date_of_visit: new Date().toISOString().split('T')[0], imnci_staff: updatedStaffList };
             }
 
-            // OLD Facility Cleanup Logic
             if (initialData?.facilityId && selectedFacility?.id && initialData.facilityId !== selectedFacility.id) {
                 try {
                     const oldFacility = await getHealthFacilityById(initialData.facilityId);
@@ -2445,7 +2494,6 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                             if (!Array.isArray(existingOldStaff)) existingOldStaff = [];
                         } catch (e) { existingOldStaff = []; }
 
-                        // Filter out the participant from the old facility's staff array
                         const updatedOldStaff = existingOldStaff.filter(
                             staff => staff.name !== initialData.name && staff.phone !== initialData.phone
                         );
@@ -2461,7 +2509,6 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
             }
         }
 
-        // Pass all 3 arguments to onSave in parent component
         onSave(p, facilityUpdatePayload, oldFacilityUpdatePayload);
     };
 
@@ -2482,7 +2529,6 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                     onSave={handleSaveNewParticipant}
                 />
              )}
-
 
             <Card>
                 <div className="p-6">
@@ -2635,7 +2681,9 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                             
                             <FormGroup label={`Previously trained in ${isIccm ? 'IMNCI/ICCM' : 'IMNCI'}?`}>
                                 <Select value={trainedIMNCI} onChange={(e) => setTrainedIMNCI(e.target.value)} disabled={isEditingExistingWorker}>
-                                    <option value="no">No</option><option value="yes">Yes</option>
+                                    <option value="">— Select —</option>
+                                    <option value="no">No</option>
+                                    <option value="yes">Yes</option>
                                 </Select>
                             </FormGroup>
                             {trainedIMNCI === 'yes' && <FormGroup label="Date of last training"><Input type="date" value={lastTrainIMNCI} onChange={(e) => setLastTrainIMNCI(e.target.value)} disabled={isEditingExistingWorker}/></FormGroup>}
@@ -2643,10 +2691,10 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                             {isImnci && (
                                 <>
                                     <FormGroup label="Total Providers at Facility (incl. this participant)">
-                                        <Input type="number" min="1" value={numProv} onChange={(e) => setNumProv(Number(e.target.value || 1))} />
+                                        <Input type="number" min="1" value={numProv} onChange={(e) => setNumProv(e.target.value)} />
                                     </FormGroup>
                                     <FormGroup label="IMCI Trained Providers at Facility (excl. current course)">
-                                        <Input type="number" min="0" value={numProvIMNCI} onChange={(e) => setNumProvIMNCI(Number(e.target.value || 0))} />
+                                        <Input type="number" min="0" value={numProvIMNCI} onChange={(e) => setNumProvIMNCI(e.target.value)} />
                                     </FormGroup>
                                 </>
                             )}
@@ -2671,44 +2719,127 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                 <div className="md:col-span-2 lg:col-span-3 my-4 p-4 border rounded-md bg-gray-50">
                                     <h3 className="text-lg font-semibold mb-3 border-b pb-2">Facility Services & Equipment (IMNCI Related)</h3>
                                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        <FormGroup label="Has therapeutic nutrition service?"><Select value={hasNutri ? 'yes' : 'no'} onChange={e => setHasNutri(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                                        {!hasNutri && <FormGroup label="Nearest therapeutic nutrition center?"><Input value={nearestNutri} onChange={e => setNearestNutri(e.target.value)} /></FormGroup>}
-                                        <FormGroup label="Has immunization service?"><Select value={hasImm ? 'yes' : 'no'} onChange={e => setHasImm(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                                        {!hasImm && <FormGroup label="Nearest immunization center?"><Input value={nearestImm} onChange={e => setNearestImm(e.target.value)} /></FormGroup>}
-                                        <FormGroup label="Has ORS corner service?"><Select value={hasORS ? 'yes' : 'no'} onChange={e => setHasORS(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                                        <FormGroup label="Growth Monitoring Service"><Select value={hasGrowthMonitoring ? 'yes' : 'no'} onChange={e => setHasGrowthMonitoring(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                                        <FormGroup label="Weighting scale"><Select value={hasWeightScale ? 'yes' : 'no'} onChange={e => setHasWeightScale(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                                        <FormGroup label="Height scale"><Select value={hasHeightScale ? 'yes' : 'no'} onChange={e => setHasHeightScale(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                                        <FormGroup label="Thermometer"><Select value={hasThermometer ? 'yes' : 'no'} onChange={e => setHasThermometer(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                                        <FormGroup label="Timer"><Select value={hasTimer ? 'yes' : 'no'} onChange={e => setHasTimer(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                                        <FormGroup label="Has therapeutic nutrition service?">
+                                            <Select value={hasNutri} onChange={e => setHasNutri(e.target.value)}>
+                                                <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
+                                            </Select>
+                                        </FormGroup>
+                                        {hasNutri === 'no' && <FormGroup label="Nearest therapeutic nutrition center?"><Input value={nearestNutri} onChange={e => setNearestNutri(e.target.value)} /></FormGroup>}
+                                        
+                                        <FormGroup label="Has immunization service?">
+                                            <Select value={hasImm} onChange={e => setHasImm(e.target.value)}>
+                                                <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
+                                            </Select>
+                                        </FormGroup>
+                                        {hasImm === 'no' && <FormGroup label="Nearest immunization center?"><Input value={nearestImm} onChange={e => setNearestImm(e.target.value)} /></FormGroup>}
+                                        
+                                        <FormGroup label="Has ORS corner service?">
+                                            <Select value={hasORS} onChange={e => setHasORS(e.target.value)}>
+                                                <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
+                                            </Select>
+                                        </FormGroup>
+                                        <FormGroup label="Growth Monitoring Service">
+                                            <Select value={hasGrowthMonitoring} onChange={e => setHasGrowthMonitoring(e.target.value)}>
+                                                <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
+                                            </Select>
+                                        </FormGroup>
+                                        <FormGroup label="Has IMNCI Register?">
+                                            <Select value={hasImnciRegister} onChange={e => setHasImnciRegister(e.target.value)}>
+                                                <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
+                                            </Select>
+                                        </FormGroup>
+                                        <FormGroup label="Has Chart Booklet?">
+                                            <Select value={hasChartBooklet} onChange={e => setHasChartBooklet(e.target.value)}>
+                                                <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
+                                            </Select>
+                                        </FormGroup>
+                                        <FormGroup label="Weighting scale">
+                                            <Select value={hasWeightScale} onChange={e => setHasWeightScale(e.target.value)}>
+                                                <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
+                                            </Select>
+                                        </FormGroup>
+                                        <FormGroup label="Height scale">
+                                            <Select value={hasHeightScale} onChange={e => setHasHeightScale(e.target.value)}>
+                                                <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
+                                            </Select>
+                                        </FormGroup>
+                                        <FormGroup label="Thermometer">
+                                            <Select value={hasThermometer} onChange={e => setHasThermometer(e.target.value)}>
+                                                <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
+                                            </Select>
+                                        </FormGroup>
+                                        <FormGroup label="Timer">
+                                            <Select value={hasTimer} onChange={e => setHasTimer(e.target.value)}>
+                                                <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
+                                            </Select>
+                                        </FormGroup>
                                     </div>
                                 </div>
                             )}
                         </>)}
 
                          {isEtat && (<>
-                             <FormGroup label="Hospital Type"><Select value={hospitalTypeEtat} onChange={e => setHospitalTypeEtat(e.target.value)}><option value="">— Select Type —</option><option>Pediatric Hospital</option><option>Pediatric Department in General Hospital</option><option>Rural Hospital</option><option>other</option></Select></FormGroup>
-                             <FormGroup label="Previously trained on ETAT?"><Select value={trainedEtat} onChange={e => setTrainedEtat(e.target.value)}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                             <FormGroup label="Hospital Type">
+                                 <Select value={hospitalTypeEtat} onChange={e => setHospitalTypeEtat(e.target.value)}>
+                                     <option value="">— Select Type —</option><option>Pediatric Hospital</option><option>Pediatric Department in General Hospital</option><option>Rural Hospital</option><option>other</option>
+                                </Select>
+                             </FormGroup>
+                             <FormGroup label="Previously trained on ETAT?">
+                                 <Select value={trainedEtat} onChange={e => setTrainedEtat(e.target.value)}>
+                                     <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
+                                 </Select>
+                             </FormGroup>
                              {trainedEtat === 'yes' && <FormGroup label="Date of last ETAT training"><Input type="date" value={lastTrainEtat} onChange={(e) => setLastTrainEtat(e.target.value)} /></FormGroup>}
-                             <FormGroup label="Has Triage System?"><Select value={hasTriageSystem ? 'yes' : 'no'} onChange={e => setHasTriageSystem(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                             <FormGroup label="Has Malnutrition Stabilization Center?"><Select value={hasStabilizationCenter ? 'yes' : 'no'} onChange={e => setHasStabilizationCenter(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                             <FormGroup label="Has High Dependency Unit (HDU)?"><Select value={hasHdu ? 'yes' : 'no'} onChange={e => setHasHdu(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                             <FormGroup label={`# ${professionalCategory}s in ER`}><Input type="number" min="0" value={numStaffInEr} onChange={e => setNumStaffInEr(Number(e.target.value || 0))} /></FormGroup>
-                             <FormGroup label={`# ${professionalCategory}s trained in ETAT`}><Input type="number" min="0" value={numStaffTrainedInEtat} onChange={e => setNumStaffTrainedInEtat(Number(e.target.value || 0))} /></FormGroup>
+                             <FormGroup label="Has Triage System?">
+                                 <Select value={hasTriageSystem} onChange={e => setHasTriageSystem(e.target.value)}>
+                                     <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
+                                 </Select>
+                             </FormGroup>
+                             <FormGroup label="Has Malnutrition Stabilization Center?">
+                                 <Select value={hasStabilizationCenter} onChange={e => setHasStabilizationCenter(e.target.value)}>
+                                     <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
+                                 </Select>
+                             </FormGroup>
+                             <FormGroup label="Has High Dependency Unit (HDU)?">
+                                 <Select value={hasHdu} onChange={e => setHasHdu(e.target.value)}>
+                                     <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
+                                 </Select>
+                             </FormGroup>
+                             <FormGroup label={`# ${professionalCategory}s in ER`}><Input type="number" min="0" value={numStaffInEr} onChange={e => setNumStaffInEr(e.target.value)} /></FormGroup>
+                             <FormGroup label={`# ${professionalCategory}s trained in ETAT`}><Input type="number" min="0" value={numStaffTrainedInEtat} onChange={e => setNumStaffTrainedInEtat(e.target.value)} /></FormGroup>
                         </>)}
 
                          {isEenc && (<>
-                            <FormGroup label="Hospital Type"><Select value={hospitalTypeEenc} onChange={e => setHospitalTypeEenc(e.target.value)}><option value="">— Select Type —</option><option>Comprehensive EmONC</option><option>Basic EmONC</option><option value="other">Other (specify)</option></Select></FormGroup>
+                            <FormGroup label="Hospital Type">
+                                <Select value={hospitalTypeEenc} onChange={e => setHospitalTypeEenc(e.target.value)}>
+                                    <option value="">— Select Type —</option><option>Comprehensive EmONC</option><option>Basic EmONC</option><option value="other">Other (specify)</option>
+                                </Select>
+                            </FormGroup>
                             {hospitalTypeEenc === 'other' && <FormGroup label="Specify Hospital Type"><Input value={otherHospitalTypeEenc} onChange={e => setOtherHospitalTypeEenc(e.target.value)} /></FormGroup>}
-                            <FormGroup label="Previously trained on EENC?"><Select value={trainedEENC} onChange={e => setTrainedEENC(e.target.value)}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                            <FormGroup label="Previously trained on EENC?">
+                                <Select value={trainedEENC} onChange={e => setTrainedEENC(e.target.value)}>
+                                    <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
+                                </Select>
+                            </FormGroup>
                             {trainedEENC === 'yes' && <FormGroup label="Date of last EENC training"><Input type="date" value={lastTrainEENC} onChange={(e) => setLastTrainEENC(e.target.value)} /></FormGroup>}
-                            <FormGroup label="Has Special Newborn Care Unit (SNCU)?"><Select value={hasSncu ? 'yes' : 'no'} onChange={e => setHasSncu(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                            <FormGroup label="Has IYCF Center?"><Select value={hasIycfCenter ? 'yes' : 'no'} onChange={e => setHasIycfCenter(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
-                            
-                            <FormGroup label="Has Kangaroo Care Room?"><Select value={hasKangaroo ? 'yes' : 'no'} onChange={e => setHasKangaroo(e.target.value === 'yes')}><option value="no">No</option><option value="yes">Yes</option></Select></FormGroup>
+                            <FormGroup label="Has Special Newborn Care Unit (SNCU)?">
+                                <Select value={hasSncu} onChange={e => setHasSncu(e.target.value)}>
+                                    <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
+                                </Select>
+                            </FormGroup>
+                            <FormGroup label="Has IYCF Center?">
+                                <Select value={hasIycfCenter} onChange={e => setHasIycfCenter(e.target.value)}>
+                                    <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
+                                </Select>
+                            </FormGroup>
+                            <FormGroup label="Has Kangaroo Care Room?">
+                                <Select value={hasKangaroo} onChange={e => setHasKangaroo(e.target.value)}>
+                                    <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
+                                </Select>
+                            </FormGroup>
 
-                            <FormGroup label={`# ${professionalCategory}s in Delivery Room`}><Input type="number" min="0" value={numStaffInDelivery} onChange={e => setNumStaffInDelivery(Number(e.target.value || 0))} /></FormGroup>
-                            <FormGroup label={`# ${professionalCategory}s trained in EENC`}><Input type="number" min="0" value={numStaffTrainedInEenc} onChange={e => setNumStaffTrainedInEenc(Number(e.target.value || 0))} /></FormGroup>
+                            <FormGroup label={`# ${professionalCategory}s in Delivery Room`}><Input type="number" min="0" value={numStaffInDelivery} onChange={e => setNumStaffInDelivery(e.target.value)} /></FormGroup>
+                            <FormGroup label={`# ${professionalCategory}s trained in EENC`}><Input type="number" min="0" value={numStaffTrainedInEenc} onChange={e => setNumStaffTrainedInEenc(e.target.value)} /></FormGroup>
                         </>)}
                     </div>
                     {/* Submit Buttons */}
