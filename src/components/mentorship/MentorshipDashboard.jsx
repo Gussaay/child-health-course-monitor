@@ -15,7 +15,6 @@ import {
 
 import { 
     IMNCI_FORM_STRUCTURE, 
-    // evaluateRelevance, // Unused imports removed for cleaner code
     calculateScores, 
     rehydrateDraftData, 
     DIARRHEA_CLASSIFICATIONS, 
@@ -360,7 +359,7 @@ const MentorshipDashboard = ({
     const [activeEencTab, setActiveEencTab] = useState('skills'); 
     const [activeImnciTab, setActiveImnciTab] = useState('skills'); 
     
-    // --- NEW: Local State for Optimistic Updates ---
+    // --- Local State for Optimistic Updates ---
     const [localStatusUpdates, setLocalStatusUpdates] = useState({});
 
     // Clear local updates when new data arrives to prevent stale data
@@ -377,12 +376,12 @@ const MentorshipDashboard = ({
         onUpdateStatus(reportId, challengeId, newValue, fieldName);
     };
 
-    const calculateAverage = (scores) => {
+    const calculateAverage = useCallback((scores) => {
         const validScores = scores.filter(s => isFinite(s) && !isNaN(s) && s !== null);
         if (validScores.length === 0) return null;
         const sum = validScores.reduce((a, b) => a + b, 0);
         return sum / validScores.length;
-    };
+    }, []);
 
     // --- Visit Report Data Processor ---
     const visitReportStats = useMemo(() => {

@@ -21,7 +21,6 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend,
 // --- Lazy Load View Components ---
 const DashboardView = lazy(() => import('./components/DashboardView'));
 const CourseReportView = lazy(() => import('./components/CourseReportView.jsx').then(module => ({ default: module.CourseReportView })));
-// REMOVED: const ShareModal = lazy(...) - We now define it locally below
 const FinalReportManager = lazy(() => import('./components/FinalReportManager.jsx').then(module => ({ default: module.FinalReportManager })));
 const ObservationView = lazy(() => import('./components/MonitoringView').then(module => ({ default: module.ObservationView })));
 const ReportsView = lazy(() => import('./components/ReportsView'));
@@ -450,6 +449,11 @@ export default function App() {
     const [isPublicSubmissionView, setIsPublicSubmissionView] = useState(false);
     const [isNewFacilityView, setIsNewFacilityView] = useState(false);
     const [isPublicFacilityUpdateView, setIsPublicFacilityUpdateView] = useState(false);
+    
+    // --- NEW: Shared Mentorship Dashboard States ---
+    const [isPublicMentorshipDashboardView, setIsPublicMentorshipDashboardView] = useState(false);
+    const [publicMentorshipDashboardParams, setPublicMentorshipDashboardParams] = useState(null);
+
     const [publicServiceType, setPublicServiceType] = useState(null);
     const [publicMentorshipProps, setPublicMentorshipProps] = useState(null);
     const [submissionType, setSubmissionType] = useState(null);
@@ -532,6 +536,9 @@ export default function App() {
             setSubmissionType(null);
             setSharedViewError(null);
             
+            setIsPublicMentorshipDashboardView(false);
+            setPublicMentorshipDashboardParams(null);
+
             setPublicViewData(null);
             setPublicViewType(null);
             setPublicViewLoading(false);
@@ -549,6 +556,20 @@ export default function App() {
             setIsBulkUpdateView(false);
             setPublicBulkUpdateParams({});
 
+            // --- NEW: Public Mentorship Dashboard Route ---
+            const publicMentorshipDashboardMatch = path.match(/^\/public\/mentorship\/dashboard\/([a-zA-Z0-9_]+)\/?$/);
+            if (publicMentorshipDashboardMatch && publicMentorshipDashboardMatch[1]) {
+                setIsPublicMentorshipDashboardView(true);
+                const searchParams = new URLSearchParams(window.location.search);
+                setPublicMentorshipDashboardParams({
+                    serviceType: publicMentorshipDashboardMatch[1],
+                    state: searchParams.get('state') || '',
+                    locality: searchParams.get('locality') || '',
+                    facilityId: searchParams.get('facilityId') || '',
+                    workerName: searchParams.get('workerName') || ''
+                });
+                return;
+            }
 
             const facilityUpdateMatch = path.match(/^\/facilities\/data-entry\/([a-zA-Z0-9_-]+)\/?$/);
             if (path.startsWith('/facilities/data-entry/new')) {
@@ -876,7 +897,7 @@ export default function App() {
 
 
     useEffect(() => {
-        if (isSharedView || !user) return;
+        if (isSharedView || isPublicMentorshipDashboardView || (!user && !isPublicMentorshipDashboardView)) return;
 
         if (view === 'dashboard') {
             fetchCourses();
@@ -908,7 +929,7 @@ export default function App() {
         if (view === 'courseReport') {
             fetchHealthFacilities();
         }
-    }, [view, isSharedView, user, fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchCoordinators, fetchHealthFacilities, fetchSkillMentorshipSubmissions]);
+    }, [view, isSharedView, user, fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchCoordinators, fetchHealthFacilities, fetchSkillMentorshipSubmissions, isPublicMentorshipDashboardView]);
 
     useEffect(() => {
         if (selectedCourseId && !courseDetails.allObs && !courseDetailsLoading) {
@@ -1573,7 +1594,7 @@ export default function App() {
     const visibleNavItems = useMemo(() => navItems.filter(item => !item.disabled), [navItems]);
 
     const isApplicationPublicView = isPublicSubmissionView || isNewFacilityView || isPublicFacilityUpdateView;
-    const isMentorshipPublicView = !!publicMentorshipProps; 
+    const isMentorshipPublicView = !!publicMentorshipProps || isPublicMentorshipDashboardView; 
     
     const isPublicReportView = !!publicViewType; 
 
@@ -1588,6 +1609,22 @@ export default function App() {
 
     if ((authLoading || permissionsLoading) && !isMinimalUILayout) {
         mainContent = <SplashScreen />;
+    }
+    
+    // --- NEW: Public Mentorship Dashboard View ---
+    else if (isPublicMentorshipDashboardView) {
+        mainContent = (
+             <Suspense fallback={<Card><div className="flex justify-center p-8"><Spinner /></div></Card>}>
+                 <SkillsMentorshipView
+                     setToast={setToast}
+                     permissions={{ canViewSkillsMentorship: true, manageScope: 'none' }} // Read-only basic permissions
+                     userStates={[]} 
+                     userLocalities={[]} 
+                     publicDashboardMode={true} 
+                     publicDashboardParams={publicMentorshipDashboardParams}
+                 />
+             </Suspense>
+        );
     }
     
     else if (isPublicFacilityUpdateView) {
@@ -1768,7 +1805,7 @@ export default function App() {
     }
 
     // --- RESTORED: Public Mentorship View Handling ---
-    else if (isMentorshipPublicView) {
+    else if (isMentorshipPublicView && !isPublicMentorshipDashboardView) {
         if (authLoading) {
             mainContent = <Card><Spinner /></Card>;
         } else if (!user) { 

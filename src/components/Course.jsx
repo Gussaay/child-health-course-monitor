@@ -338,7 +338,7 @@ const Landing = React.memo(function Landing({ active, onPick }) {
 });
 
 
-// --- CoursesTable with Added Report Button & Modal ---
+// --- CoursesTable with Added Report Button, Modal, & Pagination ---
 export function CoursesTable({ 
     courses, onOpen, onEdit, onDelete, onOpenReport, onOpenTestForm, 
     canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates, onAddFinalReport, canManageFinalReport,
@@ -348,6 +348,15 @@ export function CoursesTable({
     const [reportModalCourse, setReportModalCourse] = useState(null);
     const [deleteRequestCourse, setDeleteRequestCourse] = useState(null); 
     const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
+
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(5);
+
+    // Reset to page 1 when courses array or items per page change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [courses, itemsPerPage]);
 
     const isCourseActive = (course) => {
         if (!course.start_date || !course.course_duration || course.course_duration <= 0) {
@@ -369,13 +378,21 @@ export function CoursesTable({
         return courses.filter(c => userStates.includes(c.state));
     }, [courses, userStates]);
 
-    const sortedCourses = [...filteredCourses].sort((a, b) => {
-        const aActive = isCourseActive(a);
-        const bActive = isCourseActive(b);
-        if (aActive && !bActive) return -1;
-        if (!aActive && bActive) return 1;
-        return 0;
-    });
+    const sortedCourses = useMemo(() => {
+        return [...filteredCourses].sort((a, b) => {
+            const aActive = isCourseActive(a);
+            const bActive = isCourseActive(b);
+            if (aActive && !bActive) return -1;
+            if (!aActive && bActive) return 1;
+            return 0;
+        });
+    }, [filteredCourses]);
+
+    // Calculate Pagination Data
+    const totalItems = sortedCourses.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedCourses = sortedCourses.slice(startIndex, startIndex + itemsPerPage);
 
     const courseType = sortedCourses.length > 0 ? sortedCourses[0].course_type : 'Courses';
 
@@ -384,7 +401,7 @@ export function CoursesTable({
             <div>
                 <h3 className="text-xl font-bold mb-4">{courseType} Courses</h3>
                 <Table headers={["State", "Subcourses", "Status", "Actions"]}>
-                    {sortedCourses.map((c, index) => {
+                    {paginatedCourses.map((c, index) => {
                         // Pending deletion flag
                         const isPendingDeletion = c.deletionRequested === true;
                         
@@ -466,6 +483,46 @@ export function CoursesTable({
                         );
                     })}
                 </Table>
+
+                {/* --- Pagination Controls --- */}
+                {totalItems > 0 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between mt-4 p-4 bg-white border rounded-lg text-sm text-gray-700 shadow-sm">
+                        <div className="flex items-center gap-4 mb-4 sm:mb-0">
+                            <span>Page <strong>{currentPage}</strong> of <strong>{totalPages || 1}</strong> <span className="text-gray-500">(Total: {totalItems} courses)</span></span>
+                            <div className="flex items-center gap-2">
+                                <span className="font-medium">Per Page:</span>
+                                <Select 
+                                    value={itemsPerPage} 
+                                    onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                                    className="py-1 px-2 text-sm w-20 border-gray-300 rounded"
+                                >
+                                    <option value={5}>5</option>
+                                    <option value={10}>10</option>
+                                    <option value={25}>25</option>
+                                    <option value={50}>50</option>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button 
+                                variant="secondary" 
+                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                disabled={currentPage === 1}
+                                className="px-3 py-1"
+                            >
+                                &larr; Previous
+                            </Button>
+                            <Button 
+                                variant="secondary" 
+                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                disabled={currentPage >= totalPages || totalPages === 0}
+                                className="px-3 py-1"
+                            >
+                                Next &rarr;
+                            </Button>
+                        </div>
+                    </div>
+                )}
 
                 {/* --- SHARE & MANAGE MODAL (Updated) --- */}
                 {shareModalCourse && (
@@ -770,6 +827,7 @@ export function CourseManagementView({
     const [filterState, setFilterState] = useState('All');
     const [filterLocality, setFilterLocality] = useState('All');
     const [filterSubCourse, setFilterSubCourse] = useState('All');
+    const [filterProject, setFilterProject] = useState('All');
 
     const filterStateOptions = useMemo(() => {
         const states = new Set(coursesForActiveType.map(c => c.state));
@@ -796,17 +854,28 @@ export function CourseManagementView({
         return ['All', ...Array.from(subCourses).sort()];
     }, [coursesForActiveType]);
 
+    const filterProjectOptions = useMemo(() => {
+        const projects = new Set();
+        coursesForActiveType.forEach(c => {
+            if (c.course_project) {
+                projects.add(c.course_project);
+            }
+        });
+        return ['All', ...Array.from(projects).sort()];
+    }, [coursesForActiveType]);
+
     useEffect(() => {
         setFilterState('All');
         setFilterLocality('All');
         setFilterSubCourse('All');
+        setFilterProject('All');
     }, [activeCourseType]);
 
     useEffect(() => {
         setFilterLocality('All');
     }, [filterState]);
 
-    // **UPDATED**: Filter main list to exclude recycled courses
+    // **UPDATED**: Filter main list to exclude recycled courses and include project filter
     const courses = useMemo(() => {
         return coursesForActiveType.filter(c => {
             // Exclude courses in Recycle Bin
@@ -818,9 +887,11 @@ export function CourseManagementView({
             const subCourseMatch = filterSubCourse === 'All' || 
                 (c.facilitatorAssignments && c.facilitatorAssignments.some(a => a.imci_sub_type === filterSubCourse));
 
-            return stateMatch && localityMatch && subCourseMatch;
+            const projectMatch = filterProject === 'All' || c.course_project === filterProject;
+
+            return stateMatch && localityMatch && subCourseMatch && projectMatch;
         });
-    }, [coursesForActiveType, filterState, filterLocality, filterSubCourse]);
+    }, [coursesForActiveType, filterState, filterLocality, filterSubCourse, filterProject]);
 
     const isCourseActive = useMemo(() => {
         if (!selectedCourse?.start_date || !selectedCourse?.course_duration || selectedCourse.course_duration <= 0) {
@@ -979,7 +1050,7 @@ export function CourseManagementView({
                                 
                                 <Card className="p-4 mb-4 bg-gray-50">
                                     <h4 className="text-lg font-semibold mb-3">Filter Courses</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                         <FormGroup label="Filter by State">
                                             <Select value={filterState} onChange={(e) => setFilterState(e.target.value)}>
                                                 {filterStateOptions.map(s => <option key={s} value={s}>{s}</option>)}
@@ -995,6 +1066,11 @@ export function CourseManagementView({
                                                 {filterSubCourseOptions.map(s => <option key={s} value={s}>{s}</option>)}
                                             </Select>
                                         </FormGroup>
+                                        <FormGroup label="Filter by Project">
+                                            <Select value={filterProject} onChange={(e) => setFilterProject(e.target.value)} disabled={filterProjectOptions.length <= 1}>
+                                                {filterProjectOptions.map(p => <option key={p} value={p}>{p}</option>)}
+                                            </Select>
+                                        </FormGroup>
                                     </div>
                                 </Card>
                                 
@@ -1002,7 +1078,7 @@ export function CourseManagementView({
                                     courses={courses}
                                     onOpen={handleOpenCourse}
                                     onEdit={handleOpenEditForm} 
-                                    onDelete={handleCourseDeleteAction} // Updated handler
+                                    onDelete={handleCourseDeleteAction} 
                                     onOpenReport={onOpenReport}
                                     onOpenTestForm={handleOpenTestForm}
                                     onOpenAttendanceManager={onOpenAttendanceManager} 
@@ -1645,7 +1721,6 @@ export function CourseForm({
     );
 }
 
-// --- ADDED THIS COMPONENT TO FIX THE ERROR ---
 export function PublicCourseMonitoringView({ course, allParticipants }) {
     const [selectedParticipantId, setSelectedParticipantId] = useState(
         allParticipants && allParticipants.length > 0 ? allParticipants[0].id : null

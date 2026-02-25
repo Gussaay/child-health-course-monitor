@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useDataCache } from "../../DataContext";
 import { Timestamp } from 'firebase/firestore';
-import { PlusCircle, Trash2, FileText, Users, Building, ClipboardCheck, Archive, LayoutDashboard, Search } from 'lucide-react';
+import { PlusCircle, Trash2, FileText, Users, Building, ClipboardCheck, Archive, LayoutDashboard, Search, Share2 } from 'lucide-react';
 import {
     saveMentorshipSession,
     importMentorshipSessions,
@@ -451,7 +451,7 @@ const MentorshipTableColumns = () => (
         <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300 w-24">Date</th>
         <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300 w-16">Visit #</th>
         <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300 w-20">Status</th>
-        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300 w-16">Score</th>
+        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-3D0 w-16">Score</th>
         <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-3D0 w-32">Action</th>
     </>
 );
@@ -865,23 +865,32 @@ const SkillsMentorshipView = ({
     userLocalities,
     publicSubmissionMode = false,
     publicServiceType = null,
-    canBulkUploadMentorships = false
+    canBulkUploadMentorships = false,
+    publicDashboardMode = false, // NEW: Public Dashboard View flag
+    publicDashboardParams = null // NEW: Dashboard initial filters
 }) => {
-    const [currentView, setCurrentView] = useState(publicSubmissionMode ? 'form_setup' : 'service_selection');
-    const [activeService, setActiveService] = useState(publicSubmissionMode ? publicServiceType : null);
+    // Modify initial view state to handle public dashboard routing
+    const [currentView, setCurrentView] = useState(
+        publicDashboardMode ? 'history' : (publicSubmissionMode ? 'form_setup' : 'service_selection')
+    );
+    const [activeService, setActiveService] = useState(
+        publicDashboardMode ? publicDashboardParams?.serviceType : (publicSubmissionMode ? publicServiceType : null)
+    );
+    
     const [selectedState, setSelectedState] = useState('');
     const [selectedLocality, setSelectedLocality] = useState('');
     const [selectedFacilityId, setSelectedFacilityId] = useState('');
     const [selectedHealthWorkerName, setSelectedHealthWorkerName] = useState('');
 
-    const [activeTab, setActiveTab] = useState('skills_list');
+    const [activeTab, setActiveTab] = useState(publicDashboardMode ? 'dashboard' : 'skills_list');
     const [activeFormType, setActiveFormType] = useState('skills_assessment');
     const [isReadyToStart, setIsReadyToStart] = useState(false);
 
-    const [activeDashboardState, setActiveDashboardState] = useState('');
-    const [activeDashboardLocality, setActiveDashboardLocality] = useState('');
-    const [activeDashboardFacilityId, setActiveDashboardFacilityId] = useState('');
-    const [activeDashboardWorkerName, setActiveDashboardWorkerName] = useState('');
+    // Initialize Dashboard Filters with parameters if available
+    const [activeDashboardState, setActiveDashboardState] = useState(publicDashboardMode ? publicDashboardParams?.state || '' : '');
+    const [activeDashboardLocality, setActiveDashboardLocality] = useState(publicDashboardMode ? publicDashboardParams?.locality || '' : '');
+    const [activeDashboardFacilityId, setActiveDashboardFacilityId] = useState(publicDashboardMode ? publicDashboardParams?.facilityId || '' : '');
+    const [activeDashboardWorkerName, setActiveDashboardWorkerName] = useState(publicDashboardMode ? publicDashboardParams?.workerName || '' : '');
 
     // --- State for Viewing Visit Reports ---
     const [viewingVisitReport, setViewingVisitReport] = useState(null);
@@ -950,12 +959,12 @@ const SkillsMentorshipView = ({
 
     // --- NEW: Calculate permission to edit visit number ---
     const canEditVisitNumber = useMemo(() => {
-        if (publicSubmissionMode) return false;
+        if (publicSubmissionMode || publicDashboardMode) return false;
         // Check if user has Federal Manager scope or is explicitly a super user/federal manager
         return permissions?.manageScope === 'federal' || 
                permissions?.role === 'super_user' || 
                permissions?.role === 'federal_manager';
-    }, [permissions, publicSubmissionMode]);
+    }, [permissions, publicSubmissionMode, publicDashboardMode]);
     // -------------------------------------------------------------
 
     const processedSubmissions = useMemo(() => {
@@ -1125,6 +1134,7 @@ const SkillsMentorshipView = ({
 
 
      useEffect(() => {
+        // In public dashboard mode we still want to fetch this data if available
         fetchHealthFacilities();
         fetchSkillMentorshipSubmissions();
         fetchIMNCIVisitReports(); 
@@ -1133,23 +1143,25 @@ const SkillsMentorshipView = ({
     }, [fetchHealthFacilities, fetchSkillMentorshipSubmissions, fetchIMNCIVisitReports, fetchEENCVisitReports]);
     
     useEffect(() => {
-        setStateFilter('');
-        setLocalityFilter('');
-        setSupervisorFilter('');
-        setStatusFilter('');
-    }, [activeTab]);
+        if (!publicDashboardMode) {
+            setStateFilter('');
+            setLocalityFilter('');
+            setSupervisorFilter('');
+            setStatusFilter('');
+        }
+    }, [activeTab, publicDashboardMode]);
 
 
      const availableStates = useMemo(() => {
         const allStates = Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar));
         const userAllowedStates = allStates.filter(sKey =>
-             publicSubmissionMode || !userStates || userStates.length === 0 || userStates.includes(sKey)
+             publicSubmissionMode || publicDashboardMode || !userStates || userStates.length === 0 || userStates.includes(sKey)
         );
         return [
             { key: "", label: "-- اختر الولاية --" },
             ...userAllowedStates.map(sKey => ({ key: sKey, label: STATE_LOCALITIES[sKey].ar }))
         ];
-    }, [userStates, publicSubmissionMode]);
+    }, [userStates, publicSubmissionMode, publicDashboardMode]);
 
     const uniqueSupervisors = useMemo(() => {
         const supervisorMap = new Map();
@@ -1179,21 +1191,21 @@ const SkillsMentorshipView = ({
 
 
      useEffect(() => {
-        if (!publicSubmissionMode && userStates && userStates.length === 1) {
+        if (!publicSubmissionMode && !publicDashboardMode && userStates && userStates.length === 1) {
             setSelectedState(userStates[0]);
         }
-    }, [userStates, publicSubmissionMode]);
+    }, [userStates, publicSubmissionMode, publicDashboardMode]);
 
     useEffect(() => {
-       if (!publicSubmissionMode && permissions.manageScope === 'locality' && userLocalities && userLocalities.length === 1) {
+       if (!publicSubmissionMode && !publicDashboardMode && permissions?.manageScope === 'locality' && userLocalities && userLocalities.length === 1) {
             setSelectedLocality(userLocalities[0]);
         }
-    }, [userLocalities, permissions.manageScope, publicSubmissionMode]);
+    }, [userLocalities, permissions?.manageScope, publicSubmissionMode, publicDashboardMode]);
 
 
     const handleStateChange = (e) => {
         setSelectedState(e.target.value);
-        if (permissions.manageScope !== 'locality' || publicSubmissionMode) {
+        if ((permissions?.manageScope !== 'locality') || publicSubmissionMode) {
              setSelectedLocality('');
         }
         setSelectedFacilityId('');
@@ -1446,7 +1458,7 @@ const SkillsMentorshipView = ({
         if (publicSubmissionMode || !(userStates && userStates.length === 1)) {
             setSelectedState('');
         }
-        if (publicSubmissionMode || !(permissions.manageScope === 'locality' && userLocalities && userLocalities.length === 1)) {
+        if (publicSubmissionMode || !(permissions?.manageScope === 'locality' && userLocalities && userLocalities.length === 1)) {
             setSelectedLocality('');
         }
         setSelectedFacilityId('');
@@ -1649,6 +1661,25 @@ const SkillsMentorshipView = ({
         });
     };
     
+    // --- NEW: Share Dashboard Link handler ---
+    const handleShareDashboardLink = () => {
+        const baseUrl = `${window.location.origin}/public/mentorship/dashboard/${activeService}`;
+        const params = new URLSearchParams();
+        
+        if (activeDashboardState) params.append('state', activeDashboardState);
+        if (activeDashboardLocality) params.append('locality', activeDashboardLocality);
+        if (activeDashboardFacilityId) params.append('facilityId', activeDashboardFacilityId);
+        if (activeDashboardWorkerName) params.append('workerName', activeDashboardWorkerName);
+        
+        const shareUrl = `${baseUrl}?${params.toString()}`;
+        
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            setToast({ show: true, message: 'Public Dashboard link copied to clipboard!', type: 'success' });
+        }).catch((err) => {
+            setToast({ show: true, message: 'Failed to copy dashboard link.', type: 'error' });
+        });
+    };
+
     const handleImportMentorships = async (data, originalRows) => {
         if (!canBulkUploadMentorships) {
              setToast({ show: true, message: 'You do not have permission to import sessions.', type: 'error' });
@@ -1940,7 +1971,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
     }
 
     if (currentView === 'history') {
-        const canShareLink = permissions.canManageSkillsMentorship || permissions.canUseSuperUserAdvancedFeatures;
+        const canShareLink = permissions?.canManageSkillsMentorship || permissions?.canUseSuperUserAdvancedFeatures;
         const serviceTitle = SERVICE_TITLES[activeService] || activeService;
         const headerTitle = `${activeService} Mentorship`;
 
@@ -1951,56 +1982,66 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
             <>
                 <Card dir="ltr">
                     <div className="p-6">
-                        <div className="border-b border-gray-200 mb-6">
-                            <nav className="flex gap-2" aria-label="Tabs">
-                                <button
-                                    onClick={() => setActiveTab('skills_list')}
-                                    className={`whitespace-nowrap py-2 px-4 rounded-md font-medium text-sm
-                                        ${activeTab === 'skills_list'
-                                            ? 'bg-sky-600 text-white'
-                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                        }`}
-                                >
-                                    Skills Observations
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('mothers_list')}
-                                    className={`whitespace-nowrap py-2 px-4 rounded-md font-medium text-sm
-                                        ${activeTab === 'mothers_list'
-                                            ? 'bg-sky-600 text-white'
-                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                        }`}
-                                >
-                                    Mother's Surveys
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('visit_reports')}
-                                    className={`whitespace-nowrap py-2 px-4 rounded-md font-medium text-sm
-                                        ${activeTab === 'visit_reports'
-                                            ? 'bg-sky-600 text-white'
-                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                        }`}
-                                >
-                                    Visit Reports
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('dashboard')}
-                                    className={`whitespace-nowrap py-2 px-4 rounded-md font-medium text-sm
-                                        ${activeTab === 'dashboard'
-                                            ? 'bg-sky-600 text-white'
-                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                        }`}
-                                >
-                                    Dashboard
-                                </button>
-                            </nav>
-                        </div>
+                        {/* Only show tabs if NOT in public dashboard mode */}
+                        {!publicDashboardMode && (
+                            <div className="border-b border-gray-200 mb-6">
+                                <nav className="flex gap-2" aria-label="Tabs">
+                                    <button
+                                        onClick={() => setActiveTab('skills_list')}
+                                        className={`whitespace-nowrap py-2 px-4 rounded-md font-medium text-sm
+                                            ${activeTab === 'skills_list'
+                                                ? 'bg-sky-600 text-white'
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                            }`}
+                                    >
+                                        Skills Observations
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab('mothers_list')}
+                                        className={`whitespace-nowrap py-2 px-4 rounded-md font-medium text-sm
+                                            ${activeTab === 'mothers_list'
+                                                ? 'bg-sky-600 text-white'
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                            }`}
+                                    >
+                                        Mother's Surveys
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab('visit_reports')}
+                                        className={`whitespace-nowrap py-2 px-4 rounded-md font-medium text-sm
+                                            ${activeTab === 'visit_reports'
+                                                ? 'bg-sky-600 text-white'
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                            }`}
+                                    >
+                                        Visit Reports
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab('dashboard')}
+                                        className={`whitespace-nowrap py-2 px-4 rounded-md font-medium text-sm
+                                            ${activeTab === 'dashboard'
+                                                ? 'bg-sky-600 text-white'
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                            }`}
+                                    >
+                                        Dashboard
+                                    </button>
+                                </nav>
+                            </div>
+                        )}
 
-                        <div className="flex justify-center mb-4">
+                        <div className="flex justify-center mb-4 relative">
                             <h2 className="text-xl font-semibold text-gray-800">{headerTitle}</h2>
+                            {activeTab === 'dashboard' && !publicDashboardMode && (
+                                <div className="absolute right-0 top-0">
+                                    <Button variant="secondary" onClick={handleShareDashboardLink} title="Share Public Dashboard Link">
+                                        <Share2 className="w-4 h-4 mr-2" /> Share Dashboard
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                         
-                        {activeTab !== 'dashboard' && (
+                        {activeTab !== 'dashboard' && !publicDashboardMode && (
                             <>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 border p-4 rounded-lg bg-gray-50">
                                     <FormGroup label="State" className="text-left" dir="ltr">
@@ -2069,7 +2110,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         )}
 
                         <div>
-                            {activeTab === 'skills_list' && (
+                            {activeTab === 'skills_list' && !publicDashboardMode && (
                                 <MentorshipSubmissionsTable
                                     submissions={processedSubmissions}
                                     activeService={activeService}
@@ -2085,7 +2126,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     statusFilter={statusFilter}
                                 />
                             )}
-                            {activeTab === 'mothers_list' && (
+                            {activeTab === 'mothers_list' && !publicDashboardMode && (
                                 <MentorshipSubmissionsTable
                                     submissions={processedSubmissions}
                                     activeService={activeService}
@@ -2101,7 +2142,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     statusFilter={statusFilter}
                                 />
                             )}
-                            {activeTab === 'visit_reports' && (
+                            {activeTab === 'visit_reports' && !publicDashboardMode && (
                                 <VisitReportsTable
                                     reports={processedVisitReports}
                                     onEdit={handleEditVisitReport}
@@ -2320,28 +2361,28 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     activeService={activeService}
                                     
                                     // Pass new props for status editing
-                                    canEditStatus={isFederalManager}
+                                    canEditStatus={permissions?.role === 'federal_manager' || permissions?.isSuperUser}
                                     onUpdateStatus={handleChallengeStatusUpdate}
 
-                                    activeState={activeDashboardState}
+                                    activeState={activeDashboardState || selectedState}
                                     onStateChange={(value) => {
                                         setActiveDashboardState(value);
                                         setActiveDashboardLocality("");
                                         setActiveDashboardFacilityId("");
                                         setActiveDashboardWorkerName("");
                                     }}
-                                    activeLocality={activeDashboardLocality}
+                                    activeLocality={activeDashboardLocality || selectedLocality}
                                     onLocalityChange={(value) => {
                                         setActiveDashboardLocality(value);
                                         setActiveDashboardFacilityId("");
                                         setActiveDashboardWorkerName("");
                                     }}
-                                    activeFacilityId={activeDashboardFacilityId}
+                                    activeFacilityId={activeDashboardFacilityId || selectedFacilityId}
                                     onFacilityIdChange={(value) => {
                                         setActiveDashboardFacilityId(value);
                                         setActiveDashboardWorkerName("");
                                     }}
-                                    activeWorkerName={activeDashboardWorkerName}
+                                    activeWorkerName={activeDashboardWorkerName || selectedHealthWorkerName}
                                     onWorkerNameChange={setActiveDashboardWorkerName}
                                 />
                             </div>
@@ -2440,8 +2481,8 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
         );
     }
 
-    const isStateFilterDisabled = !publicSubmissionMode && userStates && userStates.length === 1;
-    const isLocalityFilterDisabled = publicSubmissionMode ? !selectedState : (permissions.manageScope === 'locality' || !selectedState);
+    const isStateFilterDisabled = !publicSubmissionMode && !publicDashboardMode && userStates && userStates.length === 1;
+    const isLocalityFilterDisabled = (publicSubmissionMode || publicDashboardMode) ? !selectedState : (permissions?.manageScope === 'locality' || !selectedState);
 
     if (currentView === 'form_setup') {
         const serviceTitleArabic = activeService === 'EENC' 
@@ -2486,7 +2527,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                 
                                 <FormGroup label="المحلية" className="text-right">
                                     <Select value={selectedLocality} onChange={(e) => { setSelectedLocality(e.target.value); setSelectedFacilityId(''); setSelectedHealthWorkerName(''); setSelectedWorkerOriginalData(null); setWorkerJobTitle(''); setWorkerTrainingDate(''); setWorkerPhone(''); setIsWorkerInfoChanged(false); setIsReadyToStart(false); }} disabled={isLocalityFilterDisabled || !!editingSubmission}>
-                                         {(!publicSubmissionMode && permissions.manageScope === 'locality') ? (
+                                         {(!publicSubmissionMode && !publicDashboardMode && permissions?.manageScope === 'locality') ? (
                                             userLocalities && userLocalities.length > 0 ? (
                                                 userLocalities.map(locEn => {
                                                     const locAr = selectedState && STATE_LOCALITIES[selectedState]?.localities.find(l => l.en === locEn)?.ar || locEn;
@@ -2796,7 +2837,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                 activeService={activeService}
                                 
                                 // Pass new props for status editing
-                                canEditStatus={isFederalManager}
+                                canEditStatus={permissions?.role === 'federal_manager' || permissions?.isSuperUser}
                                 onUpdateStatus={handleChallengeStatusUpdate}
 
                                 activeState={activeDashboardState}
