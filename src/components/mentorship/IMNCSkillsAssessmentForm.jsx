@@ -151,7 +151,7 @@ export const IMNCI_FORM_STRUCTURE = [
             {
                 subgroupTitle: 'في حالة الإلتهاب الرئوي',
                 scoreKey: 'pneu_treatment',
-                skills: [ { key: 'skill_pneu_abx', label: 'هل وصف مضاد حيوي لعلاج الالتهاب الرئوي بصورة صحيحة' }, { key: 'skill_pneu_dose', label: 'هل أعطى الجrعة الأولى من مضاد حيوي لعلاج الالتهاب الرئوي بالعيادة بصورة صحيحة', relevant: "${skill_pneu_abx}='yes'" }, ],
+                skills: [ { key: 'skill_pneu_abx', label: 'هل وصف مضاد حيوي (أموكسيلين) لعلاج الالتهاب الرئوي بصورة صحيحة' }, { key: 'skill_pneu_dose', label: 'هل أعطى الجرعة الأولى من مضاد حيوي لعلاج الالتهاب الرئوي بالعيادة بصورة صحيحة', relevant: "${skill_pneu_abx}='yes'" }, ],
                 relevant: (formData) => {
                     if (formData.finalDecision !== 'treatment') return false;
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_cough === 'yes';
@@ -164,7 +164,7 @@ export const IMNCI_FORM_STRUCTURE = [
             {
                 subgroupTitle: 'في حالة الإسهال',
                 scoreKey: 'diar_treatment',
-                skills: [ { key: 'skill_diar_ors', label: 'هل حدد كمية محلول الإرواء بصورة صحيحة' }, { key: 'skill_diar_counsel', label: 'هل نصح الأم بالرعاية المنزلية بإعطاء سوائل أكثر و الاستمرار في تغذية الطفل)' }, { key: 'skill_diar_zinc', label: 'هل وصف دواء الزنك بصورة صحيحة' }, { key: 'skill_diar_zinc_dose', label: 'هل أعطى الجrعة الأولى من دواء الزنك للطفل بالوحدة الصحية بطريقة صحيحة', relevant: "${skill_diar_zinc}='yes'" }, ],
+                skills: [ { key: 'skill_diar_ors', label: 'هل حدد كمية محلول الإرواء بصورة صحيحة' }, { key: 'skill_diar_counsel', label: 'هل نصح الأم بالرعاية المنزلية بإعطاء سوائل أكثر و الاستمرار في تغذية الطفل)' }, { key: 'skill_diar_zinc', label: 'هل وصف دواء الزنك بصورة صحيحة' }, { key: 'skill_diar_zinc_dose', label: 'هل أعطى الجرعة الأولى من دواء الزنك للطفل بالوحدة الصحية بطريقة صحيحة', relevant: "${skill_diar_zinc}='yes'" }, ],
                 relevant: (formData) => {
                     if (formData.finalDecision !== 'treatment') return false;
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_diarrhea === 'yes';
@@ -178,7 +178,7 @@ export const IMNCI_FORM_STRUCTURE = [
             {
                 subgroupTitle: 'في حالة الدسنتاريا',
                 scoreKey: 'dyst_treatment',
-                skills: [ { key: 'skill_dyst_abx', label: 'هل وصف مضاد حيوي لعلاج الدسنتاريا بصورة صحيحة' }, { key: 'skill_dyst_dose', label: 'هل أعطى الجrعة الأولى من مضاد حيوي لعلاج الدسنتارIA في العيادة بصورة صحيحة', relevant: "${skill_dyst_abx}='yes'" }, ],
+                skills: [ { key: 'skill_dyst_abx', label: 'هل وصف مضاد حيوي (سبروفلوكساسين) لعلاج الدسنتاريا بصورة صحيحة' }, { key: 'skill_dyst_dose', label: 'هل أعطى الجرعة الأولى من مضاد حيوي لعلاج الدسنتاريا في العيادة بصورة صحيحة', relevant: "${skill_dyst_abx}='yes'" }, ],
                 relevant: (formData) => {
                     if (formData.finalDecision !== 'treatment') return false;
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_diarrhea === 'yes';
@@ -191,7 +191,7 @@ export const IMNCI_FORM_STRUCTURE = [
             {
                 subgroupTitle: 'في حالة الملاريا',
                 scoreKey: 'mal_treatment',
-                skills: [ { key: 'skill_mal_meds', label: 'هل وصف دواء لعلاج الملاريا بصورة صحيحة' }, { key: 'skill_mal_dose', label: 'هل أعطى الجrعة الأولى من الدواء لعلاج الملاريا في العيادة بصورة صحيحة', relevant: "${skill_mal_meds}='yes'" }, ],
+                skills: [ { key: 'skill_mal_meds', label: 'هل وصف دواء لعلاج الملاريا (كوارتم) بصورة صحيحة' }, { key: 'skill_mal_dose', label: 'هل أعطى الجرعة الأولى من الدواء لعلاج الملاريا في العيادة بصورة صحيحة', relevant: "${skill_mal_meds}='yes'" }, ],
                 relevant: (formData) => {
                     if (formData.finalDecision !== 'treatment') return false;
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_fever === 'yes';
@@ -204,7 +204,7 @@ export const IMNCI_FORM_STRUCTURE = [
             {
                 subgroupTitle: 'في حالة التهاب الأذن',
                 scoreKey: 'ear_treatment',
-                skills: [ { key: 'skill_ear_abx', label: 'هل وصف مضاد حيوي لعلاج التهاب الأذن الحاد بصورة صحيحة' }, { key: 'skill_ear_dose', label: 'هل أعطى الجrعة الأولى من مضاد حيوي لعلاج التهاب الأذن الحاد بصورة صحيحة', relevant: "${skill_ear_abx}='yes'" }, { key: 'skill_ear_para', label: 'هل وصف دواء الباراسيتامول بصورة صحيحة' }, { key: 'skill_ear_para_dose', label: 'هل أعطى الجrعة الأولى من الباراسيتامول بصورة صحيحة', relevant: "${skill_ear_para}='yes'" }, ],
+                skills: [ { key: 'skill_ear_abx', label: 'هل وصف مضاد حيوي (أموكسيلين) لعلاج التهاب الأذن الحاد بصورة صحيحة' }, { key: 'skill_ear_dose', label: 'هل أعطى الجرعة الأولى من مضاد حيوي لعلاج التهاب الأذن الحاد بصورة صحيحة', relevant: "${skill_ear_abx}='yes'" }, { key: 'skill_ear_para', label: 'هل وصف دواء الباراسيتامول بصورة صحيحة' }, { key: 'skill_ear_para_dose', label: 'هل أعطى الجرعة الأولى من الباراسيتامول بصورة صحيحة', relevant: "${skill_ear_para}='yes'" }, ],
                 relevant: (formData) => {
                     if (formData.finalDecision !== 'treatment') return false;
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_ear === 'yes';
@@ -243,7 +243,7 @@ export const IMNCI_FORM_STRUCTURE = [
             {
                 subgroupTitle: 'في حالة فقر الدم',
                 scoreKey: 'anemia_treatment',
-                skills: [ { key: 'skill_anemia_iron', label: 'هل وصف شراب حديد بصورة صحيحة' }, { key: 'skill_anemia_iron_dose', label: 'هل أعطى الجrعة الأولى من شراب حديد بصورة صحيحة', relevant: "${skill_anemia_iron}='yes'" }, ],
+                skills: [ { key: 'skill_anemia_iron', label: 'هل وصف (شراب حديد) بصورة صحيحة' }, { key: 'skill_anemia_iron_dose', label: 'هل أعطى الجرعة الأولى من شراب حديد بصورة صحيحة', relevant: "${skill_anemia_iron}='yes'" }, ],
                 relevant: (formData) => {
                     if (formData.finalDecision !== 'treatment') return false;
                     const didClassifyCorrectly = formData.assessment_skills.skill_anemia_classify === 'yes';
@@ -399,8 +399,7 @@ export const calculateScores = (formData) => {
     let handsOnWFH_score = 0, handsOnWFH_max = 0;
     // --- END NEW HANDS-ON SKILLS VARS ---
 
-    // --- NEW KPI VARS (Referral, Malaria, Malnutrition) ---
-    let totalReferralCases_max = 0;
+    // --- NEW KPI VARS (Malaria, Malnutrition) ---
     let totalFeverCases_Malaria = 0;
     let totalCorrectFeverClassifications_Malaria = 0;
     let totalMalnutritionCases_max = 0;
@@ -418,38 +417,6 @@ export const calculateScores = (formData) => {
             }
             totalMaxScore += groupMaxScore;
             totalCurrentScore += groupCurrentScore;
-
-            // --- NEW KPI: Calculate Effective Classifications to find Referrals ---
-            const as = formData.assessment_skills;
-            const didClassifyCough = as.skill_classify_cough === 'yes';
-            const effectiveCoughCls = didClassifyCough ? as.worker_cough_classification : as.supervisor_correct_cough_classification;
-            
-            const didClassifyDiarrhea = as.skill_classify_diarrhea === 'yes';
-            const effectiveDiarrheaCls = didClassifyDiarrhea ? as.worker_diarrhea_classification : as.supervisor_correct_diarrhea_classification;
-            
-            const didClassifyFever = as.skill_classify_fever === 'yes';
-            const effectiveFeverCls = didClassifyFever ? as.worker_fever_classification : as.supervisor_correct_fever_classification;
-            
-            const didClassifyEar = as.skill_classify_ear === 'yes';
-            const effectiveEarCls = didClassifyEar ? as.worker_ear_classification : as.supervisor_correct_ear_classification;
-            
-            const didClassifyMal = as.skill_mal_classify === 'yes';
-            const effectiveMalnutritionCls = didClassifyMal ? as.worker_malnutrition_classification : as.supervisor_correct_malnutrition_classification;
-            
-            const didClassifyAnemia = as.skill_anemia_classify === 'yes';
-            const effectiveAnemiaCls = didClassifyAnemia ? as.worker_anemia_classification : as.supervisor_correct_anemia_classification;
-
-            if (
-                effectiveCoughCls === 'التهاب رئوي شديد أو مرض شديد جدا' ||
-                (effectiveDiarrheaCls && (effectiveDiarrheaCls['جفاف شديد'] || effectiveDiarrheaCls['إسهال مستمر شديد'])) ||
-                (effectiveFeverCls && (effectiveFeverCls['مرض حمي شديد'] || effectiveFeverCls['حصبة مصحوبة بمضاعفات شديدة'])) ||
-                effectiveEarCls === 'التهاب العظمة خلف الاذن' ||
-                effectiveMalnutritionCls === 'سوء تغذية شديد مصحوب بمضاعفات' ||
-                effectiveAnemiaCls === 'فقر دم شديد'
-            ) {
-                totalReferralCases_max = 1;
-            }
-            // --- END NEW KPI ---
 
         } else if (group.sectionKey) {
             const sectionData = formData[group.sectionKey] || {};
@@ -672,9 +639,6 @@ export const calculateScores = (formData) => {
     // --- THIS IS THE CRITICAL ADDITION ---
     // --- Add all the KPI and Hands-On scores that were missing ---
 
-    // --- LEGACY COMPATIBILITY: Keep old 'treatment_score' format for bulk upload logic ---
-    // scores.treatmentScoreForSave = currentTreatmentScore; // <-- *** THIS LINE WAS REMOVED (Part 1) ***
-
     // --- NEW HANDS-ON SKILL SCORES ---
     scores.handsOnWeight = { score: handsOnWeight_score, maxScore: handsOnWeight_max };
     scores.handsOnTemp = { score: handsOnTemp_score, maxScore: handsOnTemp_max };
@@ -685,28 +649,25 @@ export const calculateScores = (formData) => {
     scores.handsOnWFH = { score: handsOnWFH_score, maxScore: handsOnWFH_max };
     // --- END NEW HANDS-ON SKILL SCORES ---
 
-    // --- NEW KPI SCORES (Referral, Malaria, Malnutrition, Anemia) ---
-    scores.referralCaseCount = { score: totalReferralCases_max, maxScore: 1 };
-    scores.referralManagement = { score: scores['ref_treatment']?.score || 0, maxScore: scores['ref_treatment']?.maxScore || 0 };
+    // --- REVISED KPI SCORES (Malaria, Malnutrition, Anemia, Cough & Diarrhea) ---
     scores.malariaClassification = { score: totalCorrectFeverClassifications_Malaria, maxScore: totalFeverCases_Malaria };
     scores.malariaManagement = { score: scores['mal_treatment']?.score || 0, maxScore: scores['mal_treatment']?.maxScore || 0 };
     scores.malnutritionCaseCount = { score: totalMalnutritionCases_max, maxScore: 1 };
     scores.malnutritionManagement = { score: scores['nut_treatment']?.score || 0, maxScore: scores['nut_treatment']?.maxScore || 0 };
     scores.anemiaManagement = { score: scores['anemia_treatment']?.score || 0, maxScore: scores['anemia_treatment']?.maxScore || 0 };
     
-    // --- LEGACY KPI SCORES (for cough/diarrhea, which were already present) ---
-    const totalCoughCases = scores['symptom_cough']?.maxScore > 0 ? 1 : 0;
-    const totalCorrectCoughClassifications = scores['symptom_cough']?.score === 3 ? 1 : 0; // Assuming 3/3 is correct
-    // --- FIX IS HERE ---
-    scores.coughClassification = { score: totalCorrectCoughClassifications, maxScore: totalCoughCases };
-    // --- END FIX ---
+    // Cough & Pneumonia replaced with Respiratory Rate Calculation
+    const rrDenominator = formData.assessment_skills?.supervisor_confirms_cough === 'yes' ? 1 : 0;
+    const rrNumerator = (rrDenominator && formData.assessment_skills?.skill_check_rr === 'yes') ? 1 : 0;
+    scores.respiratoryRateCalculation = { score: rrNumerator, maxScore: rrDenominator };
     scores.pneumoniaManagement = { score: scores['pneu_treatment']?.score || 0, maxScore: scores['pneu_treatment']?.maxScore || 0 };
     
-    const totalDiarrheaCases = scores['symptom_diarrhea']?.maxScore > 0 ? 1 : 0;
-    const totalCorrectDiarrheaClassifications = scores['symptom_diarrhea']?.score === 3 ? 1 : 0; // Assuming 3/3 is correct
-    scores.diarrheaClassification = { score: totalCorrectDiarrheaClassifications, maxScore: totalDiarrheaCases };
+    // Diarrhea KPI replaced with Dehydration Assessment
+    const dehydDenominator = formData.assessment_skills?.supervisor_confirms_diarrhea === 'yes' ? 1 : 0;
+    const dehydNumerator = (dehydDenominator && formData.assessment_skills?.skill_check_dehydration === 'yes') ? 1 : 0;
+    scores.dehydrationAssessment = { score: dehydNumerator, maxScore: dehydDenominator };
     scores.diarrheaManagement = { score: scores['diar_treatment']?.score || 0, maxScore: scores['diar_treatment']?.maxScore || 0 };
-    // --- END NEW KPI SCORES ---
+    // --- END REVISED KPI SCORES ---
 
     return scores;
 };

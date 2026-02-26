@@ -15,7 +15,9 @@ import {
     deleteIMNCIVisitReport,
     listIMNCIVisitReports,
     saveEENCVisitReport,
-    deleteEENCVisitReport
+    deleteEENCVisitReport,
+    listMentorshipSessions, // Added for public fetch
+    listEENCVisitReports    // Added for public fetch
 } from '../../data';
 
 import {
@@ -913,11 +915,44 @@ const SkillsMentorshipView = ({
 
     const [localHealthFacilities, setLocalHealthFacilities] = useState(healthFacilities || []);
 
+    // --- NEW: Local State for direct Public Fetching ---
+    const [publicData, setPublicData] = useState({ submissions: null, imnci: null, eenc: null });
+    const [publicLoading, setPublicLoading] = useState(publicDashboardMode);
+
     useEffect(() => {
         if (healthFacilities) {
             setLocalHealthFacilities(healthFacilities);
         }
     }, [healthFacilities]);
+
+    // --- NEW: Fetch public data safely when accessed via direct public link ---
+    useEffect(() => {
+        if (publicDashboardMode) {
+            let isMounted = true;
+            const fetchPublic = async () => {
+                setPublicLoading(true);
+                try {
+                    // Safe fetching - pass 'server' to bypass standard rules if needed
+                    const [subs, imnci, eenc] = await Promise.all([
+                        typeof listMentorshipSessions === 'function' ? listMentorshipSessions('server').catch(() => []) : Promise.resolve([]),
+                        typeof listIMNCIVisitReports === 'function' ? listIMNCIVisitReports('server').catch(() => []) : Promise.resolve([]),
+                        typeof listEENCVisitReports === 'function' ? listEENCVisitReports('server').catch(() => []) : Promise.resolve([])
+                    ]);
+                    if (isMounted) {
+                        setPublicData({ submissions: subs || [], imnci: imnci || [], eenc: eenc || [] });
+                    }
+                } catch (e) {
+                    console.error("Failed fetching public data", e);
+                    if (isMounted) setPublicData({ submissions: [], imnci: [], eenc: [] });
+                } finally {
+                    if (isMounted) setPublicLoading(false);
+                }
+            };
+            fetchPublic();
+            return () => { isMounted = false; };
+        }
+    }, [publicDashboardMode]);
+
 
     const [viewingSubmission, setViewingSubmission] = useState(null);
     const [editingSubmission, setEditingSubmission] = useState(null);
@@ -941,8 +976,6 @@ const SkillsMentorshipView = ({
     const [isUpdatingWorker, setIsUpdatingWorker] = useState(false);
 
     const [isDraftsModalOpen, setIsDraftsModalOpen] = useState(false);
-    
-    // --- REMOVED: isAddFacilityModalOpen State ---
 
     const [isMothersFormModalOpen, setIsMothersFormModalOpen] = useState(false);
     const [isDashboardModalOpen, setIsDashboardModalOpen] = useState(false);
@@ -967,9 +1000,11 @@ const SkillsMentorshipView = ({
     }, [permissions, publicSubmissionMode, publicDashboardMode]);
     // -------------------------------------------------------------
 
+    // UPDATED to map correctly between authenticated and unauthenticated sets
     const processedSubmissions = useMemo(() => {
-        if (!skillMentorshipSubmissions) return [];
-        return skillMentorshipSubmissions.map(sub => ({
+        const sourceData = publicDashboardMode ? publicData.submissions : skillMentorshipSubmissions;
+        if (!sourceData) return [];
+        return sourceData.map(sub => ({
             id: sub.id,
             service: sub.serviceType,
             date: sub.effectiveDate ? new Date(sub.effectiveDate.seconds * 1000).toISOString().split('T')[0] : (sub.sessionDate || 'N/A'),
@@ -991,7 +1026,7 @@ const SkillsMentorshipView = ({
             sessionDate: sub.sessionDate || (sub.effectiveDate ? new Date(sub.effectiveDate.seconds * 1000).toISOString().split('T')[0] : null),
             fullData: sub 
         }));
-    }, [skillMentorshipSubmissions]);
+    }, [skillMentorshipSubmissions, publicDashboardMode, publicData.submissions]);
 
     // --- NEW: Calculate Worker History to pass to Form ---
     const workerHistory = useMemo(() => {
@@ -1015,9 +1050,12 @@ const SkillsMentorshipView = ({
         ).sort((a, b) => new Date(b.date) - new Date(a.date));
     }, [processedSubmissions, user, activeService]);
 
-
+    // UPDATED to map correctly between authenticated and unauthenticated sets
     const processedVisitReports = useMemo(() => {
-        const imnci = (imnciVisitReports || []).map(rep => ({
+        const rawImnci = publicDashboardMode ? publicData.imnci : imnciVisitReports;
+        const rawEenc = publicDashboardMode ? publicData.eenc : eencVisitReports;
+        
+        const imnci = (rawImnci || []).map(rep => ({
             id: rep.id,
             service: 'IMNCI',
             facilityId: rep.facilityId || null,
@@ -1032,7 +1070,7 @@ const SkillsMentorshipView = ({
             fullData: rep
         }));
         
-        const eenc = (eencVisitReports || []).map(rep => ({
+        const eenc = (rawEenc || []).map(rep => ({
             id: rep.id,
             service: 'EENC',
             facilityId: rep.facilityId || null,
@@ -1050,7 +1088,7 @@ const SkillsMentorshipView = ({
         const allReports = [...imnci, ...eenc];
         return allReports.filter(rep => rep.service === activeService);
 
-    }, [imnciVisitReports, eencVisitReports, activeService]);
+    }, [imnciVisitReports, eencVisitReports, activeService, publicDashboardMode, publicData]);
 
     const handleEditVisitReport = (reportId) => {
         const reportList = activeService === 'IMNCI' ? imnciVisitReports : eencVisitReports;
@@ -2152,37 +2190,44 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                             )}
 
                             {activeTab === 'dashboard' && (
-                                <MentorshipDashboard
-                                    allSubmissions={processedSubmissions}
-                                    visitReports={processedVisitReports}
-                                    STATE_LOCALITIES={STATE_LOCALITIES}
-                                    activeService={activeService}
-                                    
-                                    // Pass new props for status editing
-                                    canEditStatus={isFederalManager}
-                                    onUpdateStatus={handleChallengeStatusUpdate}
+                                publicLoading ? (
+                                    <div className="flex justify-center items-center p-12">
+                                        <Spinner />
+                                        <span className="ml-3 text-sky-700 font-medium">Loading Dashboard Data...</span>
+                                    </div>
+                                ) : (
+                                    <MentorshipDashboard
+                                        allSubmissions={processedSubmissions}
+                                        visitReports={processedVisitReports}
+                                        STATE_LOCALITIES={STATE_LOCALITIES}
+                                        activeService={activeService}
+                                        
+                                        // Pass new props for status editing
+                                        canEditStatus={isFederalManager}
+                                        onUpdateStatus={handleChallengeStatusUpdate}
 
-                                    activeState={activeDashboardState || selectedState}
-                                    onStateChange={(value) => {
-                                        setActiveDashboardState(value);
-                                        setActiveDashboardLocality("");
-                                        setActiveDashboardFacilityId("");
-                                        setActiveDashboardWorkerName("");
-                                    }}
-                                    activeLocality={activeDashboardLocality || selectedLocality}
-                                    onLocalityChange={(value) => {
-                                        setActiveDashboardLocality(value);
-                                        setActiveDashboardFacilityId("");
-                                        setActiveDashboardWorkerName("");
-                                    }}
-                                    activeFacilityId={activeDashboardFacilityId || selectedFacilityId}
-                                    onFacilityIdChange={(value) => {
-                                        setActiveDashboardFacilityId(value);
-                                        setActiveDashboardWorkerName("");
-                                    }}
-                                    activeWorkerName={activeDashboardWorkerName || selectedHealthWorkerName}
-                                    onWorkerNameChange={setActiveDashboardWorkerName}
-                                />
+                                        activeState={activeDashboardState || selectedState}
+                                        onStateChange={(value) => {
+                                            setActiveDashboardState(value);
+                                            setActiveDashboardLocality("");
+                                            setActiveDashboardFacilityId("");
+                                            setActiveDashboardWorkerName("");
+                                        }}
+                                        activeLocality={activeDashboardLocality || selectedLocality}
+                                        onLocalityChange={(value) => {
+                                            setActiveDashboardLocality(value);
+                                            setActiveDashboardFacilityId("");
+                                            setActiveDashboardWorkerName("");
+                                        }}
+                                        activeFacilityId={activeDashboardFacilityId || selectedFacilityId}
+                                        onFacilityIdChange={(value) => {
+                                            setActiveDashboardFacilityId(value);
+                                            setActiveDashboardWorkerName("");
+                                        }}
+                                        activeWorkerName={activeDashboardWorkerName || selectedHealthWorkerName}
+                                        onWorkerNameChange={setActiveDashboardWorkerName}
+                                    />
+                                )
                             )}
                         </div>
                     </div>
