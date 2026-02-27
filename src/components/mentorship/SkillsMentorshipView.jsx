@@ -272,14 +272,14 @@ const PostSaveModal = ({ isOpen, onClose, onSelect }) => {
 const VisitReportsTable = ({ reports, onEdit, onDelete, onView }) => {
     return (
         <div dir="ltr" className="p-4 overflow-x-auto border rounded-lg bg-white">
-            <table className="min-w-[900px] w-full border-collapse border border-gray-300">
+            <table className="w-full border-collapse border border-gray-300">
                 <thead className="bg-gray-50">
                     <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Facility</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">State</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Locality</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Visit Date</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300 w-16">Visit #</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Visit #</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Supervisor</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Action</th>
                     </tr>
@@ -290,12 +290,12 @@ const VisitReportsTable = ({ reports, onEdit, onDelete, onView }) => {
                     ) : (
                         reports.map(rep => (
                             <tr key={rep.id}>
-                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-left border border-gray-300">{rep.facilityName}</td>
-                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-left border border-gray-300">{STATE_LOCALITIES[rep.state]?.ar || rep.state}</td>
-                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-left border border-gray-300">{STATE_LOCALITIES[rep.state]?.localities.find(l => l.en === rep.locality)?.ar || rep.locality}</td>
+                                <td className="px-4 py-4 whitespace-normal break-words text-sm text-gray-500 text-left border border-gray-300">{rep.facilityName}</td>
+                                <td className="px-4 py-4 whitespace-normal break-words text-sm text-gray-500 text-left border border-gray-300">{STATE_LOCALITIES[rep.state]?.ar || rep.state}</td>
+                                <td className="px-4 py-4 whitespace-normal break-words text-sm text-gray-500 text-left border border-gray-300">{STATE_LOCALITIES[rep.state]?.localities.find(l => l.en === rep.locality)?.ar || rep.locality}</td>
                                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-left border border-gray-300">{rep.visitDate}</td>
                                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-center font-bold border border-gray-300">{rep.visitNumber || '-'}</td>
-                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-left border border-gray-300">{rep.mentorDisplay}</td>
+                                <td className="px-4 py-4 whitespace-normal break-words text-sm text-gray-500 text-left border border-gray-300">{rep.mentorDisplay}</td>
                                 <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-left border border-gray-300">
                                     <div className="flex gap-2">
                                         <Button size="sm" variant="info" onClick={() => onView(rep.id)}>View</Button>
@@ -446,15 +446,16 @@ const ViewVisitReportModal = ({ report, onClose }) => {
 // --- Mentorship Table Column Component ---
 const MentorshipTableColumns = () => (
     <>
-        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300 w-10">#</th>
+        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">#</th>
         <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Facility</th>
+        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Project / Partner</th>
         <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Health Worker/Service</th>
         <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Supervisor</th>
-        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300 w-24">Date</th>
-        <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300 w-16">Visit #</th>
-        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300 w-20">Status</th>
-        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-3D0 w-16">Score</th>
-        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-3D0 w-32">Action</th>
+        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Date</th>
+        <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Visit #</th>
+        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Status</th>
+        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Score</th>
+        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Action</th>
     </>
 );
 
@@ -537,6 +538,7 @@ const ViewSubmissionModal = ({ submission, onClose }) => {
                              <p><span className="font-medium text-gray-500">التاريخ:</span> <span className="font-semibold text-gray-900">{submission.sessionDate}</span></p>
                              <p><span className="font-medium text-gray-500">الولاية:</span> <span className="font-semibold text-gray-900">{STATE_LOCALITIES[submission.state]?.ar || submission.state}</span></p>
                              <p><span className="font-medium text-gray-500">رقم الزيارة:</span> <span className="font-semibold text-gray-900">{submission.visitNumber || 1}</span></p>
+                             {submission.project && submission.project !== 'N/A' && <p><span className="font-medium text-gray-500">المشروع / الشريك:</span> <span className="font-semibold text-gray-900">{submission.project}</span></p>}
                          </div>
                      </div>
                      
@@ -570,6 +572,7 @@ const ViewSubmissionModal = ({ submission, onClose }) => {
                         <p><span className="font-medium text-gray-500">الولاية:</span> <span className="font-semibold text-gray-900">{STATE_LOCALITIES[submission.state]?.ar || submission.state}</span></p>
                         <p><span className="font-medium text-gray-500">المحلية:</span> <span className="font-semibold text-gray-900">{STATE_LOCALITIES[submission.state]?.localities.find(l=>l.en === submission.locality)?.ar || submission.locality}</span></p>
                         <p><span className="font-medium text-gray-500">رقم الزيارة:</span> <span className="font-semibold text-gray-900">{submission.visitNumber || 1}</span></p>
+                        {submission.project && submission.project !== 'N/A' && <p><span className="font-medium text-gray-500">المشروع / الشريك:</span> <span className="font-semibold text-gray-900">{submission.project}</span></p>}
                     </div>
                 </div>
 
@@ -673,7 +676,8 @@ const MentorshipSubmissionsTable = ({
     submissions, activeService, onView, onEdit, onDelete,
     fetchSubmissions, isSubmissionsLoading,
     filterServiceType,
-    stateFilter, localityFilter, supervisorFilter, statusFilter
+    stateFilter, localityFilter, supervisorFilter, statusFilter, visitNumberFilter,
+    facilityFilter, workerFilter, projectFilter
 }) => {
     
     const handleAction = (action, submission) => {
@@ -708,18 +712,29 @@ const MentorshipSubmissionsTable = ({
         if (statusFilter) {
              filtered = filtered.filter(sub => sub.status === statusFilter);
         }
+        if (visitNumberFilter) {
+             filtered = filtered.filter(sub => String(sub.visitNumber) === String(visitNumberFilter));
+        }
+        if (facilityFilter) {
+            filtered = filtered.filter(sub => sub.facility === facilityFilter);
+        }
+        if (workerFilter) {
+            filtered = filtered.filter(sub => sub.staff === workerFilter);
+        }
+        if (projectFilter) {
+            filtered = filtered.filter(sub => sub.project === projectFilter);
+        }
         return filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
-    }, [submissions, activeService, filterServiceType, stateFilter, localityFilter, supervisorFilter, statusFilter]);
+    }, [submissions, activeService, filterServiceType, stateFilter, localityFilter, supervisorFilter, statusFilter, visitNumberFilter, facilityFilter, workerFilter, projectFilter]);
 
     return (
         <div dir="ltr" className="p-4"> 
-                {/* Table Container - Added overflow-x-auto and shadow for better UI */}
+                {/* Table Container - Removed forced constraints to allow wrapping */}
                 <div className="mt-6 w-full overflow-x-auto border border-gray-300 rounded-lg shadow-sm">
                      {isSubmissionsLoading ? (
                         <div className="flex justify-center p-8"><Spinner /></div>
                     ) : (
-                        // Added min-w-[1200px] so fixed columns render correctly on mobile
-                        <table className="min-w-[1200px] w-full border-collapse table-fixed" dir="ltr"> 
+                        <table className="w-full border-collapse" dir="ltr"> 
                             <thead className="bg-gray-50">
                                 <tr>
                                     <MentorshipTableColumns />
@@ -727,7 +742,7 @@ const MentorshipSubmissionsTable = ({
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {filteredSubmissions.length === 0 ? (
-                                    <tr><td colSpan="9" className="border border-gray-300"><EmptyState title="No Records Found" message="No mentorship visits matched the current filters." /></td></tr>
+                                    <tr><td colSpan="10" className="border border-gray-300"><EmptyState title="No Records Found" message="No mentorship visits matched the current filters." /></td></tr>
                                 ) : (
                                     filteredSubmissions.map((sub, index) => {
                                         const scoreData = sub.scores;
@@ -755,6 +770,15 @@ const MentorshipSubmissionsTable = ({
                                             {/* Facility - Allow wrapping */}
                                             <td className="px-2 py-2 text-xs text-gray-500 text-left border border-gray-300 break-words whitespace-normal">{sub.facility}</td>
                                             
+                                            {/* Project / Partner - Allow wrapping */}
+                                            <td className="px-2 py-2 text-xs text-gray-500 text-left border border-gray-300 break-words whitespace-normal">
+                                                {sub.project && sub.project !== 'N/A' ? (
+                                                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-50 text-purple-800">
+                                                        {sub.project}
+                                                    </span>
+                                                ) : '-'}
+                                            </td>
+                                            
                                             {/* Worker - Allow wrapping */}
                                             <td className="px-2 py-2 text-xs text-gray-500 text-left font-semibold border border-gray-300 break-words whitespace-normal">{workerDisplay}</td>
                                             
@@ -764,7 +788,7 @@ const MentorshipSubmissionsTable = ({
                                             {/* Date - No wrap */}
                                             <td className="px-2 py-2 whitespace-nowrap text-xs text-gray-500 text-left border border-gray-300">{sub.date}</td>
                                             
-                                            {/* NEW: Visit # Column */}
+                                            {/* Visit # Column */}
                                             <td className="px-2 py-2 whitespace-nowrap text-xs text-gray-900 text-center font-bold border border-gray-300">
                                                 {sub.visitNumber || '-'}
                                             </td>
@@ -985,48 +1009,112 @@ const SkillsMentorshipView = ({
  
     const formRef = useRef(null);
     
+    // --- FILTERS STATE ---
     const [stateFilter, setStateFilter] = useState('');
     const [localityFilter, setLocalityFilter] = useState('');
     const [supervisorFilter, setSupervisorFilter] = useState(''); 
     const [statusFilter, setStatusFilter] = useState('');
+    const [visitNumberFilter, setVisitNumberFilter] = useState(''); 
+    const [facilityFilter, setFacilityFilter] = useState('');
+    const [workerFilter, setWorkerFilter] = useState('');
+    const [projectFilter, setProjectFilter] = useState('');
 
     // --- NEW: Calculate permission to edit visit number ---
     const canEditVisitNumber = useMemo(() => {
         if (publicSubmissionMode || publicDashboardMode) return false;
-        // Check if user has Federal Manager scope or is explicitly a super user/federal manager
-        return permissions?.manageScope === 'federal' || 
+        // Check if user has advanced features permissions, Federal Manager scope, or is explicitly a super user/federal manager
+        return permissions?.canUseFederalManagerAdvancedFeatures || 
+               permissions?.canUseSuperUserAdvancedFeatures ||
+               permissions?.manageScope === 'federal' || 
                permissions?.role === 'super_user' || 
                permissions?.role === 'federal_manager';
     }, [permissions, publicSubmissionMode, publicDashboardMode]);
     // -------------------------------------------------------------
 
-    // UPDATED to map correctly between authenticated and unauthenticated sets
+    // UPDATED to map correctly between authenticated and unauthenticated sets AND extract project
     const processedSubmissions = useMemo(() => {
         const sourceData = publicDashboardMode ? publicData.submissions : skillMentorshipSubmissions;
         if (!sourceData) return [];
-        return sourceData.map(sub => ({
-            id: sub.id,
-            service: sub.serviceType,
-            date: sub.effectiveDate ? new Date(sub.effectiveDate.seconds * 1000).toISOString().split('T')[0] : (sub.sessionDate || 'N/A'),
-            effectiveDateTimestamp: sub.effectiveDate,
-            state: sub.state || 'N/A',
-            locality: sub.locality || 'N/A',
-            facility: sub.facilityName || 'N/A',
-            staff: sub.healthWorkerName || 'N/A',
-            supervisorEmail: sub.mentorEmail || null,
-            supervisorName: sub.mentorName || null,
-            supervisorDisplay: sub.mentorName || sub.mentorEmail || 'N/A',
-            facilityId: sub.facilityId || null,
-            scores: sub.scores || null,
-            status: sub.status || 'complete',
-            facilityType: sub.facilityType || null,
-            workerType: sub.workerType || null,
-            motherName: sub.motherName || null,
-            visitNumber: sub.visitNumber || null,
-            sessionDate: sub.sessionDate || (sub.effectiveDate ? new Date(sub.effectiveDate.seconds * 1000).toISOString().split('T')[0] : null),
-            fullData: sub 
-        }));
-    }, [skillMentorshipSubmissions, publicDashboardMode, publicData.submissions]);
+        
+        return sourceData.map(sub => {
+            // Find facility object to extract project/partner info dynamically
+            const fac = localHealthFacilities.find(f => f.id === sub.facilityId);
+            
+            // PRIORITIZE THE STANDARD 'project_name' KEY
+            const projectInfo = fac?.project_name || fac?.['المشروع'] || fac?.project || fac?.['الشركاء_الداعمين'] || fac?.['المنظمة_الداعمة'] || 'N/A';
+            
+            return {
+                id: sub.id,
+                service: sub.serviceType,
+                date: sub.effectiveDate ? new Date(sub.effectiveDate.seconds * 1000).toISOString().split('T')[0] : (sub.sessionDate || 'N/A'),
+                effectiveDateTimestamp: sub.effectiveDate,
+                state: sub.state || 'N/A',
+                locality: sub.locality || 'N/A',
+                facility: sub.facilityName || 'N/A',
+                staff: sub.healthWorkerName || 'N/A',
+                supervisorEmail: sub.mentorEmail || null,
+                supervisorName: sub.mentorName || null,
+                supervisorDisplay: sub.mentorName || sub.mentorEmail || 'N/A',
+                facilityId: sub.facilityId || null,
+                scores: sub.scores || null,
+                status: sub.status || 'complete',
+                facilityType: sub.facilityType || null,
+                workerType: sub.workerType || null,
+                motherName: sub.motherName || null,
+                visitNumber: sub.visitNumber || null,
+                sessionDate: sub.sessionDate || (sub.effectiveDate ? new Date(sub.effectiveDate.seconds * 1000).toISOString().split('T')[0] : null),
+                project: projectInfo, // Uses standard key
+                fullData: sub 
+            };
+        });
+    }, [skillMentorshipSubmissions, publicDashboardMode, publicData.submissions, localHealthFacilities]);
+
+    // Extract unique visit numbers for the filter dropdown
+    const uniqueVisitNumbers = useMemo(() => {
+        const numbers = new Set();
+        processedSubmissions.forEach(sub => {
+            if (sub.visitNumber) numbers.add(Number(sub.visitNumber));
+        });
+        return Array.from(numbers).sort((a, b) => a - b);
+    }, [processedSubmissions]);
+    
+    // Extract unique Facilities for filter dropdown
+    const uniqueFacilitiesList = useMemo(() => {
+        const facs = new Set();
+        processedSubmissions.forEach(sub => {
+            if ((!stateFilter || sub.state === stateFilter) && 
+                (!localityFilter || sub.locality === localityFilter)) {
+                if (sub.facility && sub.facility !== 'N/A') facs.add(sub.facility);
+            }
+        });
+        return Array.from(facs).sort();
+    }, [processedSubmissions, stateFilter, localityFilter]);
+
+    // Extract unique Workers for filter dropdown (UPDATED: now depends on State, Locality, and Facility)
+    const uniqueWorkersList = useMemo(() => {
+        const workers = new Set();
+        processedSubmissions.forEach(sub => {
+            if ((!stateFilter || sub.state === stateFilter) && 
+                (!localityFilter || sub.locality === localityFilter) &&
+                (!facilityFilter || sub.facility === facilityFilter)) {
+                if (sub.staff && sub.staff !== 'N/A') workers.add(sub.staff);
+            }
+        });
+        return Array.from(workers).sort();
+    }, [processedSubmissions, stateFilter, localityFilter, facilityFilter]);
+
+    // Extract unique Projects for filter dropdown (UPDATED: now depends on State, Locality, and Facility)
+    const uniqueProjectsList = useMemo(() => {
+        const projects = new Set();
+        processedSubmissions.forEach(sub => {
+            if ((!stateFilter || sub.state === stateFilter) && 
+                (!localityFilter || sub.locality === localityFilter) &&
+                (!facilityFilter || sub.facility === facilityFilter)) {
+                if (sub.project && sub.project !== 'N/A') projects.add(sub.project);
+            }
+        });
+        return Array.from(projects).sort();
+    }, [processedSubmissions, stateFilter, localityFilter, facilityFilter]);
 
     // --- NEW: Calculate Worker History to pass to Form ---
     const workerHistory = useMemo(() => {
@@ -1186,6 +1274,10 @@ const SkillsMentorshipView = ({
             setLocalityFilter('');
             setSupervisorFilter('');
             setStatusFilter('');
+            setVisitNumberFilter('');
+            setFacilityFilter('');
+            setWorkerFilter('');
+            setProjectFilter('');
         }
     }, [activeTab, publicDashboardMode]);
 
@@ -2081,16 +2173,37 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         
                         {activeTab !== 'dashboard' && !publicDashboardMode && (
                             <>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 border p-4 rounded-lg bg-gray-50">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6 border p-4 rounded-lg bg-gray-50">
                                     <FormGroup label="State" className="text-left" dir="ltr">
-                                        <Select value={stateFilter} onChange={(e) => { setStateFilter(e.target.value); setLocalityFilter(''); }}>
+                                        <Select value={stateFilter} onChange={(e) => { setStateFilter(e.target.value); setLocalityFilter(''); setFacilityFilter(''); setWorkerFilter(''); setProjectFilter(''); }}>
                                             {availableStates.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
                                         </Select>
                                     </FormGroup>
 
                                     <FormGroup label="Locality" className="text-left" dir="ltr">
-                                        <Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}>
+                                        <Select value={localityFilter} onChange={(e) => { setLocalityFilter(e.target.value); setFacilityFilter(''); setWorkerFilter(''); setProjectFilter(''); }} disabled={!stateFilter}>
                                              {availableLocalities.map(l => <option key={l.key} value={l.key}>{l.label}</option>)}
+                                        </Select>
+                                    </FormGroup>
+
+                                    <FormGroup label="Facility" className="text-left" dir="ltr">
+                                        <Select value={facilityFilter} onChange={(e) => { setFacilityFilter(e.target.value); setWorkerFilter(''); }}>
+                                            <option value="">All Facilities</option>
+                                            {uniqueFacilitiesList.map(f => <option key={f} value={f}>{f}</option>)}
+                                        </Select>
+                                    </FormGroup>
+
+                                    <FormGroup label="Health Worker" className="text-left" dir="ltr">
+                                        <Select value={workerFilter} onChange={(e) => setWorkerFilter(e.target.value)}>
+                                            <option value="">All Workers</option>
+                                            {uniqueWorkersList.map(w => <option key={w} value={w}>{w}</option>)}
+                                        </Select>
+                                    </FormGroup>
+
+                                    <FormGroup label="Project / Partner" className="text-left" dir="ltr">
+                                        <Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}>
+                                            <option value="">All Projects</option>
+                                            {uniqueProjectsList.map(p => <option key={p} value={p}>{p}</option>)}
                                         </Select>
                                     </FormGroup>
 
@@ -2111,6 +2224,15 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                             <option value="">All Statuses</option>
                                             <option value="complete">Complete</option>
                                             <option value="draft">Draft</option>
+                                        </Select>
+                                    </FormGroup>
+
+                                    <FormGroup label="Visit Number" className="text-left" dir="ltr">
+                                        <Select value={visitNumberFilter} onChange={(e) => setVisitNumberFilter(e.target.value)}>
+                                            <option value="">All Visits</option>
+                                            {uniqueVisitNumbers.map(num => (
+                                                <option key={num} value={num}>Visit {num}</option>
+                                            ))}
                                         </Select>
                                     </FormGroup>
                                 </div>
@@ -2162,6 +2284,10 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     localityFilter={localityFilter}
                                     supervisorFilter={supervisorFilter}
                                     statusFilter={statusFilter}
+                                    visitNumberFilter={visitNumberFilter}
+                                    facilityFilter={facilityFilter}
+                                    workerFilter={workerFilter}
+                                    projectFilter={projectFilter}
                                 />
                             )}
                             {activeTab === 'mothers_list' && !publicDashboardMode && (
@@ -2178,6 +2304,10 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     localityFilter={localityFilter}
                                     supervisorFilter={supervisorFilter}
                                     statusFilter={statusFilter}
+                                    visitNumberFilter={visitNumberFilter}
+                                    facilityFilter={facilityFilter}
+                                    workerFilter={workerFilter}
+                                    projectFilter={projectFilter}
                                 />
                             )}
                             {activeTab === 'visit_reports' && !publicDashboardMode && (

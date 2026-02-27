@@ -11,6 +11,7 @@ import {
   Title,
   Tooltip,
   Legend,
+  Filler 
 } from 'chart.js';
 
 import { 
@@ -28,6 +29,7 @@ import {
     RESUSCITATION_ITEMS 
 } from './EENCSkillsAssessmentForm.jsx';
 
+// Register Filler plugin
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -36,7 +38,8 @@ ChartJS.register(
   BarElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  Filler 
 );
 
 const SERVICE_TITLES = {
@@ -79,58 +82,118 @@ const EENC_SKILLS_LABELS = {
 
 // --- Components (ScoreText, KpiCard, etc.) ---
 const ScoreText = ({ value, showPercentage = true }) => {
-    let colorClass = 'text-gray-700';
+    let colorClass = 'text-slate-800';
     let text = 'N/A';
     if (value !== null && !isNaN(value) && isFinite(value)) {
         const percentage = Math.round(value * 100);
-        if (percentage >= 80) colorClass = 'text-green-600';
-        else if (percentage >= 50) colorClass = 'text-yellow-600';
-        else colorClass = 'text-red-600';
+        if (percentage >= 80) colorClass = 'text-emerald-700';
+        else if (percentage >= 50) colorClass = 'text-amber-600';
+        else colorClass = 'text-rose-700';
         text = showPercentage ? `${percentage}%` : percentage.toString();
     }
-    return (<span className={`font-bold text-sm ${colorClass}`}>{text}</span>);
+    return (<span className={`font-extrabold text-sm ${colorClass}`}>{text}</span>);
 };
 
 const KpiCard = ({ title, value, unit = '', scoreValue = null }) => (
-    <div className="bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200 text-center">
-        <h4 className="text-sm font-medium text-gray-500 mb-2 h-10 flex items-center justify-center" title={title}>{title}</h4>
-        <div className="flex items-baseline justify-center gap-1">
-            {scoreValue !== null ? <ScoreText value={scoreValue} /> : <span className="text-3xl font-bold text-sky-800">{value}</span>}
-            {unit && <span className="text-lg font-medium text-gray-600">{unit}</span>}
+    <div className="bg-white p-6 rounded-2xl shadow-md border border-black border-t-4 border-t-sky-600 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col justify-center items-center h-full">
+        <h4 className="text-xs sm:text-sm font-bold text-slate-600 mb-3 text-center uppercase tracking-wider" title={title}>{title}</h4>
+        <div className="flex items-baseline justify-center gap-1.5 mt-auto">
+            {scoreValue !== null ? <ScoreText value={scoreValue} /> : <span className="text-4xl font-black text-slate-800 tracking-tight">{value}</span>}
+            {unit && <span className="text-lg font-bold text-slate-500">{unit}</span>}
         </div>
     </div>
 );
 
 const KpiGridItem = ({ title, scoreValue }) => (
-    <div className="bg-gray-50 p-3 rounded-lg border text-center shadow-inner">
-        <h5 className="text-xs font-medium text-gray-500 mb-1 h-8 flex items-center justify-center" title={title}>{title}</h5>
-        <ScoreText value={scoreValue} />
+    <div className="bg-slate-50 p-4 rounded-xl border border-black text-center shadow-sm hover:border-sky-500 hover:bg-sky-50 transition-all flex flex-col justify-between h-full group">
+        <h5 className="text-xs font-bold text-slate-700 mb-3 leading-snug group-hover:text-sky-800" title={title}>{title}</h5>
+        <div className="mt-auto bg-white inline-block mx-auto px-4 py-1.5 rounded-lg border border-black shadow-sm">
+            <ScoreText value={scoreValue} />
+        </div>
     </div>
 );
 
 const KpiGridCard = ({ title, kpis, cols = 2 }) => (
-    <div className="bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200">
-        <h4 className="text-base font-bold text-sky-800 mb-3 text-center" title={title}>{title}</h4>
-        <div className={`grid grid-cols-${cols} gap-3`}>{kpis.map(kpi => (<KpiGridItem key={kpi.title} title={kpi.title} scoreValue={kpi.scoreValue} />))}</div>
+    <div className="bg-white p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300">
+        <h4 className="text-base font-extrabold text-slate-800 mb-5 text-center tracking-wide" title={title}>{title}</h4>
+        <div className={`grid grid-cols-${cols} gap-4`}>{kpis.map(kpi => (<KpiGridItem key={kpi.title} title={kpi.title} scoreValue={kpi.scoreValue} />))}</div>
     </div>
 );
 
 const DetailedKpiCard = ({ title, overallScore, kpis }) => (
-    <div className="bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200 h-full">
-        <div className="flex justify-between items-center mb-3">
-            <h4 className="text-base font-bold text-sky-800 text-left" title={title}>{title}</h4>
-            {overallScore !== null && (<div className="bg-gray-100 rounded-md px-2 py-0.5"><ScoreText value={overallScore} /></div>)}
+    <div className="bg-white p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col">
+        <div className="flex justify-between items-center mb-5 pb-3 border-b border-black">
+            <h4 className="text-base font-extrabold text-slate-800 text-left tracking-wide" title={title}>{title}</h4>
+            {overallScore !== null && (<div className="bg-sky-50 border border-black rounded-lg px-3 py-1 shadow-sm"><ScoreText value={overallScore} /></div>)}
         </div>
-        <div className="space-y-2">
+        <div className="space-y-3 flex-grow">
             {kpis.map(kpi => (
-                <div key={kpi.title} className="flex justify-between items-center bg-gray-50 p-2 rounded-lg border shadow-inner">
-                    <h5 className="text-xs font-medium text-gray-600 text-left">{kpi.title}</h5>
-                    <ScoreText value={kpi.scoreValue} />
+                <div key={kpi.title} className="flex justify-between items-center bg-slate-50 p-3.5 rounded-xl border border-black shadow-sm hover:border-sky-500 hover:bg-sky-50 transition-all duration-200 group">
+                    <h5 className="text-xs font-bold text-slate-700 text-left pr-4 group-hover:text-sky-800">{kpi.title}</h5>
+                    <div className="bg-white px-3 py-1 rounded-lg shadow-sm border border-black"><ScoreText value={kpi.scoreValue} /></div>
                 </div>
             ))}
         </div>
     </div>
 );
+
+// --- Shared Chart Options ---
+const getSharedChartOptions = () => ({
+    responsive: true, 
+    maintainAspectRatio: false,
+    animation: {
+        duration: 1000,
+        easing: 'easeOutQuart'
+    },
+    interaction: {
+        mode: 'index',
+        intersect: false,
+    },
+    plugins: { 
+        legend: { 
+            position: 'bottom', 
+            labels: { boxWidth: 10, usePointStyle: true, pointStyle: 'circle', padding: 20, font: { size: 12, family: "'Inter', sans-serif", weight: '600' }, color: '#334155' } 
+        }, 
+        tooltip: { 
+            backgroundColor: 'rgba(15, 23, 42, 0.95)', // Tailwind slate-900
+            titleFont: { size: 13, family: "'Inter', sans-serif", weight: 'bold' },
+            bodyFont: { size: 12, family: "'Inter', sans-serif" },
+            padding: 12,
+            cornerRadius: 8,
+            boxPadding: 6,
+            callbacks: {
+                label: (context) => ` ${context.dataset.label}: ${context.parsed.y}%`
+            }
+        } 
+    },
+    scales: { 
+        y: { 
+            beginAtZero: true, 
+            max: 100, 
+            grid: { color: '#e2e8f0', drawBorder: false }, // Visible slate grid
+            ticks: { callback: (value) => `${value}%`, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' }, padding: 8 } 
+        }, 
+        x: { 
+            grid: { display: false, drawBorder: false }, 
+            ticks: { maxTicksLimit: 10, autoSkip: true, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' }, padding: 8 } 
+        } 
+    }
+});
+
+const getLineDatasetStyle = (title, key, colors, data) => ({
+    label: title,
+    data: data,
+    borderColor: colors[key] || '#64748b', // slate-500
+    backgroundColor: (colors[key] || '#64748b') + '26', // 15% opacity for fill
+    fill: true,
+    tension: 0.4, // Smooth curves
+    pointRadius: 4,
+    pointHoverRadius: 6,
+    pointBackgroundColor: '#ffffff', // White center
+    pointBorderColor: colors[key] || '#64748b',
+    pointBorderWidth: 2,
+    borderWidth: 2.5, 
+});
 
 const KpiLineChart = ({ title, chartData, kpiKeys }) => {
     const colors = {
@@ -139,8 +202,7 @@ const KpiLineChart = ({ title, chartData, kpiKeys }) => {
         'Weight': '#06b6d4', 'Temp': '#3b82f6', 'Height': '#8b5cf6', 'Resp. Rate': '#14b8a6',
         'Dehydration': '#ec4899', 'Malaria RDT': '#d946ef', 'Ear Check': '#f97316',
         'Pneumonia Amox': '#a855f7', 'Diarrhea ORS': '#3b82f6', 'Diarrhea Zinc': '#eab308', 'Anemia Iron': '#dc2626',
-        'MUAC': '#0891b2', 'WFH': '#0284c7', 'Pallor': '#78716c',
-        'DangerSigns': '#f97316',
+        'MUAC': '#0891b2', 'WFH': '#0284c7', 'Pallor': '#78716c', 'DangerSigns': '#f97316',
         // EENC Colors
         'Preparation': '#10b981', 'Drying': '#3b82f6', 'Breathing Mgmt': '#f59e0b', 'Resuscitation': '#ef4444',
         'Hand Washing (1st)': '#0d9488', 'Hand Washing (2nd)': '#14b8a6', 'Sterile Gloves': '#2dd4bf',
@@ -158,23 +220,16 @@ const KpiLineChart = ({ title, chartData, kpiKeys }) => {
         'M: Knows Return': '#14b8a6', 'M: Knows Fluids': '#10b981', 'M: Time Spent': '#f59e0b', 'M: Assess Method': '#f97316',
         'M: Tx Given': '#ef4444', 'M: Comm Style': '#ec4899', 'M: What Learned': '#d946ef', 'M: Drug Avail': '#8b5cf6'
     };
+    
     const data = {
         labels: chartData.map(d => d.name),
-        datasets: kpiKeys.map(kpi => ({
-            label: kpi.title, data: chartData.map(d => d[kpi.key]),
-            borderColor: colors[kpi.key] || '#6b7280', backgroundColor: (colors[kpi.key] || '#6b7280') + '33',
-            fill: false, tension: 0.1, pointRadius: 2, borderWidth: 2,
-        })),
+        datasets: kpiKeys.map(kpi => getLineDatasetStyle(kpi.title, kpi.key, colors, chartData.map(d => d[kpi.key]))),
     };
-    const options = {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, fontSize: 10 } }, tooltip: { mode: 'index', intersect: false } },
-        scales: { y: { beginAtZero: true, max: 100, ticks: { callback: (value) => `${value}%` } }, x: { ticks: { maxTicksLimit: 10, autoSkip: true } } },
-    };
+    
     return (
-        <div className="bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200 h-full">
-            <h4 className="text-base font-bold text-sky-800 mb-3 text-center">{title}</h4>
-            <div className="relative h-[280px]">{chartData.length > 0 ? <Line options={options} data={data} /> : <div className="flex items-center justify-center h-full text-gray-500">No data available.</div>}</div>
+        <div className="bg-white p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col">
+            <h4 className="text-base font-extrabold text-slate-800 mb-5 text-center tracking-wide">{title}</h4>
+            <div className="relative flex-grow min-h-[250px]">{chartData.length > 0 ? <Line options={getSharedChartOptions()} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">No data available.</div>}</div>
         </div>
     );
 };
@@ -182,39 +237,78 @@ const KpiLineChart = ({ title, chartData, kpiKeys }) => {
 const KpiCardWithChart = ({ title, kpis, chartData, kpiKeys, cols = 2 }) => {
     const colors = { 
         'Overall': '#0ea5e9', 'Assessment': '#10b981', 'Decision': '#f59e0b', 'Treatment': '#ef4444', 
-        'Pallor': '#78716c',
+        'Pallor': '#78716c', 'Anemia Mgmt': '#dc2626',
         'Resp. Rate': '#14b8a6', 'Dehydration': '#ec4899', 
         'Malaria RDT': '#d946ef', 'Ear Check': '#f97316',
         'Pneumonia Amox': '#a855f7', 'Diarrhea ORS': '#3b82f6', 'Diarrhea Zinc': '#eab308', 'Anemia Iron': '#dc2626'
     };
-    const data = { labels: chartData.map(d => d.name), datasets: kpiKeys.map(kpi => ({ label: kpi.title, data: chartData.map(d => d[kpi.key]), borderColor: colors[kpi.key] || '#6b7280', backgroundColor: (colors[kpi.key] || '#6b7280') + '33', fill: false, tension: 0.1, pointRadius: 1, borderWidth: 2 })) };
-    const options = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, fontSize: 10 } }, tooltip: { mode: 'index', intersect: false } }, scales: { y: { beginAtZero: true, max: 100, ticks: { callback: (v) => `${v}%` } }, x: { ticks: { maxTicksLimit: 10, autoSkip: true } } } };
+    
+    const data = { 
+        labels: chartData.map(d => d.name), 
+        datasets: kpiKeys.map(kpi => getLineDatasetStyle(kpi.title, kpi.key, colors, chartData.map(d => d[kpi.key])))
+    };
+
     return (
-        <div className="bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200 flex flex-col h-full">
-            <h4 className="text-base font-bold text-sky-800 mb-3 text-center" title={title}>{title}</h4>
-            <div className={`grid grid-cols-${cols} gap-3 mb-4`}>{kpis.map(kpi => (<KpiGridItem key={kpi.title} title={kpi.title} scoreValue={kpi.scoreValue} />))}</div>
-            <div className="relative flex-grow min-h-[200px]">{chartData.length > 0 ? <Line options={options} data={data} /> : <div className="flex items-center justify-center h-full text-gray-500">No data available.</div>}</div>
+        <div className="bg-white p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 flex flex-col h-full">
+            <h4 className="text-base font-extrabold text-slate-800 mb-5 text-center tracking-wide" title={title}>{title}</h4>
+            <div className={`grid grid-cols-${cols} gap-4 mb-6`}>{kpis.map(kpi => (<KpiGridItem key={kpi.title} title={kpi.title} scoreValue={kpi.scoreValue} />))}</div>
+            <div className="relative flex-grow min-h-[200px]">{chartData.length > 0 ? <Line options={getSharedChartOptions()} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">No data available.</div>}</div>
         </div>
     );
 };
 
 const KpiBarChart = ({ title, chartData, dataKey = 'avgOverall' }) => {
-    const getBarColor = (value) => { if (value >= 80) return '#10b981'; if (value >= 50) return '#f59e0b'; if (value < 50) return '#ef4444'; return '#6b7280'; };
+    const getBarColor = (value) => { if (value >= 80) return '#10b981'; if (value >= 50) return '#f59e0b'; return '#ef4444'; };
+    const getHoverColor = (value) => { if (value >= 80) return '#059669'; if (value >= 50) return '#d97706'; return '#dc2626'; };
+
     const data = { 
         labels: chartData.map(d => d.stateName), 
         datasets: [{ 
             label: 'Value', 
             data: chartData.map(d => d[dataKey] ? Math.round(d[dataKey] * (dataKey === 'count' ? 1 : 100)) : null), 
             backgroundColor: chartData.map(d => dataKey === 'count' ? '#3b82f6' : getBarColor(d[dataKey] ? d[dataKey] * 100 : 0)), 
-            borderColor: '#ffffff', borderWidth: 1 
+            hoverBackgroundColor: chartData.map(d => dataKey === 'count' ? '#2563eb' : getHoverColor(d[dataKey] ? d[dataKey] * 100 : 0)), 
+            borderRadius: 6,
+            borderSkipped: false,
+            barPercentage: 0.6,
         }] 
     };
-    const options = { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.raw}${dataKey === 'count' ? '' : '%'}` } } }, scales: { x: { beginAtZero: true, max: dataKey === 'count' ? undefined : 100, ticks: { callback: (v) => `${v}${dataKey === 'count' ? '' : '%'}` } }, y: { ticks: { autoSkip: false, font: { size: 10 } } } } };
-    const chartHeight = Math.max(280, chartData.length * 25);
+    
+    const options = { 
+        indexAxis: 'y', 
+        responsive: true, 
+        maintainAspectRatio: false, 
+        animation: { duration: 1000, easing: 'easeOutQuart' },
+        plugins: { 
+            legend: { display: false }, 
+            tooltip: { 
+                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                titleFont: { size: 13, family: "'Inter', sans-serif" },
+                bodyFont: { size: 12, family: "'Inter', sans-serif", weight: 'bold' },
+                padding: 10,
+                cornerRadius: 8,
+                callbacks: { label: (c) => `${c.dataset.label}: ${c.raw}${dataKey === 'count' ? '' : '%'}` } 
+            } 
+        }, 
+        scales: { 
+            x: { 
+                beginAtZero: true, 
+                max: dataKey === 'count' ? undefined : 100, 
+                grid: { color: '#e2e8f0', drawBorder: false },
+                ticks: { callback: (v) => `${v}${dataKey === 'count' ? '' : '%'}`, color: '#475569', font: { family: "'Inter', sans-serif", weight: '500' } } 
+            }, 
+            y: { 
+                grid: { display: false, drawBorder: false },
+                ticks: { autoSkip: false, color: '#334155', font: { size: 12, family: "'Inter', sans-serif", weight: 'bold' } } 
+            } 
+        } 
+    };
+    const chartHeight = Math.max(300, chartData.length * 40); 
+    
     return (
-        <div className="bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200">
-            <h4 className="text-base font-bold text-sky-800 mb-3 text-center">{title}</h4>
-            <div className="relative" style={{ height: `${chartHeight}px` }}>{chartData.length > 0 ? <Bar options={options} data={data} /> : <div className="flex items-center justify-center h-full text-gray-500">No data available.</div>}</div>
+        <div className="bg-white p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300">
+            <h4 className="text-base font-extrabold text-slate-800 mb-5 text-center tracking-wide">{title}</h4>
+            <div className="relative" style={{ height: `${chartHeight}px` }}>{chartData.length > 0 ? <Bar options={options} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">No data available.</div>}</div>
         </div>
     );
 };
@@ -222,44 +316,42 @@ const KpiBarChart = ({ title, chartData, dataKey = 'avgOverall' }) => {
 const CompactSkillRow = ({ label, stats }) => {
     const yes = stats?.yes || 0; const no = stats?.no || 0; const total = yes + no; const percentage = total > 0 ? (yes / total) : null;
     return (
-        <tr className="bg-white hover:bg-gray-50">
-            <td className="p-1.5 text-xs font-medium text-gray-700 border border-gray-300 w-3/5">{label}</td>
-            <td className="p-1.5 text-xs font-semibold text-gray-800 border border-gray-300 w-1/5 text-center">{yes} / {total}</td>
-            <td className="p-1.5 border border-gray-300 w-1/5 text-center"><ScoreText value={percentage} /></td>
+        <tr className="bg-white hover:bg-sky-50 transition-colors duration-150 group border-b border-black">
+            <td className="p-3 text-xs font-bold text-slate-700 w-3/5 group-hover:text-sky-800">{label}</td>
+            <td className="p-3 text-xs font-bold text-slate-600 border-l border-black w-1/5 text-center">{yes} / {total}</td>
+            <td className="p-3 border-l border-black w-1/5 text-center bg-slate-50/50 group-hover:bg-sky-100/50"><ScoreText value={percentage} /></td>
         </tr>
     );
 };
 
 const CompactSkillsTable = ({ overallKpis }) => {
     const skillStats = overallKpis?.skillStats;
-    if (!overallKpis || !skillStats || Object.keys(skillStats).length === 0) return (<div className="bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200 text-center text-gray-500">No detailed skill data available.</div>);
+    if (!overallKpis || !skillStats || Object.keys(skillStats).length === 0) return (<div className="bg-white p-8 rounded-2xl shadow-md border border-black text-center text-slate-500 font-bold">No detailed skill data available.</div>);
     
     const subgroupScoreMap = { vitalSigns: overallKpis.avgVitalSigns, dangerSigns: overallKpis.avgDangerSigns, mainSymptoms: overallKpis.avgMainSymptoms, malnutrition: overallKpis.avgMalnutrition, anemia: overallKpis.avgAnemia, immunization: overallKpis.avgImmunization, otherProblems: overallKpis.avgOtherProblems, symptom_cough: overallKpis.avgSymptomCough, symptom_diarrhea: overallKpis.avgSymptomDiarrhea, symptom_fever: overallKpis.avgSymptomFever, symptom_ear: overallKpis.avgSymptomEar, ref_treatment: overallKpis.avgReferralManagement, pneu_treatment: overallKpis.avgPneumoniaManagement, diar_treatment: overallKpis.avgDiarrheaManagement, mal_treatment: overallKpis.avgMalariaManagement, nut_treatment: overallKpis.avgMalnutritionManagement, anemia_treatment: overallKpis.avgAnemiaManagement, dyst_treatment: overallKpis.avgDystTreatment, ear_treatment: overallKpis.avgEarTreatment, fu_treatment: overallKpis.avgFuTreatment };
     const SKILL_LABEL_MAP = { 'skill_ask_cough': 'هل سأل عن وجود الكحة أو ضيق التنفس', 'skill_check_rr': 'هل قاس معدل التنفس بصورة صحيحة', 'skill_classify_cough': 'هل صنف الكحة بصورة صحيحة', 'skill_ask_diarrhea': 'هل سأل عن وجود الاسهال', 'skill_check_dehydration': 'هل قيم فقدان السوائل بصورة صحيحة', 'skill_classify_diarrhea': 'هل صنف الاسهال بصورة صحيحة', 'skill_ask_fever': 'هل سأل عن وجود الحمى', 'skill_check_rdt': 'هل أجرى فحص الملاريا السريع بصورة صحيحة', 'skill_classify_fever': 'هل صنف الحمى بصورة صحيحة', 'skill_ask_ear': 'هل سأل عن وجود مشكلة في الأذن', 'skill_check_ear': 'هل فحص الفحص ورم مؤلم خلف الأذن', 'skill_classify_ear': 'هل صنف مشكلة الأذن بصورة صحيحة' };
     
     return (
-        <div className="bg-white rounded-lg shadow-lg border-2 border-gray-200" dir="rtl">
+        <div className="bg-white rounded-2xl shadow-md border border-black overflow-hidden" dir="rtl">
             <table className="w-full border-collapse">
-                <thead className="sticky top-0 z-10"><tr className="bg-gray-50"><th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-3/5 text-right">المهارة</th><th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-1/5 text-center">العدد (نعم / الإجمالي)</th><th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-1/5 text-center">النسبة</th></tr></thead>
+                <thead className="sticky top-0 z-10 shadow-sm border-b border-black"><tr className="bg-slate-200"><th className="p-4 text-xs font-extrabold text-slate-800 w-3/5 text-right tracking-wide uppercase">المهارة</th><th className="p-4 text-xs font-extrabold text-slate-800 border-r border-black w-1/5 text-center tracking-wide uppercase">العدد (نعم / الإجمالي)</th><th className="p-4 text-xs font-extrabold text-slate-800 border-r border-black w-1/5 text-center tracking-wide uppercase">النسبة</th></tr></thead>
                 <tbody>
                     {IMNCI_FORM_STRUCTURE.map(group => {
                         let groupAggregateScore = null; 
                         
-                        // --- Mapping Logic ---
                         if (group.group.includes('التقييم والتصنيف')) groupAggregateScore = overallKpis.avgAssessment; 
                         else if (group.isDecisionSection) groupAggregateScore = overallKpis.avgDecision; 
                         else if (group.group.includes('العلاج والنصح')) groupAggregateScore = overallKpis.avgTreatment;
-                        // Added Fixes:
                         else if (group.group.includes('القياسات')) groupAggregateScore = overallKpis.avgMeasurementSkills;
                         else if (group.group.includes('الخطورة')) groupAggregateScore = overallKpis.avgDangerSigns;
 
                         return (
                             <React.Fragment key={group.group}>
-                                <tr className="bg-sky-900 text-white"><td className="p-1 text-sm font-bold text-right border border-gray-300" colSpan="2">{group.group}</td><td className="p-1 border border-gray-300 text-center">{groupAggregateScore !== null && (<div className="bg-white rounded-md px-2 py-0.5 inline-block"><ScoreText value={groupAggregateScore} /></div>)}</td></tr>
+                                <tr className="bg-slate-800 text-white border-b border-black"><td className="p-3 text-sm font-bold text-right tracking-wide" colSpan="2">{group.group}</td><td className="p-3 text-center border-r border-black">{groupAggregateScore !== null && (<div className="bg-white/10 backdrop-blur-md rounded-lg px-3 py-1 inline-block border border-black shadow-inner"><ScoreText value={groupAggregateScore} showPercentage={true}/></div>)}</td></tr>
                                 {group.subgroups?.map(subgroup => {
-                                    if (subgroup.isSymptomGroupContainer) { return subgroup.symptomGroups.map(symptomGroup => { const symptomKey = symptomGroup.mainSkill.scoreKey; const symptomScore = subgroupScoreMap[symptomKey]; let skillsToRender = []; if (symptomKey === 'symptom_cough') skillsToRender = ['skill_ask_cough', 'skill_check_rr', 'skill_classify_cough']; else if (symptomKey === 'symptom_diarrhea') skillsToRender = ['skill_ask_diarrhea', 'skill_check_dehydration', 'skill_classify_diarrhea']; else if (symptomKey === 'symptom_fever') skillsToRender = ['skill_ask_fever', 'skill_check_rdt', 'skill_classify_fever']; else if (symptomKey === 'symptom_ear') skillsToRender = ['skill_ask_ear', 'skill_check_ear', 'skill_classify_ear']; return (<React.Fragment key={symptomKey}><tr className="bg-sky-700 text-white"><td className="p-1.5 text-xs font-bold text-right border border-gray-300" colSpan="2">{symptomGroup.mainSkill.label}</td><td className="p-1.5 border border-gray-300 text-center">{symptomScore !== null && (<div className="bg-white rounded-md px-2 py-0.5 inline-block"><ScoreText value={symptomScore} /></div>)}</td></tr>{skillsToRender.map(skillKey => (<CompactSkillRow key={skillKey} label={SKILL_LABEL_MAP[skillKey]} stats={skillStats[skillKey]} />))}</React.Fragment>); }); }
+                                    if (subgroup.isSymptomGroupContainer) { return subgroup.symptomGroups.map(symptomGroup => { const symptomKey = symptomGroup.mainSkill.scoreKey; const symptomScore = subgroupScoreMap[symptomKey]; let skillsToRender = []; if (symptomKey === 'symptom_cough') skillsToRender = ['skill_ask_cough', 'skill_check_rr', 'skill_classify_cough']; else if (symptomKey === 'symptom_diarrhea') skillsToRender = ['skill_ask_diarrhea', 'skill_check_dehydration', 'skill_classify_diarrhea']; else if (symptomKey === 'symptom_fever') skillsToRender = ['skill_ask_fever', 'skill_check_rdt', 'skill_classify_fever']; else if (symptomKey === 'symptom_ear') skillsToRender = ['skill_ask_ear', 'skill_check_ear', 'skill_classify_ear']; return (<React.Fragment key={symptomKey}><tr className="bg-sky-600 text-white border-b border-black"><td className="p-2.5 text-xs font-bold text-right" colSpan="2">{symptomGroup.mainSkill.label}</td><td className="p-2.5 text-center border-r border-black">{symptomScore !== null && (<div className="bg-white/10 backdrop-blur-md rounded-md px-2 py-0.5 inline-block border border-black"><ScoreText value={symptomScore} showPercentage={true} /></div>)}</td></tr>{skillsToRender.map(skillKey => (<CompactSkillRow key={skillKey} label={SKILL_LABEL_MAP[skillKey]} stats={skillStats[skillKey]} />))}</React.Fragment>); }); }
                                     const subgroupKey = subgroup.scoreKey || subgroup.subgroupTitle; const subgroupScore = subgroup.scoreKey ? subgroupScoreMap[subgroupKey] : null;
-                                    return (<React.Fragment key={subgroup.subgroupTitle}><tr className="bg-sky-700 text-white"><td className="p-1.5 text-xs font-bold text-right border border-gray-300" colSpan="2">{subgroup.subgroupTitle}</td><td className="p-1.5 border border-gray-300 text-center">{subgroupScore !== null && (<div className="bg-white rounded-md px-2 py-0.5 inline-block"><ScoreText value={subgroupScore} /></div>)}</td></tr>{subgroup.skills?.map(skill => (<CompactSkillRow key={skill.key} label={skill.label} stats={skillStats[skill.key]} />))}</React.Fragment>);
+                                    return (<React.Fragment key={subgroup.subgroupTitle}><tr className="bg-sky-600 text-white border-b border-black"><td className="p-2.5 text-xs font-bold text-right" colSpan="2">{subgroup.subgroupTitle}</td><td className="p-2.5 text-center border-r border-black">{subgroupScore !== null && (<div className="bg-white/10 backdrop-blur-md rounded-md px-2 py-0.5 inline-block border border-black"><ScoreText value={subgroupScore} showPercentage={true}/></div>)}</td></tr>{subgroup.skills?.map(skill => (<CompactSkillRow key={skill.key} label={skill.label} stats={skillStats[skill.key]} />))}</React.Fragment>);
                                 })}
                                 {group.isDecisionSection && (<CompactSkillRow label="هل يتطابق قرار العامل الصحي مع المشرف؟" stats={skillStats['decisionMatches']} />)}
                             </React.Fragment>
@@ -272,16 +364,16 @@ const CompactSkillsTable = ({ overallKpis }) => {
 };
 const EENCCompactSkillRow = ({ label, stats }) => {
     const yes = stats?.yes || 0; const partial = stats?.partial || 0; const no = stats?.no || 0; const totalResponses = yes + partial + no; const score = (yes * 2) + (partial * 1); const maxScore = totalResponses * 2; const percentage = maxScore > 0 ? (score / maxScore) : null;
-    return (<tr className="bg-white hover:bg-gray-50"><td className="p-1.5 text-xs font-medium text-gray-700 border border-gray-300 w-3/5">{label}</td><td className="p-1.5 text-xs font-semibold text-gray-800 border border-gray-300 w-1/5 text-center"><span title="نعم">{yes}</span> / <span title="جزئياً">{partial}</span> / <span title="لا">{no}</span></td><td className="p-1.5 border border-gray-300 w-1/5 text-center"><ScoreText value={percentage} /></td></tr>);
+    return (<tr className="bg-white hover:bg-sky-50 transition-colors duration-150 group border-b border-black"><td className="p-3 text-xs font-bold text-slate-700 w-3/5 group-hover:text-sky-800">{label}</td><td className="p-3 text-xs font-bold text-slate-600 border-l border-black w-1/5 text-center"><span title="نعم" className="text-emerald-600">{yes}</span> / <span title="جزئياً" className="text-amber-500">{partial}</span> / <span title="لا" className="text-rose-600">{no}</span></td><td className="p-3 border-l border-black w-1/5 text-center bg-slate-50/50 group-hover:bg-sky-100/50"><ScoreText value={percentage} /></td></tr>);
 };
 
 const EENCCompactSkillsTable = ({ overallKpis }) => {
     const skillStats = overallKpis?.skillStats;
-    if (!overallKpis || !skillStats || Object.keys(skillStats).length === 0) return (<div className="bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200 text-center text-gray-500">No detailed EENC skill data available.</div>);
+    if (!overallKpis || !skillStats || Object.keys(skillStats).length === 0) return (<div className="bg-white p-8 rounded-2xl shadow-md border border-black text-center text-slate-500 font-bold">No detailed EENC skill data available.</div>);
     const sections = [{ title: 'تحضيرات ما قبل الولادة', items: PREPARATION_ITEMS, score: overallKpis.avgPreparation }, { title: 'التجفيف، التحفيز، التدفئة والشفط', items: DRYING_STIMULATION_ITEMS, score: overallKpis.avgDrying }, { title: 'متابعة طفل يتنفس طبيعياً', items: NORMAL_BREATHING_ITEMS, score: overallKpis.avgNormalBreathing }, { title: 'إنعاش الوليد (الدقيقة الذهبية)', items: RESUSCITATION_ITEMS, score: overallKpis.avgResuscitation }];
     return (
-        <div className="bg-white rounded-lg shadow-lg border-2 border-gray-200" dir="rtl">
-            <table className="w-full border-collapse"><thead className="sticky top-0 z-10"><tr className="bg-gray-50"><th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-3/5 text-right">المهارة (EENC)</th><th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-1/5 text-center">العدد (نعم / جزئياً / لا)</th><th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-1/5 text-center">النسبة</th></tr></thead><tbody>{sections.map(section => { const hasData = section.items.some(item => skillStats[item.key] && (skillStats[item.key].yes > 0 || skillStats[item.key].partial > 0 || skillStats[item.key].no > 0)); if (!hasData) return null; return (<React.Fragment key={section.title}><tr className="bg-sky-900 text-white"><td className="p-1 text-sm font-bold text-right border border-gray-300" colSpan="2">{section.title}</td><td className="p-1 border border-gray-300 text-center">{section.score !== null && (<div className="bg-white rounded-md px-2 py-0.5 inline-block"><ScoreText value={section.score} /></div>)}</td></tr>{section.items.map(item => (<EENCCompactSkillRow key={item.key} label={item.label} stats={skillStats[item.key]} />))}</React.Fragment>); })}</tbody></table>
+        <div className="bg-white rounded-2xl shadow-md border border-black overflow-hidden" dir="rtl">
+            <table className="w-full border-collapse"><thead className="sticky top-0 z-10 shadow-sm border-b border-black"><tr className="bg-slate-200"><th className="p-4 text-xs font-extrabold text-slate-800 w-3/5 text-right uppercase tracking-wide">المهارة (EENC)</th><th className="p-4 text-xs font-extrabold text-slate-800 border-r border-black w-1/5 text-center uppercase tracking-wide">العدد (نعم / جزئياً / لا)</th><th className="p-4 text-xs font-extrabold text-slate-800 border-r border-black w-1/5 text-center uppercase tracking-wide">النسبة</th></tr></thead><tbody>{sections.map(section => { const hasData = section.items.some(item => skillStats[item.key] && (skillStats[item.key].yes > 0 || skillStats[item.key].partial > 0 || skillStats[item.key].no > 0)); if (!hasData) return null; return (<React.Fragment key={section.title}><tr className="bg-slate-800 text-white border-b border-black"><td className="p-3 text-sm font-bold text-right tracking-wide" colSpan="2">{section.title}</td><td className="p-3 text-center border-r border-black">{section.score !== null && (<div className="bg-white/10 backdrop-blur-md rounded-lg px-3 py-1 inline-block border border-black shadow-inner"><ScoreText value={section.score} showPercentage={true}/></div>)}</td></tr>{section.items.map(item => (<EENCCompactSkillRow key={item.key} label={item.label} stats={skillStats[item.key]} />))}</React.Fragment>); })}</tbody></table>
         </div>
     );
 };
@@ -321,23 +413,23 @@ const IMNCI_MOTHER_SURVEY_ITEMS = [
 
 const MothersCompactSkillsTable = ({ motherKpis, serviceType }) => {
     const skillStats = motherKpis?.skillStats;
-    if (!motherKpis || !skillStats) return (<div className="bg-white p-4 rounded-lg shadow-lg border-2 border-gray-200 text-center text-gray-500">No mother survey data available.</div>);
+    if (!motherKpis || !skillStats) return (<div className="bg-white p-8 rounded-2xl shadow-md border border-black text-center text-slate-500 font-bold">No mother survey data available.</div>);
     const items = serviceType === 'IMNCI' ? IMNCI_MOTHER_SURVEY_ITEMS : EENC_MOTHER_SURVEY_ITEMS;
 
     return (
-        <div className="bg-white rounded-lg shadow-lg border-2 border-gray-200" dir="rtl">
+        <div className="bg-white rounded-2xl shadow-md border border-black overflow-hidden" dir="rtl">
             <table className="w-full border-collapse">
-                <thead className="sticky top-0 z-10">
-                    <tr className="bg-gray-50">
-                        <th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-3/5 text-right">السؤال (استبيان الأم)</th>
-                        <th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-1/5 text-center">العدد (نعم / الإجمالي)</th>
-                        <th className="p-1.5 text-xs font-bold text-gray-600 border border-gray-300 w-1/5 text-center">النسبة</th>
+                <thead className="sticky top-0 z-10 shadow-sm border-b border-black">
+                    <tr className="bg-slate-200">
+                        <th className="p-4 text-xs font-extrabold text-slate-800 w-3/5 text-right tracking-wide uppercase">السؤال (استبيان الأم)</th>
+                        <th className="p-4 text-xs font-extrabold text-slate-800 border-r border-black w-1/5 text-center tracking-wide uppercase">العدد (نعم / الإجمالي)</th>
+                        <th className="p-4 text-xs font-extrabold text-slate-800 border-r border-black w-1/5 text-center tracking-wide uppercase">النسبة</th>
                     </tr>
                 </thead>
                 <tbody>
                     {items.map(group => (
                         <React.Fragment key={group.title}>
-                            <tr className="bg-sky-900 text-white"><td className="p-1 text-sm font-bold text-right border border-gray-300" colSpan="3">{group.title}</td></tr>
+                            <tr className="bg-slate-800 text-white border-b border-black"><td className="p-3 text-sm font-bold text-right tracking-wide" colSpan="3">{group.title}</td></tr>
                             {group.items.map(item => (<CompactSkillRow key={item.key} label={item.label} stats={skillStats[item.key]} />))}
                         </React.Fragment>
                     ))}
@@ -349,8 +441,8 @@ const MothersCompactSkillsTable = ({ motherKpis, serviceType }) => {
 
 const FilterSelect = ({ label, value, onChange, options, disabled = false, defaultOption }) => (
     <div>
-        <label htmlFor={label} className="block text-sm font-medium text-gray-700">{label}</label>
-        <select id={label} name={label} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md">
+        <label htmlFor={label} className="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">{label}</label>
+        <select id={label} name={label} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} className="block w-full pl-4 pr-10 py-3 text-sm font-bold border border-black focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-xl shadow-sm bg-white hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
             <option value="">{defaultOption}</option>
             {options.map(option => (<option key={option.key || option} value={option.key || option}>{option.name || option}</option>))}
         </select>
@@ -373,11 +465,8 @@ const MentorshipDashboard = ({
     }, [visitReports]);
 
     const handleLocalUpdate = (reportId, challengeId, newValue, fieldName) => {
-        // 1. Update local state immediately
         const key = `${reportId}_${challengeId}_${fieldName}`;
         setLocalStatusUpdates(prev => ({ ...prev, [key]: newValue }));
-        
-        // 2. Call the parent handler to trigger DB update
         onUpdateStatus(reportId, challengeId, newValue, fieldName);
     };
 
@@ -444,20 +533,9 @@ const MentorshipDashboard = ({
                 r.fullData.challenges_table.forEach(ch => {
                     if (ch.problem) {
                         problemsList.push({
-                            reportId: r.id, // Needed for updates
-                            challengeId: ch.id, // Needed for updates
-                            facility: r.facilityName,
-                            date: r.visitDate,
-                            problem: ch.problem,
-                            
-                            // Immediate Solution Fields
-                            immediate: ch.immediate_solution,
-                            immediate_status: ch.immediate_status || 'Pending',
-
-                            // Long-term Solution Fields
-                            longterm: ch.long_term_solution,
-                            long_term_status: ch.long_term_status || 'Pending',
-
+                            reportId: r.id, challengeId: ch.id, facility: r.facilityName, date: r.visitDate, problem: ch.problem,
+                            immediate: ch.immediate_solution, immediate_status: ch.immediate_status || 'Pending',
+                            longterm: ch.long_term_solution, long_term_status: ch.long_term_status || 'Pending',
                             person: ch.responsible_person
                         });
                     }
@@ -471,44 +549,28 @@ const MentorshipDashboard = ({
 
     // --- Helper for rendering status badges/selects with Local Optimistic Update ---
     const renderStatusCell = (currentStatus, reportId, challengeId, fieldName) => {
-        // Check if there is a pending local update for this cell
         const key = `${reportId}_${challengeId}_${fieldName}`;
         const displayStatus = localStatusUpdates[key] !== undefined ? localStatusUpdates[key] : currentStatus;
 
         if (canEditStatus) {
             return (
-                <select
-                    value={displayStatus}
-                    onChange={(e) => handleLocalUpdate(reportId, challengeId, e.target.value, fieldName)}
-                    className={`block w-full text-[10px] border-gray-300 rounded-md shadow-sm focus:border-sky-500 focus:ring-sky-500 ${
-                        displayStatus === 'Done' || displayStatus === 'Resolved' ? 'text-green-700 font-semibold' :
-                        displayStatus === 'In Progress' ? 'text-blue-700' : 'text-yellow-700'
-                    }`}
-                >
-                    <option value="Pending">Pending</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Done">Done</option>
+                <select value={displayStatus} onChange={(e) => handleLocalUpdate(reportId, challengeId, e.target.value, fieldName)} className={`block w-full text-[11px] font-bold border border-black rounded-lg shadow-sm focus:border-sky-500 focus:ring-sky-500 bg-white ${displayStatus === 'Done' || displayStatus === 'Resolved' ? 'text-emerald-700' : displayStatus === 'In Progress' ? 'text-sky-700' : 'text-amber-700'}`}>
+                    <option value="Pending">Pending</option><option value="In Progress">In Progress</option><option value="Done">Done</option>
                 </select>
             );
         } else {
             return (
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                    displayStatus === 'Done' || displayStatus === 'Resolved' ? 'bg-green-100 text-green-800' :
-                    displayStatus === 'In Progress' ? 'bg-blue-100 text-blue-800' :
-                    'bg-yellow-100 text-yellow-800'
-                }`}>
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-extrabold tracking-wide shadow-sm border border-black ${displayStatus === 'Done' || displayStatus === 'Resolved' ? 'bg-emerald-50 text-emerald-700' : displayStatus === 'In Progress' ? 'bg-sky-50 text-sky-700' : 'bg-amber-50 text-amber-700'}`}>
                     {displayStatus}
                 </span>
             );
         }
     };
 
-
     const reCalculatedSubmissions = useMemo(() => {
         if (!allSubmissions) return [];
         return allSubmissions.map(sub => {
             if (sub.service === 'EENC_MOTHERS' || sub.service === 'IMNCI_MOTHERS') return sub; 
-            
             if (sub.service !== 'IMNCI' || !sub.fullData) return sub;
             const s = sub.scores || {};
             if (s.treatment_total_score_maxScore === undefined) {
@@ -540,31 +602,23 @@ const MentorshipDashboard = ({
             measurementSkills: [], malnutritionAnemiaSkills: [],
         };
         
-        let totalVisits = submissions.length;
+        const totalCasesObserved = submissions.length;
+        const uniqueVisits = new Set(submissions.map(s => `${s.facilityId || 'unk'}_${s.staff || 'unk'}_${s.date || 'unk'}`));
+        const totalVisits = uniqueVisits.size;
+        const uniqueWorkers = new Set(submissions.map(s => `${s.facilityId || 'unk'}_${s.staff || 'unk'}`));
+        const totalHealthWorkers = uniqueWorkers.size;
+
         const skillStats = {};
         
-        // Helper to safely initialize a key
         const initStat = (key) => { if (!skillStats[key]) skillStats[key] = { yes: 0, no: 0 }; };
 
-        // Initialize keys
-        ['skill_ask_cough', 'skill_check_rr', 'skill_classify_cough',
-         'skill_ask_diarrhea', 'skill_check_dehydration', 'skill_classify_diarrhea',
-         'skill_ask_fever', 'skill_check_rdt', 'skill_classify_fever',
-         'skill_ask_ear', 'skill_check_ear', 'skill_classify_ear', 'decisionMatches'
-        ].forEach(k => initStat(k));
+        ['skill_ask_cough', 'skill_check_rr', 'skill_classify_cough', 'skill_ask_diarrhea', 'skill_check_dehydration', 'skill_classify_diarrhea', 'skill_ask_fever', 'skill_check_rdt', 'skill_classify_fever', 'skill_ask_ear', 'skill_check_ear', 'skill_classify_ear', 'decisionMatches'].forEach(k => initStat(k));
 
-        IMNCI_FORM_STRUCTURE.forEach(group => {
-            group.subgroups?.forEach(sub => {
-                sub.skills?.forEach(skill => initStat(skill.key));
-            });
-        });
+        IMNCI_FORM_STRUCTURE.forEach(group => { group.subgroups?.forEach(sub => { sub.skills?.forEach(skill => initStat(skill.key)); }); });
 
         submissions.forEach(sub => {
-            const s = sub.scores || {}; 
-            const as = sub.fullData?.assessmentSkills || {};
-            const ts = sub.fullData?.treatmentSkills || {};
+            const s = sub.scores || {}; const as = sub.fullData?.assessmentSkills || {}; const ts = sub.fullData?.treatmentSkills || {};
 
-            // --- 1. Standard Score Pushes ---
             if (s.overallScore_maxScore > 0) scores.overall.push(s.overallScore_score / s.overallScore_maxScore);
             if (s.assessment_total_score_maxScore > 0) scores.assessment.push(s.assessment_total_score_score / s.assessment_total_score_maxScore);
             if (s.finalDecision_maxScore > 0) scores.decision.push(s.finalDecision_score / s.finalDecision_maxScore);
@@ -577,68 +631,35 @@ const MentorshipDashboard = ({
                 }
             });
 
-            // --- 2. Robust Symptom Check Score Logic (Strictly based on Supervisor Confirmation) ---
-            if (as['supervisor_confirms_cough'] === 'yes') {
-                scores.respiratoryRateCalculation.push(as['skill_check_rr'] === 'yes' ? 1 : 0);
-            }
-            if (as['supervisor_confirms_diarrhea'] === 'yes') {
-                scores.dehydrationAssessment.push(as['skill_check_dehydration'] === 'yes' ? 1 : 0);
-            }
+            if (as['supervisor_confirms_cough'] === 'yes') scores.respiratoryRateCalculation.push(as['skill_check_rr'] === 'yes' ? 1 : 0);
+            if (as['supervisor_confirms_diarrhea'] === 'yes') scores.dehydrationAssessment.push(as['skill_check_dehydration'] === 'yes' ? 1 : 0);
 
-            // --- 3. Robust Treatment Logic (Strictly based on what was relevant) ---
-            const pushSpecificTreatment = (skillKey, targetArr) => {
-                const val = ts[skillKey];
-                if (val === 'yes') targetArr.push(1);
-                else if (val === 'no') targetArr.push(0);
-            };
-            pushSpecificTreatment('skill_pneu_abx', scores.pneuAmox);
-            pushSpecificTreatment('skill_diar_ors', scores.diarOrs);
-            pushSpecificTreatment('skill_diar_zinc', scores.diarZinc);
-            pushSpecificTreatment('skill_anemia_iron', scores.anemiaIron);
+            const pushSpecificTreatment = (skillKey, targetArr) => { const val = ts[skillKey]; if (val === 'yes') targetArr.push(1); else if (val === 'no') targetArr.push(0); };
+            pushSpecificTreatment('skill_pneu_abx', scores.pneuAmox); pushSpecificTreatment('skill_diar_ors', scores.diarOrs); pushSpecificTreatment('skill_diar_zinc', scores.diarZinc); pushSpecificTreatment('skill_anemia_iron', scores.anemiaIron);
 
-            // --- 4. Robust Measurement Score Logic (with Fallback) ---
-            const pushSkillWithFallback = (scoreVal, maxVal, skillKey, targetArr) => {
-                if (maxVal > 0) {
-                    targetArr.push(scoreVal / maxVal);
-                } else if (as[skillKey]) {
-                    // Fallback: Use raw data if score is missing
-                    const val = as[skillKey];
-                    targetArr.push((val === 'yes' || val === 'correct' || val === true) ? 1 : 0);
-                }
-            };
-
-            pushSkillWithFallback(s.handsOnWeight_score, s.handsOnWeight_maxScore, 'skill_weight', scores.measurementSkills);
-            pushSkillWithFallback(s.handsOnTemp_score, s.handsOnTemp_maxScore, 'skill_temp', scores.measurementSkills);
-            pushSkillWithFallback(s.handsOnHeight_score, s.handsOnHeight_maxScore, 'skill_height', scores.measurementSkills);
+            const pushSkillWithFallback = (scoreVal, maxVal, skillKey, targetArr) => { if (maxVal > 0) { targetArr.push(scoreVal / maxVal); } else if (as[skillKey]) { targetArr.push((as[skillKey] === 'yes' || as[skillKey] === 'correct' || as[skillKey] === true) ? 1 : 0); } };
+            pushSkillWithFallback(s.handsOnWeight_score, s.handsOnWeight_maxScore, 'skill_weight', scores.measurementSkills); pushSkillWithFallback(s.handsOnTemp_score, s.handsOnTemp_maxScore, 'skill_temp', scores.measurementSkills); pushSkillWithFallback(s.handsOnHeight_score, s.handsOnHeight_maxScore, 'skill_height', scores.measurementSkills);
+            pushSkillWithFallback(s.handsOnMUAC_score, s.handsOnMUAC_maxScore, 'skill_muac', scores.malnutritionAnemiaSkills); pushSkillWithFallback(s.handsOnWFH_score, s.handsOnWFH_maxScore, 'skill_wfh', scores.malnutritionAnemiaSkills);
             
-            pushSkillWithFallback(s.handsOnMUAC_score, s.handsOnMUAC_maxScore, 'skill_muac', scores.malnutritionAnemiaSkills);
-            pushSkillWithFallback(s.handsOnWFH_score, s.handsOnWFH_maxScore, 'skill_wfh', scores.malnutritionAnemiaSkills);
-            
-            // Pallor is a special case (often boolean in 'as' but missing in scores)
             const pallorVal = as['skill_anemia_pallor'];
-            if (pallorVal === 'yes') { scores.handsOnPallor.push(1); scores.malnutritionAnemiaSkills.push(1); }
-            else if (pallorVal === 'no') { scores.handsOnPallor.push(0); scores.malnutritionAnemiaSkills.push(0); }
+            if (pallorVal === 'yes') { scores.handsOnPallor.push(1); scores.malnutritionAnemiaSkills.push(1); } else if (pallorVal === 'no') { scores.handsOnPallor.push(0); scores.malnutritionAnemiaSkills.push(0); }
 
-            // --- 5. Populate skillStats for Table Rows ---
             const allSkills = { ...as, ...ts };
             Object.keys(skillStats).forEach(key => {
                 if (key === 'decisionMatches') return; 
                 const val = allSkills[key];
-                if (val === 'yes' || val === 'correct' || val === true) skillStats[key].yes++;
-                else if (val === 'no' || val === 'incorrect' || val === false) skillStats[key].no++;
+                if (val === 'yes' || val === 'correct' || val === true) skillStats[key].yes++; else if (val === 'no' || val === 'incorrect' || val === false) skillStats[key].no++;
             });
 
             const decisionMatch = sub.fullData?.decision_agreement || sub.fullData?.decision_score_agreement; 
-            if (decisionMatch === 'yes' || decisionMatch === true) skillStats['decisionMatches'].yes++;
-            else if (decisionMatch === 'no' || decisionMatch === false) skillStats['decisionMatches'].no++;
+            if (decisionMatch === 'yes' || decisionMatch === true) skillStats['decisionMatches'].yes++; else if (decisionMatch === 'no' || decisionMatch === false) skillStats['decisionMatches'].no++;
         });
 
         const avg = (arr) => calculateAverage(arr);
         return {
-            totalVisits, skillStats,
+            totalVisits, totalCasesObserved, totalHealthWorkers, skillStats,
             avgOverall: avg(scores.overall), avgAssessment: avg(scores.assessment), avgDecision: avg(scores.decision), avgTreatment: avg(scores.treatment),
-            avgRespiratoryRateCalculation: avg(scores.respiratoryRateCalculation),
-            avgDehydrationAssessment: avg(scores.dehydrationAssessment), 
+            avgRespiratoryRateCalculation: avg(scores.respiratoryRateCalculation), avgDehydrationAssessment: avg(scores.dehydrationAssessment), 
             avgHandsOnWeight: avg(scores.handsOnWeight), avgHandsOnTemp: avg(scores.handsOnTemp), avgHandsOnHeight: avg(scores.handsOnHeight), 
             avgHandsOnMUAC: avg(scores.handsOnMUAC), avgHandsOnWFH: avg(scores.handsOnWFH), avgHandsOnPallor: avg(scores.handsOnPallor),
             avgPneuAmox: avg(scores.pneuAmox), avgDiarOrs: avg(scores.diarOrs), avgDiarZinc: avg(scores.diarZinc), avgAnemiaIron: avg(scores.anemiaIron),
@@ -654,7 +675,12 @@ const MentorshipDashboard = ({
             care_dry: [], care_skin: [], care_cover: [], cord_hygiene: [], cord_delay: [], cord_clamp: [],
             bf_advice: [], resus_head: [], resus_mask: [], resus_chest: [], resus_rate: []
         };
-        let totalVisits = submissions.length;
+        const totalCasesObserved = submissions.length;
+        const uniqueVisits = new Set(submissions.map(s => `${s.facilityId || 'unk'}_${s.staff || 'unk'}_${s.date || 'unk'}`));
+        const totalVisits = uniqueVisits.size;
+        const uniqueWorkers = new Set(submissions.map(s => `${s.facilityId || 'unk'}_${s.staff || 'unk'}`));
+        const totalHealthWorkers = uniqueWorkers.size;
+
         const skillStats = {};
         const allSkillItems = [...PREPARATION_ITEMS, ...DRYING_STIMULATION_ITEMS, ...NORMAL_BREATHING_ITEMS, ...RESUSCITATION_ITEMS];
 
@@ -686,7 +712,7 @@ const MentorshipDashboard = ({
 
         const avg = (arr) => calculateAverage(arr);
         return {
-            totalVisits, skillStats,
+            totalVisits, totalCasesObserved, totalHealthWorkers, skillStats,
             avgOverall: avg(scores.overall), avgPreparation: avg(scores.preparation), avgDrying: avg(scores.drying), avgNormalBreathing: avg(scores.normal_breathing), avgResuscitation: avg(scores.resuscitation),
             avgInfWash1: avg(scores.inf_wash1), avgInfWash2: avg(scores.inf_wash2), avgInfGloves: avg(scores.inf_gloves),
             avgPrepTowel: avg(scores.prep_towel), avgPrepEquip: avg(scores.prep_equip), avgPrepAmbu: avg(scores.prep_ambu),
@@ -705,7 +731,6 @@ const MentorshipDashboard = ({
 
         motherSubmissions.forEach(sub => {
             const d = sub.eencMothersData || sub.fullData?.eencMothersData;
-            
             if (d) {
                 const push = (val, arr, key) => { const isYes = val === 'yes'; arr.push(isYes ? 1 : 0); if(skillStats[key]) { if(isYes) skillStats[key].yes++; else if(val === 'no') skillStats[key].no++; } };
                 push(d.skin_to_skin_immediate, scores.skin_imm, 'skin_to_skin_immediate'); push(d.skin_to_skin_90min, scores.skin_90min, 'skin_to_skin_90min');
@@ -810,13 +835,9 @@ const MentorshipDashboard = ({
     ), [serviceCompletedSubmissions, activeState, activeLocality, activeFacilityId, activeWorkerName]);
 
     const overallKpis = useMemo(() => {
-        if (activeService === 'IMNCI') {
-            return imnciKpiHelper(filteredSubmissions.filter(s => s.service === 'IMNCI'));
-        }
-        if (activeService === 'EENC') {
-            return eencKpiHelper(filteredSubmissions.filter(s => s.service === 'EENC'));
-        }
-        return { totalVisits: filteredSubmissions.length, skillStats: {} };
+        if (activeService === 'IMNCI') return imnciKpiHelper(filteredSubmissions.filter(s => s.service === 'IMNCI'));
+        if (activeService === 'EENC') return eencKpiHelper(filteredSubmissions.filter(s => s.service === 'EENC'));
+        return { totalVisits: filteredSubmissions.length, totalCasesObserved: filteredSubmissions.length, totalHealthWorkers: 0, skillStats: {} };
     }, [filteredSubmissions, imnciKpiHelper, eencKpiHelper, activeService]);
 
     const motherKpis = useMemo(() => {
@@ -853,25 +874,13 @@ const MentorshipDashboard = ({
             const as = sub.fullData?.assessmentSkills;
             if (as) { 
                 if (as['skill_anemia_pallor'] === 'yes') g['Pallor'].push(100); else if (as['skill_anemia_pallor'] === 'no') g['Pallor'].push(0); 
-
-                // Symptom Checks Based STRICTLY on Denominator
-                if (as['supervisor_confirms_cough'] === 'yes') {
-                    g['Resp. Rate'].push(as['skill_check_rr'] === 'yes' ? 100 : 0);
-                }
-                if (as['supervisor_confirms_diarrhea'] === 'yes') {
-                    g['Dehydration'].push(as['skill_check_dehydration'] === 'yes' ? 100 : 0);
-                }
+                if (as['supervisor_confirms_cough'] === 'yes') g['Resp. Rate'].push(as['skill_check_rr'] === 'yes' ? 100 : 0);
+                if (as['supervisor_confirms_diarrhea'] === 'yes') g['Dehydration'].push(as['skill_check_dehydration'] === 'yes' ? 100 : 0);
             }
 
             const ts = sub.fullData?.treatmentSkills || {};
-            const pushTreatment = (key, label) => {
-                if (ts[key] === 'yes') g[label].push(100);
-                else if (ts[key] === 'no') g[label].push(0);
-            };
-            pushTreatment('skill_pneu_abx', 'Pneumonia Amox');
-            pushTreatment('skill_diar_ors', 'Diarrhea ORS');
-            pushTreatment('skill_diar_zinc', 'Diarrhea Zinc');
-            pushTreatment('skill_anemia_iron', 'Anemia Iron');
+            const pushTreatment = (key, label) => { if (ts[key] === 'yes') g[label].push(100); else if (ts[key] === 'no') g[label].push(0); };
+            pushTreatment('skill_pneu_abx', 'Pneumonia Amox'); pushTreatment('skill_diar_ors', 'Diarrhea ORS'); pushTreatment('skill_diar_zinc', 'Diarrhea Zinc'); pushTreatment('skill_anemia_iron', 'Anemia Iron');
 
             return acc;
         }, {});
@@ -1024,9 +1033,14 @@ const MentorshipDashboard = ({
     // IMNCI Constants
     const mainKpiGridList = [{ title: "Overall IMNCI Adherence", scoreValue: overallKpis.avgOverall }, { title: "Assess & Classify Score", scoreValue: overallKpis.avgAssessment }, { title: "Final Decision Score", scoreValue: overallKpis.avgDecision }, { title: "Treatment & Counsel Score", scoreValue: overallKpis.avgTreatment }];
     const mainKpiChartKeys = [{ key: 'Overall', title: 'Overall' }, { key: 'Assessment', title: 'Assessment' }, { key: 'Decision', title: 'Decision' }, { key: 'Treatment', title: 'Treatment' }];
+    
     const dangerSignsKpiList = [ { title: "Asked/Checked: Cannot Drink/Breastfeed", scoreValue: calculateAverage(overallKpis.skillStats?.['skill_ds_drink'] ? [overallKpis.skillStats['skill_ds_drink'].yes / (overallKpis.skillStats['skill_ds_drink'].yes + overallKpis.skillStats['skill_ds_drink'].no)] : []) }, { title: "Asked/Checked: Vomits Everything", scoreValue: calculateAverage(overallKpis.skillStats?.['skill_ds_vomit'] ? [overallKpis.skillStats['skill_ds_vomit'].yes / (overallKpis.skillStats['skill_ds_vomit'].yes + overallKpis.skillStats['skill_ds_vomit'].no)] : []) }, { title: "Asked/Checked: Convulsions", scoreValue: calculateAverage(overallKpis.skillStats?.['skill_ds_convulsion'] ? [overallKpis.skillStats['skill_ds_convulsion'].yes / (overallKpis.skillStats['skill_ds_convulsion'].yes + overallKpis.skillStats['skill_ds_convulsion'].no)] : []) }, { title: "Checked: Lethargic/Unconscious", scoreValue: calculateAverage(overallKpis.skillStats?.['skill_ds_conscious'] ? [overallKpis.skillStats['skill_ds_conscious'].yes / (overallKpis.skillStats['skill_ds_conscious'].yes + overallKpis.skillStats['skill_ds_conscious'].no)] : []) } ];
     const dangerSignsChartKeys = [{ key: 'DangerSigns', title: 'Danger Signs Score' }];
     
+    // Measurement Skills
+    const measurementKpiGridList = [{ title: "Weight Measured Correctly", scoreValue: overallKpis.avgHandsOnWeight }, { title: "Temp Measured Correctly", scoreValue: overallKpis.avgHandsOnTemp }, { title: "Height Measured Correctly", scoreValue: overallKpis.avgHandsOnHeight }];
+    const measurementKpiChartKeys = [{ key: 'Weight', title: 'Weight' }, { key: 'Temp', title: 'Temp' }, { key: 'Height', title: 'Height' }];
+
     // Clinical Symptom Assessments 
     const respRateKpiList = [{ title: "Correct Resp. Rate", scoreValue: overallKpis.avgRespiratoryRateCalculation }];
     const respRateChartKeys = [{ key: 'Resp. Rate', title: 'Resp. Rate' }];
@@ -1034,7 +1048,17 @@ const MentorshipDashboard = ({
     const dehydrationKpiList = [{ title: "Correct Dehydration ID", scoreValue: overallKpis.avgDehydrationAssessment }];
     const dehydrationChartKeys = [{ key: 'Dehydration', title: 'Dehydration' }];
 
-    // NEW: Management Adherence (Separated into individual blocks)
+    // Malnutrition
+    const malnutritionSignsKpiList = [
+        { title: "MUAC Measured Correctly", scoreValue: overallKpis.avgHandsOnMUAC },
+        { title: "Z-Score (WFH) Measured Correctly", scoreValue: overallKpis.avgHandsOnWFH }
+    ];
+    const malnutritionSignsChartKeys = [
+        { key: 'MUAC', title: 'MUAC' },
+        { key: 'WFH', title: 'WFH' }
+    ];
+
+    // Management Adherence 
     const pneuAmoxKpiList = [{ title: "Pneumonia: Amoxicillin", scoreValue: overallKpis.avgPneuAmox }];
     const pneuAmoxChartKeys = [{ key: 'Pneumonia Amox', title: 'Amoxicillin' }];
 
@@ -1047,10 +1071,6 @@ const MentorshipDashboard = ({
     const anemiaIronKpiList = [{ title: "Anemia: Iron", scoreValue: overallKpis.avgAnemiaIron }];
     const anemiaIronChartKeys = [{ key: 'Anemia Iron', title: 'Iron' }];
 
-    const measurementKpiGridList = [{ title: "Weight Measured Correctly", scoreValue: overallKpis.avgHandsOnWeight }, { title: "Temp Measured Correctly", scoreValue: overallKpis.avgHandsOnTemp }, { title: "Height Measured Correctly", scoreValue: overallKpis.avgHandsOnHeight }];
-    const measurementKpiChartKeys = [{ key: 'Weight', title: 'Weight' }, { key: 'Temp', title: 'Temp' }, { key: 'Height', title: 'Height' }];
-    const malnutritionAnemiaSkillsKpiGridList = [{ title: "MUAC Measured Correctly", scoreValue: overallKpis.avgHandsOnMUAC }, { title: "Z-Score (WFH) Measured Correctly", scoreValue: overallKpis.avgHandsOnWFH }, { title: "Pallor Checked Correctly", scoreValue: overallKpis.avgHandsOnPallor }];
-    const malnutritionAnemiaSkillsKpiChartKeys = [{ key: 'MUAC', title: 'MUAC' }, { key: 'WFH', title: 'WFH' }, { key: 'Pallor', title: 'Pallor' }];
 
     // IMNCI Mother Constants
     const imnciMotherKnowMedKpis = [{ title: "Knows Med Details", scoreValue: motherKpis?.avgKnowMed }, { title: "Knows Treatment Details", scoreValue: motherKpis?.avgKnowTx }, { title: "Knows Return Date", scoreValue: motherKpis?.avgKnowReturn }];
@@ -1091,9 +1111,10 @@ const MentorshipDashboard = ({
     const eencMotherRegChartKeys = [{ key: 'Civil Reg', title: 'Civil Reg' }, { key: 'Discharge Card', title: 'Card' }];
 
     return (
-        <div className="p-4" dir="ltr"> 
-            <h3 className="text-xl font-bold text-sky-800 mb-4 text-left">Mentorship Dashboard: {serviceTitle} {scopeTitle}</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 p-4 bg-gray-50 rounded-lg border">
+        <div className="p-4 sm:p-6 bg-slate-50/50 min-h-screen" dir="ltr"> 
+            <h3 className="text-2xl font-extrabold text-slate-800 mb-6 text-left tracking-tight">Mentorship Dashboard: {serviceTitle} <span className="text-sky-600 text-xl font-semibold">{scopeTitle}</span></h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8 p-5 bg-white rounded-2xl shadow-md border border-black">
                 <FilterSelect label="State" value={activeState} onChange={(v) => { onStateChange(v); onLocalityChange(""); onFacilityIdChange(""); onWorkerNameChange(""); }} options={stateOptions} defaultOption="All States" />
                 <FilterSelect label="Locality" value={activeLocality} onChange={(v) => { onLocalityChange(v); onFacilityIdChange(""); onWorkerNameChange(""); }} options={localityOptions} disabled={!activeState} defaultOption="All Localities" />
                 <FilterSelect label="Health Facility Name" value={activeFacilityId} onChange={(v) => { onFacilityIdChange(v); onWorkerNameChange(""); }} options={facilityOptions} disabled={!activeLocality} defaultOption="All Facilities" />
@@ -1102,20 +1123,38 @@ const MentorshipDashboard = ({
             
             {activeService === 'IMNCI' && (
                 <>
-                    <div className="flex mb-6 border-b border-gray-200">
-                        <button className={`py-2 px-4 font-medium text-sm focus:outline-none ${activeImnciTab === 'skills' ? 'border-b-2 border-sky-600 text-sky-600' : 'text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveImnciTab('skills')}>Skills Observation (Provider)</button>
-                        <button className={`py-2 px-4 font-medium text-sm focus:outline-none ${activeImnciTab === 'mothers' ? 'border-b-2 border-sky-600 text-sky-600' : 'text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveImnciTab('mothers')}>Mother Interviews</button>
-                        <button className={`py-2 px-4 font-medium text-sm focus:outline-none ${activeImnciTab === 'visit_reports' ? 'border-b-2 border-sky-600 text-sky-600' : 'text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveImnciTab('visit_reports')}>Visit Reports (Facility)</button>
+                    <div className="flex flex-wrap gap-2 mb-8 bg-slate-200 p-1.5 rounded-xl border border-black w-fit">
+                        <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeImnciTab === 'skills' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveImnciTab('skills')}>Skills Observation (Provider)</button>
+                        <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeImnciTab === 'mothers' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveImnciTab('mothers')}>Mother Interviews</button>
+                        <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeImnciTab === 'visit_reports' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveImnciTab('visit_reports')}>Visit Reports (Facility)</button>
                     </div>
 
                     {activeImnciTab === 'skills' && (
                         <div className="animate-fade-in">
-                            <div className="grid grid-cols-1 gap-4 mb-6"><KpiCard title="Total Completed Visits" value={overallKpis.totalVisits} /></div>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"><KpiGridCard title="Overall Adherence Scores (Average)" kpis={mainKpiGridList} cols={2} /><KpiLineChart title="Adherence Over Time (Main KPIs)" chartData={imnciChartData} kpiKeys={mainKpiChartKeys} /></div>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"><DetailedKpiCard title="Danger Signs Assessment" overallScore={overallKpis.avgDangerSigns} kpis={dangerSignsKpiList} /><KpiLineChart title="Adherence Over Time (Danger Signs)" chartData={imnciChartData} kpiKeys={dangerSignsChartKeys} /></div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                                <KpiCard title="Total Completed Visits" value={overallKpis.totalVisits} />
+                                <KpiCard title="Total Health Workers Visited" value={overallKpis.totalHealthWorkers} />
+                                <KpiCard title="Total Cases Observed" value={overallKpis.totalCasesObserved} />
+                            </div>
                             
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                                <KpiGridCard title="Overall Adherence Scores (Average)" kpis={mainKpiGridList} cols={2} />
+                                <KpiLineChart title="Adherence Over Time (Main KPIs)" chartData={imnciChartData} kpiKeys={mainKpiChartKeys} />
+                            </div>
+                            
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                                <DetailedKpiCard title="Danger Signs Assessment" overallScore={overallKpis.avgDangerSigns} kpis={dangerSignsKpiList} />
+                                <KpiLineChart title="Adherence Over Time (Danger Signs)" chartData={imnciChartData} kpiKeys={dangerSignsChartKeys} />
+                            </div>
+                            
+                            {/* Measurement Skills Moved Here */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                                <DetailedKpiCard title="Measurement Skills (Average)" overallScore={overallKpis.avgMeasurementSkills} kpis={measurementKpiGridList} />
+                                <KpiLineChart title="Adherence Over Time (Measurement Skills)" chartData={imnciChartData} kpiKeys={measurementKpiChartKeys} />
+                            </div>
+
                             {/* Correct Symptom Assessments */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                                 <KpiCardWithChart 
                                     title="Correct Resp. Rate Measurement" 
                                     kpis={respRateKpiList} 
@@ -1132,8 +1171,22 @@ const MentorshipDashboard = ({
                                 />
                             </div>
 
+                            {/* Malnutrition and Anemia Signs Separated and Moved Here */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                                <DetailedKpiCard 
+                                    title="Correct Malnutrition Assessment" 
+                                    overallScore={calculateAverage([overallKpis.avgHandsOnMUAC, overallKpis.avgHandsOnWFH])} 
+                                    kpis={malnutritionSignsKpiList} 
+                                />
+                                <KpiLineChart 
+                                    title="Adherence Over Time (Malnutrition Signs)" 
+                                    chartData={imnciChartData} 
+                                    kpiKeys={malnutritionSignsChartKeys} 
+                                />
+                            </div>
+
                             {/* Management Adherence - Row 1 (Pneumonia & ORS) */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                                 <KpiCardWithChart 
                                     title="Pneumonia Treated w/ Amoxicillin" 
                                     kpis={pneuAmoxKpiList} 
@@ -1151,7 +1204,7 @@ const MentorshipDashboard = ({
                             </div>
 
                             {/* Management Adherence - Row 2 (Zinc & Iron) */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                                 <KpiCardWithChart 
                                     title="Diarrhea Treated w/ Zinc" 
                                     kpis={diarZincKpiList} 
@@ -1159,64 +1212,56 @@ const MentorshipDashboard = ({
                                     kpiKeys={diarZincChartKeys} 
                                     cols={1} 
                                 />
-                                <KpiCardWithChart 
-                                    title="Anemia Treated w/ Iron" 
-                                    kpis={anemiaIronKpiList} 
-                                    chartData={imnciChartData} 
-                                    kpiKeys={anemiaIronChartKeys} 
-                                    cols={1} 
-                                />
                             </div>
                             
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"><DetailedKpiCard title="Measurement Skills (Average)" overallScore={overallKpis.avgMeasurementSkills} kpis={measurementKpiGridList} /><KpiLineChart title="Adherence Over Time (Measurement Skills)" chartData={imnciChartData} kpiKeys={measurementKpiChartKeys} /></div>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"><DetailedKpiCard title="Malnutrition and Anemia Signs" overallScore={overallKpis.avgMalnutritionAnemiaSkills} kpis={malnutritionAnemiaSkillsKpiGridList} /><KpiLineChart title="Adherence Over Time (Malnutrition & Anemia Signs)" chartData={imnciChartData} kpiKeys={malnutritionAnemiaSkillsKpiChartKeys} /></div>
-                            <h3 className="text-xl font-bold text-sky-800 mb-4 text-left">Overall Adherence by State {scopeTitle}</h3>
-                            <div className="mb-8"><KpiBarChart title="Overall IMNCI Adherence by State" chartData={stateKpis} /></div>
-                            <h3 className="text-xl font-bold text-sky-800 mb-4 text-left">Detailed Skill Performance {scopeTitle}</h3>
-                            <div className="mb-8"><CompactSkillsTable overallKpis={overallKpis} /></div>
+                            <h3 className="text-xl font-extrabold text-slate-800 mb-5 mt-10 text-left tracking-wide">Overall Adherence by State {scopeTitle}</h3>
+                            <div className="mb-10"><KpiBarChart title="Overall IMNCI Adherence by State" chartData={stateKpis} /></div>
+                            
+                            <h3 className="text-xl font-extrabold text-slate-800 mb-5 text-left tracking-wide">Detailed Skill Performance {scopeTitle}</h3>
+                            <div className="mb-10"><CompactSkillsTable overallKpis={overallKpis} /></div>
                         </div>
                     )}
 
                     {activeImnciTab === 'mothers' && (
                         <div className="animate-fade-in">
-                            <div className="grid grid-cols-1 gap-4 mb-6"><KpiCard title="Total Mother Interviews" value={motherKpis?.totalMothers || 0} /></div>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                            <div className="grid grid-cols-1 gap-6 mb-8"><KpiCard title="Total Mother Interviews" value={motherKpis?.totalMothers || 0} /></div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                                 <DetailedKpiCard title="Mother Knowledge: Treatment" overallScore={calculateAverage([motherKpis?.avgKnowMed, motherKpis?.avgKnowTx])} kpis={imnciMotherKnowMedKpis} />
                                 <KpiLineChart title="Knowledge (Meds) Over Time" chartData={imnciMotherChartData} kpiKeys={imnciMotherKnowMedChartKeys} />
                             </div>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                                 <DetailedKpiCard title="Mother Knowledge: ORS & Fluids" overallScore={calculateAverage([motherKpis?.avgKnowOrsPrep, motherKpis?.avgKnowFluids])} kpis={imnciMotherKnowOrsKpis} />
                                 <KpiLineChart title="Knowledge (ORS) Over Time" chartData={imnciMotherChartData} kpiKeys={imnciMotherKnowOrsChartKeys} />
                             </div>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                                 <DetailedKpiCard title="Mother Satisfaction" overallScore={calculateAverage([motherKpis?.avgSatTime, motherKpis?.avgSatComm])} kpis={imnciMotherSatKpis} />
                                 <KpiLineChart title="Satisfaction Over Time" chartData={imnciMotherChartData} kpiKeys={imnciMotherSatChartKeys} />
                             </div>
-                            <h3 className="text-xl font-bold text-sky-800 mb-4 text-left">Overall Mother Interview Scores by State {scopeTitle}</h3>
-                            <div className="mb-8"><KpiBarChart title="Average Mother Knowledge/Satisfaction by State" chartData={motherStateKpis} /></div>
-                            <h3 className="text-xl font-bold text-sky-800 mb-4 text-left">Detailed Mother Interview Performance {scopeTitle}</h3>
-                            <div className="mb-8"><MothersCompactSkillsTable motherKpis={motherKpis} serviceType="IMNCI" /></div>
+                            
+                            <h3 className="text-xl font-extrabold text-slate-800 mb-5 mt-10 text-left tracking-wide">Overall Mother Interview Scores by State {scopeTitle}</h3>
+                            <div className="mb-10"><KpiBarChart title="Average Mother Knowledge/Satisfaction by State" chartData={motherStateKpis} /></div>
+                            
+                            <h3 className="text-xl font-extrabold text-slate-800 mb-5 text-left tracking-wide">Detailed Mother Interview Performance {scopeTitle}</h3>
+                            <div className="mb-10"><MothersCompactSkillsTable motherKpis={motherKpis} serviceType="IMNCI" /></div>
                         </div>
                     )}
 
                     {activeImnciTab === 'visit_reports' && visitReportStats && (
                         <div className="animate-fade-in">
-                            {/* 1. Total Card */}
-                            <div className="grid grid-cols-1 gap-4 mb-6">
+                            <div className="grid grid-cols-1 gap-6 mb-8">
                                 <KpiCard title="Total Visit Reports" value={visitReportStats.totalVisits} />
                             </div>
 
-                            {/* 2. Table: Facility, Visits, Skills (Removed State/Locality) */}
-                            <div className="mb-8 bg-white rounded-lg shadow-lg border-2 border-gray-200 overflow-hidden">
-                                <h4 className="text-lg font-bold text-sky-800 p-4 border-b bg-gray-50">Visit Breakdown & Skills Trained by Facility</h4>
+                            <div className="mb-8 bg-white rounded-2xl shadow-md border border-black overflow-hidden">
+                                <h4 className="text-lg font-extrabold text-slate-800 p-5 border-b border-black bg-slate-100">Visit Breakdown & Skills Trained by Facility</h4>
                                 <div className="overflow-x-auto">
                                 <table className="w-full text-sm text-left">
-                                    <thead className="bg-gray-100 text-xs uppercase text-gray-700">
+                                    <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider">
                                         <tr>
-                                            <th className="px-4 py-3 border">Facility</th>
-                                            <th className="px-4 py-3 border text-center bg-blue-50">Total Visits</th>
+                                            <th className="px-5 py-4 border-b border-black">Facility</th>
+                                            <th className="px-5 py-4 border-b border-black border-l border-black text-center bg-sky-100">Total Visits</th>
                                             {visitReportStats.distinctSkillKeys.map(skillKey => (
-                                                <th key={skillKey} className="px-2 py-3 border text-center break-words whitespace-normal text-xs">
+                                                <th key={skillKey} className="px-3 py-4 border-b border-l border-black text-center break-words whitespace-normal text-[11px] max-w-[120px]">
                                                     {IMNCI_SKILLS_LABELS[skillKey] || skillKey}
                                                 </th>
                                             ))}
@@ -1224,71 +1269,67 @@ const MentorshipDashboard = ({
                                     </thead>
                                     <tbody>
                                         {visitReportStats.facilityTableData.map(row => (
-                                            <tr key={row.id} className="hover:bg-gray-50 border-b">
-                                                <td className="px-4 py-2 border font-medium">{row.facilityName}</td>
-                                                <td className="px-4 py-2 border text-center font-bold bg-blue-50">{row.visitCount}</td>
+                                            <tr key={row.id} className="hover:bg-sky-50 transition-colors border-b border-black">
+                                                <td className="px-5 py-3 font-semibold text-slate-800">{row.facilityName}</td>
+                                                <td className="px-5 py-3 border-l border-black text-center font-bold bg-sky-50 text-sky-800">{row.visitCount}</td>
                                                 {visitReportStats.distinctSkillKeys.map(skillKey => (
-                                                    <td key={skillKey} className="px-2 py-2 border text-center">
+                                                    <td key={skillKey} className="px-3 py-3 border-l border-black text-center text-slate-700 font-medium">
                                                         {row.skills[skillKey] || 0}
                                                     </td>
                                                 ))}
                                             </tr>
                                         ))}
                                         {visitReportStats.facilityTableData.length === 0 && (
-                                            <tr><td colSpan={2 + visitReportStats.distinctSkillKeys.length} className="p-4 text-center text-gray-500">No visits found for current filter.</td></tr>
+                                            <tr><td colSpan={2 + visitReportStats.distinctSkillKeys.length} className="p-8 text-center text-slate-500 font-bold">No visits found for current filter.</td></tr>
                                         )}
                                     </tbody>
                                 </table>
                                 </div>
                             </div>
 
-                            {/* 3. Graph: Visits by State */}
                             <div className="mb-8">
                                 <KpiBarChart title="Total Visits by State" chartData={visitReportStats.stateChartData} dataKey="count" />
                             </div>
 
-                            {/* 4. Table: Problems and Solutions (UPDATED) */}
-                            <div className="mb-8 bg-white rounded-lg shadow-lg border-2 border-gray-200">
-                                <h4 className="text-lg font-bold text-sky-800 p-4 border-b bg-gray-50">Facility Problems & Solutions (Combined)</h4>
+                            <div className="mb-8 bg-white rounded-2xl shadow-md border border-black overflow-hidden">
+                                <h4 className="text-lg font-extrabold text-slate-800 p-5 border-b border-black bg-slate-100">Facility Problems & Solutions (Combined)</h4>
                                 <div className="overflow-x-auto max-h-[600px]">
                                     <table className="w-full text-sm text-left border-collapse">
-                                        <thead className="bg-gray-100 text-xs uppercase text-gray-700 sticky top-0 z-10">
+                                        <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider sticky top-0 z-10 shadow-sm border-b border-black">
                                             <tr>
-                                                <th className="px-2 py-3 border w-[15%]">Facility & Date</th>
-                                                <th className="px-2 py-3 border w-[20%]">Problem / Challenge</th>
-                                                <th className="px-2 py-3 border w-[20%]">Immediate Solution</th>
-                                                <th className="px-2 py-3 border w-[10%]">Imm. Status</th>
-                                                <th className="px-2 py-3 border w-[20%]">Long-term Solution</th>
-                                                <th className="px-2 py-3 border w-[10%]">LT Status</th>
-                                                <th className="px-2 py-3 border w-[5%]">Resp.</th>
+                                                <th className="px-4 py-4 border-r border-black w-[15%]">Facility & Date</th>
+                                                <th className="px-4 py-4 border-r border-black w-[20%]">Problem / Challenge</th>
+                                                <th className="px-4 py-4 border-r border-black w-[20%]">Immediate Solution</th>
+                                                <th className="px-4 py-4 border-r border-black w-[10%] text-center">Imm. Status</th>
+                                                <th className="px-4 py-4 border-r border-black w-[20%]">Long-term Solution</th>
+                                                <th className="px-4 py-4 border-r border-black w-[10%] text-center">LT Status</th>
+                                                <th className="px-4 py-4 w-[5%]">Resp.</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {visitReportStats.problemsList.map((item, idx) => (
-                                                <tr key={idx} className="hover:bg-gray-50 border-b border-gray-300">
-                                                    <td className="px-2 py-2 border align-top text-xs">
-                                                        <div className="font-bold text-gray-800">{item.facility}</div>
-                                                        <div className="text-[10px] text-gray-500">{item.date}</div>
+                                                <tr key={idx} className="hover:bg-sky-50 transition-colors border-b border-black">
+                                                    <td className="px-4 py-3 border-r border-black align-top">
+                                                        <div className="font-bold text-slate-800 mb-1">{item.facility}</div>
+                                                        <div className="text-xs font-semibold text-slate-600 bg-slate-100 inline-block px-2 py-0.5 rounded border border-black">{item.date}</div>
                                                     </td>
-                                                    <td className="px-2 py-2 border align-top text-xs text-red-700 whitespace-pre-wrap">{item.problem}</td>
+                                                    <td className="px-4 py-3 border-r border-black align-top text-xs text-rose-700 whitespace-pre-wrap font-medium">{item.problem}</td>
                                                     
-                                                    {/* Immediate Solution Column */}
-                                                    <td className="px-2 py-2 border align-top text-xs text-green-700 whitespace-pre-wrap">{item.immediate}</td>
-                                                    <td className="px-2 py-2 border align-top text-center">
+                                                    <td className="px-4 py-3 border-r border-black align-top text-xs text-emerald-700 whitespace-pre-wrap font-medium">{item.immediate}</td>
+                                                    <td className="px-4 py-3 border-r border-black align-top text-center">
                                                         {renderStatusCell(item.immediate_status, item.reportId, item.challengeId, 'immediate_status')}
                                                     </td>
 
-                                                    {/* Long-term Solution Column */}
-                                                    <td className="px-2 py-2 border align-top text-xs text-blue-700 whitespace-pre-wrap">{item.longterm}</td>
-                                                    <td className="px-2 py-2 border align-top text-center">
+                                                    <td className="px-4 py-3 border-r border-black align-top text-xs text-sky-700 whitespace-pre-wrap font-medium">{item.longterm}</td>
+                                                    <td className="px-4 py-3 border-r border-black align-top text-center">
                                                         {renderStatusCell(item.long_term_status, item.reportId, item.challengeId, 'long_term_status')}
                                                     </td>
 
-                                                    <td className="px-2 py-2 border align-top text-[10px] text-gray-600">{item.person}</td>
+                                                    <td className="px-4 py-3 align-top text-[10px] font-bold text-slate-500 uppercase tracking-wider">{item.person}</td>
                                                 </tr>
                                             ))}
                                             {visitReportStats.problemsList.length === 0 && (
-                                                <tr><td colSpan="7" className="p-4 text-center text-gray-500">No problems recorded.</td></tr>
+                                                <tr><td colSpan="7" className="p-8 text-center text-slate-500 font-bold">No problems recorded.</td></tr>
                                             )}
                                         </tbody>
                                     </table>
@@ -1301,64 +1342,66 @@ const MentorshipDashboard = ({
 
             {activeService === 'EENC' && (
                 <>
-                     <div className="flex mb-6 border-b border-gray-200">
-                        <button className={`py-2 px-4 font-medium text-sm focus:outline-none ${activeEencTab === 'skills' ? 'border-b-2 border-sky-600 text-sky-600' : 'text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveEencTab('skills')}>Skills Observation (Provider)</button>
-                        <button className={`py-2 px-4 font-medium text-sm focus:outline-none ${activeEencTab === 'mothers' ? 'border-b-2 border-sky-600 text-sky-600' : 'text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveEencTab('mothers')}>Mother Interviews</button>
-                        <button className={`py-2 px-4 font-medium text-sm focus:outline-none ${activeEencTab === 'visit_reports' ? 'border-b-2 border-sky-600 text-sky-600' : 'text-gray-500 hover:text-gray-700'}`} onClick={() => setActiveEencTab('visit_reports')}>Visit Reports (Facility)</button>
+                     <div className="flex flex-wrap gap-2 mb-8 bg-slate-200 p-1.5 rounded-xl border border-black w-fit">
+                        <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeEencTab === 'skills' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveEencTab('skills')}>Skills Observation (Provider)</button>
+                        <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeEencTab === 'mothers' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveEencTab('mothers')}>Mother Interviews</button>
+                        <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeEencTab === 'visit_reports' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveEencTab('visit_reports')}>Visit Reports (Facility)</button>
                     </div>
 
                     {activeEencTab === 'skills' && (
                         <div className="animate-fade-in">
-                            <div className="grid grid-cols-1 gap-4 mb-6"><KpiCard title="Total Completed EENC Visits" value={overallKpis.totalVisits} /></div>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"><KpiGridCard title="Overall EENC Adherence Scores (Average)" kpis={eencMainKpiGridList} cols={3} /><KpiLineChart title="EENC Adherence Over Time (Main KPIs)" chartData={eencChartData} kpiKeys={eencMainKpiChartKeys} /></div>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"><DetailedKpiCard title="KPI 1: Infection Control (All Cases)" overallScore={calculateAverage([overallKpis.avgInfWash1, overallKpis.avgInfWash2, overallKpis.avgInfGloves])} kpis={eencInfectionKpis} /><KpiLineChart title="KPI 1 Over Time: Infection Control" chartData={eencChartData} kpiKeys={eencInfectionChartKeys} /></div>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"><DetailedKpiCard title="KPI 2: Resuscitation Preparedness (All Cases)" overallScore={overallKpis.avgPreparation} kpis={eencPrepKpis} /><KpiLineChart title="KPI 2 Over Time: Preparedness" chartData={eencChartData} kpiKeys={eencPrepChartKeys} /></div>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"><DetailedKpiCard title="KPI 3: Early Care (All Cases)" overallScore={overallKpis.avgDrying} kpis={eencCareKpis} /><KpiLineChart title="KPI 3 Over Time: Early Care" chartData={eencChartData} kpiKeys={eencCareChartKeys} /></div>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"><DetailedKpiCard title="KPI 4: Cord Management (Breathing Babies)" overallScore={calculateAverage([overallKpis.avgCordHygiene, overallKpis.avgCordDelay, overallKpis.avgCordClamp])} kpis={eencCordKpis} /><KpiLineChart title="KPI 4 Over Time: Cord Mgmt" chartData={eencChartData} kpiKeys={eencCordChartKeys} /></div>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"><DetailedKpiCard title="KPI 5: Breastfeeding (Breathing Babies)" overallScore={overallKpis.avgBfAdvice} kpis={eencBreastfeedingKpis} /><KpiLineChart title="KPI 5 Over Time: Breastfeeding" chartData={eencChartData} kpiKeys={eencBreastfeedingChartKeys} /></div>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"><DetailedKpiCard title="KPI 6: Resuscitation Execution (Non-Breathing)" overallScore={overallKpis.avgResuscitation} kpis={eencResusExecKpis} /><KpiLineChart title="KPI 6 Over Time: Resuscitation" chartData={eencChartData} kpiKeys={eencResusExecChartKeys} /></div>
-                            <h3 className="text-xl font-bold text-sky-800 mb-4 text-left">Overall EENC Adherence by State {scopeTitle}</h3>
-                            <div className="mb-8"><KpiBarChart title="Overall EENC Adherence by State" chartData={stateKpis} /></div>
-                            <h3 className="text-xl font-bold text-sky-800 mb-4 text-left">Detailed EENC Skill Performance {scopeTitle}</h3>
-                            <div className="mb-8"><EENCCompactSkillsTable overallKpis={overallKpis} /></div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                                <KpiCard title="Total Completed EENC Visits" value={overallKpis.totalVisits} />
+                                <KpiCard title="Total Health Workers Visited" value={overallKpis.totalHealthWorkers} />
+                                <KpiCard title="Total Cases Observed" value={overallKpis.totalCasesObserved} />
+                            </div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"><KpiGridCard title="Overall EENC Adherence Scores (Average)" kpis={eencMainKpiGridList} cols={3} /><KpiLineChart title="EENC Adherence Over Time (Main KPIs)" chartData={eencChartData} kpiKeys={eencMainKpiChartKeys} /></div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"><DetailedKpiCard title="KPI 1: Infection Control (All Cases)" overallScore={calculateAverage([overallKpis.avgInfWash1, overallKpis.avgInfWash2, overallKpis.avgInfGloves])} kpis={eencInfectionKpis} /><KpiLineChart title="KPI 1 Over Time: Infection Control" chartData={eencChartData} kpiKeys={eencInfectionChartKeys} /></div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"><DetailedKpiCard title="KPI 2: Resuscitation Preparedness (All Cases)" overallScore={overallKpis.avgPreparation} kpis={eencPrepKpis} /><KpiLineChart title="KPI 2 Over Time: Preparedness" chartData={eencChartData} kpiKeys={eencPrepChartKeys} /></div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"><DetailedKpiCard title="KPI 3: Early Care (All Cases)" overallScore={overallKpis.avgDrying} kpis={eencCareKpis} /><KpiLineChart title="KPI 3 Over Time: Early Care" chartData={eencChartData} kpiKeys={eencCareChartKeys} /></div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"><DetailedKpiCard title="KPI 4: Cord Management (Breathing Babies)" overallScore={calculateAverage([overallKpis.avgCordHygiene, overallKpis.avgCordDelay, overallKpis.avgCordClamp])} kpis={eencCordKpis} /><KpiLineChart title="KPI 4 Over Time: Cord Mgmt" chartData={eencChartData} kpiKeys={eencCordChartKeys} /></div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"><DetailedKpiCard title="KPI 5: Breastfeeding (Breathing Babies)" overallScore={overallKpis.avgBfAdvice} kpis={eencBreastfeedingKpis} /><KpiLineChart title="KPI 5 Over Time: Breastfeeding" chartData={eencChartData} kpiKeys={eencBreastfeedingChartKeys} /></div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"><DetailedKpiCard title="KPI 6: Resuscitation Execution (Non-Breathing)" overallScore={overallKpis.avgResuscitation} kpis={eencResusExecKpis} /><KpiLineChart title="KPI 6 Over Time: Resuscitation" chartData={eencChartData} kpiKeys={eencResusExecChartKeys} /></div>
+                            <h3 className="text-xl font-bold text-slate-800 mb-5 mt-10 text-left tracking-wide">Overall EENC Adherence by State {scopeTitle}</h3>
+                            <div className="mb-10"><KpiBarChart title="Overall EENC Adherence by State" chartData={stateKpis} /></div>
+                            <h3 className="text-xl font-bold text-slate-800 mb-5 text-left tracking-wide">Detailed EENC Skill Performance {scopeTitle}</h3>
+                            <div className="mb-10"><EENCCompactSkillsTable overallKpis={overallKpis} /></div>
                         </div>
                     )}
 
                      {activeEencTab === 'mothers' && (
                          <div className="animate-fade-in">
-                            <div className="grid grid-cols-1 gap-4 mb-6"><KpiCard title="Total Mother Interviews" value={motherKpis?.totalMothers || 0} /></div>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"><DetailedKpiCard title="Mother Interview: Skin-to-Skin Care" overallScore={calculateAverage([motherKpis?.avgSkinImm, motherKpis?.avgSkin90min])} kpis={eencMotherSkinKpis} /><KpiLineChart title="Skin-to-Skin Over Time" chartData={eencMotherChartData} kpiKeys={eencMotherSkinChartKeys} /></div>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"><DetailedKpiCard title="Mother Interview: Breastfeeding" overallScore={calculateAverage([motherKpis?.avgBf1hr])} kpis={eencMotherBfKpis} /><KpiLineChart title="Breastfeeding Over Time" chartData={eencMotherChartData} kpiKeys={eencMotherBfChartKeys} /></div>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"><DetailedKpiCard title="Mother Interview: Skin & Cord Care" overallScore={calculateAverage([motherKpis?.avgVitK, motherKpis?.avgEyeOint, motherKpis?.avgCordSubs])} kpis={eencMotherCareKpis} /><KpiLineChart title="Care Indicators Over Time" chartData={eencMotherChartData} kpiKeys={eencMotherCareChartKeys} /></div>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"><DetailedKpiCard title="Mother Interview: Oiling & Bathing" overallScore={calculateAverage([motherKpis?.avgSkinOil, motherKpis?.avgBath6hr])} kpis={eencMotherHygieneKpis} /><KpiLineChart title="Hygiene Indicators Over Time" chartData={eencMotherChartData} kpiKeys={eencMotherHygieneChartKeys} /></div>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"><DetailedKpiCard title="Mother Interview: Vaccination" overallScore={calculateAverage([motherKpis?.avgPolio, motherKpis?.avgBcg])} kpis={eencMotherVacKpis} /><KpiLineChart title="Vaccination Over Time" chartData={eencMotherChartData} kpiKeys={eencMotherVacChartKeys} /></div>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"><DetailedKpiCard title="Mother Interview: Measurements" overallScore={calculateAverage([motherKpis?.avgWeight, motherKpis?.avgTemp])} kpis={eencMotherMeasureKpis} /><KpiLineChart title="Measurements Over Time" chartData={eencMotherChartData} kpiKeys={eencMotherMeasureChartKeys} /></div>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"><DetailedKpiCard title="Mother Interview: Registration" overallScore={calculateAverage([motherKpis?.avgCivReg, motherKpis?.avgDisCard])} kpis={eencMotherRegKpis} /><KpiLineChart title="Registration Over Time" chartData={eencMotherChartData} kpiKeys={eencMotherRegChartKeys} /></div>
-                            <h3 className="text-xl font-bold text-sky-800 mb-4 text-left">Overall Mother Interview Indicators by State {scopeTitle}</h3>
-                            <div className="mb-8"><KpiBarChart title="Average Indicator Presence by State" chartData={motherStateKpis} /></div>
-                            <h3 className="text-xl font-bold text-sky-800 mb-4 text-left">Detailed Mother Interview Performance {scopeTitle}</h3>
-                            <div className="mb-8"><MothersCompactSkillsTable motherKpis={motherKpis} serviceType="EENC" /></div>
+                            <div className="grid grid-cols-1 gap-6 mb-8"><KpiCard title="Total Mother Interviews" value={motherKpis?.totalMothers || 0} /></div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"><DetailedKpiCard title="Mother Interview: Skin-to-Skin Care" overallScore={calculateAverage([motherKpis?.avgSkinImm, motherKpis?.avgSkin90min])} kpis={eencMotherSkinKpis} /><KpiLineChart title="Skin-to-Skin Over Time" chartData={eencMotherChartData} kpiKeys={eencMotherSkinChartKeys} /></div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"><DetailedKpiCard title="Mother Interview: Breastfeeding" overallScore={calculateAverage([motherKpis?.avgBf1hr])} kpis={eencMotherBfKpis} /><KpiLineChart title="Breastfeeding Over Time" chartData={eencMotherChartData} kpiKeys={eencMotherBfChartKeys} /></div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"><DetailedKpiCard title="Mother Interview: Skin & Cord Care" overallScore={calculateAverage([motherKpis?.avgVitK, motherKpis?.avgEyeOint, motherKpis?.avgCordSubs])} kpis={eencMotherCareKpis} /><KpiLineChart title="Care Indicators Over Time" chartData={eencMotherChartData} kpiKeys={eencMotherCareChartKeys} /></div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"><DetailedKpiCard title="Mother Interview: Oiling & Bathing" overallScore={calculateAverage([motherKpis?.avgSkinOil, motherKpis?.avgBath6hr])} kpis={eencMotherHygieneKpis} /><KpiLineChart title="Hygiene Indicators Over Time" chartData={eencMotherChartData} kpiKeys={eencMotherHygieneChartKeys} /></div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"><DetailedKpiCard title="Mother Interview: Vaccination" overallScore={calculateAverage([motherKpis?.avgPolio, motherKpis?.avgBcg])} kpis={eencMotherVacKpis} /><KpiLineChart title="Vaccination Over Time" chartData={eencMotherChartData} kpiKeys={eencMotherVacChartKeys} /></div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"><DetailedKpiCard title="Mother Interview: Measurements" overallScore={calculateAverage([motherKpis?.avgWeight, motherKpis?.avgTemp])} kpis={eencMotherMeasureKpis} /><KpiLineChart title="Measurements Over Time" chartData={eencMotherChartData} kpiKeys={eencMotherMeasureChartKeys} /></div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"><DetailedKpiCard title="Mother Interview: Registration" overallScore={calculateAverage([motherKpis?.avgCivReg, motherKpis?.avgDisCard])} kpis={eencMotherRegKpis} /><KpiLineChart title="Registration Over Time" chartData={eencMotherChartData} kpiKeys={eencMotherRegChartKeys} /></div>
+                            <h3 className="text-xl font-bold text-slate-800 mb-5 mt-10 text-left tracking-wide">Overall Mother Interview Indicators by State {scopeTitle}</h3>
+                            <div className="mb-10"><KpiBarChart title="Average Indicator Presence by State" chartData={motherStateKpis} /></div>
+                            <h3 className="text-xl font-bold text-slate-800 mb-5 text-left tracking-wide">Detailed Mother Interview Performance {scopeTitle}</h3>
+                            <div className="mb-10"><MothersCompactSkillsTable motherKpis={motherKpis} serviceType="EENC" /></div>
                          </div>
                      )}
 
                     {activeEencTab === 'visit_reports' && visitReportStats && (
                         <div className="animate-fade-in">
-                            {/* 1. Total Card */}
-                            <div className="grid grid-cols-1 gap-4 mb-6">
+                            <div className="grid grid-cols-1 gap-6 mb-8">
                                 <KpiCard title="Total Visit Reports" value={visitReportStats.totalVisits} />
                             </div>
 
-                            {/* 2. Table: Facility, Visits, Skills (Removed State/Locality) */}
-                            <div className="mb-8 bg-white rounded-lg shadow-lg border-2 border-gray-200 overflow-hidden">
-                                <h4 className="text-lg font-bold text-sky-800 p-4 border-b bg-gray-50">Visit Breakdown & Skills Trained by Facility</h4>
+                            <div className="mb-8 bg-white rounded-2xl shadow-md border border-black overflow-hidden">
+                                <h4 className="text-lg font-extrabold text-slate-800 p-5 border-b border-black bg-slate-100">Visit Breakdown & Skills Trained by Facility</h4>
                                 <div className="overflow-x-auto">
                                 <table className="w-full text-sm text-left">
-                                    <thead className="bg-gray-100 text-xs uppercase text-gray-700">
+                                    <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider">
                                         <tr>
-                                            <th className="px-4 py-3 border">Facility</th>
-                                            <th className="px-4 py-3 border text-center bg-blue-50">Total Visits</th>
+                                            <th className="px-5 py-4 border-b border-black">Facility</th>
+                                            <th className="px-5 py-4 border-b border-black border-l border-black text-center bg-sky-100">Total Visits</th>
                                             {visitReportStats.distinctSkillKeys.map(skillKey => (
-                                                <th key={skillKey} className="px-2 py-3 border text-center break-words whitespace-normal text-xs">
+                                                <th key={skillKey} className="px-3 py-4 border-b border-l border-black text-center break-words whitespace-normal text-[11px] max-w-[120px]">
                                                     {EENC_SKILLS_LABELS[skillKey] || skillKey}
                                                 </th>
                                             ))}
@@ -1366,71 +1409,67 @@ const MentorshipDashboard = ({
                                     </thead>
                                     <tbody>
                                         {visitReportStats.facilityTableData.map(row => (
-                                            <tr key={row.id} className="hover:bg-gray-50 border-b">
-                                                <td className="px-4 py-2 border font-medium">{row.facilityName}</td>
-                                                <td className="px-4 py-2 border text-center font-bold bg-blue-50">{row.visitCount}</td>
+                                            <tr key={row.id} className="hover:bg-sky-50 transition-colors border-b border-black">
+                                                <td className="px-5 py-3 font-semibold text-slate-800">{row.facilityName}</td>
+                                                <td className="px-5 py-3 border-l border-black text-center font-bold bg-sky-50 text-sky-800">{row.visitCount}</td>
                                                 {visitReportStats.distinctSkillKeys.map(skillKey => (
-                                                    <td key={skillKey} className="px-2 py-2 border text-center">
+                                                    <td key={skillKey} className="px-3 py-3 border-l border-black text-center text-slate-700 font-medium">
                                                         {row.skills[skillKey] || 0}
                                                     </td>
                                                 ))}
                                             </tr>
                                         ))}
                                         {visitReportStats.facilityTableData.length === 0 && (
-                                            <tr><td colSpan={2 + visitReportStats.distinctSkillKeys.length} className="p-4 text-center text-gray-500">No visits found for current filter.</td></tr>
+                                            <tr><td colSpan={2 + visitReportStats.distinctSkillKeys.length} className="p-8 text-center text-slate-500 font-bold">No visits found for current filter.</td></tr>
                                         )}
                                     </tbody>
                                 </table>
                                 </div>
                             </div>
 
-                            {/* 3. Graph: Visits by State */}
                             <div className="mb-8">
                                 <KpiBarChart title="Total Visits by State" chartData={visitReportStats.stateChartData} dataKey="count" />
                             </div>
 
-                            {/* 4. Table: Problems and Solutions (UPDATED) */}
-                            <div className="mb-8 bg-white rounded-lg shadow-lg border-2 border-gray-200">
-                                <h4 className="text-lg font-bold text-sky-800 p-4 border-b bg-gray-50">Facility Problems & Solutions (Combined)</h4>
+                            <div className="mb-8 bg-white rounded-2xl shadow-md border border-black overflow-hidden">
+                                <h4 className="text-lg font-extrabold text-slate-800 p-5 border-b border-black bg-slate-100">Facility Problems & Solutions (Combined)</h4>
                                 <div className="overflow-x-auto max-h-[600px]">
                                     <table className="w-full text-sm text-left border-collapse">
-                                        <thead className="bg-gray-100 text-xs uppercase text-gray-700 sticky top-0 z-10">
+                                        <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider sticky top-0 z-10 shadow-sm border-b border-black">
                                             <tr>
-                                                <th className="px-2 py-3 border w-[15%]">Facility & Date</th>
-                                                <th className="px-2 py-3 border w-[20%]">Problem / Challenge</th>
-                                                <th className="px-2 py-3 border w-[20%]">Immediate Solution</th>
-                                                <th className="px-2 py-3 border w-[10%]">Imm. Status</th>
-                                                <th className="px-2 py-3 border w-[20%]">Long-term Solution</th>
-                                                <th className="px-2 py-3 border w-[10%]">LT Status</th>
-                                                <th className="px-2 py-3 border w-[5%]">Resp.</th>
+                                                <th className="px-4 py-4 border-r border-black w-[15%]">Facility & Date</th>
+                                                <th className="px-4 py-4 border-r border-black w-[20%]">Problem / Challenge</th>
+                                                <th className="px-4 py-4 border-r border-black w-[20%]">Immediate Solution</th>
+                                                <th className="px-4 py-4 border-r border-black w-[10%] text-center">Imm. Status</th>
+                                                <th className="px-4 py-4 border-r border-black w-[20%]">Long-term Solution</th>
+                                                <th className="px-4 py-4 border-r border-black w-[10%] text-center">LT Status</th>
+                                                <th className="px-4 py-4 w-[5%]">Resp.</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {visitReportStats.problemsList.map((item, idx) => (
-                                                <tr key={idx} className="hover:bg-gray-50 border-b border-gray-300">
-                                                    <td className="px-2 py-2 border align-top text-xs">
-                                                        <div className="font-bold text-gray-800">{item.facility}</div>
-                                                        <div className="text-[10px] text-gray-500">{item.date}</div>
+                                                <tr key={idx} className="hover:bg-sky-50 transition-colors border-b border-black">
+                                                    <td className="px-4 py-3 border-r border-black align-top">
+                                                        <div className="font-bold text-slate-800 mb-1">{item.facility}</div>
+                                                        <div className="text-xs font-semibold text-slate-600 bg-slate-100 inline-block px-2 py-0.5 rounded border border-black">{item.date}</div>
                                                     </td>
-                                                    <td className="px-2 py-2 border align-top text-xs text-red-700 whitespace-pre-wrap">{item.problem}</td>
+                                                    <td className="px-4 py-3 border-r border-black align-top text-xs text-rose-700 whitespace-pre-wrap font-medium">{item.problem}</td>
                                                     
-                                                    {/* Immediate Solution Column */}
-                                                    <td className="px-2 py-2 border align-top text-xs text-green-700 whitespace-pre-wrap">{item.immediate}</td>
-                                                    <td className="px-2 py-2 border align-top text-center">
+                                                    <td className="px-4 py-3 border-r border-black align-top text-xs text-emerald-700 whitespace-pre-wrap font-medium">{item.immediate}</td>
+                                                    <td className="px-4 py-3 border-r border-black align-top text-center">
                                                         {renderStatusCell(item.immediate_status, item.reportId, item.challengeId, 'immediate_status')}
                                                     </td>
 
-                                                    {/* Long-term Solution Column */}
-                                                    <td className="px-2 py-2 border align-top text-xs text-blue-700 whitespace-pre-wrap">{item.longterm}</td>
-                                                    <td className="px-2 py-2 border align-top text-center">
+                                                    <td className="px-4 py-3 border-r border-black align-top text-xs text-sky-700 whitespace-pre-wrap font-medium">{item.longterm}</td>
+                                                    <td className="px-4 py-3 border-r border-black align-top text-center">
                                                         {renderStatusCell(item.long_term_status, item.reportId, item.challengeId, 'long_term_status')}
                                                     </td>
 
-                                                    <td className="px-2 py-2 border align-top text-[10px] text-gray-600">{item.person}</td>
+                                                    <td className="px-4 py-3 align-top text-[10px] font-bold text-slate-500 uppercase tracking-wider">{item.person}</td>
                                                 </tr>
                                             ))}
                                             {visitReportStats.problemsList.length === 0 && (
-                                                <tr><td colSpan="7" className="p-4 text-center text-gray-500">No problems recorded.</td></tr>
+                                                <tr><td colSpan="7" className="p-8 text-center text-slate-500 font-bold">No problems recorded.</td></tr>
                                             )}
                                         </tbody>
                                     </table>
