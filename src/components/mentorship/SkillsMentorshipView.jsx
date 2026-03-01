@@ -917,6 +917,7 @@ const SkillsMentorshipView = ({
     const [activeDashboardLocality, setActiveDashboardLocality] = useState(publicDashboardMode ? publicDashboardParams?.locality || '' : '');
     const [activeDashboardFacilityId, setActiveDashboardFacilityId] = useState(publicDashboardMode ? publicDashboardParams?.facilityId || '' : '');
     const [activeDashboardWorkerName, setActiveDashboardWorkerName] = useState(publicDashboardMode ? publicDashboardParams?.workerName || '' : '');
+    const [activeDashboardProject, setActiveDashboardProject] = useState(publicDashboardMode ? publicDashboardParams?.project || '' : '');
 
     // --- State for Viewing Visit Reports ---
     const [viewingVisitReport, setViewingVisitReport] = useState(null);
@@ -1800,6 +1801,7 @@ const SkillsMentorshipView = ({
         if (activeDashboardLocality) params.append('locality', activeDashboardLocality);
         if (activeDashboardFacilityId) params.append('facilityId', activeDashboardFacilityId);
         if (activeDashboardWorkerName) params.append('workerName', activeDashboardWorkerName);
+        if (activeDashboardProject) params.append('project', activeDashboardProject);
         
         const shareUrl = `${baseUrl}?${params.toString()}`;
         
@@ -2341,12 +2343,14 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                             setActiveDashboardState(value);
                                             setActiveDashboardLocality("");
                                             setActiveDashboardFacilityId("");
+                                            setActiveDashboardProject("");
                                             setActiveDashboardWorkerName("");
                                         }}
                                         activeLocality={activeDashboardLocality || selectedLocality}
                                         onLocalityChange={(value) => {
                                             setActiveDashboardLocality(value);
                                             setActiveDashboardFacilityId("");
+                                            setActiveDashboardProject("");
                                             setActiveDashboardWorkerName("");
                                         }}
                                         activeFacilityId={activeDashboardFacilityId || selectedFacilityId}
@@ -2354,6 +2358,13 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                             setActiveDashboardFacilityId(value);
                                             setActiveDashboardWorkerName("");
                                         }}
+
+                                        activeProject={activeDashboardProject}
+                                        onProjectChange={(value) => {
+                                            setActiveDashboardProject(value);
+                                            setActiveDashboardWorkerName("");
+                                        }}
+
                                         activeWorkerName={activeDashboardWorkerName || selectedHealthWorkerName}
                                         onWorkerNameChange={setActiveDashboardWorkerName}
                                     />
@@ -2544,12 +2555,14 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                         setActiveDashboardState(value);
                                         setActiveDashboardLocality("");
                                         setActiveDashboardFacilityId("");
+                                        setActiveDashboardProject("");
                                         setActiveDashboardWorkerName("");
                                     }}
                                     activeLocality={activeDashboardLocality || selectedLocality}
                                     onLocalityChange={(value) => {
                                         setActiveDashboardLocality(value);
                                         setActiveDashboardFacilityId("");
+                                        setActiveDashboardProject("");
                                         setActiveDashboardWorkerName("");
                                     }}
                                     activeFacilityId={activeDashboardFacilityId || selectedFacilityId}
@@ -2557,6 +2570,13 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                         setActiveDashboardFacilityId(value);
                                         setActiveDashboardWorkerName("");
                                     }}
+
+                                    activeProject={activeDashboardProject}
+                                    onProjectChange={(value) => {
+                                        setActiveDashboardProject(value);
+                                        setActiveDashboardWorkerName("");
+                                    }}
+
                                     activeWorkerName={activeDashboardWorkerName || selectedHealthWorkerName}
                                     onWorkerNameChange={setActiveDashboardWorkerName}
                                 />
@@ -3020,12 +3040,14 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     setActiveDashboardState(value);
                                     setActiveDashboardLocality("");
                                     setActiveDashboardFacilityId("");
+                                    setActiveDashboardProject("");
                                     setActiveDashboardWorkerName("");
                                 }}
                                 activeLocality={activeDashboardLocality}
                                 onLocalityChange={(value) => {
                                     setActiveDashboardLocality(value);
                                     setActiveDashboardFacilityId("");
+                                    setActiveDashboardProject("");
                                     setActiveDashboardWorkerName("");
                                 }}
                                 activeFacilityId={activeDashboardFacilityId}
@@ -3033,6 +3055,14 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     setActiveDashboardFacilityId(value);
                                     setActiveDashboardWorkerName("");
                                 }}
+                                
+                                // --- FIX: Pass activeProject to modal instance ---
+                                activeProject={activeDashboardProject}
+                                onProjectChange={(value) => {
+                                    setActiveDashboardProject(value);
+                                    setActiveDashboardWorkerName("");
+                                }}
+
                                 activeWorkerName={activeDashboardWorkerName}
                                 onWorkerNameChange={setActiveDashboardWorkerName}
                             />

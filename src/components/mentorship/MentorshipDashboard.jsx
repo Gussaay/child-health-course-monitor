@@ -450,7 +450,7 @@ const FilterSelect = ({ label, value, onChange, options, disabled = false, defau
 );
 
 const MentorshipDashboard = ({ 
-    allSubmissions, STATE_LOCALITIES, activeService, activeState, onStateChange, activeLocality, onLocalityChange, activeFacilityId, onFacilityIdChange, activeWorkerName, onWorkerNameChange, visitReports, canEditStatus, onUpdateStatus
+    allSubmissions, STATE_LOCALITIES, activeService, activeState, onStateChange, activeLocality, onLocalityChange, activeFacilityId, onFacilityIdChange, activeWorkerName, onWorkerNameChange, activeProject, onProjectChange, visitReports, canEditStatus, onUpdateStatus
 }) => {
 
     const [activeEencTab, setActiveEencTab] = useState('skills'); 
@@ -485,6 +485,7 @@ const MentorshipDashboard = ({
         if (activeState) filtered = filtered.filter(r => r.state === activeState);
         if (activeLocality) filtered = filtered.filter(r => r.locality === activeLocality);
         if (activeFacilityId) filtered = filtered.filter(r => r.facilityId === activeFacilityId);
+        if (activeProject) filtered = filtered.filter(r => r.project === activeProject);
 
         const totalVisits = filtered.length;
 
@@ -545,7 +546,7 @@ const MentorshipDashboard = ({
 
         return { totalVisits, stateChartData, facilityTableData, distinctSkillKeys, problemsList };
 
-    }, [visitReports, activeService, activeState, activeLocality, activeFacilityId, STATE_LOCALITIES]);
+    }, [visitReports, activeService, activeState, activeLocality, activeFacilityId, activeProject, STATE_LOCALITIES]);
 
     // --- Helper for rendering status badges/selects with Local Optimistic Update ---
     const renderStatusCell = (currentStatus, reportId, challengeId, fieldName) => {
@@ -825,14 +826,34 @@ const MentorshipDashboard = ({
         const map = new Map(); serviceCompletedSubmissions.filter(s => (!activeState || s.state === activeState) && (!activeLocality || s.locality === activeLocality)).forEach(s => { if (s.facilityId && !map.has(s.facilityId)) map.set(s.facilityId, { key: s.facilityId, name: s.facility || 'Unknown' }); });
         return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
     }, [serviceCompletedSubmissions, activeState, activeLocality]);
-    const workerOptions = useMemo(() => {
-        const map = new Map(); serviceCompletedSubmissions.filter(s => (!activeState || s.state === activeState) && (!activeLocality || s.locality === activeLocality) && (!activeFacilityId || s.facilityId === activeFacilityId)).forEach(s => { if (s.staff && !map.has(s.staff)) map.set(s.staff, { key: s.staff, name: s.staff }); });
+    
+    // Derived project options based on state and locality
+    const projectOptions = useMemo(() => {
+        const map = new Map(); 
+        serviceCompletedSubmissions.filter(s => 
+            (!activeState || s.state === activeState) && 
+            (!activeLocality || s.locality === activeLocality) &&
+            (!activeFacilityId || s.facilityId === activeFacilityId)
+        ).forEach(s => { 
+            if (s.project && s.project !== 'N/A' && !map.has(s.project)) {
+                map.set(s.project, { key: s.project, name: s.project }); 
+            }
+        });
         return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
     }, [serviceCompletedSubmissions, activeState, activeLocality, activeFacilityId]);
 
+    const workerOptions = useMemo(() => {
+        const map = new Map(); serviceCompletedSubmissions.filter(s => (!activeState || s.state === activeState) && (!activeLocality || s.locality === activeLocality) && (!activeFacilityId || s.facilityId === activeFacilityId) && (!activeProject || s.project === activeProject)).forEach(s => { if (s.staff && !map.has(s.staff)) map.set(s.staff, { key: s.staff, name: s.staff }); });
+        return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
+    }, [serviceCompletedSubmissions, activeState, activeLocality, activeFacilityId, activeProject]);
+
     const filteredSubmissions = useMemo(() => serviceCompletedSubmissions.filter(sub => 
-        (!activeState || sub.state === activeState) && (!activeLocality || sub.locality === activeLocality) && (!activeFacilityId || sub.facilityId === activeFacilityId) && (!activeWorkerName || sub.staff === activeWorkerName)
-    ), [serviceCompletedSubmissions, activeState, activeLocality, activeFacilityId, activeWorkerName]);
+        (!activeState || sub.state === activeState) && 
+        (!activeLocality || sub.locality === activeLocality) && 
+        (!activeFacilityId || sub.facilityId === activeFacilityId) && 
+        (!activeWorkerName || sub.staff === activeWorkerName) &&
+        (!activeProject || sub.project === activeProject)
+    ), [serviceCompletedSubmissions, activeState, activeLocality, activeFacilityId, activeWorkerName, activeProject]);
 
     const overallKpis = useMemo(() => {
         if (activeService === 'IMNCI') return imnciKpiHelper(filteredSubmissions.filter(s => s.service === 'IMNCI'));
@@ -1027,7 +1048,7 @@ const MentorshipDashboard = ({
 
     // --- Constants for Rendering ---
     const serviceTitle = SERVICE_TITLES[activeService] || activeService;
-    const isFiltered = activeState || activeLocality || activeFacilityId || activeWorkerName;
+    const isFiltered = activeState || activeLocality || activeFacilityId || activeProject || activeWorkerName;
     const scopeTitle = isFiltered ? "(Filtered Data)" : "(All Sudan Data)";
 
     // IMNCI Constants
@@ -1114,10 +1135,11 @@ const MentorshipDashboard = ({
         <div className="p-4 sm:p-6 bg-slate-50/50 min-h-screen" dir="ltr"> 
             <h3 className="text-2xl font-extrabold text-slate-800 mb-6 text-left tracking-tight">Mentorship Dashboard: {serviceTitle} <span className="text-sky-600 text-xl font-semibold">{scopeTitle}</span></h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8 p-5 bg-white rounded-2xl shadow-md border border-black">
-                <FilterSelect label="State" value={activeState} onChange={(v) => { onStateChange(v); onLocalityChange(""); onFacilityIdChange(""); onWorkerNameChange(""); }} options={stateOptions} defaultOption="All States" />
-                <FilterSelect label="Locality" value={activeLocality} onChange={(v) => { onLocalityChange(v); onFacilityIdChange(""); onWorkerNameChange(""); }} options={localityOptions} disabled={!activeState} defaultOption="All Localities" />
-                <FilterSelect label="Health Facility Name" value={activeFacilityId} onChange={(v) => { onFacilityIdChange(v); onWorkerNameChange(""); }} options={facilityOptions} disabled={!activeLocality} defaultOption="All Facilities" />
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-5 mb-8 p-5 bg-white rounded-2xl shadow-md border border-black">
+                <FilterSelect label="State" value={activeState} onChange={(v) => { onStateChange(v); onLocalityChange(""); onFacilityIdChange(""); onProjectChange(""); onWorkerNameChange(""); }} options={stateOptions} defaultOption="All States" />
+                <FilterSelect label="Locality" value={activeLocality} onChange={(v) => { onLocalityChange(v); onFacilityIdChange(""); onProjectChange(""); onWorkerNameChange(""); }} options={localityOptions} disabled={!activeState} defaultOption="All Localities" />
+                <FilterSelect label="Health Facility Name" value={activeFacilityId} onChange={(v) => { onFacilityIdChange(v); onProjectChange(""); onWorkerNameChange(""); }} options={facilityOptions} disabled={!activeLocality} defaultOption="All Facilities" />
+                <FilterSelect label="Project / Partner" value={activeProject} onChange={(v) => { onProjectChange(v); onWorkerNameChange(""); }} options={projectOptions} defaultOption="All Projects" />
                 <FilterSelect label="Health Worker Name" value={activeWorkerName} onChange={onWorkerNameChange} options={workerOptions} disabled={!activeFacilityId} defaultOption="All Health Workers" />
             </div>
             
