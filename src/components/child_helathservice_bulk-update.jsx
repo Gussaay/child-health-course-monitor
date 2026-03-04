@@ -10,7 +10,8 @@ import { FileOpener } from '@capacitor-community/file-opener';
 import { Plus, Trash2, Edit } from 'lucide-react';
 
 // --- DATA & CONFIG ---
-import { submitFacilityDataForApproval, listHealthFacilities } from "../data.js";
+import { submitFacilityDataForApproval } from "../data.js"; 
+import { useDataCache } from '../DataContext'; 
 import { STATE_LOCALITIES } from "./constants.js";
 import { amiriFontBase64 } from './AmiriFont.js';
 
@@ -185,6 +186,8 @@ const StaffManagementModal = ({ isOpen, onClose, facilityName, initialStaff, onS
 
 // --- MAIN EXPORT: BULK UPDATE VIEW ---
 const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }) => {
+    const { fetchHealthFacilities } = useDataCache(); // Use cache fetcher
+
     const currentFilters = useMemo(() => {
         if (filters && Object.keys(filters).length > 0) return filters;
         return { state: stateParam, locality: localityParam };
@@ -194,6 +197,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
     
     // States
     const [facilities, setFacilities] = useState([]);
+    const [allProjectOptions, setAllProjectOptions] = useState([]); // Global project list
     const [loading, setLoading] = useState(true);
     const [updates, setUpdates] = useState({}); 
     
@@ -201,7 +205,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
     const [searchTerm, setSearchTerm] = useState('');
     const [ownershipFilter, setOwnershipFilter] = useState(''); 
     
-    // NEW: UI Filters to narrow down the fetched results
+    // UI Filters to narrow down the fetched results
     const [localStateFilter, setLocalStateFilter] = useState(currentFilters.state && currentFilters.state !== 'ALL_STATES' ? currentFilters.state : 'All');
     const [localLocalityFilter, setLocalLocalityFilter] = useState(currentFilters.locality || 'All');
     
@@ -213,6 +217,26 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
     const [selectedFacilityName, setSelectedFacilityName] = useState('');
     const [currentStaffList, setCurrentStaffList] = useState([]);
 
+    // --- FETCH GLOBAL PROJECT NAMES FOR DROPDOWN (USING CACHE) ---
+    useEffect(() => {
+        const fetchAllProjects = async () => {
+            try {
+                // Fetch from cache, force=false
+                const allData = await fetchHealthFacilities({}, false); 
+                const names = new Set();
+                allData.forEach(f => {
+                    if (f.project_name && f.project_name.trim() !== '') {
+                        names.add(f.project_name.trim());
+                    }
+                });
+                setAllProjectOptions(Array.from(names).sort());
+            } catch (err) {
+                console.error("Failed to fetch global project list:", err);
+            }
+        };
+        fetchAllProjects();
+    }, [fetchHealthFacilities]);
+
     // --- CONFIG ---
     const BULK_VIEW_CONFIG = useMemo(() => ({
         'General': {
@@ -220,6 +244,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
             facilityTypes: null, 
             columns: [
                 { key: 'facility_ownership', label: 'ملكية المؤسسة', type: 'select', options: OWNERSHIP_OPTIONS },
+                { key: 'project_name', label: 'اسم المشروع', type: 'select', options: allProjectOptions },
                 { key: 'هل_المؤسسة_تعمل', label: 'هل المؤسسة تعمل', type: 'select', options: ['Yes', 'No'] },
                 { key: 'وجود_العلاج_المتكامل_لامراض_الطفولة', label: 'العلاج المتكامل', type: 'select', options: ['Yes', 'No'] },
                 { key: 'eenc_provides_essential_care', label: 'رعاية حديثي الولادة', type: 'select', options: ['Yes', 'No'] },
@@ -231,6 +256,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
             facilityTypes: ["مركز صحة الاسرة", "وحدة صحة الاسرة", "شفخانه", "Health Unit", "Family Health Center", "Primary Health Center"],
             columns: [
                 { key: 'facility_ownership', label: 'ملكية المؤسسة', type: 'select', options: OWNERSHIP_OPTIONS },
+                { key: 'project_name', label: 'اسم المشروع', type: 'select', options: allProjectOptions },
                 { key: 'هل_المؤسسة_تعمل', label: 'هل المؤسسة تعمل', type: 'select', options: ['Yes', 'No'] },
                 { key: 'وجود_العلاج_المتكامل_لامراض_الطفولة', label: 'وجود العلاج المتكامل', type: 'select', options: ['Yes', 'No'] },
                 { key: 'STAFF_NAMES', label: 'اسم الكادر', type: 'staff_names' },
@@ -250,6 +276,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
             facilityTypes: ["مستشفى", "مستشفى ريفي", "مستشفى تخصصي", "Hospital", "Rural Hospital"],
             columns: [
                 { key: 'facility_ownership', label: 'ملكية المؤسسة', type: 'select', options: OWNERSHIP_OPTIONS },
+                { key: 'project_name', label: 'اسم المشروع', type: 'select', options: allProjectOptions },
                 { key: 'هل_المؤسسة_تعمل', label: 'هل المؤسسة تعمل', type: 'select', options: ['Yes', 'No'] },
                 { key: 'neonatal_level_of_care_primary', label: 'رعاية أولية', type: 'select', options: ['Yes', 'No'] },
                 { key: 'neonatal_level_of_care_secondary', label: 'رعاية ثانوية', type: 'select', options: ['Yes', 'No'] },
@@ -263,6 +290,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
             facilityTypes: ["مستشفى", "مستشفى ريفي", "مستشفى تخصصي", "Hospital", "Rural Hospital"],
             columns: [
                 { key: 'facility_ownership', label: 'ملكية المؤسسة', type: 'select', options: OWNERSHIP_OPTIONS },
+                { key: 'project_name', label: 'اسم المشروع', type: 'select', options: allProjectOptions },
                 { key: 'هل_المؤسسة_تعمل', label: 'هل المؤسسة تعمل', type: 'select', options: ['Yes', 'No'] },
                 { key: 'eenc_provides_essential_care', label: 'تقدم خدمة EENC', type: 'select', options: ['Yes', 'No'] },
                 { key: 'eenc_ambu_bags', label: 'عدد الامبوباق', type: 'number' },
@@ -275,31 +303,57 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
             facilityTypes: ["مستشفى", "مستشفى ريفي", "مستشفى تخصصي", "Hospital", "Rural Hospital"],
             columns: [
                 { key: 'facility_ownership', label: 'ملكية المؤسسة', type: 'select', options: OWNERSHIP_OPTIONS },
+                { key: 'project_name', label: 'اسم المشروع', type: 'select', options: allProjectOptions },
                 { key: 'هل_المؤسسة_تعمل', label: 'هل المؤسسة تعمل', type: 'select', options: ['Yes', 'No'] },
                 { key: 'etat_has_service', label: 'فرز الحالات (ETAT)', type: 'select', options: ['Yes', 'No'] },
                 { key: 'hdu_has_service', label: 'عناية وسيطة (HDU)', type: 'select', options: ['Yes', 'No'] },
                 { key: 'picu_has_service', label: 'عناية مكثفة (PICU)', type: 'select', options: ['Yes', 'No'] },
                 { key: 'etat_trained_workers', label: 'الكوادر المدربة', type: 'number' }
             ]
+        },
+        'Vaccination': {
+            label: 'التحصين (Vaccination)',
+            facilityTypes: ["مستشفى ريفي", "مركز صحة الاسرة", "وحدة صحة الاسرة", "شفخانه", "Primary Health Center"],
+            columns: [
+                { key: 'facility_ownership', label: 'ملكية المؤسسة', type: 'select', options: OWNERSHIP_OPTIONS },
+                { key: 'project_name', label: 'اسم المشروع', type: 'select', options: allProjectOptions },
+                { key: 'هل_المؤسسة_تعمل', label: 'هل المؤسسة تعمل', type: 'select', options: ['Yes', 'No'] },
+                { key: 'immunization_office_exists', label: 'وجود مكتب تحصين', type: 'select', options: ['Yes', 'No'] },
+                { key: 'nearest_immunization_center', label: 'أقرب مركز تحصين', type: 'text' }
+            ]
+        },
+        'Nutrition': {
+            label: 'التغذية (Nutrition)',
+            facilityTypes: ["مستشفى ريفي", "مركز صحة الاسرة", "وحدة صحة الاسرة", "شفخانه", "Primary Health Center"],
+            columns: [
+                { key: 'facility_ownership', label: 'ملكية المؤسسة', type: 'select', options: OWNERSHIP_OPTIONS },
+                { key: 'project_name', label: 'اسم المشروع', type: 'select', options: allProjectOptions },
+                { key: 'هل_المؤسسة_تعمل', label: 'هل المؤسسة تعمل', type: 'select', options: ['Yes', 'No'] },
+                { key: 'nutrition_center_exists', label: 'مركز تغذية خارجي', type: 'select', options: ['Yes', 'No'] },
+                { key: 'growth_monitoring_service_exists', label: 'خدمة متابعة النمو', type: 'select', options: ['Yes', 'No'] },
+                { key: 'nearest_nutrition_center', label: 'أقرب مركز تغذية', type: 'text' }
+            ]
         }
-    }), []);
+    }), [allProjectOptions]);
 
     const filtersString = JSON.stringify(currentFilters);
 
+    // --- FETCH FACILITIES VIA CACHE ---
     useEffect(() => {
         const load = async () => {
             setLoading(true);
             setFacilities([]); 
             try {
                 const fetchFilters = {
-                    state: currentFilters.state,
-                    locality: currentFilters.locality,
+                    state: localStateFilter === 'All' ? undefined : localStateFilter,
+                    locality: localLocalityFilter === 'All' ? undefined : localLocalityFilter,
                     facilityType: currentFilters.facilityType,
                     functioningStatus: currentFilters.functioning,
                     project: currentFilters.project
                 };
                 
-                const raw = await listHealthFacilities(fetchFilters);
+                // Use fetchHealthFacilities with force=false to utilize cache
+                const raw = await fetchHealthFacilities(fetchFilters, false);
                 const data = raw.map(r => ({ ...r, locality: r['المحلية'] || 'Unknown' }));
                 
                 setFacilities(data);
@@ -311,7 +365,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
             }
         };
         load();
-    }, [filtersString, setToast]);
+    }, [filtersString, localStateFilter, localLocalityFilter, setToast, fetchHealthFacilities]);
 
     const handleInputChange = (id, field, value) => {
         setUpdates(prev => {
@@ -382,13 +436,13 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
     const config = BULK_VIEW_CONFIG[activeService] || BULK_VIEW_CONFIG['General'];
     
     // --- DYNAMIC ARABIC TITLE ---
-    const stateAr = currentFilters.state && currentFilters.state !== 'ALL_STATES' 
-        ? (STATE_LOCALITIES[currentFilters.state]?.ar || currentFilters.state) 
+    const stateAr = localStateFilter !== 'All' 
+        ? (STATE_LOCALITIES[localStateFilter]?.ar || localStateFilter) 
         : 'كل الولايات';
         
-    const localityAr = currentFilters.locality 
-        ? (LOCALITY_EN_TO_AR_MAP[currentFilters.locality] || currentFilters.locality) 
-        : (currentFilters.state && currentFilters.state !== 'ALL_STATES' ? 'كل المحليات' : '');
+    const localityAr = localLocalityFilter !== 'All' 
+        ? (LOCALITY_EN_TO_AR_MAP[localLocalityFilter] || localLocalityFilter) 
+        : (localStateFilter !== 'All' ? 'كل المحليات' : '');
 
     let filterTitleParts = [];
     if (currentFilters.project) filterTitleParts.push(`مشروع: ${currentFilters.project}`);
@@ -444,7 +498,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
     const viewKpiData = useMemo(() => calculateKPIs(displayedFacilities, updates, config), [displayedFacilities, updates, config]);
 
     const handleExportPDF = async () => {
-        const safeStateName = currentFilters.state || 'All_States';
+        const safeStateName = localStateFilter !== 'All' ? localStateFilter : 'All_States';
         const fileName = `${activeService}_${safeStateName}.pdf`;
         const doc = new jsPDF('landscape', 'mm', 'a4');
         doc.addFileToVFS('Amiri-Regular.ttf', amiriFontBase64);

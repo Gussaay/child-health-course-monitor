@@ -22,7 +22,6 @@ import {
 import {
     saveFacilitySnapshot,
     upsertHealthFacility,
-    listHealthFacilities,
     importHealthFacilities,
     deleteHealthFacility,
     deleteFacilitiesBatch,
@@ -32,7 +31,7 @@ import {
     rejectFacilitySubmission,
     submitFacilityDataForApproval,
     listFacilitiesByLocality
-} from "../data.js";
+} from "../data.js"; 
 import {
     GenericFacilityForm,
     IMNCIFormFields,
@@ -825,7 +824,7 @@ const ChildHealthServicesView = ({
         const params = new URLSearchParams();
 
         // Add any active filters to the query parameters
-        if (stateFilter && stateFilter !== 'ALL_STATES' && stateFilter !== 'NOT_ASSIGNED') {
+        if (stateFilter && stateFilter !== 'NOT_ASSIGNED') {
             params.append('state', stateFilter);
         }
         if (localityFilter) {
@@ -888,6 +887,7 @@ const ChildHealthServicesView = ({
     const [searchQuery, setSearchQuery] = useState('');
     const [pendingStartDate, setPendingStartDate] = useState('');
     const [pendingEndDate, setPendingEndDate] = useState('');
+    const hasFetchedPendingRef = useRef(false); 
     const [isMapModalOpen, setIsMapModalOpen] = useState(false);
     const [facilityForMap, setFacilityForMap] = useState(null);
     const [localityBoundaries, setLocalityBoundaries] = useState(null);
@@ -956,18 +956,9 @@ const ChildHealthServicesView = ({
         fetchBoundaries();
     }, [setToast]);
 
-    const getCurrentFilters = () => {
-         let effectiveLocalityFilter = localityFilter;
-         if (permissions.manageScope === 'locality') {
-             effectiveLocalityFilter = userLocalities?.[0] || '';
-         }
-        const filters = { locality: effectiveLocalityFilter, facilityType: facilityTypeFilter, functioningStatus: functioningFilter, project: projectFilter, };
-        if (stateFilter && stateFilter !== 'ALL_STATES') { filters.state = stateFilter; }
-        if (!stateFilter && (userStates && userStates.length > 0)) { return null; }
-        if (permissions.manageScope === 'locality' && !effectiveLocalityFilter) { return null; }
-        if ((!userStates || userStates.length === 0) && !stateFilter && Object.keys(filters).every(k => !filters[k] )) { return null; }
-        return filters;
-    };
+    const getCurrentFilters = useCallback(() => {
+        return {};
+    }, []);
 
     const handleOpenMapModal = (facility) => { setFacilityForMap(facility); setIsMapModalOpen(true); };
 
@@ -977,13 +968,12 @@ const ChildHealthServicesView = ({
         try {
             if (permissions.canApproveSubmissions) {
                 await saveFacilitySnapshot(payload);
-                setToast({ show: true, message: "Facility location updated directly.", type: "success" });
+                setToast({ show: true, message: "Facility location updated directly. (Click Refresh to update table)", type: "success" });
             } else {
                  await submitFacilityDataForApproval(payload, auth.currentUser?.email || 'Unknown User');
                  setToast({ show: true, message: "Facility location update submitted for approval.", type: "info" });
             }
-            const currentFilters = getCurrentFilters();
-            if (currentFilters) { fetchHealthFacilities(currentFilters, true); }
+            // Removed forced fetch
         } catch (error) {
             setToast({ show: true, message: `Failed to update location: ${error.message}`, type: 'error' });
         }
@@ -1059,6 +1049,9 @@ const ChildHealthServicesView = ({
 
     const refreshSubmissions = useCallback(async (force = false) => {
         if (!permissions.canManageFacilities) return;
+        
+        if (!force && hasFetchedPendingRef.current) return;
+
         setIsSubmissionsLoading(true);
         try {
             await Promise.all([
@@ -1066,7 +1059,11 @@ const ChildHealthServicesView = ({
                 fetchPendingFederalSubmissions(force),
                 fetchPendingStateSubmissions(force),
                 fetchPendingLocalitySubmissions(force),
-                (async () => { const subs = await listPendingFacilitySubmissions(); setPendingSubmissions(subs); })()
+                (async () => { 
+                    const subs = await listPendingFacilitySubmissions(); 
+                    setPendingSubmissions(subs); 
+                    hasFetchedPendingRef.current = true;
+                })()
             ]);
         } catch (error) {
             setToast({ show: true, message: "Failed to load pending submissions.", type: "error" });
@@ -1077,83 +1074,69 @@ const ChildHealthServicesView = ({
 
     useEffect(() => {
         if (view === 'list') {
-            const isLocalityMgr = permissions.manageScope === 'locality';
-            const hasAssignedLocality = userLocalities && userLocalities.length > 0;
-            if (isLocalityMgr && !hasAssignedLocality) {
-                 if (activeTab === TABS.PENDING) { refreshSubmissions(false); }
-                 return;
-             }
-            let fetchLocalityFilter = '';
-            if (isLocalityMgr && hasAssignedLocality) { fetchLocalityFilter = userLocalities[0]; } else if (!isLocalityMgr) { fetchLocalityFilter = localityFilter; }
-            const filters = { locality: fetchLocalityFilter, facilityType: facilityTypeFilter, functioningStatus: functioningFilter, project: projectFilter, };
-            if (stateFilter && stateFilter !== 'ALL_STATES') { filters.state = stateFilter; }
-            const shouldFetch = (stateFilter && stateFilter !== 'ALL_STATES') || ((!userStates || userStates.length === 0) && (stateFilter === 'ALL_STATES' || stateFilter === 'NOT_ASSIGNED')) || ((!userStates || userStates.length === 0) && !stateFilter && (filters.locality || filters.facilityType || filters.functioningStatus || filters.project)) || (isLocalityMgr && stateFilter && hasAssignedLocality);
-            if (hasManuallySelected && shouldFetch) { fetchHealthFacilities(filters, false); }
-            if (activeTab === TABS.PENDING) { refreshSubmissions(false); }
+            if (activeTab === TABS.PENDING) {
+                refreshSubmissions(false);
+            } else {
+                fetchHealthFacilities({}, false);
+            }
         }
-    }, [ view, stateFilter, localityFilter, facilityTypeFilter, functioningFilter, projectFilter, activeTab, fetchHealthFacilities, refreshSubmissions, userStates, userLocalities, permissions.manageScope, hasManuallySelected ]);
+    }, [view, activeTab, fetchHealthFacilities, refreshSubmissions]);
 
+    // THE OPTIMIZED useMemo HOOK:
     const uniquePendingSubmissions = useMemo(() => {
-        if (!pendingSubmissions) return [];
-        const unique = new Map();
+        if (!pendingSubmissions || pendingSubmissions.length === 0) return [];
 
-        // 1. Sort submissions ascending (oldest first) so newer updates merge on top
-        const sortedSubmissions = [...pendingSubmissions].sort((a, b) => {
+        // 1. FILTER FIRST: Reduce the dataset before doing heavy merging
+        let relevantSubmissions = pendingSubmissions;
+        if (pendingStartDate || pendingEndDate) {
+            const start = pendingStartDate ? new Date(pendingStartDate).setHours(0, 0, 0, 0) : 0;
+            const end = pendingEndDate ? new Date(pendingEndDate).setHours(23, 59, 59, 999) : Infinity;
+            
+            relevantSubmissions = pendingSubmissions.filter(s => {
+                if (!s.submittedAt?.toDate) return false;
+                const time = s.submittedAt.toDate().getTime();
+                return time >= start && time <= end;
+            });
+        }
+
+        // 2. SORT ASCENDING: Oldest first for accurate merging
+        const sortedSubmissions = [...relevantSubmissions].sort((a, b) => {
             const timeA = a.submittedAt?.toMillis ? a.submittedAt.toMillis() : 0;
             const timeB = b.submittedAt?.toMillis ? b.submittedAt.toMillis() : 0;
             return timeA - timeB;
         });
 
-        // 2. Merge overlapping fields
-        sortedSubmissions.forEach(s => {
+        // 3. MERGE
+        const unique = new Map();
+        for (const s of sortedSubmissions) {
             const key = `${s['اسم_المؤسسة']}-${s['الولاية']}-${s['المحلية']}`;
-            
-            if (!unique.has(key)) {
-                // First time seeing this facility in pending
+            const existing = unique.get(key);
+
+            if (!existing) {
                 unique.set(key, { ...s, _mergedSubmissionIds: [s.submissionId] });
             } else {
-                const existing = unique.get(key);
-                
                 if (s._action === 'DELETE') {
-                    // Deletion overrides data, but keep track of previous IDs for cleanup
                     unique.set(key, { 
                         ...s, 
                         _mergedSubmissionIds: [...existing._mergedSubmissionIds, s.submissionId] 
                     });
                 } else {
-                    // Standard merge: new fields overwrite old, but non-overlapping old fields are kept
                     const merged = { ...existing, ...s };
-                    
-                    // Deep merge specific nested objects like neonatal care
                     if (existing.neonatal_level_of_care || s.neonatal_level_of_care) {
                         merged.neonatal_level_of_care = {
                             ...(existing.neonatal_level_of_care || {}),
                             ...(s.neonatal_level_of_care || {})
                         };
                     }
-                    
-                    // Accumulate all the submission IDs that built this final record
                     merged._mergedSubmissionIds = [...existing._mergedSubmissionIds, s.submissionId];
-                    merged.submissionId = s.submissionId; // main reference points to latest
-                    
+                    merged.submissionId = s.submissionId; 
                     unique.set(key, merged);
                 }
             }
-        });
+        }
 
-        let filtered = Array.from(unique.values());
-        
-        if (pendingStartDate) { 
-            const start = new Date(pendingStartDate); start.setHours(0, 0, 0, 0); 
-            filtered = filtered.filter(s => s.submittedAt?.toDate && s.submittedAt.toDate() >= start); 
-        }
-        if (pendingEndDate) { 
-            const end = new Date(pendingEndDate); end.setHours(23, 59, 59, 999); 
-            filtered = filtered.filter(s => s.submittedAt?.toDate && s.submittedAt.toDate() <= end); 
-        }
-        
-        // 3. Sort descending (newest first) for UI display
-        return filtered.sort((a, b) => {
+        // 4. SORT DESCENDING ONCE: For the UI
+        return Array.from(unique.values()).sort((a, b) => {
             const timeA = a.submittedAt?.toMillis ? a.submittedAt.toMillis() : 0;
             const timeB = b.submittedAt?.toMillis ? b.submittedAt.toMillis() : 0;
             return timeB - timeA;
@@ -1224,11 +1207,10 @@ const ChildHealthServicesView = ({
         const finalPayload = { ...payload };
         if (editingFacility?.id) { finalPayload.id = editingFacility.id; }
         try {
-            if (permissions.canApproveSubmissions) { await saveFacilitySnapshot(finalPayload); setToast({ show: true, message: 'Facility saved directly.', type: 'success' }); } else { await submitFacilityDataForApproval(finalPayload, user.email || 'Unknown User'); setToast({ show: true, message: 'Facility update submitted for approval.', type: 'info' }); }
+            if (permissions.canApproveSubmissions) { await saveFacilitySnapshot(finalPayload); setToast({ show: true, message: 'Facility saved directly. (Click Refresh to update table)', type: 'success' }); } else { await submitFacilityDataForApproval(finalPayload, user.email || 'Unknown User'); setToast({ show: true, message: 'Facility update submitted for approval.', type: 'info' }); }
             setEditingFacility(null);
             setView('list');
-            const currentFilters = getCurrentFilters();
-            if (currentFilters) { fetchHealthFacilities(currentFilters, true); }
+            // Removed forced fetch
         } catch (error) {
              setToast({ show: true, message: `Failed to save/submit: ${error.message}`, type: 'error' });
         }
@@ -1265,15 +1247,14 @@ const ChildHealthServicesView = ({
             try {
                 if (permissions.canApproveSubmissions) {
                     await deleteHealthFacility(facilityId);
-                    setToast({ show: true, message: 'Facility deleted.', type: 'success' });
+                    setToast({ show: true, message: 'Facility deleted. (Click Refresh to update table)', type: 'success' });
                 } else {
                     const updaterIdentifier = user.displayName ? `${user.displayName} (${user.email})` : user.email;
                     const payload = { ...facility, _action: 'DELETE', updated_by: updaterIdentifier, 'اخر تحديث': new Date().toISOString(), };
                     await submitFacilityDataForApproval(payload, user.email || 'Unknown User');
                     setToast({ show: true, message: 'Deletion request submitted for approval.', type: 'info' });
                 }
-                const currentFilters = getCurrentFilters();
-                if (currentFilters) { fetchHealthFacilities(currentFilters, true); }
+                // Removed forced fetch
             } catch (error) {
                 setToast({ show: true, message: `Failed to process request: ${error.message}`, type: 'error' });
             }
@@ -1287,11 +1268,10 @@ const ChildHealthServicesView = ({
             const { successes, errors, failedRowsData } = await importHealthFacilities(data, originalRows, (progress) => { setUploadStatus(prev => ({ ...prev, processed: progress.processed })); });
             const successCount = successes.length;
             const errorCount = errors.length;
-            let message = `${successCount} facilities imported/updated successfully.`;
+            let message = `${successCount} facilities imported/updated successfully. (Click Refresh to update table)`;
             if (errorCount > 0) { message += `\n${errorCount} rows failed to import.`; }
              setUploadStatus(prev => ({ ...prev, inProgress: false, message, errors: failedRowsData }));
-            const currentFilters = getCurrentFilters();
-            if (currentFilters) { fetchHealthFacilities(currentFilters, true); }
+            // Removed forced fetch
         } catch (error) {
              setUploadStatus({ inProgress: false, processed: 0, total: 0, errors: [{ message: error.message }], message: `Import failed: ${error.message}` });
         }
@@ -1307,7 +1287,7 @@ const ChildHealthServicesView = ({
                  const idsToClean = submissionData._mergedSubmissionIds || [submissionData.submissionId];
                  await Promise.all(idsToClean.map(id => rejectFacilitySubmission(id, auth.currentUser?.email || 'Unknown Approver')));
                  
-                 setToast({ show: true, message: "Facility deletion approved and completed.", type: "success" });
+                 setToast({ show: true, message: "Facility deletion approved and completed. (Click Refresh to update table)", type: "success" });
             } else {
                 // Process the combined submission using the main ID
                 await approveFacilitySubmission(submissionData, auth.currentUser?.email || 'Unknown Approver');
@@ -1318,13 +1298,12 @@ const ChildHealthServicesView = ({
                     await Promise.all(redundantIds.map(id => rejectFacilitySubmission(id, 'Merged into a combined submission')));
                 }
 
-                setToast({ show: true, message: "Submission approved and facility data updated.", type: "success" });
+                setToast({ show: true, message: "Submission approved and facility data updated. (Click Refresh to update table)", type: "success" });
             }
             setSubmissionForReview(null);
             setComparisonFacilities([]);
-            refreshSubmissions(true);
-            const currentFilters = getCurrentFilters();
-            if (currentFilters) { fetchHealthFacilities(currentFilters, true); }
+            refreshSubmissions(true); // Refreshes the pending submissions so the approved item vanishes
+            // Removed forced fetch for All Facilities
         } catch (error) {
              setToast({ show: true, message: `Approval failed: ${error.message}`, type: 'error' });
         }
@@ -1656,8 +1635,7 @@ const ChildHealthServicesView = ({
                 onClose={() => setIsDuplicateModalOpen(false)}
                 facilities={filteredFacilities || []}
                 onDuplicatesDeleted={() => {
-                    const currentFilters = getCurrentFilters();
-                    if (currentFilters) fetchHealthFacilities(currentFilters, true);
+                    // Removed forced fetch
                 }}
             />
             <DataCleanupModal
@@ -1665,8 +1643,7 @@ const ChildHealthServicesView = ({
                 onClose={() => setIsCleanupModalOpen(false)}
                 facilities={filteredFacilities || []}
                 onCleanupComplete={() => {
-                    const currentFilters = getCurrentFilters();
-                    if (currentFilters) fetchHealthFacilities(currentFilters, true);
+                    // Removed forced fetch
                 }}
                 setToast={setToast}
                 cleanupConfig={CLEANABLE_FIELDS_CONFIG}

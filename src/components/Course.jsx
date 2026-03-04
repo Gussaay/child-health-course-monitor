@@ -18,7 +18,7 @@ import {
 import { ParticipantsView, ParticipantForm } from './Participants';
 import { CourseTestForm } from './CourseTestForm'; 
 import {
-    STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES,
+    STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_SSNC
 } from './constants.js';
 import html2canvas from 'html2canvas';
 import { db } from '../firebase';
@@ -101,6 +101,7 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
     // Load job titles based on course type
     const jobOptions = useMemo(() => {
         if (course.course_type === 'ICCM') return ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
+        if (course.course_type === 'Small & Sick Newborn' || course.course_type === 'SSNC') return JOB_TITLES_SSNC;
         return ['Medical Doctor', 'Nurse', 'Midwife', 'Medical Assistant', 'Health Visitor', 'Nutritionist', 'Vaccinator'];
     }, [course.course_type]);
 
@@ -1304,7 +1305,7 @@ export function CourseForm({
     ];
 
     const ICCM_SUBCOURSE_TYPES = ['ICCM Community Module'];
-    const SMALL_AND_SICK_SUBCOURSE_TYPES = ['Portable warmer training', 'CPAP training'];
+    const SMALL_AND_SICK_SUBCOURSE_TYPES = ['Portable warmer training', 'CPAP training', 'Kangaroo mother Care'];
 
     const EENC_SUBCOURSE_TYPES = [
         'EENC EmONC', 

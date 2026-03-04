@@ -5,7 +5,7 @@ import jsPDF from "jspdf";
 import { createRoot } from 'react-dom/client'; 
 
 // --- Icons ---
-import { Mail, Lock, RefreshCw, Search, Printer } from 'lucide-react'; 
+import { Mail, Lock, RefreshCw, Search, Printer, ArrowLeft, Save } from 'lucide-react'; 
 
 // --- Firebase Imports (For Refresh Logic) ---
 import { db } from '../firebase';
@@ -15,7 +15,7 @@ import {
     Card, PageHeader, Button, FormGroup, Input, Select, Textarea, Table, EmptyState, Modal, Spinner, Toast
 } from "./CommonComponents";
 import {
-    STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_ETAT, JOB_TITLES_EENC
+    STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_ETAT, JOB_TITLES_EENC, JOB_TITLES_SSNC
 } from './constants.js';
 import {
     listHealthFacilities,
@@ -456,6 +456,7 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, co
     const jobTitleOptions = useMemo(() => {
         if (courseType === 'ETAT') return JOB_TITLES_ETAT;
         if (courseType === 'EENC') return JOB_TITLES_EENC;
+        if (courseType === 'SSNC' || courseType === 'Small & Sick Newborn') return JOB_TITLES_SSNC;
         return ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
     }, [courseType]);
 
@@ -510,9 +511,9 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, co
             };
         }
 
-        if (courseType === 'EENC') {
+        if (courseType === 'EENC' || courseType === 'SSNC' || courseType === 'Small & Sick Newborn') {
             config['hospital_type'] = {
-                label: 'Hospital Type (EENC)',
+                label: `Hospital Type (${courseType})`,
                 standardValues: ['Comprehensive EmONC', 'Basic EmONC', 'other'],
                 getOptionLabel: (opt) => opt
             };
@@ -575,8 +576,39 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, co
                 [selectedFieldKey]: mappings[String(p[selectedFieldKey])]
             }));
 
+        const facilitiesToUpsert = [];
+        if (courseType === 'IMNCI') {
+            const facilityUpdatesMap = new Map();
+            participantsToUpdate.forEach(p => {
+                const facilityKey = p.facilityId || `${p.state}-${p.locality}-${p.center_name}`;
+                const existingPayload = facilityUpdatesMap.get(facilityKey) || {
+                    id: p.facilityId || undefined,
+                    'اسم_المؤسسة': p.center_name,
+                    'الولاية': p.state,
+                    'المحلية': p.locality,
+                    imnci_staff: []
+                };
+
+                if (selectedFieldKey === 'facility_type') {
+                    existingPayload['نوع_المؤسسةالصحية'] = p.facility_type;
+                }
+
+                if (!existingPayload.imnci_staff.some(s => s.name === p.name)) {
+                    existingPayload.imnci_staff.push({
+                        name: p.name,
+                        job_title: p.job_title,
+                        is_trained: p.trained_before ? 'Yes' : 'No',
+                        training_date: p.last_imci_training || '',
+                        phone: p.phone || ''
+                    });
+                }
+                facilityUpdatesMap.set(facilityKey, existingPayload);
+            });
+            facilitiesToUpsert.push(...Array.from(facilityUpdatesMap.values()));
+        }
+
         try {
-            await onSave(participantsToUpdate);
+            await onSave(participantsToUpdate, facilitiesToUpsert);
         } catch (error) {
             console.error("Failed to update participants:", error);
         } finally {
@@ -661,6 +693,7 @@ const BulkChangeModal = ({ isOpen, onClose, participants, onSave, courseType }) 
     const jobTitleOptions = useMemo(() => {
         if (courseType === 'ETAT') return JOB_TITLES_ETAT;
         if (courseType === 'EENC') return JOB_TITLES_EENC;
+        if (courseType === 'SSNC' || courseType === 'Small & Sick Newborn') return JOB_TITLES_SSNC;
         return ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
     }, [courseType]);
 
@@ -689,16 +722,44 @@ const BulkChangeModal = ({ isOpen, onClose, participants, onSave, courseType }) 
         }
 
         setIsUpdating(true);
-        const participantsToUpdate = participants
-            .filter(p => p[selectedFieldKey] === fromValue)
-            .map(p => ({
-                id: p.id,
-                [selectedFieldKey]: toValue,
-            }));
+        const affectedParticipants = participants.filter(p => p[selectedFieldKey] === fromValue);
+        
+        const participantsToUpdate = affectedParticipants.map(p => ({
+            ...p,
+            id: p.id,
+            [selectedFieldKey]: toValue,
+        }));
+
+        const facilitiesToUpsert = [];
+        if (courseType === 'IMNCI') {
+            const facilityUpdatesMap = new Map();
+            participantsToUpdate.forEach(p => {
+                const facilityKey = p.facilityId || `${p.state}-${p.locality}-${p.center_name}`;
+                const existingPayload = facilityUpdatesMap.get(facilityKey) || {
+                    id: p.facilityId || undefined,
+                    'اسم_المؤسسة': p.center_name,
+                    'الولاية': p.state,
+                    'المحلية': p.locality,
+                    imnci_staff: []
+                };
+
+                if (!existingPayload.imnci_staff.some(s => s.name === p.name)) {
+                    existingPayload.imnci_staff.push({
+                        name: p.name,
+                        job_title: p.job_title, 
+                        is_trained: p.trained_before ? 'Yes' : 'No',
+                        training_date: p.last_imci_training || '',
+                        phone: p.phone || ''
+                    });
+                }
+                facilityUpdatesMap.set(facilityKey, existingPayload);
+            });
+            facilitiesToUpsert.push(...Array.from(facilityUpdatesMap.values()));
+        }
 
         try {
             if (participantsToUpdate.length > 0) {
-                await onSave(participantsToUpdate);
+                await onSave(participantsToUpdate, facilitiesToUpsert);
             }
         } catch (error) {
             console.error("Failed to bulk update participants:", error);
@@ -787,6 +848,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
     const jobTitleOptions = useMemo(() => {
         if (course.course_type === 'ETAT') return JOB_TITLES_ETAT;
         if (course.course_type === 'EENC') return JOB_TITLES_EENC;
+        if (course.course_type === 'SSNC' || course.course_type === 'Small & Sick Newborn') return JOB_TITLES_SSNC;
         return ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
     }, [course.course_type]);
 
@@ -839,7 +901,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
             { key: 'hours_to_facility', label: 'Hours to Facility (on foot)' },
         ] : []),
         ...(course.course_type === 'ETAT' ? [ { key: 'hospital_type', label: 'Hospital Type' }, { key: 'trained_etat_before', label: 'Previously trained on ETAT?' }, ] : []),
-        ...(course.course_type === 'EENC' ? [ { key: 'hospital_type', label: 'Hospital Type' }, { key: 'trained_eenc_before', label: 'Previously trained on EENC?' }, ] : [])
+        ...(course.course_type === 'EENC' || course.course_type === 'SSNC' || course.course_type === 'Small & Sick Newborn' ? [ { key: 'hospital_type', label: 'Hospital Type' }, { key: 'trained_eenc_before', label: `Previously trained on ${course.course_type}?` }, ] : [])
     ], [course.course_type]);
 
     const handleDownloadTemplate = () => {
@@ -1135,7 +1197,12 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
 // --- Searchable and Creatable Name Input Component (for Participant Name) ---
 const CreatableNameInput = ({ value, onChange, options, onSelect, disabled }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [inputValue, setInputValue] = useState(value || '');
     const ref = useRef(null);
+
+    useEffect(() => {
+        setInputValue(value || '');
+    }, [value]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -1148,9 +1215,9 @@ const CreatableNameInput = ({ value, onChange, options, onSelect, disabled }) =>
     }, [ref]);
 
     const filteredOptions = useMemo(() => {
-        if (!value) return options;
-        return options.filter(opt => opt.name && opt.name.toLowerCase().includes(value.toLowerCase()));
-    }, [options, value]);
+        if (!inputValue) return options;
+        return options.filter(opt => opt.name && opt.name.toLowerCase().includes(inputValue.toLowerCase()));
+    }, [options, inputValue]);
 
     const handleSelect = (option) => {
         onSelect(option);
@@ -1161,8 +1228,11 @@ const CreatableNameInput = ({ value, onChange, options, onSelect, disabled }) =>
         <div className="relative" ref={ref}>
             <Input
                 type="text"
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
+                value={inputValue}
+                onChange={(e) => {
+                    setInputValue(e.target.value);
+                    onChange(e.target.value);
+                }}
                 onFocus={() => setIsOpen(true)}
                 disabled={disabled}
                 placeholder={disabled ? "Select a facility first" : "Type to search or add new"}
@@ -1186,7 +1256,7 @@ const CreatableNameInput = ({ value, onChange, options, onSelect, disabled }) =>
                             </div>
                         ))
                     ) : (
-                        value && <div className="p-2 text-gray-500">No existing staff found matching "{value}".</div>
+                        inputValue && <div className="p-2 text-gray-500">No existing staff found matching "{inputValue}".</div>
                     )}
                 </div>
             )}
@@ -1269,6 +1339,515 @@ const FacilitySearchModal = ({ isOpen, onClose, facilities, onSelect }) => {
 // ===== 3. EXPORTED COMPONENTS (Top Level) ===========================
 // ====================================================================
 
+// --- Bulk Edit Participants Full Page View ---
+export function BulkEditParticipantsView({ participants, course, onSave, onCancel }) {
+    const [editedData, setEditedData] = useState([]);
+    const [isSaving, setIsSaving] = useState(false);
+    const [facilityCache, setFacilityCache] = useState({});
+    const [searchTerm, setSearchTerm] = useState('');
+    const fetchedKeys = useRef(new Set());
+
+    useEffect(() => {
+        setEditedData(JSON.parse(JSON.stringify(participants)));
+    }, [participants]);
+
+    // Fetch facilities silently for dropdowns
+    useEffect(() => {
+        if (course?.course_type === 'ICCM') return;
+
+        editedData.forEach(p => {
+            if (p.state && p.locality) {
+                const cacheKey = `${p.state}-${p.locality}`;
+                if (!fetchedKeys.current.has(cacheKey)) {
+                    fetchedKeys.current.add(cacheKey);
+                    listHealthFacilities({ state: p.state, locality: p.locality })
+                        .then(facilities => {
+                            setFacilityCache(prev => ({ ...prev, [cacheKey]: facilities }));
+                        })
+                        .catch(err => {
+                            console.error("Failed to fetch facilities for cache:", err);
+                            setFacilityCache(prev => ({ ...prev, [cacheKey]: [] }));
+                        });
+                }
+            }
+        });
+    }, [editedData, course?.course_type]);
+
+    const handleChange = (idOrIndex, field, value) => {
+        const newData = [...editedData];
+        // Handle if we are passing index or an ID (safest is to use the actual element reference or index)
+        const targetIndex = typeof idOrIndex === 'number' ? idOrIndex : newData.findIndex(p => p.id === idOrIndex);
+        if (targetIndex === -1) return;
+
+        newData[targetIndex][field] = value;
+        
+        // Hierarchy rules
+        if (field === 'state') {
+            newData[targetIndex]['locality'] = '';
+            newData[targetIndex]['center_name'] = '';
+            newData[targetIndex]['facilityId'] = null;
+        } else if (field === 'locality') {
+            newData[targetIndex]['center_name'] = '';
+            newData[targetIndex]['facilityId'] = null;
+        } else if (field === 'center_name') {
+            const cacheKey = `${newData[targetIndex].state}-${newData[targetIndex].locality}`;
+            const facilities = Array.isArray(facilityCache[cacheKey]) ? facilityCache[cacheKey] : [];
+            const matchedFacility = facilities.find(f => f['اسم_المؤسسة'] === value);
+            newData[targetIndex]['facilityId'] = matchedFacility ? matchedFacility.id : null;
+        }
+        
+        setEditedData(newData);
+    };
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            const facilitiesToUpsert = [];
+            // Deep copy to safely mutate participant data with the required approval flags
+            const pDataToSave = JSON.parse(JSON.stringify(editedData)); 
+
+            // If it's IMNCI, we generate a list of facility updates based on the grid data
+            if (course?.course_type === 'IMNCI') {
+                const facilityUpdatesMap = new Map();
+                
+                pDataToSave.forEach(p => {
+                    // 1. LOOKUP EXISTING FACILITY IN CACHE TO GET CORRECT ID AND BASE DATA
+                    const cacheKey = `${p.state}-${p.locality}`;
+                    const cachedFacilities = Array.isArray(facilityCache[cacheKey]) ? facilityCache[cacheKey] : [];
+                    const matchedFacility = cachedFacilities.find(f => f['اسم_المؤسسة'] === p.center_name);
+                    
+                    const finalFacilityId = p.facilityId || (matchedFacility ? matchedFacility.id : undefined);
+                    const facilityKey = finalFacilityId || `${p.state}-${p.locality}-${p.center_name}`;
+
+                    // --- FORCE APPROVAL ROUTING FOR ALL BULK EDITS ---
+                    // The backend typically relies on this flag or generic approval flags to intercept modifications 
+                    // and route the facility records into the "Pending Approvals" queue.
+                    p.introduced_imci_to_facility = true;
+                    p.requires_facility_approval = true;
+
+                    // 2. MERGE EXISTING DATA SO WE DON'T OVERWRITE OTHER FACILITY INFO
+                    const existingPayload = facilityUpdatesMap.get(facilityKey) || {
+                        ...(matchedFacility || {}), 
+                        id: finalFacilityId,
+                        'اسم_المؤسسة': p.center_name,
+                        'الولاية': p.state,
+                        'المحلية': p.locality,
+                        'هل_المؤسسة_تعمل': 'Yes',
+                        'وجود_العلاج_المتكامل_لامراض_الطفولة': 'Yes',
+                        date_of_visit: new Date().toISOString().split('T')[0],
+                        // Backup generic approval flags for the facility object itself
+                        needs_approval: true,
+                        is_pending_approval: true,
+                        status: 'Pending',
+                        // Safely parse existing staff if it's stored as a string
+                        imnci_staff: matchedFacility?.imnci_staff ? 
+                            (typeof matchedFacility.imnci_staff === 'string' ? JSON.parse(matchedFacility.imnci_staff) : [...matchedFacility.imnci_staff]) 
+                            : []
+                    };
+
+                    const parseStr = (val) => {
+                        if (val === true || String(val).toLowerCase() === 'yes') return 'Yes';
+                        if (val === false || String(val).toLowerCase() === 'no') return 'No';
+                        return val;
+                    };
+
+                    // Only map over properties that actually have a value to avoid destroying existing DB data with blanks
+                    if (p.facility_type) existingPayload['نوع_المؤسسةالصحية'] = p.facility_type;
+                    if (p.has_nutrition_service !== undefined && p.has_nutrition_service !== '') existingPayload['nutrition_center_exists'] = parseStr(p.has_nutrition_service);
+                    if (p.has_immunization_service !== undefined && p.has_immunization_service !== '') existingPayload['immunization_office_exists'] = parseStr(p.has_immunization_service);
+                    if (p.has_ors_room !== undefined && p.has_ors_room !== '') existingPayload['غرفة_إرواء'] = parseStr(p.has_ors_room);
+                    if (p.has_growth_monitoring !== undefined && p.has_growth_monitoring !== '') existingPayload['growth_monitoring_service_exists'] = parseStr(p.has_growth_monitoring);
+                    
+                    // Tools & Registers
+                    if (p['ميزان_وزن']) existingPayload['ميزان_وزن'] = parseStr(p['ميزان_وزن']);
+                    if (p['ميزان_طول']) existingPayload['ميزان_طول'] = parseStr(p['ميزان_طول']);
+                    if (p['ميزان_حرارة']) existingPayload['ميزان_حرارة'] = parseStr(p['ميزان_حرارة']);
+                    if (p['ساعة_ مؤقت']) existingPayload['ساعة_ مؤقت'] = parseStr(p['ساعة_ مؤقت']);
+                    if (p['وجود_سجل_علاج_متكامل']) existingPayload['وجود_سجل_علاج_متكامل'] = parseStr(p['وجود_سجل_علاج_متكامل']);
+                    if (p['وجود_كتيب_لوحات']) existingPayload['وجود_كتيب_لوحات'] = parseStr(p['وجود_كتيب_لوحات']);
+
+                    // Ensure this participant is logged as trained staff in this facility
+                    const staffMember = {
+                        name: p.name,
+                        job_title: p.job_title,
+                        is_trained: 'Yes',
+                        training_date: course?.start_date || '',
+                        phone: p.phone || ''
+                    };
+                    
+                    // Check if staff already exists to safely update or push new
+                    const staffIndex = existingPayload.imnci_staff.findIndex(s => s.name === staffMember.name || (s.phone && s.phone === staffMember.phone));
+                    if (staffIndex > -1) {
+                        existingPayload.imnci_staff[staffIndex] = { ...existingPayload.imnci_staff[staffIndex], ...staffMember };
+                    } else {
+                        existingPayload.imnci_staff.push(staffMember);
+                    }
+
+                    // Recalculate provider counts based on updated staff array if not explicitly overridden by user
+                    if (p.num_other_providers !== undefined && p.num_other_providers !== '') {
+                        existingPayload['العدد_الكلي_لكوادر_طبية_العاملة_أطباء_ومساعدين'] = Number(p.num_other_providers);
+                    } else {
+                        existingPayload['العدد_الكلي_لكوادر_طبية_العاملة_أطباء_ومساعدين'] = Math.max(existingPayload['العدد_الكلي_لكوادر_طبية_العاملة_أطباء_ومساعدين'] || 0, existingPayload.imnci_staff.length);
+                    }
+
+                    if (p.num_other_providers_imci !== undefined && p.num_other_providers_imci !== '') {
+                        existingPayload['العدد_Kلي_للكودار_ المدربة_على_العلاج_المتكامل'] = Number(p.num_other_providers_imci);
+                    } else {
+                        existingPayload['العدد_Kلي_للكودار_ المدربة_على_العلاج_المتكامل'] = existingPayload.imnci_staff.filter(s => s.is_trained === 'Yes').length;
+                    }
+
+                    facilityUpdatesMap.set(facilityKey, existingPayload);
+                });
+
+                facilitiesToUpsert.push(...Array.from(facilityUpdatesMap.values()));
+            }
+
+            // Fire onSave with the fully prepped arrays
+            await onSave(pDataToSave, facilitiesToUpsert);
+            
+        } catch (error) {
+            console.error("Bulk edit save failed", error);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const jobTitleOptions = useMemo(() => {
+        if (course?.course_type === 'ETAT') return JOB_TITLES_ETAT;
+        if (course?.course_type === 'EENC') return JOB_TITLES_EENC;
+        if (course?.course_type === 'SSNC' || course?.course_type === 'Small & Sick Newborn') return JOB_TITLES_SSNC;
+        return ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
+    }, [course?.course_type]);
+
+    const courseType = course?.course_type;
+    const searchLower = searchTerm.toLowerCase();
+    
+    // Calculate visible rows
+    const visibleRowsCount = editedData.filter(p => {
+        if (!searchTerm) return true;
+        const matchName = p.name && p.name.toLowerCase().includes(searchLower);
+        const matchFacility = p.center_name && p.center_name.toLowerCase().includes(searchLower);
+        return matchName || matchFacility;
+    }).length;
+
+    // Base input styling
+    const baseInputStyle = "w-full min-w-0 text-[10px] px-0.5 py-0 h-6 border rounded shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors overflow-hidden text-ellipsis whitespace-nowrap";
+    const cellInputStyle = `${baseInputStyle} bg-white border-gray-300 text-gray-700`;
+
+    // Strong solid colors for Yes / No
+    const getSelectColor = (val) => {
+        const str = String(val).toLowerCase();
+        if (val === true || str === 'yes') return `${baseInputStyle} bg-green-500 text-white border-green-600 font-bold`;
+        if (val === false || str === 'no') return `${baseInputStyle} bg-red-500 text-white border-red-600 font-bold`;
+        return cellInputStyle; // Default back to white
+    };
+
+    return (
+        <Card>
+            <div className="p-4 flex flex-col h-full">
+                <div className="flex justify-between items-start mb-4">
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-800">Bulk Edit Participants</h2>
+                        <p className="text-xs text-gray-600 mb-3">All data shown. Non-essential fields hidden to prevent scrolling.</p>
+                        
+                        {/* Search Bar */}
+                        <div className="relative w-full max-w-md">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <Search className="h-4 w-4 text-gray-400" />
+                            </div>
+                            <Input
+                                type="text"
+                                placeholder="Search by health worker or facility name..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-10 h-9 text-sm"
+                            />
+                        </div>
+                    </div>
+                    <div className="flex gap-2 mt-1">
+                        <Button variant="secondary" onClick={onCancel} disabled={isSaving}>
+                            <ArrowLeft className="w-4 h-4 mr-1" /> Back
+                        </Button>
+                        <Button onClick={handleSave} disabled={isSaving || editedData.length === 0} className="bg-green-600 hover:bg-green-700">
+                            {isSaving ? <Spinner size="sm" className="mr-2" /> : <Save className="w-4 h-4 mr-1" />}
+                            {isSaving ? 'Saving...' : 'Save All'}
+                        </Button>
+                    </div>
+                </div>
+
+                <div className="w-full overflow-x-hidden border border-gray-200 rounded-sm bg-white flex-1">
+                    <table className="w-full table-fixed divide-y divide-gray-200 text-[10px] text-gray-700">
+                        <thead className="bg-gray-100">
+                            <tr>
+                                {/* Base Columns */}
+                                <th className="p-1 text-left font-semibold align-bottom leading-tight border-r sticky left-0 bg-gray-100 z-10 shadow-[1px_0_0_0_#e5e7eb] w-[14%]">Name</th>
+                                <th className="p-1 text-left font-semibold align-bottom leading-tight border-r w-[8%]">Job Title</th>
+                                <th className="p-1 text-left font-semibold align-bottom leading-tight border-r w-[8%]">State</th>
+                                <th className="p-1 text-left font-semibold align-bottom leading-tight border-r w-[8%]">Locality</th>
+                                <th className="p-1 text-left font-semibold align-bottom leading-tight border-r w-[12%]">{courseType === 'ICCM' ? 'Village Name' : 'Facility Name'}</th>
+                                <th className="p-1 text-center font-semibold align-bottom leading-tight border-r w-[4%]">Pre-Test</th>
+                                <th className="p-1 text-center font-semibold align-bottom leading-tight border-r w-[4%]">Post-Test</th>
+
+                                {/* IMNCI Specifics */}
+                                {courseType === 'IMNCI' && (
+                                    <>
+                                        <th className="p-1 text-left font-semibold align-bottom leading-tight border-r w-[8%]">Facility Type</th>
+                                        <th className="p-1 text-center font-semibold align-bottom leading-tight border-r w-[4%]">#Prov</th>
+                                        <th className="p-1 text-center font-semibold align-bottom leading-tight border-r w-[4%]">#IMCI</th>
+                                        <th className="p-1 text-center font-semibold align-bottom leading-tight border-r w-[4%]">ORS?</th>
+                                        <th className="p-1 text-center font-semibold align-bottom leading-tight border-r w-[4%]">Grwth?</th>
+                                        
+                                        {/* Tools & Services */}
+                                        <th className="p-1 text-center font-semibold align-bottom leading-tight border-r w-[3%]">Wt.</th>
+                                        <th className="p-1 text-center font-semibold align-bottom leading-tight border-r w-[3%]">Ht.</th>
+                                        <th className="p-1 text-center font-semibold align-bottom leading-tight border-r w-[3%]">Temp.</th>
+                                        <th className="p-1 text-center font-semibold align-bottom leading-tight border-r w-[3%]">Timer</th>
+                                        <th className="p-1 text-center font-semibold align-bottom leading-tight border-r w-[3%]">Reg.</th>
+                                        <th className="p-1 text-center font-semibold align-bottom leading-tight w-[3%]">Bklt.</th>
+                                    </>
+                                )}
+
+                                {/* ICCM Specifics */}
+                                {courseType === 'ICCM' && (
+                                    <>
+                                        <th className="p-1 text-left font-semibold align-bottom leading-tight border-r w-[15%]">Nearest Facility</th>
+                                        <th className="p-1 text-center font-semibold align-bottom leading-tight w-[5%]">Hours to Facility</th>
+                                    </>
+                                )}
+
+                                {/* ETAT Specifics */}
+                                {courseType === 'ETAT' && (
+                                    <>
+                                        <th className="p-1 text-left font-semibold align-bottom leading-tight border-r w-[12%]">Hospital Type</th>
+                                        <th className="p-1 text-center font-semibold align-bottom leading-tight border-r w-[6%]">Triage?</th>
+                                        <th className="p-1 text-center font-semibold align-bottom leading-tight border-r w-[6%]">Stabil.?</th>
+                                        <th className="p-1 text-center font-semibold align-bottom leading-tight border-r w-[6%]">HDU?</th>
+                                        <th className="p-1 text-center font-semibold align-bottom leading-tight border-r w-[5%]">Staff in ER</th>
+                                        <th className="p-1 text-center font-semibold align-bottom leading-tight w-[5%]">Trained Staff</th>
+                                    </>
+                                )}
+
+                                {/* EENC & SSNC Specifics */}
+                                {(courseType === 'EENC' || courseType === 'SSNC' || courseType === 'Small & Sick Newborn') && (
+                                    <>
+                                        <th className="p-1 text-left font-semibold align-bottom leading-tight border-r w-[12%]">Hospital Type</th>
+                                        <th className="p-1 text-center font-semibold align-bottom leading-tight border-r w-[6%]">SNCU?</th>
+                                        <th className="p-1 text-center font-semibold align-bottom leading-tight border-r w-[6%]">IYCF?</th>
+                                        <th className="p-1 text-center font-semibold align-bottom leading-tight border-r w-[6%]">KMC?</th>
+                                        <th className="p-1 text-center font-semibold align-bottom leading-tight border-r w-[5%]">Staff in Deliv.</th>
+                                        <th className="p-1 text-center font-semibold align-bottom leading-tight w-[5%]">Trained Staff</th>
+                                    </>
+                                )}
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                            {editedData.map((p, index) => {
+                                // Filter logic
+                                if (searchTerm) {
+                                    const matchName = p.name && p.name.toLowerCase().includes(searchLower);
+                                    const matchFacility = p.center_name && p.center_name.toLowerCase().includes(searchLower);
+                                    if (!matchName && !matchFacility) return null;
+                                }
+
+                                const cacheKey = `${p.state}-${p.locality}`;
+                                const facilities = Array.isArray(facilityCache[cacheKey]) ? facilityCache[cacheKey] : [];
+                                const listId = `fac-list-${index}`;
+                                
+                                return (
+                                <tr key={p.id || index} className="hover:bg-blue-50 focus-within:bg-blue-50">
+                                    {/* Base Columns */}
+                                    <td className="p-0.5 align-top border-r sticky left-0 bg-white z-10 shadow-[1px_0_0_0_#e5e7eb] focus-within:bg-blue-50">
+                                        <input value={p.name || ''} onChange={(e) => handleChange(index, 'name', e.target.value)} className={cellInputStyle} />
+                                    </td>
+                                    <td className="p-0.5 align-top border-r">
+                                        <select value={jobTitleOptions.includes(p.job_title) ? p.job_title : (p.job_title ? 'Other' : '')} onChange={(e) => handleChange(index, 'job_title', e.target.value)} className={cellInputStyle}>
+                                            <option value=""> </option>
+                                            {jobTitleOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                            {!jobTitleOptions.includes(p.job_title) && p.job_title && <option value="Other">Oth.</option>}
+                                        </select>
+                                    </td>
+                                    <td className="p-0.5 align-top border-r">
+                                        <select value={p.state || ''} onChange={(e) => handleChange(index, 'state', e.target.value)} className={cellInputStyle}>
+                                            <option value="">-</option>
+                                            {Object.keys(STATE_LOCALITIES).map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar}</option>)}
+                                        </select>
+                                    </td>
+                                    <td className="p-0.5 align-top border-r">
+                                        <select value={p.locality || ''} onChange={(e) => handleChange(index, 'locality', e.target.value)} disabled={!p.state} className={cellInputStyle}>
+                                            <option value="">-</option>
+                                            {(STATE_LOCALITIES[p.state]?.localities || []).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
+                                        </select>
+                                    </td>
+                                    <td className="p-0.5 align-top border-r">
+                                        {courseType !== 'ICCM' ? (
+                                            <>
+                                                <input 
+                                                    list={listId}
+                                                    value={p.center_name || ''} 
+                                                    onChange={(e) => handleChange(index, 'center_name', e.target.value)} 
+                                                    className={cellInputStyle} 
+                                                    disabled={!p.locality}
+                                                />
+                                                <datalist id={listId}>
+                                                    {facilities.map(f => (
+                                                        <option key={f.id} value={f['اسم_المؤسسة']} />
+                                                    ))}
+                                                </datalist>
+                                            </>
+                                        ) : (
+                                            <input 
+                                                value={p.center_name || ''} 
+                                                onChange={(e) => handleChange(index, 'center_name', e.target.value)} 
+                                                className={cellInputStyle} 
+                                                disabled={!p.locality}
+                                            />
+                                        )}
+                                    </td>
+                                    <td className="p-0.5 align-top border-r"><input type="number" value={p.pre_test_score || ''} onChange={(e) => handleChange(index, 'pre_test_score', e.target.value)} className={cellInputStyle} /></td>
+                                    <td className="p-0.5 align-top border-r"><input type="number" value={p.post_test_score || ''} onChange={(e) => handleChange(index, 'post_test_score', e.target.value)} className={cellInputStyle} /></td>
+
+                                    {/* IMNCI Specifics */}
+                                    {courseType === 'IMNCI' && (
+                                        <>
+                                            <td className="p-0.5 align-top border-r">
+                                                <select value={p.facility_type || ''} onChange={(e) => handleChange(index, 'facility_type', e.target.value)} className={cellInputStyle}>
+                                                    <option value=""> </option>
+                                                    <option value="مركز صحة الاسرة">م. صحة اسرة</option>
+                                                    <option value="مستشفى ريفي">مستشفى ريفي</option>
+                                                    <option value="وحدة صحة الاسرة">و. صحة اسرة</option>
+                                                    <option value="مستشفى">مستشفى</option>
+                                                </select>
+                                            </td>
+                                            <td className="p-0.5 align-top border-r"><input type="number" value={p.num_other_providers || ''} onChange={(e) => handleChange(index, 'num_other_providers', e.target.value)} className={cellInputStyle} /></td>
+                                            <td className="p-0.5 align-top border-r"><input type="number" value={p.num_other_providers_imci || ''} onChange={(e) => handleChange(index, 'num_other_providers_imci', e.target.value)} className={cellInputStyle} /></td>
+                                            <td className="p-0.5 align-top border-r">
+                                                <select value={p.has_ors_room === true ? 'yes' : p.has_ors_room === false ? 'no' : p.has_ors_room || ''} onChange={(e) => handleChange(index, 'has_ors_room', e.target.value)} className={getSelectColor(p.has_ors_room)}>
+                                                    <option value=""> </option><option value="yes">Y</option><option value="no">N</option>
+                                                </select>
+                                            </td>
+                                            <td className="p-0.5 align-top border-r">
+                                                <select value={p.has_growth_monitoring === true ? 'yes' : p.has_growth_monitoring === false ? 'no' : p.has_growth_monitoring || ''} onChange={(e) => handleChange(index, 'has_growth_monitoring', e.target.value)} className={getSelectColor(p.has_growth_monitoring)}>
+                                                    <option value=""> </option><option value="yes">Y</option><option value="no">N</option>
+                                                </select>
+                                            </td>
+
+                                            {/* Tools and Services mappings */}
+                                            <td className="p-0.5 align-top border-r">
+                                                <select value={p['ميزان_وزن'] || ''} onChange={(e) => handleChange(index, 'ميزان_وزن', e.target.value)} className={getSelectColor(p['ميزان_وزن'])}>
+                                                    <option value=""> </option><option value="Yes">Y</option><option value="No">N</option>
+                                                </select>
+                                            </td>
+                                            <td className="p-0.5 align-top border-r">
+                                                <select value={p['ميزان_طول'] || ''} onChange={(e) => handleChange(index, 'ميزان_طول', e.target.value)} className={getSelectColor(p['ميزان_طول'])}>
+                                                    <option value=""> </option><option value="Yes">Y</option><option value="No">N</option>
+                                                </select>
+                                            </td>
+                                            <td className="p-0.5 align-top border-r">
+                                                <select value={p['ميزان_حرارة'] || ''} onChange={(e) => handleChange(index, 'ميزان_حرارة', e.target.value)} className={getSelectColor(p['ميزان_حرارة'])}>
+                                                    <option value=""> </option><option value="Yes">Y</option><option value="No">N</option>
+                                                </select>
+                                            </td>
+                                            <td className="p-0.5 align-top border-r">
+                                                <select value={p['ساعة_ مؤقت'] || ''} onChange={(e) => handleChange(index, 'ساعة_ مؤقت', e.target.value)} className={getSelectColor(p['ساعة_ مؤقت'])}>
+                                                    <option value=""> </option><option value="Yes">Y</option><option value="No">N</option>
+                                                </select>
+                                            </td>
+                                            <td className="p-0.5 align-top border-r">
+                                                <select value={p['وجود_سجل_علاج_متكامل'] || ''} onChange={(e) => handleChange(index, 'وجود_سجل_علاج_متكامل', e.target.value)} className={getSelectColor(p['وجود_سجل_علاج_متكامل'])}>
+                                                    <option value=""> </option><option value="Yes">Y</option><option value="No">N</option>
+                                                </select>
+                                            </td>
+                                            <td className="p-0.5 align-top">
+                                                <select value={p['وجود_كتيب_لوحات'] || ''} onChange={(e) => handleChange(index, 'وجود_كتيب_لوحات', e.target.value)} className={getSelectColor(p['وجود_كتيب_لوحات'])}>
+                                                    <option value=""> </option><option value="Yes">Y</option><option value="No">N</option>
+                                                </select>
+                                            </td>
+                                        </>
+                                    )}
+
+                                    {/* ICCM Specifics */}
+                                    {courseType === 'ICCM' && (
+                                        <>
+                                            <td className="p-0.5 align-top border-r"><input value={p.nearest_health_facility || ''} onChange={(e) => handleChange(index, 'nearest_health_facility', e.target.value)} className={cellInputStyle} /></td>
+                                            <td className="p-0.5 align-top"><input type="number" value={p.hours_to_facility || ''} onChange={(e) => handleChange(index, 'hours_to_facility', e.target.value)} className={cellInputStyle} /></td>
+                                        </>
+                                    )}
+
+                                    {/* ETAT Specifics */}
+                                    {courseType === 'ETAT' && (
+                                        <>
+                                            <td className="p-0.5 align-top border-r">
+                                                <select value={p.hospital_type || ''} onChange={(e) => handleChange(index, 'hospital_type', e.target.value)} className={cellInputStyle}>
+                                                    <option value=""> </option>
+                                                    <option value="Pediatric Hospital">Ped. Hosp</option>
+                                                    <option value="Pediatric Department in General Hospital">Ped. Dept</option>
+                                                    <option value="Rural Hospital">Rural</option>
+                                                    <option value="other">Oth</option>
+                                                </select>
+                                            </td>
+                                            <td className="p-0.5 align-top border-r">
+                                                <select value={p.has_triage_system === true ? 'yes' : p.has_triage_system === false ? 'no' : p.has_triage_system || ''} onChange={(e) => handleChange(index, 'has_triage_system', e.target.value)} className={getSelectColor(p.has_triage_system)}>
+                                                    <option value=""> </option><option value="yes">Y</option><option value="no">N</option>
+                                                </select>
+                                            </td>
+                                            <td className="p-0.5 align-top border-r">
+                                                <select value={p.has_stabilization_center === true ? 'yes' : p.has_stabilization_center === false ? 'no' : p.has_stabilization_center || ''} onChange={(e) => handleChange(index, 'has_stabilization_center', e.target.value)} className={getSelectColor(p.has_stabilization_center)}>
+                                                    <option value=""> </option><option value="yes">Y</option><option value="no">N</option>
+                                                </select>
+                                            </td>
+                                            <td className="p-0.5 align-top border-r">
+                                                <select value={p.has_hdu === true ? 'yes' : p.has_hdu === false ? 'no' : p.has_hdu || ''} onChange={(e) => handleChange(index, 'has_hdu', e.target.value)} className={getSelectColor(p.has_hdu)}>
+                                                    <option value=""> </option><option value="yes">Y</option><option value="no">N</option>
+                                                </select>
+                                            </td>
+                                            <td className="p-0.5 align-top border-r"><input type="number" value={p.num_staff_in_er || ''} onChange={(e) => handleChange(index, 'num_staff_in_er', e.target.value)} className={cellInputStyle} /></td>
+                                            <td className="p-0.5 align-top"><input type="number" value={p.num_staff_trained_in_etat || ''} onChange={(e) => handleChange(index, 'num_staff_trained_in_etat', e.target.value)} className={cellInputStyle} /></td>
+                                        </>
+                                    )}
+
+                                    {/* EENC & SSNC Specifics */}
+                                    {(courseType === 'EENC' || courseType === 'SSNC' || courseType === 'Small & Sick Newborn') && (
+                                        <>
+                                            <td className="p-0.5 align-top border-r">
+                                                <select value={p.hospital_type || ''} onChange={(e) => handleChange(index, 'hospital_type', e.target.value)} className={cellInputStyle}>
+                                                    <option value=""> </option>
+                                                    <option value="Comprehensive EmONC">Comp. EmONC</option>
+                                                    <option value="Basic EmONC">Basic EmONC</option>
+                                                    <option value="other">Oth</option>
+                                                </select>
+                                            </td>
+                                            <td className="p-0.5 align-top border-r">
+                                                <select value={p.has_sncu === true ? 'yes' : p.has_sncu === false ? 'no' : p.has_sncu || ''} onChange={(e) => handleChange(index, 'has_sncu', e.target.value)} className={getSelectColor(p.has_sncu)}>
+                                                    <option value=""> </option><option value="yes">Y</option><option value="no">N</option>
+                                                </select>
+                                            </td>
+                                            <td className="p-0.5 align-top border-r">
+                                                <select value={p.has_iycf_center === true ? 'yes' : p.has_iycf_center === false ? 'no' : p.has_iycf_center || ''} onChange={(e) => handleChange(index, 'has_iycf_center', e.target.value)} className={getSelectColor(p.has_iycf_center)}>
+                                                    <option value=""> </option><option value="yes">Y</option><option value="no">N</option>
+                                                </select>
+                                            </td>
+                                            <td className="p-0.5 align-top border-r">
+                                                <select value={p.has_kangaroo_room === true ? 'yes' : p.has_kangaroo_room === false ? 'no' : p.has_kangaroo_room || ''} onChange={(e) => handleChange(index, 'has_kangaroo_room', e.target.value)} className={getSelectColor(p.has_kangaroo_room)}>
+                                                    <option value=""> </option><option value="yes">Y</option><option value="no">N</option>
+                                                </select>
+                                            </td>
+                                            <td className="p-0.5 align-top border-r"><input type="number" value={p.num_staff_in_delivery || ''} onChange={(e) => handleChange(index, 'num_staff_in_delivery', e.target.value)} className={cellInputStyle} /></td>
+                                            <td className="p-0.5 align-top"><input type="number" value={p.num_staff_trained_in_eenc || ''} onChange={(e) => handleChange(index, 'num_staff_trained_in_eenc', e.target.value)} className={cellInputStyle} /></td>
+                                        </>
+                                    )}
+                                </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                    {visibleRowsCount === 0 && (
+                        <div className="p-4 text-center text-gray-500">No participants found.</div>
+                    )}
+                </div>
+            </div>
+        </Card>
+    );
+}
 
 // --- Participant Migration Mapping View ---
 export function ParticipantMigrationMappingView({ course, participants, onCancel, onSave, setToast }) {
@@ -1439,6 +2018,7 @@ export function ParticipantsView({
     const [lastVisible, setLastVisible] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [hasMore, setHasMore] = useState(true);
+    const [isBulkEditing, setIsBulkEditing] = useState(false); // Added bulk editing state
 
     // --- Progress & Approval States ---
     const [isBulkCertLoading, setIsBulkCertLoading] = useState(false);
@@ -1608,13 +2188,18 @@ export function ParticipantsView({
         }
     };
 
-    const handleSaveCleanup = async (participantsToUpdate) => {
-        if (!participantsToUpdate || participantsToUpdate.length === 0) return;
+    // Unified Advanced Save for Bulk Operations
+    const handleAdvancedSave = async (participantsData, facilitiesData) => {
+        if (!participantsData || participantsData.length === 0) return;
         try {
-            await importParticipants(participantsToUpdate);
+            if (facilitiesData && facilitiesData.length > 0) {
+                await onImport({ participantsToImport: participantsData, facilitiesToUpsert: facilitiesData });
+            } else {
+                await importParticipants(participantsData);
+            }
             onBatchUpdate(); 
         } catch (err) {
-            console.error("Cleanup failed", err);
+            console.error("Advanced save failed", err);
         }
     };
     
@@ -1686,6 +2271,21 @@ export function ParticipantsView({
         setEmailModalOpen(true);
     };
 
+    // Render Full Page View instead if Bulk Editing
+    if (isBulkEditing) {
+        return (
+            <BulkEditParticipantsView
+                participants={filtered}
+                course={course}
+                onCancel={() => setIsBulkEditing(false)}
+                onSave={async (pData, fData) => {
+                    await handleAdvancedSave(pData, fData);
+                    setIsBulkEditing(false);
+                }}
+            />
+        );
+    }
+
     return (
         <Card>
             {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ show: false, message: '', type: '' })} />}
@@ -1704,7 +2304,7 @@ export function ParticipantsView({
                 isOpen={isCleanupModalOpen}
                 onClose={() => setIsCleanupModalOpen(false)}
                 participants={participants} 
-                onSave={handleSaveCleanup}
+                onSave={handleAdvancedSave}
                 courseType={course.course_type}
             />
 
@@ -1712,7 +2312,7 @@ export function ParticipantsView({
                 isOpen={isBulkChangeModalOpen}
                 onClose={() => setIsBulkChangeModalOpen(false)}
                 participants={participants} 
-                onSave={handleSaveCleanup}
+                onSave={handleAdvancedSave}
                 courseType={course.course_type}
             />
             
@@ -1756,9 +2356,14 @@ export function ParticipantsView({
                             </Button>
                         )}
                         {canBulkChangeParticipants && (
-                            <Button variant="secondary" onClick={() => setIsBulkChangeModalOpen(true)}>
-                                Bulk Change
-                            </Button>
+                            <>
+                                <Button variant="secondary" onClick={() => setIsBulkChangeModalOpen(true)}>
+                                    Bulk Change
+                                </Button>
+                                <Button variant="secondary" onClick={() => setIsBulkEditing(true)}>
+                                    Bulk Edit Table
+                                </Button>
+                            </>
                         )}
                         {canBulkMigrateParticipants && (
                             <Button
@@ -2136,15 +2741,17 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
     const isIccm = course.course_type === 'ICCM';
     const isEtat = course.course_type === 'ETAT';
     const isEenc = course.course_type === 'EENC';
+    const isSsnc = course.course_type === 'SSNC' || course.course_type === 'Small & Sick Newborn';
 
     const excludedImnciSubtypes = ["Standard 7 days course for Medical Doctors", "Standard 7 days course for Medical Assistance", "Refreshment IMNCI Course"];
-    const showTestScores = !(isImnci || isIccm || isEenc) || ((isImnci || isIccm) && !excludedImnciSubtypes.includes(initialData?.imci_sub_type));
+    const showTestScores = !(isImnci || isIccm || isEenc || isSsnc) || ((isImnci || isIccm) && !excludedImnciSubtypes.includes(initialData?.imci_sub_type));
 
     const jobTitleOptions = useMemo(() => {
         if (isEtat) return JOB_TITLES_ETAT;
         if (isEenc) return JOB_TITLES_EENC;
+        if (isSsnc) return JOB_TITLES_SSNC;
         return ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
-    }, [isIccm, isImnci, isEtat, isEenc]);
+    }, [isIccm, isImnci, isEtat, isEenc, isSsnc]);
 
     const [name, setName] = useState(String(initialData?.name || ''));
     const [email, setEmail] = useState(String(initialData?.email || ''));
@@ -2426,9 +3033,9 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                 num_staff_in_er: numStaffInEr !== '' ? Number(numStaffInEr) : null, 
                 num_staff_trained_in_etat: numStaffTrainedInEtat !== '' ? Number(numStaffTrainedInEtat) : null 
             };
-        } else if (isEenc) {
-            if (!hospitalTypeEenc) { setError('Hospital Type is required for EENC.'); return; }
-            if (hospitalTypeEenc === 'other' && !otherHospitalTypeEenc) { setError('Please specify the Hospital Type for EENC.'); return; }
+        } else if (isEenc || isSsnc) {
+            if (!hospitalTypeEenc) { setError(`Hospital Type is required for ${isEenc ? 'EENC' : 'SSNC'}.`); return; }
+            if (hospitalTypeEenc === 'other' && !otherHospitalTypeEenc) { setError(`Please specify the Hospital Type for ${isEenc ? 'EENC' : 'SSNC'}.`); return; }
             p = { 
                 ...p, hospital_type: hospitalTypeEenc === 'other' ? otherHospitalTypeEenc : hospitalTypeEenc, 
                 trained_eenc_before: parseBool(trainedEENC), 
@@ -2463,6 +3070,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                 }
 
                 const baseFacilityPayload = {
+                    'هل_المؤسسة_تعمل': 'Yes', 
                     'وجود_العلاج_المتكامل_لامراض_الطفولة': 'Yes', 
                     'نوع_المؤسسةالصحية': facilityType || selectedFacility['نوع_المؤسسةالصحية'] || 'no data',
                     'nutrition_center_exists': parseStr(hasNutri), 
@@ -2809,19 +3417,19 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                              <FormGroup label={`# ${professionalCategory}s trained in ETAT`}><Input type="number" min="0" value={numStaffTrainedInEtat} onChange={e => setNumStaffTrainedInEtat(e.target.value)} /></FormGroup>
                         </>)}
 
-                         {isEenc && (<>
+                         {(isEenc || isSsnc) && (<>
                             <FormGroup label="Hospital Type">
                                 <Select value={hospitalTypeEenc} onChange={e => setHospitalTypeEenc(e.target.value)}>
                                     <option value="">— Select Type —</option><option>Comprehensive EmONC</option><option>Basic EmONC</option><option value="other">Other (specify)</option>
                                 </Select>
                             </FormGroup>
                             {hospitalTypeEenc === 'other' && <FormGroup label="Specify Hospital Type"><Input value={otherHospitalTypeEenc} onChange={e => setOtherHospitalTypeEenc(e.target.value)} /></FormGroup>}
-                            <FormGroup label="Previously trained on EENC?">
+                            <FormGroup label={`Previously trained on ${isEenc ? 'EENC' : 'SSNC'}?`}>
                                 <Select value={trainedEENC} onChange={e => setTrainedEENC(e.target.value)}>
                                     <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
                                 </Select>
                             </FormGroup>
-                            {trainedEENC === 'yes' && <FormGroup label="Date of last EENC training"><Input type="date" value={lastTrainEENC} onChange={(e) => setLastTrainEENC(e.target.value)} /></FormGroup>}
+                            {trainedEENC === 'yes' && <FormGroup label={`Date of last ${isEenc ? 'EENC' : 'SSNC'} training`}><Input type="date" value={lastTrainEENC} onChange={(e) => setLastTrainEENC(e.target.value)} /></FormGroup>}
                             <FormGroup label="Has Special Newborn Care Unit (SNCU)?">
                                 <Select value={hasSncu} onChange={e => setHasSncu(e.target.value)}>
                                     <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
@@ -2839,7 +3447,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                             </FormGroup>
 
                             <FormGroup label={`# ${professionalCategory}s in Delivery Room`}><Input type="number" min="0" value={numStaffInDelivery} onChange={e => setNumStaffInDelivery(e.target.value)} /></FormGroup>
-                            <FormGroup label={`# ${professionalCategory}s trained in EENC`}><Input type="number" min="0" value={numStaffTrainedInEenc} onChange={e => setNumStaffTrainedInEenc(e.target.value)} /></FormGroup>
+                            <FormGroup label={`# ${professionalCategory}s trained in ${isEenc ? 'EENC' : 'SSNC'}`}><Input type="number" min="0" value={numStaffTrainedInEenc} onChange={e => setNumStaffTrainedInEenc(e.target.value)} /></FormGroup>
                         </>)}
                     </div>
                     {/* Submit Buttons */}

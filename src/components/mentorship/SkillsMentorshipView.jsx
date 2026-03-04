@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useDataCache } from "../../DataContext";
 import { Timestamp } from 'firebase/firestore';
-import { PlusCircle, Trash2, FileText, Users, Building, ClipboardCheck, Archive, LayoutDashboard, Search, Share2 } from 'lucide-react';
+import { PlusCircle, Trash2, FileText, Users, Building, ClipboardCheck, Archive, LayoutDashboard, Search, Share2, List, ArrowLeft } from 'lucide-react';
 import {
     saveMentorshipSession,
     importMentorshipSessions,
@@ -16,15 +16,14 @@ import {
     listIMNCIVisitReports,
     saveEENCVisitReport,
     deleteEENCVisitReport,
-    listMentorshipSessions, // Added for public fetch
-    listEENCVisitReports    // Added for public fetch
+    listMentorshipSessions, 
+    listEENCVisitReports    
 } from '../../data';
 
 import {
     Card, PageHeader, Button, FormGroup, Select, Spinner,
     EmptyState, Input, Textarea, CourseIcon, Checkbox, Modal
 } from '../CommonComponents';
-
 
 import { STATE_LOCALITIES } from "../constants.js";
 import SkillsAssessmentForm from './SkillsAssessmentForm';
@@ -100,6 +99,43 @@ const EENC_ORIENTATIONS_LABELS = {
     orient_nicu: "قسم الحضانة",
     orient_stats: "قسم الاحصاء والمعلومات",
     orient_nutrition: "قسم التغذية عن الرعاية الضرورية المبكرة للاطفال حديث الولادة",
+};
+
+// --- Action Menu Component (Enhanced Visualization) ---
+const ActionMenu = ({ onAction, activeService, draftCount, onBack }) => {
+    const menuItems = [
+        { id: 'view_submissions', label: 'Show Main Submitted Form', icon: List, color: 'text-blue-600', bg: 'bg-blue-100', border: 'hover:border-blue-400', shadow: 'hover:shadow-blue-100' },
+        { id: 'view_dashboard', label: 'Show Dashboard', icon: LayoutDashboard, color: 'text-purple-600', bg: 'bg-purple-100', border: 'hover:border-purple-400', shadow: 'hover:shadow-purple-100' },
+        { id: 'view_drafts', label: `Show Drafts (${draftCount})`, icon: Archive, color: 'text-amber-600', bg: 'bg-amber-100', border: 'hover:border-amber-400', shadow: 'hover:shadow-amber-100' },
+        { id: 'new_skill', label: 'Add New Skill Form', icon: PlusCircle, color: 'text-emerald-600', bg: 'bg-emerald-100', border: 'hover:border-emerald-400', shadow: 'hover:shadow-emerald-100' },
+        { id: 'new_mother', label: 'Add New Mother Form', icon: Users, color: 'text-pink-600', bg: 'bg-pink-100', border: 'hover:border-pink-400', shadow: 'hover:shadow-pink-100' },
+        { id: 'new_visit_report', label: 'Add New Visit Report', icon: ClipboardCheck, color: 'text-indigo-600', bg: 'bg-indigo-100', border: 'hover:border-indigo-400', shadow: 'hover:shadow-indigo-100' },
+        { id: 'update_facility', label: 'Update Facility Info', icon: Building, color: 'text-cyan-600', bg: 'bg-cyan-100', border: 'hover:border-cyan-400', shadow: 'hover:shadow-cyan-100' },
+    ];
+
+    return (
+        <div className="max-w-6xl mx-auto mt-8 p-4" dir="ltr">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {menuItems.map(item => {
+                    const Icon = item.icon;
+                    return (
+                        <button
+                            key={item.id}
+                            onClick={() => onAction(item.id)}
+                            className={`flex flex-col items-center justify-center p-8 border border-gray-100 rounded-2xl bg-white shadow-sm hover:shadow-lg transition-all duration-300 group ${item.border} ${item.shadow} transform hover:-translate-y-1`}
+                        >
+                            <div className={`p-5 rounded-2xl mb-5 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 ${item.bg}`}>
+                                <Icon className={`w-8 h-8 ${item.color}`} strokeWidth={1.5} />
+                            </div>
+                            <div className="font-semibold text-gray-700 text-lg group-hover:text-gray-900 transition-colors text-center">
+                                {item.label}
+                            </div>
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
 };
 
 
@@ -242,10 +278,10 @@ const PostSaveModal = ({ isOpen, onClose, onSelect }) => {
                     </Button>
                     <Button
                         variant="secondary"
-                        onClick={() => onSelect('dashboard')}
+                        onClick={() => onSelect('action_menu')}
                         className="w-full justify-center"
                     >
-                        عرض المنصة (Dashboard)
+                        العودة للقائمة الرئيسية
                     </Button>
                     <Button
                         variant="secondary"
@@ -260,7 +296,7 @@ const PostSaveModal = ({ isOpen, onClose, onSelect }) => {
                         onClick={onClose}
                         className="w-full justify-center"
                     >
-                        العودة إلى القائمة الرئيسية
+                        إغلاق النافذة
                     </Button>
                 </div>
             </div>
@@ -674,7 +710,7 @@ const DraftsModal = ({ isOpen, onClose, drafts, onView, onEdit, onDelete }) => {
 // --- Mentorship Submissions Table Component ---
 const MentorshipSubmissionsTable = ({
     submissions, activeService, onView, onEdit, onDelete,
-    fetchSubmissions, isSubmissionsLoading,
+    isSubmissionsLoading,
     filterServiceType,
     stateFilter, localityFilter, supervisorFilter, statusFilter, visitNumberFilter,
     facilityFilter, workerFilter, projectFilter
@@ -819,7 +855,6 @@ const MentorshipSubmissionsTable = ({
                                             <td className="px-2 py-2 whitespace-nowrap text-xs font-medium text-left border border-gray-300">
                                                 <div className="flex flex-col xl:flex-row gap-1">
                                                     <Button size="sm" variant="info" onClick={() => handleAction('view', sub)} className="text-xs px-2 py-1">View</Button>
-                                                    {/* MODIFIED: Allow Edit for Mothers too */}
                                                     {(sub.service === 'IMNCI' || sub.service === 'IMNCI_MOTHERS' || sub.service === 'EENC_MOTHERS') && 
                                                         <Button size="sm" variant="warning" onClick={() => handleAction('edit', sub)} className="text-xs px-2 py-1">Edit</Button>
                                                     }
@@ -832,9 +867,6 @@ const MentorshipSubmissionsTable = ({
                             </tbody>
                         </table>
                     )}
-                </div>
-                <div className="flex justify-center mt-4">
-                    <Button variant="secondary" onClick={() => fetchSubmissions(true)}>Refresh Data</Button>
                 </div>
         </div>
     );
@@ -892,25 +924,30 @@ const SkillsMentorshipView = ({
     publicSubmissionMode = false,
     publicServiceType = null,
     canBulkUploadMentorships = false,
-    publicDashboardMode = false, // NEW: Public Dashboard View flag
-    publicDashboardParams = null // NEW: Dashboard initial filters
+    publicDashboardMode = false, 
+    publicDashboardParams = null 
 }) => {
-    // Modify initial view state to handle public dashboard routing
-    const [currentView, setCurrentView] = useState(
-        publicDashboardMode ? 'history' : (publicSubmissionMode ? 'form_setup' : 'service_selection')
-    );
-    const [activeService, setActiveService] = useState(
-        publicDashboardMode ? publicDashboardParams?.serviceType : (publicSubmissionMode ? publicServiceType : null)
-    );
+    const defaultService = publicDashboardMode ? publicDashboardParams?.serviceType : (publicSubmissionMode ? publicServiceType : null);
+
+    const [currentView, setCurrentView] = useState(() => {
+        if (publicDashboardMode && defaultService) return 'history';
+        if (defaultService) return 'action_menu';
+        return 'service_selection';
+    });
+    
+    const [activeService, setActiveService] = useState(defaultService);
     
     const [selectedState, setSelectedState] = useState('');
     const [selectedLocality, setSelectedLocality] = useState('');
     const [selectedFacilityId, setSelectedFacilityId] = useState('');
     const [selectedHealthWorkerName, setSelectedHealthWorkerName] = useState('');
 
-    const [activeTab, setActiveTab] = useState(publicDashboardMode ? 'dashboard' : 'skills_list');
+    const [activeTab, setActiveTab] = useState(() => {
+        return publicDashboardMode ? 'dashboard' : 'skills_list';
+    });
     const [activeFormType, setActiveFormType] = useState('skills_assessment');
     const [isReadyToStart, setIsReadyToStart] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     // Initialize Dashboard Filters with parameters if available
     const [activeDashboardState, setActiveDashboardState] = useState(publicDashboardMode ? publicDashboardParams?.state || '' : '');
@@ -924,6 +961,9 @@ const SkillsMentorshipView = ({
 
     // --- State for Facility Selection Modal ---
     const [isFacilitySelectionModalOpen, setIsFacilitySelectionModalOpen] = useState(false);
+    
+    // --- State for Standalone Facility Update Modal ---
+    const [isStandaloneFacilityModalOpen, setIsStandaloneFacilityModalOpen] = useState(false);
 
     const {
         healthFacilities,
@@ -940,7 +980,7 @@ const SkillsMentorshipView = ({
 
     const [localHealthFacilities, setLocalHealthFacilities] = useState(healthFacilities || []);
 
-    // --- NEW: Local State for direct Public Fetching ---
+    // --- Local State for direct Public Fetching ---
     const [publicData, setPublicData] = useState({ submissions: null, imnci: null, eenc: null });
     const [publicLoading, setPublicLoading] = useState(publicDashboardMode);
 
@@ -950,33 +990,56 @@ const SkillsMentorshipView = ({
         }
     }, [healthFacilities]);
 
-    // --- NEW: Fetch public data safely when accessed via direct public link ---
+    // --- Fetch public data safely with Cache-First + Server-Update Strategy ---
     useEffect(() => {
         if (publicDashboardMode) {
             let isMounted = true;
-            const fetchPublic = async () => {
-                setPublicLoading(true);
+            const fetchPublicData = async () => {
+                // 1. Try fetching from Cache first for instant loading
                 try {
-                    // Safe fetching - pass 'server' to bypass standard rules if needed
+                    const [cachedSubs, cachedImnci, cachedEenc] = await Promise.all([
+                        typeof listMentorshipSessions === 'function' ? listMentorshipSessions('cache').catch(() => []) : Promise.resolve([]),
+                        typeof listIMNCIVisitReports === 'function' ? listIMNCIVisitReports('cache').catch(() => []) : Promise.resolve([]),
+                        typeof listEENCVisitReports === 'function' ? listEENCVisitReports('cache').catch(() => []) : Promise.resolve([])
+                    ]);
+                    
+                    if (isMounted && (cachedSubs.length > 0 || cachedImnci.length > 0 || cachedEenc.length > 0)) {
+                        setPublicData({ submissions: cachedSubs, imnci: cachedImnci, eenc: cachedEenc });
+                        setPublicLoading(false); // Stop loading spinner since we have cached data to show
+                    }
+                } catch (e) {
+                    console.log("Cache miss or unavailable. Waiting for server data...");
+                }
+
+                // 2. Fetch from Server in the background to ensure data is up-to-date
+                try {
                     const [subs, imnci, eenc] = await Promise.all([
                         typeof listMentorshipSessions === 'function' ? listMentorshipSessions('server').catch(() => []) : Promise.resolve([]),
                         typeof listIMNCIVisitReports === 'function' ? listIMNCIVisitReports('server').catch(() => []) : Promise.resolve([]),
                         typeof listEENCVisitReports === 'function' ? listEENCVisitReports('server').catch(() => []) : Promise.resolve([])
                     ]);
                     if (isMounted) {
+                        // Update state with fresh server data
                         setPublicData({ submissions: subs || [], imnci: imnci || [], eenc: eenc || [] });
                     }
                 } catch (e) {
-                    console.error("Failed fetching public data", e);
-                    if (isMounted) setPublicData({ submissions: [], imnci: [], eenc: [] });
+                    console.error("Failed fetching fresh public data from server", e);
                 } finally {
                     if (isMounted) setPublicLoading(false);
                 }
             };
-            fetchPublic();
+            fetchPublicData();
             return () => { isMounted = false; };
         }
     }, [publicDashboardMode]);
+
+    // Ensure data is cached on mount without triggering new server loads unnecessarily
+    useEffect(() => {
+        fetchHealthFacilities({}, false);
+        fetchSkillMentorshipSubmissions(false);
+        fetchIMNCIVisitReports(false); 
+        if (fetchEENCVisitReports) fetchEENCVisitReports(false);
+    }, [fetchHealthFacilities, fetchSkillMentorshipSubmissions, fetchIMNCIVisitReports, fetchEENCVisitReports]);
 
 
     const [viewingSubmission, setViewingSubmission] = useState(null);
@@ -1020,10 +1083,9 @@ const SkillsMentorshipView = ({
     const [workerFilter, setWorkerFilter] = useState('');
     const [projectFilter, setProjectFilter] = useState('');
 
-    // --- NEW: Calculate permission to edit visit number ---
+    // --- Calculate permission to edit visit number ---
     const canEditVisitNumber = useMemo(() => {
         if (publicSubmissionMode || publicDashboardMode) return false;
-        // Check if user has advanced features permissions, Federal Manager scope, or is explicitly a super user/federal manager
         return permissions?.canUseFederalManagerAdvancedFeatures || 
                permissions?.canUseSuperUserAdvancedFeatures ||
                permissions?.manageScope === 'federal' || 
@@ -1091,7 +1153,7 @@ const SkillsMentorshipView = ({
         return Array.from(facs).sort();
     }, [processedSubmissions, stateFilter, localityFilter]);
 
-    // Extract unique Workers for filter dropdown (UPDATED: now depends on State, Locality, and Facility)
+    // Extract unique Workers for filter dropdown 
     const uniqueWorkersList = useMemo(() => {
         const workers = new Set();
         processedSubmissions.forEach(sub => {
@@ -1104,7 +1166,7 @@ const SkillsMentorshipView = ({
         return Array.from(workers).sort();
     }, [processedSubmissions, stateFilter, localityFilter, facilityFilter]);
 
-    // Extract unique Projects for filter dropdown (UPDATED: now depends on State, Locality, and Facility)
+    // Extract unique Projects for filter dropdown 
     const uniqueProjectsList = useMemo(() => {
         const projects = new Set();
         processedSubmissions.forEach(sub => {
@@ -1117,7 +1179,7 @@ const SkillsMentorshipView = ({
         return Array.from(projects).sort();
     }, [processedSubmissions, stateFilter, localityFilter, facilityFilter]);
 
-    // --- NEW: Calculate Worker History to pass to Form ---
+    // --- Calculate Worker History to pass to Form ---
     const workerHistory = useMemo(() => {
         if (!processedSubmissions || !selectedFacilityId || !selectedHealthWorkerName || !activeService) return [];
         return processedSubmissions.filter(sub =>
@@ -1152,7 +1214,7 @@ const SkillsMentorshipView = ({
             state: rep.state || 'N/A',
             locality: rep.locality || 'N/A',
             visitDate: rep.visit_date || 'N/A',
-            visitNumber: rep.visitNumber || null, // Map visitNumber
+            visitNumber: rep.visitNumber || null, 
             mentorEmail: rep.mentorEmail || null,
             mentorName: rep.mentorName || null,
             mentorDisplay: rep.mentorName || rep.mentorEmail || 'N/A',
@@ -1167,7 +1229,7 @@ const SkillsMentorshipView = ({
             state: rep.state || 'N/A',
             locality: rep.locality || 'N/A',
             visitDate: rep.visit_date || 'N/A',
-            visitNumber: rep.visitNumber || null, // Map visitNumber
+            visitNumber: rep.visitNumber || null, 
             mentorEmail: rep.mentorEmail || null,
             mentorName: rep.mentorName || null,
             mentorDisplay: rep.mentorName || rep.mentorEmail || 'N/A',
@@ -1208,12 +1270,10 @@ const SkillsMentorshipView = ({
             try {
                 if (activeService === 'IMNCI') {
                     await deleteIMNCIVisitReport(reportId);
-                    await fetchIMNCIVisitReports(true);
                 } else if (activeService === 'EENC') {
                     await deleteEENCVisitReport(reportId);
-                    await fetchEENCVisitReports(true);
                 }
-                setToast({ show: true, message: 'Report deleted.', type: 'success' });
+                setToast({ show: true, message: 'Report deleted. (Click Refresh to update table)', type: 'success' });
             } catch (error) {
                 setToast({ show: true, message: `Delete failed: ${error.message}`, type: 'error' });
             }
@@ -1230,7 +1290,6 @@ const SkillsMentorshipView = ({
             return;
         }
 
-        // Clone challenges table and update specific row and specific field
         const updatedChallenges = (report.challenges_table || []).map(ch => 
             ch.id === challengeId ? { ...ch, [fieldName]: newStatus } : ch
         );
@@ -1241,34 +1300,53 @@ const SkillsMentorshipView = ({
             lastUpdatedAt: Timestamp.now(),
             statusUpdatedBy: user?.email || 'Unknown'
         };
-        // Remove potential ID field before saving
         const { id, ...dataToSave } = payload;
 
         try {
             if (activeService === 'IMNCI') {
                 await saveIMNCIVisitReport(dataToSave, reportId);
-                await fetchIMNCIVisitReports(true);
             } else {
                 await saveEENCVisitReport(dataToSave, reportId);
-                if (fetchEENCVisitReports) await fetchEENCVisitReports(true);
             }
-            setToast({ show: true, message: 'Status updated successfully', type: 'success' });
+            setToast({ show: true, message: 'Status updated. (Click Refresh to update table)', type: 'success' });
         } catch (error) {
             console.error("Error updating status:", error);
             setToast({ show: true, message: `Failed to update status: ${error.message}`, type: 'error' });
         }
     };
-
-
-     useEffect(() => {
-        // In public dashboard mode we still want to fetch this data if available
-        fetchHealthFacilities();
-        fetchSkillMentorshipSubmissions();
-        fetchIMNCIVisitReports(); 
-        if (fetchEENCVisitReports) fetchEENCVisitReports();
-
-    }, [fetchHealthFacilities, fetchSkillMentorshipSubmissions, fetchIMNCIVisitReports, fetchEENCVisitReports]);
     
+    // --- Manual Refresh Data ---
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        try {
+            if (publicDashboardMode) {
+                // Force server fetch for public dashboard mode
+                const [subs, imnci, eenc] = await Promise.all([
+                    typeof listMentorshipSessions === 'function' ? listMentorshipSessions('server').catch(() => []) : Promise.resolve([]),
+                    typeof listIMNCIVisitReports === 'function' ? listIMNCIVisitReports('server').catch(() => []) : Promise.resolve([]),
+                    typeof listEENCVisitReports === 'function' ? listEENCVisitReports('server').catch(() => []) : Promise.resolve([])
+                ]);
+                setPublicData({ submissions: subs || [], imnci: imnci || [], eenc: eenc || [] });
+            } else {
+                // Standard refresh for authenticated users
+                const promises = [
+                    fetchSkillMentorshipSubmissions(true),
+                    fetchIMNCIVisitReports(true),
+                    fetchHealthFacilities({}, true)
+                ];
+                if (fetchEENCVisitReports) {
+                    promises.push(fetchEENCVisitReports(true));
+                }
+                await Promise.all(promises);
+            }
+            setToast({ show: true, message: "Data refreshed successfully.", type: "success" });
+        } catch (error) {
+            setToast({ show: true, message: `Failed to refresh: ${error.message}`, type: "error" });
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
+
     useEffect(() => {
         if (!publicDashboardMode) {
             setStateFilter('');
@@ -1430,7 +1508,7 @@ const SkillsMentorshipView = ({
 
     }, [processedSubmissions, selectedFacilityId, selectedHealthWorkerName, activeService, editingSubmission]);
 
-    // --- NEW: Calculate Mother Visit Number Logic ---
+    // --- Calculate Mother Visit Number Logic ---
     const motherVisitNumber = useMemo(() => {
         if (!Array.isArray(processedSubmissions) || !selectedFacilityId || !activeService) {
             return 1;
@@ -1442,7 +1520,6 @@ const SkillsMentorshipView = ({
 
         const motherServiceType = `${activeService}_MOTHERS`;
 
-        // Filter submissions for this specific facility and mother service type
         const facilityMotherSessions = processedSubmissions.filter(sub =>
             sub.facilityId === selectedFacilityId &&
             sub.service === motherServiceType &&
@@ -1450,7 +1527,6 @@ const SkillsMentorshipView = ({
             sub.sessionDate
         );
 
-        // Count unique dates to determine session number
         const uniqueDateSet = new Set(facilityMotherSessions.map(s => s.sessionDate));
         const baseVisitCount = uniqueDateSet.size;
 
@@ -1462,7 +1538,6 @@ const SkillsMentorshipView = ({
         const lastVisitDateStr = sortedDates[sortedDates.length - 1];
         const todayStr = new Date().toISOString().split('T')[0];
 
-        // If a session already exists for today, use that count, otherwise increment
         if (todayStr === lastVisitDateStr) {
             return baseVisitCount;
         } else {
@@ -1470,16 +1545,13 @@ const SkillsMentorshipView = ({
         }
 
     }, [processedSubmissions, selectedFacilityId, activeService, editingSubmission]);
-    // --- END NEW LOGIC ---
 
-    // --- NEW: Calculate Visit Report Visit Number Logic ---
+    // --- Calculate Visit Report Visit Number Logic ---
     const visitReportVisitNumber = useMemo(() => {
         if (!selectedFacilityId || !activeService) {
             return 1;
         }
         
-        // Use the processed reports which are already filtered by activeService
-        // Filter for the selected facility
         const relevantReports = processedVisitReports.filter(rep => rep.facilityId === selectedFacilityId);
 
         if (editingSubmission && (editingSubmission.service === activeService)) {
@@ -1504,7 +1576,6 @@ const SkillsMentorshipView = ({
         }
 
     }, [processedVisitReports, selectedFacilityId, activeService, editingSubmission]);
-    // --- END NEW LOGIC ---
 
     const lastSessionDate = useMemo(() => {
         if (!Array.isArray(processedSubmissions) || !selectedFacilityId || !selectedHealthWorkerName || !activeService) {
@@ -1603,14 +1674,49 @@ const SkillsMentorshipView = ({
         setActiveFormType('skills_assessment');
         setIsReadyToStart(false);
     };
+
     const handleSelectService = (serviceKey) => {
         setActiveService(serviceKey);
-        setCurrentView('history');
-        setActiveTab('skills_list');
+        if (publicDashboardMode) {
+            setCurrentView('history');
+            setActiveTab('dashboard');
+        } else {
+            setCurrentView('action_menu');
+        }
+    };
+
+    // Action Menu handler
+    const handleActionMenuClick = (action) => {
+        if (action === 'view_submissions') {
+            setCurrentView('history');
+            setActiveTab('skills_list');
+        } else if (action === 'view_dashboard') {
+            setCurrentView('history');
+            setActiveTab('dashboard');
+        } else if (action === 'view_drafts') {
+            setIsDraftsModalOpen(true);
+        } else if (action === 'new_skill') {
+            resetSelection();
+            setActiveFormType('skills_assessment');
+            setCurrentView('form_setup');
+        } else if (action === 'new_mother') {
+            resetSelection();
+            setActiveFormType('mothers_form');
+            setCurrentView('form_setup');
+        } else if (action === 'new_visit_report') {
+            resetSelection();
+            setActiveFormType('visit_report');
+            setCurrentView('form_setup');
+        } else if (action === 'update_facility') {
+            resetSelection();
+            setActiveFormType('facility_update');
+            setCurrentView('form_setup');
+        }
     };
     
     const handleStartNewVisit = async () => {
         resetSelection();
+        setActiveFormType('skills_assessment');
         setCurrentView('form_setup');
     };
     
@@ -1626,34 +1732,12 @@ const SkillsMentorshipView = ({
         setCurrentView('form_setup');
     };
 
-    const handleReturnToServiceSelection = () => {
-        setActiveService(null);
-        setCurrentView('service_selection');
-        resetSelection();
-    };
-
     const handleExitForm = () => {
-        const completedFormType = activeFormType;
         resetSelection(); 
-
-        if (publicSubmissionMode) {
-             setCurrentView('form_setup');
-        } else {
-            setCurrentView('history');
-            if (completedFormType === 'mothers_form') {
-                setActiveTab('mothers_list');
-            } else if (completedFormType === 'visit_report') {
-                setActiveTab('visit_reports');
-            } else {
-                setActiveTab('skills_list');
-            }
-        }
+        setCurrentView('action_menu');
     };
 
     const handleSaveSuccess = async (status, savedData) => {
-        const wasEditing = !!editingSubmission;
-        const completedFormType = activeFormType;
-
         let lastFacilityInfo = null;
         if (savedData) {
             lastFacilityInfo = {
@@ -1664,10 +1748,6 @@ const SkillsMentorshipView = ({
         }
  
         resetSelection(); 
-
-        if (previousViewRef.current === 'form_setup' || wasEditing) {
-            await fetchSkillMentorshipSubmissions(true);
-        }
         
         if (status === 'complete' && !publicSubmissionMode) {
             setLastSavedFacilityInfo(lastFacilityInfo);
@@ -1677,28 +1757,16 @@ const SkillsMentorshipView = ({
                 if (status === 'complete') {
                     setToast({ show: true, message: 'Submission successful! Thank you.', type: 'success' });
                 }
-                setCurrentView('form_setup');
+                setCurrentView('action_menu');
             } else {
-                setCurrentView('history');
-                setActiveTab('skills_list');
+                setCurrentView('action_menu');
             }
         }
     };
 
     const handleGenericFormExit = async (returnTab = 'skills_list') => {
         resetSelection(); 
-
-        await fetchSkillMentorshipSubmissions(true); 
-        await fetchIMNCIVisitReports(true);
-        if (fetchEENCVisitReports) await fetchEENCVisitReports(true);
-
-
-        if (publicSubmissionMode) {
-             setCurrentView('form_setup');
-        } else {
-            setCurrentView('history'); 
-            setActiveTab(returnTab);
-        }
+        setCurrentView('action_menu');
     };
 
     const previousViewRef = useRef(currentView);
@@ -1707,9 +1775,9 @@ const SkillsMentorshipView = ({
     }, [currentView]);
 
 
-    const handleBackToHistoryView = () => {
-        setCurrentView('history');
-         resetSelection();
+    const handleBackToMainMenu = () => {
+        setCurrentView('action_menu');
+        resetSelection();
     };
 
     const handlePostSaveSelect = (actionType) => {
@@ -1727,36 +1795,28 @@ const SkillsMentorshipView = ({
         if (actionType === 'skills_assessment' || actionType === 'mothers_form' || actionType === 'visit_report') {
             setActiveFormType(actionType);
             setCurrentView('form_setup');
-            
             setSelectedHealthWorkerName('');
             setIsReadyToStart(false);
 
-        } else if (actionType === 'dashboard') {
-            setActiveDashboardState(savedInfo.state);
-            setActiveDashboardLocality(savedInfo.locality);
-            setActiveDashboardFacilityId(savedInfo.facilityId);
-            setIsDashboardModalOpen(true);
-            
-            setCurrentView('history');
-            setActiveTab('skills_list');
-
+        } else if (actionType === 'action_menu') {
+            setCurrentView('action_menu');
         } else if (actionType === 'drafts') {
             setIsDraftsModalOpen(true);
-
-            setCurrentView('history');
-            setActiveTab('skills_list');
+            setCurrentView('action_menu');
         }
     };
 
     const handlePostSaveClose = () => {
         setIsPostSaveModalOpen(false);
         setLastSavedFacilityInfo(null);
-        setCurrentView('history');
-        setActiveTab('skills_list');
+        setCurrentView('action_menu');
     };
 
     const handleProceedToForm = () => {
-        if (activeFormType === 'skills_assessment') {
+        if (activeFormType === 'facility_update') {
+            setIsStandaloneFacilityModalOpen(true);
+        }
+        else if (activeFormType === 'skills_assessment') {
             const draftForSelectedWorker = currentUserDrafts.find(d => 
                 d.facilityId === selectedFacilityId && 
                 d.staff === selectedHealthWorkerName
@@ -1792,7 +1852,6 @@ const SkillsMentorshipView = ({
         });
     };
     
-    // --- NEW: Share Dashboard Link handler ---
     const handleShareDashboardLink = () => {
         const baseUrl = `${window.location.origin}/public/mentorship/dashboard/${activeService}`;
         const params = new URLSearchParams();
@@ -1828,12 +1887,11 @@ const SkillsMentorshipView = ({
             );
             const successCount = successes.length;
             const errorCount = errors.length;
-            let message = `${successCount} sessions imported successfully.`;
+            let message = `${successCount} sessions imported successfully. (Click Refresh to update table)`;
             if (errorCount > 0) {
                 message += `\n${errorCount} rows failed to import. Check results for details.`;
             }
              setUploadStatus(prev => ({ ...prev, inProgress: false, message, errors: failedRowsData }));
-             fetchSkillMentorshipSubmissions(true);
         } catch (error) {
              setUploadStatus({
                  inProgress: false,
@@ -1949,7 +2007,6 @@ const SkillsMentorshipView = ({
         const fullSubmission = skillMentorshipSubmissions.find(s => s.id === submissionId);
         if (!fullSubmission) return;
         
-        // MODIFIED: Allow mother forms
         if (fullSubmission.serviceType === 'IMNCI_MOTHERS' || fullSubmission.serviceType === 'EENC_MOTHERS') {
             setActiveFormType('mothers_form');
         } else if (fullSubmission.serviceType === 'IMNCI') {
@@ -1959,13 +2016,6 @@ const SkillsMentorshipView = ({
         } else {
             setToast({ show: true, message: 'لا يمكن تعديل هذا النوع من الجلسات.', type: 'error' });
             return;
-        }
-
-        const isFormOpen = currentView === 'form_setup';
-        const isDifferentDraft = !editingSubmission || (editingSubmission.id !== submissionId);
-
-        if (isFormOpen && isDifferentDraft && formRef.current) {
-            // ... save draft logic
         }
 
         setSelectedState(fullSubmission.state);
@@ -1991,8 +2041,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
         if (window.confirm(confirmMessage)) {
             try {
                 await deleteMentorshipSession(submissionId);
-                setToast({ show: true, message: 'تم حذف الجلسة بنجاح.', type: 'success' });
-                await fetchSkillMentorshipSubmissions(true);
+                setToast({ show: true, message: 'تم الحذف. (انقر تحديث لتحديث القائمة)', type: 'success' });
                 setIsDraftsModalOpen(false);
                 setViewingSubmission(null);
             } catch (error) {
@@ -2002,11 +2051,8 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
         }
     };
 
- 
-
     const handleDraftCreated = (newDraftObject) => {
         setEditingSubmission(newDraftObject);
-        fetchSkillMentorshipSubmissions(true);
     };
 
     const MobileFormNavBar = ({ activeFormType, draftCount, onNavClick }) => {
@@ -2102,21 +2148,72 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
         return <ServiceSelector onSelectService={handleSelectService} />;
     }
 
+    if (currentView === 'action_menu') {
+        return (
+            <>
+                <ActionMenu 
+                    onAction={handleActionMenuClick} 
+                    activeService={activeService} 
+                    draftCount={currentUserDrafts.length}
+                    onBack={() => {
+                        setActiveService(null);
+                        setCurrentView('service_selection');
+                        resetSelection();
+                    }}
+                />
+                <DraftsModal
+                    isOpen={isDraftsModalOpen}
+                    onClose={() => setIsDraftsModalOpen(false)}
+                    drafts={currentUserDrafts}
+                    onView={handleViewSubmission}
+                    onEdit={handleEditSubmission}
+                    onDelete={handleDeleteSubmission}
+                />
+                {viewingSubmission && (
+                    <ViewSubmissionModal
+                        submission={viewingSubmission}
+                        onClose={() => setViewingSubmission(null)}
+                    />
+                )}
+            </>
+        );
+    }
+
     if (currentView === 'history') {
         const canShareLink = permissions?.canManageSkillsMentorship || permissions?.canUseSuperUserAdvancedFeatures;
-        const serviceTitle = SERVICE_TITLES[activeService] || activeService;
         const headerTitle = `${activeService} Mentorship`;
-
-        // Check if user is a Federal Manager or Super User
         const isFederalManager = permissions?.manageScope === 'federal' || permissions?.isSuperUser || permissions?.role === 'federal_manager';
 
         return (
             <>
                 <Card dir="ltr">
                     <div className="p-6">
-                        {/* Only show tabs if NOT in public dashboard mode */}
-                        {!publicDashboardMode && (
-                            <div className="border-b border-gray-200 mb-6">
+                        <div className="flex justify-between items-center mb-6 border-b border-gray-200 pb-2">
+                            <div className="flex items-center gap-4">
+                                {!publicDashboardMode && (
+                                    <Button variant="secondary" onClick={() => setCurrentView('action_menu')} className="mr-4">
+                                        <ArrowLeft className="w-4 h-4 mr-2" /> Back to Main Menu
+                                    </Button>
+                                )}
+                                <Button 
+                                    variant="secondary" 
+                                    onClick={handleRefresh} 
+                                    disabled={isRefreshing}
+                                    className="flex items-center gap-2"
+                                >
+                                    {isRefreshing ? (
+                                        <> <Spinner size="sm" /> Refreshing... </>
+                                    ) : (
+                                        <>
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                                              <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.759l.274.549a.75.75 0 101.3-.65l-.274-.549a5.479 5.479 0 016.128-4.032.75.75 0 00.573-1.376 6.979 6.979 0 00-7.75-2.088l-.94-.313a.75.75 0 00-.913.655v1.944a.75.75 0 001.5 0V7.32l.94.313a5.479 5.479 0 016.128 4.032zM4.688 8.576a5.5 5.5 0 019.201-2.759l-.274-.549a.75.75 0 10-1.3.65l.274.549a5.479 5.479 0 01-6.128 4.032.75.75 0 00-.573 1.376 6.979 6.979 0 007.75 2.088l.94.313a.75.75 0 00.913-.655V12.06a.75.75 0 00-1.5 0v1.631l-.94-.313a5.479 5.479 0 01-6.128-4.032z" clipRule="evenodd" />
+                                            </svg>
+                                            Refresh
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+                            {!publicDashboardMode && (
                                 <nav className="flex gap-2" aria-label="Tabs">
                                     <button
                                         onClick={() => setActiveTab('skills_list')}
@@ -2159,8 +2256,8 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                         Dashboard
                                     </button>
                                 </nav>
-                            </div>
-                        )}
+                            )}
+                        </div>
 
                         <div className="flex justify-center mb-4 relative">
                             <h2 className="text-xl font-semibold text-gray-800">{headerTitle}</h2>
@@ -2280,7 +2377,6 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     onView={handleViewSubmission}
                                     onEdit={handleEditSubmission}
                                     onDelete={handleDeleteSubmission}
-                                    fetchSubmissions={fetchSkillMentorshipSubmissions}
                                     isSubmissionsLoading={isDataCacheLoading.skillMentorshipSubmissions || !skillMentorshipSubmissions}
                                     stateFilter={stateFilter}
                                     localityFilter={localityFilter}
@@ -2300,7 +2396,6 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     onView={handleViewSubmission}
                                     onEdit={handleEditSubmission}
                                     onDelete={handleDeleteSubmission}
-                                    fetchSubmissions={fetchSkillMentorshipSubmissions}
                                     isSubmissionsLoading={isDataCacheLoading.skillMentorshipSubmissions || !skillMentorshipSubmissions}
                                     stateFilter={stateFilter}
                                     localityFilter={localityFilter}
@@ -2317,7 +2412,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     reports={processedVisitReports}
                                     onEdit={handleEditVisitReport}
                                     onDelete={handleDeleteVisitReport}
-                                    onView={handleViewVisitReport} // Pass view handler
+                                    onView={handleViewVisitReport} 
                                 />
                             )}
 
@@ -2334,7 +2429,6 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                         STATE_LOCALITIES={STATE_LOCALITIES}
                                         activeService={activeService}
                                         
-                                        // Pass new props for status editing
                                         canEditStatus={isFederalManager}
                                         onUpdateStatus={handleChallengeStatusUpdate}
 
@@ -2392,7 +2486,6 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                     />
                 )}
                 
-                {/* New View Visit Report Modal */}
                 {viewingVisitReport && (
                     <ViewVisitReportModal
                         report={viewingVisitReport}
@@ -2430,9 +2523,9 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         setToast={setToast}
                         
                         visitNumber={visitNumber}
-                        workerHistory={workerHistory} // Pass history for date checks
+                        workerHistory={workerHistory} 
                         
-                        canEditVisitNumber={canEditVisitNumber} // Pass permission
+                        canEditVisitNumber={canEditVisitNumber} 
                         existingSessionData={editingSubmission}
                         lastSessionDate={lastSessionDate}
                         onDraftCreated={handleDraftCreated}
@@ -2473,13 +2566,12 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                 <MothersForm
                                     facility={facilityData}
                                     visitNumber={motherVisitNumber}
-                                    existingSessionData={null} // Mothers form is new here
+                                    existingSessionData={null}
                                     onCancel={() => {
                                         setIsMothersFormModalOpen(false);
-                                        fetchSkillMentorshipSubmissions(true);
                                     }}
                                     setToast={setToast}
-                                    canEditVisitNumber={canEditVisitNumber} // NEW PROP
+                                    canEditVisitNumber={canEditVisitNumber}
                                 />
                             </div>
                         </Modal>
@@ -2497,34 +2589,28 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     {activeService === 'IMNCI' ? (
                                         <IMNCIVisitReport
                                             facility={facilityData}
-                                            visitNumber={visitReportVisitNumber} // Pass calculated visit number
+                                            visitNumber={visitReportVisitNumber}
                                             onCancel={() => {
                                                 setIsVisitReportModalOpen(false);
-                                                fetchSkillMentorshipSubmissions(true);
-                                                fetchIMNCIVisitReports(true);
                                             }}
                                             setToast={setToast}
                                             allSubmissions={processedSubmissions}
                                             existingReportData={null}
-                                            // NEW PROP
                                             allVisitReports={processedVisitReports}
-                                            canEditVisitNumber={canEditVisitNumber} // NEW PROP
+                                            canEditVisitNumber={canEditVisitNumber}
                                         />
                                     ) : (
                                         <EENCVisitReport
                                             facility={facilityData}
-                                            visitNumber={visitReportVisitNumber} // Pass calculated visit number
+                                            visitNumber={visitReportVisitNumber}
                                             onCancel={() => {
                                                 setIsVisitReportModalOpen(false);
-                                                fetchSkillMentorshipSubmissions(true);
-                                                if (fetchEENCVisitReports) fetchEENCVisitReports(true);
                                             }}
                                             setToast={setToast}
                                             allSubmissions={processedSubmissions}
                                             existingReportData={null}
-                                            // NEW PROP
                                             allVisitReports={processedVisitReports}
-                                            canEditVisitNumber={canEditVisitNumber} // NEW PROP
+                                            canEditVisitNumber={canEditVisitNumber}
                                         />
                                     )}
                                 </Suspense>
@@ -2546,7 +2632,6 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     STATE_LOCALITIES={STATE_LOCALITIES}
                                     activeService={activeService}
                                     
-                                    // Pass new props for status editing
                                     canEditStatus={permissions?.role === 'federal_manager' || permissions?.isSuperUser}
                                     onUpdateStatus={handleChallengeStatusUpdate}
 
@@ -2597,8 +2682,8 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         setToast={setToast}
                         existingSessionData={editingSubmission}
                         visitNumber={visitNumber}
-                        workerHistory={workerHistory} // Pass history to EENC too
-                        canEditVisitNumber={canEditVisitNumber} // Pass permission
+                        workerHistory={workerHistory}
+                        canEditVisitNumber={canEditVisitNumber}
                     />
                 </>
             );
@@ -2611,12 +2696,12 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
             return (
                 <>
                     <MothersForm
-                        facility={facilityData} // Use facilityData which handles edits
+                        facility={facilityData}
                         visitNumber={motherVisitNumber}
-                        existingSessionData={editingSubmission} // Pass existing data
+                        existingSessionData={editingSubmission}
                         onCancel={() => handleGenericFormExit('mothers_list')}
                         setToast={setToast}
-                        canEditVisitNumber={canEditVisitNumber} // NEW PROP
+                        canEditVisitNumber={canEditVisitNumber}
                     />
                     <MobileFormNavBar
                         activeFormType={activeFormType}
@@ -2630,12 +2715,12 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
             return (
                 <>
                     <EENCMothersForm
-                        facility={facilityData} // Use facilityData which handles edits
+                        facility={facilityData}
                         visitNumber={motherVisitNumber}
-                        existingSessionData={editingSubmission} // Pass existing data
+                        existingSessionData={editingSubmission}
                         onCancel={() => handleGenericFormExit('mothers_list')}
                         setToast={setToast}
-                        canEditVisitNumber={canEditVisitNumber} // NEW PROP
+                        canEditVisitNumber={canEditVisitNumber}
                     />
                 </>
             );
@@ -2651,14 +2736,13 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                 <Suspense fallback={<div className="p-8"><Spinner /></div>}>
                     <ReportComponent
                         facility={facilityData}
-                        visitNumber={visitReportVisitNumber} // Pass calculated visit number
+                        visitNumber={visitReportVisitNumber}
                         onCancel={() => handleGenericFormExit('visit_reports')}
                         setToast={setToast}
                         allSubmissions={processedSubmissions}
                         existingReportData={editingSubmission}
-                        // NEW PROP
                         allVisitReports={processedVisitReports}
-                        canEditVisitNumber={canEditVisitNumber} // NEW PROP
+                        canEditVisitNumber={canEditVisitNumber}
                     />
                 </Suspense>
                 {isVisitReportModalOpen && (
@@ -2666,7 +2750,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         <div className="p-4">Visit Report is already open.</div>
                     </Modal>
                 )}
-                {isMothersFormModalOpen && facilityData && <Modal isOpen={isMothersFormModalOpen} onClose={() => setIsMothersFormModalOpen(false)} title="استبيان الأم" size="full"><div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto"><MothersForm facility={facilityData} visitNumber={motherVisitNumber} existingSessionData={null} onCancel={() => { setIsMothersFormModalOpen(false); fetchSkillMentorshipSubmissions(true); }} setToast={setToast} canEditVisitNumber={canEditVisitNumber} /></div></Modal>}
+                {isMothersFormModalOpen && facilityData && <Modal isOpen={isMothersFormModalOpen} onClose={() => setIsMothersFormModalOpen(false)} title="استبيان الأم" size="full"><div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto"><MothersForm facility={facilityData} visitNumber={motherVisitNumber} existingSessionData={null} onCancel={() => { setIsMothersFormModalOpen(false); }} setToast={setToast} canEditVisitNumber={canEditVisitNumber} /></div></Modal>}
                 <MobileFormNavBar
                     activeFormType={activeFormType}
                     draftCount={currentUserDrafts.length}
@@ -2687,6 +2771,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
         const isSkillsAssessmentSetup = activeFormType === 'skills_assessment';
         const isVisitReportSetup = activeFormType === 'visit_report';
         const isMothersFormSetup = activeFormType === 'mothers_form';
+        const isFacilityUpdateSetup = activeFormType === 'facility_update';
         
         let setupTitle = '';
         if (isSkillsAssessmentSetup) {
@@ -2695,6 +2780,8 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
             setupTitle = editingSubmission ? (activeService === 'EENC' ? 'تعديل تقرير زيارة EENC' : 'تعديل تقرير الزيارة') : (activeService === 'EENC' ? 'إدخال تقرير زيارة EENC' : 'إدخال تقرير زيارة جديد');
         } else if (isMothersFormSetup) {
             setupTitle = editingSubmission ? (activeService === 'EENC' ? 'تعديل استبيان الأم (EENC)' : 'تعديل استبيان الأم') : (activeService === 'EENC' ? 'نموذج استبيان الأم (EENC)' : 'نموذج استبيان الأم (IMNCI)');
+        } else if (isFacilityUpdateSetup) {
+            setupTitle = 'تحديث بيانات المؤسسة الصحية';
         }
 
         const setupSubtitle = isSkillsAssessmentSetup 
@@ -2840,7 +2927,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         <div className="hidden sm:flex flex-col gap-2 items-end mt-6 pt-4 border-t">
                             <div className="flex gap-2 flex-wrap justify-end">
                                 <Button 
-                                    onClick={handleBackToHistoryView}
+                                    onClick={handleBackToMainMenu}
                                     variant="secondary"
                                     disabled={isFacilitiesLoading}
                                 >
@@ -2851,7 +2938,9 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     disabled={!selectedFacilityId || (isSkillsAssessmentSetup && !selectedHealthWorkerName) || isFacilitiesLoading || isWorkerInfoChanged}
                                     variant="primary"
                                 >
-                                    {isSkillsAssessmentSetup ? 'بدء جلسة الاشراف' : (isVisitReportSetup ? (activeService === 'EENC' ? 'بدء تقرير زيارة EENC' : 'بدء تقرير زيارة') : 'بدء استبيان الأم')}
+                                    {isSkillsAssessmentSetup ? 'بدء جلسة الاشراف' : 
+                                     (isVisitReportSetup ? (activeService === 'EENC' ? 'بدء تقرير زيارة EENC' : 'بدء تقرير زيارة') : 
+                                     (isFacilityUpdateSetup ? 'تحديث بيانات المنشأة' : 'بدء استبيان الأم'))}
                                 </Button>
                             </div>
                             <div className="flex gap-2 flex-wrap justify-end">
@@ -2892,7 +2981,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         </div>
 
                         <div className="flex sm:hidden fixed bottom-16 left-0 right-0 z-20 h-16 justify-around items-center bg-gray-900 text-white border-t border-gray-700 shadow-lg" dir="rtl">
-                            <Button type="button" variant="secondary" onClick={handleBackToHistoryView} disabled={isFacilitiesLoading} size="sm">
+                            <Button type="button" variant="secondary" onClick={handleBackToMainMenu} disabled={isFacilitiesLoading} size="sm">
                                 إلغاء
                             </Button>
                             
@@ -2903,7 +2992,9 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                 title={!selectedFacilityId ? "Select facility" : (isSkillsAssessmentSetup && !selectedHealthWorkerName ? "Select health worker" : "Start Session")}
                                 size="sm"
                             >
-                                {isSkillsAssessmentSetup ? 'بدء الجلسة' : (isVisitReportSetup ? (activeService === 'EENC' ? 'بدء تقرير EENC' : 'بدء التقرير') : 'بدء الاستبيان')} 
+                                {isSkillsAssessmentSetup ? 'بدء الجلسة' : 
+                                 (isVisitReportSetup ? (activeService === 'EENC' ? 'بدء تقرير EENC' : 'بدء التقرير') : 
+                                 (isFacilityUpdateSetup ? 'تحديث منشأة' : 'بدء الاستبيان'))}
                             </Button>
                         </div>
                     </div>
@@ -2947,6 +3038,39 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                     onSelect={handlePostSaveSelect}
                 />
 
+                {isStandaloneFacilityModalOpen && selectedFacility && (
+                    <Modal 
+                        isOpen={isStandaloneFacilityModalOpen} 
+                        onClose={() => setIsStandaloneFacilityModalOpen(false)} 
+                        title={`بيانات منشأة: ${selectedFacility['اسم_المؤسسة'] || ''}`}
+                        size="full"
+                    >
+                        <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
+                            <GenericFacilityForm
+                                initialData={selectedFacility}
+                                onSave={async (formData) => {
+                                    try {
+                                        await submitFacilityDataForApproval(formData);
+                                        setToast({ show: true, message: "تم إرسال التحديث للموافقة.", type: 'success' });
+                                        setIsStandaloneFacilityModalOpen(false);
+                                    } catch (error) {
+                                        setToast({ show: true, message: `فشل التحديث: ${error.message}`, type: 'error' });
+                                    }
+                                }}
+                                onCancel={() => setIsStandaloneFacilityModalOpen(false)}
+                                setToast={setToast}
+                                title="تحديث بيانات المنشأة"
+                                subtitle={`المنشأة: ${selectedFacility['اسم_المؤسسة']}`}
+                                isPublicForm={false}
+                                saveButtonText="إرسال التحديث للموافقة"
+                                cancelButtonText="إغلاق"
+                            >
+                                {(props) => <IMNCIFormFields {...props} />}
+                            </GenericFacilityForm>
+                        </div>
+                    </Modal>
+                )}
+
                 {isMothersFormModalOpen && selectedFacility && (
                     <Modal 
                         isOpen={isMothersFormModalOpen} 
@@ -2958,13 +3082,12 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                             <MothersForm
                                 facility={selectedFacility} 
                                 visitNumber={motherVisitNumber}
-                                existingSessionData={null} // Mothers form is new here
+                                existingSessionData={null} 
                                 onCancel={() => { 
                                     setIsMothersFormModalOpen(false);
-                                    fetchSkillMentorshipSubmissions(true); 
                                 }}
                                 setToast={setToast}
-                                canEditVisitNumber={canEditVisitNumber} // NEW PROP
+                                canEditVisitNumber={canEditVisitNumber} 
                             />
                         </div>
                     </Modal>
@@ -2982,34 +3105,28 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                 {activeService === 'IMNCI' ? (
                                     <IMNCIVisitReport
                                         facility={selectedFacility}
-                                        visitNumber={visitReportVisitNumber} // Pass calculated visit number
+                                        visitNumber={visitReportVisitNumber}
                                         onCancel={() => {
                                             setIsVisitReportModalOpen(false);
-                                            fetchSkillMentorshipSubmissions(true);
-                                            fetchIMNCIVisitReports(true);
                                         }}
                                         setToast={setToast}
                                         allSubmissions={processedSubmissions}
                                         existingReportData={null}
-                                        // NEW PROP
                                         allVisitReports={processedVisitReports}
-                                        canEditVisitNumber={canEditVisitNumber} // NEW PROP
+                                        canEditVisitNumber={canEditVisitNumber} 
                                     />
                                 ) : (
                                     <EENCVisitReport
                                         facility={selectedFacility}
-                                        visitNumber={visitReportVisitNumber} // Pass calculated visit number
+                                        visitNumber={visitReportVisitNumber}
                                         onCancel={() => {
                                             setIsVisitReportModalOpen(false);
-                                            fetchSkillMentorshipSubmissions(true);
-                                            if (fetchEENCVisitReports) fetchEENCVisitReports(true);
                                         }}
                                         setToast={setToast}
                                         allSubmissions={processedSubmissions}
                                         existingReportData={null}
-                                        // NEW PROP
                                         allVisitReports={processedVisitReports}
-                                        canEditVisitNumber={canEditVisitNumber} // NEW PROP
+                                        canEditVisitNumber={canEditVisitNumber}
                                     />
                                 )}
                             </Suspense>
@@ -3031,7 +3148,6 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                 STATE_LOCALITIES={STATE_LOCALITIES}
                                 activeService={activeService}
                                 
-                                // Pass new props for status editing
                                 canEditStatus={permissions?.role === 'federal_manager' || permissions?.isSuperUser}
                                 onUpdateStatus={handleChallengeStatusUpdate}
 
@@ -3056,7 +3172,6 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     setActiveDashboardWorkerName("");
                                 }}
                                 
-                                // --- FIX: Pass activeProject to modal instance ---
                                 activeProject={activeDashboardProject}
                                 onProjectChange={(value) => {
                                     setActiveDashboardProject(value);

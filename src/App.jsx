@@ -78,11 +78,10 @@ import {
     upsertParticipantTest
 } from './data.js';
 import { STATE_LOCALITIES } from './components/constants.js';
-// UPDATE: Added Modal and Input to imports
 import { Card, PageHeader, Button, Table, EmptyState, Spinner, PdfIcon, CourseIcon, Footer, Toast, Modal, Input } from './components/CommonComponents';
 import { auth, db } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { signOut, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { signOut } from 'firebase/auth';
 import { useDataCache } from './DataContext';
 import { useAuth } from './hooks/useAuth';
 import { SignInBox } from './auth-ui.jsx';
@@ -438,7 +437,10 @@ export default function App() {
     const [activeCoursesTab, setActiveCoursesTab] = useState('courses');
     const [activeHRTab, setActiveHRTab] = useState('facilitators');
 
-    const [courseDetails, setCourseDetails] = useState({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null });
+    // --- REPLACED: Single state for cache object ---
+    const [courseDetailsCache, setCourseDetailsCache] = useState({});
+    // Dynamically grab details for the currently selected course
+    const courseDetails = courseDetailsCache[selectedCourseId] || { participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null };
     
     const [courseDetailsLoading, setCourseDetailsLoading] = useState(false);
     
@@ -932,7 +934,7 @@ export default function App() {
     }, [view, isSharedView, user, fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchCoordinators, fetchHealthFacilities, fetchSkillMentorshipSubmissions, isPublicMentorshipDashboardView]);
 
     useEffect(() => {
-        if (selectedCourseId && !courseDetails.allObs && !courseDetailsLoading) {
+        if (selectedCourseId && !courseDetailsCache[selectedCourseId]?.allObs && !courseDetailsLoading) {
             
             const fetchFullCourseDetails = async () => {
                 setCourseDetailsLoading(true);
@@ -945,11 +947,19 @@ export default function App() {
                     ]);
                     const { allObs, allCases } = allCourseData;
                     
-                    setCourseDetails({ participants: participantsData || [], allObs, allCases, finalReport, participantTests: testData || [] }); 
+                    setCourseDetailsCache(prev => ({
+                        ...prev,
+                        [selectedCourseId]: { 
+                            participants: participantsData || [], 
+                            allObs, 
+                            allCases, 
+                            finalReport, 
+                            participantTests: testData || [] 
+                        }
+                    })); 
                     
                 } catch (error) {
                     console.error("Background fetch of course details failed:", error);
-                    setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null }); 
                 } finally {
                     setCourseDetailsLoading(false);
                 }
@@ -957,7 +967,7 @@ export default function App() {
             
             fetchFullCourseDetails();
         }
-    }, [selectedCourseId, courseDetails.allObs, courseDetailsLoading]); 
+    }, [selectedCourseId, courseDetailsCache, courseDetailsLoading]); 
 
     // ... [Data calculations and handlers remain unchanged] ...
     const canSeeAllData = useMemo(() => {
@@ -1077,7 +1087,6 @@ export default function App() {
             setSelectedCourseId(null);
             setSelectedParticipantId(null);
             setFinalReportCourse(null);
-            setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null }); 
             if (['dashboard', 'admin', 'landing', 'skillsMentorship'].includes(newView)) {
                 setActiveCourseType(null);
             }
@@ -1090,16 +1099,13 @@ export default function App() {
     const handleOpenCourse = useCallback((courseId) => {
         setSelectedCourseId(courseId);
         setLoading(false); 
-        
-        setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null }); 
-        
         navigate('participants', { courseId });
     }, [navigate]);
 
     const handleOpenCourseReport = useCallback(async (courseId) => {
         setSelectedCourseId(courseId);
         
-        if (courseDetails.allObs !== null && courseDetails.participants !== null && courseDetails.participantTests !== null) { 
+        if (courseDetailsCache[courseId]?.allObs && courseDetailsCache[courseId]?.participants && courseDetailsCache[courseId]?.participantTests) { 
              navigate('courseReport', { courseId });
              return; 
         }
@@ -1119,7 +1125,12 @@ export default function App() {
                 listParticipantTestsForCourse(courseId) 
             ]);
             const { allObs, allCases } = allCourseData;
-            setCourseDetails({ participants: participantsData, allObs, allCases, finalReport, participantTests: testData || [] }); 
+            
+            setCourseDetailsCache(prev => ({
+                ...prev,
+                [courseId]: { participants: participantsData, allObs, allCases, finalReport, participantTests: testData || [] }
+            }));
+            
             navigate('courseReport', { courseId });
         } catch (error) {
             console.error("Error loading course report data:", error);
@@ -1128,7 +1139,7 @@ export default function App() {
             setLoading(false);
             setCourseDetailsLoading(false); 
         }
-    }, [navigate, courseDetails, courseDetailsLoading]);
+    }, [navigate, courseDetailsCache, courseDetailsLoading]);
 
     const handleOpenCourseForTestForm = useCallback(async (courseId) => {
         setLoading(true);
@@ -1141,13 +1152,14 @@ export default function App() {
                 listParticipantTestsForCourse(courseId, { source: 'server' }) 
             ]);
             
-            setCourseDetails({
-                participants: participantsData || [],
-                participantTests: testData || [],
-                allObs: null, 
-                allCases: null, 
-                finalReport: null 
-            });
+            setCourseDetailsCache(prev => ({
+                ...prev,
+                [courseId]: { 
+                    ...(prev[courseId] || {}), 
+                    participants: participantsData || [],
+                    participantTests: testData || []
+                }
+            }));
 
             setActiveCoursesTab('test-dashboard'); 
             setView('courses');
@@ -1209,6 +1221,13 @@ export default function App() {
         if (window.confirm('Are you sure you want to delete this course and all its data?')) {
             await deleteCourse(courseId);
             await fetchCourses(true);
+            
+            setCourseDetailsCache(prev => {
+                const newCache = { ...prev };
+                delete newCache[courseId];
+                return newCache;
+            });
+            
             if (selectedCourseId === courseId) {
                 setSelectedCourseId(null);
                 setSelectedParticipantId(null);
@@ -1223,22 +1242,21 @@ export default function App() {
         if (!permissions.canManageCourse) return;
         if (window.confirm('Are you sure you want to delete this participant and all their data?')) {
             await deleteParticipant(participantId);
-            if (selectedCourseId) navigate('participants', { courseId: selectedCourseId });
+            
+            if (selectedCourseId) {
+                setCourseDetailsCache(prev => {
+                    const newCache = { ...prev };
+                    delete newCache[selectedCourseId];
+                    return newCache;
+                });
+                navigate('participants', { courseId: selectedCourseId });
+            }
             if (selectedParticipantId === participantId) {
                 setSelectedParticipantId(null);
                 navigate('participants');
             }
         }
     }, [permissions, selectedCourseId, selectedParticipantId, navigate]);
-
-    const handleDeleteFacilitator = useCallback(async (facilitatorId) => {
-        if (!permissions.canManageHumanResource) return;
-        if (window.confirm('Are you sure you want to delete this facilitator?')) {
-            await deleteFacilitator(facilitatorId);
-            await fetchFacilitators(true);
-            navigate('humanResources');
-        }
-    }, [permissions, navigate, fetchFacilitators]);
 
     const handleImportParticipants = useCallback(async ({ participantsToImport, facilitiesToUpsert }) => {
         if (!permissions.canUseSuperUserAdvancedFeatures) return;
@@ -1247,6 +1265,12 @@ export default function App() {
             if (facilitiesToUpsert?.length > 0) { /* ... */ }
             const participantsWithCourseId = participantsToImport.map(p => ({ ...p, courseId: selectedCourse.id }));
             await importParticipants(participantsWithCourseId);
+            
+            setCourseDetailsCache(prev => {
+                const newCache = { ...prev };
+                delete newCache[selectedCourse.id];
+                return newCache;
+            });
             
             navigate('participants', { courseId: selectedCourse.id });
 
@@ -1283,7 +1307,12 @@ export default function App() {
                 type: result.errors > 0 ? 'warning' : 'success'
             });
 
-            setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null }); 
+            setCourseDetailsCache(prev => {
+                const newCache = { ...prev };
+                delete newCache[selectedCourseId];
+                return newCache;
+            });
+            
             navigate('participants', { courseId: selectedCourseId });
 
         } catch (error) {
@@ -1308,7 +1337,10 @@ export default function App() {
                 listAllParticipantsForCourse(courseId),
                 getFinalReportByCourseId(courseId)
             ]);
-            setCourseDetails(prev => ({ ...prev, participants: participantsData, finalReport: existingReport }));
+            setCourseDetailsCache(prev => ({
+                ...prev,
+                [courseId]: { ...prev[courseId], participants: participantsData, finalReport: existingReport }
+            }));
             navigate('finalReport');
         } catch (error) {
             setToast({ show: true, message: 'Failed to load data for Final Report.', type: 'error' });
@@ -1334,7 +1366,10 @@ export default function App() {
             const payload = { id: reportData.id, courseId: reportData.courseId, summary: reportData.summary, recommendations: reportData.recommendations, potentialFacilitators: reportData.potentialFacilitators, pdfUrl: pdfUrl, galleryImageUrls: finalUrlsToSave, participantsForFollowUp: reportData.participantsForFollowUp };
             await upsertFinalReport(payload);
             const savedReport = await getFinalReportByCourseId(reportData.courseId);
-            setCourseDetails(prev => ({...prev, finalReport: savedReport }));
+            setCourseDetailsCache(prev => ({
+                ...prev,
+                [reportData.courseId]: { ...prev[reportData.courseId], finalReport: savedReport }
+            }));
             setToast({ show: true, message: 'Final report saved successfully.', type: 'success' });
         } catch (error) {
             console.error("Error saving final report:", error);
@@ -1349,7 +1384,10 @@ export default function App() {
         setFinalReportCourse(courseToEditReport); setSelectedCourseId(courseId); setLoading(true);
         try {
             const [participantsData, existingReport] = await Promise.all([ listAllParticipantsForCourse(courseId), getFinalReportByCourseId(courseId) ]);
-            setCourseDetails(prev => ({ ...prev, participants: participantsData, finalReport: existingReport }));
+            setCourseDetailsCache(prev => ({
+                ...prev,
+                [courseId]: { ...prev[courseId], participants: participantsData, finalReport: existingReport }
+            }));
             navigate('finalReport');
         } catch (error) { console.error("Error fetching final report for editing:", error); setToast({ show: true, message: 'Failed to load the final report.', type: 'error' }); }
         finally { setLoading(false); }
@@ -1432,7 +1470,11 @@ export default function App() {
                 onSetSelectedParticipantId={setSelectedParticipantId}
                 onBulkMigrate={handleBulkMigrate}
                 onBatchUpdate={() => {
-                    setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null });
+                    setCourseDetailsCache(prev => {
+                        const newCache = { ...prev };
+                        delete newCache[selectedCourse.id];
+                        return newCache;
+                    });
                     setSelectedCourseId(null); 
                     setSelectedCourseId(selectedCourse.id); 
                 }}
@@ -1447,7 +1489,11 @@ export default function App() {
                         await upsertParticipantTest(payload);
                     }
                     
-                    setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null });
+                    setCourseDetailsCache(prev => {
+                        const newCache = { ...prev };
+                        delete newCache[selectedCourse?.id];
+                        return newCache;
+                    });
                     
                     if (selectedCourse) {
                         const currentId = selectedCourse.id;
@@ -1523,7 +1569,11 @@ export default function App() {
 
             case 'participantForm': return permissions.canManageCourse ? (selectedCourse && <ParticipantForm course={selectedCourse} initialData={editingParticipant} onCancel={() => navigate(previousView)} onSave={async (participantData, facilityUpdateData) => { try { const fullPayload = { ...participantData, id: editingParticipant?.id, courseId: selectedCourse.id }; await saveParticipantAndSubmitFacilityUpdate(fullPayload, facilityUpdateData); if (facilityUpdateData) setToast({ show: true, message: 'Facility update submitted for approval.', type: 'info' }); 
             
-            setCourseDetails({ participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null }); 
+            setCourseDetailsCache(prev => {
+                const newCache = { ...prev };
+                delete newCache[selectedCourse.id];
+                return newCache;
+            });
             navigate('participants', { courseId: selectedCourse.id });
 
             } catch (e) { setToast({ show: true, message: `Submission failed: ${e.message}`, type: 'error' }); } }} />) : null;

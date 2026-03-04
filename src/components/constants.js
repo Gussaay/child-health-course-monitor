@@ -1,3 +1,4 @@
+// constants.js
 // ----------------------------- CONSTANTS ------------------------------
 export const STATE_LOCALITIES = {
   "Federal": {
@@ -303,8 +304,9 @@ export const STATE_LOCALITIES = {
     ]
   }
 };
-// --- MODIFICATION: Added ICCM ---
-export const COURSE_TYPES_FACILITATOR = ["IMNCI", "ETAT", "EENC", "IPC", "ICCM"];
+
+// --- MODIFICATION: Added ICCM & SSNC ---
+export const COURSE_TYPES_FACILITATOR = ["IMNCI", "ETAT", "EENC", "IPC", "ICCM", "SSNC"];
 export const IMNCI_SUBCOURSE_TYPES = ["Standard 7 days course for medical assistants", "Standard 7 days course for medical doctor", "Refreshment course", "IMNCI in humanitarian setting", "online IMCI course", "preservice Course"];
 
 // EENC SKILLS UPDATED WITH SCORING TYPE
@@ -322,9 +324,12 @@ export const CLASS_0_59D = { bacterial: ["Possible serious bacterial infection",
 export const DOMAINS_BY_AGE_IMNCI = { GE2M_LE5Y: ["danger", "respiratory", "diarrhoea", "fever_malaria", "ear", "malnutrition", "anaemia", "identify_treatment", "treatment_2_59m", "counsel"], LT2M: ["bacterial", "jaundice", "vyi_diarrhoea", "feeding", "identify_treatment", "treatment_0_59d"], };
 export const DOMAIN_LABEL_IMNCI = { danger: "Danger signs", respiratory: "COUGH:", diarrhoea: "DIARRHOEA:", fever_malaria: "FEVER:", ear: "EAR:", malnutrition: "MALNUTRITION:", anaemia: "ANAEMIA:", identify_treatment: "IDENTIFY TREATMENT:", treatment_2_59m: "TREAT:", counsel: "COUNSEL:", bacterial: "BACTERIAL:", jaundice: "JAUNDICE:", vyi_diarrhoea: "DIARRHOEA:", feeding: "FEEDING:", treatment_0_59d: "TREATMENT/COUNSEL:" };
 export const getClassListImnci = (age, d) => (age === "GE2M_LE5Y" ? CLASS_2_59M[d] : CLASS_0_59D[d]) || [];
+
+// --- UPDATED JOB TITLES TO MATCH REQUEST ---
 export const JOB_TITLES_IMNCI = ["Pediatric Doctor", "Family Medicine Doctor", "General Practioner", "Medical Assistance", "Treating Nurse", "Other"];
 export const JOB_TITLES_ETAT = ["Pediatric Specialist", "Pediatric registrar", "Family Medicine Doctor", "Emergency doctor", "General Practioner", "Nurse Diploma", "Nurse Bachelor", "Other"];
-export const JOB_TITLES_EENC = ["Pediatric doctor", "Obstetric Doctor", "Emergency doctor", "General Practioner", "Nurse Diploma", "Nurse Bachelor", "Sister Midwife", "Midwife", "Other"];
+export const JOB_TITLES_EENC = ["Pediatric Specialist", "Pediatric registrar", "Family Medicine Doctor", "Emergency doctor", "General Practioner", "Nurse Diploma", "Nurse Bachelor", "Other"];
+export const JOB_TITLES_SSNC = ["Pediatric Specialist", "Pediatric registrar", "Family Medicine Doctor", "Emergency doctor", "General Practioner", "Nurse Diploma", "Nurse Bachelor", "Other"];
 
 // --- NEW: ICCM Constants based on CSV ---
 export const SKILLS_ICCM = {
@@ -372,7 +377,6 @@ export const ICCM_DOMAIN_LABEL = {
 };
 export const ICCM_DOMAINS = Object.keys(SKILLS_ICCM);
 // --- END ICCM Constants ---
-
 
 // ----------------------------- HELPER FUNCTIONS --------------------------------
 export const calcPct = (c, s) => (!s ? NaN : (c * 100) / s);

@@ -14,6 +14,8 @@ import {
   Filler 
 } from 'chart.js';
 
+import { Button, Spinner } from '../CommonComponents';
+
 import { 
     IMNCI_FORM_STRUCTURE, 
     calculateScores, 
@@ -155,7 +157,7 @@ const getSharedChartOptions = () => ({
             labels: { boxWidth: 10, usePointStyle: true, pointStyle: 'circle', padding: 20, font: { size: 12, family: "'Inter', sans-serif", weight: '600' }, color: '#334155' } 
         }, 
         tooltip: { 
-            backgroundColor: 'rgba(15, 23, 42, 0.95)', // Tailwind slate-900
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
             titleFont: { size: 13, family: "'Inter', sans-serif", weight: 'bold' },
             bodyFont: { size: 12, family: "'Inter', sans-serif" },
             padding: 12,
@@ -170,7 +172,7 @@ const getSharedChartOptions = () => ({
         y: { 
             beginAtZero: true, 
             max: 100, 
-            grid: { color: '#e2e8f0', drawBorder: false }, // Visible slate grid
+            grid: { color: '#e2e8f0', drawBorder: false }, 
             ticks: { callback: (value) => `${value}%`, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' }, padding: 8 } 
         }, 
         x: { 
@@ -183,13 +185,13 @@ const getSharedChartOptions = () => ({
 const getLineDatasetStyle = (title, key, colors, data) => ({
     label: title,
     data: data,
-    borderColor: colors[key] || '#64748b', // slate-500
-    backgroundColor: (colors[key] || '#64748b') + '26', // 15% opacity for fill
+    borderColor: colors[key] || '#64748b', 
+    backgroundColor: (colors[key] || '#64748b') + '26',
     fill: true,
-    tension: 0.4, // Smooth curves
+    tension: 0.4,
     pointRadius: 4,
     pointHoverRadius: 6,
-    pointBackgroundColor: '#ffffff', // White center
+    pointBackgroundColor: '#ffffff',
     pointBorderColor: colors[key] || '#64748b',
     pointBorderWidth: 2,
     borderWidth: 2.5, 
@@ -198,24 +200,20 @@ const getLineDatasetStyle = (title, key, colors, data) => ({
 const KpiLineChart = ({ title, chartData, kpiKeys }) => {
     const colors = {
         'Overall': '#0ea5e9', 'Assessment': '#10b981', 'Decision': '#f59e0b', 'Treatment': '#ef4444',
-        // IMNCI Colors
         'Weight': '#06b6d4', 'Temp': '#3b82f6', 'Height': '#8b5cf6', 'Resp. Rate': '#14b8a6',
         'Dehydration': '#ec4899', 'Malaria RDT': '#d946ef', 'Ear Check': '#f97316',
         'Pneumonia Amox': '#a855f7', 'Diarrhea ORS': '#3b82f6', 'Diarrhea Zinc': '#eab308', 'Anemia Iron': '#dc2626',
         'MUAC': '#0891b2', 'WFH': '#0284c7', 'Pallor': '#78716c', 'DangerSigns': '#f97316',
-        // EENC Colors
         'Preparation': '#10b981', 'Drying': '#3b82f6', 'Breathing Mgmt': '#f59e0b', 'Resuscitation': '#ef4444',
         'Hand Washing (1st)': '#0d9488', 'Hand Washing (2nd)': '#14b8a6', 'Sterile Gloves': '#2dd4bf',
         'Towels Ready': '#7c3aed', 'Resus Equip Ready': '#8b5cf6', 'Ambu Check': '#a78bfa',
         'Drying < 5s': '#ea580c', 'Skin-to-Skin': '#f97316', 'Dry Towel/Hat': '#fb923c',
         'Hygienic Check': '#be123c', 'Delayed Clamp': '#e11d48', 'Correct Clamp': '#f43f5e',
         'Early BF Advice': '#d946ef', 'Head Pos': '#b91c1c', 'Mask Seal': '#dc2626', 'Chest Rise': '#ef4444', 'Rate 30-50': '#f87171',
-        // EENC Mother Colors
         'Imm. Skin-to-Skin': '#f97316', '90min Skin-to-Skin': '#fdba74', 'BF 1st Hour': '#ec4899', 'Other Fluids': '#f43f5e', 
         'Bottle Feeding': '#be123c', 'Vitamin K': '#8b5cf6', 'Eye Ointment': '#a78bfa', 'Cord Substance': '#d946ef',
         'Skin Oiling': '#eab308', 'Bathing < 6hrs': '#f59e0b', 'Polio Vaccine': '#10b981', 'BCG Vaccine': '#34d399',
         'Weight Measured': '#06b6d4', 'Temp Measured': '#22d3ee', 'Civil Reg': '#3b82f6', 'Discharge Card': '#6366f1',
-        // IMNCI Mother Colors
         'M: Knows Meds': '#4f46e5', 'M: Knows ORS': '#3b82f6', 'M: Knows Tx': '#0ea5e9', 'M: Knows 4 Rules': '#06b6d4',
         'M: Knows Return': '#14b8a6', 'M: Knows Fluids': '#10b981', 'M: Time Spent': '#f59e0b', 'M: Assess Method': '#f97316',
         'M: Tx Given': '#ef4444', 'M: Comm Style': '#ec4899', 'M: What Learned': '#d946ef', 'M: Drug Avail': '#8b5cf6'
@@ -450,7 +448,8 @@ const FilterSelect = ({ label, value, onChange, options, disabled = false, defau
 );
 
 const MentorshipDashboard = ({ 
-    allSubmissions, STATE_LOCALITIES, activeService, activeState, onStateChange, activeLocality, onLocalityChange, activeFacilityId, onFacilityIdChange, activeWorkerName, onWorkerNameChange, activeProject, onProjectChange, visitReports, canEditStatus, onUpdateStatus
+    allSubmissions, STATE_LOCALITIES, activeService, activeState, onStateChange, activeLocality, onLocalityChange, activeFacilityId, onFacilityIdChange, activeWorkerName, onWorkerNameChange, activeProject, onProjectChange, visitReports, canEditStatus, onUpdateStatus,
+    publicDashboardMode = false, handleRefresh = () => {}, isRefreshing = false
 }) => {
 
     const [activeEencTab, setActiveEencTab] = useState('skills'); 
@@ -892,7 +891,7 @@ const MentorshipDashboard = ({
             g['WFH'].push(calcPercent(s.handsOnWFH_score, s.handsOnWFH_maxScore));
             g['DangerSigns'].push(calcPercent(s.dangerSigns_score, s.dangerSigns_maxScore));
             
-            const as = sub.fullData?.assessmentSkills;
+            const as = sub.fullData?.assessmentSkills || {};
             if (as) { 
                 if (as['skill_anemia_pallor'] === 'yes') g['Pallor'].push(100); else if (as['skill_anemia_pallor'] === 'no') g['Pallor'].push(0); 
                 if (as['supervisor_confirms_cough'] === 'yes') g['Resp. Rate'].push(as['skill_check_rr'] === 'yes' ? 100 : 0);
@@ -910,7 +909,7 @@ const MentorshipDashboard = ({
             const res = { name: `Visit ${visitNumber}` };
             Object.keys(data).forEach(k => res[k] = avg(data[k]));
             return res;
-        });
+        }).slice(0, 4);
     }, [filteredSubmissions, activeService]);
 
     const eencChartData = useMemo(() => {
@@ -931,9 +930,9 @@ const MentorshipDashboard = ({
             g['Drying'].push(calcPercent(s.drying_score, s.drying_maxScore));
             if (s.normal_breathing_maxScore > 0) g['Breathing Mgmt'].push(calcPercent(s.normal_breathing_score, s.normal_breathing_maxScore)); else if (s.resuscitation_maxScore > 0) g['Breathing Mgmt'].push(calcPercent(s.resuscitation_score, s.resuscitation_maxScore));
             g['Resuscitation'].push(calcPercent(s.resuscitation_score, s.resuscitation_maxScore));
-            const skills = sub.fullData?.skills;
+            const skills = sub.fullData?.skills || {};
             if (skills) {
-                const pushSkill = (key, label) => { if (skills[key] === 'yes') g[label].push(100); else if (skills[key] === 'no' || skills[key] === 'partial') g[label].push(0); };
+                const pushSkill = (key, label) => { if (skills[key] === 'yes') g[label].push(100); else if (skills[key] === 'no') g[label].push(0); };
                 pushSkill('prep_wash_1', 'Hand Washing (1st)'); pushSkill('prep_wash_2', 'Hand Washing (2nd)'); pushSkill('prep_gloves', 'Sterile Gloves'); pushSkill('prep_cloths', 'Towels Ready'); pushSkill('prep_resuscitation_area', 'Resus Equip Ready'); pushSkill('prep_ambu_check', 'Ambu Check');
                 pushSkill('dry_start_5sec', 'Drying < 5s'); pushSkill('dry_skin_to_skin', 'Skin-to-Skin'); pushSkill('dry_cover_baby', 'Dry Towel/Hat'); pushSkill('normal_remove_outer_glove', 'Hygienic Check'); pushSkill('normal_cord_pulse_check', 'Delayed Clamp'); pushSkill('normal_cord_clamping', 'Correct Clamp'); pushSkill('normal_breastfeeding_guidance', 'Early BF Advice');
                 pushSkill('resus_position_head', 'Head Pos'); pushSkill('resus_mask_position', 'Mask Seal'); pushSkill('resus_check_chest_rise', 'Chest Rise'); pushSkill('resus_ventilation_rate', 'Rate 30-50');
@@ -945,7 +944,7 @@ const MentorshipDashboard = ({
             const res = { name: `Visit ${visitNumber}` };
             Object.keys(data).forEach(k => res[k] = avg(data[k]));
             return res;
-        });
+        }).slice(0, 4);
     }, [filteredSubmissions, activeService]);
 
     const imnciMotherChartData = useMemo(() => {
@@ -979,7 +978,7 @@ const MentorshipDashboard = ({
                 const res = { name: `Visit ${visitNumber}` };
                 Object.keys(data).forEach(k => res[k] = avg(data[k]));
                 return res;
-            });
+            }).slice(0, 4);
     }, [filteredSubmissions, activeService]);
 
     const eencMotherChartData = useMemo(() => {
@@ -990,7 +989,7 @@ const MentorshipDashboard = ({
             const visitNum = sub.visitNumber || 1; 
             if (!acc[visitNum]) acc[visitNum] = { 'Imm. Skin-to-Skin': [], '90min Skin-to-Skin': [], 'BF 1st Hour': [], 'Other Fluids': [], 'Bottle Feeding': [], 'Vitamin K': [], 'Eye Ointment': [], 'Cord Substance': [], 'Skin Oiling': [], 'Bathing < 6hrs': [], 'Polio Vaccine': [], 'BCG Vaccine': [], 'Weight Measured': [], 'Temp Measured': [], 'Civil Reg': [], 'Discharge Card': [] };
             const g = acc[visitNum]; 
-            const d = sub.eencMothersData || sub.fullData?.eencMothersData;
+            const d = sub.eencMothersData || sub.fullData?.eencMothersData || {};
             if(d) {
                 const push = (val, label) => g[label].push(val === 'yes' ? 100 : 0);
                 push(d.skin_to_skin_immediate, 'Imm. Skin-to-Skin'); push(d.skin_to_skin_90min, '90min Skin-to-Skin'); push(d.breastfed_first_hour, 'BF 1st Hour'); push(d.given_other_fluids, 'Other Fluids'); push(d.given_other_fluids_bottle, 'Bottle Feeding');
@@ -1007,7 +1006,7 @@ const MentorshipDashboard = ({
                 const res = { name: `Visit ${visitNumber}` };
                 Object.keys(data).forEach(k => res[k] = avg(data[k]));
                 return res;
-            });
+            }).slice(0, 4);
     }, [filteredSubmissions, activeService]);
 
 
@@ -1133,7 +1132,28 @@ const MentorshipDashboard = ({
 
     return (
         <div className="p-4 sm:p-6 bg-slate-50/50 min-h-screen" dir="ltr"> 
-            <h3 className="text-2xl font-extrabold text-slate-800 mb-6 text-left tracking-tight">Mentorship Dashboard: {serviceTitle} <span className="text-sky-600 text-xl font-semibold">{scopeTitle}</span></h3>
+            <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-extrabold text-slate-800 text-left tracking-tight">Mentorship Dashboard: {serviceTitle} <span className="text-sky-600 text-xl font-semibold">{scopeTitle}</span></h3>
+                {publicDashboardMode && (
+                    <Button 
+                        variant="secondary" 
+                        onClick={handleRefresh} 
+                        disabled={isRefreshing}
+                        className="flex items-center gap-2"
+                    >
+                        {isRefreshing ? (
+                            <> <Spinner size="sm" /> Refreshing... </>
+                        ) : (
+                            <>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                                  <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.759l.274.549a.75.75 0 101.3-.65l-.274-.549a5.479 5.479 0 016.128-4.032.75.75 0 00.573-1.376 6.979 6.979 0 00-7.75-2.088l-.94-.313a.75.75 0 00-.913.655v1.944a.75.75 0 001.5 0V7.32l.94.313a5.479 5.479 0 016.128 4.032zM4.688 8.576a5.5 5.5 0 019.201-2.759l-.274-.549a.75.75 0 10-1.3.65l.274.549a5.479 5.479 0 01-6.128 4.032.75.75 0 00-.573 1.376 6.979 6.979 0 007.75 2.088l.94.313a.75.75 0 00.913-.655V12.06a.75.75 0 00-1.5 0v1.631l-.94-.313a5.479 5.479 0 01-6.128-4.032z" clipRule="evenodd" />
+                                </svg>
+                                Refresh Data
+                            </>
+                        )}
+                    </Button>
+                )}
+            </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-5 mb-8 p-5 bg-white rounded-2xl shadow-md border border-black">
                 <FilterSelect label="State" value={activeState} onChange={(v) => { onStateChange(v); onLocalityChange(""); onFacilityIdChange(""); onProjectChange(""); onWorkerNameChange(""); }} options={stateOptions} defaultOption="All States" />
