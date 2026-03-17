@@ -102,42 +102,98 @@ const EENC_ORIENTATIONS_LABELS = {
 };
 
 // --- Action Menu Component (Enhanced Visualization) ---
-const ActionMenu = ({ onAction, activeService, draftCount, onBack }) => {
-    const menuItems = [
-        { id: 'view_submissions', label: 'Show Main Submitted Form', icon: List, color: 'text-blue-600', bg: 'bg-blue-100', border: 'hover:border-blue-400', shadow: 'hover:shadow-blue-100' },
-        { id: 'view_dashboard', label: 'Show Dashboard', icon: LayoutDashboard, color: 'text-purple-600', bg: 'bg-purple-100', border: 'hover:border-purple-400', shadow: 'hover:shadow-purple-100' },
-        { id: 'view_drafts', label: `Show Drafts (${draftCount})`, icon: Archive, color: 'text-amber-600', bg: 'bg-amber-100', border: 'hover:border-amber-400', shadow: 'hover:shadow-amber-100' },
+const ActionMenu = ({ onAction, activeService, draftCount, onBack, permissions, canManage }) => {
+    
+    // STRICT ROLE CHECK: Only Super Users and Federal Managers can view main submissions
+    const canViewSubmissions = 
+        permissions?.canUseFederalManagerAdvancedFeatures ||
+        permissions?.canUseSuperUserAdvancedFeatures ||
+        permissions?.role === 'super_user' || 
+        permissions?.role === 'federal_manager';
+
+    const canShareLink = permissions?.canManageSkillsMentorship || permissions?.canUseSuperUserAdvancedFeatures;
+
+    // Section 1: Adding Forms
+    const addItems = [
         { id: 'new_skill', label: 'Add New Skill Form', icon: PlusCircle, color: 'text-emerald-600', bg: 'bg-emerald-100', border: 'hover:border-emerald-400', shadow: 'hover:shadow-emerald-100' },
         { id: 'new_mother', label: 'Add New Mother Form', icon: Users, color: 'text-pink-600', bg: 'bg-pink-100', border: 'hover:border-pink-400', shadow: 'hover:shadow-pink-100' },
         { id: 'new_visit_report', label: 'Add New Visit Report', icon: ClipboardCheck, color: 'text-indigo-600', bg: 'bg-indigo-100', border: 'hover:border-indigo-400', shadow: 'hover:shadow-indigo-100' },
         { id: 'update_facility', label: 'Update Facility Info', icon: Building, color: 'text-cyan-600', bg: 'bg-cyan-100', border: 'hover:border-cyan-400', shadow: 'hover:shadow-cyan-100' },
     ];
 
+    // Section 2: Viewing Forms
+    const viewItems = [
+        { id: 'view_dashboard', label: 'Show Dashboard', icon: LayoutDashboard, color: 'text-purple-600', bg: 'bg-purple-100', border: 'hover:border-purple-400', shadow: 'hover:shadow-purple-100' },
+        { id: 'view_drafts', label: `Show Drafts (${draftCount})`, icon: Archive, color: 'text-amber-600', bg: 'bg-amber-100', border: 'hover:border-amber-400', shadow: 'hover:shadow-amber-100' },
+    ];
+
+    // Conditionally add 'Show Submitted Forms'
+    if (canViewSubmissions) {
+        viewItems.unshift({ 
+            id: 'view_submissions', 
+            label: 'Show Submitted Forms', 
+            icon: List, 
+            color: 'text-blue-600', 
+            bg: 'bg-blue-100', 
+            border: 'hover:border-blue-400', 
+            shadow: 'hover:shadow-blue-100' 
+        });
+    }
+
+    // Conditionally add 'Share Submission Link'
+    if (canShareLink) {
+        viewItems.push({ 
+            id: 'share_link', 
+            label: 'Share Submission Link', 
+            icon: Share2, 
+            color: 'text-teal-600', 
+            bg: 'bg-teal-100', 
+            border: 'hover:border-teal-400', 
+            shadow: 'hover:shadow-teal-100' 
+        });
+    }
+
+    // Helper to render grids consistently
+    const renderGrid = (items) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {items.map(item => {
+                const Icon = item.icon;
+                return (
+                    <button
+                        key={item.id}
+                        onClick={() => onAction(item.id)}
+                        className={`flex flex-col items-center justify-center p-8 border border-gray-100 rounded-2xl bg-white shadow-sm hover:shadow-lg transition-all duration-300 group ${item.border} ${item.shadow} transform hover:-translate-y-1`}
+                    >
+                        <div className={`p-5 rounded-2xl mb-5 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 ${item.bg}`}>
+                            <Icon className={`w-8 h-8 ${item.color}`} strokeWidth={1.5} />
+                        </div>
+                        <div className="font-semibold text-gray-700 text-lg group-hover:text-gray-900 transition-colors text-center">
+                            {item.label}
+                        </div>
+                    </button>
+                );
+            })}
+        </div>
+    );
+
     return (
-        <div className="max-w-6xl mx-auto mt-8 p-4" dir="ltr">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {menuItems.map(item => {
-                    const Icon = item.icon;
-                    return (
-                        <button
-                            key={item.id}
-                            onClick={() => onAction(item.id)}
-                            className={`flex flex-col items-center justify-center p-8 border border-gray-100 rounded-2xl bg-white shadow-sm hover:shadow-lg transition-all duration-300 group ${item.border} ${item.shadow} transform hover:-translate-y-1`}
-                        >
-                            <div className={`p-5 rounded-2xl mb-5 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 ${item.bg}`}>
-                                <Icon className={`w-8 h-8 ${item.color}`} strokeWidth={1.5} />
-                            </div>
-                            <div className="font-semibold text-gray-700 text-lg group-hover:text-gray-900 transition-colors text-center">
-                                {item.label}
-                            </div>
-                        </button>
-                    );
-                })}
-            </div>
+        <div className="max-w-6xl mx-auto mt-8 p-4 space-y-12" dir="ltr">
+            {/* Adding Section */}
+            {canManage && (
+                <section>
+                    <h3 className="text-xl font-bold text-gray-800 mb-6 border-b border-gray-200 pb-2">Add New Data</h3>
+                    {renderGrid(addItems)}
+                </section>
+            )}
+
+            {/* Viewing Section */}
+            <section>
+                <h3 className="text-xl font-bold text-gray-800 mb-6 border-b border-gray-200 pb-2">View Records & Dashboards</h3>
+                {renderGrid(viewItems)}
+            </section>
         </div>
     );
 };
-
 
 // --- AddHealthWorkerModal Component ---
 const IMNCI_JOB_TITLES = [
@@ -305,45 +361,91 @@ const PostSaveModal = ({ isOpen, onClose, onSelect }) => {
 };
 
 // --- Visit Reports Table Component ---
-const VisitReportsTable = ({ reports, onEdit, onDelete, onView }) => {
+const VisitReportsTable = ({ reports, onEdit, onDelete, onView, selectedIds, onSelectionChange, isReportsLoading, canManage }) => {
+    const isAllSelected = reports.length > 0 && reports.every(r => selectedIds.includes(r.id));
+    const isSomeSelected = reports.length > 0 && reports.some(r => selectedIds.includes(r.id));
+
+    const handleSelectAll = (e) => {
+        if (e.target.checked) {
+            const newSelection = new Set([...selectedIds, ...reports.map(r => r.id)]);
+            onSelectionChange(Array.from(newSelection));
+        } else {
+            const visibleIds = reports.map(r => r.id);
+            onSelectionChange(selectedIds.filter(id => !visibleIds.includes(id)));
+        }
+    };
+
+    const handleSelectRow = (id) => {
+        if (selectedIds.includes(id)) {
+            onSelectionChange(selectedIds.filter(selId => selId !== id));
+        } else {
+            onSelectionChange([...selectedIds, id]);
+        }
+    };
+
     return (
         <div dir="ltr" className="p-4 overflow-x-auto border rounded-lg bg-white">
-            <table className="w-full border-collapse border border-gray-300">
-                <thead className="bg-gray-50">
-                    <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Facility</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">State</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Locality</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Visit Date</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Visit #</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Supervisor</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Action</th>
-                    </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                    {reports.length === 0 ? (
-                        <tr><td colSpan="7" className="border border-gray-300"><EmptyState title="No Records Found" message="No visit reports found for this service." /></td></tr>
-                    ) : (
-                        reports.map(rep => (
-                            <tr key={rep.id}>
-                                <td className="px-4 py-4 whitespace-normal break-words text-sm text-gray-500 text-left border border-gray-300">{rep.facilityName}</td>
-                                <td className="px-4 py-4 whitespace-normal break-words text-sm text-gray-500 text-left border border-gray-300">{STATE_LOCALITIES[rep.state]?.ar || rep.state}</td>
-                                <td className="px-4 py-4 whitespace-normal break-words text-sm text-gray-500 text-left border border-gray-300">{STATE_LOCALITIES[rep.state]?.localities.find(l => l.en === rep.locality)?.ar || rep.locality}</td>
-                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-left border border-gray-300">{rep.visitDate}</td>
-                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-center font-bold border border-gray-300">{rep.visitNumber || '-'}</td>
-                                <td className="px-4 py-4 whitespace-normal break-words text-sm text-gray-500 text-left border border-gray-300">{rep.mentorDisplay}</td>
-                                <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-left border border-gray-300">
-                                    <div className="flex gap-2">
-                                        <Button size="sm" variant="info" onClick={() => onView(rep.id)}>View</Button>
-                                        <Button size="sm" variant="warning" onClick={() => onEdit(rep.id)}>Edit</Button>
-                                        <Button size="sm" variant="danger" onClick={() => onDelete(rep.id)}>Delete</Button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))
-                    )}
-                </tbody>
-            </table>
+            {isReportsLoading ? (
+                <div className="flex justify-center p-8"><Spinner /></div>
+            ) : (
+                <table className="w-full border-collapse border border-gray-300">
+                    <thead className="bg-gray-50">
+                        <tr>
+                            {canManage && (
+                                <th className="px-3 py-3 text-center w-10 border border-gray-300">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={isAllSelected} 
+                                        ref={el => el && (el.indeterminate = isSomeSelected && !isAllSelected)} 
+                                        onChange={handleSelectAll} 
+                                        className="w-4 h-4 text-sky-600 rounded focus:ring-sky-500 cursor-pointer"
+                                    />
+                                </th>
+                            )}
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Facility</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">State</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Locality</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Visit Date</th>
+                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Visit #</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Supervisor</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                        {reports.length === 0 ? (
+                            <tr><td colSpan={canManage ? "8" : "7"} className="border border-gray-300"><EmptyState title="No Records Found" message="No visit reports found for this service." /></td></tr>
+                        ) : (
+                            reports.map(rep => (
+                                <tr key={rep.id} className={selectedIds.includes(rep.id) ? 'bg-sky-50' : ''}>
+                                    {canManage && (
+                                        <td className="px-3 py-2 text-center border border-gray-300">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={selectedIds.includes(rep.id)} 
+                                                onChange={() => handleSelectRow(rep.id)} 
+                                                className="w-4 h-4 text-sky-600 rounded focus:ring-sky-500 cursor-pointer"
+                                            />
+                                        </td>
+                                    )}
+                                    <td className="px-4 py-4 whitespace-normal break-words text-sm text-gray-500 text-left border border-gray-300">{rep.facilityName}</td>
+                                    <td className="px-4 py-4 whitespace-normal break-words text-sm text-gray-500 text-left border border-gray-300">{STATE_LOCALITIES[rep.state]?.ar || rep.state}</td>
+                                    <td className="px-4 py-4 whitespace-normal break-words text-sm text-gray-500 text-left border border-gray-300">{STATE_LOCALITIES[rep.state]?.localities.find(l => l.en === rep.locality)?.ar || rep.locality}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-left border border-gray-300">{rep.visitDate}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-center font-bold border border-gray-300">{rep.visitNumber || '-'}</td>
+                                    <td className="px-4 py-4 whitespace-normal break-words text-sm text-gray-500 text-left border border-gray-300">{rep.mentorDisplay}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-left border border-gray-300">
+                                        <div className="flex gap-2">
+                                            <Button size="sm" variant="info" onClick={() => onView(rep.id)}>View</Button>
+                                            {canManage && <Button size="sm" variant="warning" onClick={() => onEdit(rep.id)}>Edit</Button>}
+                                            {canManage && <Button size="sm" variant="danger" onClick={() => onDelete(rep.id)}>Delete</Button>}
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            )}
         </div>
     );
 };
@@ -480,12 +582,24 @@ const ViewVisitReportModal = ({ report, onClose }) => {
 };
 
 // --- Mentorship Table Column Component ---
-const MentorshipTableColumns = () => (
+const MentorshipTableColumns = ({ allSelected, someSelected, onSelectAll, canManage }) => (
     <>
+        {canManage && (
+            <th className="px-3 py-3 text-center w-10 border border-gray-300">
+                 <input 
+                     type="checkbox" 
+                     checked={allSelected} 
+                     ref={el => el && (el.indeterminate = someSelected && !allSelected)} 
+                     onChange={onSelectAll} 
+                     className="w-4 h-4 text-sky-600 rounded focus:ring-sky-500 cursor-pointer"
+                 />
+            </th>
+        )}
         <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">#</th>
         <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Facility</th>
         <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Project / Partner</th>
         <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Health Worker/Service</th>
+        <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Job Title</th>
         <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Supervisor</th>
         <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Date</th>
         <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">Visit #</th>
@@ -609,6 +723,7 @@ const ViewSubmissionModal = ({ submission, onClose }) => {
                         <p><span className="font-medium text-gray-500">المحلية:</span> <span className="font-semibold text-gray-900">{STATE_LOCALITIES[submission.state]?.localities.find(l=>l.en === submission.locality)?.ar || submission.locality}</span></p>
                         <p><span className="font-medium text-gray-500">رقم الزيارة:</span> <span className="font-semibold text-gray-900">{submission.visitNumber || 1}</span></p>
                         {submission.project && submission.project !== 'N/A' && <p><span className="font-medium text-gray-500">المشروع / الشريك:</span> <span className="font-semibold text-gray-900">{submission.project}</span></p>}
+                        {submission.workerType && submission.workerType !== 'N/A' && <p><span className="font-medium text-gray-500">الوصف الوظيفي:</span> <span className="font-semibold text-gray-900">{submission.workerType}</span></p>}
                     </div>
                 </div>
 
@@ -664,7 +779,7 @@ const ViewSubmissionModal = ({ submission, onClose }) => {
 };
 
 // --- Drafts Modal ---
-const DraftsModal = ({ isOpen, onClose, drafts, onView, onEdit, onDelete }) => {
+const DraftsModal = ({ isOpen, onClose, drafts, onView, onEdit, onDelete, canManage }) => {
     const handleAction = (action, submissionId) => {
         if (action === 'view') {
             onView(submissionId);
@@ -692,8 +807,8 @@ const DraftsModal = ({ isOpen, onClose, drafts, onView, onEdit, onDelete }) => {
                                 </div>
                                 <div className="flex gap-2 flex-shrink-0 mt-2 sm:mt-0">
                                     <Button size="sm" variant="info" onClick={() => handleAction('view', draft.id)}>عرض</Button>
-                                    <Button size="sm" variant="warning" onClick={() => handleAction('edit', draft.id)}>تعديل</Button>
-                                    <Button size="sm" variant="danger" onClick={() => handleAction('delete', draft.id)}>حذف</Button>
+                                    {canManage && <Button size="sm" variant="warning" onClick={() => handleAction('edit', draft.id)}>تعديل</Button>}
+                                    {canManage && <Button size="sm" variant="danger" onClick={() => handleAction('delete', draft.id)}>حذف</Button>}
                                 </div>
                             </div>
                         ))}
@@ -713,7 +828,8 @@ const MentorshipSubmissionsTable = ({
     isSubmissionsLoading,
     filterServiceType,
     stateFilter, localityFilter, supervisorFilter, statusFilter, visitNumberFilter,
-    facilityFilter, workerFilter, projectFilter
+    facilityFilter, workerFilter, projectFilter, workerTypeFilter,
+    selectedIds, onSelectionChange, canManage
 }) => {
     
     const handleAction = (action, submission) => {
@@ -760,12 +876,37 @@ const MentorshipSubmissionsTable = ({
         if (projectFilter) {
             filtered = filtered.filter(sub => sub.project === projectFilter);
         }
+        if (workerTypeFilter) {
+            filtered = filtered.filter(sub => sub.workerType === workerTypeFilter);
+        }
         return filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
-    }, [submissions, activeService, filterServiceType, stateFilter, localityFilter, supervisorFilter, statusFilter, visitNumberFilter, facilityFilter, workerFilter, projectFilter]);
+    }, [submissions, activeService, filterServiceType, stateFilter, localityFilter, supervisorFilter, statusFilter, visitNumberFilter, facilityFilter, workerFilter, projectFilter, workerTypeFilter]);
+
+    // --- Bulk Selection Handlers ---
+    const allFilteredIds = filteredSubmissions.map(s => s.id);
+    const isAllSelected = filteredSubmissions.length > 0 && allFilteredIds.every(id => selectedIds.includes(id));
+    const isSomeSelected = filteredSubmissions.length > 0 && allFilteredIds.some(id => selectedIds.includes(id));
+
+    const handleSelectAll = (e) => {
+        if (e.target.checked) {
+            const newSelection = new Set([...selectedIds, ...allFilteredIds]);
+            onSelectionChange(Array.from(newSelection));
+        } else {
+            const newSelection = selectedIds.filter(id => !allFilteredIds.includes(id));
+            onSelectionChange(newSelection);
+        }
+    };
+
+    const handleSelectRow = (id) => {
+        if (selectedIds.includes(id)) {
+            onSelectionChange(selectedIds.filter(selectedId => selectedId !== id));
+        } else {
+            onSelectionChange([...selectedIds, id]);
+        }
+    };
 
     return (
         <div dir="ltr" className="p-4"> 
-                {/* Table Container - Removed forced constraints to allow wrapping */}
                 <div className="mt-6 w-full overflow-x-auto border border-gray-300 rounded-lg shadow-sm">
                      {isSubmissionsLoading ? (
                         <div className="flex justify-center p-8"><Spinner /></div>
@@ -773,12 +914,17 @@ const MentorshipSubmissionsTable = ({
                         <table className="w-full border-collapse" dir="ltr"> 
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <MentorshipTableColumns />
+                                    <MentorshipTableColumns 
+                                        allSelected={isAllSelected}
+                                        someSelected={isSomeSelected}
+                                        onSelectAll={handleSelectAll}
+                                        canManage={canManage}
+                                    />
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {filteredSubmissions.length === 0 ? (
-                                    <tr><td colSpan="10" className="border border-gray-300"><EmptyState title="No Records Found" message="No mentorship visits matched the current filters." /></td></tr>
+                                    <tr><td colSpan={canManage ? "12" : "11"} className="border border-gray-300"><EmptyState title="No Records Found" message="No mentorship visits matched the current filters." /></td></tr>
                                 ) : (
                                     filteredSubmissions.map((sub, index) => {
                                         const scoreData = sub.scores;
@@ -787,7 +933,6 @@ const MentorshipSubmissionsTable = ({
                                             percentage = Math.round((scoreData.overallScore_score / scoreData.overallScore_maxScore) * 100);
                                         }
 
-                                        // Determine worker name/service for display
                                         const motherServiceType = `${activeService}_MOTHERS`;
                                         const isMotherSurvey = sub.service === motherServiceType;
                                 
@@ -798,15 +943,27 @@ const MentorshipSubmissionsTable = ({
                                             ? 'Mother\'s Survey' 
                                             : (sub.status === 'draft' ? 'Draft' : 'Complete');
 
+                                        const isSelected = selectedIds.includes(sub.id);
+                                        const rowBgClass = isSelected ? 'bg-sky-50' : (sub.status === 'draft' ? 'bg-yellow-50' : (isMotherSurvey ? 'bg-blue-50' : 'bg-white'));
+
                                         return (
-                                        <tr key={sub.id} className={sub.status === 'draft' ? 'bg-yellow-50' : (isMotherSurvey ? 'bg-blue-50' : 'bg-white')}>
-                                            {/* # Column */}
+                                        <tr key={sub.id} className={rowBgClass}>
+                                            {/* Selection Checkbox */}
+                                            {canManage && (
+                                                <td className="px-3 py-2 text-center border border-gray-300">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={isSelected} 
+                                                        onChange={() => handleSelectRow(sub.id)} 
+                                                        className="w-4 h-4 text-sky-600 rounded focus:ring-sky-500 cursor-pointer"
+                                                    />
+                                                </td>
+                                            )}
+
                                             <td className="px-2 py-2 text-sm font-medium text-gray-900 text-left border border-gray-300">{index + 1}</td>
                                             
-                                            {/* Facility - Allow wrapping */}
                                             <td className="px-2 py-2 text-xs text-gray-500 text-left border border-gray-300 break-words whitespace-normal">{sub.facility}</td>
                                             
-                                            {/* Project / Partner - Allow wrapping */}
                                             <td className="px-2 py-2 text-xs text-gray-500 text-left border border-gray-300 break-words whitespace-normal">
                                                 {sub.project && sub.project !== 'N/A' ? (
                                                     <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-50 text-purple-800">
@@ -815,21 +972,18 @@ const MentorshipSubmissionsTable = ({
                                                 ) : '-'}
                                             </td>
                                             
-                                            {/* Worker - Allow wrapping */}
                                             <td className="px-2 py-2 text-xs text-gray-500 text-left font-semibold border border-gray-300 break-words whitespace-normal">{workerDisplay}</td>
                                             
-                                            {/* Supervisor - Allow wrapping */}
+                                            <td className="px-2 py-2 text-xs text-gray-500 text-left border border-gray-300 break-words whitespace-normal">{sub.workerType || '-'}</td>
+                                            
                                             <td className="px-2 py-2 text-xs text-gray-500 text-left border border-gray-300 break-words whitespace-normal">{sub.supervisorDisplay}</td> 
                                             
-                                            {/* Date - No wrap */}
                                             <td className="px-2 py-2 whitespace-nowrap text-xs text-gray-500 text-left border border-gray-300">{sub.date}</td>
                                             
-                                            {/* Visit # Column */}
                                             <td className="px-2 py-2 whitespace-nowrap text-xs text-gray-900 text-center font-bold border border-gray-300">
                                                 {sub.visitNumber || '-'}
                                             </td>
 
-                                            {/* Status */}
                                             <td className="px-2 py-2 whitespace-nowrap text-xs text-left border border-gray-300">
                                                 {isMotherSurvey ? (
                                                     <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
@@ -846,19 +1000,17 @@ const MentorshipSubmissionsTable = ({
                                                 )}
                                             </td>
 
-                                            {/* Score */}
                                             <td className="px-2 py-2 whitespace-nowrap text-xs font-medium text-gray-800 text-left border border-gray-300">
                                                 {isMotherSurvey ? 'N/A' : (percentage !== null ? `${percentage}%` : 'N/A')}
                                             </td>
 
-                                            {/* Actions - Flex container handles width */}
                                             <td className="px-2 py-2 whitespace-nowrap text-xs font-medium text-left border border-gray-300">
                                                 <div className="flex flex-col xl:flex-row gap-1">
                                                     <Button size="sm" variant="info" onClick={() => handleAction('view', sub)} className="text-xs px-2 py-1">View</Button>
-                                                    {(sub.service === 'IMNCI' || sub.service === 'IMNCI_MOTHERS' || sub.service === 'EENC_MOTHERS') && 
+                                                    {canManage && (sub.service === 'IMNCI' || sub.service === 'IMNCI_MOTHERS' || sub.service === 'EENC_MOTHERS') && 
                                                         <Button size="sm" variant="warning" onClick={() => handleAction('edit', sub)} className="text-xs px-2 py-1">Edit</Button>
                                                     }
-                                                    <Button size="sm" variant="danger" onClick={() => handleAction('delete', sub)} className="text-xs px-2 py-1">Del</Button>
+                                                    {canManage && <Button size="sm" variant="danger" onClick={() => handleAction('delete', sub)} className="text-xs px-2 py-1">Del</Button>}
                                                 </div>
                                             </td>
                                         </tr>
@@ -935,6 +1087,10 @@ const SkillsMentorshipView = ({
         return 'service_selection';
     });
     
+    // Check if the user is allowed to manage (add, edit, delete).
+    // Public submission mode implies they are submitting fresh data, so they are granted temporary creation rights.
+    const canManageMentorship = publicSubmissionMode || permissions?.canManageSkillsMentorship || permissions?.canUseSuperUserAdvancedFeatures || permissions?.role === 'super_user' || false;
+
     const [activeService, setActiveService] = useState(defaultService);
     
     const [selectedState, setSelectedState] = useState('');
@@ -948,6 +1104,29 @@ const SkillsMentorshipView = ({
     const [activeFormType, setActiveFormType] = useState('skills_assessment');
     const [isReadyToStart, setIsReadyToStart] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    
+    // --- Multiple Selection and Optimistic Deletion States ---
+    const [selectedSubmissionIds, setSelectedSubmissionIds] = useState([]);
+    const [selectedReportIds, setSelectedReportIds] = useState([]);
+    const [deletedSubmissionIds, setDeletedSubmissionIds] = useState(new Set());
+    const [deletedReportIds, setDeletedReportIds] = useState(new Set());
+
+    // Clear selections when switching tabs
+    useEffect(() => {
+        setSelectedSubmissionIds([]);
+        setSelectedReportIds([]);
+    }, [activeTab, activeService]);
+
+    // Dashboard Last Updated Timestamp tracking
+    const [lastSyncTime, setLastSyncTime] = useState(null);
+
+    const updateLastSyncTime = useCallback(() => {
+        const now = new Date();
+        setLastSyncTime(now.toLocaleString('en-US', { 
+            month: 'short', day: 'numeric', year: 'numeric', 
+            hour: 'numeric', minute: '2-digit', hour12: true 
+        }));
+    }, []);
 
     // Initialize Dashboard Filters with parameters if available
     const [activeDashboardState, setActiveDashboardState] = useState(publicDashboardMode ? publicDashboardParams?.state || '' : '');
@@ -955,6 +1134,7 @@ const SkillsMentorshipView = ({
     const [activeDashboardFacilityId, setActiveDashboardFacilityId] = useState(publicDashboardMode ? publicDashboardParams?.facilityId || '' : '');
     const [activeDashboardWorkerName, setActiveDashboardWorkerName] = useState(publicDashboardMode ? publicDashboardParams?.workerName || '' : '');
     const [activeDashboardProject, setActiveDashboardProject] = useState(publicDashboardMode ? publicDashboardParams?.project || '' : '');
+    const [activeDashboardWorkerType, setActiveDashboardWorkerType] = useState(publicDashboardMode ? publicDashboardParams?.workerType || '' : '');
 
     // --- State for Viewing Visit Reports ---
     const [viewingVisitReport, setViewingVisitReport] = useState(null);
@@ -1006,6 +1186,7 @@ const SkillsMentorshipView = ({
                     if (isMounted && (cachedSubs.length > 0 || cachedImnci.length > 0 || cachedEenc.length > 0)) {
                         setPublicData({ submissions: cachedSubs, imnci: cachedImnci, eenc: cachedEenc });
                         setPublicLoading(false); // Stop loading spinner since we have cached data to show
+                        updateLastSyncTime(); // Update time from cache
                     }
                 } catch (e) {
                     console.log("Cache miss or unavailable. Waiting for server data...");
@@ -1021,6 +1202,7 @@ const SkillsMentorshipView = ({
                     if (isMounted) {
                         // Update state with fresh server data
                         setPublicData({ submissions: subs || [], imnci: imnci || [], eenc: eenc || [] });
+                        updateLastSyncTime(); // Update time upon fresh fetch
                     }
                 } catch (e) {
                     console.error("Failed fetching fresh public data from server", e);
@@ -1031,15 +1213,18 @@ const SkillsMentorshipView = ({
             fetchPublicData();
             return () => { isMounted = false; };
         }
-    }, [publicDashboardMode]);
+    }, [publicDashboardMode, updateLastSyncTime]);
 
     // Ensure data is cached on mount without triggering new server loads unnecessarily
     useEffect(() => {
-        fetchHealthFacilities({}, false);
-        fetchSkillMentorshipSubmissions(false);
-        fetchIMNCIVisitReports(false); 
-        if (fetchEENCVisitReports) fetchEENCVisitReports(false);
-    }, [fetchHealthFacilities, fetchSkillMentorshipSubmissions, fetchIMNCIVisitReports, fetchEENCVisitReports]);
+        if (!publicDashboardMode) {
+            fetchHealthFacilities({}, false);
+            fetchSkillMentorshipSubmissions(false);
+            fetchIMNCIVisitReports(false); 
+            if (fetchEENCVisitReports) fetchEENCVisitReports(false);
+            updateLastSyncTime();
+        }
+    }, [fetchHealthFacilities, fetchSkillMentorshipSubmissions, fetchIMNCIVisitReports, fetchEENCVisitReports, publicDashboardMode, updateLastSyncTime]);
 
 
     const [viewingSubmission, setViewingSubmission] = useState(null);
@@ -1082,6 +1267,7 @@ const SkillsMentorshipView = ({
     const [facilityFilter, setFacilityFilter] = useState('');
     const [workerFilter, setWorkerFilter] = useState('');
     const [projectFilter, setProjectFilter] = useState('');
+    const [workerTypeFilter, setWorkerTypeFilter] = useState('');
 
     // --- Calculate permission to edit visit number ---
     const canEditVisitNumber = useMemo(() => {
@@ -1095,11 +1281,14 @@ const SkillsMentorshipView = ({
     // -------------------------------------------------------------
 
     // UPDATED to map correctly between authenticated and unauthenticated sets AND extract project
+    // OPTIMISTIC UPDATE APPLIED: Filters out deletedSubmissionIds
     const processedSubmissions = useMemo(() => {
         const sourceData = publicDashboardMode ? publicData.submissions : skillMentorshipSubmissions;
         if (!sourceData) return [];
         
-        return sourceData.map(sub => {
+        return sourceData
+            .filter(sub => !deletedSubmissionIds.has(sub.id))
+            .map(sub => {
             // Find facility object to extract project/partner info dynamically
             const fac = localHealthFacilities.find(f => f.id === sub.facilityId);
             
@@ -1130,7 +1319,7 @@ const SkillsMentorshipView = ({
                 fullData: sub 
             };
         });
-    }, [skillMentorshipSubmissions, publicDashboardMode, publicData.submissions, localHealthFacilities]);
+    }, [skillMentorshipSubmissions, publicDashboardMode, publicData.submissions, localHealthFacilities, deletedSubmissionIds]);
 
     // Extract unique visit numbers for the filter dropdown
     const uniqueVisitNumbers = useMemo(() => {
@@ -1179,6 +1368,19 @@ const SkillsMentorshipView = ({
         return Array.from(projects).sort();
     }, [processedSubmissions, stateFilter, localityFilter, facilityFilter]);
 
+    // Extract unique Worker Types (Job Titles) for filter dropdown
+    const uniqueWorkerTypesList = useMemo(() => {
+        const types = new Set();
+        processedSubmissions.forEach(sub => {
+            if ((!stateFilter || sub.state === stateFilter) && 
+                (!localityFilter || sub.locality === localityFilter) &&
+                (!facilityFilter || sub.facility === facilityFilter)) {
+                if (sub.workerType && sub.workerType !== 'N/A') types.add(sub.workerType);
+            }
+        });
+        return Array.from(types).sort();
+    }, [processedSubmissions, stateFilter, localityFilter, facilityFilter]);
+
     // --- Calculate Worker History to pass to Form ---
     const workerHistory = useMemo(() => {
         if (!processedSubmissions || !selectedFacilityId || !selectedHealthWorkerName || !activeService) return [];
@@ -1202,6 +1404,7 @@ const SkillsMentorshipView = ({
     }, [processedSubmissions, user, activeService]);
 
     // UPDATED to map correctly between authenticated and unauthenticated sets
+    // OPTIMISTIC UPDATE APPLIED: Filters out deletedReportIds
     const processedVisitReports = useMemo(() => {
         const rawImnci = publicDashboardMode ? publicData.imnci : imnciVisitReports;
         const rawEenc = publicDashboardMode ? publicData.eenc : eencVisitReports;
@@ -1237,11 +1440,15 @@ const SkillsMentorshipView = ({
         }));
 
         const allReports = [...imnci, ...eenc];
-        return allReports.filter(rep => rep.service === activeService);
+        return allReports.filter(rep => rep.service === activeService && !deletedReportIds.has(rep.id));
 
-    }, [imnciVisitReports, eencVisitReports, activeService, publicDashboardMode, publicData]);
+    }, [imnciVisitReports, eencVisitReports, activeService, publicDashboardMode, publicData, deletedReportIds]);
 
     const handleEditVisitReport = (reportId) => {
+        if (!canManageMentorship) {
+            setToast({ show: true, message: 'You do not have permission to perform this action.', type: 'error' });
+            return;
+        }
         const reportList = activeService === 'IMNCI' ? imnciVisitReports : eencVisitReports;
         if (!reportList) return;
 
@@ -1266,7 +1473,10 @@ const SkillsMentorshipView = ({
     };
 
     const handleDeleteVisitReport = async (reportId) => {
+        if (!canManageMentorship) return;
         if (window.confirm('Are you sure you want to delete this visit report?')) {
+            // Optimistic Update
+            setDeletedReportIds(prev => new Set(prev).add(reportId));
             try {
                 if (activeService === 'IMNCI') {
                     await deleteIMNCIVisitReport(reportId);
@@ -1277,6 +1487,32 @@ const SkillsMentorshipView = ({
             } catch (error) {
                 setToast({ show: true, message: `Delete failed: ${error.message}`, type: 'error' });
             }
+        }
+    };
+
+    const handleBulkDeleteReports = async () => {
+        if (!canManageMentorship) return;
+        if (!window.confirm(`Are you sure you want to delete ${selectedReportIds.length} reports?`)) return;
+
+        // Find actual reports before optimistic delete removes them
+        const reportsToDelete = selectedReportIds.map(id => processedVisitReports.find(r => r.id === id)).filter(Boolean);
+
+        // Optimistic Update
+        const newDeleted = new Set(deletedReportIds);
+        selectedReportIds.forEach(id => newDeleted.add(id));
+        setDeletedReportIds(newDeleted);
+        
+        setSelectedReportIds([]);
+
+        try {
+            await Promise.all(reportsToDelete.map(rep => {
+                if (rep.service === 'IMNCI') return deleteIMNCIVisitReport(rep.id);
+                else return deleteEENCVisitReport(rep.id);
+            }));
+            setToast({ show: true, message: 'Selected reports deleted.', type: 'success' });
+        } catch(error) {
+            console.error("Bulk delete error", error);
+            setToast({ show: true, message: 'Some reports failed to delete.', type: 'error' });
         }
     };
 
@@ -1339,6 +1575,7 @@ const SkillsMentorshipView = ({
                 }
                 await Promise.all(promises);
             }
+            updateLastSyncTime();
             setToast({ show: true, message: "Data refreshed successfully.", type: "success" });
         } catch (error) {
             setToast({ show: true, message: `Failed to refresh: ${error.message}`, type: "error" });
@@ -1357,6 +1594,7 @@ const SkillsMentorshipView = ({
             setFacilityFilter('');
             setWorkerFilter('');
             setProjectFilter('');
+            setWorkerTypeFilter('');
         }
     }, [activeTab, publicDashboardMode]);
 
@@ -1690,6 +1928,8 @@ const SkillsMentorshipView = ({
         if (action === 'view_submissions') {
             setCurrentView('history');
             setActiveTab('skills_list');
+        } else if (action === 'share_link') {
+            handleShareSubmissionLink();
         } else if (action === 'view_dashboard') {
             setCurrentView('history');
             setActiveTab('dashboard');
@@ -1715,18 +1955,21 @@ const SkillsMentorshipView = ({
     };
     
     const handleStartNewVisit = async () => {
+        if (!canManageMentorship) return;
         resetSelection();
         setActiveFormType('skills_assessment');
         setCurrentView('form_setup');
     };
     
     const handleStartMothersForm = () => {
+        if (!canManageMentorship) return;
         resetSelection();
         setActiveFormType('mothers_form');
         setCurrentView('form_setup');
     };
 
     const handleStartNewVisitReport = () => {
+        if (!canManageMentorship) return;
         resetSelection();
         setActiveFormType('visit_report');
         setCurrentView('form_setup');
@@ -1861,6 +2104,7 @@ const SkillsMentorshipView = ({
         if (activeDashboardFacilityId) params.append('facilityId', activeDashboardFacilityId);
         if (activeDashboardWorkerName) params.append('workerName', activeDashboardWorkerName);
         if (activeDashboardProject) params.append('project', activeDashboardProject);
+        if (activeDashboardWorkerType) params.append('workerType', activeDashboardWorkerType);
         
         const shareUrl = `${baseUrl}?${params.toString()}`;
         
@@ -2004,6 +2248,10 @@ const SkillsMentorshipView = ({
     };
 
     const handleEditSubmission = async (submissionId) => {
+        if (!canManageMentorship) {
+            setToast({ show: true, message: 'You do not have permission to perform this action.', type: 'error' });
+            return;
+        }
         const fullSubmission = skillMentorshipSubmissions.find(s => s.id === submissionId);
         if (!fullSubmission) return;
         
@@ -2032,6 +2280,7 @@ const SkillsMentorshipView = ({
 
 
     const handleDeleteSubmission = async (submissionId) => {
+        if (!canManageMentorship) return;
         const submissionToDelete = processedSubmissions.find(s => s.id === submissionId);
         if (!submissionToDelete) return;
 
@@ -2039,6 +2288,8 @@ const SkillsMentorshipView = ({
 ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
 
         if (window.confirm(confirmMessage)) {
+            // Optimistic update
+            setDeletedSubmissionIds(prev => new Set(prev).add(submissionId));
             try {
                 await deleteMentorshipSession(submissionId);
                 setToast({ show: true, message: 'تم الحذف. (انقر تحديث لتحديث القائمة)', type: 'success' });
@@ -2048,6 +2299,27 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                 console.error("Error deleting session:", error);
                 setToast({ show: true, message: `فشل الحذف: ${error.message}`, type: 'error' });
             }
+        }
+    };
+
+    const handleBulkDeleteSubmissions = async () => {
+        if (!canManageMentorship) return;
+        if (!window.confirm(`Are you sure you want to delete ${selectedSubmissionIds.length} items?`)) return;
+
+        // Optimistic update
+        const newDeleted = new Set(deletedSubmissionIds);
+        selectedSubmissionIds.forEach(id => newDeleted.add(id));
+        setDeletedSubmissionIds(newDeleted);
+        
+        const idsToDelete = [...selectedSubmissionIds];
+        setSelectedSubmissionIds([]);
+
+        try {
+            await Promise.all(idsToDelete.map(id => deleteMentorshipSession(id)));
+            setToast({ show: true, message: 'Selected items deleted.', type: 'success' });
+        } catch (error) {
+            console.error("Bulk delete error", error);
+            setToast({ show: true, message: 'Some items failed to delete. Refreshing might be needed.', type: 'error' });
         }
     };
 
@@ -2139,6 +2411,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                 setActiveDashboardLocality(selectedLocality);
                 setActiveDashboardFacilityId(selectedFacilityId);
                 setActiveDashboardWorkerName(selectedHealthWorkerName);
+                setActiveDashboardWorkerType(workerTypeFilter);
             }
             setIsDashboardModalOpen(true);
         }
@@ -2155,6 +2428,8 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                     onAction={handleActionMenuClick} 
                     activeService={activeService} 
                     draftCount={currentUserDrafts.length}
+                    permissions={permissions}
+                    canManage={canManageMentorship}
                     onBack={() => {
                         setActiveService(null);
                         setCurrentView('service_selection');
@@ -2168,6 +2443,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                     onView={handleViewSubmission}
                     onEdit={handleEditSubmission}
                     onDelete={handleDeleteSubmission}
+                    canManage={canManageMentorship}
                 />
                 {viewingSubmission && (
                     <ViewSubmissionModal
@@ -2181,7 +2457,6 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
 
     if (currentView === 'history') {
         const canShareLink = permissions?.canManageSkillsMentorship || permissions?.canUseSuperUserAdvancedFeatures;
-        const headerTitle = `${activeService} Mentorship`;
         const isFederalManager = permissions?.manageScope === 'federal' || permissions?.isSuperUser || permissions?.role === 'federal_manager';
 
         return (
@@ -2212,81 +2487,80 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                         </>
                                     )}
                                 </Button>
+                                {/* Last Updated Badge placed beside the Refresh button */}
+                                {lastSyncTime && (
+                                    <div className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-white text-slate-600 border border-slate-300 shadow-sm">
+                                        <svg className="w-3.5 h-3.5 mr-1.5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        Last Updated: {lastSyncTime}
+                                    </div>
+                                )}
                             </div>
-                            {!publicDashboardMode && (
-                                <nav className="flex gap-2" aria-label="Tabs">
-                                    <button
-                                        onClick={() => setActiveTab('skills_list')}
-                                        className={`whitespace-nowrap py-2 px-4 rounded-md font-medium text-sm
-                                            ${activeTab === 'skills_list'
-                                                ? 'bg-sky-600 text-white'
-                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                            }`}
-                                    >
-                                        Skills Observations
-                                    </button>
-                                    <button
-                                        onClick={() => setActiveTab('mothers_list')}
-                                        className={`whitespace-nowrap py-2 px-4 rounded-md font-medium text-sm
-                                            ${activeTab === 'mothers_list'
-                                                ? 'bg-sky-600 text-white'
-                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                            }`}
-                                    >
-                                        Mother's Surveys
-                                    </button>
-                                    <button
-                                        onClick={() => setActiveTab('visit_reports')}
-                                        className={`whitespace-nowrap py-2 px-4 rounded-md font-medium text-sm
-                                            ${activeTab === 'visit_reports'
-                                                ? 'bg-sky-600 text-white'
-                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                            }`}
-                                    >
-                                        Visit Reports
-                                    </button>
-                                    <button
-                                        onClick={() => setActiveTab('dashboard')}
-                                        className={`whitespace-nowrap py-2 px-4 rounded-md font-medium text-sm
-                                            ${activeTab === 'dashboard'
-                                                ? 'bg-sky-600 text-white'
-                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                            }`}
-                                    >
-                                        Dashboard
-                                    </button>
-                                </nav>
-                            )}
-                        </div>
-
-                        <div className="flex justify-center mb-4 relative">
-                            <h2 className="text-xl font-semibold text-gray-800">{headerTitle}</h2>
+                            
+                            {/* MOVED SHARE BUTTON TO TOP RIGHT, REPLACING TABS */}
                             {activeTab === 'dashboard' && !publicDashboardMode && (
-                                <div className="absolute right-0 top-0">
+                                <div className="flex items-center">
                                     <Button variant="secondary" onClick={handleShareDashboardLink} title="Share Public Dashboard Link">
                                         <Share2 className="w-4 h-4 mr-2" /> Share Dashboard
                                     </Button>
                                 </div>
                             )}
                         </div>
-                        
+
+                        {/* --- ADDED: Tab Navigation for History Forms --- */}
+                        {!publicDashboardMode && activeTab !== 'dashboard' && (
+                            <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
+                                <button
+                                    onClick={() => setActiveTab('skills_list')}
+                                    className={`px-4 py-2 font-medium text-sm transition-colors duration-150 whitespace-nowrap ${
+                                        activeTab === 'skills_list'
+                                            ? 'border-b-2 border-sky-500 text-sky-600'
+                                            : 'text-gray-500 hover:text-gray-700'
+                                    }`}
+                                >
+                                    Skills Assessments
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('mothers_list')}
+                                    className={`px-4 py-2 font-medium text-sm transition-colors duration-150 whitespace-nowrap ${
+                                        activeTab === 'mothers_list'
+                                            ? 'border-b-2 border-sky-500 text-sky-600'
+                                            : 'text-gray-500 hover:text-gray-700'
+                                    }`}
+                                >
+                                    Mothers Surveys
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('visit_reports')}
+                                    className={`px-4 py-2 font-medium text-sm transition-colors duration-150 whitespace-nowrap ${
+                                        activeTab === 'visit_reports'
+                                            ? 'border-b-2 border-sky-500 text-sky-600'
+                                            : 'text-gray-500 hover:text-gray-700'
+                                    }`}
+                                >
+                                    Visit Reports
+                                </button>
+                            </div>
+                        )}
+
                         {activeTab !== 'dashboard' && !publicDashboardMode && (
                             <>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6 border p-4 rounded-lg bg-gray-50">
                                     <FormGroup label="State" className="text-left" dir="ltr">
-                                        <Select value={stateFilter} onChange={(e) => { setStateFilter(e.target.value); setLocalityFilter(''); setFacilityFilter(''); setWorkerFilter(''); setProjectFilter(''); }}>
+                                        <Select value={stateFilter} onChange={(e) => { setStateFilter(e.target.value); setLocalityFilter(''); setFacilityFilter(''); setWorkerFilter(''); setProjectFilter(''); setWorkerTypeFilter(''); }}>
                                             {availableStates.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
                                         </Select>
                                     </FormGroup>
 
                                     <FormGroup label="Locality" className="text-left" dir="ltr">
-                                        <Select value={localityFilter} onChange={(e) => { setLocalityFilter(e.target.value); setFacilityFilter(''); setWorkerFilter(''); setProjectFilter(''); }} disabled={!stateFilter}>
+                                        <Select value={localityFilter} onChange={(e) => { setLocalityFilter(e.target.value); setFacilityFilter(''); setWorkerFilter(''); setProjectFilter(''); setWorkerTypeFilter(''); }} disabled={!stateFilter}>
                                              {availableLocalities.map(l => <option key={l.key} value={l.key}>{l.label}</option>)}
                                         </Select>
                                     </FormGroup>
 
                                     <FormGroup label="Facility" className="text-left" dir="ltr">
-                                        <Select value={facilityFilter} onChange={(e) => { setFacilityFilter(e.target.value); setWorkerFilter(''); }}>
+                                        <Select value={facilityFilter} onChange={(e) => { setFacilityFilter(e.target.value); setWorkerFilter(''); setWorkerTypeFilter(''); }}>
                                             <option value="">All Facilities</option>
                                             {uniqueFacilitiesList.map(f => <option key={f} value={f}>{f}</option>)}
                                         </Select>
@@ -2296,6 +2570,13 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                         <Select value={workerFilter} onChange={(e) => setWorkerFilter(e.target.value)}>
                                             <option value="">All Workers</option>
                                             {uniqueWorkersList.map(w => <option key={w} value={w}>{w}</option>)}
+                                        </Select>
+                                    </FormGroup>
+
+                                    <FormGroup label="Job Title" className="text-left" dir="ltr">
+                                        <Select value={workerTypeFilter} onChange={(e) => setWorkerTypeFilter(e.target.value)}>
+                                            <option value="">All Job Titles</option>
+                                            {uniqueWorkerTypesList.map(w => <option key={w} value={w}>{w}</option>)}
                                         </Select>
                                     </FormGroup>
 
@@ -2339,29 +2620,38 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                 <div className="flex justify-between items-center mb-6">
                                     <div className="flex gap-2 flex-wrap">
                                         
-                                        {activeTab === 'skills_list' && (
+                                        {activeTab === 'skills_list' && selectedSubmissionIds.length === 0 && canManageMentorship && (
                                             <Button onClick={handleStartNewVisit}>Add New Skills Observation</Button>
                                         )}
+                                        {activeTab === 'skills_list' && selectedSubmissionIds.length > 0 && canManageMentorship && (
+                                            <Button variant="danger" onClick={handleBulkDeleteSubmissions}>
+                                                <Trash2 className="w-4 h-4 mr-2 inline" /> Delete Selected ({selectedSubmissionIds.length})
+                                            </Button>
+                                        )}
                                         
-                                        {activeTab === 'mothers_list' && (
+                                        {activeTab === 'mothers_list' && selectedSubmissionIds.length === 0 && canManageMentorship && (
                                             <Button variant="primary" onClick={handleStartMothersForm}>Add Mother's Knowledge & Satisfaction Form</Button>
                                         )}
+                                        {activeTab === 'mothers_list' && selectedSubmissionIds.length > 0 && canManageMentorship && (
+                                            <Button variant="danger" onClick={handleBulkDeleteSubmissions}>
+                                                <Trash2 className="w-4 h-4 mr-2 inline" /> Delete Selected ({selectedSubmissionIds.length})
+                                            </Button>
+                                        )}
 
-                                        {activeTab === 'visit_reports' && activeService === 'IMNCI' && (
+                                        {activeTab === 'visit_reports' && activeService === 'IMNCI' && selectedReportIds.length === 0 && canManageMentorship && (
                                             <Button variant="primary" onClick={handleStartNewVisitReport}>Add New IMNCI Visit Report</Button>
                                         )}
-                                        {activeTab === 'visit_reports' && activeService === 'EENC' && (
+                                        {activeTab === 'visit_reports' && activeService === 'EENC' && selectedReportIds.length === 0 && canManageMentorship && (
                                             <Button variant="primary" onClick={handleStartNewVisitReport}>Add New EENC Visit Report</Button>
                                         )}
-
-                                        {activeTab === 'skills_list' && canBulkUploadMentorships && (
-                                            <Button onClick={() => setIsBulkUploadModalOpen(true)}>Bulk Upload</Button>
+                                        {activeTab === 'visit_reports' && selectedReportIds.length > 0 && canManageMentorship && (
+                                             <Button variant="danger" onClick={handleBulkDeleteReports}>
+                                                <Trash2 className="w-4 h-4 mr-2 inline" /> Delete Selected ({selectedReportIds.length})
+                                            </Button>
                                         )}
 
-                                        {activeTab === 'skills_list' && canShareLink && (
-                                             <Button variant="info" onClick={handleShareSubmissionLink}>
-                                                 Share Submission Link
-                                             </Button>
+                                        {activeTab === 'skills_list' && canBulkUploadMentorships && selectedSubmissionIds.length === 0 && canManageMentorship && (
+                                            <Button onClick={() => setIsBulkUploadModalOpen(true)}>Bulk Upload</Button>
                                         )}
                                     </div>
                                 </div>
@@ -2386,6 +2676,10 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     facilityFilter={facilityFilter}
                                     workerFilter={workerFilter}
                                     projectFilter={projectFilter}
+                                    workerTypeFilter={workerTypeFilter}
+                                    selectedIds={selectedSubmissionIds}
+                                    onSelectionChange={setSelectedSubmissionIds}
+                                    canManage={canManageMentorship}
                                 />
                             )}
                             {activeTab === 'mothers_list' && !publicDashboardMode && (
@@ -2405,6 +2699,10 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     facilityFilter={facilityFilter}
                                     workerFilter={workerFilter}
                                     projectFilter={projectFilter}
+                                    workerTypeFilter={workerTypeFilter}
+                                    selectedIds={selectedSubmissionIds}
+                                    onSelectionChange={setSelectedSubmissionIds}
+                                    canManage={canManageMentorship}
                                 />
                             )}
                             {activeTab === 'visit_reports' && !publicDashboardMode && (
@@ -2413,6 +2711,10 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     onEdit={handleEditVisitReport}
                                     onDelete={handleDeleteVisitReport}
                                     onView={handleViewVisitReport} 
+                                    selectedIds={selectedReportIds}
+                                    onSelectionChange={setSelectedReportIds}
+                                    isReportsLoading={activeService === 'IMNCI' ? (isDataCacheLoading.imnciVisitReports || !imnciVisitReports) : (isDataCacheLoading.eencVisitReports || !eencVisitReports)}
+                                    canManage={canManageMentorship}
                                 />
                             )}
 
@@ -2439,6 +2741,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                             setActiveDashboardFacilityId("");
                                             setActiveDashboardProject("");
                                             setActiveDashboardWorkerName("");
+                                            setActiveDashboardWorkerType("");
                                         }}
                                         activeLocality={activeDashboardLocality || selectedLocality}
                                         onLocalityChange={(value) => {
@@ -2446,21 +2749,32 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                             setActiveDashboardFacilityId("");
                                             setActiveDashboardProject("");
                                             setActiveDashboardWorkerName("");
+                                            setActiveDashboardWorkerType("");
                                         }}
                                         activeFacilityId={activeDashboardFacilityId || selectedFacilityId}
                                         onFacilityIdChange={(value) => {
                                             setActiveDashboardFacilityId(value);
                                             setActiveDashboardWorkerName("");
+                                            setActiveDashboardWorkerType("");
                                         }}
 
                                         activeProject={activeDashboardProject}
                                         onProjectChange={(value) => {
                                             setActiveDashboardProject(value);
                                             setActiveDashboardWorkerName("");
+                                            setActiveDashboardWorkerType("");
                                         }}
 
                                         activeWorkerName={activeDashboardWorkerName || selectedHealthWorkerName}
-                                        onWorkerNameChange={setActiveDashboardWorkerName}
+                                        onWorkerNameChange={(value) => {
+                                            setActiveDashboardWorkerName(value);
+                                        }}
+
+                                        activeWorkerType={activeDashboardWorkerType || workerTypeFilter}
+                                        onWorkerTypeChange={(value) => {
+                                            setActiveDashboardWorkerType(value);
+                                            setActiveDashboardWorkerName("");
+                                        }}
                                     />
                                 )
                             )}
@@ -2547,6 +2861,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         onView={handleViewSubmission}
                         onEdit={handleEditSubmission}
                         onDelete={handleDeleteSubmission}
+                        canManage={canManageMentorship}
                     />
                     {viewingSubmission && (
                         <ViewSubmissionModal
@@ -2642,6 +2957,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                         setActiveDashboardFacilityId("");
                                         setActiveDashboardProject("");
                                         setActiveDashboardWorkerName("");
+                                        setActiveDashboardWorkerType("");
                                     }}
                                     activeLocality={activeDashboardLocality || selectedLocality}
                                     onLocalityChange={(value) => {
@@ -2649,21 +2965,32 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                         setActiveDashboardFacilityId("");
                                         setActiveDashboardProject("");
                                         setActiveDashboardWorkerName("");
+                                        setActiveDashboardWorkerType("");
                                     }}
                                     activeFacilityId={activeDashboardFacilityId || selectedFacilityId}
                                     onFacilityIdChange={(value) => {
                                         setActiveDashboardFacilityId(value);
                                         setActiveDashboardWorkerName("");
+                                        setActiveDashboardWorkerType("");
                                     }}
 
                                     activeProject={activeDashboardProject}
                                     onProjectChange={(value) => {
                                         setActiveDashboardProject(value);
                                         setActiveDashboardWorkerName("");
+                                        setActiveDashboardWorkerType("");
                                     }}
 
                                     activeWorkerName={activeDashboardWorkerName || selectedHealthWorkerName}
-                                    onWorkerNameChange={setActiveDashboardWorkerName}
+                                    onWorkerNameChange={(value) => {
+                                        setActiveDashboardWorkerName(value);
+                                    }}
+
+                                    activeWorkerType={activeDashboardWorkerType || workerTypeFilter}
+                                    onWorkerTypeChange={(value) => {
+                                        setActiveDashboardWorkerType(value);
+                                        setActiveDashboardWorkerName("");
+                                    }}
                                 />
                             </div>
                         </Modal>
@@ -3025,6 +3352,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                     onView={handleViewSubmission}
                     onEdit={handleEditSubmission}
                     onDelete={handleDeleteSubmission}
+                    canManage={canManageMentorship}
                  />
                  {viewingSubmission && (
                     <ViewSubmissionModal
@@ -3158,6 +3486,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     setActiveDashboardFacilityId("");
                                     setActiveDashboardProject("");
                                     setActiveDashboardWorkerName("");
+                                    setActiveDashboardWorkerType("");
                                 }}
                                 activeLocality={activeDashboardLocality}
                                 onLocalityChange={(value) => {
@@ -3165,21 +3494,32 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     setActiveDashboardFacilityId("");
                                     setActiveDashboardProject("");
                                     setActiveDashboardWorkerName("");
+                                    setActiveDashboardWorkerType("");
                                 }}
                                 activeFacilityId={activeDashboardFacilityId}
                                 onFacilityIdChange={(value) => {
                                     setActiveDashboardFacilityId(value);
                                     setActiveDashboardWorkerName("");
+                                    setActiveDashboardWorkerType("");
                                 }}
                                 
                                 activeProject={activeDashboardProject}
                                 onProjectChange={(value) => {
                                     setActiveDashboardProject(value);
                                     setActiveDashboardWorkerName("");
+                                    setActiveDashboardWorkerType("");
                                 }}
 
                                 activeWorkerName={activeDashboardWorkerName}
-                                onWorkerNameChange={setActiveDashboardWorkerName}
+                                onWorkerNameChange={(value) => {
+                                    setActiveDashboardWorkerName(value);
+                                }}
+
+                                activeWorkerType={activeDashboardWorkerType}
+                                onWorkerTypeChange={(value) => {
+                                    setActiveDashboardWorkerType(value);
+                                    setActiveDashboardWorkerName("");
+                                }}
                             />
                         </div>
                     </Modal>

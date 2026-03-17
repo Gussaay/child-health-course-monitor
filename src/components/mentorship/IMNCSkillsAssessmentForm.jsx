@@ -1,4 +1,4 @@
-// IMNCIFormPart.jsx
+// IMNCSkillsAssessmentForm.jsx
 import React from 'react';
 import {
     FormGroup, Select, Checkbox
@@ -262,6 +262,23 @@ export const IMNCI_FORM_STRUCTURE = [
                 }
             }
         ]
+    },
+    {
+        group: 'استخدام الاستمارة', 
+        step: 10, 
+        scoreKey: 'recording',
+        sectionKey: 'recording_skills',
+        subgroups: [
+            {
+                subgroupTitle: 'تسجيل البيانات',
+                scoreKey: 'recording_skills_score',
+                skills: [
+                    { key: 'skill_record_signs', label: 'هل استخدم العامل الصحي الاستمارة لتسجيل العلامات الموجودة بصورة صحيحة', showNaOption: true, naLabel: 'لا توجد استمارة' },
+                    { key: 'skill_record_classifications', label: 'هل استخدم العامل الصحي الاستمارة لتسجيل التصانيف بصورة صحيحة', showNaOption: true, naLabel: 'لا توجد استمارة' },
+                    { key: 'skill_record_treatments', label: 'هل استخدم العامل الصحي الاستمارة لتحديد العلاجات بصورة صحيحة', showNaOption: true, naLabel: 'لا توجد استمارة' },
+                ]
+            }
+        ]
     }
 ];
 
@@ -332,6 +349,12 @@ export const rehydrateDraftData = (draft, DIARRHEA_CLASSIFICATIONS, FEVER_CLASSI
         rehydrated.treatment_skills = {
             ...rehydrated.treatment_skills,
             ...draft.treatmentSkills,
+        };
+    }
+    if (draft.recordingSkills) {
+        rehydrated.recording_skills = {
+            ...rehydrated.recording_skills,
+            ...draft.recordingSkills,
         };
     }
 
@@ -582,11 +605,13 @@ export const calculateScores = (formData) => {
                                 // This is for the *group* total max score (assessment vs treatment)
                                 if (isTreatmentSubgroup) {
                                     totalTreatmentMaxScore += 1;
-                                } else {
+                                } else if (group.sectionKey === 'assessment_skills') {
                                     const isVitalSignsNa = (subgroup.scoreKey === 'vitalSigns' && value === 'na');
                                     if (!isVitalSignsNa) { // Don't count N/A vitals
                                         totalAssessmentMaxScore += 1;
                                     }
+                                } else if (group.sectionKey === 'recording_skills') {
+                                    // Handle recording skills max score naturally 
                                 }
                             }
 
@@ -621,6 +646,12 @@ export const calculateScores = (formData) => {
                 totalMaxScore += groupMaxScore;
                 totalCurrentScore += groupCurrentScore;
                 currentTreatmentScore = groupCurrentScore; // <-- *** THIS IS THE FIX (Part 1) ***
+            }
+            // This block handles the Recording Skills Score 
+            else if (group.sectionKey === 'recording_skills') {
+                 scores['recording_score'] = { score: groupCurrentScore, maxScore: groupMaxScore };
+                 totalMaxScore += groupMaxScore;
+                 totalCurrentScore += groupCurrentScore;
             }
         }
     });
@@ -806,6 +837,14 @@ export const isImmunizationComplete = (data) => { const skills = data.assessment
 export const isOtherProblemsComplete = (data) => { const skills = data.assessment_skills; return skills.skill_other !== ''; };
 export const isDecisionComplete = (data) => { return data.finalDecision !== '' && data.decisionMatches !== ''; };
 
+// --- NEW HELPER: Is Recording Skills Complete? ---
+export const isRecordingComplete = (data) => {
+    const skills = data.recording_skills;
+    if (!skills) return false;
+    return skills.skill_record_signs !== '' &&
+           skills.skill_record_classifications !== '' &&
+           skills.skill_record_treatments !== '';
+};
 
 // --- NEW: The IMNCI-specific rendering component ---
 export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormChange, handleSkillChange, handleMultiClassificationChange, isEditing }) => {
@@ -1055,8 +1094,8 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                                         label={skill.label}
                                                         value={formData[group.sectionKey]?.[skill.key]}
                                                         onChange={(key, value) => handleSkillChange(group.sectionKey, key, value)}
-                                                        showNaOption={isVitalSignsGroup}
-                                                        naLabel={isVitalSignsGroup ? "لا يوجد / لا يعمل الجهاز" : "لا ينطبق"}
+                                                        showNaOption={isVitalSignsGroup || skill.showNaOption}
+                                                        naLabel={skill.naLabel || (isVitalSignsGroup ? "لا يوجد / لا يعمل الجهاز" : "لا ينطبق")}
                                                     />
                                                 );
                                             })}

@@ -399,7 +399,7 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
 
                                 {!showOtherFacilities && facilitiesWithoutService.length > 0 && (
                                     <button type="button" onClick={() => setShowOtherFacilities(true)} className="text-sm text-sky-600 hover:text-sky-800 hover:underline focus:outline-none">
-                                        لم تجد المنشأة؟ عرض المنشآt الأخرى ({facilitiesWithoutService.length})
+                                        لم تجد المنشأة؟ عرض المنشآت الأخرى ({facilitiesWithoutService.length})
                                     </button>
                                 )}
                                 
@@ -460,97 +460,149 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
     );
 }
 
-
 // --- REUSABLE FORM SECTION FOR SHARED FIELDS ---
 
 export const SharedFacilityFields = ({ formData, handleChange, handleStateChange, isPublicForm = false, isReadOnly = false }) => {
     return (
-    <>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormGroup label="Date of Visit / Update">
-                <Input type="date" name="date_of_visit" value={formData.date_of_visit || ''} onChange={handleChange} required disabled={isReadOnly} />
-            </FormGroup>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-             <FormGroup label="الولاية">
-                <Select name="الولاية" value={formData['الولاية'] || ''} onChange={handleStateChange} required disabled={isReadOnly}>
-                    <option value="">اختر الولاية</option>
-                    {Object.keys(STATE_LOCALITIES).map(sKey => <option key={sKey} value={sKey}>{STATE_LOCALITIES[sKey].ar}</option>)}
-                </Select>
-            </FormGroup>
-            <FormGroup label="المحلية">
-                <Select name="المحلية" value={formData['المحلية'] || ''} onChange={handleChange} required disabled={!formData['الولاية'] || isReadOnly}>
-                    <option value="">اختر المحلية</option>
-                    {formData['الولاية'] && STATE_LOCALITIES[formData['الولاية']]?.localities.map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
-                </Select>
-            </FormGroup>
-        </div>
-        <FormGroup label="اسم المؤسسة"><Input name="اسم_المؤسسة" value={formData['اسم_المؤسسة'] || ''} onChange={handleChange} required disabled={isReadOnly} /></FormGroup>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormGroup label="نوع المؤسسة الصحية">
-                <Select name="نوع_المؤسسةالصحية" value={formData['نوع_المؤسسةالصحية'] || ''} onChange={handleChange} disabled={isReadOnly}>
-                    <option value="">اختر النوع</option>
-                    <option value="مركز صحة الاسرة">مركز صحة الاسرة</option>
-                    <option value="مستشفى ريفي">مستشفى ريفي</option>
-                    <option value="وحدة صحة الاسرة">وحدة صحة الاسرة</option>
-                    <option value="مستشفى">مستشفى</option>
-                </Select>
-            </FormGroup>
-            <FormGroup label="نوع الخدمات المقدمة">
-                <Select name="eenc_service_type" value={formData.eenc_service_type || ''} onChange={handleChange} disabled={isReadOnly}>
-                    <option value="">اختر النوع</option>
-                    <option value="CEmONC">مؤسسة طواري حمل وولادة شاملة</option>
-                    <option value="BEmONC">مؤسسة طواري حمل وولادة أساسية</option>
-                    <option value="general">خدمات عامة غير متخصصة</option>
-                    <option value="pediatric">مستشفى اطفال متخصص</option>
-                </Select>
-            </FormGroup>
-            {/* --- ADDED: Ownership Field --- */}
-            <FormGroup label="ملكية المؤسسة">
-                <Select name="facility_ownership" value={formData.facility_ownership || ''} onChange={handleChange} disabled={isReadOnly}>
-                    <option value="">اختر الملكية</option>
-                    <option value="حكومي">حكومي</option>
-                    <option value="خاص">خاص</option>
-                    <option value="منظمات">منظمات</option>
-                    <option value="اهلي">اهلي</option>
-                </Select>
-            </FormGroup>
-            {/* --- END ADD --- */}
-        </div>
-        <FormGroup label="هل المؤسسة تعمل؟">
-            <Select name="هل_المؤسسة_تعمل" value={formData['هل_المؤسسة_تعمل'] || 'Yes'} onChange={handleChange} disabled={isReadOnly}>
-                <option value="Yes">نعم</option>
-                <option value="No">لا</option>
-            </Select>
-        </FormGroup>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            <div>
-                <FormGroup label="هل توجد حوافز للاستاف؟">
-                    <Select name="staff_incentives" value={formData.staff_incentives || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select>
-                </FormGroup>
-                {formData.staff_incentives === 'Yes' && (<FormGroup label="ما هي المنظمة المقدم للحوافز؟" className="mt-4"><Input type="text" name="staff_incentives_organization" value={formData.staff_incentives_organization || ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>)}
-            </div>
-            <div>
-                <FormGroup label="هل تشارك المؤسسة في أي مشروع؟">
-                    <Select name="project_participation" value={formData.project_participation || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select>
-                </FormGroup>
-                {formData.project_participation === 'Yes' && (<FormGroup label="ما هو اسم المشروع؟" className="mt-4"><Input type="text" name="project_name" value={formData.project_name || ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>)}
-            </div>
-        </div>
-        <FormGroup label="رقم هاتف المسئول من المؤسسة" className="mt-4"><Input type="tel" name="person_in_charge_phone" value={formData.person_in_charge_phone || ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-        {!isPublicForm && (
-            <>
-                <h4 className="font-semibold mt-4 mb-2">الإحداثيات الجغرافية</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FormGroup label="خط العرض"><Input type="number" step="any" name="_الإحداثيات_latitude" value={formData['_الإحداثيات_latitude'] || ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-                    <FormGroup label="خط الطول"><Input type="number" step="any" name="_الإحداثيات_longitude" value={formData['_الإحداثيات_longitude'] || ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+        <div className="space-y-8">
+            {/* --- Section 1: Basic Facility Information --- */}
+            <div className="border border-sky-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                <div className="bg-sky-100 px-4 py-3 border-b border-sky-200">
+                    <h3 className="text-lg font-semibold text-sky-800">البيانات الأساسية للمنشأة</h3>
                 </div>
-            </>
-        )}
-    </>
+                <div className="p-5 space-y-4">
+                    {/* Date of Visit is intentionally hidden here. It's strictly set to today's date upon form load & save. */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormGroup label="الولاية">
+                            <Select name="الولاية" value={formData['الولاية'] || ''} onChange={handleStateChange} required disabled={isReadOnly}>
+                                <option value="">اختر الولاية</option>
+                                {Object.keys(STATE_LOCALITIES).map(sKey => <option key={sKey} value={sKey}>{STATE_LOCALITIES[sKey].ar}</option>)}
+                            </Select>
+                        </FormGroup>
+                        <FormGroup label="المحلية">
+                            <Select name="المحلية" value={formData['المحلية'] || ''} onChange={handleChange} required disabled={!formData['الولاية'] || isReadOnly}>
+                                <option value="">اختر المحلية</option>
+                                {formData['الولاية'] && STATE_LOCALITIES[formData['الولاية']]?.localities.map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
+                            </Select>
+                        </FormGroup>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormGroup label="اسم المؤسسة">
+                            <Input name="اسم_المؤسسة" value={formData['اسم_المؤسسة'] || ''} onChange={handleChange} required disabled={isReadOnly} />
+                        </FormGroup>
+                        <FormGroup label="ملكية المؤسسة">
+                            <Select name="facility_ownership" value={formData.facility_ownership || ''} onChange={handleChange} disabled={isReadOnly}>
+                                <option value="">اختر الملكية</option>
+                                <option value="حكومي">حكومي</option>
+                                <option value="خاص">خاص</option>
+                                <option value="منظمات">منظمات</option>
+                                <option value="اهلي">اهلي</option>
+                            </Select>
+                        </FormGroup>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormGroup label="نوع المؤسسة الصحية">
+                            <Select name="نوع_المؤسسةالصحية" value={formData['نوع_المؤسسةالصحية'] || ''} onChange={handleChange} disabled={isReadOnly}>
+                                <option value="">اختر النوع</option>
+                                <option value="مركز صحة الاسرة">مركز صحة الاسرة</option>
+                                <option value="مستشفى ريفي">مستشفى ريفي</option>
+                                <option value="وحدة صحة الاسرة">وحدة صحة الاسرة</option>
+                                <option value="مستشفى">مستشفى</option>
+                            </Select>
+                        </FormGroup>
+                        <FormGroup label="نوع الخدمات المقدمة">
+                            <Select name="eenc_service_type" value={formData.eenc_service_type || ''} onChange={handleChange} disabled={isReadOnly}>
+                                <option value="">اختر النوع</option>
+                                <option value="CEmONC">مؤسسة طواري حمل وولادة شاملة</option>
+                                <option value="BEmONC">مؤسسة طواري حمل وولادة أساسية</option>
+                                <option value="general">خدمات عامة غير متخصصة</option>
+                                <option value="pediatric">مستشفى اطفال متخصص</option>
+                            </Select>
+                        </FormGroup>
+                    </div>
+                </div>
+            </div>
+
+            {/* --- Section 2: Operational Status --- */}
+            <div className="border border-sky-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                <div className="bg-sky-100 px-4 py-3 border-b border-sky-200">
+                    <h3 className="text-lg font-semibold text-sky-800">حالة عمل المؤسسة</h3>
+                </div>
+                <div className="p-5 space-y-5">
+                    <FormGroup label="هل المؤسسة تعمل؟">
+                        <Select name="هل_المؤسسة_تعمل" value={formData['هل_المؤسسة_تعمل'] || ''} onChange={handleChange} disabled={isReadOnly} required>
+                            <option value="">اختر...</option>
+                            <option value="Yes">نعم</option>
+                            <option value="No">لا</option>
+                        </Select>
+                    </FormGroup>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-4 bg-gray-50 border border-gray-200 rounded-md transition-colors hover:bg-sky-50">
+                            <FormGroup label="هل توجد حوافز للاستاف؟">
+                                <Select name="staff_incentives" value={formData.staff_incentives || ''} onChange={handleChange} disabled={isReadOnly}>
+                                    <option value="">اختر...</option>
+                                    <option value="Yes">نعم</option>
+                                    <option value="No">لا</option>
+                                </Select>
+                            </FormGroup>
+                            {formData.staff_incentives === 'Yes' && (
+                                <div className="mt-4 pt-4 border-t border-gray-200 animate-fade-in">
+                                    <FormGroup label="ما هي المنظمة المقدم للحوافز؟">
+                                        <Input type="text" name="staff_incentives_organization" value={formData.staff_incentives_organization || ''} onChange={handleChange} disabled={isReadOnly} />
+                                    </FormGroup>
+                                </div>
+                            )}
+                        </div>
+                        <div className="p-4 bg-gray-50 border border-gray-200 rounded-md transition-colors hover:bg-sky-50">
+                            <FormGroup label="هل تشارك المؤسسة في أي مشروع؟">
+                                <Select name="project_participation" value={formData.project_participation || ''} onChange={handleChange} disabled={isReadOnly}>
+                                    <option value="">اختر...</option>
+                                    <option value="Yes">نعم</option>
+                                    <option value="No">لا</option>
+                                </Select>
+                            </FormGroup>
+                            {formData.project_participation === 'Yes' && (
+                                <div className="mt-4 pt-4 border-t border-gray-200 animate-fade-in">
+                                    <FormGroup label="ما هو اسم المشروع؟">
+                                        <Input type="text" name="project_name" value={formData.project_name || ''} onChange={handleChange} disabled={isReadOnly} />
+                                    </FormGroup>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2">
+                        <FormGroup label="رقم هاتف المسئول من المؤسسة">
+                            <Input type="tel" name="person_in_charge_phone" value={formData.person_in_charge_phone || ''} onChange={handleChange} disabled={isReadOnly} />
+                        </FormGroup>
+                    </div>
+                </div>
+            </div>
+
+            {/* --- Section 3: Geolocation --- */}
+            {!isPublicForm && (
+                <div className="border border-sky-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                    <div className="bg-sky-100 px-4 py-3 border-b border-sky-200">
+                        <h3 className="text-lg font-semibold text-sky-800">الإحداثيات الجغرافية</h3>
+                    </div>
+                    <div className="p-5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <FormGroup label="خط العرض (Latitude)">
+                                <Input type="number" step="any" name="_الإحداثيات_latitude" value={formData['_الإحداثيات_latitude'] || ''} onChange={handleChange} disabled={isReadOnly} />
+                            </FormGroup>
+                            <FormGroup label="خط الطول (Longitude)">
+                                <Input type="number" step="any" name="_الإحداثيات_longitude" value={formData['_الإحداثيات_longitude'] || ''} onChange={handleChange} disabled={isReadOnly} />
+                            </FormGroup>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 };
-
 
 // --- GENERIC FACILITY FORM WRAPPER ---
 export const GenericFacilityForm = React.forwardRef(({
@@ -572,11 +624,12 @@ export const GenericFacilityForm = React.forwardRef(({
     const [formData, setFormData] = useState(() => {
         let processedData = initialData ? { ...initialData } : {};
         
+        // Always ensure it has today's date in state, even if hidden from UI
+        processedData.date_of_visit = new Date().toISOString().split('T')[0];
+        
         if (!initialData) {
-            processedData.date_of_visit = new Date().toISOString().split('T')[0];
-            const fieldsToDefaultNo = ['وجود_العلاج_المتكامل_لامراض_الطفولة', 'وجود_سجل_علاج_متكامل', 'وجود_كتيب_لوحات', 'ميزان_وزن', 'ميزان_طول', 'ميزان_حرارة', 'ساعة_مؤقت', 'غرفة_إرواء', 'eenc_provides_essential_care', 'eenc_steam_sterilizer', 'eenc_wall_clock', 'etat_has_service', 'hdu_has_service', 'picu_has_service', 'neonatal_kmc_unit', 'neonatal_breastfeeding_unit', 'neonatal_sterilization_unit', 'staff_incentives', 'project_participation', 'immunization_office_exists', 'nutrition_center_exists', 'growth_monitoring_service_exists', 'neonatal_sepsis_surveillance'];
+            const fieldsToDefaultNo = ['وجود_سجل_علاج_متكامل', 'وجود_كتيب_لوحات', 'ميزان_وزن', 'ميزان_طول', 'ميزان_حرارة', 'ساعة_مؤقت', 'غرفة_إرواء', 'eenc_steam_sterilizer', 'eenc_wall_clock', 'etat_has_service', 'hdu_has_service', 'picu_has_service', 'neonatal_kmc_unit', 'neonatal_breastfeeding_unit', 'neonatal_sterilization_unit', 'immunization_office_exists', 'nutrition_center_exists', 'growth_monitoring_service_exists', 'neonatal_sepsis_surveillance'];
             fieldsToDefaultNo.forEach(field => processedData[field] = processedData[field] || 'No');
-            processedData.هل_المؤسسة_تعمل = processedData.هل_المؤسسة_تعمل || 'Yes';
         }
 
         if (processedData && (processedData.اسم_الكادر_المعالج || processedData.الوصف_الوظيفي) && !processedData.imnci_staff) {
@@ -635,6 +688,10 @@ export const GenericFacilityForm = React.forwardRef(({
         e.preventDefault();
 
         const processedData = { ...formData };
+        
+        // STRICT OVERRIDE: Automatically ensure the visit/update date is strictly today upon saving
+        processedData.date_of_visit = new Date().toISOString().split('T')[0];
+
         ['نوع_المؤسسةالصحية', 'eenc_service_type'].forEach(field => {
             if ([null, undefined, ''].includes(processedData[field])) processedData[field] = 'no data';
         });
@@ -691,20 +748,22 @@ export const GenericFacilityForm = React.forwardRef(({
                             isPublicForm={isPublicForm} 
                             isReadOnly={isReadOnly} 
                         />
-                        <hr className="my-6" />
-                        {children({ 
-                            formData, 
-                            handleChange, 
-                            handleStateChange, 
-                            handleStaffChange, 
-                            handleAddStaffRow, 
-                            handleRemoveStaffRow, 
-                            handleCheckboxGroupChange,
-                            isReadOnly // Pass isReadOnly to child components
-                        })}
+                        
+                        <div className="mt-8">
+                            {children({ 
+                                formData, 
+                                handleChange, 
+                                handleStateChange, 
+                                handleStaffChange, 
+                                handleAddStaffRow, 
+                                handleRemoveStaffRow, 
+                                handleCheckboxGroupChange,
+                                isReadOnly 
+                            })}
+                        </div>
                         
                         {isPublicForm && (
-                             <div className="mt-6 pt-6 border-t border-sky-200">
+                             <div className="mt-8 pt-6 border-t border-sky-200">
                                 <div className="p-4 bg-sky-50 rounded-lg border border-sky-200">
                                     <h3 className="text-lg font-semibold mb-2 text-sky-800" dir="ltr">Your Information</h3>
                                     <p className="text-sm text-gray-600 mb-4" dir="ltr">
@@ -737,7 +796,7 @@ export const GenericFacilityForm = React.forwardRef(({
                             </div>
                         )}
 
-                        <div className="flex gap-2 mt-6">
+                        <div className="flex gap-2 mt-8">
                             <Button type="submit" variant={saveButtonVariant} disabled={isSubmitting}>
                                 {isSubmitting ? 'جاري الحفظ...' : saveButtonText}
                             </Button>
@@ -754,156 +813,256 @@ export const GenericFacilityForm = React.forwardRef(({
 
 // --- SERVICE-SPECIFIC FORM FIELDS ---
 
-export const IMNCIFormFields = ({ formData, handleChange, handleStaffChange, handleAddStaffRow, handleRemoveStaffRow, isReadOnly = false }) => (
-    <>
-        <h3 className="text-xl font-semibold mb-4">تفاصيل خدمة العلاج المتكامل لأمراض الطفولة (IMNCI)</h3>
-        <FormGroup label="هل تتوفر خدمة العلاج المتكامل؟"><Select name="وجود_العلاج_المتكامل_لامراض_الطفولة" value={formData['وجود_العلاج_المتكامل_لامراض_الطفولة'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
-        <hr className="my-4"/>
-        <h4 className="font-semibold mb-2">معلومات الكادر</h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-            <FormGroup label="العدد الكلي للكوادر الطبية العاملة (أطباء ومساعدين)"><Input type="number" name="العدد_الكلي_للكوادر_الطبية_العاملة_أطباء_ومساعدين" value={formData['العدد_الكلي_للكوادر_الطبية_العاملة_أطباء_ومساعدين'] ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-            <FormGroup label="العدد الكلي للكودار المدربة على العلاج المتكامل"><Input type="number" name="العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل" value={formData['العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل'] ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-        </div>
-        <div className="overflow-x-auto">
-            <table className="min-w-full border-collapse text-sm">
-                <thead className="bg-gray-100"><tr><th className="border p-2 text-right">الاسم</th><th className="border p-2 text-right">الوصف الوظيفي</th><th className="border p-2 text-right">هل مدرب</th><th className="border p-2 text-right">تاريخ اخر تدريب</th><th className="border p-2 text-right">رقم الهاتف</th><th className="border p-2 text-right">إجراء</th></tr></thead>
-                <tbody>
-                    {(formData.imnci_staff || []).map((staff, index) => (
-                        <tr key={index}>
-                            <td className="border p-1"><Input name="name" value={staff.name} onChange={(e) => handleStaffChange(index, e)} disabled={isReadOnly} /></td>
-                            <td className="border p-1"><Select name="job_title" value={staff.job_title} onChange={(e) => handleStaffChange(index, e)} disabled={isReadOnly}><option value="">اختر</option><option value="طبيب">طبيب</option><option value="مساعد طبي">مساعد طبي</option><option value="ممرض معالج">ممرض معالج</option></Select></td>
-                            <td className="border p-1"><Select name="is_trained" value={staff.is_trained} onChange={(e) => handleStaffChange(index, e)} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></td>
-                            <td className="border p-1"><Input type="date" name="training_date" value={staff.training_date} onChange={(e) => handleStaffChange(index, e)} disabled={staff.is_trained !== 'Yes' || isReadOnly} /></td>
-                            <td className="border p-1"><Input type="tel" name="phone" value={staff.phone} onChange={(e) => handleStaffChange(index, e)} disabled={isReadOnly} /></td>
-                            <td className="border p-1 text-center"><Button size="sm" variant="danger" type="button" onClick={(e) => handleRemoveStaffRow(e, index)} disabled={isReadOnly}>حذف</Button></td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-        <Button type="button" onClick={(e) => handleAddStaffRow(e)} variant="secondary" className="mt-2" disabled={isReadOnly}>إضافة كادر</Button>
-        <hr className="my-4"/>
-        <h4 className="font-semibold mt-4 mb-2">الموارد والمعدات المتاحة</h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormGroup label="وجود سجل علاج متكامل"><Select name="وجود_سجل_علاج_متكامل" value={formData['وجود_سجل_علاج_متكامل'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
-            <FormGroup label="وجود كتيب لوحات"><Select name="وجود_كتيب_لوحات" value={formData['وجود_كتيب_لوحات'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
-            <FormGroup label="ميزان وزن"><Select name="ميزان_وزن" value={formData['ميزان_وزن'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
-            <FormGroup label="ميزان طول"><Select name="ميزان_طول" value={formData['ميزان_طول'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
-            <FormGroup label="ميزان حرارة"><Select name="ميزان_حرارة" value={formData['ميزان_حرارة'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
-            <FormGroup label="ساعة مؤقت"><Select name="ساعة_مؤقت" value={formData['ساعة_مؤقت'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
-            <FormGroup label="غرفة إرواء"><Select name="غرفة_إرواء" value={formData['غرفة_إرواء'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
-        </div>
-        <hr className="my-4"/>
-        <h4 className="font-semibold mt-4 mb-2">الخدمات الاخرى</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
-            <div>
-                <FormGroup label="هل يوجد مكتب تحصين؟"><Select name="immunization_office_exists" value={formData.immunization_office_exists || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
-                {formData.immunization_office_exists === 'No' && <FormGroup label="اين يقع اقرب مركز تحصين؟" className="mt-4"><Input type="text" name="nearest_immunization_center" value={formData.nearest_immunization_center || ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>}
-            </div>
-            <div>
-                <FormGroup label="هل يوجد مركز تغذية خارجي؟"><Select name="nutrition_center_exists" value={formData.nutrition_center_exists || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
-                {formData.nutrition_center_exists === 'No' && <FormGroup label="اين يقع اقرب مركز تغذية خارجي؟" className="mt-4"><Input type="text" name="nearest_nutrition_center" value={formData.nearest_nutrition_center || ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>}
-            </div>
-            <div><FormGroup label="هل يوجد خدمة متابعة النمو ؟"><Select name="growth_monitoring_service_exists" value={formData.growth_monitoring_service_exists || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup></div>
-        </div>
-    </>
-);
+export const IMNCIFormFields = ({ formData, handleChange, handleStaffChange, handleAddStaffRow, handleRemoveStaffRow, isReadOnly = false }) => {
+    const hasService = formData['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes';
 
-export const EENCFormFields = ({ formData, handleChange, isReadOnly = false }) => (
-    <>
-        <h3 className="text-xl font-semibold mb-4">تفاصيل خدمة الرعاية الطارئة لحديثي الولادة والأطفال (EENC)</h3>
-        <FormGroup label="هل تقدم الرعاية الضرورية المبكرة EENC؟"><Select name="eenc_provides_essential_care" value={formData.eenc_provides_essential_care || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
-        <FormGroup label="عدد الكوادر الصحية المدربة"><Input type="number" name="eenc_trained_workers" value={formData.eenc_trained_workers ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-        <hr className="my-4" />
-        <h4 className="font-semibold mt-2 mb-2">الموارد والمعدات المتاحة</h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormGroup label="العدد الكلي لسرير الولادة"><Input type="number" name="eenc_delivery_beds" value={formData.eenc_delivery_beds ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-            <FormGroup label="العدد الكلي لمحطات الانعاش"><Input type="number" name="eenc_resuscitation_stations" value={formData.eenc_resuscitation_stations ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-            <FormGroup label="العدد الكلي لاجهزة التدفئة"><Input type="number" name="eenc_warmers" value={formData.eenc_warmers ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-            <FormGroup label="العدد الكلي لجهاز الامبوباق"><Input type="number" name="eenc_ambu_bags" value={formData.eenc_ambu_bags ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-            <FormGroup label="العدد الكلي لجهاز الشفط اليدوي"><Input type="number" name="eenc_manual_suction" value={formData.eenc_manual_suction ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-            <FormGroup label="ساعة حائط"><Select name="eenc_wall_clock" value={formData.eenc_wall_clock || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
-            <FormGroup label="جهاز التعقيم بالبخار"><Select name="eenc_steam_sterilizer" value={formData.eenc_steam_sterilizer || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
-        </div>
-    </>
-);
-
-export const NeonatalFormFields = ({ formData, handleChange, handleCheckboxGroupChange, isReadOnly = false }) => (
-    <>
-        <h3 className="text-xl font-semibold mb-4">تفاصيل وحدة رعاية حديثي الولادة</h3>
-        <FormGroup label="مستوى الرعاية">
-            <div className="space-y-3">
-                <label className="p-3 border rounded-md hover:bg-gray-50 transition-colors flex items-center justify-between cursor-pointer"><span className="font-medium text-gray-700">أولي (رعاية أساسية لحديثي الولادة)</span><Checkbox name="neonatal_level_of_care" value="primary" label="" checked={!!formData.neonatal_level_of_care?.primary} onChange={handleCheckboxGroupChange} disabled={isReadOnly} /></label>
-                <label className="p-3 border rounded-md hover:bg-gray-50 transition-colors flex items-center justify-between cursor-pointer"><span className="font-medium text-gray-700">ثانوي (وحدة رعاية خاصة لحديثي الولادة)</span><Checkbox name="neonatal_level_of_care" value="secondary" label="" checked={!!formData.neonatal_level_of_care?.secondary} onChange={handleCheckboxGroupChange} disabled={isReadOnly} /></label>
-                <label className="p-3 border rounded-md hover:bg-gray-50 transition-colors flex items-center justify-between cursor-pointer"><span className="font-medium text-gray-700">ثالثوي (وحدة العناية المركزة لحديثي الولادة)</span><Checkbox name="neonatal_level_of_care" value="tertiary" label="" checked={!!formData.neonatal_level_of_care?.tertiary} onChange={handleCheckboxGroupChange} disabled={isReadOnly} /></label>
+    return (
+        <div className="border border-sky-200 rounded-lg overflow-hidden bg-white shadow-sm">
+            {/* Main Section Header with Blue Background */}
+            <div className="bg-sky-100 px-4 py-3 border-b border-sky-200">
+                <h3 className="text-lg font-semibold text-sky-800">IMNCI Services (خدمات العلاج المتكامل لأمراض الطفولة)</h3>
             </div>
-        </FormGroup>
-        <hr className="my-4" />
-        <h4 className="font-semibold mt-4 mb-2">خدمات ملحقة</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <label className="p-3 border rounded-md hover:bg-gray-50 transition-colors flex items-center justify-between cursor-pointer">
-                <span className="font-medium text-gray-700">وحدة رعاية الكنغر (KMC unit)</span>
-                <Checkbox name="neonatal_kmc_unit" label="" checked={formData.neonatal_kmc_unit === 'Yes'} onChange={handleChange} disabled={isReadOnly} />
-            </label>
-            <label className="p-3 border rounded-md hover:bg-gray-50 transition-colors flex items-center justify-between cursor-pointer">
-                <span className="font-medium text-gray-700">وحدة الرضاعة الطبيعية (breastfeeding unit)</span>
-                <Checkbox name="neonatal_breastfeeding_unit" label="" checked={formData.neonatal_breastfeeding_unit === 'Yes'} onChange={handleChange} disabled={isReadOnly} />
-            </label>
-            <label className="p-3 border rounded-md hover:bg-gray-50 transition-colors flex items-center justify-between cursor-pointer">
-                <span className="font-medium text-gray-700">وحدة تعقيم (sterilization unit)</span>
-                <Checkbox name="neonatal_sterilization_unit" label="" checked={formData.neonatal_sterilization_unit === 'Yes'} onChange={handleChange} disabled={isReadOnly} />
-            </label>
-            <label className="p-3 border rounded-md hover:bg-gray-50 transition-colors flex items-center justify-between cursor-pointer">
-                <span className="font-medium text-gray-700">الترصد والحماية من عدوى التسمم الدموي</span>
-                <Checkbox name="neonatal_sepsis_surveillance" label="" checked={formData.neonatal_sepsis_surveillance === 'Yes'} onChange={handleChange} disabled={isReadOnly} />
-            </label>
+            <div className="p-5 space-y-6">
+                <FormGroup label="هل تتوفر خدمة العلاج المتكامل لأمراض الطفولة؟">
+                    <Select name="وجود_العلاج_المتكامل_لامراض_الطفولة" value={formData['وجود_العلاج_المتكامل_لامراض_الطفولة'] || ''} onChange={handleChange} disabled={isReadOnly} required>
+                        <option value="">اختر...</option>
+                        <option value="Yes">نعم</option>
+                        <option value="No">لا</option>
+                    </Select>
+                </FormGroup>
+
+                {/* Conditionally Rendered Details Section */}
+                {hasService && (
+                    <div className="space-y-6 animate-fade-in pt-4 border-t border-gray-200">
+                        <div>
+                            <h4 className="text-lg font-semibold mb-4 text-sky-800 bg-sky-50 px-4 py-2 border border-sky-100 rounded-md">معلومات الكادر</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                <FormGroup label="العدد الكلي للكوادر الطبية العاملة (أطباء ومساعدين)"><Input type="number" name="العدد_الكلي_للكوادر_الطبية_العاملة_أطباء_ومساعدين" value={formData['العدد_الكلي_للكوادر_الطبية_العاملة_أطباء_ومساعدين'] ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label="العدد الكلي للكودار المدربة على العلاج المتكامل"><Input type="number" name="العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل" value={formData['العدد_الكلي_للكودار_المدربة_على_العلاج_المتكامل'] ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            </div>
+                            <div className="overflow-x-auto bg-white border rounded">
+                                <table className="min-w-full border-collapse text-sm">
+                                    <thead className="bg-gray-100"><tr><th className="border p-2 text-right">الاسم</th><th className="border p-2 text-right">الوصف الوظيفي</th><th className="border p-2 text-right">هل مدرب</th><th className="border p-2 text-right">تاريخ اخر تدريب</th><th className="border p-2 text-right">رقم الهاتف</th><th className="border p-2 text-right">إجراء</th></tr></thead>
+                                    <tbody>
+                                        {(formData.imnci_staff || []).map((staff, index) => (
+                                            <tr key={index}>
+                                                <td className="border p-1"><Input name="name" value={staff.name} onChange={(e) => handleStaffChange(index, e)} disabled={isReadOnly} /></td>
+                                                <td className="border p-1"><Select name="job_title" value={staff.job_title} onChange={(e) => handleStaffChange(index, e)} disabled={isReadOnly}><option value="">اختر</option><option value="طبيب">طبيب</option><option value="مساعد طبي">مساعد طبي</option><option value="ممرض معالج">ممرض معالج</option></Select></td>
+                                                <td className="border p-1"><Select name="is_trained" value={staff.is_trained} onChange={(e) => handleStaffChange(index, e)} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></td>
+                                                <td className="border p-1"><Input type="date" name="training_date" value={staff.training_date} onChange={(e) => handleStaffChange(index, e)} disabled={staff.is_trained !== 'Yes' || isReadOnly} /></td>
+                                                <td className="border p-1"><Input type="tel" name="phone" value={staff.phone} onChange={(e) => handleStaffChange(index, e)} disabled={isReadOnly} /></td>
+                                                <td className="border p-1 text-center"><Button size="sm" variant="danger" type="button" onClick={(e) => handleRemoveStaffRow(e, index)} disabled={isReadOnly}>حذف</Button></td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <Button type="button" onClick={(e) => handleAddStaffRow(e)} variant="secondary" className="mt-3" disabled={isReadOnly}>إضافة كادر</Button>
+                        </div>
+
+                        <hr className="border-gray-200" />
+                        
+                        <div>
+                            <h4 className="text-lg font-semibold mb-4 text-sky-800 bg-sky-50 px-4 py-2 border border-sky-100 rounded-md">الموارد والمعدات المتاحة</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <FormGroup label="وجود سجل علاج متكامل"><Select name="وجود_سجل_علاج_متكامل" value={formData['وجود_سجل_علاج_متكامل'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
+                                <FormGroup label="وجود كتيب لوحات"><Select name="وجود_كتيب_لوحات" value={formData['وجود_كتيب_لوحات'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
+                                <FormGroup label="ميزان وزن"><Select name="وجود_ميزان_وزن" value={formData['ميزان_وزن'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
+                                <FormGroup label="ميزان طول"><Select name="وجود_ميزان_طول" value={formData['ميزان_طول'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
+                                <FormGroup label="ميزان حرارة"><Select name="وجود_ميزان_حرارة" value={formData['ميزان_حرارة'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
+                                <FormGroup label="ساعة مؤقت"><Select name="ساعة_مؤقت" value={formData['ساعة_مؤقت'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
+                                <FormGroup label="غرفة إرواء"><Select name="غرفة_إرواء" value={formData['غرفة_إرواء'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
+                            </div>
+                        </div>
+
+                        <hr className="border-gray-200" />
+
+                        <div>
+                            <h4 className="text-lg font-semibold mb-4 text-sky-800 bg-sky-50 px-4 py-2 border border-sky-100 rounded-md">الخدمات الاخرى</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4">
+                                <div className="p-3 bg-gray-50 border border-gray-200 rounded">
+                                    <FormGroup label="هل يوجد مكتب تحصين؟"><Select name="immunization_office_exists" value={formData.immunization_office_exists || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
+                                    {formData.immunization_office_exists === 'No' && <FormGroup label="اين يقع اقرب مركز تحصين؟" className="mt-3"><Input type="text" name="nearest_immunization_center" value={formData.nearest_immunization_center || ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>}
+                                </div>
+                                <div className="p-3 bg-gray-50 border border-gray-200 rounded">
+                                    <FormGroup label="هل يوجد مركز تغذية خارجي؟"><Select name="nutrition_center_exists" value={formData.nutrition_center_exists || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
+                                    {formData.nutrition_center_exists === 'No' && <FormGroup label="اين يقع اقرب مركز تغذية خارجي؟" className="mt-3"><Input type="text" name="nearest_nutrition_center" value={formData.nearest_nutrition_center || ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>}
+                                </div>
+                                <div className="p-3 bg-gray-50 border border-gray-200 rounded">
+                                    <FormGroup label="هل يوجد خدمة متابعة النمو ؟"><Select name="growth_monitoring_service_exists" value={formData.growth_monitoring_service_exists || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
-        <h4 className="font-semibold mt-4 mb-2">المعدات المتاحة</h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormGroup label="إجمالي سعة الأسرة"><Input type="number" name="neonatal_total_beds" value={formData.neonatal_total_beds ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-            <FormGroup label="العدد الكلي للحضانات (incubators)"><Input type="number" name="neonatal_total_incubators" value={formData.neonatal_total_incubators ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-            <FormGroup label="العدد الكلي للاسرة للاطفال مكتملي النمو (cots)"><Input type="number" name="neonatal_total_cots" value={formData.neonatal_total_cots ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-            <FormGroup label="أجهزة CPAP"><Input type="number" name="neonatal_cpap" value={formData.neonatal_cpap ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-            <FormGroup label="جهاز تدفئة حرارية (warmer)"><Input type="number" name="neonatal_warmer" value={formData.neonatal_warmer ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-            <FormGroup label="مضخة تسريب (infusion pump)"><Input type="number" name="neonatal_infusion_pump" value={formData.neonatal_infusion_pump ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-            <FormGroup label="مضخات الحقن (Syringe pump)"><Input type="number" name="neonatal_syringe_pump" value={formData.neonatal_syringe_pump ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-            <FormGroup label="جهاز شفط (suction machine)"><Input type="number" name="neonatal_sucker" value={formData.neonatal_sucker ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-            <FormGroup label="وحدات العلاج الضوئي (Phototherapy)"><Input type="number" name="neonatal_phototherapy" value={formData.neonatal_phototherapy ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-            <FormGroup label="أكياس الإنعاش (Ambu Bag)"><Input type="number" name="neonatal_ambu_bag" value={formData.neonatal_ambu_bag ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-            <FormGroup label="جهاز مراقبة التنفس والاكسجين (Pulse and oxygen Monitor)"><Input type="number" name="neonatal_respiration_monitor" value={formData.neonatal_respiration_monitor ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-            <FormGroup label="جهاز أكسجين (Oxygen concentrator)"><Input type="number" name="neonatal_oxygen_machine" value={formData.neonatal_oxygen_machine ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-            <FormGroup label="أسطوانة الاكسجين (oxygen cylinder)"><Input type="number" name="neonatal_oxygen_cylinder" value={formData.neonatal_oxygen_cylinder ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-            <FormGroup label="جهاز تنفس صناعي (Mechanical ventilator)"><Input type="number" name="neonatal_mechanical_ventilator" value={formData.neonatal_mechanical_ventilator ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
-            <FormGroup label="حاضنة محمولة (Portable Incubator)"><Input type="number" name="neonatal_portable_incubator" value={formData.neonatal_portable_incubator ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+    );
+};
+
+export const EENCFormFields = ({ formData, handleChange, isReadOnly = false }) => {
+    const hasService = formData.eenc_provides_essential_care === 'Yes';
+
+    return (
+        <div className="border border-sky-200 rounded-lg overflow-hidden bg-white shadow-sm">
+            {/* Main Section Header with Blue Background */}
+            <div className="bg-sky-100 px-4 py-3 border-b border-sky-200">
+                <h3 className="text-lg font-semibold text-sky-800">EENC Services (خدمات الرعاية الطارئة لحديثي الولادة)</h3>
+            </div>
+            <div className="p-5 space-y-6">
+                <FormGroup label="هل تقدم الرعاية الضرورية المبكرة لحديثي الولادة والأطفال؟">
+                    <Select name="eenc_provides_essential_care" value={formData.eenc_provides_essential_care || ''} onChange={handleChange} disabled={isReadOnly} required>
+                        <option value="">اختر...</option>
+                        <option value="Yes">نعم</option>
+                        <option value="No">لا</option>
+                    </Select>
+                </FormGroup>
+
+                {hasService && (
+                    <div className="space-y-6 animate-fade-in pt-4 border-t border-gray-200">
+                        <FormGroup label="عدد الكوادر الصحية المدربة"><Input type="number" name="eenc_trained_workers" value={formData.eenc_trained_workers ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                        <hr className="border-gray-200" />
+                        <div>
+                            <h4 className="text-lg font-semibold mb-4 text-sky-800 bg-sky-50 px-4 py-2 border border-sky-100 rounded-md">الموارد والمعدات المتاحة</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <FormGroup label="العدد الكلي لسرير الولادة"><Input type="number" name="eenc_delivery_beds" value={formData.eenc_delivery_beds ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label="العدد الكلي لمحطات الانعاش"><Input type="number" name="eenc_resuscitation_stations" value={formData.eenc_resuscitation_stations ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label="العدد الكلي لاجهزة التدفئة"><Input type="number" name="eenc_warmers" value={formData.eenc_warmers ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label="العدد الكلي لجهاز الامبوباق"><Input type="number" name="eenc_ambu_bags" value={formData.eenc_ambu_bags ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label="العدد الكلي لجهاز الشفط اليدوي"><Input type="number" name="eenc_manual_suction" value={formData.eenc_manual_suction ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label="ساعة حائط"><Select name="eenc_wall_clock" value={formData.eenc_wall_clock || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
+                                <FormGroup label="جهاز التعقيم بالبخار"><Select name="eenc_steam_sterilizer" value={formData.eenc_steam_sterilizer || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
-    </>
-);
+    );
+};
+
+export const NeonatalFormFields = ({ formData, handleChange, handleCheckboxGroupChange, isReadOnly = false }) => {
+    const hasService = !!(formData.neonatal_level_of_care?.primary || formData.neonatal_level_of_care?.secondary || formData.neonatal_level_of_care?.tertiary);
+
+    return (
+        <div className="border border-sky-200 rounded-lg overflow-hidden bg-white shadow-sm">
+            {/* Main Section Header with Blue Background */}
+            <div className="bg-sky-100 px-4 py-3 border-b border-sky-200">
+                <h3 className="text-lg font-semibold text-sky-800">Neonatal Care Unit (وحدة رعاية حديثي الولادة)</h3>
+            </div>
+            <div className="p-5 space-y-6">
+                <FormGroup label="مستوى رعاية وحدة حديثي الولادة (يرجى التحديد لعرض التفاصيل الإضافية)">
+                    <div className="space-y-3 mt-2">
+                        <label className="p-3 border border-gray-200 rounded-md hover:bg-gray-50 transition-colors flex items-center justify-between cursor-pointer"><span className="font-medium text-gray-700">أولي (رعاية أساسية لحديثي الولادة)</span><Checkbox name="neonatal_level_of_care" value="primary" label="" checked={!!formData.neonatal_level_of_care?.primary} onChange={handleCheckboxGroupChange} disabled={isReadOnly} /></label>
+                        <label className="p-3 border border-gray-200 rounded-md hover:bg-gray-50 transition-colors flex items-center justify-between cursor-pointer"><span className="font-medium text-gray-700">ثانوي (وحدة رعاية خاصة لحديثي الولادة)</span><Checkbox name="neonatal_level_of_care" value="secondary" label="" checked={!!formData.neonatal_level_of_care?.secondary} onChange={handleCheckboxGroupChange} disabled={isReadOnly} /></label>
+                        <label className="p-3 border border-gray-200 rounded-md hover:bg-gray-50 transition-colors flex items-center justify-between cursor-pointer"><span className="font-medium text-gray-700">ثالثوي (وحدة العناية المركزة لحديثي الولادة)</span><Checkbox name="neonatal_level_of_care" value="tertiary" label="" checked={!!formData.neonatal_level_of_care?.tertiary} onChange={handleCheckboxGroupChange} disabled={isReadOnly} /></label>
+                    </div>
+                </FormGroup>
+
+                {hasService && (
+                    <div className="space-y-6 animate-fade-in pt-4 border-t border-gray-200">
+                        <div>
+                            <h4 className="text-lg font-semibold mb-4 text-sky-800 bg-sky-50 px-4 py-2 border border-sky-100 rounded-md">خدمات ملحقة</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <label className="p-3 border border-gray-200 rounded-md hover:bg-sky-50 transition-colors flex items-center justify-between cursor-pointer">
+                                    <span className="font-medium text-gray-700">وحدة رعاية الكنغر (KMC unit)</span>
+                                    <Checkbox name="neonatal_kmc_unit" label="" checked={formData.neonatal_kmc_unit === 'Yes'} onChange={handleChange} disabled={isReadOnly} />
+                                </label>
+                                <label className="p-3 border border-gray-200 rounded-md hover:bg-sky-50 transition-colors flex items-center justify-between cursor-pointer">
+                                    <span className="font-medium text-gray-700">وحدة الرضاعة الطبيعية (breastfeeding unit)</span>
+                                    <Checkbox name="neonatal_breastfeeding_unit" label="" checked={formData.neonatal_breastfeeding_unit === 'Yes'} onChange={handleChange} disabled={isReadOnly} />
+                                </label>
+                                <label className="p-3 border border-gray-200 rounded-md hover:bg-sky-50 transition-colors flex items-center justify-between cursor-pointer">
+                                    <span className="font-medium text-gray-700">وحدة تعقيم (sterilization unit)</span>
+                                    <Checkbox name="neonatal_sterilization_unit" label="" checked={formData.neonatal_sterilization_unit === 'Yes'} onChange={handleChange} disabled={isReadOnly} />
+                                </label>
+                                <label className="p-3 border border-gray-200 rounded-md hover:bg-sky-50 transition-colors flex items-center justify-between cursor-pointer">
+                                    <span className="font-medium text-gray-700">الترصد والحماية من عدوى التسمم الدموي</span>
+                                    <Checkbox name="neonatal_sepsis_surveillance" label="" checked={formData.neonatal_sepsis_surveillance === 'Yes'} onChange={handleChange} disabled={isReadOnly} />
+                                </label>
+                            </div>
+                        </div>
+
+                        <hr className="border-gray-200" />
+                        
+                        <div>
+                            <h4 className="text-lg font-semibold mb-4 text-sky-800 bg-sky-50 px-4 py-2 border border-sky-100 rounded-md">المعدات المتاحة</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <FormGroup label="إجمالي سعة الأسرة"><Input type="number" name="neonatal_total_beds" value={formData.neonatal_total_beds ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label="العدد الكلي للحضانات (incubators)"><Input type="number" name="neonatal_total_incubators" value={formData.neonatal_total_incubators ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label="العدد الكلي للاسرة للاطفال مكتملي النمو (cots)"><Input type="number" name="neonatal_total_cots" value={formData.neonatal_total_cots ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label="أجهزة CPAP"><Input type="number" name="neonatal_cpap" value={formData.neonatal_cpap ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label="جهاز تدفئة حرارية (warmer)"><Input type="number" name="neonatal_warmer" value={formData.neonatal_warmer ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label="مضخة تسريب (infusion pump)"><Input type="number" name="neonatal_infusion_pump" value={formData.neonatal_infusion_pump ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label="مضخات الحقن (Syringe pump)"><Input type="number" name="neonatal_syringe_pump" value={formData.neonatal_syringe_pump ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label="جهاز شفط (suction machine)"><Input type="number" name="neonatal_sucker" value={formData.neonatal_sucker ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label="وحدات العلاج الضوئي (Phototherapy)"><Input type="number" name="neonatal_phototherapy" value={formData.neonatal_phototherapy ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label="أكياس الإنعاش (Ambu Bag)"><Input type="number" name="neonatal_ambu_bag" value={formData.neonatal_ambu_bag ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label="جهاز مراقبة التنفس والاكسجين (Pulse and oxygen Monitor)"><Input type="number" name="neonatal_respiration_monitor" value={formData.neonatal_respiration_monitor ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label="جهاز أكسجين (Oxygen concentrator)"><Input type="number" name="neonatal_oxygen_machine" value={formData.neonatal_oxygen_machine ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label="أسطوانة الاكسجين (oxygen cylinder)"><Input type="number" name="neonatal_oxygen_cylinder" value={formData.neonatal_oxygen_cylinder ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label="جهاز تنفس صناعي (Mechanical ventilator)"><Input type="number" name="neonatal_mechanical_ventilator" value={formData.neonatal_mechanical_ventilator ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                                <FormGroup label="حاضنة محمولة (Portable Incubator)"><Input type="number" name="neonatal_portable_incubator" value={formData.neonatal_portable_incubator ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
 
 export const CriticalCareFormFields = ({ formData, handleChange, isReadOnly = false }) => (
-    <>
-        <h3 className="text-xl font-semibold mb-4">تفاصيل الطوارئ والرعاية الحرجة</h3>
-        <div className="space-y-4">
-            <div className="p-4 border rounded-md hover:bg-gray-50 transition-colors">
+    <div className="border border-sky-200 rounded-lg overflow-hidden bg-white shadow-sm">
+        {/* Main Section Header with Blue Background */}
+        <div className="bg-sky-100 px-4 py-3 border-b border-sky-200">
+            <h3 className="text-lg font-semibold text-sky-800">Emergency & Critical Care (الطوارئ والرعاية الحرجة)</h3>
+        </div>
+        <div className="p-5 space-y-4">
+            {/* ETAT Section */}
+            <div className={`p-4 border rounded-md transition-colors ${formData.etat_has_service === 'Yes' ? 'bg-sky-50 border-sky-300' : 'bg-gray-50 border-gray-200 hover:bg-white'}`}>
                 <div className="flex items-center justify-between">
-                    <span className="font-medium text-gray-700">المنشأة تقدم خدمة الفرز والتقييم والعلاج والتوجيه في حالات الطوارئ (ETAT)</span>
+                    <span className="font-medium text-gray-800">المنشأة تقدم خدمة الفرز والتقييم والعلاج لطوارئ الأطفال (ETAT)</span>
                     <Checkbox name="etat_has_service" label="" checked={formData.etat_has_service === 'Yes'} onChange={handleChange} disabled={isReadOnly} />
                 </div>
-                {formData.etat_has_service === 'Yes' && (<FormGroup label="عدد الكوادر المدربة على ETAT" className="mt-4"><Input type="number" name="etat_trained_workers" value={formData.etat_trained_workers ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>)}
+                {formData.etat_has_service === 'Yes' && (
+                    <div className="mt-4 pt-4 border-t border-sky-200 animate-fade-in">
+                        <FormGroup label="عدد الكوادر المدربة على ETAT">
+                            <Input type="number" name="etat_trained_workers" value={formData.etat_trained_workers ?? ''} onChange={handleChange} disabled={isReadOnly} />
+                        </FormGroup>
+                    </div>
+                )}
             </div>
-            <div className="p-4 border rounded-md hover:bg-gray-50 transition-colors">
+
+            {/* HDU Section */}
+            <div className={`p-4 border rounded-md transition-colors ${formData.hdu_has_service === 'Yes' ? 'bg-sky-50 border-sky-300' : 'bg-gray-50 border-gray-200 hover:bg-white'}`}>
                 <div className="flex items-center justify-between">
-                    <span className="font-medium text-gray-700">المنشأة تقدم خدمة وحدة الرعاية عالية الاعتماد (HDU)</span>
+                    <span className="font-medium text-gray-800">المنشأة تقدم خدمة وحدة العناية الوسيطة (HDU)</span>
                     <Checkbox name="hdu_has_service" label="" checked={formData.hdu_has_service === 'Yes'} onChange={handleChange} disabled={isReadOnly} />
                 </div>
-                {formData.hdu_has_service === 'Yes' && (<FormGroup label="سعة أسرة HDU" className="mt-4"><Input type="number" name="hdu_bed_capacity" value={formData.hdu_bed_capacity ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>)}
+                {formData.hdu_has_service === 'Yes' && (
+                    <div className="mt-4 pt-4 border-t border-sky-200 animate-fade-in">
+                        <FormGroup label="سعة أسرة HDU">
+                            <Input type="number" name="hdu_bed_capacity" value={formData.hdu_bed_capacity ?? ''} onChange={handleChange} disabled={isReadOnly} />
+                        </FormGroup>
+                    </div>
+                )}
             </div>
-            <div className="p-4 border rounded-md hover:bg-gray-50 transition-colors">
+
+            {/* PICU Section */}
+            <div className={`p-4 border rounded-md transition-colors ${formData.picu_has_service === 'Yes' ? 'bg-sky-50 border-sky-300' : 'bg-gray-50 border-gray-200 hover:bg-white'}`}>
                 <div className="flex items-center justify-between">
-                    <span className="font-medium text-gray-700">المنشأة تقدم خدمة وحدة العناية المركزة للأطفال (PICU)</span>
+                    <span className="font-medium text-gray-800">المنشأة تقدم خدمة وحدة العناية المركزة للأطفال (PICU)</span>
                     <Checkbox name="picu_has_service" label="" checked={formData.picu_has_service === 'Yes'} onChange={handleChange} disabled={isReadOnly} />
                 </div>
-                {formData.picu_has_service === 'Yes' && (<FormGroup label="سعة أسرة PICU" className="mt-4"><Input type="number" name="picu_bed_capacity" value={formData.picu_bed_capacity ?? ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>)}
+                {formData.picu_has_service === 'Yes' && (
+                    <div className="mt-4 pt-4 border-t border-sky-200 animate-fade-in">
+                        <FormGroup label="سعة أسرة PICU">
+                            <Input type="number" name="picu_bed_capacity" value={formData.picu_bed_capacity ?? ''} onChange={handleChange} disabled={isReadOnly} />
+                        </FormGroup>
+                    </div>
+                )}
             </div>
         </div>
-    </>
+    </div>
 );

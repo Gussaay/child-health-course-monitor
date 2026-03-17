@@ -34,13 +34,10 @@ export const DEFAULT_ROLE_PERMISSIONS = {
         'canManageFacilities'
     ],
     'user': [
-        'canViewDashboard', 'canViewCourse', 'canViewHumanResource', 'canViewFacilities', 'canViewSkillsMentorship'
+        'canViewDashboard', 'canViewCourse', 'canViewHumanResource', 'canViewFacilities' // <-- Removed canViewSkillsMentorship
     ]
 };
 
 export const applyDerivedPermissions = (basePermissions) => {
-    // Logic to ensure derived permissions are set correctly
-    // For simplicity in this extraction, we return the base. 
-    // If you had complex logic in AdminDashboard, copy it here.
     return basePermissions; 
 };

@@ -814,6 +814,14 @@ export default function App() {
             return ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: true }), {});
         }
         
+        // --- STRICT OVERRIDE FOR STANDARD USERS ---
+        // Forcefully deny Mentorship access to standard users, ignoring stale Firestore data
+        if (userRole?.toLowerCase() === 'user') {
+            derivedPermissions.canViewSkillsMentorship = false;
+            derivedPermissions.canManageSkillsMentorship = false;
+        }
+        // ------------------------------------------
+        
         const ALL_PERMISSIONS_MINIMAL = ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
         return { ...ALL_PERMISSIONS_MINIMAL, ...derivedPermissions };
     }, [userRole, userPermissions]);
@@ -1236,8 +1244,6 @@ export default function App() {
         }
     }, [permissions, selectedCourseId, navigate, fetchCourses]);
 
-
-
     const handleDeleteParticipant = useCallback(async (participantId) => {
         if (!permissions.canManageCourse) return;
         if (window.confirm('Are you sure you want to delete this participant and all their data?')) {
@@ -1257,6 +1263,26 @@ export default function App() {
             }
         }
     }, [permissions, selectedCourseId, selectedParticipantId, navigate]);
+
+    // --- ADDED MISSING handleDeleteFacilitator ---
+    const handleDeleteFacilitator = useCallback(async (facilitatorId) => {
+        if (!permissions.canManageHumanResource) return;
+        if (window.confirm('Are you sure you want to delete this facilitator?')) {
+            try {
+                await deleteFacilitator(facilitatorId);
+                await fetchFacilitators(true);
+                
+                if (selectedFacilitatorId === facilitatorId) {
+                    setSelectedFacilitatorId(null);
+                    navigate('humanResources');
+                }
+                setToast({ show: true, message: 'Facilitator deleted successfully.', type: 'success' });
+            } catch (error) {
+                console.error("Failed to delete facilitator:", error);
+                setToast({ show: true, message: `Failed to delete facilitator: ${error.message}`, type: 'error' });
+            }
+        }
+    }, [permissions.canManageHumanResource, fetchFacilitators, selectedFacilitatorId, navigate]);
 
     const handleImportParticipants = useCallback(async ({ participantsToImport, facilitiesToUpsert }) => {
         if (!permissions.canUseSuperUserAdvancedFeatures) return;
@@ -1363,7 +1389,7 @@ export default function App() {
                 else if (finalUrl) { finalUrlsToSave.push(finalUrl); }
                 else if (originalUrl && !finalUrl) { await deleteFile(originalUrl); }
             }
-            const payload = { id: reportData.id, courseId: reportData.courseId, summary: reportData.summary, recommendations: reportData.recommendations, potentialFacilitators: reportData.potentialFacilitators, pdfUrl: pdfUrl, galleryImageUrls: finalUrlsToSave, participantsForFollowUp: reportData.participantsForFollowUp };
+            const payload = { id: reportData.id, courseId: reportData.courseId, summary: reportData.summary, recommendations: reportData.recommendations, potentialFacilitators: reportData.participantsForFollowUp, pdfUrl: pdfUrl, galleryImageUrls: finalUrlsToSave, participantsForFollowUp: reportData.participantsForFollowUp };
             await upsertFinalReport(payload);
             const savedReport = await getFinalReportByCourseId(reportData.courseId);
             setCourseDetailsCache(prev => ({

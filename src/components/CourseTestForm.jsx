@@ -19,7 +19,7 @@ export const EENC_TEST_QUESTIONS = [
     { id: 'q3', text: '3. After a baby is born, you should call out the time of birth (accurate to minute and second), then what?', type: 'mc', options: [{ id: 'a', text: 'Clamp and cut the cord.' }, { id: 'b', text: 'Thoroughly dry the baby.' }, { id: 'c', text: 'Suction the baby’s mouth and nose.' }, { id: 'd', text: 'Hold the baby upside-down to let out the secretion' }], correctAnswer: 'b' },
     { id: 'q4', text: '4. During thorough drying and stimulation of the baby, your rapid assessment shows she is crying. What is your next action?', type: 'mc', options: [{ id: 'a', text: 'Suction the baby’s mouth and nose.' }, { id: 'b', text: 'Clamp and cut the cord.' }, { id: 'c', text: 'Place the baby in skin-to-skin contact with the mother.' }, { id: 'd', text: 'Place the baby onto the breast.' }], correctAnswer: 'c' },
     { id: 'q5', text: '5. For which reason(s)should the baby’s mouth and nose be suctioned after thorough drying?', type: 'mc', options: [{ id: 'a', text: 'The baby is breathing and the amniotic fluid is thickly stained with meconium and the baby is covered in meconium.' }, { id: 'b', text: 'The baby is not breathing and the amniotic fluid is thickly stained with meconium and the baby is covered in meconium.' }, { id: 'c', text: 'The baby is not breathing and there is no airway obstruction visible.' }, { id: 'd', text: 'All of the above.' }], correctAnswer: 'b' },
-    { id: 'q6', text: '6. A baby has feeding cues indicating she is ready to breast feed immediately after birth.', type: 'mc', options: [{ id: 'a', text: 'True' }, { id: 'b', text: 'False' }], correctAnswer: 'a' },
+    { id: 'q6', text: '6. Any baby is ready to breast feed immediately after birth.', type: 'mc', options: [{ id: 'a', text: 'True' }, { id: 'b', text: 'False' }], correctAnswer: 'b' },
     { id: 'q7', text: '7. What is the approximate capacity of a newborn\'s stomach? Circle A, B, C or D.', type: 'mc', imageSrc: '/eenc-q7.jpg', options: [{ id: 'a', text: 'A' }, { id: 'b', text: 'B' }, { id: 'c', text: 'C' }, { id: 'd', text: 'D' }], correctAnswer: 'd' },
     { id: 'q8', text: '8. List 3 signs a newborn baby is ready to breast feed (“feeding cues”).', type: 'open', lines: 3 },
     { id: 'q9', text: '9. List 3 signs a baby has good attachment to the breast.', type: 'open', lines: 3 },
@@ -50,7 +50,7 @@ export const SSNB_WARMER_TEST_QUESTIONS = [
     { id: 'q1', text: '1. ما هي الرعاية القياسية لتوفير الدف للاطفال حديثي الولادة حسب توصيات منظمة الصحة العالمية ؟', type: 'mc', options: [{ id: 'a', text: 'استخدام الدفايات الكهربائية' }, { id: 'b', text: 'استخدام الدفايات المتنقلة' }, { id: 'c', text: 'وضع الطفل ملتصقا جلد بجلد' }, { id: 'd', text: 'استخدام الملابس القطنية' }], correctAnswer: 'c' },
     { id: 'q2', text: '2. ما هي درجة الحرارة المناسبة للطفل حديث الولادة :', type: 'mc', options: [{ id: 'a', text: 'اكثر من 37 درجة' }, { id: 'b', text: 'من 36.5 الى 37.5 درجة' }, { id: 'c', text: 'اقل من 36.5 درجة' }], correctAnswer: 'b' },
     { id: 'q3', text: '3. ما هي اسباب استخدام الدفايات المتنقلة :', type: 'mc', options: [{ id: 'a', text: 'وضع كل الاطفال الخدج وناقصي الوزن' }, { id: 'b', text: 'استخدام الدفاية في حالة النقل من مكان لمكان' }], correctAnswer: 'b' },
-    { id: 'q4', text: '4. في تقديرك كم من الزمن سوف تحتفظ الدفاية بالحرارة عند وضع الطفل بداخلها', type: 'mc', options: [{ id: 'a', text: 'ساعة واحدة' }, { id: 'b', text: '4 ساعات - 6 ساعات' }, { id: 'c', text: 'اكثر من 10 ساعات' }], correctAnswer: 'b' },
+    { id: 'q4', text: '4. في تقدير كم من الزمن سوف تحتفظ الدفاية بالحرارة عند وضع الطفل بداخلها', type: 'mc', options: [{ id: 'a', text: 'ساعة واحدة' }, { id: 'b', text: '4 ساعات - 6 ساعات' }, { id: 'c', text: 'اكثر من 10 ساعات' }], correctAnswer: 'b' },
     { id: 'q5', text: '5. كيف يتم تعقيم لبسة الدفاية', type: 'mc', options: [{ id: 'a', text: 'غسلها بالماء والصابون ثم المسح بالكجول قبل الاستخدام' }, { id: 'b', text: 'نقعها في محلول الكلور' }], correctAnswer: 'a' }
 ];
 
@@ -187,12 +187,18 @@ const initializeManualScores = (questions, existingScores = {}) => {
     return scores;
 };
 
-// ... [Keep TestResultScreen, SearchableSelect exactly as they were] ...
 const TestResultScreen = ({ 
     participantName, testType, score, total, percentage, onBack, 
-    canManageTests, onEdit, onDelete, isExistingResult 
+    canManageTests, onEdit, onDelete, isExistingResult, resultData
 }) => {
-    const percent = percentage.toFixed(1);
+    // Determine if we should only show the MCQ score (has open questions and not yet graded)
+    const showMcqOnly = resultData?.hasOpenQuestions && !resultData?.isGraded;
+    
+    const displayPercent = showMcqOnly ? (resultData.mcqPercentage || 0) : percentage;
+    const displayScore = showMcqOnly ? (resultData.mcqScore || 0) : score;
+    const displayTotal = showMcqOnly ? (resultData.mcqTotal || 0) : total;
+
+    const percent = displayPercent.toFixed(1);
     const scoreClass = percent >= 80 ? 'text-green-600' : percent >= 60 ? 'text-yellow-600' : 'text-red-600';
 
     return (
@@ -206,12 +212,25 @@ const TestResultScreen = ({
                 )}
                 <div className="my-8">
                     <div className={`text-6xl font-bold ${scoreClass}`}>{percent}%</div>
-                    <div className="text-xl text-gray-700 mt-2">({score} / {total} Total Points)</div>
-                    <p className="text-sm text-gray-500 mt-4">Score includes both multiple-choice and manually graded questions.</p>
+                    {/* Only show scores if it's not a legacy record missing score totals */}
+                    {!resultData?.isLegacy && (
+                        <div className="text-xl text-gray-700 mt-2">({displayScore} / {displayTotal} Total Points)</div>
+                    )}
+                    
+                    {/* Dynamic helper text based on grading status */}
+                    {showMcqOnly ? (
+                        <p className="text-sm text-blue-600 mt-4 font-medium max-w-lg mx-auto">
+                            * Score reflects auto-graded multiple choice questions only. Open-ended questions will be graded later by a facilitator.
+                        </p>
+                    ) : (
+                        !resultData?.isLegacy && (
+                            <p className="text-sm text-gray-500 mt-4">Score includes both multiple-choice and manually graded questions.</p>
+                        )
+                    )}
                 </div>
                 <div className="flex justify-center gap-3">
                     <Button variant="secondary" onClick={onBack}>Back</Button>
-                    {canManageTests && (
+                    {canManageTests && !resultData?.isLegacy && (
                         <>
                             <Button variant="primary" onClick={onEdit}>Edit / Grade Test</Button>
                             <Button variant="danger" onClick={onDelete}>Delete Test</Button>
@@ -308,15 +327,31 @@ const SearchableSelect = ({ options, value, onChange, placeholder, disabled }) =
 const TestScoresDashboard = ({ 
     courseId,
     participants, 
-    participantTests, 
+    participantTests = [], // Ensure it defaults to empty array
     onOpenEntry,
     onEdit,
     onDelete,
     canManageTests
 }) => {
-    // Helper to get a specific test result
-    const getTest = (participantId, type) => {
-        return participantTests.find(t => t.participantId === participantId && t.testType === type);
+    
+    // --- UPDATED: Helper to get a specific test result, falling back to legacy flat scores ---
+    const getTest = (participant, type) => {
+        // 1. Try to find the new, detailed test record format first
+        const detailedTest = participantTests.find(t => t.participantId === participant.id && t.testType === type);
+        if (detailedTest) return detailedTest;
+
+        // 2. Fallback to the legacy flat score stored directly on the participant profile
+        const legacyScore = type === 'pre-test' ? participant.pre_test_score : participant.post_test_score;
+        if (legacyScore !== undefined && legacyScore !== null && legacyScore !== '') {
+            return { 
+                percentage: Number(legacyScore), 
+                isLegacy: true, 
+                isGraded: true, 
+                hasOpenQuestions: false 
+            };
+        }
+        
+        return null; // No test found
     };
 
     // Helper for Percentage Styling
@@ -359,8 +394,8 @@ const TestScoresDashboard = ({
                     <tr><td colSpan="4" className="text-center p-4">No participants found.</td></tr>
                 ) : (
                     participants.map(p => {
-                        const preTest = getTest(p.id, 'pre-test');
-                        const postTest = getTest(p.id, 'post-test');
+                        const preTest = getTest(p, 'pre-test');
+                        const postTest = getTest(p, 'post-test');
 
                         return (
                             <tr key={p.id} className="hover:bg-gray-50">
@@ -372,27 +407,55 @@ const TestScoresDashboard = ({
                                     <div className="flex items-center gap-4">
                                         {preTest ? (
                                             <>
-                                                <span className={getScoreStyle(preTest.percentage)}>
-                                                    {preTest.percentage.toFixed(1)}%
-                                                </span>
+                                                <div className="flex flex-col items-start gap-1">
+                                                    <span className={getScoreStyle(preTest.percentage)}>
+                                                        {preTest.percentage.toFixed(1)}%
+                                                    </span>
+                                                    {preTest.isLegacy && (
+                                                        <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider" title="Score recorded using older version">
+                                                            Legacy Record
+                                                        </span>
+                                                    )}
+                                                    {preTest.hasOpenQuestions && !preTest.isGraded && (
+                                                        <span className="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                                                            Pending Grade
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <div className="flex gap-1">
-                                                    <Button 
-                                                        variant="icon" 
-                                                        onClick={() => onEdit(p.id, 'pre-test')}
-                                                        title="View/Edit Test"
-                                                        className="text-gray-500 hover:text-blue-600"
-                                                    >
-                                                        <Eye size={18} />
-                                                    </Button>
-                                                    {canManageTests && (
-                                                        <Button 
-                                                            variant="icon" 
-                                                            onClick={() => onDelete(p.id, 'pre-test')}
-                                                            title="Delete Test"
-                                                            className="text-gray-500 hover:text-red-600"
-                                                        >
-                                                            <Trash2 size={18} />
-                                                        </Button>
+                                                    {!preTest.isLegacy ? (
+                                                        <>
+                                                            <Button 
+                                                                variant="icon" 
+                                                                onClick={() => onEdit(p.id, 'pre-test')}
+                                                                title="View/Edit Test"
+                                                                className="text-gray-500 hover:text-blue-600"
+                                                            >
+                                                                <Eye size={18} />
+                                                            </Button>
+                                                            {canManageTests && (
+                                                                <Button 
+                                                                    variant="icon" 
+                                                                    onClick={() => onDelete(p.id, 'pre-test')}
+                                                                    title="Delete Test"
+                                                                    className="text-gray-500 hover:text-red-600"
+                                                                >
+                                                                    <Trash2 size={18} />
+                                                                </Button>
+                                                            )}
+                                                        </>
+                                                    ) : (
+                                                        canManageTests && (
+                                                            <Button 
+                                                                size="sm" 
+                                                                variant="secondary" 
+                                                                onClick={() => onOpenEntry('pre-test', p.id)}
+                                                                className="text-xs"
+                                                                title="Override legacy score with new detailed test"
+                                                            >
+                                                                Override
+                                                            </Button>
+                                                        )
                                                     )}
                                                 </div>
                                             </>
@@ -416,27 +479,55 @@ const TestScoresDashboard = ({
                                     <div className="flex items-center gap-4">
                                         {postTest ? (
                                             <>
-                                                <span className={getScoreStyle(postTest.percentage)}>
-                                                    {postTest.percentage.toFixed(1)}%
-                                                </span>
+                                                <div className="flex flex-col items-start gap-1">
+                                                    <span className={getScoreStyle(postTest.percentage)}>
+                                                        {postTest.percentage.toFixed(1)}%
+                                                    </span>
+                                                    {postTest.isLegacy && (
+                                                        <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider" title="Score recorded using older version">
+                                                            Legacy Record
+                                                        </span>
+                                                    )}
+                                                    {postTest.hasOpenQuestions && !postTest.isGraded && (
+                                                        <span className="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                                                            Pending Grade
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <div className="flex gap-1">
-                                                    <Button 
-                                                        variant="icon" 
-                                                        onClick={() => onEdit(p.id, 'post-test')}
-                                                        title="View/Edit Test"
-                                                        className="text-gray-500 hover:text-blue-600"
-                                                    >
-                                                        <Eye size={18} />
-                                                    </Button>
-                                                    {canManageTests && (
-                                                        <Button 
-                                                            variant="icon" 
-                                                            onClick={() => onDelete(p.id, 'post-test')}
-                                                            title="Delete Test"
-                                                            className="text-gray-500 hover:text-red-600"
-                                                        >
-                                                            <Trash2 size={18} />
-                                                        </Button>
+                                                    {!postTest.isLegacy ? (
+                                                        <>
+                                                            <Button 
+                                                                variant="icon" 
+                                                                onClick={() => onEdit(p.id, 'post-test')}
+                                                                title="View/Edit Test"
+                                                                className="text-gray-500 hover:text-blue-600"
+                                                            >
+                                                                <Eye size={18} />
+                                                            </Button>
+                                                            {canManageTests && (
+                                                                <Button 
+                                                                    variant="icon" 
+                                                                    onClick={() => onDelete(p.id, 'post-test')}
+                                                                    title="Delete Test"
+                                                                    className="text-gray-500 hover:text-red-600"
+                                                                >
+                                                                    <Trash2 size={18} />
+                                                                </Button>
+                                                            )}
+                                                        </>
+                                                    ) : (
+                                                        canManageTests && (
+                                                            <Button 
+                                                                size="sm" 
+                                                                variant="secondary" 
+                                                                onClick={() => onOpenEntry('post-test', p.id)}
+                                                                className="text-xs"
+                                                                title="Override legacy score with new detailed test"
+                                                            >
+                                                                Override
+                                                            </Button>
+                                                        )
                                                     )}
                                                 </div>
                                             </>
@@ -524,7 +615,7 @@ const FacilitySelectionModal = ({
 export function CourseTestForm({ 
     course, 
     participants, 
-    participantTests, 
+    participantTests = [], 
     onSave, 
     onCancel, 
     initialParticipantId = '',
@@ -534,6 +625,13 @@ export function CourseTestForm({
     canManageTests = false,
     testType: initialTestType
 }) {
+    // Helper to normalize URL parameters ("pre", "post") to matched database values ("pre-test", "post-test")
+    const normalizeTestType = (type) => {
+        if (type === 'pre') return 'pre-test';
+        if (type === 'post') return 'post-test';
+        return type;
+    };
+
     // --- MAIN STATE: Controls View Mode (Dashboard vs Entry Form) ---
     // If it's a public view, default to 'entry'. If admin view, default to 'dashboard'
     const [viewMode, setViewMode] = useState(isPublicView ? 'entry' : 'dashboard'); 
@@ -574,8 +672,8 @@ export function CourseTestForm({
 
     const [selectedParticipantId, setSelectedParticipantId] = useState(initialParticipantId);
     
-    // --- UPDATED: If initialTestType provided (from public link params), use it. Default to 'pre-test' ---
-    const [testType, setTestType] = useState(initialTestType || 'pre-test'); 
+    // --- UPDATED: Normalize test type on initial load so internal references always use 'pre-test' or 'post-test' ---
+    const [testType, setTestType] = useState(() => normalizeTestType(initialTestType) || 'pre-test'); 
     
     const [answers, setAnswers] = useState(() => initializeAnswers(testQuestions));
     
@@ -599,10 +697,10 @@ export function CourseTestForm({
     const [showTestSubmitSuccessModal, setShowTestSubmitSuccessModal] = useState(false);
     const [lastSubmissionStats, setLastSubmissionStats] = useState(null);
 
-    // --- UPDATED: Update testType if prop changes (e.g. navigation via link with different param) ---
+    // --- UPDATED: Update testType if prop changes and normalize it ---
     useEffect(() => {
         if (initialTestType) {
-            setTestType(initialTestType);
+            setTestType(normalizeTestType(initialTestType));
         }
     }, [initialTestType]);
 
@@ -640,6 +738,7 @@ export function CourseTestForm({
     const [isParticipantInfoSaved, setIsParticipantInfoSaved] = useState(false);
     const [participantNameForDisplay, setParticipantNameForDisplay] = useState('');
     
+    // Update existing results detection to safely handle `participantTests`
     const existingResults = useMemo(() => {
         const results = { 'pre-test': null, 'post-test': null };
         if (!selectedParticipantId || !participantTests) return results;
@@ -659,7 +758,7 @@ export function CourseTestForm({
         setViewMode('entry');
         
         // Find existing result to load
-        const result = participantTests.find(t => t.participantId === pId && t.testType === type);
+        const result = (participantTests || []).find(t => t.participantId === pId && t.testType === type);
         if (result) {
             setAnswers(result.answers || initializeAnswers(testQuestions));
             setManualScores(initializeManualScores(testQuestions, result.manualScores));
@@ -901,10 +1000,15 @@ export function CourseTestForm({
             });
 
             // 3. Total Score Calculation
-            // Total points = Number of MCQs (1 pt each) + Total number of lines in open questions (1 pt each)
-            const total = scorableQuestions.length + openQuestionsTotalLines; 
+            const mcqTotal = scorableQuestions.length;
+            const total = mcqTotal + openQuestionsTotalLines; 
             const finalScore = correctMCQ + manualTotal;
             const percentage = total > 0 ? (finalScore / total) * 100 : 0;
+            const mcqPercentage = mcqTotal > 0 ? (correctMCQ / mcqTotal) * 100 : 0;
+
+            // Mark as graded if a facilitator is editing/saving it, or if it was already marked graded
+            const existingResult = existingResults[testType];
+            const isGradedStatus = (isEditing && canManageTests) || (existingResult && existingResult.isGraded) ? true : false;
 
             const payload = {
                 participantId: selectedParticipantId, 
@@ -917,8 +1021,14 @@ export function CourseTestForm({
                 score: finalScore,
                 total: total,
                 percentage: percentage,
+                mcqScore: correctMCQ,
+                mcqTotal: mcqTotal,
+                mcqPercentage: mcqPercentage,
+                hasOpenQuestions: openQuestionsTotalLines > 0,
+                isGraded: isGradedStatus,
                 submittedAt: new Date().toISOString()
             };
+
             if (onSaveTest) await onSaveTest(payload); else await new Promise(resolve => setTimeout(resolve, 1000));
             // MODIFIED: Instead of setting submissionResult immediately (which changes view), show success modal first
             // setSubmissionResult(payload); 
@@ -931,7 +1041,7 @@ export function CourseTestForm({
     const handleBackToDashboard = () => {
         if(isPublicView) {
             setIsSetupModalOpen(true);
-            setTestType(initialTestType || ''); // Reset to initial prop value if exists, else empty
+            setTestType(normalizeTestType(initialTestType) || ''); // Reset to initial prop value if exists, else empty
             setSelectedParticipantId('');
         } else {
             setViewMode('dashboard');
@@ -978,6 +1088,7 @@ export function CourseTestForm({
                 canManageTests={canManageTests}
                 onEdit={() => { setSubmissionResult(null); setIsEditing(true); }}
                 onDelete={handleDeleteTest}
+                resultData={submissionResult}
             />
         );
     }
@@ -1000,6 +1111,7 @@ export function CourseTestForm({
                 onEdit={handleEditTest}
                 onDelete={handleDeleteTest}
                 isExistingResult={true} 
+                resultData={existingTestResult}
             />
         );
     }
@@ -1172,12 +1284,29 @@ export function CourseTestForm({
                         lastSubmissionStats && (
                             <div className="bg-gray-50 rounded-lg p-4 mb-6">
                                 <p className="text-sm text-gray-500 mb-1">Score Achieved</p>
-                                <div className="text-3xl font-bold text-gray-800">
-                                    {lastSubmissionStats.percentage.toFixed(1)}%
-                                </div>
-                                <p className="text-xs text-gray-500 mt-1">
-                                    ({lastSubmissionStats.score} out of {lastSubmissionStats.total} Total Points)
-                                </p>
+                                {(() => {
+                                    // Determine what score to show on successful submission
+                                    const showMcqOnly = lastSubmissionStats.hasOpenQuestions && !lastSubmissionStats.isGraded;
+                                    const displayPercent = showMcqOnly ? lastSubmissionStats.mcqPercentage : lastSubmissionStats.percentage;
+                                    const displayScore = showMcqOnly ? lastSubmissionStats.mcqScore : lastSubmissionStats.score;
+                                    const displayTotal = showMcqOnly ? lastSubmissionStats.mcqTotal : lastSubmissionStats.total;
+
+                                    return (
+                                        <>
+                                            <div className="text-3xl font-bold text-gray-800">
+                                                {displayPercent.toFixed(1)}%
+                                            </div>
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                ({displayScore} out of {displayTotal} Total Points)
+                                            </p>
+                                            {showMcqOnly && (
+                                                <p className="text-xs text-blue-600 mt-2 font-medium">
+                                                    * Auto-graded MCQs only. Open questions pending review.
+                                                </p>
+                                            )}
+                                        </>
+                                    );
+                                })()}
                             </div>
                         )
                     ) : (

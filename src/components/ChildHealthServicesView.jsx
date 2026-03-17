@@ -316,22 +316,12 @@ const ApprovalComparisonModal = ({ submission, allFacilities, onClose, onConfirm
                              userAssignedLocality={null}
                         >
                             {(props) => (
-                                <>
-                                    <h3 className="text-lg font-semibold text-sky-700 border-b pb-2 mb-4">IMNCI Services (خدمات العلاج المتكامل لأمراض الطفولة)</h3>
+                                <div className="space-y-8">
                                     <IMNCIFormFields {...props} isReadOnly={isDeletionRequest} />
-                                    <hr className="my-6 border-t-2 border-gray-200" />
-                                    
-                                    <h3 className="text-lg font-semibold text-teal-700 border-b pb-2 mb-4">EENC Services (خدمات الرعاية الطارئة لحديثي الولادة)</h3>
                                     <EENCFormFields {...props} isReadOnly={isDeletionRequest} />
-                                    <hr className="my-6 border-t-2 border-gray-200" />
-
-                                    <h3 className="text-lg font-semibold text-indigo-700 border-b pb-2 mb-4">Neonatal Care Unit (وحدة رعاية حديثي الولادة)</h3>
                                     <NeonatalFormFields {...props} isReadOnly={isDeletionRequest} />
-                                    <hr className="my-6 border-t-2 border-gray-200" />
-
-                                    <h3 className="text-lg font-semibold text-red-700 border-b pb-2 mb-4">Emergency & Critical Care (الطوارئ والرعاية الحرجة)</h3>
                                     <CriticalCareFormFields {...props} isReadOnly={isDeletionRequest} />
-                                </>
+                                </div>
                             )}
                         </GenericFacilityForm>
                     </div>
@@ -1566,10 +1556,6 @@ const ChildHealthServicesView = ({
     };
 
     const renderFormView = () => {
-        const formFields = { 'IMNCI': IMNCIFormFields, 'EENC': EENCFormFields, 'Neonatal': NeonatalFormFields, 'Critical Care': CriticalCareFormFields, };
-        const currentTabForForm = serviceTypeFilter || 'IMNCI'; 
-        const FormComponent = formFields[currentTabForForm] || IMNCIFormFields;
-        const arabicTitle = ARABIC_TITLES[currentTabForForm] || currentTabForForm;
         const saveButtonText = permissions.canApproveSubmissions ? "Save Directly" : "Submit for Approval";
         return (
             <GenericFacilityForm
@@ -1584,22 +1570,12 @@ const ChildHealthServicesView = ({
                 userAssignedLocality={userLocalities && userLocalities.length === 1 ? userLocalities[0] : null}
             >
                 {(props) => (
-                    <>
-                        <h3 className="text-lg font-semibold text-sky-700 border-b pb-2 mb-4">IMNCI Services (خدمات العلاج المتكامل لأمراض الطفولة)</h3>
+                    <div className="space-y-8">
                         <IMNCIFormFields {...props} />
-                        <hr className="my-6 border-t-2 border-gray-200" />
-                        
-                        <h3 className="text-lg font-semibold text-teal-700 border-b pb-2 mb-4">EENC Services (خدمات الرعاية الطارئة لحديثي الولادة)</h3>
                         <EENCFormFields {...props} />
-                        <hr className="my-6 border-t-2 border-gray-200" />
-
-                        <h3 className="text-lg font-semibold text-indigo-700 border-b pb-2 mb-4">Neonatal Care Unit (وحدة رعاية حديثي الولادة)</h3>
                         <NeonatalFormFields {...props} />
-                        <hr className="my-6 border-t-2 border-gray-200" />
-
-                        <h3 className="text-lg font-semibold text-red-700 border-b pb-2 mb-4">Emergency & Critical Care (الطوارئ والرعاية الحرجة)</h3>
                         <CriticalCareFormFields {...props} />
-                    </>
+                    </div>
                 )}
             </GenericFacilityForm>
         );

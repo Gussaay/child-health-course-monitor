@@ -32,6 +32,7 @@ import {
     isImmunizationComplete,
     isOtherProblemsComplete,
     isDecisionComplete,
+    isRecordingComplete, // NEWLY ADDED IMPORT
     DIARRHEA_CLASSIFICATIONS,
     FEVER_CLASSIFICATIONS,
     COUGH_CLASSIFICATIONS,
@@ -92,7 +93,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
     const [formData, setFormData] = useState(() => 
         existingSessionData ? rehydrateDraftData(existingSessionData, DIARRHEA_CLASSIFICATIONS, FEVER_CLASSIFICATIONS) : getInitialFormData()
     );
-    const [visibleStep, setVisibleStep] = useState(existingSessionData ? 9 : 1);
+    const [visibleStep, setVisibleStep] = useState(existingSessionData ? 10 : 1);
     const [isSaving, setIsSaving] = useState(false);
     const [isSavingDraft, setIsSavingDraft] = useState(false);
     const [isFacilityModalOpen, setIsFacilityModalOpen] = useState(false);
@@ -172,7 +173,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
             if (newId) {
                 const rehydratedData = rehydrateDraftData(existingSessionData, DIARRHEA_CLASSIFICATIONS, FEVER_CLASSIFICATIONS);
                 setFormData(rehydratedData);
-                setVisibleStep(9);
+                setVisibleStep(10);
                 
                 const { assessment_skills: newAssessmentSkills } = rehydratedData;
                 const vitalSignsComplete = isVitalSignsComplete(rehydratedData);
@@ -184,6 +185,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                 const otherProblemsComplete = isOtherProblemsComplete(rehydratedData);
                 const decisionComplete = isDecisionComplete(rehydratedData);
                 const treatmentComplete = findIncompleteTreatmentSkills(rehydratedData).length === 0;
+                const recordingComplete = isRecordingComplete(rehydratedData);
 
                 const allComplete = vitalSignsComplete &&
                                      dangerSignsComplete &&
@@ -193,7 +195,8 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                                      immunizationComplete &&
                                      otherProblemsComplete &&
                                      decisionComplete &&
-                                     treatmentComplete;
+                                     treatmentComplete &&
+                                     recordingComplete;
 
                 setIsFormFullyComplete(allComplete);
             } else {
@@ -217,11 +220,12 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
             if (isDangerSignsComplete(formData)) { maxStep = 3;
                 if (isMainSymptomsComplete(newAssessmentSkills)) { maxStep = 4;
                     if (isMalnutritionComplete(formData)) { maxStep = 5;
-                        if (isMalnutritionComplete(formData)) { maxStep = 5;
                         if (isAnemiaComplete(formData)) { maxStep = 6;
                             if (isImmunizationComplete(formData)) { maxStep = 7;
                                 if (isOtherProblemsComplete(formData)) { maxStep = 8;
-                                    if (isDecisionComplete(formData)) { maxStep = 9; }
+                                    if (isDecisionComplete(formData)) { maxStep = 9; 
+                                        if (findIncompleteTreatmentSkills(formData).length === 0) { maxStep = 10; }
+                                    }
                                 }
                             }
                         }
@@ -229,8 +233,8 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                 }
             }
         }
-    }
-        const targetVisibleStep = editingIdRef.current ? 9 : Math.max(visibleStep, maxStep);
+    
+        const targetVisibleStep = editingIdRef.current ? 10 : Math.max(visibleStep, maxStep);
         if (targetVisibleStep !== visibleStep) {
             setVisibleStep(targetVisibleStep);
         }
@@ -363,6 +367,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
         const otherProblemsComplete = isOtherProblemsComplete(newFormData);
         const decisionComplete = isDecisionComplete(newFormData);
         const treatmentComplete = findIncompleteTreatmentSkills(newFormData).length === 0;
+        const recordingComplete = isRecordingComplete(newFormData);
 
         const allStepsComplete = vitalSignsComplete &&
                                  dangerSignsComplete &&
@@ -372,7 +377,8 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                                  immunizationComplete &&
                                  otherProblemsComplete &&
                                  decisionComplete &&
-                                 treatmentComplete;
+                                 treatmentComplete &&
+                                 recordingComplete;
 
         setIsFormFullyComplete(allStepsComplete);
 
@@ -429,6 +435,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                 finalDecision: currentFormData.finalDecision,
                 decisionMatches: currentFormData.decisionMatches,
                 treatmentSkills: currentFormData.treatment_skills,
+                recordingSkills: currentFormData.recording_skills,
                 scores: scoresPayload,
                 notes: currentFormData.notes,
                 status: 'draft',
@@ -545,6 +552,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
              if (incompleteTreatment.length > 0) {
                 validationMessages.push(`خطوة 9: حقول العلاج والنصح (ناقص: ${incompleteTreatment[0]}...)`);
              }
+             if (!isRecordingComplete(formData)) validationMessages.push('خطوة 10: استخدام الاستمارة');
              
              const errorMessage = `لا يمكن الحفظ. الرجاء إكمال الأقسام التالية: \n- ${validationMessages.join('\n- ')}`;
              setToast({ show: true, message: errorMessage, type: 'error', duration: 10000 });
@@ -596,6 +604,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                 finalDecision: formData.finalDecision,
                 decisionMatches: formData.decisionMatches,
                 treatmentSkills: formData.treatment_skills,
+                recordingSkills: formData.recording_skills,
                 scores: scoresPayload,
                 notes: formData.notes,
                 status: 'complete',
@@ -666,6 +675,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                  finalDecision: formData.finalDecision,
                  decisionMatches: formData.decisionMatches,
                  treatmentSkills: formData.treatment_skills,
+                 recordingSkills: formData.recording_skills,
                  scores: scoresPayload,
                  notes: formData.notes,
                  status: 'draft',
@@ -789,7 +799,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                     />
                     
                     {/* --- Notes Section --- */}
-                    {(visibleStep >= 9 || !!editingIdRef.current) && (
+                    {(visibleStep >= 10 || !!editingIdRef.current) && (
                         <>
                            <FormGroup label="ملاحظات عامة" className="text-right">
                                 <Textarea name="notes" value={formData.notes} onChange={handleFormChange} rows={4} placeholder="أضف أي ملاحظات إضافية حول الجلسة..." className="text-right placeholder:text-right"/>

@@ -597,6 +597,17 @@ export function CoursesTable({
                                 </div>
                             </Button>
 
+                            {/* --- NEW TEST SCORES DASHBOARD BUTTON --- */}
+                            {(['ICCM', 'EENC', 'Small & Sick Newborn', 'IMNCI', 'ETAT'].includes(reportModalCourse.course_type)) && (
+                                <Button variant="secondary" className="flex items-center gap-3 p-4 justify-start" onClick={() => { onOpenTestForm(reportModalCourse.id); setReportModalCourse(null); }}>
+                                    <div className="bg-orange-100 p-2 rounded-full"><CheckCircle className="text-orange-600" size={20} /></div>
+                                    <div className="text-left">
+                                        <div className="font-semibold text-gray-800">Test Scores Dashboard</div>
+                                        <div className="text-xs text-gray-500">Manage pre-test and post-test scores</div>
+                                    </div>
+                                </Button>
+                            )}
+
                             {canManageFinalReport && (
                                 <Button variant="secondary" className="flex items-center gap-3 p-4 justify-start" onClick={() => { onAddFinalReport(reportModalCourse.id); setReportModalCourse(null); }}>
                                     <div className="bg-purple-100 p-2 rounded-full"><FileText className="text-purple-600" size={20} /></div>
@@ -1164,7 +1175,7 @@ export function CourseManagementView({
                         )}
                         {activeCoursesTab === 'reports' && selectedCourse && (
                             <Suspense fallback={<Spinner />}><ReportsView course={selectedCourse} participants={participants} /></Suspense>
-)}
+                        )}
                         {activeCoursesTab === 'enter-test-scores' && selectedCourse && (
                             <CourseTestForm
                                 course={selectedCourse}
@@ -1177,7 +1188,8 @@ export function CourseManagementView({
                                     setActiveCoursesTab('participants');
                                     onBatchUpdate();
                                 }}
-                                canManageTests={canUseFederalManagerAdvancedFeatures}
+                                // FIX: Updated permission so course managers can fully access grading and adding scores
+                                canManageTests={canManageCourse || canUseFederalManagerAdvancedFeatures}
                                 onSaveParticipant={onSaveParticipant}
                             />
                         )}
@@ -1187,6 +1199,7 @@ export function CourseManagementView({
         </Card>
     );
 }
+
 // ... [SearchableSelect, CourseForm, public views, etc. remain unchanged] ...
 const SearchableSelect = ({ label, options, value, onChange, onOpenNewForm, placeholder }) => {
     // ... [Implementation remains the same]
@@ -1506,7 +1519,6 @@ export function CourseForm({
             return;
         }
 
-        // --- FIXED: Added !isSmallAndSick to skip facilitator requirement ---
         if (!isInfectionControl && !isSmallAndSick && allFacilitatorAssignments.length === 0) {
              setError('Please assign at least one facilitator to a subcourse.');
              return;
