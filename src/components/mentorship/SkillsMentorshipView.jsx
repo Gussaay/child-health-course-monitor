@@ -56,6 +56,16 @@ import {
 } from '../FacilityForms.jsx';
 import { onAuthStateChanged } from "firebase/auth";
 
+// --- Normalization Helper for Job Titles ---
+const normalizeJobTitle = (title) => {
+    if (!title || typeof title !== 'string') return title;
+    const t = title.trim();
+    if (t === 'طبيب' || t === 'طبيب عمومي') return 'Medical Officer';
+    if (t === 'مساعد طبي') return 'Medical Assistance';
+    if (t === 'ممرض') return 'Treating Nurse';
+    return t;
+};
+
 // --- Dictionaries for Visit Report View ---
 const IMNCI_SKILLS_LABELS = {
     skill_weight: "قياس الوزن",
@@ -723,7 +733,7 @@ const ViewSubmissionModal = ({ submission, onClose }) => {
                         <p><span className="font-medium text-gray-500">المحلية:</span> <span className="font-semibold text-gray-900">{STATE_LOCALITIES[submission.state]?.localities.find(l=>l.en === submission.locality)?.ar || submission.locality}</span></p>
                         <p><span className="font-medium text-gray-500">رقم الزيارة:</span> <span className="font-semibold text-gray-900">{submission.visitNumber || 1}</span></p>
                         {submission.project && submission.project !== 'N/A' && <p><span className="font-medium text-gray-500">المشروع / الشريك:</span> <span className="font-semibold text-gray-900">{submission.project}</span></p>}
-                        {submission.workerType && submission.workerType !== 'N/A' && <p><span className="font-medium text-gray-500">الوصف الوظيفي:</span> <span className="font-semibold text-gray-900">{submission.workerType}</span></p>}
+                        {submission.workerType && submission.workerType !== 'N/A' && <p><span className="font-medium text-gray-500">الوصف الوظيفي:</span> <span className="font-semibold text-gray-900">{normalizeJobTitle(submission.workerType)}</span></p>}
                     </div>
                 </div>
 
@@ -1178,9 +1188,9 @@ const SkillsMentorshipView = ({
                 // 1. Try fetching from Cache first for instant loading
                 try {
                     const [cachedSubs, cachedImnci, cachedEenc] = await Promise.all([
-                        typeof listMentorshipSessions === 'function' ? listMentorshipSessions('cache').catch(() => []) : Promise.resolve([]),
-                        typeof listIMNCIVisitReports === 'function' ? listIMNCIVisitReports('cache').catch(() => []) : Promise.resolve([]),
-                        typeof listEENCVisitReports === 'function' ? listEENCVisitReports('cache').catch(() => []) : Promise.resolve([])
+                        typeof listMentorshipSessions === 'function' ? listMentorshipSessions({ source: 'cache' }).catch(() => []) : Promise.resolve([]),
+                        typeof listIMNCIVisitReports === 'function' ? listIMNCIVisitReports({ source: 'cache' }).catch(() => []) : Promise.resolve([]),
+                        typeof listEENCVisitReports === 'function' ? listEENCVisitReports({ source: 'cache' }).catch(() => []) : Promise.resolve([])
                     ]);
                     
                     if (isMounted && (cachedSubs.length > 0 || cachedImnci.length > 0 || cachedEenc.length > 0)) {
@@ -1195,9 +1205,9 @@ const SkillsMentorshipView = ({
                 // 2. Fetch from Server in the background to ensure data is up-to-date
                 try {
                     const [subs, imnci, eenc] = await Promise.all([
-                        typeof listMentorshipSessions === 'function' ? listMentorshipSessions('server').catch(() => []) : Promise.resolve([]),
-                        typeof listIMNCIVisitReports === 'function' ? listIMNCIVisitReports('server').catch(() => []) : Promise.resolve([]),
-                        typeof listEENCVisitReports === 'function' ? listEENCVisitReports('server').catch(() => []) : Promise.resolve([])
+                        typeof listMentorshipSessions === 'function' ? listMentorshipSessions().catch(() => []) : Promise.resolve([]),
+                        typeof listIMNCIVisitReports === 'function' ? listIMNCIVisitReports().catch(() => []) : Promise.resolve([]),
+                        typeof listEENCVisitReports === 'function' ? listEENCVisitReports().catch(() => []) : Promise.resolve([])
                     ]);
                     if (isMounted) {
                         // Update state with fresh server data
@@ -1311,7 +1321,7 @@ const SkillsMentorshipView = ({
                 scores: sub.scores || null,
                 status: sub.status || 'complete',
                 facilityType: sub.facilityType || null,
-                workerType: sub.workerType || null,
+                workerType: normalizeJobTitle(sub.workerType) || null,
                 motherName: sub.motherName || null,
                 visitNumber: sub.visitNumber || null,
                 sessionDate: sub.sessionDate || (sub.effectiveDate ? new Date(sub.effectiveDate.seconds * 1000).toISOString().split('T')[0] : null),
@@ -1558,9 +1568,9 @@ const SkillsMentorshipView = ({
             if (publicDashboardMode) {
                 // Force server fetch for public dashboard mode
                 const [subs, imnci, eenc] = await Promise.all([
-                    typeof listMentorshipSessions === 'function' ? listMentorshipSessions('server').catch(() => []) : Promise.resolve([]),
-                    typeof listIMNCIVisitReports === 'function' ? listIMNCIVisitReports('server').catch(() => []) : Promise.resolve([]),
-                    typeof listEENCVisitReports === 'function' ? listEENCVisitReports('server').catch(() => []) : Promise.resolve([])
+                    typeof listMentorshipSessions === 'function' ? listMentorshipSessions().catch(() => []) : Promise.resolve([]),
+                    typeof listIMNCIVisitReports === 'function' ? listIMNCIVisitReports().catch(() => []) : Promise.resolve([]),
+                    typeof listEENCVisitReports === 'function' ? listEENCVisitReports().catch(() => []) : Promise.resolve([])
                 ]);
                 setPublicData({ submissions: subs || [], imnci: imnci || [], eenc: eenc || [] });
             } else {
@@ -2730,7 +2740,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                         visitReports={processedVisitReports}
                                         STATE_LOCALITIES={STATE_LOCALITIES}
                                         activeService={activeService}
-                                        
+                                        isLoading={!publicDashboardMode && (isDataCacheLoading.skillMentorshipSubmissions || !skillMentorshipSubmissions)}
                                         canEditStatus={isFederalManager}
                                         onUpdateStatus={handleChallengeStatusUpdate}
 
@@ -2946,7 +2956,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     visitReports={processedVisitReports}
                                     STATE_LOCALITIES={STATE_LOCALITIES}
                                     activeService={activeService}
-                                    
+                                    isLoading={isDataCacheLoading.skillMentorshipSubmissions || !skillMentorshipSubmissions}
                                     canEditStatus={permissions?.role === 'federal_manager' || permissions?.isSuperUser}
                                     onUpdateStatus={handleChallengeStatusUpdate}
 
@@ -3475,7 +3485,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                 visitReports={processedVisitReports}
                                 STATE_LOCALITIES={STATE_LOCALITIES}
                                 activeService={activeService}
-                                
+                                isLoading={isDataCacheLoading.skillMentorshipSubmissions || !skillMentorshipSubmissions}
                                 canEditStatus={permissions?.role === 'federal_manager' || permissions?.isSuperUser}
                                 onUpdateStatus={handleChallengeStatusUpdate}
 

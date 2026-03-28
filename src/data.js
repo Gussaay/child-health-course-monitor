@@ -419,10 +419,6 @@ export async function approveFacilitySubmission(submission, approverEmail) {
     await updateDoc(submissionRef, { status: 'approved', approvedBy: approverEmail, approvedAt: serverTimestamp() });
 }
 
-/**
- * Fetches all health facilities for a specific locality.
- * Used for the Locality Bulk Update public view.
- */
 export async function listFacilitiesByLocality(state, locality) {
     try {
         const q = query(
@@ -430,7 +426,7 @@ export async function listFacilitiesByLocality(state, locality) {
             where("الولاية", "==", state), 
             where("المحلية", "==", locality)
         );
-        const snapshot = await getDocs(q); // Uses the existing dispatchOpEvent tracking
+        const snapshot = await getDocs(q); 
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
         console.error("Error fetching facilities by locality:", error);
@@ -438,11 +434,8 @@ export async function listFacilitiesByLocality(state, locality) {
     }
 }
 
-/**
- * Submits a batch of facility updates for approval.
- */
 export async function submitLocalityBatchUpdate(updates, localityName) {
-    const batch = writeBatch(db); // Uses the tracked writeBatch wrapper
+    const batch = writeBatch(db); 
     const submissionDate = serverTimestamp();
     
     for (const update of updates) {
@@ -456,12 +449,11 @@ export async function submitLocalityBatchUpdate(updates, localityName) {
         batch.set(submissionRef, submissionData);
     }
     
-    await batch.commit(); // Dispatches 'write' op events
+    await batch.commit(); 
     return true;
 }
 
-
-export async function listHealthFacilities(filters = {}) {
+export async function listHealthFacilities(filters = {}, sourceOptions = {}) {
     let q = collection(db, "healthFacilities");
     const conditions = [];
     let orderByClause = orderBy("الولاية"); 
@@ -485,7 +477,6 @@ export async function listHealthFacilities(filters = {}) {
     q = query(q, orderByClause);
 
     try {
-        const sourceOptions = {};
         const querySnapshot = await getData(q, sourceOptions);
         let facilities = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 

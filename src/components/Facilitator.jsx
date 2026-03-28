@@ -362,7 +362,6 @@ function SubmissionDetails({ submission }) {
     );
 }
 
-// --- Reusable Facilitator Form Fields Component ---
 export function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublicForm = false }) {
     const { name, arabicName, phone, email, isUserEmail, courses, totDates, certificateUrls, currentState, currentLocality, directorCourse, directorCourseDate, followUpCourse, followUpCourseDate, teamLeaderCourse, teamLeaderCourseDate, isClinicalInstructor, comments, backgroundQualification, backgroundQualificationOther } = data;
 
@@ -373,7 +372,6 @@ export function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublic
         onDataChange({ ...data, courses: newCourses });
     };
 
-    // Ensure Small & Sick Newborn is included in the options even if missing from imports
     const displayCourseTypes = useMemo(() => {
         const types = new Set(COURSE_TYPES_FACILITATOR);
         types.add('Small & Sick Newborn');
@@ -604,10 +602,12 @@ export function FacilitatorsView({
 }) {
     const {
         facilitators,
+        courses,
         pendingFacilitatorSubmissions: pendingSubmissions,
         facilitatorApplicationSettings,
         isLoading,
         fetchFacilitators,
+        fetchCourses,
         fetchPendingFacilitatorSubmissions,
         fetchFacilitatorApplicationSettings
     } = useDataCache();
@@ -620,19 +620,18 @@ export function FacilitatorsView({
     const [viewingSubmission, setViewingSubmission] = useState(null);
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [viewingCertsFor, setViewingCertsFor] = useState(null);
-    
-    // --- NEW STATE: Search Query ---
     const [searchQuery, setSearchQuery] = useState('');
     const [shareModalInfo, setShareModalInfo] = useState({ isOpen: false, link: '' });
 
     useEffect(() => {
         fetchFacilitators(); 
+        if (fetchCourses) fetchCourses();
 
         if (permissions.canApproveSubmissions) {
             fetchPendingFacilitatorSubmissions(); 
             fetchFacilitatorApplicationSettings();
         }
-    }, [permissions.canApproveSubmissions, fetchFacilitators, fetchPendingFacilitatorSubmissions, fetchFacilitatorApplicationSettings]);
+    }, [permissions.canApproveSubmissions, fetchFacilitators, fetchCourses, fetchPendingFacilitatorSubmissions, fetchFacilitatorApplicationSettings]);
 
     const handleToggleLinkStatus = async () => {
         const newStatus = !facilitatorApplicationSettings.isActive;
@@ -695,16 +694,27 @@ export function FacilitatorsView({
             return [];
         }
         
-        let result = facilitators;
+        let result = facilitators.map(f => {
+            let score = 0;
+            if (courses && courses.length > 0) {
+                courses.forEach(course => {
+                    const duration = Number(course.course_duration) || 0;
+                    const isDirector = course.director === f.name;
+                    const isFacilitator = Array.isArray(course.facilitators) && course.facilitators.includes(f.name);
+                    
+                    if (isDirector) score += duration * 1.5;
+                    if (isFacilitator) score += duration * 1.0;
+                });
+            }
+            return { ...f, score };
+        });
 
-        // Filter by Permission Scope
         if (permissions.manageScope !== 'federal') {
             if (userStates && userStates.length > 0) {
                 result = result.filter(f => f.currentState && userStates.includes(f.currentState));
             }
         }
 
-        // --- NEW: Search Filtering ---
         if (searchQuery) {
             const lowerQuery = searchQuery.toLowerCase();
             result = result.filter(f => 
@@ -714,15 +724,17 @@ export function FacilitatorsView({
             );
         }
         
+        // Sort highest score first
+        result.sort((a, b) => b.score - a.score);
+        
         return result;
-    }, [facilitators, userStates, permissions.manageScope, searchQuery]);
+    }, [facilitators, userStates, permissions.manageScope, searchQuery, courses]);
 
     return (
         <Card>
             <CardBody>
                 <PageHeader title="Manage Facilitators" />
                 
-                {/* --- UPDATED: Toolbar with Buttons on Left, Search on Right --- */}
                 <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
                     <div className="flex gap-2 flex-wrap">
                         {permissions.canManageHumanResource && <Button onClick={onAdd}>Add New Facilitator</Button>}
@@ -790,21 +802,19 @@ export function FacilitatorsView({
 
                     <div className="mt-4">
                         {activeTab === 'current' && (
-                             // --- UPDATED: Removed Arabic Name from headers, kept actions simple ---
-                             <Table headers={["Name", "Phone", "Courses", "Actions"]}>
+                             <Table headers={["Name", "Phone", "Courses", "Score", "Actions"]}>
                                 {isLoading.facilitators ? (
-                                    <tr><td colSpan={4} className="p-8 text-center"><Spinner /></td></tr>
+                                    <tr><td colSpan={5} className="p-8 text-center"><Spinner /></td></tr>
                                 ) : filteredFacilitators.length > 0 ? (
                                     filteredFacilitators.map(f => {
                                         const hasCerts = f.certificateUrls && Object.keys(f.certificateUrls).length > 0;
                                         return (
                                             <tr key={f.id}>
                                                 <td className="p-4">{f.name}</td>
-                                                {/* Removed Arabic Name TD */}
                                                 <td className="p-4">{f.phone}</td>
                                                 <td className="p-4">{(Array.isArray(f.courses) ? f.courses : []).join(', ')}</td>
+                                                <td className="p-4 font-bold text-indigo-600">{Number.isInteger(f.score) ? f.score : f.score.toFixed(1)}</td>
                                                 <td className="p-4">
-                                                    {/* --- UPDATED: Actions container with whitespace-nowrap --- */}
                                                     <div className="flex gap-2 justify-end whitespace-nowrap">
                                                         <Button size="sm" onClick={() => onOpenReport(f.id)}>Report</Button>
                                                         
@@ -819,22 +829,18 @@ export function FacilitatorsView({
                                         );
                                     })
                                 ) : (
-                                    <EmptyState key="empty-facilitators" message="No facilitators found matching your search." colSpan={4} />
+                                    <EmptyState key="empty-facilitators" message="No facilitators found matching your search." colSpan={5} />
                                 )}
                             </Table>
                         )}
 
                         {activeTab === 'pending' && permissions.canApproveSubmissions && (
                             isSubmissionsLoading ? <Spinner /> : (
-                                // Pending table still shows Arabic name as per previous instruction, or should I remove it here too? 
-                                // User said "no need for arabic name in the table", usually implying the main view. 
-                                // I will remove it from here too for consistency with "the table".
                                 <Table headers={["Name", "Phone", "State", "Submitted At", "Actions"]}>
                                     {pendingSubmissions && pendingSubmissions.length > 0 ? (
                                         pendingSubmissions.map(sub => (
                                             <tr key={sub.id}>
                                                 <td className="p-2">{sub.name}</td>
-                                                {/* Removed Arabic Name TD */}
                                                 <td className="p-2">{sub.phone}</td>
                                                 <td className="p-2">{sub.currentState}</td>
                                                 <td className="p-2">{sub.submittedAt?.toDate ? sub.submittedAt.toDate().toLocaleDateString() : 'N/A'}</td>
@@ -1144,12 +1150,13 @@ export function FacilitatorReportView({
         imciSubcourseData, 
         courseSummary,
         totalInstructed,
-        totalDirected
+        totalDirected,
+        totalScore
     } = useMemo(() => {
         if (!facilitator || !allCourses) {
             return {
                 directedCourses: [], facilitatedCourses: [], combinedChartData: { labels: [], datasets: [] }, 
-                imciSubcourseData: null, courseSummary: [], totalInstructed: 0, totalDirected: 0
+                imciSubcourseData: null, courseSummary: [], totalInstructed: 0, totalDirected: 0, totalScore: 0
             };
         }
 
@@ -1158,9 +1165,11 @@ export function FacilitatorReportView({
         
         const summary = {};
         const imciCounts = {};
+        let scoreCounter = 0;
 
         allCourses.forEach(course => {
             const courseType = course.course_type;
+            const duration = Number(course.course_duration) || 0;
             summary[courseType] = summary[courseType] || { directed: 0, instructed: 0, daysDirected: 0, daysInstructed: 0, };
 
             const isDirector = course.director === facilitator.name;
@@ -1169,11 +1178,13 @@ export function FacilitatorReportView({
 
             if (isDirector) {
                 summary[courseType].directed++;
-                summary[courseType].daysDirected += (course.course_duration || 0);
+                summary[courseType].daysDirected += duration;
+                scoreCounter += duration * 1.5;
             }
             if (isFacilitator) {
                 summary[courseType].instructed++;
-                summary[courseType].daysInstructed += (course.course_duration || 0);
+                summary[courseType].daysInstructed += duration;
+                scoreCounter += duration * 1.0;
             }
 
             if (courseType === 'IMNCI' && (isDirector || isClinical || isFacilitator)) {
@@ -1244,7 +1255,8 @@ export function FacilitatorReportView({
             combinedChartData: finalCombinedChartData,
             imciSubcourseData: finalImciSubcourseData,
             totalInstructed: facilitated.length,
-            totalDirected: directed.length
+            totalDirected: directed.length,
+            totalScore: scoreCounter
         };
     }, [facilitator, allCourses]);
     
@@ -1277,7 +1289,6 @@ export function FacilitatorReportView({
                 )}
             </>} />
 
-            {/* 1. Full Facilitator Details */}
             <Card>
                 <CardHeader>Facilitator Details</CardHeader>
                 <CardBody>
@@ -1298,8 +1309,7 @@ export function FacilitatorReportView({
                 </CardBody>
             </Card>
 
-            {/* 2. KPIs */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card>
                     <CardHeader>Total Courses Instructed</CardHeader>
                     <CardBody className="flex items-center justify-center">
@@ -1312,9 +1322,14 @@ export function FacilitatorReportView({
                         <div className="text-5xl font-bold text-pink-600">{totalDirected}</div>
                     </CardBody>
                 </Card>
+                <Card>
+                    <CardHeader>Overall Score</CardHeader>
+                    <CardBody className="flex items-center justify-center">
+                        <div className="text-5xl font-bold text-green-600">{Number.isInteger(totalScore) ? totalScore : totalScore.toFixed(1)}</div>
+                    </CardBody>
+                </Card>
             </div>
 
-            {/* 3. Course Involvement Summary Table */}
             <Card>
                 <CardHeader>Course Involvement Summary</CardHeader>
                 <CardBody>
@@ -1331,9 +1346,7 @@ export function FacilitatorReportView({
                 </CardBody>
             </Card>
             
-            {/* 4. Graphs */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* 5. IMNCI Pie Chart */}
                 {imciSubcourseData && (
                     <Card>
                         <CardHeader>IMNCI Sub-course Distribution</CardHeader>
@@ -1346,7 +1359,6 @@ export function FacilitatorReportView({
                 </Card>
             </div>
 
-            {/* 6. Directed and Facilitated Lists */}
             <div className="grid md:grid-cols-2 gap-6">
                  <Card><CardHeader>Directed Courses</CardHeader><CardBody><Table headers={["Course", "Date", "Location"]}>{directedCourses.length > 0 ? directedCourses.map(c => <tr key={c.id}><td className="p-2">{c.course_type}</td><td className="p-2">{c.start_date}</td><td className="p-2">{c.state}</td></tr>) : <EmptyState message="No courses directed." colSpan={3} />}</Table></CardBody></Card>
                  <Card><CardHeader>Facilitated Courses</CardHeader><CardBody><Table headers={["Course", "Date", "Location"]}>{facilitatedCourses.length > 0 ? facilitatedCourses.map(c => <tr key={c.id}><td className="p-2">{c.course_type}</td><td className="p-2">{c.start_date}</td><td className="p-2">{c.state}</td></tr>) : <EmptyState message="No courses facilitated." colSpan={3} />}</Table></CardBody></Card>

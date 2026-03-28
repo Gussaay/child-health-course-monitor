@@ -77,7 +77,6 @@ function ShareLinkModal({ isOpen, onClose, title, link }) {
     );
 }
 
-
 // Reusable component for dynamic experience fields
 function DynamicExperienceFields({ experiences, onChange }) {
     const handleAddExperience = () => onChange([...experiences, { role: '', duration: '' }]);
@@ -88,46 +87,70 @@ function DynamicExperienceFields({ experiences, onChange }) {
     };
 
     return (
-        <FormGroup label="المهام الوظيفية والخبرات الاخرى قبل الانضمام لبرنامج صحة الطفل" dir="rtl">
-            <div className="space-y-4">
-                {experiences.map((exp, index) => (
-                    <div key={index} className="flex flex-col sm:flex-row gap-2 p-3 border rounded-md bg-gray-50">
-                        <Input label="الخبرة/المهمة" value={exp.role} onChange={(e) => handleExperienceChange(index, 'role', e.target.value)} placeholder="العمل ببرنامج الصحة الانجابية" className="flex-grow" />
-                        <Input label="مدة الخبرة بالسنوات" value={exp.duration} onChange={(e) => handleExperienceChange(index, 'duration', e.target.value)} placeholder="مثال: سنتان" className="sm:w-40" />
-                        <Button size="sm" variant="danger" onClick={() => handleRemoveExperience(index)} className="self-end sm:self-center mt-2 sm:mt-0 h-10">حذف</Button>
-                    </div>
-                ))}
-                <Button type="button" variant="secondary" onClick={handleAddExperience}>إضافة خبرات أخرى</Button>
-            </div>
-        </FormGroup>
+        <div className="space-y-4" dir="rtl">
+            {experiences.map((exp, index) => (
+                <div key={index} className="flex flex-col sm:flex-row gap-2 p-3 border rounded-md bg-gray-50">
+                    <Input label="الخبرة/المهمة" value={exp.role} onChange={(e) => handleExperienceChange(index, 'role', e.target.value)} placeholder="مكان العمل السابق" className="flex-grow" />
+                    <Input label="مدة الخبرة بالسنوات" value={exp.duration} onChange={(e) => handleExperienceChange(index, 'duration', e.target.value)} placeholder="مثال: سنتان" className="sm:w-40" />
+                    <Button size="sm" variant="danger" onClick={() => handleRemoveExperience(index)} className="self-end sm:self-center mt-2 sm:mt-0 h-10">حذف</Button>
+                </div>
+            ))}
+            <Button type="button" variant="secondary" onClick={handleAddExperience}>إضافة خبرات أخرى</Button>
+        </div>
     );
 }
 
-// A single, reusable component for displaying form fields
+// A single, reusable component for displaying form fields with DEDICATED BORDERS AND STYLED BLUE HEADERS
 function MemberFormFieldset({ level, formData, onFormChange, onDynamicFieldChange }) {
     const states = Object.keys(STATE_LOCALITIES);
     const localities = formData.state ? (STATE_LOCALITIES[formData.state]?.localities || []).map(l => l.en) : [];
     const joinDateLabels = { state: 'تاريخ الانضمام لبرنامج صحة الطفل بالولاية', federal: 'تاريخ الانضمام لبرنامج صحة الطفل بالاتحادية' };
 
     return (
-        <>
-            {/* --- MODIFIED: Explicitly labeled English Name and Added Arabic Name --- */}
-            <Input label="الإسم (باللغة الإنجليزية)" name="name" value={formData.name} onChange={onFormChange} required />
-            <Input label="الإسم (باللغة العربية)" name="nameAr" value={formData.nameAr || ''} onChange={onFormChange} required />
-            
-            <Input label="رقم الهاتف" name="phone" type="tel" value={formData.phone} onChange={onFormChange} />
-            <Input label="الايميل" name="email" type="email" value={formData.email} onChange={onFormChange} required disabled={formData.isUserEmail} />
-            {level !== 'federal' && ( <Select label="الولاية" name="state" value={formData.state} onChange={onFormChange} required><option value="">اختر ولاية</option>{states.map(s => <option key={s} value={s}>{s}</option>)}</Select> )}
-            {level === 'locality' && ( <Select label="المحلية" name="locality" value={formData.locality} onChange={onFormChange} required disabled={!formData.state}><option value="">اختر المحلية</option>{localities.map(loc => <option key={loc} value={loc}>{loc}</option>)}</Select> )}
-            <Select label="المسمى الوظيفي" name="jobTitle" value={formData.jobTitle} onChange={onFormChange} required><option value="">اختر المسمى الوظيفي</option><option value="صحة عامة">صحة عامة</option><option value="طبيب">طبيب</option><option value="ممرض">ممرض</option><option value="ظابط تغذية">ظابط تغذية</option><option value="اخرى">اخرى</option></Select>
-            {formData.jobTitle === 'اخرى' && <Input label="حدد المسمى الوظيفي" name="jobTitleOther" value={formData.jobTitleOther} onChange={onFormChange} required />}
-            {level !== 'locality' && ( <Select label="الصفة" name="role" value={formData.role} onChange={onFormChange} required><option value="">اختر الصفة</option><option value="مدير البرنامج">مدير البرنامج</option><option value="رئيس وحدة">رئيس وحدة</option><option value="عضو في وحدة">عضو في وحدة</option><option value="سكرتارية">سكرتارية</option></Select> )}
-            {level !== 'locality' && formData.role === 'مدير البرنامج' && <Input label="الرجاء تحديد تاريخ التعيين مدير للبرنامج" name="directorDate" type="date" value={formData.directorDate} onChange={onFormChange} required />}
-            {level !== 'locality' && (formData.role === 'رئيس وحدة' || formData.role === 'عضو في وحدة') && (<Select label="اختر الوحدة" name="unit" value={formData.unit} onChange={onFormChange} required><option value="">اختر الوحدة</option><option value="العلاج المتكامل للاطفال اقل من 5 سنوات">العلاج المتكامل للاطفال اقل من 5 سنوات</option><option value="حديثي الولادة">حديثي الولادة</option><option value="المراهقين وحماية الاطفال">المراهقين وحماية الاطفال</option><option value="المتابعة والتقييم والمعلومات">المتابعة والتقييم والمعلومات</option><option value="الامداد">الامداد</option><option value="تعزيز صحة الاطفال والمراهقين">تعزيز صحة الاطفال والمراهقين</option></Select>)}
-            {level !== 'locality' && <Input label={joinDateLabels[level] || 'تاريخ الانضمام'} name="joinDate" type="date" value={formData.joinDate} onChange={onFormChange} />}
-            <DynamicExperienceFields experiences={formData.previousRoles} onChange={onDynamicFieldChange} />
-            <Textarea label="اي تعليقات اخرى" name="comments" value={formData.comments} onChange={onFormChange} />
-        </>
+        <div className="space-y-6">
+            {/* Section 1: Basic Info */}
+            <div className="p-5 border border-gray-200 shadow-sm rounded-lg bg-white space-y-4">
+                <h3 className="text-lg font-semibold text-blue-800 bg-blue-100 px-4 py-2 rounded-md mb-4">البيانات الأساسية</h3>
+                {level !== 'federal' && ( <Select label="الولاية" name="state" value={formData.state} onChange={onFormChange} required><option value="">اختر ولاية</option>{states.map(s => <option key={s} value={s}>{STATE_LOCALITIES[s]?.ar || s}</option>)}</Select> )}
+                {level === 'locality' && ( <Select label="المحلية" name="locality" value={formData.locality} onChange={onFormChange} required disabled={!formData.state}><option value="">اختر المحلية</option>{localities.map(loc => <option key={loc} value={loc}>{loc}</option>)}</Select> )}
+                <Input label="الإسم (باللغة الإنجليزية)" name="name" value={formData.name} onChange={onFormChange} required />
+                <Input label="الإسم (باللغة العربية)" name="nameAr" value={formData.nameAr || ''} onChange={onFormChange} required />
+                <Input label="رقم الهاتف" name="phone" type="tel" value={formData.phone} onChange={onFormChange} />
+                <Input label="الايميل" name="email" type="email" value={formData.email} onChange={onFormChange} required disabled={formData.isUserEmail} />
+            </div>
+
+            {/* Section 2: Bank Details */}
+            <div className="p-5 border border-gray-200 shadow-sm rounded-lg bg-white space-y-4">
+                <h3 className="text-lg font-semibold text-blue-800 bg-blue-100 px-4 py-2 rounded-md mb-4">بيانات الحساب البنكي</h3>
+                <Input label="رقم الحساب البنكي" name="bankAccount" type="text" value={formData.bankAccount || ''} onChange={onFormChange} />
+                <Input label="اسم البنك" name="bankName" type="text" value={formData.bankName || ''} onChange={onFormChange} />
+                <Input label="اسم الفرع" name="bankBranch" type="text" value={formData.bankBranch || ''} onChange={onFormChange} />
+                <Input label="اذا كان رقم الحساب ليس باسمك ادخال اسم صاحب الحساب" name="accountHolder" type="text" value={formData.accountHolder || ''} onChange={onFormChange} />
+            </div>
+
+            {/* Section 3: Job Info */}
+            <div className="p-5 border border-gray-200 shadow-sm rounded-lg bg-white space-y-4">
+                <h3 className="text-lg font-semibold text-blue-800 bg-blue-100 px-4 py-2 rounded-md mb-4">البيانات الوظيفية</h3>
+                <Select label="المسمى الوظيفي" name="jobTitle" value={formData.jobTitle} onChange={onFormChange} required><option value="">اختر المسمى الوظيفي</option><option value="صحة عامة">صحة عامة</option><option value="طبيب">طبيب</option><option value="ممرض">ممرض</option><option value="ظابط تغذية">ظابط تغذية</option><option value="اخرى">اخرى</option></Select>
+                {formData.jobTitle === 'اخرى' && <Input label="حدد المسمى الوظيفي" name="jobTitleOther" value={formData.jobTitleOther} onChange={onFormChange} required />}
+                {level !== 'locality' && ( <Select label="الصفة" name="role" value={formData.role} onChange={onFormChange} required><option value="">اختر الصفة</option><option value="مدير البرنامج">مدير البرنامج</option><option value="رئيس وحدة">رئيس وحدة</option><option value="عضو في وحدة">عضو في وحدة</option><option value="سكرتارية">سكرتارية</option></Select> )}
+                {level !== 'locality' && formData.role === 'مدير البرنامج' && <Input label="الرجاء تحديد تاريخ التعيين مدير للبرنامج" name="directorDate" type="date" value={formData.directorDate} onChange={onFormChange} required />}
+                {level !== 'locality' && (formData.role === 'رئيس وحدة' || formData.role === 'عضو في وحدة') && (<Select label="اختر الوحدة" name="unit" value={formData.unit} onChange={onFormChange} required><option value="">اختر الوحدة</option><option value="العلاج المتكامل للاطفال اقل من 5 سنوات">العلاج المتكامل للاطفال اقل من 5 سنوات</option><option value="حديثي الولادة">حديثي الولادة</option><option value="المراهقين وحماية الاطفال">المراهقين وحماية الاطفال</option><option value="المتابعة والتقييم والمعلومات">المتابعة والتقييم والمعلومات</option><option value="الامداد">الامداد</option><option value="تعزيز صحة الاطفال والمراهقين">تعزيز صحة الاطفال والمراهقين</option></Select>)}
+                {level !== 'locality' && <Input label={joinDateLabels[level] || 'تاريخ الانضمام'} name="joinDate" type="date" value={formData.joinDate} onChange={onFormChange} />}
+            </div>
+
+            {/* Section 4: Experiences */}
+            <div className="p-5 border border-gray-200 shadow-sm rounded-lg bg-white space-y-4">
+                <h3 className="text-lg font-semibold text-blue-800 bg-blue-100 px-4 py-2 rounded-md mb-4">الخبرات السابقة قبل الانضمام لبرنامج صحة الطفل</h3>
+                <DynamicExperienceFields experiences={formData.previousRoles} onChange={onDynamicFieldChange} />
+            </div>
+
+            {/* Section 5: Additional Comments */}
+            <div className="p-5 border border-gray-200 shadow-sm rounded-lg bg-white space-y-4">
+                <h3 className="text-lg font-semibold text-blue-800 bg-blue-100 px-4 py-2 rounded-md mb-4">ملاحظات إضافية</h3>
+                <Textarea label="اي تعليقات اخرى" name="comments" value={formData.comments} onChange={onFormChange} />
+            </div>
+        </div>
     );
 }
 
@@ -135,11 +158,10 @@ function MemberFormFieldset({ level, formData, onFormChange, onDynamicFieldChang
 function TeamMemberForm({ member, onSave, onCancel }) {
     const [selectedLevel, setSelectedLevel] = useState(member?.level || (member ? (member.locality ? 'locality' : member.state ? 'state' : 'federal') : ''));
     const [formData, setFormData] = useState(() => {
-        // --- MODIFIED: Added nameAr to default state ---
         const initialData = member || { 
-            name: '', 
-            nameAr: '', 
-            phone: '', email: '', state: '', locality: '', jobTitle: '', jobTitleOther: '', role: '', directorDate: '', unit: '', joinDate: '', comments: '' 
+            name: '', nameAr: '', phone: '', email: '', state: '', locality: '', 
+            jobTitle: '', jobTitleOther: '', role: '', directorDate: '', unit: '', 
+            joinDate: '', bankAccount: '', bankName: '', bankBranch: '', accountHolder: '', comments: '' 
         };
         if (!initialData.previousRoles || !Array.isArray(initialData.previousRoles) || initialData.previousRoles.length === 0) {
             initialData.previousRoles = [{ role: '', duration: '' }, { role: '', duration: '' }, { role: '', duration: '' }];
@@ -167,7 +189,7 @@ function TeamMemberForm({ member, onSave, onCancel }) {
     return (
         <form onSubmit={handleSubmit} className="space-y-4" dir="rtl">
             <CardBody>
-                <h2 className="text-xl font-bold text-gray-800 text-center border-b pb-4 mb-6">{member?.id ? `Edit Team Member` : `Add New Team Member`}</h2>
+                <h2 className="text-xl font-bold text-gray-800 text-center border-b pb-4 mb-6">{member?.id ? `تعديل بيانات العضو` : `إضافة عضو جديد`}</h2>
                 {!member?.id && ( <Select label="اختر المستوى" value={selectedLevel} onChange={(e) => setSelectedLevel(e.target.value)} required><option value="">-- Select Level --</option><option value="federal">Federal</option><option value="state">State</option><option value="locality">Locality</option></Select> )}
                 {selectedLevel && <MemberFormFieldset level={selectedLevel} formData={formData} onFormChange={handleChange} onDynamicFieldChange={handlePreviousRolesChange} />}
             </CardBody>
@@ -181,51 +203,79 @@ function TeamMemberForm({ member, onSave, onCancel }) {
     );
 }
 
-// This component is now rendered inside a modal
+// Internal View Component with dedicated bordered sections and BLUE styled headers
 function TeamMemberView({ level, member, onBack }) {
     const renderDetail = (label, value) => {
         if (!value) return null;
         return (
-            <div className="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:py-5">
+            <div className="py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:py-4">
                 <dt className="text-sm font-medium text-gray-600">{label}</dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{value}</dd>
             </div>
         );
     };
 
+    const renderSection = (title, content) => (
+        <div className="mb-6 p-5 border border-gray-200 shadow-sm rounded-lg bg-white">
+            <h3 className="text-lg font-semibold text-blue-800 bg-blue-100 px-4 py-2 rounded-md mb-4">{title}</h3>
+            <dl className="divide-y divide-gray-100">
+                {content}
+            </dl>
+        </div>
+    );
+
     return (
         <>
-            <CardBody>
+            <CardBody dir="rtl">
                 <PageHeader title="View Team Member Details" />
-                <div className="border-t border-gray-200">
-                    <dl className="divide-y divide-gray-200">
-                        {/* --- MODIFIED: Added Arabic Name --- */}
-                        {renderDetail('الإسم (باللغة الإنجليزية)', member.name)}
-                        {renderDetail('الإسم (باللغة العربية)', member.nameAr)}
+                <div className="mt-6">
+                    {renderSection("البيانات الأساسية",
+                        <>
+                            {level !== 'federal' && renderDetail('الولاية', STATE_LOCALITIES[member.state]?.ar || member.state)}
+                            {level === 'locality' && renderDetail('المحلية', member.locality)}
+                            {renderDetail('الإسم (باللغة الإنجليزية)', member.name)}
+                            {renderDetail('الإسم (باللغة العربية)', member.nameAr)}
+                            {renderDetail('رقم الهاتف', member.phone)}
+                            {renderDetail('الايميل', member.email)}
+                        </>
+                    )}
 
-                        {renderDetail('رقم الهاتف', member.phone)}
-                        {renderDetail('الايميل', member.email)}
-                        {level !== 'federal' && renderDetail('الولاية', member.state)}
-                        {level === 'locality' && renderDetail('المحلية', member.locality)}
-                        {renderDetail('المسمى الوظيفي', member.jobTitle === 'اخرى' ? member.jobTitleOther : member.jobTitle)}
-                        {level !== 'locality' && renderDetail('الصفة', member.role)}
-                        {level !== 'locality' && member.role === 'مدير البرنامج' && renderDetail('تاريخ التعيين مدير للبرنامج', member.directorDate)}
-                        {level !== 'locality' && (member.role === 'رئيس وحدة' || member.role === 'عضو في وحدة') && renderDetail('الوحدة', member.unit)}
-                        {level !== 'locality' && renderDetail(level === 'federal' ? 'تاريخ الانضمام للبرنامج الاتحادي' : 'تاريخ الانضمام لبرنامج الولاية', member.joinDate)}
-                        <div className="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:py-5">
-                            <dt className="text-sm font-medium text-gray-600">المهام الوظيفية والخبرات الاخرى</dt>
-                            <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                                {Array.isArray(member.previousRoles) && member.previousRoles.some(e => e.role) ? (
-                                    <ul className="list-disc pl-5 space-y-1">
-                                        {member.previousRoles.map((exp, index) => (
-                                            exp.role && <li key={index}><strong>{exp.role}</strong> ({exp.duration || 'N/A'})</li>
-                                        ))}
-                                    </ul>
-                                ) : 'N/A'}
-                            </dd>
+                    {renderSection("بيانات الحساب البنكي",
+                        <>
+                            {renderDetail('رقم الحساب البنكي', member.bankAccount)}
+                            {renderDetail('اسم البنك', member.bankName)}
+                            {renderDetail('اسم الفرع', member.bankBranch)}
+                            {renderDetail('اسم صاحب الحساب', member.accountHolder)}
+                        </>
+                    )}
+
+                    {renderSection("البيانات الوظيفية",
+                        <>
+                            {renderDetail('المسمى الوظيفي', member.jobTitle === 'اخرى' ? member.jobTitleOther : member.jobTitle)}
+                            {level !== 'locality' && renderDetail('الصفة', member.role)}
+                            {level !== 'locality' && member.role === 'مدير البرنامج' && renderDetail('تاريخ التعيين مدير للبرنامج', member.directorDate)}
+                            {level !== 'locality' && (member.role === 'رئيس وحدة' || member.role === 'عضو في وحدة') && renderDetail('الوحدة', member.unit)}
+                            {level !== 'locality' && renderDetail(level === 'federal' ? 'تاريخ الانضمام للبرنامج الاتحادي' : 'تاريخ الانضمام لبرنامج الولاية', member.joinDate)}
+                        </>
+                    )}
+
+                    {renderSection("الخبرات السابقة",
+                        <div className="py-3">
+                            {Array.isArray(member.previousRoles) && member.previousRoles.some(e => e.role) ? (
+                                <ul className="list-disc pl-5 pr-5 space-y-1 text-sm text-gray-900">
+                                    {member.previousRoles.map((exp, index) => (
+                                        exp.role && <li key={index}><strong>{exp.role}</strong> ({exp.duration || 'N/A'})</li>
+                                    ))}
+                                </ul>
+                            ) : <span className="text-sm text-gray-500">لا توجد خبرات مسجلة</span>}
                         </div>
-                        {renderDetail('اي تعليقات اخرى', member.comments)}
-                    </dl>
+                    )}
+
+                    {renderSection("ملاحظات إضافية",
+                        <>
+                            {renderDetail('اي تعليقات اخرى', member.comments)}
+                        </>
+                    )}
                 </div>
             </CardBody>
             <CardFooter>
@@ -236,7 +286,6 @@ function TeamMemberView({ level, member, onBack }) {
 }
 
 function PendingSubmissions({ submissions, isLoading, onApprove, onReject, onView }) {
-    // --- MODIFIED: Added Arabic Name to Header ---
     const headers = ['Name (En)', 'Name (Ar)', 'Email', 'Actions'];
     if (isLoading) return <Card><Spinner /></Card>;
     
@@ -248,7 +297,6 @@ function PendingSubmissions({ submissions, isLoading, onApprove, onReject, onVie
                         submissions.map(s => (
                             <tr key={s.id}>
                                 <td className="p-4 text-sm">{s.name}</td>
-                                {/* --- MODIFIED: Added Arabic Name to Row --- */}
                                 <td className="p-4 text-sm">{s.nameAr || '-'}</td>
                                 <td className="p-4 text-sm">{s.email}</td>
                                 <td className="p-4 text-sm">
@@ -273,48 +321,67 @@ function PendingSubmissions({ submissions, isLoading, onApprove, onReject, onVie
     );
 }
 
-
 function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleStatus }) {
-    const [showLinkCopied, setShowLinkCopied] = useState(false);
-    const link = `${window.location.origin}/public/team-member-application`;
-    const handleCopyLink = () => navigator.clipboard.writeText(link).then(() => {
-        setShowLinkCopied(true);
-        setTimeout(() => setShowLinkCopied(false), 2500);
-    });
+    const [copiedState, setCopiedState] = useState('');
+    
+    const baseUrl = `${window.location.origin}/public/team-member-application`;
+    
+    const links = {
+        'General (Select Level manually)': baseUrl,
+        'Federal Level': `${baseUrl}?level=federal`,
+        'State Level': `${baseUrl}?level=state`,
+        'Locality Level': `${baseUrl}?level=locality`
+    };
+
+    const handleCopyLink = (levelName, link) => {
+        navigator.clipboard.writeText(link).then(() => {
+            setCopiedState(levelName);
+            setTimeout(() => setCopiedState(''), 2500);
+        });
+    };
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={`Manage Team Member Submission Link`}>
             {isLoading ? <Spinner /> : ( 
-                <> 
-                    <FormGroup label="Public URL">
-                        <div className="relative">
-                            <Input type="text" value={link} readOnly className="pr-24" />
-                            <Button onClick={handleCopyLink} className="absolute right-1 top-1/2 -translate-y-1/2" variant="secondary" size="sm">
-                                {showLinkCopied ? 'Copied!' : 'Copy'}
-                            </Button>
-                        </div>
-                    </FormGroup>
+                <div className="space-y-4"> 
+                    <div className="space-y-4 mb-4">
+                        <p className="text-sm text-gray-600">Share these links to direct users to a specific application form.</p>
+                        {Object.entries(links).map(([levelName, link]) => (
+                            <FormGroup key={levelName} label={levelName}>
+                                <div className="relative">
+                                    <Input type="text" value={link} readOnly className="pr-24" />
+                                    <Button 
+                                        onClick={() => handleCopyLink(levelName, link)} 
+                                        className="absolute right-1 top-1/2 -translate-y-1/2" 
+                                        variant="secondary" 
+                                        size="sm"
+                                    >
+                                        {copiedState === levelName ? 'Copied!' : 'Copy'}
+                                    </Button>
+                                </div>
+                            </FormGroup>
+                        ))}
+                    </div>
+
                     <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-gray-50 rounded-lg">
                         <div className="flex items-center gap-4">
                             <div>Status: <span className={`font-bold px-2 py-1 rounded-full text-xs ml-2 ${settings.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{settings.isActive ? 'Active' : 'Inactive'}</span></div>
-                            <div><span className="font-medium">Link Opened:</span> {settings.openCount || 0} times</div>
+                            <div><span className="font-medium">Links Opened:</span> {settings.openCount || 0} times</div>
                         </div>
                         <Button variant={settings.isActive ? 'danger' : 'success'} onClick={onToggleStatus}>
-                            {settings.isActive ? 'Deactivate Link' : 'Activate Link'}
+                            {settings.isActive ? 'Deactivate Links' : 'Activate Links'}
                         </Button>
                     </div>
-                </> 
+                </div> 
             )}
         </Modal>
     );
 }
 
-// Helper function for role assignment
 const updateUserRoleByEmail = async (email, newRole, state, locality) => {
     if (!email || !newRole) return; 
 
     try {
-        // 1. Find the user by email
         const usersRef = collection(db, "users");
         const q = query(usersRef, where("email", "==", email));
         const querySnapshot = await getDocs(q);
@@ -328,20 +395,17 @@ const updateUserRoleByEmail = async (email, newRole, state, locality) => {
         const userRef = doc(db, "users", userDoc.id);
         const currentUserRole = userDoc.data().role;
 
-        // Safety Check: Do not override a super_user's role
         if (currentUserRole === 'super_user') {
              console.warn(`Role assignment skipped: Cannot programmatically change the role of a Super User (${email}).`);
              return;
         }
 
-        // 2. Prepare the update payload
         const newPermissions = DEFAULT_ROLE_PERMISSIONS[newRole] || DEFAULT_ROLE_PERMISSIONS['user'];
         const updatePayload = {
             role: newRole,
             permissions: applyDerivedPermissions({ ...ALL_PERMISSIONS, ...newPermissions })
         };
 
-        // 3. Add state/locality assignments if needed
         if (newRole === 'states_manager' || newRole === 'state_coordinator') {
             updatePayload.assignedState = state || '';
             updatePayload.assignedLocality = ''; 
@@ -350,7 +414,6 @@ const updateUserRoleByEmail = async (email, newRole, state, locality) => {
             updatePayload.assignedLocality = locality || '';
         }
 
-        // 4. Update the user document
         await updateDoc(userRef, updatePayload);
         console.log(`Successfully updated role for ${email} to ${newRole}.`);
 
@@ -359,7 +422,6 @@ const updateUserRoleByEmail = async (email, newRole, state, locality) => {
         throw new Error(`Failed to update user role: ${error.message}`);
     }
 };
-
 
 export function ProgramTeamView({ permissions, userStates }) {
     const {
@@ -461,7 +523,6 @@ export function ProgramTeamView({ permissions, userStates }) {
         }
     }, [filters.level, permissions, fetchersByLevel]);
 
-
     const filteredMembers = useMemo(() => {
         if (!filters.level) return [];
         
@@ -546,7 +607,6 @@ export function ProgramTeamView({ permissions, userStates }) {
 
             await upsertFn({ ...payload, id: editingMember?.id });
             
-            // After successful save, update the user's role
             let newRole = null;
             const roleFromForm = payload.role; 
             const isManagerOrHead = roleFromForm === 'مدير البرنامج' || roleFromForm === 'رئيس وحدة';
@@ -617,7 +677,6 @@ export function ProgramTeamView({ permissions, userStates }) {
             const approveFn = approveFnMap[filters.level];
             const approverInfo = { uid: currentUser.uid, email: currentUser.email, approvedAt: new Date() };
             
-            // Role assignment logic ON APPROVAL
             let newRole = null;
             const roleFromForm = submission.role;
             const isManagerOrHead = roleFromForm === 'مدير البرنامج' || roleFromForm === 'رئيس وحدة';
@@ -684,7 +743,6 @@ export function ProgramTeamView({ permissions, userStates }) {
         }
     };
     
-    // --- MODIFIED: Included 'الإسم (Ar)' in all headers ---
     const tableHeaders = {
         state: ['الإسم (En)', 'الإسم (Ar)', 'الايميل', 'الولاية', 'المسمى الوظيفي', 'الصفة', 'Actions'],
         federal: ['الإسم (En)', 'الإسم (Ar)', 'الايميل', 'المسمى الوظيفي', 'الصفة', 'Actions'],
@@ -712,15 +770,15 @@ export function ProgramTeamView({ permissions, userStates }) {
                     {(filters.level === 'state' || filters.level === 'locality') && (
                         <FormGroup label="State">
                             <Select value={filters.state} onChange={(e) => handleFilterChange('state', e.target.value)} disabled={!isFederal}>
-                                <option value="">All States</option>
-                                {Object.keys(STATE_LOCALITIES).sort().map(s => <option key={s} value={s}>{s}</option>)}
+                                <option value="">كل الولايات</option>
+                                {Object.keys(STATE_LOCALITIES).sort().map(s => <option key={s} value={s}>{STATE_LOCALITIES[s]?.ar || s}</option>)}
                             </Select>
                         </FormGroup>
                     )}
                     {filters.level === 'locality' && (
                         <FormGroup label="Locality">
                             <Select value={filters.locality} onChange={(e) => handleFilterChange('locality', e.target.value)} disabled={!filters.state}>
-                                <option value="">All Localities</option>
+                                <option value="">كل المحليات</option>
                                 {(STATE_LOCALITIES[filters.state]?.localities || []).sort((a,b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
                             </Select>
                         </FormGroup>
@@ -755,11 +813,9 @@ export function ProgramTeamView({ permissions, userStates }) {
                                 {filteredMembers.length > 0 ? filteredMembers.map(c => (
                                     <tr key={c.id}>
                                         <td className="p-4 text-sm">{c.name}</td>
-                                        {/* --- MODIFIED: Display Arabic Name --- */}
                                         <td className="p-4 text-sm">{c.nameAr || '-'}</td>
-
                                         <td className="p-4 text-sm">{c.email}</td>
-                                        {filters.level !== 'federal' && <td className="p-4 text-sm">{c.state}</td>}
+                                        {filters.level !== 'federal' && <td className="p-4 text-sm">{STATE_LOCALITIES[c.state]?.ar || c.state}</td>}
                                         {filters.level === 'locality' && <td className="p-4 text-sm">{c.locality}</td>}
                                         <td className="p-4 text-sm">{c.jobTitle === 'اخرى' ? c.jobTitleOther : c.jobTitle}</td>
                                         {filters.level !== 'locality' && <td className="p-4 text-sm">{c.role}</td>}
@@ -830,15 +886,23 @@ export function ProgramTeamView({ permissions, userStates }) {
 
 export function TeamMemberApplicationForm() {
     const [formData, setFormData] = useState({
-        name: '', 
-        nameAr: '', // --- NEW
-        phone: '', email: '', state: '', locality: '', jobTitle: '', jobTitleOther: '', 
-        role: '', directorDate: '', unit: '', joinDate: '', comments: '',
+        name: '', nameAr: '', phone: '', email: '', state: '', locality: '', 
+        jobTitle: '', jobTitleOther: '', role: '', directorDate: '', unit: '', 
+        joinDate: '', bankAccount: '', bankName: '', bankBranch: '', accountHolder: '', comments: '',
         previousRoles: [{ role: '', duration: '' }, { role: '', duration: '' }, { role: '', duration: '' }],
         isUserEmail: false,
     });
     
-    const [selectedLevel, setSelectedLevel] = useState(''); 
+    const [selectedLevel, setSelectedLevel] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const levelFromUrl = params.get('level');
+            if (['federal', 'state', 'locality'].includes(levelFromUrl)) {
+                return levelFromUrl;
+            }
+        }
+        return '';
+    }); 
     
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -895,7 +959,6 @@ export function TeamMemberApplicationForm() {
             return;
         }
 
-        // Basic validation
         if (!formData.name || !formData.email) {
             setError('Please fill in at least Name and Email.');
             return;
@@ -972,7 +1035,7 @@ export function TeamMemberApplicationForm() {
     if (!isLinkActive) {
         return (
             <Card>
-                <PageHeader title="Program Team Application" />
+                <PageHeader title="معلومات فريق صحة الطفل" />
                 <CardBody>
                     <EmptyState message="Submissions for new team members are currently closed." />
                 </CardBody>
@@ -999,19 +1062,12 @@ export function TeamMemberApplicationForm() {
         );
     }
 
-    const levelNames = {
-        federal: "Federal Level (اتحادي)",
-        state: "State Level (ولائي)",
-        locality: "Locality Level (محلي)"
-    };
-
     return (
         <Card>
             <form onSubmit={handleSubmit} className="space-y-4" dir="rtl">
                 <CardBody>
                     <PageHeader 
-                        title={isUpdate ? "Update Your Program Team Profile" : "Program Team Application"}
-                        subtitle={isUpdate ? `Please review and update your information for the ${levelNames[selectedLevel] || ''}.` : "Please select your application level to begin."} 
+                        title={isUpdate ? "تحديث معلومات فريق صحة الطفل" : "معلومات فريق صحة الطفل"}
                     />
                     {error && <div className="p-3 my-4 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
                     
@@ -1030,11 +1086,6 @@ export function TeamMemberApplicationForm() {
                     
                     {selectedLevel && (
                         <div className="space-y-4">
-                            <div className="p-2 bg-sky-50 border border-sky-200 rounded-md">
-                                <p className="text-center font-semibold text-sky-800">
-                                    أنت تملأ استمارة التقديم لـ: {levelNames[selectedLevel]}
-                                </p>
-                            </div>
                             <MemberFormFieldset 
                                 level={selectedLevel} 
                                 formData={formData} 
@@ -1048,7 +1099,7 @@ export function TeamMemberApplicationForm() {
                 {selectedLevel && (
                     <CardFooter>
                          <Button type="submit" disabled={submitting}>
-                            {submitting ? 'Submitting...' : (isUpdate ? 'Update Profile' : 'Submit Application')}
+                            {submitting ? 'Submitting...' : (isUpdate ? 'Update Profile' : 'تسليم الاستمارة')}
                         </Button>
                     </CardFooter>
                 )}
@@ -1057,6 +1108,7 @@ export function TeamMemberApplicationForm() {
     );
 }
 
+// Public View Component with dedicated bordered sections and BLUE styled headers
 export function PublicTeamMemberProfileView({ member, level }) {
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const publicLink = window.location.href;
@@ -1064,12 +1116,21 @@ export function PublicTeamMemberProfileView({ member, level }) {
     const renderDetail = (label, value) => {
         if (!value) return null;
         return (
-            <div className="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:py-5">
+            <div className="py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:py-4">
                 <dt className="text-sm font-medium text-gray-600">{label}</dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{value}</dd>
             </div>
         );
     };
+
+    const renderSection = (title, content) => (
+        <div className="mb-6 p-5 border border-gray-200 shadow-sm rounded-lg bg-white">
+            <h3 className="text-lg font-semibold text-blue-800 bg-blue-100 px-4 py-2 rounded-md mb-4">{title}</h3>
+            <dl className="divide-y divide-gray-100">
+                {content}
+            </dl>
+        </div>
+    );
 
     const levelName = level.charAt(0).toUpperCase() + level.slice(1);
 
@@ -1091,36 +1152,46 @@ export function PublicTeamMemberProfileView({ member, level }) {
                     </Button>
                 }
             />
-            <CardBody>
-                <div className="border-t border-gray-200">
-                    <dl className="divide-y divide-gray-200">
-                        {/* --- MODIFIED: Added Arabic Name --- */}
-                        {renderDetail('الإسم (باللغة الإنجليزية)', member.name)}
-                        {renderDetail('الإسم (باللغة العربية)', member.nameAr)}
+            <CardBody dir="rtl">
+                <div className="mt-4">
+                    {renderSection("البيانات الأساسية",
+                        <>
+                            {level !== 'federal' && renderDetail('الولاية', STATE_LOCALITIES[member.state]?.ar || member.state)}
+                            {level === 'locality' && renderDetail('المحلية', member.locality)}
+                            {renderDetail('الإسم (باللغة الإنجليزية)', member.name)}
+                            {renderDetail('الإسم (باللغة العربية)', member.nameAr)}
+                            {renderDetail('رقم الهاتف', member.phone)}
+                            {renderDetail('الايميل', member.email)}
+                        </>
+                    )}
 
-                        {renderDetail('رقم الهاتف', member.phone)}
-                        {renderDetail('الايميل', member.email)}
-                        {level !== 'federal' && renderDetail('الولاية', member.state)}
-                        {level === 'locality' && renderDetail('المحلية', member.locality)}
-                        {renderDetail('المسمى الوظيفي', member.jobTitle === 'اخرى' ? member.jobTitleOther : member.jobTitle)}
-                        {level !== 'locality' && renderDetail('الصفة', member.role)}
-                        {level !== 'locality' && member.role === 'مدير البرنامج' && renderDetail('تاريخ التعيين مدير للبرنامج', member.directorDate)}
-                        {level !== 'locality' && (member.role === 'رئيس وحدة' || member.role === 'عضو في وحدة') && renderDetail('الوحدة', member.unit)}
-                        {level !== 'locality' && renderDetail(level === 'federal' ? 'تاريخ الانضمام للبرنامج الاتحادي' : 'تاريخ الانضمام لبرنامج الولاية', member.joinDate)}
-                        <div className="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:py-5">
-                            <dt className="text-sm font-medium text-gray-600">المهام الوظيفية والخبرات الاخرى</dt>
-                            <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                                {Array.isArray(member.previousRoles) && member.previousRoles.some(e => e.role) ? (
-                                    <ul className="list-disc pl-5 space-y-1">
-                                        {member.previousRoles.map((exp, index) => (
-                                            exp.role && <li key={index}><strong>{exp.role}</strong> ({exp.duration || 'N/A'})</li>
-                                        ))}
-                                    </ul>
-                                ) : 'N/A'}
-                            </dd>
+                    {renderSection("البيانات الوظيفية",
+                        <>
+                            {renderDetail('المسمى الوظيفي', member.jobTitle === 'اخرى' ? member.jobTitleOther : member.jobTitle)}
+                            {level !== 'locality' && renderDetail('الصفة', member.role)}
+                            {level !== 'locality' && member.role === 'مدير البرنامج' && renderDetail('تاريخ التعيين مدير للبرنامج', member.directorDate)}
+                            {level !== 'locality' && (member.role === 'رئيس وحدة' || member.role === 'عضو في وحدة') && renderDetail('الوحدة', member.unit)}
+                            {level !== 'locality' && renderDetail(level === 'federal' ? 'تاريخ الانضمام للبرنامج الاتحادي' : 'تاريخ الانضمام لبرنامج الولاية', member.joinDate)}
+                        </>
+                    )}
+
+                    {renderSection("الخبرات السابقة",
+                        <div className="py-3">
+                            {Array.isArray(member.previousRoles) && member.previousRoles.some(e => e.role) ? (
+                                <ul className="list-disc pl-5 pr-5 space-y-1 text-sm text-gray-900">
+                                    {member.previousRoles.map((exp, index) => (
+                                        exp.role && <li key={index}><strong>{exp.role}</strong> ({exp.duration || 'N/A'})</li>
+                                    ))}
+                                </ul>
+                            ) : <span className="text-sm text-gray-500">لا توجد خبرات مسجلة</span>}
                         </div>
-                        {renderDetail('اي تعليقات اخرى', member.comments)}
-                    </dl>
+                    )}
+
+                    {renderSection("ملاحظات إضافية",
+                        <>
+                            {renderDetail('اي تعليقات اخرى', member.comments)}
+                        </>
+                    )}
                 </div>
             </CardBody>
         </Card>

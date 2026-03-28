@@ -52,6 +52,16 @@ const SERVICE_TITLES = {
     'IPC': 'Infection Prevention and Control in Neonatal Units (IPC)'
 };
 
+// --- Normalization Helper for Job Titles ---
+const normalizeJobTitle = (title) => {
+    if (!title || typeof title !== 'string') return title;
+    const t = title.trim();
+    if (t === 'طبيب' || t === 'طبيب عمومي') return 'Medical Officer';
+    if (t === 'مساعد طبي') return 'Medical Assistance';
+    if (t === 'ممرض') return 'Treating Nurse';
+    return t;
+};
+
 // --- Dictionaries for English Translations ---
 const IMNCI_ENGLISH_LABELS = {
     // Groups
@@ -810,9 +820,125 @@ const FilterSelect = ({ label, value, onChange, options, disabled = false, defau
     </div>
 );
 
+// --- Helper to render trend arrows based on Ideal values ---
+const renderTrendArrows = (val, type) => {
+    const numVal = parseFloat(val);
+    if (isNaN(numVal)) return null;
+
+    if (type === 'visits') {
+        if (numVal < 2) return <span className="text-red-500 text-[10px] ml-1" title="Critically below ideal (4)">▼▼▼</span>;
+        if (numVal < 3) return <span className="text-red-500 text-[10px] ml-1" title="Below ideal (4)">▼▼</span>;
+        if (numVal < 4) return <span className="text-red-500 text-[10px] ml-1" title="Slightly below ideal (4)">▼</span>;
+        if (numVal > 4) return <span className="text-emerald-500 text-[10px] ml-1" title="Above ideal (4)">▲</span>;
+    } else if (type === 'cases') {
+        if (numVal < 2) return <span className="text-red-500 text-[10px] ml-1" title="Critically below ideal (3)">▼▼</span>;
+        if (numVal < 3) return <span className="text-red-500 text-[10px] ml-1" title="Below ideal (3)">▼</span>;
+        if (numVal > 5) return <span className="text-emerald-500 text-[10px] ml-1" title="Exceptionally above ideal (3)">▲▲▲</span>;
+        if (numVal > 4) return <span className="text-emerald-500 text-[10px] ml-1" title="Well above ideal (3)">▲▲</span>;
+        if (numVal > 3) return <span className="text-emerald-500 text-[10px] ml-1" title="Above ideal (3)">▲</span>;
+    }
+    return null;
+};
+
+// --- NEW COMPONENT: Geographic Volume KPI Table ---
+const GeographicVolumeTable = ({ title, data, locationLabel }) => {
+    if (!data || data.length === 0) return null;
+    return (
+        <div className="bg-white rounded-2xl shadow-md border border-black overflow-hidden mb-10">
+            <div className="p-5 border-b border-black bg-slate-100 flex justify-between items-center">
+                <h4 className="text-lg font-extrabold text-slate-800">{title}</h4>
+            </div>
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left border-collapse">
+                    <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider">
+                        <tr>
+                            <th className="px-5 py-4 border-b border-r border-black font-extrabold">{locationLabel}</th>
+                            <th className="px-5 py-4 border-b border-r border-black font-extrabold text-center bg-sky-50">Total Completed Visits</th>
+                            <th className="px-5 py-4 border-b border-r border-black font-extrabold text-center bg-sky-50">Visits per HW</th>
+                            <th className="px-5 py-4 border-b border-r border-black font-extrabold text-center">Total HWs Visited</th>
+                            <th className="px-5 py-4 border-b border-r border-black font-extrabold text-center bg-emerald-50">Total Cases Observed</th>
+                            <th className="px-5 py-4 border-b border-black font-extrabold text-center bg-emerald-50">Cases per Visit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {data.map((row, idx) => {
+                            const visitsPerHw = row.totalHealthWorkers > 0 ? (row.totalVisits / row.totalHealthWorkers).toFixed(1) : '0';
+                            const casesPerVisit = row.totalVisits > 0 ? (row.totalCasesObserved / row.totalVisits).toFixed(1) : '0';
+                            
+                            return (
+                                <tr key={idx} className="hover:bg-sky-50 transition-colors border-b border-black">
+                                    <td className="px-5 py-3 border-r border-black font-bold text-slate-800">{row.stateName}</td>
+                                    <td className="px-5 py-3 border-r border-black text-center font-bold text-sky-800 bg-sky-50/50">{row.totalVisits}</td>
+                                    <td className="px-5 py-3 border-r border-black text-center text-slate-600 bg-sky-50/50">
+                                        <div className="flex items-center justify-center">
+                                            <span>{visitsPerHw}</span>
+                                            {renderTrendArrows(visitsPerHw, 'visits')}
+                                        </div>
+                                    </td>
+                                    <td className="px-5 py-3 border-r border-black text-center font-bold text-slate-700">{row.totalHealthWorkers}</td>
+                                    <td className="px-5 py-3 border-r border-black text-center font-bold text-emerald-800 bg-emerald-50/50">{row.totalCasesObserved}</td>
+                                    <td className="px-5 py-3 text-center text-slate-600 bg-emerald-50/50">
+                                        <div className="flex items-center justify-center">
+                                            <span>{casesPerVisit}</span>
+                                            {renderTrendArrows(casesPerVisit, 'cases')}
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+};
+
+// --- NEW COMPONENT: Summary KPI Table grouped by Job Description (Worker Type) ---
+const SummaryKpiTable = ({ title, kpiDefinitions, overallKpis, kpisByWorkerType }) => {
+    if (!overallKpis || !kpisByWorkerType || kpisByWorkerType.length === 0) return null;
+    return (
+        <div className="bg-white rounded-2xl shadow-md border border-black overflow-hidden mb-10">
+            <div className="p-5 border-b border-black bg-slate-100 flex justify-between items-center">
+                <h4 className="text-lg font-extrabold text-slate-800">{title}</h4>
+            </div>
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left border-collapse">
+                    <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider">
+                        <tr>
+                            <th className="px-5 py-4 border-b border-r border-black font-extrabold min-w-[200px]">KPI Name</th>
+                            <th className="px-5 py-4 border-b border-r border-black font-extrabold text-center bg-sky-100 whitespace-nowrap">Overall Score</th>
+                            {kpisByWorkerType.map(group => (
+                                <th key={group.workerType} className="px-5 py-4 border-b border-r border-black font-extrabold text-center whitespace-nowrap">
+                                    {group.workerType}
+                                </th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {kpiDefinitions.map((kpi, idx) => (
+                            <tr key={idx} className="hover:bg-sky-50 transition-colors border-b border-black">
+                                <td className="px-5 py-3 border-r border-black font-bold text-slate-800">{kpi.label}</td>
+                                <td className="px-5 py-3 border-r border-black text-center bg-sky-50/50">
+                                    <ScoreText value={kpi.getValue(overallKpis)} />
+                                </td>
+                                {kpisByWorkerType.map(group => (
+                                    <td key={group.workerType} className="px-5 py-3 border-r border-black text-center">
+                                        <ScoreText value={kpi.getValue(group.kpis)} />
+                                    </td>
+                                ))}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+};
+
 const MentorshipDashboard = ({ 
     allSubmissions, STATE_LOCALITIES, activeService, activeState, onStateChange, activeLocality, onLocalityChange, activeFacilityId, onFacilityIdChange, activeWorkerName, onWorkerNameChange, activeProject, onProjectChange, visitReports, canEditStatus, onUpdateStatus, activeWorkerType, onWorkerTypeChange = () => {},
-    publicDashboardMode = false, handleRefresh = () => {}, isRefreshing = false, isLoading = false
+    publicDashboardMode = false, handleRefresh = () => {}, isRefreshing = false, isLoading = false,
+    lastUpdated = null 
 }) => {
 
     const [activeEencTab, setActiveEencTab] = useState('skills'); 
@@ -832,6 +958,9 @@ const MentorshipDashboard = ({
         onUpdateStatus(reportId, challengeId, newValue, fieldName);
     };
 
+    // Geographic Dynamic Level Label
+    const geographicLevelName = activeState ? 'Locality' : 'State';
+
     // --- Visit Report Data Processor ---
     const visitReportStats = useMemo(() => {
         if (!visitReports) return null;
@@ -844,15 +973,31 @@ const MentorshipDashboard = ({
 
         const totalVisits = filtered.length;
 
-        const stateCounts = {};
+        // Dynamic State/Locality Grouping for the Visit Report Bar Chart
+        const isStateLevel = !activeState;
+        const locationCounts = {};
+        
         filtered.forEach(r => {
-            const s = r.state || 'Unknown';
-            stateCounts[s] = (stateCounts[s] || 0) + 1;
+            const loc = isStateLevel ? (r.state || 'Unknown') : (r.locality || 'Unknown');
+            locationCounts[loc] = (locationCounts[loc] || 0) + 1;
         });
-        const stateChartData = Object.keys(stateCounts).map(k => ({
-            stateName: STATE_LOCALITIES[k]?.ar || k,
-            count: stateCounts[k]
-        }));
+        
+        const geographicChartData = Object.keys(locationCounts).map(k => {
+             let locName = k;
+            if (isStateLevel) {
+                locName = STATE_LOCALITIES[k]?.ar || k;
+            } else {
+                const stateObj = STATE_LOCALITIES[activeState];
+                if (stateObj && stateObj.localities) {
+                    const locObj = stateObj.localities.find(l => l.en === k);
+                    if (locObj) locName = locObj.ar;
+                }
+            }
+            return {
+                stateName: locName,
+                count: locationCounts[k]
+            };
+        });
 
         const facilityMap = {};
         const skillKeys = new Set();
@@ -899,7 +1044,7 @@ const MentorshipDashboard = ({
             }
         });
 
-        return { totalVisits, stateChartData, facilityTableData, distinctSkillKeys, problemsList };
+        return { totalVisits, geographicChartData, facilityTableData, distinctSkillKeys, problemsList };
 
     }, [visitReports, activeService, activeState, activeLocality, activeFacilityId, activeProject, STATE_LOCALITIES]);
 
@@ -1508,41 +1653,118 @@ const MentorshipDashboard = ({
             }).slice(0, 4);
     }, [filteredSubmissions, activeService]);
 
-
-    const stateKpis = useMemo(() => {
+    const geographicKpis = useMemo(() => {
         const kpisHelper = activeService === 'IMNCI' ? imnciKpiHelper : (activeService === 'EENC' ? eencKpiHelper : null);
         if (!kpisHelper) return [];
-        const submissionsByState = filteredSubmissions.reduce((acc, sub) => {
+        
+        const isStateLevel = !activeState;
+        
+        const submissionsByLocation = filteredSubmissions.reduce((acc, sub) => {
             if (sub.service === 'EENC_MOTHERS' || sub.service === 'IMNCI_MOTHERS') return acc;
-            const stateKey = sub.state || 'UNKNOWN';
-            if (!acc[stateKey]) acc[stateKey] = [];
-            acc[stateKey].push(sub);
+            const locKey = isStateLevel ? (sub.state || 'UNKNOWN') : (sub.locality || 'UNKNOWN');
+            if (!acc[locKey]) acc[locKey] = [];
+            acc[locKey].push(sub);
             return acc;
         }, {});
-        return Object.keys(submissionsByState).map(stateKey => {
-            const stateName = STATE_LOCALITIES[stateKey]?.ar || stateKey;
-            return { stateKey, stateName, ...kpisHelper(submissionsByState[stateKey]) };
-        }).sort((a, b) => a.stateName.localeCompare(b.name, 'ar'));
-    }, [filteredSubmissions, imnciKpiHelper, eencKpiHelper, activeService, STATE_LOCALITIES]);
+        
+        return Object.keys(submissionsByLocation).map(locKey => {
+            let locName = locKey;
+            if (isStateLevel) {
+                locName = STATE_LOCALITIES[locKey]?.ar || locKey;
+            } else {
+                const stateObj = STATE_LOCALITIES[activeState];
+                if (stateObj && stateObj.localities) {
+                    const locObj = stateObj.localities.find(l => l.en === locKey);
+                    if (locObj) locName = locObj.ar;
+                }
+            }
+            return { stateKey: locKey, stateName: locName, ...kpisHelper(submissionsByLocation[locKey]) };
+        }).sort((a, b) => a.stateName.localeCompare(b.stateName, 'ar'));
+    }, [filteredSubmissions, imnciKpiHelper, eencKpiHelper, activeService, STATE_LOCALITIES, activeState]);
 
-    const motherStateKpis = useMemo(() => {
+    const motherGeographicKpis = useMemo(() => {
         if (activeService !== 'EENC' && activeService !== 'IMNCI') return [];
         const isEenc = activeService === 'EENC';
-        const submissionsByState = filteredSubmissions.reduce((acc, sub) => {
+        const isStateLevel = !activeState;
+
+        const submissionsByLocation = filteredSubmissions.reduce((acc, sub) => {
             if (isEenc && sub.service !== 'EENC_MOTHERS') return acc;
             if (!isEenc && sub.service !== 'IMNCI_MOTHERS') return acc;
-            const stateKey = sub.state || 'UNKNOWN';
-            if (!acc[stateKey]) acc[stateKey] = [];
-            acc[stateKey].push(sub);
+            const locKey = isStateLevel ? (sub.state || 'UNKNOWN') : (sub.locality || 'UNKNOWN');
+            if (!acc[locKey]) acc[locKey] = [];
+            acc[locKey].push(sub);
             return acc;
         }, {});
+
         const helper = isEenc ? eencMotherKpiHelper : imnciMotherKpiHelper;
-        return Object.keys(submissionsByState).map(stateKey => {
-            const stateName = STATE_LOCALITIES[stateKey]?.ar || stateKey;
-            const kpis = helper(submissionsByState[stateKey]);
-            return { stateKey, stateName, ...kpis };
-        }).sort((a, b) => a.stateName.localeCompare(b.name, 'ar'));
-    }, [filteredSubmissions, eencMotherKpiHelper, imnciMotherKpiHelper, activeService, STATE_LOCALITIES]);
+        
+        return Object.keys(submissionsByLocation).map(locKey => {
+            let locName = locKey;
+            if (isStateLevel) {
+                locName = STATE_LOCALITIES[locKey]?.ar || locKey;
+            } else {
+                const stateObj = STATE_LOCALITIES[activeState];
+                if (stateObj && stateObj.localities) {
+                    const locObj = stateObj.localities.find(l => l.en === locKey);
+                    if (locObj) locName = locObj.ar;
+                }
+            }
+            const kpis = helper(submissionsByLocation[locKey]);
+            return { stateKey: locKey, stateName: locName, ...kpis };
+        }).sort((a, b) => a.stateName.localeCompare(b.stateName, 'ar'));
+    }, [filteredSubmissions, eencMotherKpiHelper, imnciMotherKpiHelper, activeService, STATE_LOCALITIES, activeState]);
+
+    // --- NEW: Data grouped by Job Description (Worker Type) ---
+    const kpisByWorkerType = useMemo(() => {
+        const kpisHelper = activeService === 'IMNCI' ? imnciKpiHelper : (activeService === 'EENC' ? eencKpiHelper : null);
+        if (!kpisHelper) return [];
+        
+        const submissionsByWt = filteredSubmissions.reduce((acc, sub) => {
+            if (sub.service === 'EENC_MOTHERS' || sub.service === 'IMNCI_MOTHERS') return acc;
+            const wt = sub.workerType && sub.workerType !== 'N/A' ? sub.workerType : 'Unknown Title';
+            if (!acc[wt]) acc[wt] = [];
+            acc[wt].push(sub);
+            return acc;
+        }, {});
+        
+        return Object.keys(submissionsByWt).map(wt => ({
+            workerType: wt,
+            kpis: kpisHelper(submissionsByWt[wt])
+        })).sort((a, b) => a.workerType.localeCompare(b.workerType));
+    }, [filteredSubmissions, imnciKpiHelper, eencKpiHelper, activeService]);
+
+    // KPI Definitions for Summary Tables
+    const imnciSummaryDefs = [
+        { label: 'Overall IMNCI Adherence', getValue: (k) => k.avgOverall },
+        { label: 'Assess & Classify', getValue: (k) => k.avgAssessment },
+        { label: 'Final Decision', getValue: (k) => k.avgDecision },
+        { label: 'Treatment & Counsel', getValue: (k) => k.avgTreatment },
+        { label: 'Danger Signs Assessment', getValue: (k) => k.avgDangerSigns },
+        { label: 'Measurement Skills', getValue: (k) => calculateAverage([k.avgHandsOnWeight, k.avgHandsOnTemp, k.avgHandsOnHeight]) },
+        { label: 'Correct Respiratory Rate', getValue: (k) => k.avgRespiratoryRateCalculation },
+        { label: 'Correct Dehydration Assessment', getValue: (k) => k.avgDehydrationAssessment },
+        { label: 'Correct Malnutrition Assessment', getValue: (k) => calculateAverage([k.avgHandsOnMUAC, k.avgHandsOnWFH]) },
+        { label: 'Immunization Assessed Correctly', getValue: (k) => k.avgImmunization },
+        { label: 'Vitamin Supplementation Correctly', getValue: (k) => k.avgVitaminAssessment },
+        { label: 'Pneumonia Treated with Amoxicillin', getValue: (k) => k.avgPneuAmox },
+        { label: 'Diarrhea Treated with ORS', getValue: (k) => k.avgDiarOrs },
+        { label: 'Diarrhea Treated with Zinc', getValue: (k) => k.avgDiarZinc },
+        { label: 'Malaria Treated with Coartem', getValue: (k) => k.avgMalariaCoartem },
+        { label: 'Advised Return Immediately', getValue: (k) => k.avgReturnImm },
+        { label: 'Advised Return for Follow Up', getValue: (k) => k.avgReturnFu },
+        { label: 'Recording Form Use', getValue: (k) => calculateAverage([k.avgRecordSigns, k.avgRecordClass, k.avgRecordTreat]) },
+    ];
+
+    const eencSummaryDefs = [
+        { label: 'Overall EENC Adherence', getValue: (k) => k.avgOverall },
+        { label: 'Preparation Score', getValue: (k) => k.avgPreparation },
+        { label: 'Drying & Stimulation Score', getValue: (k) => k.avgDrying },
+        { label: 'Breathing Baby Mgmt Score', getValue: (k) => k.avgNormalBreathing },
+        { label: 'Resuscitation Score', getValue: (k) => k.avgResuscitation },
+        { label: 'Infection Control', getValue: (k) => calculateAverage([k.avgInfWash1, k.avgInfWash2, k.avgInfGloves]) },
+        { label: 'Cord Management (Breathing Babies)', getValue: (k) => calculateAverage([k.avgCordHygiene, k.avgCordDelay, k.avgCordClamp]) },
+        { label: 'Early Breastfeeding Advice', getValue: (k) => k.avgBfAdvice }
+    ];
 
     // --- Constants for Rendering ---
     const serviceTitle = SERVICE_TITLES[activeService] || activeService;
@@ -1677,10 +1899,41 @@ const MentorshipDashboard = ({
 
     return (
         <div className="p-4 sm:p-6 bg-slate-50/50 min-h-screen" dir="ltr">             
-            <div className="flex justify-between items-center mb-6">
+            {/* UPDATED HEADER SECTION */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <h3 className="text-2xl font-extrabold text-slate-800 text-left tracking-tight">
                     Mentorship Dashboard: {serviceTitle} <span className="text-sky-600 text-xl font-semibold">{scopeTitle}</span>
                 </h3>
+                
+                {/* REFRESH & LAST UPDATED UI */}
+                <div className="flex items-center gap-4 bg-white px-4 py-2 border border-black rounded-xl shadow-sm">
+                    {lastUpdated && (
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Last Updated (Server)</span>
+                            <span className="text-xs font-bold text-slate-700">
+                                {new Date(lastUpdated).toLocaleString('en-US', { 
+                                    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' 
+                                })}
+                            </span>
+                        </div>
+                    )}
+                    {lastUpdated && <div className="w-px h-8 bg-slate-200 mx-1"></div>}
+                    <button 
+                        onClick={handleRefresh} 
+                        disabled={isRefreshing || isLoading}
+                        className="flex items-center gap-2 p-2 text-sky-600 hover:text-sky-800 hover:bg-sky-50 rounded-lg transition-colors font-bold text-sm disabled:opacity-50"
+                        title="Force refresh data from server"
+                    >
+                        {isRefreshing ? (
+                            <Spinner size="sm" /> 
+                        ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                            </svg>
+                        )}
+                        <span className="hidden sm:inline">Refresh</span>
+                    </button>
+                </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-5 mb-8 p-5 bg-white rounded-2xl shadow-md border border-black">
@@ -1862,8 +2115,24 @@ const MentorshipDashboard = ({
                                 />
                             </div>
                             
-                            <h3 className="text-xl font-extrabold text-slate-800 mb-5 mt-10 text-left tracking-wide">Overall Adherence by State {scopeTitle}</h3>
-                            <div className="mb-10"><KpiBarChart title="Overall IMNCI Adherence by State" chartData={stateKpis} /></div>
+                            {/* SUMMARY TABLE ADDED HERE */}
+                            <SummaryKpiTable 
+                                title={`KPI Summary by Job Description ${scopeTitle}`} 
+                                kpiDefinitions={imnciSummaryDefs} 
+                                overallKpis={overallKpis} 
+                                kpisByWorkerType={kpisByWorkerType} 
+                            />
+
+                            {/* NEW: Geographic KPI Volume Table */}
+                            <h3 className="text-xl font-extrabold text-slate-800 mb-5 mt-10 text-left tracking-wide">Program Performance by {geographicLevelName} {scopeTitle}</h3>
+                            <GeographicVolumeTable 
+                                title={`Volume & Coverage by ${geographicLevelName}`} 
+                                data={geographicKpis} 
+                                locationLabel={geographicLevelName} 
+                            />
+
+                            <h3 className="text-xl font-extrabold text-slate-800 mb-5 mt-10 text-left tracking-wide">Overall Adherence by {geographicLevelName} {scopeTitle}</h3>
+                            <div className="mb-10"><KpiBarChart title={`Overall IMNCI Adherence by ${geographicLevelName}`} chartData={geographicKpis} /></div>
                             
                             <h3 className="text-xl font-extrabold text-slate-800 mb-5 text-left tracking-wide">Detailed Skill Performance {scopeTitle}</h3>
                             <div className="mb-10"><CompactSkillsTable overallKpis={overallKpis} /></div>
@@ -1886,8 +2155,8 @@ const MentorshipDashboard = ({
                                 <KpiLineChart title="Satisfaction Over Time" chartData={imnciMotherChartData} kpiKeys={imnciMotherSatChartKeys} />
                             </div>
                             
-                            <h3 className="text-xl font-extrabold text-slate-800 mb-5 mt-10 text-left tracking-wide">Overall Mother Interview Scores by State {scopeTitle}</h3>
-                            <div className="mb-10"><KpiBarChart title="Average Mother Knowledge/Satisfaction by State" chartData={motherStateKpis} /></div>
+                            <h3 className="text-xl font-extrabold text-slate-800 mb-5 mt-10 text-left tracking-wide">Overall Mother Interview Scores by {geographicLevelName} {scopeTitle}</h3>
+                            <div className="mb-10"><KpiBarChart title={`Average Mother Knowledge/Satisfaction by ${geographicLevelName}`} chartData={motherGeographicKpis} /></div>
                             
                             <h3 className="text-xl font-extrabold text-slate-800 mb-5 text-left tracking-wide">Detailed Mother Interview Performance {scopeTitle}</h3>
                             <div className="mb-10"><MothersCompactSkillsTable motherKpis={motherKpis} serviceType="IMNCI" /></div>
@@ -1936,7 +2205,7 @@ const MentorshipDashboard = ({
                             </div>
 
                             <div className="mb-8">
-                                <KpiBarChart title="Total Visits by State" chartData={visitReportStats.stateChartData} dataKey="count" />
+                                <KpiBarChart title={`Total Visits by ${geographicLevelName}`} chartData={visitReportStats.geographicChartData} dataKey="count" />
                             </div>
 
                             <div className="mb-8 bg-white rounded-2xl shadow-md border border-black overflow-hidden">
@@ -2015,8 +2284,26 @@ const MentorshipDashboard = ({
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"><DetailedKpiCard title="KPI 4: Cord Management (Breathing Babies)" overallScore={calculateAverage([overallKpis.avgCordHygiene, overallKpis.avgCordDelay, overallKpis.avgCordClamp])} kpis={eencCordKpis} /><KpiLineChart title="KPI 4 Over Time: Cord Mgmt" chartData={eencChartData} kpiKeys={eencCordChartKeys} /></div>
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"><DetailedKpiCard title="KPI 5: Breastfeeding (Breathing Babies)" overallScore={overallKpis.avgBfAdvice} kpis={eencBreastfeedingKpis} /><KpiLineChart title="KPI 5 Over Time: Breastfeeding" chartData={eencChartData} kpiKeys={eencBreastfeedingChartKeys} /></div>
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"><DetailedKpiCard title="KPI 6: Resuscitation Execution (Non-Breathing)" overallScore={overallKpis.avgResuscitation} kpis={eencResusExecKpis} /><KpiLineChart title="KPI 6 Over Time: Resuscitation" chartData={eencChartData} kpiKeys={eencResusExecChartKeys} /></div>
-                            <h3 className="text-xl font-bold text-slate-800 mb-5 mt-10 text-left tracking-wide">Overall EENC Adherence by State {scopeTitle}</h3>
-                            <div className="mb-10"><KpiBarChart title="Overall EENC Adherence by State" chartData={stateKpis} /></div>
+                            
+                            {/* SUMMARY TABLE ADDED HERE */}
+                            <SummaryKpiTable 
+                                title={`KPI Summary by Job Description ${scopeTitle}`} 
+                                kpiDefinitions={eencSummaryDefs} 
+                                overallKpis={overallKpis} 
+                                kpisByWorkerType={kpisByWorkerType} 
+                            />
+
+                            {/* NEW: Geographic KPI Volume Table */}
+                            <h3 className="text-xl font-bold text-slate-800 mb-5 mt-10 text-left tracking-wide">Program Performance by {geographicLevelName} {scopeTitle}</h3>
+                            <GeographicVolumeTable 
+                                title={`Volume & Coverage by ${geographicLevelName}`} 
+                                data={geographicKpis} 
+                                locationLabel={geographicLevelName} 
+                            />
+
+                            <h3 className="text-xl font-bold text-slate-800 mb-5 mt-10 text-left tracking-wide">Overall EENC Adherence by {geographicLevelName} {scopeTitle}</h3>
+                            <div className="mb-10"><KpiBarChart title={`Overall EENC Adherence by ${geographicLevelName}`} chartData={geographicKpis} /></div>
+                            
                             <h3 className="text-xl font-bold text-slate-800 mb-5 text-left tracking-wide">Detailed EENC Skill Performance {scopeTitle}</h3>
                             <div className="mb-10"><EENCCompactSkillsTable overallKpis={overallKpis} /></div>
                         </div>
@@ -2032,8 +2319,10 @@ const MentorshipDashboard = ({
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"><DetailedKpiCard title="Mother Interview: Vaccination" overallScore={calculateAverage([motherKpis?.avgPolio, motherKpis?.avgBcg])} kpis={eencMotherVacKpis} /><KpiLineChart title="Vaccination Over Time" chartData={eencMotherChartData} kpiKeys={eencMotherVacChartKeys} /></div>
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"><DetailedKpiCard title="Mother Interview: Measurements" overallScore={calculateAverage([motherKpis?.avgWeight, motherKpis?.avgTemp])} kpis={eencMotherMeasureKpis} /><KpiLineChart title="Measurements Over Time" chartData={eencMotherChartData} kpiKeys={eencMotherMeasureChartKeys} /></div>
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"><DetailedKpiCard title="Mother Interview: Registration" overallScore={calculateAverage([motherKpis?.avgCivReg, motherKpis?.avgDisCard])} kpis={eencMotherRegKpis} /><KpiLineChart title="Registration Over Time" chartData={eencMotherChartData} kpiKeys={eencMotherRegChartKeys} /></div>
-                            <h3 className="text-xl font-bold text-slate-800 mb-5 mt-10 text-left tracking-wide">Overall Mother Interview Indicators by State {scopeTitle}</h3>
-                            <div className="mb-10"><KpiBarChart title="Average Indicator Presence by State" chartData={motherStateKpis} /></div>
+                            
+                            <h3 className="text-xl font-bold text-slate-800 mb-5 mt-10 text-left tracking-wide">Overall Mother Interview Indicators by {geographicLevelName} {scopeTitle}</h3>
+                            <div className="mb-10"><KpiBarChart title={`Average Indicator Presence by ${geographicLevelName}`} chartData={motherGeographicKpis} /></div>
+                            
                             <h3 className="text-xl font-bold text-slate-800 mb-5 text-left tracking-wide">Detailed Mother Interview Performance {scopeTitle}</h3>
                             <div className="mb-10"><MothersCompactSkillsTable motherKpis={motherKpis} serviceType="EENC" /></div>
                          </div>
@@ -2081,7 +2370,7 @@ const MentorshipDashboard = ({
                             </div>
 
                             <div className="mb-8">
-                                <KpiBarChart title="Total Visits by State" chartData={visitReportStats.stateChartData} dataKey="count" />
+                                <KpiBarChart title={`Total Visits by ${geographicLevelName}`} chartData={visitReportStats.geographicChartData} dataKey="count" />
                             </div>
 
                             <div className="mb-8 bg-white rounded-2xl shadow-md border border-black overflow-hidden">
