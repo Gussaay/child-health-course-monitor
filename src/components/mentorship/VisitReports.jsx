@@ -35,8 +35,6 @@ const PreviousProblemsTable = ({ reports, currentFacilityId, currentReportId, on
         if (!reports) return [];
         const problems = [];
         reports.forEach(rep => {
-            // Filter for same facility, older reports (or just different ID if editing)
-            // Ensure we are looking at the correct service type if reports array is mixed
             if (rep.facilityId === currentFacilityId && rep.id !== currentReportId && rep.fullData?.challenges_table && rep.service === serviceType) {
                 rep.fullData.challenges_table.forEach(ch => {
                     if (ch.problem) {
@@ -51,7 +49,6 @@ const PreviousProblemsTable = ({ reports, currentFacilityId, currentReportId, on
                 });
             }
         });
-        // Sort by date descending (newest first)
         return problems.sort((a, b) => new Date(b.visitDate) - new Date(a.visitDate));
     }, [reports, currentFacilityId, currentReportId, serviceType]);
 
@@ -64,7 +61,7 @@ const PreviousProblemsTable = ({ reports, currentFacilityId, currentReportId, on
                 المشاكل السابقة في هذه المنشأة (Previous Problems)
             </h3>
             <div className="overflow-x-auto border rounded-lg">
-                <table className="min-w-full text-xs text-right bg-gray-50">
+                <table className="min-w-full text-xs text-right bg-gray-50" dir="rtl">
                     <thead className="bg-gray-200 font-bold text-gray-700">
                         <tr>
                             <th className="px-2 py-2 border w-1/6">التاريخ / الزيارة</th>
@@ -130,20 +127,36 @@ export const IMNCIVisitReport = ({
         const defaultRow = { 
             id: 1, 
             problem: '', 
-            immediate_solution: '', 
-            immediate_status: 'Pending', 
-            long_term_solution: '', 
-            long_term_status: 'Pending', 
+            solution: '', 
+            status: 'Pending', 
             responsible_person: '' 
         };
 
         if (existingReportData) {
+            // Backward compatibility map for older reports
+            const mappedChallenges = (existingReportData.challenges_table || [defaultRow]).map(row => {
+                let combinedSolution = row.solution || '';
+                if (!combinedSolution && (row.immediate_solution || row.long_term_solution)) {
+                    combinedSolution = [row.immediate_solution, row.long_term_solution].filter(Boolean).join(' / ');
+                }
+                
+                return {
+                    id: row.id,
+                    problem: row.problem || '',
+                    solution: combinedSolution,
+                    status: row.status || row.immediate_status || 'Pending',
+                    responsible_person: row.responsible_person || ''
+                };
+            });
+
             return {
                 visit_date: existingReportData.visit_date || new Date().toISOString().split('T')[0],
                 visitNumber: existingReportData.visitNumber || visitNumber,
                 trained_skills: existingReportData.trained_skills || {},
                 other_orientations: existingReportData.other_orientations || {},
-                challenges_table: existingReportData.challenges_table || [defaultRow],
+                medication_shortage: existingReportData.medication_shortage || { amoxicillin: '', zinc: '', ors: '', coartem: '' },
+                info_system: existingReportData.info_system || { total_examined: '', examined_by_trained: '', completed_forms: '', completed_followup_forms: '' },
+                challenges_table: mappedChallenges,
                 imageUrls: existingReportData.imageUrls || [], 
                 notes: existingReportData.notes || '',
             };
@@ -153,6 +166,8 @@ export const IMNCIVisitReport = ({
             visitNumber: visitNumber,
             trained_skills: {},
             other_orientations: {},
+            medication_shortage: { amoxicillin: '', zinc: '', ors: '', coartem: '' },
+            info_system: { total_examined: '', examined_by_trained: '', completed_forms: '', completed_followup_forms: '' },
             challenges_table: [defaultRow],
             imageUrls: [],
             notes: '',
@@ -163,7 +178,7 @@ export const IMNCIVisitReport = ({
     const [newImageFiles, setNewImageFiles] = useState([]); 
     const [isSaving, setIsSaving] = useState(false);
     const [previousUpdates, setPreviousUpdates] = useState({}); 
-    const [showSuccessModal, setShowSuccessModal] = useState(false); // Success Modal State
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
 
     useEffect(() => {
         if (!existingReportData && visitNumber) {
@@ -178,6 +193,14 @@ export const IMNCIVisitReport = ({
 
     const handleFormChange = (e) => { const { name, value } = e.target; setFormData(prev => ({ ...prev, [name]: value })); };
     const handleCheckboxChange = (group, key) => { setFormData(prev => ({ ...prev, [group]: { ...prev[group], [key]: !prev[group][key] } })); };
+    
+    const handleMedicationShortageChange = (key, value) => {
+        setFormData(prev => ({ ...prev, medication_shortage: { ...prev.medication_shortage, [key]: value } }));
+    };
+
+    const handleInfoSystemChange = (key, value) => {
+        setFormData(prev => ({ ...prev, info_system: { ...prev.info_system, [key]: value } }));
+    };
 
     const handleChallengeChange = (id, field, value) => {
         setFormData(prev => ({
@@ -196,10 +219,8 @@ export const IMNCIVisitReport = ({
                 { 
                     id: Date.now(), 
                     problem: '', 
-                    immediate_solution: '', 
-                    immediate_status: 'Pending',
-                    long_term_solution: '', 
-                    long_term_status: 'Pending',
+                    solution: '', 
+                    status: 'Pending',
                     responsible_person: '' 
                 }
             ]
@@ -224,7 +245,6 @@ export const IMNCIVisitReport = ({
     const handleSubmit = async (e) => {
         e.preventDefault();
         
-        // --- DUPLICATE CHECK ---
         if (!existingReportData) {
             const isDuplicate = allVisitReports.some(rep => 
                 rep.facilityId === facility.id && 
@@ -241,11 +261,9 @@ export const IMNCIVisitReport = ({
                 return;
             }
         }
-        // ------------------------
 
         setIsSaving(true);
         try {
-            // 1. Save Current Report
             const originalUrls = existingReportData?.imageUrls || [];
             const currentUrls = formData.imageUrls;
             const urlsToDelete = originalUrls.filter(url => !currentUrls.includes(url));
@@ -280,7 +298,6 @@ export const IMNCIVisitReport = ({
 
             await saveIMNCIVisitReport(payload, existingReportData?.id || null);
 
-            // 2. Update Previous Reports (Batch-like)
             const updatePromises = Object.values(previousUpdates).map(async (update) => {
                 const reportToUpdate = allVisitReports.find(r => r.id === update.reportId);
                 if (reportToUpdate && reportToUpdate.fullData) {
@@ -300,8 +317,6 @@ export const IMNCIVisitReport = ({
             });
 
             await Promise.all(updatePromises);
-
-            // Show Success Modal instead of immediate exit
             setShowSuccessModal(true);
 
         } catch (error) {
@@ -314,7 +329,7 @@ export const IMNCIVisitReport = ({
 
     const handleCloseSuccessModal = () => {
         setShowSuccessModal(false);
-        onCancel(); // Navigate back
+        onCancel();
     };
 
     const skillsList = { skill_weight: "قياس الوزن", skill_height: "قياس الطول", skill_temp: "قياس الحرارة", skill_rr: "قياس معدل التنفس", skill_muac: "قياس محيط منتصف الذراع", skill_wfh: "قياس الانحراف المعياري للطول بالنسبة للوزن", skill_edema: "تقييم الورم", skill_danger_signs: "علامات الخطورة", skill_chartbook: "استخدام كتيب اللوحات", skill_counseling_card: "استخدام كرت النصح", skill_immunization_referral: "سواقط التطعيم" };
@@ -350,44 +365,153 @@ export const IMNCIVisitReport = ({
                         <div className="mb-6"><h3 className="text-lg font-bold text-sky-800 mb-2 border-b pb-1">المهارات المدربة</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-2">{Object.entries(skillsList).map(([k, l]) => <label key={k} className="cursor-pointer"><span>{l}</span><input type="checkbox" checked={!!formData.trained_skills[k]} onChange={() => handleCheckboxChange('trained_skills', k)} className="ms-3" /></label>)}</div></div>
                         <div className="mb-6"><h3 className="text-lg font-bold text-sky-800 mb-2 border-b pb-1">تنوير الأقسام</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-2">{Object.entries(orientationsList).map(([k, l]) => <label key={k} className="cursor-pointer"><span>{l}</span><input type="checkbox" checked={!!formData.other_orientations[k]} onChange={() => handleCheckboxChange('other_orientations', k)} className="ms-3" /></label>)}</div></div>
 
+                        {/* --- MEDICATION SHORTAGE TABLE --- */}
+                        <div className="mb-6">
+                            <h3 className="text-lg font-bold text-sky-800 mb-2 border-b pb-1">
+                                وفرة الادوية / هل حدث إنقطاع للادوية التالية خلال الاسبوع السابق؟
+                            </h3>
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full border-collapse border border-gray-300 bg-white" dir="rtl">
+                                    <thead className="bg-gray-100 text-xs">
+                                        <tr>
+                                            <th className="px-4 py-2 border border-gray-300 text-right w-1/2">الدواء</th>
+                                            <th className="px-4 py-2 border border-gray-300 text-center w-1/4">نعم (حدث انقطاع)</th>
+                                            <th className="px-4 py-2 border border-gray-300 text-center w-1/4">لا (متوفر دائمًا)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {[
+                                            { key: 'amoxicillin', label: 'أموكسليلين 250 ملغ' },
+                                            { key: 'zinc', label: 'زنك' },
+                                            { key: 'ors', label: 'ملح تروية' },
+                                            { key: 'coartem', label: 'كوارتم' }
+                                        ].map(med => (
+                                            <tr key={med.key} className="hover:bg-gray-50">
+                                                <td className="px-4 py-2 border border-gray-300 font-semibold text-sm">{med.label}</td>
+                                                <td className="px-4 py-2 border border-gray-300 text-center">
+                                                    <input 
+                                                        type="radio" 
+                                                        name={`medication_shortage_${med.key}`} 
+                                                        value="yes" 
+                                                        checked={formData.medication_shortage[med.key] === 'yes'}
+                                                        onChange={(e) => handleMedicationShortageChange(med.key, e.target.value)}
+                                                        className="w-4 h-4 text-sky-600 focus:ring-sky-500 cursor-pointer"
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-2 border border-gray-300 text-center">
+                                                    <input 
+                                                        type="radio" 
+                                                        name={`medication_shortage_${med.key}`} 
+                                                        value="no" 
+                                                        checked={formData.medication_shortage[med.key] === 'no'}
+                                                        onChange={(e) => handleMedicationShortageChange(med.key, e.target.value)}
+                                                        className="w-4 h-4 text-sky-600 focus:ring-sky-500 cursor-pointer"
+                                                    />
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* --- INFORMATION SYSTEM TABLE --- */}
+                        <div className="mb-6">
+                            <h3 className="text-lg font-bold text-sky-800 mb-2 border-b pb-1">
+                                نظام معلومات العلاج المتكامل
+                            </h3>
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full border-collapse border border-gray-300 bg-white" dir="rtl">
+                                    <thead className="bg-gray-100 text-xs">
+                                        <tr>
+                                            <th className="px-4 py-2 border border-gray-300 text-right w-2/3">البيان</th>
+                                            <th className="px-4 py-2 border border-gray-300 text-center w-1/3">العدد</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {[
+                                            { key: 'total_examined', label: 'عدد الأطفال الذين تم معاينتهم في العيادة' },
+                                            { key: 'examined_by_trained', label: 'عدد الأطفال الذين تم معاينتهم بكادر مدرب على العلاج المتكامل' },
+                                            { key: 'completed_forms', label: 'عدد الأطفال الذين لديهم إستمارة علاج متكامل مكتملة' },
+                                            { key: 'completed_followup_forms', label: 'عدد الأطفال الذين لديهم إستمارة متابعة مكتملة' }
+                                        ].map(item => (
+                                            <tr key={item.key} className="hover:bg-gray-50">
+                                                <td className="px-4 py-2 border border-gray-300 font-semibold text-sm">{item.label}</td>
+                                                <td className="px-4 py-2 border border-gray-300 text-center">
+                                                    <Input 
+                                                        type="number" 
+                                                        min="0"
+                                                        value={formData.info_system[item.key]} 
+                                                        onChange={(e) => handleInfoSystemChange(item.key, e.target.value)}
+                                                        className="w-full text-center font-bold"
+                                                        placeholder="0"
+                                                    />
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
                         {/* --- CHALLENGES TABLE --- */}
                         <div className="mb-6">
                             <h3 className="text-lg font-bold text-sky-800 mb-2 border-b pb-1">المشاكل والمعوقات والحلول (الحالية)</h3>
                             <div className="overflow-x-auto">
-                                <table className="min-w-full border-collapse border border-gray-300">
+                                <table className="min-w-full border-collapse border border-gray-300" dir="rtl">
                                     <thead className="bg-gray-100 text-xs">
                                         <tr>
-                                            <th className="px-2 py-2 border border-gray-300 text-right w-1/6">المسؤول</th>
-                                            <th className="px-2 py-2 border border-gray-300 text-right w-1/12">حالة (بعيد)</th>
-                                            <th className="px-2 py-2 border border-gray-300 text-right w-1/6">حل بعيد المدى</th>
-                                            <th className="px-2 py-2 border border-gray-300 text-right w-1/12">حالة (اني)</th>
-                                            <th className="px-2 py-2 border border-gray-300 text-right w-1/6">حل اني</th>
                                             <th className="px-2 py-2 border border-gray-300 text-right w-1/4">المشكلة</th>
-                                            <th className="px-2 py-2 border border-gray-300"></th>
+                                            <th className="px-2 py-2 border border-gray-300 text-right w-1/3">الحل</th>
+                                            <th className="px-2 py-2 border border-gray-300 text-right w-1/6">الحالة</th>
+                                            <th className="px-2 py-2 border border-gray-300 text-right w-1/6">المسؤول</th>
+                                            <th className="px-2 py-2 border border-gray-300 w-1/12"></th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {formData.challenges_table.map((row, index) => (
-                                            <tr key={row.id}>
-                                                <td className="border"><Textarea value={row.responsible_person} onChange={(e) => handleChallengeChange(row.id, 'responsible_person', e.target.value)} rows={2} className="w-full text-right text-xs" /></td>
-                                                <td className="border">
-                                                    <Select value={row.long_term_status || 'Pending'} onChange={(e) => handleChallengeChange(row.id, 'long_term_status', e.target.value)} className="text-xs p-1">
-                                                        <option value="Pending">Pending</option><option value="In Progress">In Progress</option><option value="Done">Done</option>
-                                                    </Select>
-                                                </td>
-                                                <td className="border"><Textarea value={row.long_term_solution} onChange={(e) => handleChallengeChange(row.id, 'long_term_solution', e.target.value)} rows={2} className="w-full text-right text-xs" /></td>
-                                                <td className="border">
-                                                    <Select value={row.immediate_status || 'Pending'} onChange={(e) => handleChallengeChange(row.id, 'immediate_status', e.target.value)} className="text-xs p-1">
-                                                        <option value="Pending">Pending</option><option value="In Progress">In Progress</option><option value="Done">Done</option>
-                                                    </Select>
-                                                </td>
-                                                <td className="border"><Textarea value={row.immediate_solution} onChange={(e) => handleChallengeChange(row.id, 'immediate_solution', e.target.value)} rows={2} className="w-full text-right text-xs" /></td>
-                                                <td className="border"><Textarea value={row.problem} onChange={(e) => handleChallengeChange(row.id, 'problem', e.target.value)} rows={2} className="w-full text-right text-xs" /></td>
-                                                <td className="border text-center">
-                                                    {index > 0 && (<Button type="button" variant="danger" size="sm" onClick={() => removeChallengeRow(row.id)}><Trash2 size={14} /></Button>)}
-                                                </td>
-                                            </tr>
-                                        ))}
+                                        {formData.challenges_table.map((row, index) => {
+                                            const standardResp = ["مدير المركز", "منسق صحة الطفل بالمحلية", "منسق صحة الطفل بالولاية", ""];
+                                            const isCustomResp = !standardResp.includes(row.responsible_person);
+                                            
+                                            return (
+                                                <tr key={row.id}>
+                                                    <td className="border p-1"><Textarea value={row.problem} onChange={(e) => handleChallengeChange(row.id, 'problem', e.target.value)} rows={2} className="w-full text-right text-xs border-gray-300 focus:border-sky-500 focus:ring-sky-500" /></td>
+                                                    <td className="border p-1"><Textarea value={row.solution} onChange={(e) => handleChallengeChange(row.id, 'solution', e.target.value)} rows={2} className="w-full text-right text-xs border-gray-300 focus:border-sky-500 focus:ring-sky-500" /></td>
+                                                    <td className="border align-top p-1">
+                                                        <Select value={row.status || 'Pending'} onChange={(e) => handleChallengeChange(row.id, 'status', e.target.value)} className="text-[11px] font-bold p-1 border-gray-300 focus:border-sky-500 focus:ring-sky-500">
+                                                            <option value="Pending">Pending</option>
+                                                            <option value="In Progress">In Progress</option>
+                                                            <option value="Resolved">Resolved</option>
+                                                        </Select>
+                                                    </td>
+                                                    <td className="border align-top p-1">
+                                                        <Select 
+                                                            value={isCustomResp ? 'أخرى حدد' : row.responsible_person} 
+                                                            onChange={(e) => handleChallengeChange(row.id, 'responsible_person', e.target.value === 'أخرى حدد' ? 'أخرى حدد' : e.target.value)} 
+                                                            className="text-[11px] font-bold p-1 w-full border-gray-300 focus:border-sky-500 focus:ring-sky-500"
+                                                        >
+                                                            <option value="">-- اختر --</option>
+                                                            <option value="مدير المركز">مدير المركز</option>
+                                                            <option value="منسق صحة الطفل بالمحلية">منسق صحة الطفل بالمحلية</option>
+                                                            <option value="منسق صحة الطفل بالولاية">منسق صحة الطفل بالولاية</option>
+                                                            <option value="أخرى حدد">أخرى (حدد)</option>
+                                                        </Select>
+                                                        {isCustomResp && (
+                                                            <Textarea 
+                                                                value={row.responsible_person === 'أخرى حدد' ? '' : row.responsible_person} 
+                                                                onChange={(e) => handleChallengeChange(row.id, 'responsible_person', e.target.value)} 
+                                                                rows={1} 
+                                                                placeholder="أدخل المسؤول..."
+                                                                className="w-full text-right text-xs mt-1 border-sky-200 bg-sky-50 focus:border-sky-500 focus:ring-sky-500" 
+                                                            />
+                                                        )}
+                                                    </td>
+                                                    <td className="border text-center p-1">
+                                                        {index > 0 && (<Button type="button" variant="danger" size="sm" onClick={() => removeChallengeRow(row.id)}><Trash2 size={14} /></Button>)}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
@@ -417,7 +541,6 @@ export const IMNCIVisitReport = ({
                     </div>
                 </form>
                 
-                {/* --- SUCCESS POPUP --- */}
                 <SuccessModal 
                     isOpen={showSuccessModal} 
                     onClose={handleCloseSuccessModal} 
@@ -443,14 +566,29 @@ export const EENCVisitReport = ({
     const user = auth.currentUser;
 
     const getInitialState = () => {
-        const defaultRow = { id: 1, problem: '', immediate_solution: '', immediate_status: 'Pending', long_term_solution: '', long_term_status: 'Pending', responsible_person: '' };
+        const defaultRow = { id: 1, problem: '', solution: '', status: 'Pending', responsible_person: '' };
         if (existingReportData) {
+            const mappedChallenges = (existingReportData.challenges_table || [defaultRow]).map(row => {
+                let combinedSolution = row.solution || '';
+                if (!combinedSolution && (row.immediate_solution || row.long_term_solution)) {
+                    combinedSolution = [row.immediate_solution, row.long_term_solution].filter(Boolean).join(' / ');
+                }
+                
+                return {
+                    id: row.id,
+                    problem: row.problem || '',
+                    solution: combinedSolution,
+                    status: row.status || row.immediate_status || 'Pending',
+                    responsible_person: row.responsible_person || ''
+                };
+            });
+
             return {
                 visit_date: existingReportData.visit_date || new Date().toISOString().split('T')[0],
                 visitNumber: existingReportData.visitNumber || visitNumber,
                 trained_skills: existingReportData.trained_skills || {},
                 other_orientations: existingReportData.other_orientations || {},
-                challenges_table: existingReportData.challenges_table || [defaultRow],
+                challenges_table: mappedChallenges,
                 imageUrls: existingReportData.imageUrls || [], 
                 notes: existingReportData.notes || '',
             };
@@ -462,7 +600,7 @@ export const EENCVisitReport = ({
     const [newImageFiles, setNewImageFiles] = useState([]); 
     const [isSaving, setIsSaving] = useState(false);
     const [previousUpdates, setPreviousUpdates] = useState({}); 
-    const [showSuccessModal, setShowSuccessModal] = useState(false); // Success Modal State
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
 
     useEffect(() => { if (!existingReportData && visitNumber) setFormData(prev => ({ ...prev, visitNumber: visitNumber })); }, [visitNumber, existingReportData]);
 
@@ -474,7 +612,14 @@ export const EENCVisitReport = ({
     const handleFormChange = (e) => { const { name, value } = e.target; setFormData(prev => ({ ...prev, [name]: value })); };
     const handleCheckboxChange = (group, key) => { setFormData(prev => ({ ...prev, [group]: { ...prev[group], [key]: !prev[group][key] } })); };
     const handleChallengeChange = (id, field, value) => { setFormData(prev => ({ ...prev, challenges_table: prev.challenges_table.map(row => row.id === id ? { ...row, [field]: value } : row) })); };
-    const addChallengeRow = () => { setFormData(prev => ({ ...prev, challenges_table: [...prev.challenges_table, { id: Date.now(), problem: '', immediate_solution: '', immediate_status: 'Pending', long_term_solution: '', long_term_status: 'Pending', responsible_person: '' }] })); };
+    
+    const addChallengeRow = () => { 
+        setFormData(prev => ({ 
+            ...prev, 
+            challenges_table: [...prev.challenges_table, { id: Date.now(), problem: '', solution: '', status: 'Pending', responsible_person: '' }] 
+        })); 
+    };
+    
     const removeChallengeRow = (id) => { setFormData(prev => ({ ...prev, challenges_table: prev.challenges_table.filter(row => row.id !== id) })); };
     const handleImageChange = (e) => { if (e.target.files) { setNewImageFiles(prev => [...prev, ...Array.from(e.target.files)]); e.target.value = null; } };
     const removeExistingImage = (i) => { setFormData(prev => ({ ...prev, imageUrls: prev.imageUrls.filter((_, index) => index !== i) })); };
@@ -484,7 +629,6 @@ export const EENCVisitReport = ({
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // --- DUPLICATE CHECK ---
         if (!existingReportData) {
             const isDuplicate = allVisitReports.some(rep => 
                 rep.facilityId === facility.id && 
@@ -501,7 +645,6 @@ export const EENCVisitReport = ({
                 return;
             }
         }
-        // ------------------------
 
         setIsSaving(true);
         try {
@@ -531,7 +674,6 @@ export const EENCVisitReport = ({
             });
             await Promise.all(updatePromises);
 
-            // Show Success Modal
             setShowSuccessModal(true);
 
         } catch (error) { setToast({ show: true, message: `فشل: ${error.message}`, type: 'error' }); } finally { setIsSaving(false); }
@@ -539,7 +681,7 @@ export const EENCVisitReport = ({
 
     const handleCloseSuccessModal = () => {
         setShowSuccessModal(false);
-        onCancel(); // Navigate back
+        onCancel(); 
     };
 
     const skillsList = { skill_pre_handwash: "غسل الايدي", skill_pre_equip: "تجهيز المعدات", skill_drying: "التجفيف", skill_skin_to_skin: "جلد بجلد", skill_suction: "الشفط", skill_cord_pulse_check: "نبض الحبل السري", skill_clamp_placement: "وضع المشبك", skill_transfer: "نقل الطفل", skill_airway: "فتح مجرى الهواء", skill_ambubag_placement: "وضع الامبوباق", skill_ambubag_use: "استخدام الامبوباق", skill_ventilation_rate: "معدل التهوية", skill_correction_steps: "التدخلات التصحيحية" };
@@ -576,38 +718,58 @@ export const EENCVisitReport = ({
                         <div className="mb-6">
                             <h3 className="text-lg font-bold text-sky-800 mb-2 border-b pb-1">المشاكل والحلول</h3>
                             <div className="overflow-x-auto">
-                                <table className="min-w-full border-collapse border border-gray-300">
+                                <table className="min-w-full border-collapse border border-gray-300" dir="rtl">
                                     <thead className="bg-gray-100 text-xs">
                                         <tr>
-                                            <th className="px-2 py-2 border border-gray-300 text-right w-1/6">المسؤول</th>
-                                            <th className="px-2 py-2 border border-gray-300 text-right w-1/12">حالة (بعيد)</th>
-                                            <th className="px-2 py-2 border border-gray-300 text-right w-1/6">حل بعيد المدى</th>
-                                            <th className="px-2 py-2 border border-gray-300 text-right w-1/12">حالة (اني)</th>
-                                            <th className="px-2 py-2 border border-gray-300 text-right w-1/6">حل اني</th>
                                             <th className="px-2 py-2 border border-gray-300 text-right w-1/4">المشكلة</th>
-                                            <th className="px-2 py-2 border border-gray-300"></th>
+                                            <th className="px-2 py-2 border border-gray-300 text-right w-1/3">الحل</th>
+                                            <th className="px-2 py-2 border border-gray-300 text-right w-1/6">الحالة</th>
+                                            <th className="px-2 py-2 border border-gray-300 text-right w-1/6">المسؤول</th>
+                                            <th className="px-2 py-2 border border-gray-300 w-1/12"></th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {formData.challenges_table.map((row, index) => (
-                                            <tr key={row.id}>
-                                                <td className="border"><Textarea value={row.responsible_person} onChange={(e) => handleChallengeChange(row.id, 'responsible_person', e.target.value)} rows={2} className="w-full text-right text-xs" /></td>
-                                                <td className="border">
-                                                    <Select value={row.long_term_status || 'Pending'} onChange={(e) => handleChallengeChange(row.id, 'long_term_status', e.target.value)} className="text-xs p-1">
-                                                        <option value="Pending">Pending</option><option value="In Progress">In Progress</option><option value="Done">Done</option>
-                                                    </Select>
-                                                </td>
-                                                <td className="border"><Textarea value={row.long_term_solution} onChange={(e) => handleChallengeChange(row.id, 'long_term_solution', e.target.value)} rows={2} className="w-full text-right text-xs" /></td>
-                                                <td className="border">
-                                                    <Select value={row.immediate_status || 'Pending'} onChange={(e) => handleChallengeChange(row.id, 'immediate_status', e.target.value)} className="text-xs p-1">
-                                                        <option value="Pending">Pending</option><option value="In Progress">In Progress</option><option value="Done">Done</option>
-                                                    </Select>
-                                                </td>
-                                                <td className="border"><Textarea value={row.immediate_solution} onChange={(e) => handleChallengeChange(row.id, 'immediate_solution', e.target.value)} rows={2} className="w-full text-right text-xs" /></td>
-                                                <td className="border"><Textarea value={row.problem} onChange={(e) => handleChallengeChange(row.id, 'problem', e.target.value)} rows={2} className="w-full text-right text-xs" /></td>
-                                                <td className="border text-center">{index > 0 && (<Button type="button" variant="danger" size="sm" onClick={() => removeChallengeRow(row.id)}><Trash2 size={14} /></Button>)}</td>
-                                            </tr>
-                                        ))}
+                                        {formData.challenges_table.map((row, index) => {
+                                            const standardResp = ["مدير المركز", "منسق صحة الطفل بالمحلية", "منسق صحة الطفل بالولاية", ""];
+                                            const isCustomResp = !standardResp.includes(row.responsible_person);
+                                            
+                                            return (
+                                                <tr key={row.id}>
+                                                    <td className="border p-1"><Textarea value={row.problem} onChange={(e) => handleChallengeChange(row.id, 'problem', e.target.value)} rows={2} className="w-full text-right text-xs border-gray-300 focus:border-sky-500 focus:ring-sky-500" /></td>
+                                                    <td className="border p-1"><Textarea value={row.solution} onChange={(e) => handleChallengeChange(row.id, 'solution', e.target.value)} rows={2} className="w-full text-right text-xs border-gray-300 focus:border-sky-500 focus:ring-sky-500" /></td>
+                                                    <td className="border align-top p-1">
+                                                        <Select value={row.status || 'Pending'} onChange={(e) => handleChallengeChange(row.id, 'status', e.target.value)} className="text-[11px] font-bold p-1 border-gray-300 focus:border-sky-500 focus:ring-sky-500">
+                                                            <option value="Pending">Pending</option>
+                                                            <option value="In Progress">In Progress</option>
+                                                            <option value="Resolved">Resolved</option>
+                                                        </Select>
+                                                    </td>
+                                                    <td className="border align-top p-1">
+                                                        <Select 
+                                                            value={isCustomResp ? 'أخرى حدد' : row.responsible_person} 
+                                                            onChange={(e) => handleChallengeChange(row.id, 'responsible_person', e.target.value === 'أخرى حدد' ? 'أخرى حدد' : e.target.value)} 
+                                                            className="text-[11px] font-bold p-1 w-full border-gray-300 focus:border-sky-500 focus:ring-sky-500"
+                                                        >
+                                                            <option value="">-- اختر --</option>
+                                                            <option value="مدير المركز">مدير المركز</option>
+                                                            <option value="منسق صحة الطفل بالمحلية">منسق صحة الطفل بالمحلية</option>
+                                                            <option value="منسق صحة الطفل بالولاية">منسق صحة الطفل بالولاية</option>
+                                                            <option value="أخرى حدد">أخرى (حدد)</option>
+                                                        </Select>
+                                                        {isCustomResp && (
+                                                            <Textarea 
+                                                                value={row.responsible_person === 'أخرى حدد' ? '' : row.responsible_person} 
+                                                                onChange={(e) => handleChallengeChange(row.id, 'responsible_person', e.target.value)} 
+                                                                rows={1} 
+                                                                placeholder="أدخل المسؤول..."
+                                                                className="w-full text-right text-xs mt-1 border-sky-200 bg-sky-50 focus:border-sky-500 focus:ring-sky-500" 
+                                                            />
+                                                        )}
+                                                    </td>
+                                                    <td className="border text-center p-1">{index > 0 && (<Button type="button" variant="danger" size="sm" onClick={() => removeChallengeRow(row.id)}><Trash2 size={14} /></Button>)}</td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
@@ -635,7 +797,6 @@ export const EENCVisitReport = ({
                     </div>
                 </form>
 
-                {/* --- SUCCESS POPUP --- */}
                 <SuccessModal 
                     isOpen={showSuccessModal} 
                     onClose={handleCloseSuccessModal} 

@@ -52,6 +52,44 @@ const SERVICE_TITLES = {
     'IPC': 'Infection Prevention and Control in Neonatal Units (IPC)'
 };
 
+// --- Definitions for IMNCI Trained Skills Groups (Visit Reports) ---
+const IMNCI_SKILL_GROUPS = {
+    group1: {
+        title: "Number of training sessions on use of IMNCI tools",
+        keys: ['skill_chartbook', 'skill_counseling_card', 'skill_record_form', 'skill_stat_reports'],
+        labels: [
+            'Chartbooklet use training sessions', 
+            'Mother Counseling Card use training sessions', 
+            'Recording Form filling training sessions', 
+            'Daily and Monthly Statistic Reports filling training sessions'
+        ],
+        color: '#3b82f6' // Sky Blue
+    },
+    group2: {
+        title: "Number of training sessions on Main IMNCI Signs Assessment",
+        keys: ['skill_danger_signs', 'skill_rr', 'skill_dehydration', 'skill_immunization_referral'],
+        labels: [
+            'Danger Signs assessment training sessions', 
+            'Respiratory Rate measurement training sessions', 
+            'Dehydration assessment training sessions', 
+            'Immunization check training sessions'
+        ],
+        color: '#10b981' // Emerald Green
+    },
+    group3: {
+        title: "Number of training sessions on Malnutrition signs Assessment",
+        keys: ['skill_weight', 'skill_height', 'skill_muac', 'skill_wfh', 'skill_edema'],
+        labels: [
+            'Weight measurement training sessions', 
+            'Height measurement training sessions', 
+            'MUAC measurement training sessions', 
+            'Z-Score measurement training sessions', 
+            'Lower Limb Edema check training sessions'
+        ],
+        color: '#f59e0b' // Amber/Orange
+    }
+};
+
 // --- Normalization Helper for Job Titles ---
 const normalizeJobTitle = (title) => {
     if (!title || typeof title !== 'string') return title;
@@ -64,13 +102,10 @@ const normalizeJobTitle = (title) => {
 
 // --- Dictionaries for English Translations ---
 const IMNCI_ENGLISH_LABELS = {
-    // Groups
     'تقييم مهارات التقييم والتصنيف': 'Assessment & Classification Skills',
     'القرار النهائي': 'Final Decision',
     'تقييم مهارات العلاج والنصح': 'Treatment & Counseling Skills',
     'استخدام الاستمارة': 'Recording Skills',
-    
-    // Subgroups
     'القياسات الجسمانية والحيوية': 'Physical & Vital Measurements',
     'قيم علامات الخطورة العامة بصورة صحيحة': 'General Danger Signs Assessment',
     'قيم الطفل بصورة صحيحة لوجود كل الأعراض الأساسية': 'Main Symptoms Assessment',
@@ -88,8 +123,6 @@ const IMNCI_ENGLISH_LABELS = {
     'في حالة فقر الدم': 'Anemia Management',
     'نصح الأم متى تعود للمتابعة': 'Follow-up Counseling',
     'تسجيل البيانات': 'Data Recording',
-    
-    // Skills
     'skill_weight': 'Weighed the child correctly',
     'skill_temp': 'Measured temperature correctly',
     'skill_height': 'Measured height/length correctly',
@@ -328,7 +361,7 @@ const KpiCard = ({ title, value, unit = '', scoreValue = null }) => (
         <h4 className="text-xs sm:text-sm font-bold text-slate-600 mb-3 text-center uppercase tracking-wider" title={title}>{title}</h4>
         <div className="flex items-baseline justify-center gap-1.5 mt-auto">
             {scoreValue !== null ? <ScoreText value={scoreValue} /> : <span className="text-4xl font-black text-slate-800 tracking-tight">{value}</span>}
-            {unit && <span className="text-lg font-bold text-slate-500">{unit}</span>}
+            {unit && <span className="text-sm font-bold text-slate-500">{unit}</span>}
         </div>
     </div>
 );
@@ -606,6 +639,84 @@ const KpiBarChart = ({ title, chartData, dataKey = 'avgOverall' }) => {
             <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
             <h4 className="text-base font-extrabold text-slate-800 mb-5 text-center tracking-wide pr-8">{title}</h4>
             <div className="relative" style={{ height: `${chartHeight}px` }}>{chartData.length > 0 ? <Bar options={options} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">No data available.</div>}</div>
+        </div>
+    );
+};
+
+// --- NEW COMPONENT: Row containing Detailed Card (Left) and Horizontal Bar Chart (Right) ---
+const TrainedGroupRow = ({ title, details, color }) => {
+    const cardRef = useRef(null);
+
+    const chartData = {
+        labels: details.map(d => d.label),
+        datasets: [{
+            label: 'Times Trained',
+            data: details.map(d => d.count),
+            backgroundColor: color,
+            hoverBackgroundColor: color + 'CC',
+            borderRadius: 6,
+            barPercentage: 0.6,
+        }]
+    };
+
+    const options = {
+        indexAxis: 'y', // Horizontal Bar Chart
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 1000, easing: 'easeOutQuart' },
+        plugins: { 
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                titleFont: { size: 13, family: "'Inter', sans-serif" },
+                bodyFont: { size: 12, family: "'Inter', sans-serif", weight: 'bold' },
+                padding: 10,
+                cornerRadius: 8,
+            }
+        },
+        scales: {
+            x: { 
+                beginAtZero: true, 
+                grid: { color: '#e2e8f0', drawBorder: false },
+                ticks: { precision: 0, color: '#475569', font: { family: "'Inter', sans-serif", weight: '500' } } 
+            },
+            y: { 
+                grid: { display: false, drawBorder: false },
+                ticks: { color: '#334155', font: { size: 11, family: "'Inter', sans-serif", weight: 'bold' } } 
+            }
+        }
+    };
+
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8" ref={cardRef}>
+            {/* Left: Detailed Disaggregated KPI Card */}
+            <div className="bg-white p-6 rounded-2xl shadow-md border border-black flex flex-col relative h-full">
+                <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
+                <div className="flex justify-between items-center mb-5 pb-3 border-b border-black pr-10">
+                    <h4 className="text-base font-extrabold text-slate-800 text-left">{title}</h4>
+                </div>
+                <div className="space-y-3 flex-grow">
+                    {details.map((d, i) => (
+                        <div key={i} className="flex justify-between items-center bg-slate-50 p-3.5 rounded-xl border border-black shadow-sm group hover:border-sky-500 hover:bg-sky-50 transition-all duration-200">
+                            <h5 className="text-xs font-bold text-slate-700 text-left pr-4 group-hover:text-sky-800">{d.label}</h5>
+                            <div className="flex items-center gap-3">
+                                <span className="text-xs font-extrabold text-slate-500 bg-white px-2 py-1 rounded border border-black">Count: {d.count}</span>
+                                <div className="bg-white px-3 py-1 rounded-lg shadow-sm border border-black min-w-[60px] text-center">
+                                    <ScoreText value={d.pct / 100} showPercentage={true} />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Right: Horizontal Bar Chart of Number Trained */}
+            <div className="bg-white p-5 rounded-2xl shadow-md border border-black flex flex-col h-full min-h-[300px] relative">
+                <h4 className="text-sm font-extrabold text-slate-800 mb-4 text-center tracking-wide">{title} (Count)</h4>
+                <div className="relative flex-grow w-full">
+                    {details.some(d => d.count > 0) ? <Bar options={options} data={chartData} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold text-xs">No training data recorded.</div>}
+                </div>
+            </div>
         </div>
     );
 };
@@ -959,6 +1070,8 @@ const MentorshipDashboard = ({
     };
 
     // Geographic Dynamic Level Label
+    const dynamicLocationLevel = !activeState ? 'State' : (!activeLocality ? 'Locality' : 'Facility');
+    const dynamicLocationLabel = dynamicLocationLevel === 'State' ? 'الولاية (State)' : (dynamicLocationLevel === 'Locality' ? 'المحلية (Locality)' : 'المنشأة (Facility & Date)');
     const geographicLevelName = activeState ? 'Locality' : 'State';
 
     // --- Visit Report Data Processor ---
@@ -999,23 +1112,91 @@ const MentorshipDashboard = ({
             };
         });
 
+        // Group problems strictly by the dynamic level
+        const groupedProblems = {};
+        let totalProblems = 0;
+        let totalSkillsTrained = 0;
+        
+        filtered.forEach(r => {
+            // Count total all skills trained across all visits
+            if (r.service === 'IMNCI' && r.fullData && r.fullData.trained_skills) {
+                Object.values(r.fullData.trained_skills).forEach(val => {
+                    if (val === true || val === 'yes') {
+                        totalSkillsTrained++;
+                    }
+                });
+            }
+
+            if (r.fullData && r.fullData.challenges_table) {
+                let locName = 'Unknown';
+                if (dynamicLocationLevel === 'State') {
+                    locName = STATE_LOCALITIES[r.state]?.ar || r.state || 'Unknown';
+                } else if (dynamicLocationLevel === 'Locality') {
+                    if (STATE_LOCALITIES[r.state]?.localities) {
+                        const lObj = STATE_LOCALITIES[r.state].localities.find(l => l.en === r.locality || l.ar === r.locality);
+                        locName = lObj ? lObj.ar : (r.locality || 'Unknown');
+                    } else {
+                        locName = r.locality || 'Unknown';
+                    }
+                } else {
+                    locName = r.facilityName || 'Unknown';
+                }
+
+                r.fullData.challenges_table.forEach(ch => {
+                    if (ch.problem) {
+                        let combinedSolution = ch.solution || '';
+                        if (!combinedSolution && (ch.immediate_solution || ch.long_term_solution)) {
+                            combinedSolution = [ch.immediate_solution, ch.long_term_solution].filter(Boolean).join(' / ');
+                        }
+                        let combinedStatus = ch.status || ch.immediate_status || 'Pending';
+
+                        if (!groupedProblems[locName]) groupedProblems[locName] = [];
+                        groupedProblems[locName].push({
+                            reportId: r.id, 
+                            challengeId: ch.id, 
+                            facility: r.facilityName, 
+                            date: r.visitDate, 
+                            problem: ch.problem,
+                            solution: combinedSolution,
+                            status: combinedStatus,
+                            person: ch.responsible_person
+                        });
+                        totalProblems++;
+                    }
+                });
+            }
+        });
+
+        // Grouped Skills Tracking Helper (calculated out of totalSkillsTrained)
+        const processSkillGroup = (groupDef, visits, totalCountOverall) => {
+            const details = groupDef.keys.map((key, idx) => {
+                let count = 0;
+                visits.forEach(r => {
+                    if (r.service === 'IMNCI' && r.fullData?.trained_skills?.[key]) {
+                        count++;
+                    }
+                });
+                const pct = totalCountOverall > 0 ? Math.round((count / totalCountOverall) * 100) : 0;
+                return { label: groupDef.labels[idx], count, pct };
+            });
+            return { details }; // No overall score needed here anymore
+        };
+
+        const trainedSkillsGroups = {
+            group1: processSkillGroup(IMNCI_SKILL_GROUPS.group1, filtered, totalSkillsTrained),
+            group2: processSkillGroup(IMNCI_SKILL_GROUPS.group2, filtered, totalSkillsTrained),
+            group3: processSkillGroup(IMNCI_SKILL_GROUPS.group3, filtered, totalSkillsTrained)
+        };
+
+        // Retain original facility table logic for EENC compatibility if needed
         const facilityMap = {};
         const skillKeys = new Set();
-
         filtered.forEach(r => {
             const fid = r.facilityId;
             if (!facilityMap[fid]) {
-                facilityMap[fid] = {
-                    id: fid,
-                    facilityName: r.facilityName,
-                    state: r.state,
-                    locality: r.locality,
-                    visitCount: 0,
-                    skills: {}
-                };
+                facilityMap[fid] = { id: fid, facilityName: r.facilityName, state: r.state, locality: r.locality, visitCount: 0, skills: {} };
             }
             facilityMap[fid].visitCount++;
-
             if (r.fullData && r.fullData.trained_skills) {
                 Object.keys(r.fullData.trained_skills).forEach(k => {
                     if (r.fullData.trained_skills[k]) {
@@ -1028,25 +1209,9 @@ const MentorshipDashboard = ({
         const facilityTableData = Object.values(facilityMap);
         const distinctSkillKeys = Array.from(skillKeys);
 
-        const problemsList = [];
-        filtered.forEach(r => {
-            if (r.fullData && r.fullData.challenges_table) {
-                r.fullData.challenges_table.forEach(ch => {
-                    if (ch.problem) {
-                        problemsList.push({
-                            reportId: r.id, challengeId: ch.id, facility: r.facilityName, date: r.visitDate, problem: ch.problem,
-                            immediate: ch.immediate_solution, immediate_status: ch.immediate_status || 'Pending',
-                            longterm: ch.long_term_solution, long_term_status: ch.long_term_status || 'Pending',
-                            person: ch.responsible_person
-                        });
-                    }
-                });
-            }
-        });
+        return { totalVisits, geographicChartData, facilityTableData, distinctSkillKeys, groupedProblems, totalProblems, trainedSkillsGroups, totalSkillsTrained };
 
-        return { totalVisits, geographicChartData, facilityTableData, distinctSkillKeys, problemsList };
-
-    }, [visitReports, activeService, activeState, activeLocality, activeFacilityId, activeProject, STATE_LOCALITIES]);
+    }, [visitReports, activeService, activeState, activeLocality, activeFacilityId, activeProject, STATE_LOCALITIES, dynamicLocationLevel]);
 
     // --- Helper for rendering status badges/selects with Local Optimistic Update ---
     const renderStatusCell = (currentStatus, reportId, challengeId, fieldName) => {
@@ -1057,6 +1222,7 @@ const MentorshipDashboard = ({
             return (
                 <select value={displayStatus} onChange={(e) => handleLocalUpdate(reportId, challengeId, e.target.value, fieldName)} className={`block w-full text-[11px] font-bold border border-black rounded-lg shadow-sm focus:border-sky-500 focus:ring-sky-500 bg-white ${displayStatus === 'Done' || displayStatus === 'Resolved' ? 'text-emerald-700' : displayStatus === 'In Progress' ? 'text-sky-700' : 'text-amber-700'}`}>
                     <option value="Pending">Pending</option><option value="In Progress">In Progress</option><option value="Done">Done</option>
+                    <option value="Resolved">Resolved</option>
                 </select>
             );
         } else {
@@ -2165,44 +2331,33 @@ const MentorshipDashboard = ({
 
                     {activeImnciTab === 'visit_reports' && visitReportStats && (
                         <div className="animate-fade-in">
-                            <div className="grid grid-cols-1 gap-6 mb-8">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                                 <KpiCard title="Total Visit Reports" value={visitReportStats.totalVisits} />
+                                <KpiCard 
+                                    title="Total Number of Training Sessions" 
+                                    value={visitReportStats.totalSkillsTrained} 
+                                    unit={`(${visitReportStats.totalVisits > 0 ? (visitReportStats.totalSkillsTrained / visitReportStats.totalVisits).toFixed(1) : 0} mean sessions per visit)`}
+                                />
                             </div>
 
-                            <div className="mb-8 bg-white rounded-2xl shadow-md border border-black overflow-hidden">
-                                <h4 className="text-lg font-extrabold text-slate-800 p-5 border-b border-black bg-slate-100">Visit Breakdown & Skills Trained by Facility</h4>
-                                <div className="overflow-x-auto">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider">
-                                        <tr>
-                                            <th className="px-5 py-4 border-b border-black">Facility</th>
-                                            <th className="px-5 py-4 border-b border-black border-l border-black text-center bg-sky-100">Total Visits</th>
-                                            {visitReportStats.distinctSkillKeys.map(skillKey => (
-                                                <th key={skillKey} className="px-3 py-4 border-b border-l border-black text-center break-words whitespace-normal text-[11px] max-w-[120px]">
-                                                    {IMNCI_SKILLS_LABELS[skillKey] || skillKey}
-                                                </th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {visitReportStats.facilityTableData.map(row => (
-                                            <tr key={row.id} className="hover:bg-sky-50 transition-colors border-b border-black">
-                                                <td className="px-5 py-3 font-semibold text-slate-800">{row.facilityName}</td>
-                                                <td className="px-5 py-3 border-l border-black text-center font-bold bg-sky-50 text-sky-800">{row.visitCount}</td>
-                                                {visitReportStats.distinctSkillKeys.map(skillKey => (
-                                                    <td key={skillKey} className="px-3 py-3 border-l border-black text-center text-slate-700 font-medium">
-                                                        {row.skills[skillKey] || 0}
-                                                    </td>
-                                                ))}
-                                            </tr>
-                                        ))}
-                                        {visitReportStats.facilityTableData.length === 0 && (
-                                            <tr><td colSpan={2 + visitReportStats.distinctSkillKeys.length} className="p-8 text-center text-slate-500 font-bold">No visits found for current filter.</td></tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                                </div>
-                            </div>
+                            {/* UPDATED: Grouped Trained Skills KPIs & Charts replacing Facility breakdown */}
+                            <TrainedGroupRow 
+                                title={IMNCI_SKILL_GROUPS.group1.title} 
+                                details={visitReportStats.trainedSkillsGroups.group1.details} 
+                                color={IMNCI_SKILL_GROUPS.group1.color} 
+                            />
+                            
+                            <TrainedGroupRow 
+                                title={IMNCI_SKILL_GROUPS.group2.title} 
+                                details={visitReportStats.trainedSkillsGroups.group2.details} 
+                                color={IMNCI_SKILL_GROUPS.group2.color} 
+                            />
+                            
+                            <TrainedGroupRow 
+                                title={IMNCI_SKILL_GROUPS.group3.title} 
+                                details={visitReportStats.trainedSkillsGroups.group3.details} 
+                                color={IMNCI_SKILL_GROUPS.group3.color} 
+                            />
 
                             <div className="mb-8">
                                 <KpiBarChart title={`Total Visits by ${geographicLevelName}`} chartData={visitReportStats.geographicChartData} dataKey="count" />
@@ -2211,43 +2366,52 @@ const MentorshipDashboard = ({
                             <div className="mb-8 bg-white rounded-2xl shadow-md border border-black overflow-hidden">
                                 <h4 className="text-lg font-extrabold text-slate-800 p-5 border-b border-black bg-slate-100">Facility Problems & Solutions (Combined)</h4>
                                 <div className="overflow-x-auto max-h-[600px]">
-                                    <table className="w-full text-sm text-left border-collapse">
+                                    <table className="w-full text-sm text-left border-collapse" dir="rtl">
                                         <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider sticky top-0 z-10 shadow-sm border-b border-black">
                                             <tr>
-                                                <th className="px-4 py-4 border-r border-black w-[15%]">Facility & Date</th>
-                                                <th className="px-4 py-4 border-r border-black w-[20%]">Problem / Challenge</th>
-                                                <th className="px-4 py-4 border-r border-black w-[20%]">Immediate Solution</th>
-                                                <th className="px-4 py-4 border-r border-black w-[10%] text-center">Imm. Status</th>
-                                                <th className="px-4 py-4 border-r border-black w-[20%]">Long-term Solution</th>
-                                                <th className="px-4 py-4 border-r border-black w-[10%] text-center">LT Status</th>
-                                                <th className="px-4 py-4 w-[5%]">Resp.</th>
+                                                <th className="px-4 py-4 border-l border-black w-[15%] text-right">{dynamicLocationLabel}</th>
+                                                <th className="px-4 py-4 border-l border-black w-[30%] text-right">المشكلة / التحدي</th>
+                                                <th className="px-4 py-4 border-l border-black w-[30%] text-right">الحل المتبع</th>
+                                                <th className="px-4 py-4 border-l border-black w-[15%] text-center">الحالة</th>
+                                                <th className="px-4 py-4 w-[10%] text-right">المسؤول</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {visitReportStats.problemsList.map((item, idx) => (
-                                                <tr key={idx} className="hover:bg-sky-50 transition-colors border-b border-black">
-                                                    <td className="px-4 py-3 border-r border-black align-top">
-                                                        <div className="font-bold text-slate-800 mb-1">{item.facility}</div>
-                                                        <div className="text-xs font-semibold text-slate-600 bg-slate-100 inline-block px-2 py-0.5 rounded border border-black">{item.date}</div>
-                                                    </td>
-                                                    <td className="px-4 py-3 border-r border-black align-top text-xs text-rose-700 whitespace-pre-wrap font-medium">{item.problem}</td>
-                                                    
-                                                    <td className="px-4 py-3 border-r border-black align-top text-xs text-emerald-700 whitespace-pre-wrap font-medium">{item.immediate}</td>
-                                                    <td className="px-4 py-3 border-r border-black align-top text-center">
-                                                        {renderStatusCell(item.immediate_status, item.reportId, item.challengeId, 'immediate_status')}
-                                                    </td>
-
-                                                    <td className="px-4 py-3 border-r border-black align-top text-xs text-sky-700 whitespace-pre-wrap font-medium">{item.longterm}</td>
-                                                    <td className="px-4 py-3 border-r border-black align-top text-center">
-                                                        {renderStatusCell(item.long_term_status, item.reportId, item.challengeId, 'long_term_status')}
-                                                    </td>
-
-                                                    <td className="px-4 py-3 align-top text-[10px] font-bold text-slate-500 uppercase tracking-wider">{item.person}</td>
-                                                </tr>
-                                            ))}
-                                            {visitReportStats.problemsList.length === 0 && (
-                                                <tr><td colSpan="7" className="p-8 text-center text-slate-500 font-bold">No problems recorded.</td></tr>
+                                            {visitReportStats.totalProblems === 0 && (
+                                                <tr><td colSpan="5" className="p-8 text-center text-slate-500 font-bold">لا توجد مشاكل مسجلة.</td></tr>
                                             )}
+                                            {Object.keys(visitReportStats.groupedProblems).sort().map(locName => {
+                                                const problems = visitReportStats.groupedProblems[locName];
+                                                return problems.map((item, idx) => (
+                                                    <tr key={`${locName}-${idx}`} className="hover:bg-sky-50 transition-colors border-b border-black">
+                                                        {idx === 0 && (
+                                                            <td rowSpan={problems.length} className="px-4 py-3 border-l border-black align-top font-extrabold text-slate-800 bg-slate-100 w-[15%] border-b border-black text-right">
+                                                                {locName}
+                                                            </td>
+                                                        )}
+                                                        <td className="px-4 py-3 border-l border-black align-top text-xs text-rose-700 whitespace-pre-wrap font-medium text-right">
+                                                            {item.problem}
+                                                            {dynamicLocationLevel !== 'Facility' && (
+                                                                <div className="mt-2 text-[10px] text-slate-500 font-bold bg-white inline-block px-1.5 py-0.5 rounded border border-slate-300">
+                                                                    {item.facility} - {item.date}
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                        
+                                                        <td className="px-4 py-3 border-l border-black align-top text-xs text-emerald-700 whitespace-pre-wrap font-medium text-right">
+                                                            {item.solution}
+                                                        </td>
+
+                                                        <td className="px-4 py-3 border-l border-black align-top text-center">
+                                                            {renderStatusCell(item.status, item.reportId, item.challengeId, 'status')}
+                                                        </td>
+
+                                                        <td className="px-4 py-3 align-top text-[10px] font-bold text-slate-600 uppercase tracking-wider text-right">
+                                                            {item.person}
+                                                        </td>
+                                                    </tr>
+                                                ));
+                                            })}
                                         </tbody>
                                     </table>
                                 </div>
@@ -2376,43 +2540,52 @@ const MentorshipDashboard = ({
                             <div className="mb-8 bg-white rounded-2xl shadow-md border border-black overflow-hidden">
                                 <h4 className="text-lg font-extrabold text-slate-800 p-5 border-b border-black bg-slate-100">Facility Problems & Solutions (Combined)</h4>
                                 <div className="overflow-x-auto max-h-[600px]">
-                                    <table className="w-full text-sm text-left border-collapse">
+                                    <table className="w-full text-sm text-left border-collapse" dir="rtl">
                                         <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider sticky top-0 z-10 shadow-sm border-b border-black">
                                             <tr>
-                                                <th className="px-4 py-4 border-r border-black w-[15%]">Facility & Date</th>
-                                                <th className="px-4 py-4 border-r border-black w-[20%]">Problem / Challenge</th>
-                                                <th className="px-4 py-4 border-r border-black w-[20%]">Immediate Solution</th>
-                                                <th className="px-4 py-4 border-r border-black w-[10%] text-center">Imm. Status</th>
-                                                <th className="px-4 py-4 border-r border-black w-[20%]">Long-term Solution</th>
-                                                <th className="px-4 py-4 border-r border-black w-[10%] text-center">LT Status</th>
-                                                <th className="px-4 py-4 w-[5%]">Resp.</th>
+                                                <th className="px-4 py-4 border-l border-black w-[15%] text-right">{dynamicLocationLabel}</th>
+                                                <th className="px-4 py-4 border-l border-black w-[30%] text-right">المشكلة / التحدي</th>
+                                                <th className="px-4 py-4 border-l border-black w-[30%] text-right">الحل المتبع</th>
+                                                <th className="px-4 py-4 border-l border-black w-[15%] text-center">الحالة</th>
+                                                <th className="px-4 py-4 w-[10%] text-right">المسؤول</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {visitReportStats.problemsList.map((item, idx) => (
-                                                <tr key={idx} className="hover:bg-sky-50 transition-colors border-b border-black">
-                                                    <td className="px-4 py-3 border-r border-black align-top">
-                                                        <div className="font-bold text-slate-800 mb-1">{item.facility}</div>
-                                                        <div className="text-xs font-semibold text-slate-600 bg-slate-100 inline-block px-2 py-0.5 rounded border border-black">{item.date}</div>
-                                                    </td>
-                                                    <td className="px-4 py-3 border-r border-black align-top text-xs text-rose-700 whitespace-pre-wrap font-medium">{item.problem}</td>
-                                                    
-                                                    <td className="px-4 py-3 border-r border-black align-top text-xs text-emerald-700 whitespace-pre-wrap font-medium">{item.immediate}</td>
-                                                    <td className="px-4 py-3 border-r border-black align-top text-center">
-                                                        {renderStatusCell(item.immediate_status, item.reportId, item.challengeId, 'immediate_status')}
-                                                    </td>
-
-                                                    <td className="px-4 py-3 border-r border-black align-top text-xs text-sky-700 whitespace-pre-wrap font-medium">{item.longterm}</td>
-                                                    <td className="px-4 py-3 border-r border-black align-top text-center">
-                                                        {renderStatusCell(item.long_term_status, item.reportId, item.challengeId, 'long_term_status')}
-                                                    </td>
-
-                                                    <td className="px-4 py-3 align-top text-[10px] font-bold text-slate-500 uppercase tracking-wider">{item.person}</td>
-                                                </tr>
-                                            ))}
-                                            {visitReportStats.problemsList.length === 0 && (
-                                                <tr><td colSpan="7" className="p-8 text-center text-slate-500 font-bold">No problems recorded.</td></tr>
+                                            {visitReportStats.totalProblems === 0 && (
+                                                <tr><td colSpan="5" className="p-8 text-center text-slate-500 font-bold">لا توجد مشاكل مسجلة.</td></tr>
                                             )}
+                                            {Object.keys(visitReportStats.groupedProblems).sort().map(locName => {
+                                                const problems = visitReportStats.groupedProblems[locName];
+                                                return problems.map((item, idx) => (
+                                                    <tr key={`${locName}-${idx}`} className="hover:bg-sky-50 transition-colors border-b border-black">
+                                                        {idx === 0 && (
+                                                            <td rowSpan={problems.length} className="px-4 py-3 border-l border-black align-top font-extrabold text-slate-800 bg-slate-100 w-[15%] border-b border-black text-right">
+                                                                {locName}
+                                                            </td>
+                                                        )}
+                                                        <td className="px-4 py-3 border-l border-black align-top text-xs text-rose-700 whitespace-pre-wrap font-medium text-right">
+                                                            {item.problem}
+                                                            {dynamicLocationLevel !== 'Facility' && (
+                                                                <div className="mt-2 text-[10px] text-slate-500 font-bold bg-white inline-block px-1.5 py-0.5 rounded border border-slate-300">
+                                                                    {item.facility} - {item.date}
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                        
+                                                        <td className="px-4 py-3 border-l border-black align-top text-xs text-emerald-700 whitespace-pre-wrap font-medium text-right">
+                                                            {item.solution}
+                                                        </td>
+
+                                                        <td className="px-4 py-3 border-l border-black align-top text-center">
+                                                            {renderStatusCell(item.status, item.reportId, item.challengeId, 'status')}
+                                                        </td>
+
+                                                        <td className="px-4 py-3 align-top text-[10px] font-bold text-slate-600 uppercase tracking-wider text-right">
+                                                            {item.person}
+                                                        </td>
+                                                    </tr>
+                                                ));
+                                            })}
                                         </tbody>
                                     </table>
                                 </div>
