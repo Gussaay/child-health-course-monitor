@@ -749,10 +749,32 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                                 <div><span className="text-sm font-medium text-gray-500">رقم الهاتف:</span><span className="text-sm font-semibold text-gray-900 mr-2">{healthWorkerPhone || 'غير محدد'}</span></div>
                             </div>
                         </div>
+                        
                         {/* Mentor/Session Info */}
                         <div className="p-2 border rounded-lg bg-gray-50 text-right">
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-3 gap-y-0.5 items-end" dir="rtl">
-                                <div className="text-sm"><span className="font-medium text-gray-500">اسم المشرف:</span><span className="font-semibold text-gray-900 mr-2">{user?.displayName || user?.email || '...'}</span></div>                                <div className="text-sm"><span className="font-medium text-gray-500">تاريخ الجلسة:</span>
+                                
+                                {/* --- UPDATED: Supervisor Info Display --- */}
+                                <div className="text-sm flex flex-col justify-end">
+                                    <div>
+                                        <span className="font-medium text-gray-500">اسم المشرف:</span>
+                                        <span className="font-semibold text-gray-900 mr-2">
+                                            {existingSessionData 
+                                                ? (existingSessionData.mentorName || existingSessionData.mentorEmail || 'غير معروف') 
+                                                : (user?.displayName || user?.email || '...')}
+                                        </span>
+                                    </div>
+                                    {/* Show "Edited by" if this is an existing session */}
+                                    {existingSessionData && (
+                                        <span className="text-xs text-orange-600 font-bold mt-1">
+                                            (تعديل بواسطة: {user?.displayName || user?.email})
+                                        </span>
+                                    )}
+                                </div>
+                                {/* ---------------------------------------- */}
+
+                                <div className="text-sm">
+                                    <span className="font-medium text-gray-500">تاريخ الجلسة:</span>
                                     <Input 
                                         type="date" 
                                         name="session_date" 

@@ -1,5 +1,5 @@
 {
-  "appId": "com.nchp.monitoring.app;",
+  "appId": "com.nchp.monitoring.app",
   "appName": "NCHP Monitoring",
   "webDir": "dist",
   "server": {

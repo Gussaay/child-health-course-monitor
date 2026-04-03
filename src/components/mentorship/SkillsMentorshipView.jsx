@@ -1398,7 +1398,6 @@ const SkillsMentorshipView = ({
             sub.facilityId === selectedFacilityId &&
             sub.staff === selectedHealthWorkerName &&
             sub.service === activeService &&
-            sub.status !== 'draft' &&
             sub.sessionDate
         );
     }, [processedSubmissions, selectedFacilityId, selectedHealthWorkerName, activeService]);
@@ -1732,7 +1731,6 @@ const SkillsMentorshipView = ({
             sub.facilityId === selectedFacilityId &&
             sub.staff === selectedHealthWorkerName &&
             sub.service === activeService &&
-            sub.status !== 'draft' &&
             sub.sessionDate
         );
 
@@ -1771,7 +1769,6 @@ const SkillsMentorshipView = ({
         const facilityMotherSessions = processedSubmissions.filter(sub =>
             sub.facilityId === selectedFacilityId &&
             sub.service === motherServiceType &&
-            sub.status !== 'draft' &&
             sub.sessionDate
         );
 
@@ -1834,8 +1831,7 @@ const SkillsMentorshipView = ({
             .filter(sub =>
                 sub.facilityId === selectedFacilityId &&
                 sub.staff === selectedHealthWorkerName &&
-                sub.service === activeService &&
-                sub.status !== 'draft'
+                sub.service === activeService 
             )
             .sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -2741,7 +2737,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                         STATE_LOCALITIES={STATE_LOCALITIES}
                                         activeService={activeService}
                                         isLoading={!publicDashboardMode && (isDataCacheLoading.skillMentorshipSubmissions || !skillMentorshipSubmissions)}
-                                        canEditStatus={isFederalManager}
+                                        canEditStatus={permissions?.manageScope === 'federal' || permissions?.canUseFederalManagerAdvancedFeatures}
                                         onUpdateStatus={handleChallengeStatusUpdate}
 
                                         activeState={activeDashboardState || selectedState}
@@ -2957,7 +2953,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     STATE_LOCALITIES={STATE_LOCALITIES}
                                     activeService={activeService}
                                     isLoading={isDataCacheLoading.skillMentorshipSubmissions || !skillMentorshipSubmissions}
-                                    canEditStatus={permissions?.role === 'federal_manager' || permissions?.isSuperUser}
+                                    canEditStatus={permissions?.manageScope === 'federal' || permissions?.canUseFederalManagerAdvancedFeatures}
                                     onUpdateStatus={handleChallengeStatusUpdate}
 
                                     activeState={activeDashboardState || selectedState}
@@ -3486,7 +3482,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                 STATE_LOCALITIES={STATE_LOCALITIES}
                                 activeService={activeService}
                                 isLoading={isDataCacheLoading.skillMentorshipSubmissions || !skillMentorshipSubmissions}
-                                canEditStatus={permissions?.role === 'federal_manager' || permissions?.isSuperUser}
+                                canEditStatus={permissions?.manageScope === 'federal' || permissions?.canUseFederalManagerAdvancedFeatures}
                                 onUpdateStatus={handleChallengeStatusUpdate}
 
                                 activeState={activeDashboardState}

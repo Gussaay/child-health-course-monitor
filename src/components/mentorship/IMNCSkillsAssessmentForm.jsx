@@ -401,7 +401,7 @@ export const rehydrateDraftData = (draft, DIARRHEA_CLASSIFICATIONS, FEVER_CLASSI
 };
 
 
-// --- calculateScores function (MODIFIED: Merged with Bulk Upload logic) ---
+// --- calculateScores function (MODIFIED: NaN Bug Fix Applied) ---
 export const calculateScores = (formData) => {
     const scores = {};
     let totalTreatmentMaxScore = 0;
@@ -411,6 +411,7 @@ export const calculateScores = (formData) => {
     let mainSymptomsMaxScore = 0;
     let totalMaxScore = 0;
     let totalCurrentScore = 0;
+    let totalRecordingMaxScore = 0; // FIX 1: Add recording max score tracker
 
     // --- NEW HANDS-ON SKILLS VARS ---
     let handsOnWeight_score = 0, handsOnWeight_max = 0;
@@ -430,7 +431,7 @@ export const calculateScores = (formData) => {
 
     IMNCI_FORM_STRUCTURE.forEach(group => {
         let groupCurrentScore = 0;
-        let groupMaxScore = group.maxScore;
+        let groupMaxScore = group.maxScore || 0; // FIX 2: Default to 0 to prevent NaN
 
         if (group.isDecisionSection) {
             groupCurrentScore = formData.decisionMatches === 'yes' ? 1 : 0;
@@ -611,7 +612,7 @@ export const calculateScores = (formData) => {
                                         totalAssessmentMaxScore += 1;
                                     }
                                 } else if (group.sectionKey === 'recording_skills') {
-                                    // Handle recording skills max score naturally 
+                                    totalRecordingMaxScore += 1; // FIX 3: Accumulate the recording score specifically
                                 }
                             }
 
@@ -641,14 +642,14 @@ export const calculateScores = (formData) => {
             // This block is for the total Treatment score
             else if (group.scoreKey === 'treatment') {
                 groupMaxScore = totalTreatmentMaxScore; // Max score is the sum of all relevant skills
-                // --- FIX: Save under 'treatment_total_score' to match 'assessment_total_score' pattern ---
                 scores['treatment_total_score'] = { score: groupCurrentScore, maxScore: groupMaxScore };
                 totalMaxScore += groupMaxScore;
                 totalCurrentScore += groupCurrentScore;
-                currentTreatmentScore = groupCurrentScore; // <-- *** THIS IS THE FIX (Part 1) ***
+                currentTreatmentScore = groupCurrentScore;
             }
             // This block handles the Recording Skills Score 
             else if (group.sectionKey === 'recording_skills') {
+                 groupMaxScore = totalRecordingMaxScore; // FIX 4: Apply the properly accumulated tracking variable
                  scores['recording_score'] = { score: groupCurrentScore, maxScore: groupMaxScore };
                  totalMaxScore += groupMaxScore;
                  totalCurrentScore += groupCurrentScore;

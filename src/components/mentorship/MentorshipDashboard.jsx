@@ -16,6 +16,7 @@ import {
 } from 'chart.js';
 
 import { Button, Spinner } from '../CommonComponents';
+import VisitReportDashboardTab from './VisitReportDashboardTab'; 
 
 import { 
     IMNCI_FORM_STRUCTURE, 
@@ -295,7 +296,7 @@ const calculateAverage = (scores) => {
 };
 
 // --- Helper for Copying to Clipboard ---
-const CopyImageButton = ({ targetRef, title }) => {
+export const CopyImageButton = ({ targetRef, title }) => {
     const [isCopying, setIsCopying] = useState(false);
 
     const handleCopy = async () => {
@@ -343,7 +344,7 @@ const CopyImageButton = ({ targetRef, title }) => {
 };
 
 // --- Components (ScoreText, KpiCard, etc.) ---
-const ScoreText = ({ value, showPercentage = true }) => {
+export const ScoreText = ({ value, showPercentage = true }) => {
     let colorClass = 'text-slate-800';
     let text = 'N/A';
     if (value !== null && !isNaN(value) && isFinite(value)) {
@@ -356,7 +357,7 @@ const ScoreText = ({ value, showPercentage = true }) => {
     return (<span className={`font-extrabold text-sm ${colorClass}`}>{text}</span>);
 };
 
-const KpiCard = ({ title, value, unit = '', scoreValue = null }) => (
+export const KpiCard = ({ title, value, unit = '', scoreValue = null }) => (
     <div className="bg-white p-6 rounded-2xl shadow-md border border-black border-t-4 border-t-sky-600 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col justify-center items-center h-full">
         <h4 className="text-xs sm:text-sm font-bold text-slate-600 mb-3 text-center uppercase tracking-wider" title={title}>{title}</h4>
         <div className="flex items-baseline justify-center gap-1.5 mt-auto">
@@ -410,7 +411,7 @@ const DetailedKpiCard = ({ title, overallScore, kpis }) => {
 };
 
 // --- Shared Chart Options ---
-const getSharedChartOptions = () => ({
+export const getSharedChartOptions = () => ({
     responsive: true, 
     maintainAspectRatio: false,
     animation: {
@@ -585,7 +586,7 @@ const KpiCardWithChart = ({ title, kpis, chartData, kpiKeys, cols = 2 }) => {
     );
 };
 
-const KpiBarChart = ({ title, chartData, dataKey = 'avgOverall' }) => {
+export const KpiBarChart = ({ title, chartData, dataKey = 'avgOverall' }) => {
     const cardRef = useRef(null);
     const getBarColor = (value) => { if (value >= 80) return '#10b981'; if (value >= 50) return '#f59e0b'; return '#ef4444'; };
     const getHoverColor = (value) => { if (value >= 80) return '#059669'; if (value >= 50) return '#d97706'; return '#dc2626'; };
@@ -639,84 +640,6 @@ const KpiBarChart = ({ title, chartData, dataKey = 'avgOverall' }) => {
             <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
             <h4 className="text-base font-extrabold text-slate-800 mb-5 text-center tracking-wide pr-8">{title}</h4>
             <div className="relative" style={{ height: `${chartHeight}px` }}>{chartData.length > 0 ? <Bar options={options} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">No data available.</div>}</div>
-        </div>
-    );
-};
-
-// --- NEW COMPONENT: Row containing Detailed Card (Left) and Horizontal Bar Chart (Right) ---
-const TrainedGroupRow = ({ title, details, color }) => {
-    const cardRef = useRef(null);
-
-    const chartData = {
-        labels: details.map(d => d.label),
-        datasets: [{
-            label: 'Times Trained',
-            data: details.map(d => d.count),
-            backgroundColor: color,
-            hoverBackgroundColor: color + 'CC',
-            borderRadius: 6,
-            barPercentage: 0.6,
-        }]
-    };
-
-    const options = {
-        indexAxis: 'y', // Horizontal Bar Chart
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: { duration: 1000, easing: 'easeOutQuart' },
-        plugins: { 
-            legend: { display: false },
-            tooltip: {
-                backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                titleFont: { size: 13, family: "'Inter', sans-serif" },
-                bodyFont: { size: 12, family: "'Inter', sans-serif", weight: 'bold' },
-                padding: 10,
-                cornerRadius: 8,
-            }
-        },
-        scales: {
-            x: { 
-                beginAtZero: true, 
-                grid: { color: '#e2e8f0', drawBorder: false },
-                ticks: { precision: 0, color: '#475569', font: { family: "'Inter', sans-serif", weight: '500' } } 
-            },
-            y: { 
-                grid: { display: false, drawBorder: false },
-                ticks: { color: '#334155', font: { size: 11, family: "'Inter', sans-serif", weight: 'bold' } } 
-            }
-        }
-    };
-
-    return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8" ref={cardRef}>
-            {/* Left: Detailed Disaggregated KPI Card */}
-            <div className="bg-white p-6 rounded-2xl shadow-md border border-black flex flex-col relative h-full">
-                <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
-                <div className="flex justify-between items-center mb-5 pb-3 border-b border-black pr-10">
-                    <h4 className="text-base font-extrabold text-slate-800 text-left">{title}</h4>
-                </div>
-                <div className="space-y-3 flex-grow">
-                    {details.map((d, i) => (
-                        <div key={i} className="flex justify-between items-center bg-slate-50 p-3.5 rounded-xl border border-black shadow-sm group hover:border-sky-500 hover:bg-sky-50 transition-all duration-200">
-                            <h5 className="text-xs font-bold text-slate-700 text-left pr-4 group-hover:text-sky-800">{d.label}</h5>
-                            <div className="flex items-center gap-3">
-                                <span className="text-xs font-extrabold text-slate-500 bg-white px-2 py-1 rounded border border-black">Count: {d.count}</span>
-                                <div className="bg-white px-3 py-1 rounded-lg shadow-sm border border-black min-w-[60px] text-center">
-                                    <ScoreText value={d.pct / 100} showPercentage={true} />
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* Right: Horizontal Bar Chart of Number Trained */}
-            <div className="bg-white p-5 rounded-2xl shadow-md border border-black flex flex-col h-full min-h-[300px] relative">
-                <h4 className="text-sm font-extrabold text-slate-800 mb-4 text-center tracking-wide">{title} (Count)</h4>
-                <div className="relative flex-grow w-full">
-                    {details.some(d => d.count > 0) ? <Bar options={options} data={chartData} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold text-xs">No training data recorded.</div>}
-                </div>
-            </div>
         </div>
     );
 };
@@ -1049,7 +972,8 @@ const SummaryKpiTable = ({ title, kpiDefinitions, overallKpis, kpisByWorkerType 
 const MentorshipDashboard = ({ 
     allSubmissions, STATE_LOCALITIES, activeService, activeState, onStateChange, activeLocality, onLocalityChange, activeFacilityId, onFacilityIdChange, activeWorkerName, onWorkerNameChange, activeProject, onProjectChange, visitReports, canEditStatus, onUpdateStatus, activeWorkerType, onWorkerTypeChange = () => {},
     publicDashboardMode = false, handleRefresh = () => {}, isRefreshing = false, isLoading = false,
-    lastUpdated = null 
+    lastUpdated = null,
+    currentUserRole = ''
 }) => {
 
     const [activeEencTab, setActiveEencTab] = useState('skills'); 
@@ -1179,7 +1103,7 @@ const MentorshipDashboard = ({
                 const pct = totalCountOverall > 0 ? Math.round((count / totalCountOverall) * 100) : 0;
                 return { label: groupDef.labels[idx], count, pct };
             });
-            return { details }; // No overall score needed here anymore
+            return { details }; 
         };
 
         const trainedSkillsGroups = {
@@ -1209,7 +1133,17 @@ const MentorshipDashboard = ({
         const facilityTableData = Object.values(facilityMap);
         const distinctSkillKeys = Array.from(skillKeys);
 
-        return { totalVisits, geographicChartData, facilityTableData, distinctSkillKeys, groupedProblems, totalProblems, trainedSkillsGroups, totalSkillsTrained };
+        return { 
+            totalVisits, 
+            geographicChartData, 
+            facilityTableData, 
+            distinctSkillKeys, 
+            groupedProblems, 
+            totalProblems, 
+            trainedSkillsGroups, 
+            totalSkillsTrained,
+            rawReports: filtered 
+        };
 
     }, [visitReports, activeService, activeState, activeLocality, activeFacilityId, activeProject, STATE_LOCALITIES, dynamicLocationLevel]);
 
@@ -1469,9 +1403,7 @@ const MentorshipDashboard = ({
         const totalMothers = motherSubmissions.length;
         
         const scores = {
-            // Knowledge
             know_med: [], know_ors_prep: [], know_tx: [], know_4rules: [], know_return: [], know_fluids: [], know_ors_qty: [], know_ors_stool: [],
-            // Satisfaction
             sat_time: [], sat_assess: [], sat_tx: [], sat_comm: [], sat_learn: [], sat_avail: []
         };
 
@@ -1483,7 +1415,7 @@ const MentorshipDashboard = ({
             const s = sub.mothersSatisfaction || sub.fullData?.mothersSatisfaction || {};
             
             const push = (val, arr, key) => { 
-                const isYes = val === 'نعم'; // IMNCI Form uses Arabic 'نعم'
+                const isYes = val === 'نعم'; 
                 arr.push(isYes ? 1 : 0); 
                 if(skillStats[key]) { 
                     if(isYes) skillStats[key].yes++; 
@@ -1715,7 +1647,7 @@ const MentorshipDashboard = ({
             return acc;
         }, {});
         return Object.keys(visitGroups).map(v => ({ visitNumber: parseInt(v), data: visitGroups[v] })).sort((a,b)=>a.visitNumber-b.visitNumber).map(({visitNumber, data}) => {
-            const avg = (scores) => { const v = scores.filter(s => s !== null && !isNaN(s)); if(v.length===0)return null; return Math.round(v.reduce((a,b)=>a+b,0)/v.length); };
+            const avg = (scoreArray) => { const v = scoreArray.filter(s => s !== null && !isNaN(s)); if(v.length===0)return null; return Math.round(v.reduce((a,b)=>a+b,0)/v.length); };
             const res = { name: `Visit ${visitNumber}` };
             Object.keys(data).forEach(k => res[k] = avg(data[k]));
             return res;
@@ -1750,7 +1682,7 @@ const MentorshipDashboard = ({
             return acc;
         }, {});
         return Object.keys(visitGroups).map(v => ({ visitNumber: parseInt(v), data: visitGroups[v] })).sort((a,b)=>a.visitNumber-b.visitNumber).map(({visitNumber, data}) => {
-            const avg = (scores) => { const v = scores.filter(s => s !== null && !isNaN(s)); if(v.length===0)return null; return Math.round(v.reduce((a,b)=>a+b,0)/v.length); };
+            const avg = (scoreArray) => { const v = scoreArray.filter(s => s !== null && !isNaN(s)); if(v.length===0)return null; return Math.round(v.reduce((a,b)=>a+b,0)/v.length); };
             const res = { name: `Visit ${visitNumber}` };
             Object.keys(data).forEach(k => res[k] = avg(data[k]));
             return res;
@@ -1784,7 +1716,7 @@ const MentorshipDashboard = ({
             .map(v => ({ visitNumber: parseInt(v), data: visitGroups[v] }))
             .sort((a,b) => a.visitNumber - b.visitNumber)
             .map(({visitNumber, data}) => {
-                const avg = (scores) => { const v = scores.filter(s => s !== null && !isNaN(s)); if(v.length===0)return null; return Math.round(v.reduce((a,b)=>a+b,0)/v.length); };
+                const avg = (scoreArray) => { const v = scoreArray.filter(s => s !== null && !isNaN(s)); if(v.length===0)return null; return Math.round(v.reduce((a,b)=>a+b,0)/v.length); };
                 const res = { name: `Visit ${visitNumber}` };
                 Object.keys(data).forEach(k => res[k] = avg(data[k]));
                 return res;
@@ -1812,7 +1744,7 @@ const MentorshipDashboard = ({
             .map(v => ({ visitNumber: parseInt(v), data: visitGroups[v] }))
             .sort((a,b) => a.visitNumber - b.visitNumber)
             .map(({visitNumber, data}) => {
-                const avg = (scores) => { const v = scores.filter(s => s !== null && !isNaN(s)); if(v.length===0)return null; return Math.round(v.reduce((a,b)=>a+b,0)/v.length); };
+                const avg = (scoreArray) => { const v = scoreArray.filter(s => s !== null && !isNaN(s)); if(v.length===0)return null; return Math.round(v.reduce((a,b)=>a+b,0)/v.length); };
                 const res = { name: `Visit ${visitNumber}` };
                 Object.keys(data).forEach(k => res[k] = avg(data[k]));
                 return res;
@@ -2117,18 +2049,37 @@ const MentorshipDashboard = ({
                         <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeImnciTab === 'skills' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveImnciTab('skills')}>Skills Observation (Provider)</button>
                         <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeImnciTab === 'mothers' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveImnciTab('mothers')}>Mother Interviews</button>
                         <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeImnciTab === 'visit_reports' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveImnciTab('visit_reports')}>Visit Reports (Facility)</button>
+                        {canEditStatus && (
+                            <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeImnciTab === 'admin' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveImnciTab('admin')}>Admin Dashboard</button>
+                        )}
                     </div>
 
-                    {activeImnciTab === 'skills' && (
+                    {activeImnciTab === 'admin' && canEditStatus && (
                         <div className="animate-fade-in">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                                 <KpiCard title="Total Completed Visits" value={overallKpis.totalVisits} unit={overallKpis.totalHealthWorkers > 0 ? `(${(overallKpis.totalVisits / overallKpis.totalHealthWorkers).toFixed(1)} visits per HW)` : ''} />
                                 <KpiCard title="Total Health Workers Visited" value={overallKpis.totalHealthWorkers} />
                                 <KpiCard title="Total Cases Observed" value={overallKpis.totalCasesObserved} unit={overallKpis.totalVisits > 0 ? `(${ (overallKpis.totalCasesObserved / overallKpis.totalVisits).toFixed(1) } cases per visit)` : ''} />
                             </div>
-
                             <div className="mb-8">
                                 <VolumeLineChart title="Visits & Cases by Visit Number" chartData={volumeChartData} kpiKeys={volumeChartKeys} />
+                            </div>
+                            
+                            <h3 className="text-xl font-extrabold text-slate-800 mb-5 mt-10 text-left tracking-wide">Program Performance by {geographicLevelName} {scopeTitle}</h3>
+                            <GeographicVolumeTable 
+                                title={`Volume & Coverage by ${geographicLevelName}`} 
+                                data={geographicKpis} 
+                                locationLabel={geographicLevelName} 
+                            />
+                        </div>
+                    )}
+
+                    {activeImnciTab === 'skills' && (
+                        <div className="animate-fade-in">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                                <KpiCard title="Total Completed Visits" value={overallKpis.totalVisits} />
+                                <KpiCard title="Total Health Workers Visited" value={overallKpis.totalHealthWorkers} />
+                                <KpiCard title="Total Cases Observed" value={overallKpis.totalCasesObserved} />
                             </div>
                             
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
@@ -2289,14 +2240,6 @@ const MentorshipDashboard = ({
                                 kpisByWorkerType={kpisByWorkerType} 
                             />
 
-                            {/* NEW: Geographic KPI Volume Table */}
-                            <h3 className="text-xl font-extrabold text-slate-800 mb-5 mt-10 text-left tracking-wide">Program Performance by {geographicLevelName} {scopeTitle}</h3>
-                            <GeographicVolumeTable 
-                                title={`Volume & Coverage by ${geographicLevelName}`} 
-                                data={geographicKpis} 
-                                locationLabel={geographicLevelName} 
-                            />
-
                             <h3 className="text-xl font-extrabold text-slate-800 mb-5 mt-10 text-left tracking-wide">Overall Adherence by {geographicLevelName} {scopeTitle}</h3>
                             <div className="mb-10"><KpiBarChart title={`Overall IMNCI Adherence by ${geographicLevelName}`} chartData={geographicKpis} /></div>
                             
@@ -2329,94 +2272,22 @@ const MentorshipDashboard = ({
                         </div>
                     )}
 
-                    {activeImnciTab === 'visit_reports' && visitReportStats && (
-                        <div className="animate-fade-in">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                                <KpiCard title="Total Visit Reports" value={visitReportStats.totalVisits} />
-                                <KpiCard 
-                                    title="Total Number of Training Sessions" 
-                                    value={visitReportStats.totalSkillsTrained} 
-                                    unit={`(${visitReportStats.totalVisits > 0 ? (visitReportStats.totalSkillsTrained / visitReportStats.totalVisits).toFixed(1) : 0} mean sessions per visit)`}
-                                />
-                            </div>
-
-                            {/* UPDATED: Grouped Trained Skills KPIs & Charts replacing Facility breakdown */}
-                            <TrainedGroupRow 
-                                title={IMNCI_SKILL_GROUPS.group1.title} 
-                                details={visitReportStats.trainedSkillsGroups.group1.details} 
-                                color={IMNCI_SKILL_GROUPS.group1.color} 
-                            />
-                            
-                            <TrainedGroupRow 
-                                title={IMNCI_SKILL_GROUPS.group2.title} 
-                                details={visitReportStats.trainedSkillsGroups.group2.details} 
-                                color={IMNCI_SKILL_GROUPS.group2.color} 
-                            />
-                            
-                            <TrainedGroupRow 
-                                title={IMNCI_SKILL_GROUPS.group3.title} 
-                                details={visitReportStats.trainedSkillsGroups.group3.details} 
-                                color={IMNCI_SKILL_GROUPS.group3.color} 
-                            />
-
-                            <div className="mb-8">
-                                <KpiBarChart title={`Total Visits by ${geographicLevelName}`} chartData={visitReportStats.geographicChartData} dataKey="count" />
-                            </div>
-
-                            <div className="mb-8 bg-white rounded-2xl shadow-md border border-black overflow-hidden">
-                                <h4 className="text-lg font-extrabold text-slate-800 p-5 border-b border-black bg-slate-100">Facility Problems & Solutions (Combined)</h4>
-                                <div className="overflow-x-auto max-h-[600px]">
-                                    <table className="w-full text-sm text-left border-collapse" dir="rtl">
-                                        <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider sticky top-0 z-10 shadow-sm border-b border-black">
-                                            <tr>
-                                                <th className="px-4 py-4 border-l border-black w-[15%] text-right">{dynamicLocationLabel}</th>
-                                                <th className="px-4 py-4 border-l border-black w-[30%] text-right">المشكلة / التحدي</th>
-                                                <th className="px-4 py-4 border-l border-black w-[30%] text-right">الحل المتبع</th>
-                                                <th className="px-4 py-4 border-l border-black w-[15%] text-center">الحالة</th>
-                                                <th className="px-4 py-4 w-[10%] text-right">المسؤول</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {visitReportStats.totalProblems === 0 && (
-                                                <tr><td colSpan="5" className="p-8 text-center text-slate-500 font-bold">لا توجد مشاكل مسجلة.</td></tr>
-                                            )}
-                                            {Object.keys(visitReportStats.groupedProblems).sort().map(locName => {
-                                                const problems = visitReportStats.groupedProblems[locName];
-                                                return problems.map((item, idx) => (
-                                                    <tr key={`${locName}-${idx}`} className="hover:bg-sky-50 transition-colors border-b border-black">
-                                                        {idx === 0 && (
-                                                            <td rowSpan={problems.length} className="px-4 py-3 border-l border-black align-top font-extrabold text-slate-800 bg-slate-100 w-[15%] border-b border-black text-right">
-                                                                {locName}
-                                                            </td>
-                                                        )}
-                                                        <td className="px-4 py-3 border-l border-black align-top text-xs text-rose-700 whitespace-pre-wrap font-medium text-right">
-                                                            {item.problem}
-                                                            {dynamicLocationLevel !== 'Facility' && (
-                                                                <div className="mt-2 text-[10px] text-slate-500 font-bold bg-white inline-block px-1.5 py-0.5 rounded border border-slate-300">
-                                                                    {item.facility} - {item.date}
-                                                                </div>
-                                                            )}
-                                                        </td>
-                                                        
-                                                        <td className="px-4 py-3 border-l border-black align-top text-xs text-emerald-700 whitespace-pre-wrap font-medium text-right">
-                                                            {item.solution}
-                                                        </td>
-
-                                                        <td className="px-4 py-3 border-l border-black align-top text-center">
-                                                            {renderStatusCell(item.status, item.reportId, item.challengeId, 'status')}
-                                                        </td>
-
-                                                        <td className="px-4 py-3 align-top text-[10px] font-bold text-slate-600 uppercase tracking-wider text-right">
-                                                            {item.person}
-                                                        </td>
-                                                    </tr>
-                                                ));
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
+                    {activeImnciTab === 'visit_reports' && (
+                        // USE THE NEW COMPONENT HERE
+                        <VisitReportDashboardTab 
+                            activeService={activeService}
+                            visitReportStats={visitReportStats}
+                            geographicLevelName={geographicLevelName}
+                            dynamicLocationLabel={dynamicLocationLabel}
+                            dynamicLocationLevel={dynamicLocationLevel}
+                            renderStatusCell={renderStatusCell}
+                            IMNCI_SKILL_GROUPS={IMNCI_SKILL_GROUPS}
+                            EENC_SKILLS_LABELS={EENC_SKILLS_LABELS}
+                            KpiCard={KpiCard}
+                            KpiBarChart={KpiBarChart}
+                            ScoreText={ScoreText}
+                            CopyImageButton={CopyImageButton}
+                        />
                     )}
                 </>
             )}
@@ -2427,18 +2298,37 @@ const MentorshipDashboard = ({
                         <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeEencTab === 'skills' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveEencTab('skills')}>Skills Observation (Provider)</button>
                         <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeEencTab === 'mothers' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveEencTab('mothers')}>Mother Interviews</button>
                         <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeEencTab === 'visit_reports' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveEencTab('visit_reports')}>Visit Reports (Facility)</button>
+                        {canEditStatus && (
+                            <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeEencTab === 'admin' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveEencTab('admin')}>Admin Dashboard</button>
+                        )}
                     </div>
 
-                    {activeEencTab === 'skills' && (
+                    {activeEencTab === 'admin' && canEditStatus && (
                         <div className="animate-fade-in">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                                 <KpiCard title="Total Completed EENC Visits" value={overallKpis.totalVisits} unit={overallKpis.totalHealthWorkers > 0 ? `(${(overallKpis.totalVisits / overallKpis.totalHealthWorkers).toFixed(1)} visits per HW)` : ''} />
                                 <KpiCard title="Total Health Workers Visited" value={overallKpis.totalHealthWorkers} />
                                 <KpiCard title="Total Cases Observed" value={overallKpis.totalCasesObserved} unit={overallKpis.totalVisits > 0 ? `(${ (overallKpis.totalCasesObserved / overallKpis.totalVisits).toFixed(1) } cases per visit)` : ''} />
                             </div>
-
                             <div className="mb-8">
                                 <VolumeLineChart title="Visits & Cases by Visit Number" chartData={volumeChartData} kpiKeys={volumeChartKeys} />
+                            </div>
+                            
+                            <h3 className="text-xl font-bold text-slate-800 mb-5 mt-10 text-left tracking-wide">Program Performance by {geographicLevelName} {scopeTitle}</h3>
+                            <GeographicVolumeTable 
+                                title={`Volume & Coverage by ${geographicLevelName}`} 
+                                data={geographicKpis} 
+                                locationLabel={geographicLevelName} 
+                            />
+                        </div>
+                    )}
+
+                    {activeEencTab === 'skills' && (
+                        <div className="animate-fade-in">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                                <KpiCard title="Total Completed EENC Visits" value={overallKpis.totalVisits} />
+                                <KpiCard title="Total Health Workers Visited" value={overallKpis.totalHealthWorkers} />
+                                <KpiCard title="Total Cases Observed" value={overallKpis.totalCasesObserved} />
                             </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"><KpiGridCard title="Overall EENC Adherence Scores (Average)" kpis={eencMainKpiGridList} cols={3} /><KpiLineChart title="EENC Adherence Over Time (Main KPIs)" chartData={eencChartData} kpiKeys={eencMainKpiChartKeys} /></div>
@@ -2455,14 +2345,6 @@ const MentorshipDashboard = ({
                                 kpiDefinitions={eencSummaryDefs} 
                                 overallKpis={overallKpis} 
                                 kpisByWorkerType={kpisByWorkerType} 
-                            />
-
-                            {/* NEW: Geographic KPI Volume Table */}
-                            <h3 className="text-xl font-bold text-slate-800 mb-5 mt-10 text-left tracking-wide">Program Performance by {geographicLevelName} {scopeTitle}</h3>
-                            <GeographicVolumeTable 
-                                title={`Volume & Coverage by ${geographicLevelName}`} 
-                                data={geographicKpis} 
-                                locationLabel={geographicLevelName} 
                             />
 
                             <h3 className="text-xl font-bold text-slate-800 mb-5 mt-10 text-left tracking-wide">Overall EENC Adherence by {geographicLevelName} {scopeTitle}</h3>
@@ -2492,105 +2374,22 @@ const MentorshipDashboard = ({
                          </div>
                      )}
 
-                    {activeEencTab === 'visit_reports' && visitReportStats && (
-                        <div className="animate-fade-in">
-                            <div className="grid grid-cols-1 gap-6 mb-8">
-                                <KpiCard title="Total Visit Reports" value={visitReportStats.totalVisits} />
-                            </div>
-
-                            <div className="mb-8 bg-white rounded-2xl shadow-md border border-black overflow-hidden">
-                                <h4 className="text-lg font-extrabold text-slate-800 p-5 border-b border-black bg-slate-100">Visit Breakdown & Skills Trained by Facility</h4>
-                                <div className="overflow-x-auto">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider">
-                                        <tr>
-                                            <th className="px-5 py-4 border-b border-black">Facility</th>
-                                            <th className="px-5 py-4 border-b border-black border-l border-black text-center bg-sky-100">Total Visits</th>
-                                            {visitReportStats.distinctSkillKeys.map(skillKey => (
-                                                <th key={skillKey} className="px-3 py-4 border-b border-l border-black text-center break-words whitespace-normal text-[11px] max-w-[120px]">
-                                                    {EENC_SKILLS_LABELS[skillKey] || skillKey}
-                                                </th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {visitReportStats.facilityTableData.map(row => (
-                                            <tr key={row.id} className="hover:bg-sky-50 transition-colors border-b border-black">
-                                                <td className="px-5 py-3 font-semibold text-slate-800">{row.facilityName}</td>
-                                                <td className="px-5 py-3 border-l border-black text-center font-bold bg-sky-50 text-sky-800">{row.visitCount}</td>
-                                                {visitReportStats.distinctSkillKeys.map(skillKey => (
-                                                    <td key={skillKey} className="px-3 py-3 border-l border-black text-center text-slate-700 font-medium">
-                                                        {row.skills[skillKey] || 0}
-                                                    </td>
-                                                ))}
-                                            </tr>
-                                        ))}
-                                        {visitReportStats.facilityTableData.length === 0 && (
-                                            <tr><td colSpan={2 + visitReportStats.distinctSkillKeys.length} className="p-8 text-center text-slate-500 font-bold">No visits found for current filter.</td></tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                                </div>
-                            </div>
-
-                            <div className="mb-8">
-                                <KpiBarChart title={`Total Visits by ${geographicLevelName}`} chartData={visitReportStats.geographicChartData} dataKey="count" />
-                            </div>
-
-                            <div className="mb-8 bg-white rounded-2xl shadow-md border border-black overflow-hidden">
-                                <h4 className="text-lg font-extrabold text-slate-800 p-5 border-b border-black bg-slate-100">Facility Problems & Solutions (Combined)</h4>
-                                <div className="overflow-x-auto max-h-[600px]">
-                                    <table className="w-full text-sm text-left border-collapse" dir="rtl">
-                                        <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider sticky top-0 z-10 shadow-sm border-b border-black">
-                                            <tr>
-                                                <th className="px-4 py-4 border-l border-black w-[15%] text-right">{dynamicLocationLabel}</th>
-                                                <th className="px-4 py-4 border-l border-black w-[30%] text-right">المشكلة / التحدي</th>
-                                                <th className="px-4 py-4 border-l border-black w-[30%] text-right">الحل المتبع</th>
-                                                <th className="px-4 py-4 border-l border-black w-[15%] text-center">الحالة</th>
-                                                <th className="px-4 py-4 w-[10%] text-right">المسؤول</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {visitReportStats.totalProblems === 0 && (
-                                                <tr><td colSpan="5" className="p-8 text-center text-slate-500 font-bold">لا توجد مشاكل مسجلة.</td></tr>
-                                            )}
-                                            {Object.keys(visitReportStats.groupedProblems).sort().map(locName => {
-                                                const problems = visitReportStats.groupedProblems[locName];
-                                                return problems.map((item, idx) => (
-                                                    <tr key={`${locName}-${idx}`} className="hover:bg-sky-50 transition-colors border-b border-black">
-                                                        {idx === 0 && (
-                                                            <td rowSpan={problems.length} className="px-4 py-3 border-l border-black align-top font-extrabold text-slate-800 bg-slate-100 w-[15%] border-b border-black text-right">
-                                                                {locName}
-                                                            </td>
-                                                        )}
-                                                        <td className="px-4 py-3 border-l border-black align-top text-xs text-rose-700 whitespace-pre-wrap font-medium text-right">
-                                                            {item.problem}
-                                                            {dynamicLocationLevel !== 'Facility' && (
-                                                                <div className="mt-2 text-[10px] text-slate-500 font-bold bg-white inline-block px-1.5 py-0.5 rounded border border-slate-300">
-                                                                    {item.facility} - {item.date}
-                                                                </div>
-                                                            )}
-                                                        </td>
-                                                        
-                                                        <td className="px-4 py-3 border-l border-black align-top text-xs text-emerald-700 whitespace-pre-wrap font-medium text-right">
-                                                            {item.solution}
-                                                        </td>
-
-                                                        <td className="px-4 py-3 border-l border-black align-top text-center">
-                                                            {renderStatusCell(item.status, item.reportId, item.challengeId, 'status')}
-                                                        </td>
-
-                                                        <td className="px-4 py-3 align-top text-[10px] font-bold text-slate-600 uppercase tracking-wider text-right">
-                                                            {item.person}
-                                                        </td>
-                                                    </tr>
-                                                ));
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
+                    {activeEencTab === 'visit_reports' && (
+                        // USE THE NEW COMPONENT HERE
+                        <VisitReportDashboardTab 
+                            activeService={activeService}
+                            visitReportStats={visitReportStats}
+                            geographicLevelName={geographicLevelName}
+                            dynamicLocationLabel={dynamicLocationLabel}
+                            dynamicLocationLevel={dynamicLocationLevel}
+                            renderStatusCell={renderStatusCell}
+                            IMNCI_SKILL_GROUPS={IMNCI_SKILL_GROUPS}
+                            EENC_SKILLS_LABELS={EENC_SKILLS_LABELS}
+                            KpiCard={KpiCard}
+                            KpiBarChart={KpiBarChart}
+                            ScoreText={ScoreText}
+                            CopyImageButton={CopyImageButton}
+                        />
                     )}
                 </>
             )}
