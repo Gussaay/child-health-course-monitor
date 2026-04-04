@@ -227,7 +227,7 @@ async function getData(query, sourceOptions = {}) {
         const snapshot = await getDocs(query, sourceOptions); 
         return snapshot;
     } catch (e) {
-        console.error(`getData query failed with options ${JSON.stringify(sourceOptions)}:`, e.message);
+        console.warn(`getData query failed with options ${JSON.stringify(sourceOptions)}:`, e.message);
         throw e; 
     }
 }
@@ -456,12 +456,10 @@ export async function submitLocalityBatchUpdate(updates, localityName) {
 export async function listHealthFacilities(filters = {}, sourceOptions = {}) {
     let q = collection(db, "healthFacilities");
     const conditions = [];
-    let orderByClause = orderBy("الولاية"); 
 
     if (filters.state && filters.state !== 'NOT_ASSIGNED') conditions.push(where("الولاية", "==", filters.state));
     if (filters.locality) {
         conditions.push(where("المحلية", "==", filters.locality));
-        orderByClause = orderBy("اسم_المؤسسة");
     }
     if (filters.facilityType) conditions.push(where("نوع_المؤسسةالصحية", "==", filters.facilityType));
     if (filters.functioningStatus && filters.functioningStatus !== 'NOT_SET') conditions.push(where("هل_المؤسسة_تعمل", "==", filters.functioningStatus));
@@ -470,11 +468,17 @@ export async function listHealthFacilities(filters = {}, sourceOptions = {}) {
     if (filters.lastUpdatedAfter instanceof Date) { 
         const timestamp = Timestamp.fromDate(filters.lastUpdatedAfter);
         conditions.push(where("lastSnapshotAt", ">", timestamp));
-        orderByClause = orderBy("lastSnapshotAt");
     }
 
-    if (conditions.length > 0) q = query(q, ...conditions);
-    q = query(q, orderByClause);
+    if (conditions.length > 0) {
+        // CRITICAL FIX: Only apply orderBy if required by Firebase inequality rules.
+        // Unnecessary ordering causes cache query failures in offline/cache modes.
+        if (filters.lastUpdatedAfter instanceof Date) {
+            q = query(q, ...conditions, orderBy("lastSnapshotAt"));
+        } else {
+            q = query(q, ...conditions);
+        }
+    }
 
     try {
         const querySnapshot = await getData(q, sourceOptions);
@@ -1436,7 +1440,9 @@ export async function saveMentorshipSession(payload, sessionId = null, externalB
 
 export async function listMentorshipSessions(sourceOptions = {}) {
     try {
-        const q = query(collection(db, "skillMentorship"), orderBy("effectiveDate", "desc"));
+        // CRITICAL FIX: Removed orderBy("effectiveDate", "desc")
+        // Ordering prevents cache resolution and triggers fallback to server, destroying performance.
+        const q = collection(db, "skillMentorship");
         const snapshot = await getData(q, sourceOptions);
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
@@ -1519,7 +1525,8 @@ export async function saveIMNCIVisitReport(payload, reportId = null) {
 
 export async function listIMNCIVisitReports(sourceOptions = {}) {
     try {
-        const q = query(collection(db, "imnciVisitReports"), orderBy("visit_date", "desc"));
+        // CRITICAL FIX: Removed orderBy("visit_date", "desc")
+        const q = collection(db, "imnciVisitReports");
         const snapshot = await getData(q, sourceOptions);
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
@@ -1552,7 +1559,8 @@ export async function saveEENCVisitReport(payload, reportId = null) {
 
 export async function listEENCVisitReports(sourceOptions = {}) {
     try {
-        const q = query(collection(db, "eencVisitReports"), orderBy("visit_date", "desc"));
+        // CRITICAL FIX: Removed orderBy("visit_date", "desc")
+        const q = collection(db, "eencVisitReports");
         const snapshot = await getData(q, sourceOptions);
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {

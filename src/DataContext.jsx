@@ -13,15 +13,12 @@ import {
     listIMNCIVisitReports, 
     listEENCVisitReports, 
     listParticipantTestsForCourse, 
-    
     listPendingFacilitatorSubmissions,
     getFacilitatorApplicationSettings,
-    
     listPendingFederalSubmissions,
     listPendingCoordinatorSubmissions,
     listPendingLocalitySubmissions,
     getCoordinatorApplicationSettings
-
 } from './data';
 import { useAuth } from './hooks/useAuth';
 
@@ -34,6 +31,9 @@ const getFilterKey = (filters) => {
   const sortedKeys = Object.keys(filters).sort();
   return sortedKeys.map(key => `${key}:${filters[key]}`).join('|');
 };
+
+// --- 24-HOUR CACHE EXPIRATION CONSTANT ---
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
 export const DataProvider = ({ children }) => {
     const { user } = useAuth();
@@ -50,10 +50,8 @@ export const DataProvider = ({ children }) => {
         imnciVisitReports: null,
         eencVisitReports: null, 
         participantTests: null,
-        
         pendingFacilitatorSubmissions: null,
         facilitatorApplicationSettings: { isActive: false, openCount: 0 },
-        
         pendingFederalSubmissions: null,
         pendingStateSubmissions: null,
         pendingLocalitySubmissions: null,
@@ -69,10 +67,8 @@ export const DataProvider = ({ children }) => {
         imnciVisitReports: true,
         eencVisitReports: true, 
         participantTests: true,
-        
         pendingFacilitatorSubmissions: true,
         facilitatorApplicationSettings: true,
-        
         pendingFederalSubmissions: true,
         pendingStateSubmissions: true,
         pendingLocalitySubmissions: true,
@@ -85,26 +81,25 @@ export const DataProvider = ({ children }) => {
 
     const facilitiesFilterCacheRef = useRef({});
     const currentFacilitiesFilterKeyRef = useRef('all');
-    
     const cacheRef = useRef(cache);
     
-    useEffect(() => {
-        cacheRef.current = cache;
-    }, [cache]);
-
-    useEffect(() => {
-        lastFacilitiesFetchTimeRef.current = lastFacilitiesFetchTime;
-    }, [lastFacilitiesFetchTime]);
+    useEffect(() => { cacheRef.current = cache; }, [cache]);
+    useEffect(() => { lastFacilitiesFetchTimeRef.current = lastFacilitiesFetchTime; }, [lastFacilitiesFetchTime]);
     
-
     const createFetcher = useCallback((key, fetchFn) => {
         if (key === 'healthFacilities') {
              return async (filters = {}, force = false) => { 
                 const filterKey = getFilterKey(filters);
                 const internalCache = facilitiesFilterCacheRef.current;
                 
+                // Determine if cache is stale (> 24 hours)
+                const timeKey = `lastServerFetch_${key}_${filterKey}`;
+                const lastFetchTime = parseInt(localStorage.getItem(timeKey) || '0', 10);
+                const isStale = (Date.now() - lastFetchTime) > CACHE_TTL_MS;
+                const shouldForceServer = force || isStale;
+                
                 // 1. Memory Cache validation
-                if (internalCache[filterKey] && !force) {
+                if (internalCache[filterKey] && !shouldForceServer) {
                     const cachedData = internalCache[filterKey];
                     if (filterKey !== currentFacilitiesFilterKeyRef.current) {
                         setCache(prev => ({ ...prev, healthFacilities: cachedData }));
@@ -117,30 +112,37 @@ export const DataProvider = ({ children }) => {
                 if (fetchingRef.current[filterKey]) return cacheRef.current.healthFacilities; 
                 fetchingRef.current[filterKey] = true;
 
-                // 2. Try fetching from Firebase IndexedDB Cache first
-                if (!force) {
+                // 2. Try fetching from Firebase IndexedDB Cache first (if not forced/stale)
+                if (!shouldForceServer) {
                     try {
                         const cachedData = await listHealthFacilities(filters, { source: 'cache' });
-                        if (cachedData && cachedData.length > 0) {
+                        // Accept ANY successful cache read, even if it's an empty array []
+                        if (cachedData !== undefined && cachedData !== null) {
                             facilitiesFilterCacheRef.current[filterKey] = cachedData;
                             if (filterKey === currentFacilitiesFilterKeyRef.current || currentFacilitiesFilterKeyRef.current === 'all') {
                                 setCache(prev => ({ ...prev, healthFacilities: cachedData }));
                                 currentFacilitiesFilterKeyRef.current = filterKey;
                             }
                             setIsLoading(prev => prev.healthFacilities === false ? prev : { ...prev, healthFacilities: false });
-                        } else {
-                            setIsLoading(prev => prev.healthFacilities === true ? prev : { ...prev, healthFacilities: true });
+                            fetchingRef.current[filterKey] = false;
+                            
+                            // SUCCESS: Return immediately to prevent background server fetch
+                            return cachedData; 
                         }
                     } catch (e) {
-                        setIsLoading(prev => prev.healthFacilities === true ? prev : { ...prev, healthFacilities: true });
+                        // Silent catch, fallback to server
                     }
-                } else {
-                    setIsLoading(prev => prev.healthFacilities === true ? prev : { ...prev, healthFacilities: true });
                 }
 
-                // 3. Revalidate from Server silently
+                setIsLoading(prev => prev.healthFacilities === true ? prev : { ...prev, healthFacilities: true });
+
+                // 3. Fetch from Server (Happens if forced, stale > 24h, or cache is empty)
                 try {
-                    const newData = await listHealthFacilities(filters, {}); 
+                    const newData = await listHealthFacilities(filters, { source: 'server' }); 
+                    
+                    // Mark successful server fetch time in local storage
+                    localStorage.setItem(timeKey, Date.now().toString());
+
                     facilitiesFilterCacheRef.current[filterKey] = newData;
                     setCache(prev => ({ ...prev, healthFacilities: newData }));
                     setLastFacilitiesFetchTime(prev => ({ ...prev, [filterKey]: Date.now() })); 
@@ -166,48 +168,61 @@ export const DataProvider = ({ children }) => {
             const hasData = currentCache !== null;
             const isDefaultSettings = (key.includes('Settings') && currentCache?.openCount === 0);
 
-            if (hasData === false || force || isDefaultSettings) {
-                if (fetchingRef.current[key]) return currentCache;
-                fetchingRef.current[key] = true;
-                
-                // 1. Try Firebase Cache first to ensure zero delay
-                if (!force) {
-                    try {
-                        const cachedData = await fetchFn({ source: 'cache' });
-                        if (cachedData && (Array.isArray(cachedData) ? cachedData.length > 0 : Object.keys(cachedData).length > 0)) {
-                            setCache(prev => ({ ...prev, [key]: cachedData }));
-                            setIsLoading(prev => prev[key] === false ? prev : { ...prev, [key]: false });
-                        } else {
-                            setIsLoading(prev => prev[key] === true ? prev : { ...prev, [key]: true });
-                        }
-                    } catch (e) {
-                        setIsLoading(prev => prev[key] === true ? prev : { ...prev, [key]: true });
-                    }
-                } else {
-                    setIsLoading(prev => prev[key] === true ? prev : { ...prev, [key]: true });
-                }
-                
-                // 2. Fetch fresh data from Server in background
+            // Determine if cache is stale (> 24 hours)
+            const timeKey = `lastServerFetch_${key}`;
+            const lastFetchTime = parseInt(localStorage.getItem(timeKey) || '0', 10);
+            const isStale = (Date.now() - lastFetchTime) > CACHE_TTL_MS;
+            const shouldForceServer = force || isStale;
+
+            // If we already hold the data in active memory, serve it instantly
+            if (hasData && !shouldForceServer && !isDefaultSettings) {
+                return currentCache;
+            }
+
+            if (fetchingRef.current[key]) return currentCache;
+            fetchingRef.current[key] = true;
+            
+            // 1. Try Firebase Cache first to ensure zero delay (if not forced/stale)
+            if (!shouldForceServer) {
                 try {
-                    const data = await fetchFn({}); 
-                    setCache(prev => ({ ...prev, [key]: data })); 
-                    return data;
-                } catch (error) {
-                    console.error(`Failed to fetch ${key}:`, error);
-                    if (cacheRef.current[key] === null) {
-                        const defaultEmpty = key.includes('Settings') ? { isActive: false, openCount: 0 } : [];
-                        setCache(prev => ({ ...prev, [key]: defaultEmpty }));
-                        return defaultEmpty;
+                    const cachedData = await fetchFn({ source: 'cache' });
+                    // Accept ANY successful cache read, even if it's an empty array []
+                    if (cachedData !== undefined && cachedData !== null) {
+                        setCache(prev => ({ ...prev, [key]: cachedData }));
+                        setIsLoading(prev => prev[key] === false ? prev : { ...prev, [key]: false });
+                        fetchingRef.current[key] = false;
+                        
+                        // SUCCESS: Return immediately to prevent background server fetch
+                        return cachedData;
                     }
-                    return cacheRef.current[key];
-                } finally {
-                    setIsLoading(prev => prev[key] === false ? prev : { ...prev, [key]: false });
-                    fetchingRef.current[key] = false;
+                } catch (e) {
+                    // Silent catch, fallback to server
                 }
             }
 
-            setIsLoading(prev => prev[key] === false ? prev : { ...prev, [key]: false });
-            return currentCache;
+            setIsLoading(prev => prev[key] === true ? prev : { ...prev, [key]: true });
+            
+            // 2. Fetch fresh data from Server (Happens if forced, stale > 24h, or cache read failed)
+            try {
+                const data = await fetchFn({ source: 'server' }); 
+                
+                // Mark successful server fetch time in local storage
+                localStorage.setItem(timeKey, Date.now().toString());
+
+                setCache(prev => ({ ...prev, [key]: data })); 
+                return data;
+            } catch (error) {
+                console.error(`Failed to fetch ${key}:`, error);
+                if (cacheRef.current[key] === null) {
+                    const defaultEmpty = key.includes('Settings') ? { isActive: false, openCount: 0 } : [];
+                    setCache(prev => ({ ...prev, [key]: defaultEmpty }));
+                    return defaultEmpty;
+                }
+                return cacheRef.current[key];
+            } finally {
+                setIsLoading(prev => prev[key] === false ? prev : { ...prev, [key]: false });
+                fetchingRef.current[key] = false;
+            }
         };
     }, []); 
 
@@ -224,7 +239,6 @@ export const DataProvider = ({ children }) => {
         fetchIMNCIVisitReports: createFetcher('imnciVisitReports', (opts) => listIMNCIVisitReports(opts)),
         fetchEENCVisitReports: createFetcher('eencVisitReports', (opts) => listEENCVisitReports(opts)), 
         fetchParticipantTests: createFetcher('participantTests', (opts) => listParticipantTestsForCourse(opts)),
-        
         fetchPendingFacilitatorSubmissions: createFetcher('pendingFacilitatorSubmissions', (opts) => listPendingFacilitatorSubmissions(opts)),
         fetchFacilitatorApplicationSettings: createFetcher('facilitatorApplicationSettings', (opts) => getFacilitatorApplicationSettings(opts)),
         fetchPendingFederalSubmissions: createFetcher('pendingFederalSubmissions', (opts) => listPendingFederalSubmissions(opts)),

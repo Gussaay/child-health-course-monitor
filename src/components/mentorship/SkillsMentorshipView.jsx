@@ -1180,11 +1180,13 @@ const SkillsMentorshipView = ({
         }
     }, [healthFacilities]);
 
-    // --- Fetch public data safely with Cache-First + Server-Update Strategy ---
+    // --- Fetch public data safely with Cache-First Strategy ---
     useEffect(() => {
         if (publicDashboardMode) {
             let isMounted = true;
             const fetchPublicData = async () => {
+                let cacheSuccess = false;
+                
                 // 1. Try fetching from Cache first for instant loading
                 try {
                     const [cachedSubs, cachedImnci, cachedEenc] = await Promise.all([
@@ -1193,31 +1195,33 @@ const SkillsMentorshipView = ({
                         typeof listEENCVisitReports === 'function' ? listEENCVisitReports({ source: 'cache' }).catch(() => []) : Promise.resolve([])
                     ]);
                     
-                    if (isMounted && (cachedSubs.length > 0 || cachedImnci.length > 0 || cachedEenc.length > 0)) {
-                        setPublicData({ submissions: cachedSubs, imnci: cachedImnci, eenc: cachedEenc });
-                        setPublicLoading(false); // Stop loading spinner since we have cached data to show
-                        updateLastSyncTime(); // Update time from cache
+                    if (isMounted && (cachedSubs !== undefined && cachedImnci !== undefined && cachedEenc !== undefined)) {
+                        setPublicData({ submissions: cachedSubs || [], imnci: cachedImnci || [], eenc: cachedEenc || [] });
+                        setPublicLoading(false); 
+                        updateLastSyncTime(); 
+                        cacheSuccess = true;
                     }
                 } catch (e) {
                     console.log("Cache miss or unavailable. Waiting for server data...");
                 }
 
-                // 2. Fetch from Server in the background to ensure data is up-to-date
-                try {
-                    const [subs, imnci, eenc] = await Promise.all([
-                        typeof listMentorshipSessions === 'function' ? listMentorshipSessions().catch(() => []) : Promise.resolve([]),
-                        typeof listIMNCIVisitReports === 'function' ? listIMNCIVisitReports().catch(() => []) : Promise.resolve([]),
-                        typeof listEENCVisitReports === 'function' ? listEENCVisitReports().catch(() => []) : Promise.resolve([])
-                    ]);
-                    if (isMounted) {
-                        // Update state with fresh server data
-                        setPublicData({ submissions: subs || [], imnci: imnci || [], eenc: eenc || [] });
-                        updateLastSyncTime(); // Update time upon fresh fetch
+                // 2. Fetch from Server ONLY IF CACHE MISSED to save bandwidth and speed up loading
+                if (!cacheSuccess) {
+                    try {
+                        const [subs, imnci, eenc] = await Promise.all([
+                            typeof listMentorshipSessions === 'function' ? listMentorshipSessions({ source: 'server' }).catch(() => []) : Promise.resolve([]),
+                            typeof listIMNCIVisitReports === 'function' ? listIMNCIVisitReports({ source: 'server' }).catch(() => []) : Promise.resolve([]),
+                            typeof listEENCVisitReports === 'function' ? listEENCVisitReports({ source: 'server' }).catch(() => []) : Promise.resolve([])
+                        ]);
+                        if (isMounted) {
+                            setPublicData({ submissions: subs || [], imnci: imnci || [], eenc: eenc || [] });
+                            updateLastSyncTime();
+                        }
+                    } catch (e) {
+                        console.error("Failed fetching fresh public data from server", e);
+                    } finally {
+                        if (isMounted) setPublicLoading(false);
                     }
-                } catch (e) {
-                    console.error("Failed fetching fresh public data from server", e);
-                } finally {
-                    if (isMounted) setPublicLoading(false);
                 }
             };
             fetchPublicData();
@@ -1290,6 +1294,17 @@ const SkillsMentorshipView = ({
     }, [permissions, publicSubmissionMode, publicDashboardMode]);
     // -------------------------------------------------------------
 
+    // O(1) Facility Lookup Map to prevent extreme slowdowns
+    const facilityMap = useMemo(() => {
+        const map = new Map();
+        if (localHealthFacilities) {
+            for (let i = 0; i < localHealthFacilities.length; i++) {
+                map.set(localHealthFacilities[i].id, localHealthFacilities[i]);
+            }
+        }
+        return map;
+    }, [localHealthFacilities]);
+
     // UPDATED to map correctly between authenticated and unauthenticated sets AND extract project
     // OPTIMISTIC UPDATE APPLIED: Filters out deletedSubmissionIds
     const processedSubmissions = useMemo(() => {
@@ -1299,8 +1314,8 @@ const SkillsMentorshipView = ({
         return sourceData
             .filter(sub => !deletedSubmissionIds.has(sub.id))
             .map(sub => {
-            // Find facility object to extract project/partner info dynamically
-            const fac = localHealthFacilities.find(f => f.id === sub.facilityId);
+            // Find facility object to extract project/partner info dynamically via fast Map lookup
+            const fac = facilityMap.get(sub.facilityId);
             
             // PRIORITIZE THE STANDARD 'project_name' KEY
             const projectInfo = fac?.project_name || fac?.['المشروع'] || fac?.project || fac?.['الشركاء_الداعمين'] || fac?.['المنظمة_الداعمة'] || 'N/A';
@@ -1329,7 +1344,7 @@ const SkillsMentorshipView = ({
                 fullData: sub 
             };
         });
-    }, [skillMentorshipSubmissions, publicDashboardMode, publicData.submissions, localHealthFacilities, deletedSubmissionIds]);
+    }, [skillMentorshipSubmissions, publicDashboardMode, publicData.submissions, facilityMap, deletedSubmissionIds]);
 
     // Extract unique visit numbers for the filter dropdown
     const uniqueVisitNumbers = useMemo(() => {
@@ -1567,9 +1582,9 @@ const SkillsMentorshipView = ({
             if (publicDashboardMode) {
                 // Force server fetch for public dashboard mode
                 const [subs, imnci, eenc] = await Promise.all([
-                    typeof listMentorshipSessions === 'function' ? listMentorshipSessions().catch(() => []) : Promise.resolve([]),
-                    typeof listIMNCIVisitReports === 'function' ? listIMNCIVisitReports().catch(() => []) : Promise.resolve([]),
-                    typeof listEENCVisitReports === 'function' ? listEENCVisitReports().catch(() => []) : Promise.resolve([])
+                    typeof listMentorshipSessions === 'function' ? listMentorshipSessions({ source: 'server' }).catch(() => []) : Promise.resolve([]),
+                    typeof listIMNCIVisitReports === 'function' ? listIMNCIVisitReports({ source: 'server' }).catch(() => []) : Promise.resolve([]),
+                    typeof listEENCVisitReports === 'function' ? listEENCVisitReports({ source: 'server' }).catch(() => []) : Promise.resolve([])
                 ]);
                 setPublicData({ submissions: subs || [], imnci: imnci || [], eenc: eenc || [] });
             } else {
@@ -2673,7 +2688,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     onView={handleViewSubmission}
                                     onEdit={handleEditSubmission}
                                     onDelete={handleDeleteSubmission}
-                                    isSubmissionsLoading={isDataCacheLoading.skillMentorshipSubmissions || !skillMentorshipSubmissions}
+                                    isSubmissionsLoading={isDataCacheLoading.skillMentorshipSubmissions && skillMentorshipSubmissions === null}
                                     stateFilter={stateFilter}
                                     localityFilter={localityFilter}
                                     supervisorFilter={supervisorFilter}
@@ -2696,7 +2711,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     onView={handleViewSubmission}
                                     onEdit={handleEditSubmission}
                                     onDelete={handleDeleteSubmission}
-                                    isSubmissionsLoading={isDataCacheLoading.skillMentorshipSubmissions || !skillMentorshipSubmissions}
+                                    isSubmissionsLoading={isDataCacheLoading.skillMentorshipSubmissions && skillMentorshipSubmissions === null}
                                     stateFilter={stateFilter}
                                     localityFilter={localityFilter}
                                     supervisorFilter={supervisorFilter}
@@ -2719,7 +2734,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     onView={handleViewVisitReport} 
                                     selectedIds={selectedReportIds}
                                     onSelectionChange={setSelectedReportIds}
-                                    isReportsLoading={activeService === 'IMNCI' ? (isDataCacheLoading.imnciVisitReports || !imnciVisitReports) : (isDataCacheLoading.eencVisitReports || !eencVisitReports)}
+                                    isReportsLoading={activeService === 'IMNCI' ? (isDataCacheLoading.imnciVisitReports && imnciVisitReports === null) : (isDataCacheLoading.eencVisitReports && eencVisitReports === null)}
                                     canManage={canManageMentorship}
                                 />
                             )}
@@ -2736,7 +2751,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                         visitReports={processedVisitReports}
                                         STATE_LOCALITIES={STATE_LOCALITIES}
                                         activeService={activeService}
-                                        isLoading={!publicDashboardMode && (isDataCacheLoading.skillMentorshipSubmissions || !skillMentorshipSubmissions)}
+                                        isLoading={!publicDashboardMode && (isDataCacheLoading.skillMentorshipSubmissions && skillMentorshipSubmissions === null)}
                                         canEditStatus={permissions?.manageScope === 'federal' || permissions?.canUseFederalManagerAdvancedFeatures}
                                         onUpdateStatus={handleChallengeStatusUpdate}
 
@@ -2952,7 +2967,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     visitReports={processedVisitReports}
                                     STATE_LOCALITIES={STATE_LOCALITIES}
                                     activeService={activeService}
-                                    isLoading={isDataCacheLoading.skillMentorshipSubmissions || !skillMentorshipSubmissions}
+                                    isLoading={isDataCacheLoading.skillMentorshipSubmissions && skillMentorshipSubmissions === null}
                                     canEditStatus={permissions?.manageScope === 'federal' || permissions?.canUseFederalManagerAdvancedFeatures}
                                     onUpdateStatus={handleChallengeStatusUpdate}
 
@@ -3481,7 +3496,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                 visitReports={processedVisitReports}
                                 STATE_LOCALITIES={STATE_LOCALITIES}
                                 activeService={activeService}
-                                isLoading={isDataCacheLoading.skillMentorshipSubmissions || !skillMentorshipSubmissions}
+                                isLoading={isDataCacheLoading.skillMentorshipSubmissions && skillMentorshipSubmissions === null}
                                 canEditStatus={permissions?.manageScope === 'federal' || permissions?.canUseFederalManagerAdvancedFeatures}
                                 onUpdateStatus={handleChallengeStatusUpdate}
 
