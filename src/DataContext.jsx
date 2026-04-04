@@ -269,20 +269,22 @@ export const DataProvider = ({ children }) => {
     }, []); 
 
     const fetchers = useMemo(() => ({
-        fetchCourses: createFetcher('courses', (opts) => listAllCourses(opts)),
-        fetchParticipants: createFetcher('participants', (opts) => listAllParticipants(opts)),
-        fetchFacilitators: createFetcher('facilitators', (opts) => listFacilitators(opts)),
-        fetchFunders: createFetcher('funders', (opts) => listFunders(opts)),
-        fetchFederalCoordinators: createFetcher('federalCoordinators', (opts) => listFederalCoordinators(opts)),
-        fetchStateCoordinators: createFetcher('stateCoordinators', (opts) => listStateCoordinators(opts)),
-        fetchLocalityCoordinators: createFetcher('localityCoordinators', (opts) => listLocalityCoordinators(opts)),
+        // Pass lastSync properly to all arrays!
+        fetchCourses: createFetcher('courses', (opts, lastSync) => listAllCourses(opts, lastSync)),
+        fetchParticipants: createFetcher('participants', (opts, lastSync) => listAllParticipants(opts, lastSync)),
+        fetchFacilitators: createFetcher('facilitators', (opts, lastSync) => listFacilitators(opts, lastSync)),
+        fetchFunders: createFetcher('funders', (opts, lastSync) => listFunders(opts, lastSync)),
+        fetchFederalCoordinators: createFetcher('federalCoordinators', (opts, lastSync) => listFederalCoordinators(opts, lastSync)),
+        fetchStateCoordinators: createFetcher('stateCoordinators', (opts, lastSync) => listStateCoordinators(opts, lastSync)),
+        fetchLocalityCoordinators: createFetcher('localityCoordinators', (opts, lastSync) => listLocalityCoordinators(opts, lastSync)),
+        
         fetchHealthFacilities: createFetcher('healthFacilities', listHealthFacilities), 
         
         fetchSkillMentorshipSubmissions: createFetcher('skillMentorshipSubmissions', (opts, lastSync) => listMentorshipSessions(opts, lastSync)),
         fetchIMNCIVisitReports: createFetcher('imnciVisitReports', (opts, lastSync) => listIMNCIVisitReports(opts, lastSync)),
         fetchEENCVisitReports: createFetcher('eencVisitReports', (opts, lastSync) => listEENCVisitReports(opts, lastSync)), 
         
-        fetchParticipantTests: createFetcher('participantTests', (opts) => listParticipantTestsForCourse(opts)),
+        fetchParticipantTests: createFetcher('participantTests', (opts) => listParticipantTestsForCourse(null, opts)),
         fetchPendingFacilitatorSubmissions: createFetcher('pendingFacilitatorSubmissions', (opts) => listPendingFacilitatorSubmissions(opts)),
         fetchFacilitatorApplicationSettings: createFetcher('facilitatorApplicationSettings', (opts) => getFacilitatorApplicationSettings(opts)),
         fetchPendingFederalSubmissions: createFetcher('pendingFederalSubmissions', (opts) => listPendingFederalSubmissions(opts)),

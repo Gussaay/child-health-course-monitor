@@ -699,9 +699,15 @@ export async function importFacilitators(facilitators) {
     await batch.commit();
     return true;
 }
-export async function listFacilitators(sourceOptions = {}) {
+
+// DELTA FETCH ENABLED
+export async function listFacilitators(sourceOptions = {}, lastSyncTime = null) {
     try {
         let q = collection(db, "facilitators");
+        if (sourceOptions.source === 'server' && lastSyncTime) {
+            const firestoreTimestamp = Timestamp.fromMillis(lastSyncTime);
+            q = query(q, where("lastUpdatedAt", ">", firestoreTimestamp));
+        }
         const querySnapshot = await getData(q, sourceOptions);
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
@@ -889,8 +895,13 @@ export async function upsertCoordinator(payload) {
         return newRef.id;
     }
 }
-export async function listCoordinators(sourceOptions = {}) { 
-    const q = query(collection(db, "coordinators"));
+
+// DELTA FETCH ENABLED
+export async function listCoordinators(sourceOptions = {}, lastSyncTime = null) { 
+    let q = collection(db, "coordinators");
+    if (sourceOptions.source === 'server' && lastSyncTime) {
+        q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSyncTime)));
+    }
     const snapshot = await getData(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
@@ -912,8 +923,13 @@ export async function upsertStateCoordinator(payload) {
         return newRef.id;
     }
 }
-export async function listStateCoordinators(sourceOptions = {}) {
-    const q = query(collection(db, "stateCoordinators"));
+
+// DELTA FETCH ENABLED
+export async function listStateCoordinators(sourceOptions = {}, lastSyncTime = null) {
+    let q = collection(db, "stateCoordinators");
+    if (sourceOptions.source === 'server' && lastSyncTime) {
+        q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSyncTime)));
+    }
     const snapshot = await getData(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
@@ -935,8 +951,13 @@ export async function upsertFederalCoordinator(payload) {
         return newRef.id;
     }
 }
-export async function listFederalCoordinators(sourceOptions = {}) {
-    const q = query(collection(db, "federalCoordinators"));
+
+// DELTA FETCH ENABLED
+export async function listFederalCoordinators(sourceOptions = {}, lastSyncTime = null) {
+    let q = collection(db, "federalCoordinators");
+    if (sourceOptions.source === 'server' && lastSyncTime) {
+        q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSyncTime)));
+    }
     const snapshot = await getData(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
@@ -958,8 +979,13 @@ export async function upsertLocalityCoordinator(payload) {
         return newRef.id;
     }
 }
-export async function listLocalityCoordinators(sourceOptions = {}) {
-    const q = query(collection(db, "localityCoordinators"));
+
+// DELTA FETCH ENABLED
+export async function listLocalityCoordinators(sourceOptions = {}, lastSyncTime = null) {
+    let q = collection(db, "localityCoordinators");
+    if (sourceOptions.source === 'server' && lastSyncTime) {
+        q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSyncTime)));
+    }
     const snapshot = await getData(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
@@ -981,8 +1007,13 @@ export async function upsertFunder(payload) {
         return newRef.id;
     }
 }
-export async function listFunders(sourceOptions = {}) {
-    const q = query(collection(db, "funders"));
+
+// DELTA FETCH ENABLED
+export async function listFunders(sourceOptions = {}, lastSyncTime = null) {
+    let q = collection(db, "funders");
+    if (sourceOptions.source === 'server' && lastSyncTime) {
+        q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSyncTime)));
+    }
     const snapshot = await getData(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
@@ -1034,9 +1065,15 @@ export async function listCoursesByType(course_type, userStates, sourceOptions =
         throw error;
     }
 }
-export async function listAllCourses(sourceOptions = {}) {
+
+// DELTA FETCH ENABLED
+export async function listAllCourses(sourceOptions = {}, lastSyncTime = null) {
     try {
-        let q = query(collection(db, "courses"));
+        let q = collection(db, "courses");
+        if (sourceOptions.source === 'server' && lastSyncTime) {
+            const firestoreTimestamp = Timestamp.fromMillis(lastSyncTime);
+            q = query(q, where("lastUpdatedAt", ">", firestoreTimestamp));
+        }
         const querySnapshot = await getData(q, sourceOptions);
         const courses = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         return courses;
@@ -1197,9 +1234,14 @@ export async function listParticipants(courseId, lastVisible = null, sourceOptio
     return { participants, lastVisible: newLastVisible };
 }
 
-export async function listAllParticipants(sourceOptions = {}) {
+// DELTA FETCH ENABLED
+export async function listAllParticipants(sourceOptions = {}, lastSyncTime = null) {
     try {
-        const q = collection(db, "participants");
+        let q = collection(db, "participants");
+        if (sourceOptions.source === 'server' && lastSyncTime) {
+            const firestoreTimestamp = Timestamp.fromMillis(lastSyncTime);
+            q = query(q, where("lastUpdatedAt", ">", firestoreTimestamp));
+        }
         const querySnapshot = await getData(q, sourceOptions);
         const participants = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         return participants;

@@ -30,7 +30,10 @@ const Table = ({ headers, children }) => (
 );
 const Input = (props) => <input {...props} className={`border border-gray-300 rounded-md p-1.5 text-sm w-full focus:ring-2 focus:ring-sky-500 focus:border-sky-500 ${props.className || ''}`} />;
 const EmptyState = ({ message, colSpan = 100 }) => (<tr><td colSpan={colSpan} className="py-12 text-center text-gray-500 border border-gray-200">{message}</td></tr>);
-const Spinner = () => <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-600 mx-auto"></div>;
+const Spinner = ({ size = 'md' }) => {
+    const sizeClasses = size === 'sm' ? 'h-4 w-4 border-2' : 'h-8 w-8 border-2';
+    return <div className={`animate-spin rounded-full border-sky-600 border-t-transparent ${sizeClasses} mx-auto`}></div>;
+};
 
 // Helper functions 
 const exportToExcel = (tableData, headers, fileName) => {
@@ -75,7 +78,12 @@ const exportTableToPdf = (title, tableHeaders, tableBody, fileName, filters) => 
 
 function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFacilitatorReport, STATE_LOCALITIES, permissions, userStates }) {
 
-    const { courses: allCourses, participants: allParticipants, facilitators: allFacilitators, fetchCourses, fetchParticipants, fetchFacilitators, isLoading } = useDataCache();
+    const { courses: allCourses, participants: allParticipants, facilitators: allFacilitators, fetchCourses, fetchParticipants, fetchFacilitators, fetchHealthFacilities, isLoading } = useDataCache();
+
+    // --- APPLY SOFT DELETE FILTER TO ALL CACHED DATA ---
+    const activeCourses = useMemo(() => (allCourses || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true"), [allCourses]);
+    const activeParticipants = useMemo(() => (allParticipants || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true"), [allParticipants]);
+    const activeFacilitators = useMemo(() => (allFacilitators || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilitators]);
 
     // Updated primary view types to include the EENC coverage dashboard and Compiled Reports
     const [viewType, setViewType] = useState('neonatalCoverage'); 
@@ -84,6 +92,7 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
     const [fetchedParticipants, setFetchedParticipants] = useState([]);
     const [fetchedFacilitators, setFetchedFacilitators] = useState([]);
     const [fetchingDetailed, setFetchingDetailed] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     // Other states for filtering courses/participants/facilitators
     const [courseTypeFilter, setCourseTypeFilter] = useState('All');
@@ -97,16 +106,46 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
     const [facRoleFilter, setFacRoleFilter] = useState('All');
     const [facCourseFilter, setFacCourseFilter] = useState('All');
 
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        try {
+            await Promise.all([
+                fetchCourses(true),
+                fetchParticipants(true),
+                fetchFacilitators(true),
+                fetchHealthFacilities({}, true)
+            ]);
+            
+            // Re-fetch detailed data if already viewing it
+            if (fetchedCourses.length > 0) {
+                setFetchingDetailed(true);
+                const courseMap = new Map(activeCourses.map(c => [c.id, c]));
+                const participantsWithCourseInfo = activeParticipants.map(p => {
+                    const course = courseMap.get(p.courseId);
+                    return { ...p, course_type: course?.course_type, state: course?.state, locality: course?.locality };
+                });
+                setFetchedCourses(activeCourses);
+                setFetchedParticipants(participantsWithCourseInfo);
+                setFetchedFacilitators(activeFacilitators);
+                setFetchingDetailed(false);
+            }
+        } catch(e) {
+            console.error(e);
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
+
     const fetchDetailedData = async () => {
         setFetchingDetailed(true);
         
-        if (!allCourses || !allParticipants) {
+        if (!activeCourses || !activeParticipants) {
             setFetchingDetailed(false);
             return;
         }
         
-        const courseMap = new Map(allCourses.map(c => [c.id, c]));
-        const participantsWithCourseInfo = allParticipants.map(p => {
+        const courseMap = new Map(activeCourses.map(c => [c.id, c]));
+        const participantsWithCourseInfo = activeParticipants.map(p => {
             const course = courseMap.get(p.courseId);
             return {
                 ...p,
@@ -116,9 +155,9 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
             };
         });
 
-        setFetchedCourses(allCourses);
+        setFetchedCourses(activeCourses);
         setFetchedParticipants(participantsWithCourseInfo);
-        setFetchedFacilitators(allFacilitators);
+        setFetchedFacilitators(activeFacilitators);
         setFetchingDetailed(false);
     };
 
@@ -127,18 +166,16 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
     const allLocalities = useMemo(() => stateFilter === 'All' ? [] : ['All', ...STATE_LOCALITIES[stateFilter].localities.map(l => l.en).sort()], [stateFilter, STATE_LOCALITIES]);
     const allCourseTypes = useMemo(() => ['All', ...COURSE_TYPES_FACILITATOR], []);
     const allYears = useMemo(() => {
-        const coursesList = allCourses || [];
-        const years = [...new Set(coursesList.map(c => new Date(c.start_date).getFullYear()))].sort().map(String);
+        const years = [...new Set(activeCourses.map(c => new Date(c.start_date).getFullYear()))].sort().map(String);
         return ['All', ...years];
-    }, [allCourses]);
+    }, [activeCourses]);
     const allMonths = useMemo(() => {
         const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         return ['All', ...months];
     }, []);
 
     const filteredCourses = useMemo(() => {
-        const coursesList = allCourses || [];
-        return coursesList.filter(course => {
+        return activeCourses.filter(course => {
             const courseDate = new Date(course.start_date);
             const matchesCourseType = courseTypeFilter === 'All' || course.course_type === courseTypeFilter;
             const matchesState = stateFilter === 'All' || course.state === stateFilter;
@@ -148,19 +185,15 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
 
             return matchesCourseType && matchesState && matchesLocality && matchesYear && matchesMonth;
         });
-    }, [allCourses, courseTypeFilter, stateFilter, localityFilter, yearFilter, monthFilter, allMonths]);
+    }, [activeCourses, courseTypeFilter, stateFilter, localityFilter, yearFilter, monthFilter, allMonths]);
 
     const filteredParticipants = useMemo(() => {
-        if (!allParticipants) {
-            return [];
-        }
         const matchingCourseIds = new Set(filteredCourses.map(c => c.id));
-        return allParticipants.filter(p => matchingCourseIds.has(p.courseId));
-    }, [filteredCourses, allParticipants]);
+        return activeParticipants.filter(p => matchingCourseIds.has(p.courseId));
+    }, [filteredCourses, activeParticipants]);
 
     const filteredFacilitators = useMemo(() => {
-        const facilitatorsList = allFacilitators || [];
-        return facilitatorsList.filter(f => {
+        return activeFacilitators.filter(f => {
             const matchesSearch = facSearchQuery === '' || f.name.toLowerCase().includes(facSearchQuery.toLowerCase());
             const matchesCourse = facCourseFilter === 'All' || (f.courses && f.courses.includes(facCourseFilter));
             const matchesState = facStateFilter === 'All' || f.currentState === facStateFilter;
@@ -168,7 +201,7 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
             const matchesRole = facRoleFilter === 'All' || f[facRoleFilter] === 'Yes';
             return matchesSearch && matchesCourse && matchesState && matchesLocality && matchesRole;
         });
-    }, [allFacilitators, facSearchQuery, facCourseFilter, facStateFilter, facLocalityFilter, facRoleFilter]);
+    }, [activeFacilitators, facSearchQuery, facCourseFilter, facStateFilter, facLocalityFilter, facRoleFilter]);
 
     const courseKPIs = useMemo(() => {
         const totalCourses = filteredCourses.length;
@@ -235,12 +268,12 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
         const totalParticipants = filteredParticipants.length;
         const participantsByCourse = filteredCourses.reduce((acc, c) => {
             const courseName = c.course_type || 'Unknown Course';
-            const count = (allParticipants || []).filter(p => p.courseId === c.id).length;
+            const count = (activeParticipants || []).filter(p => p.courseId === c.id).length;
             acc[courseName] = (acc[courseName] || 0) + count;
             return acc;
         }, {});
         return { totalParticipants, participantsByCourse };
-    }, [filteredParticipants, filteredCourses, allParticipants]);
+    }, [filteredParticipants, filteredCourses, activeParticipants]);
 
     const trainedByCadreAndCourse = useMemo(() => {
         const data = {};
@@ -414,58 +447,68 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
     // The entire JSX render block of the component
     return (
         <Card className="p-0">
-            <div className="border-b border-gray-200 px-4 md:px-6">
+            <div className="border-b border-gray-200 px-4 md:px-6 flex flex-col md:flex-row md:justify-between md:items-center py-2 gap-4">
                 <nav className="-mb-px flex flex-wrap space-x-4 overflow-x-auto">
                     {/* Neonatal Coverage Tab */}
                     <button
                         onClick={() => setViewType('neonatalCoverage')}
-                        className={`${viewType === 'neonatalCoverage' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-4 px-3 border-b-2 font-medium text-sm transition-colors`} 
+                        className={`${viewType === 'neonatalCoverage' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-3 px-3 border-b-2 font-medium text-sm transition-colors`} 
                     >
                         Neonatal Care Coverage
                     </button>
                     {/* EENC Coverage Tab */}
                     <button
                         onClick={() => setViewType('eencCoverage')}
-                        className={`${viewType === 'eencCoverage' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-4 px-3 border-b-2 font-medium text-sm transition-colors`} 
+                        className={`${viewType === 'eencCoverage' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-3 px-3 border-b-2 font-medium text-sm transition-colors`} 
                     >
                         EENC Coverage
                     </button>
                     {/* IMNCI Coverage Tab */}
                     <button
                         onClick={() => setViewType('imnciCoverage')}
-                        className={`${viewType === 'imnciCoverage' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-4 px-3 border-b-2 font-medium text-sm transition-colors`} 
+                        className={`${viewType === 'imnciCoverage' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-3 px-3 border-b-2 font-medium text-sm transition-colors`} 
                     >
                         IMNCI Coverage
                     </button>
                     {/* NEW: Compiled Reports Tab */}
                     <button 
                         onClick={() => setViewType('compiledReport')} 
-                        className={`${viewType === 'compiledReport' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-4 px-3 border-b-2 font-medium text-sm transition-colors`}
+                        className={`${viewType === 'compiledReport' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-3 px-3 border-b-2 font-medium text-sm transition-colors`}
                     >
                         Compiled Reports
                     </button>
                     {/* Course Dashboard Tab */}
                     <button
                         onClick={() => setViewType('courses')}
-                        className={`${viewType === 'courses' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-4 px-3 border-b-2 font-medium text-sm transition-colors`} 
+                        className={`${viewType === 'courses' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-3 px-3 border-b-2 font-medium text-sm transition-colors`} 
                     >
                         Course Dashboard
                     </button>
                     {/* Participant Dashboard Tab */}
                     <button
                         onClick={() => setViewType('participants')}
-                        className={`${viewType === 'participants' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-4 px-3 border-b-2 font-medium text-sm transition-colors`} 
+                        className={`${viewType === 'participants' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-3 px-3 border-b-2 font-medium text-sm transition-colors`} 
                     >
                         Participant Dashboard
                     </button>
                     {/* Facilitator Dashboard Tab */}
                     <button
                         onClick={() => setViewType('facilitators')}
-                        className={`${viewType === 'facilitators' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-4 px-3 border-b-2 font-medium text-sm transition-colors`} 
+                        className={`${viewType === 'facilitators' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-3 px-3 border-b-2 font-medium text-sm transition-colors`} 
                     >
                         Facilitator Dashboard
                     </button>
                 </nav>
+
+                {/* Master Refresh Button */}
+                <Button 
+                    onClick={handleRefresh} 
+                    disabled={isRefreshing} 
+                    variant="secondary" 
+                    className="whitespace-nowrap text-xs py-1.5 px-3 mb-2 md:mb-0 border border-sky-200 text-sky-700 hover:bg-sky-50 shadow-sm"
+                >
+                    {isRefreshing ? <Spinner size="sm" /> : '↻ Refresh Data'}
+                </Button>
             </div>
 
             {/* Compact Filters */}
@@ -509,13 +552,13 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
                     {/* NEW: Compiled Reports View */}
                     {viewType === 'compiledReport' && (
                         <CompiledReportView 
-                            allCourses={allCourses || []} 
-                            allParticipants={allParticipants || []} 
+                            allCourses={activeCourses || []} 
+                            allParticipants={activeParticipants || []} 
                         />
                     )}
 
                     {/* Render Course Dashboard */}
-                    {viewType === 'courses' && (allCourses || []).length > 0 && (
+                    {viewType === 'courses' && (activeCourses || []).length > 0 && (
                         <div>
                             <h3 className="text-xl font-bold mb-4">Course KPIs</h3>
                             <div className="grid md:grid-cols-4 gap-4 mb-8">
@@ -552,7 +595,7 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
                     )}
 
                     {/* Render Participant Dashboard */}
-                    {viewType === 'participants' && (allCourses || []).length > 0 && (
+                    {viewType === 'participants' && (activeCourses || []).length > 0 && (
                         <div className="px-4 md:px-6">
                             <h3 className="text-xl font-bold mb-4">Participant KPIs</h3>
                             <div className="grid md:grid-cols-4 gap-4 mb-8">
@@ -574,7 +617,7 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
                     )}
 
                     {/* Render Facilitator Dashboard */}
-                    {viewType === 'facilitators' && (allCourses || []).length > 0 && (
+                    {viewType === 'facilitators' && (activeCourses || []).length > 0 && (
                         <div className="px-4 md:px-6">
                             <h3 className="text-xl font-bold mb-4">Facilitator KPIs</h3>
                             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 text-center mb-6">
@@ -599,7 +642,7 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
                     )}
 
                     {/* Fallback for no data/no view */}
-                    {['courses', 'participants', 'facilitators'].includes(viewType) && (allCourses || []).length === 0 && (
+                    {['courses', 'participants', 'facilitators'].includes(viewType) && (activeCourses || []).length === 0 && (
                          <div className="text-center py-12 text-gray-500">
                              No course data available to display the {viewType} dashboard.
                          </div>
