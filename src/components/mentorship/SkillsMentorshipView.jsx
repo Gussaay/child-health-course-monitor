@@ -1121,12 +1121,6 @@ const SkillsMentorshipView = ({
     const [deletedSubmissionIds, setDeletedSubmissionIds] = useState(new Set());
     const [deletedReportIds, setDeletedReportIds] = useState(new Set());
 
-    // Clear selections when switching tabs
-    useEffect(() => {
-        setSelectedSubmissionIds([]);
-        setSelectedReportIds([]);
-    }, [activeTab, activeService]);
-
     // Dashboard Last Updated Timestamp tracking
     const [lastSyncTime, setLastSyncTime] = useState(null);
 
@@ -1180,13 +1174,20 @@ const SkillsMentorshipView = ({
         }
     }, [healthFacilities]);
 
-    // --- Fetch public data safely with Cache-First Strategy ---
+    // --- Fetch public data safely with Cache-First Strategy & Incremental Sync ---
     useEffect(() => {
         if (publicDashboardMode) {
             let isMounted = true;
             const fetchPublicData = async () => {
-                let cacheSuccess = false;
+                const timeKey = 'publicDashboardLastSync';
+                const lastFetchTime = parseInt(localStorage.getItem(timeKey) || '0', 10);
+                const isStale = (Date.now() - lastFetchTime) > (1 * 60 * 60 * 1000); // 1 HOUR TTL
                 
+                let localSubs = [];
+                let localImnci = [];
+                let localEenc = [];
+                let hasLocalData = false;
+
                 // 1. Try fetching from Cache first for instant loading
                 try {
                     const [cachedSubs, cachedImnci, cachedEenc] = await Promise.all([
@@ -1195,26 +1196,51 @@ const SkillsMentorshipView = ({
                         typeof listEENCVisitReports === 'function' ? listEENCVisitReports({ source: 'cache' }).catch(() => []) : Promise.resolve([])
                     ]);
                     
-                    if (isMounted && (cachedSubs !== undefined && cachedImnci !== undefined && cachedEenc !== undefined)) {
+                    // Accept ANY successful cache response, even empty arrays []
+                    if (isMounted && cachedSubs !== undefined && cachedImnci !== undefined && cachedEenc !== undefined) {
+                        localSubs = cachedSubs;
+                        localImnci = cachedImnci;
+                        localEenc = cachedEenc;
+                        hasLocalData = true;
+
                         setPublicData({ submissions: cachedSubs || [], imnci: cachedImnci || [], eenc: cachedEenc || [] });
                         setPublicLoading(false); 
                         updateLastSyncTime(); 
-                        cacheSuccess = true;
                     }
                 } catch (e) {
                     console.log("Cache miss or unavailable. Waiting for server data...");
                 }
 
-                // 2. Fetch from Server ONLY IF CACHE MISSED to save bandwidth and speed up loading
-                if (!cacheSuccess) {
+                // 2. Fetch from Server if Cache missed OR if data is Stale (> 1 hour)
+                if (!hasLocalData || isStale) {
                     try {
-                        const [subs, imnci, eenc] = await Promise.all([
-                            typeof listMentorshipSessions === 'function' ? listMentorshipSessions({ source: 'server' }).catch(() => []) : Promise.resolve([]),
-                            typeof listIMNCIVisitReports === 'function' ? listIMNCIVisitReports({ source: 'server' }).catch(() => []) : Promise.resolve([]),
-                            typeof listEENCVisitReports === 'function' ? listEENCVisitReports({ source: 'server' }).catch(() => []) : Promise.resolve([])
+                        let effectiveLastFetchTime = lastFetchTime;
+                        // If no local data at all, fetch everything
+                        if (!hasLocalData || localSubs.length === 0) {
+                            effectiveLastFetchTime = 0;
+                        }
+
+                        const [newSubs, newImnci, newEenc] = await Promise.all([
+                            typeof listMentorshipSessions === 'function' ? listMentorshipSessions({ source: 'server' }, effectiveLastFetchTime).catch(() => []) : Promise.resolve([]),
+                            typeof listIMNCIVisitReports === 'function' ? listIMNCIVisitReports({ source: 'server' }, effectiveLastFetchTime).catch(() => []) : Promise.resolve([]),
+                            typeof listEENCVisitReports === 'function' ? listEENCVisitReports({ source: 'server' }, effectiveLastFetchTime).catch(() => []) : Promise.resolve([])
                         ]);
+
                         if (isMounted) {
-                            setPublicData({ submissions: subs || [], imnci: imnci || [], eenc: eenc || [] });
+                            const mergeData = (oldData, newData) => {
+                                if (!newData || newData.length === 0) return oldData || [];
+                                const map = new Map((oldData || []).map(i => [i.id, i]));
+                                newData.forEach(i => map.set(i.id, i));
+                                return Array.from(map.values());
+                            };
+
+                            setPublicData({ 
+                                submissions: mergeData(localSubs, newSubs), 
+                                imnci: mergeData(localImnci, newImnci), 
+                                eenc: mergeData(localEenc, newEenc) 
+                            });
+                            
+                            localStorage.setItem(timeKey, Date.now().toString());
                             updateLastSyncTime();
                         }
                     } catch (e) {
@@ -1306,13 +1332,13 @@ const SkillsMentorshipView = ({
     }, [localHealthFacilities]);
 
     // UPDATED to map correctly between authenticated and unauthenticated sets AND extract project
-    // OPTIMISTIC UPDATE APPLIED: Filters out deletedSubmissionIds
+    // OPTIMISTIC UPDATE APPLIED: Filters out deletedSubmissionIds and Soft Deletes
     const processedSubmissions = useMemo(() => {
         const sourceData = publicDashboardMode ? publicData.submissions : skillMentorshipSubmissions;
         if (!sourceData) return [];
         
         return sourceData
-            .filter(sub => !deletedSubmissionIds.has(sub.id))
+            .filter(sub => !deletedSubmissionIds.has(sub.id) && sub.isDeleted !== true && sub.isDeleted !== "true") // SOFT DELETE FILTER
             .map(sub => {
             // Find facility object to extract project/partner info dynamically via fast Map lookup
             const fac = facilityMap.get(sub.facilityId);
@@ -1428,7 +1454,7 @@ const SkillsMentorshipView = ({
     }, [processedSubmissions, user, activeService]);
 
     // UPDATED to map correctly between authenticated and unauthenticated sets
-    // OPTIMISTIC UPDATE APPLIED: Filters out deletedReportIds
+    // OPTIMISTIC UPDATE APPLIED: Filters out deletedReportIds and Soft Deletes
     const processedVisitReports = useMemo(() => {
         const rawImnci = publicDashboardMode ? publicData.imnci : imnciVisitReports;
         const rawEenc = publicDashboardMode ? publicData.eenc : eencVisitReports;
@@ -1464,7 +1490,12 @@ const SkillsMentorshipView = ({
         }));
 
         const allReports = [...imnci, ...eenc];
-        return allReports.filter(rep => rep.service === activeService && !deletedReportIds.has(rep.id));
+        return allReports.filter(rep => 
+            rep.service === activeService && 
+            !deletedReportIds.has(rep.id) && 
+            rep.fullData?.isDeleted !== true && 
+            rep.fullData?.isDeleted !== "true" // SOFT DELETE FILTER
+        );
 
     }, [imnciVisitReports, eencVisitReports, activeService, publicDashboardMode, publicData, deletedReportIds]);
 
@@ -1580,15 +1611,39 @@ const SkillsMentorshipView = ({
         setIsRefreshing(true);
         try {
             if (publicDashboardMode) {
-                // Force server fetch for public dashboard mode
-                const [subs, imnci, eenc] = await Promise.all([
-                    typeof listMentorshipSessions === 'function' ? listMentorshipSessions({ source: 'server' }).catch(() => []) : Promise.resolve([]),
-                    typeof listIMNCIVisitReports === 'function' ? listIMNCIVisitReports({ source: 'server' }).catch(() => []) : Promise.resolve([]),
-                    typeof listEENCVisitReports === 'function' ? listEENCVisitReports({ source: 'server' }).catch(() => []) : Promise.resolve([])
+                const timeKey = 'publicDashboardLastSync';
+                const lastFetch = parseInt(localStorage.getItem(timeKey) || '0', 10);
+                
+                let effectiveLastFetch = lastFetch;
+                // If we have no public data loaded, pull everything
+                if (!publicData.submissions || publicData.submissions.length === 0) {
+                    effectiveLastFetch = 0;
+                }
+
+                const [newSubs, newImnci, newEenc] = await Promise.all([
+                    listMentorshipSessions({ source: 'server' }, effectiveLastFetch).catch(() => []),
+                    listIMNCIVisitReports({ source: 'server' }, effectiveLastFetch).catch(() => []),
+                    listEENCVisitReports({ source: 'server' }, effectiveLastFetch).catch(() => [])
                 ]);
-                setPublicData({ submissions: subs || [], imnci: imnci || [], eenc: eenc || [] });
+
+                // Merge logic
+                const mergeData = (oldData, newData) => {
+                    if (!newData || newData.length === 0) return oldData || [];
+                    const map = new Map((oldData || []).map(i => [i.id, i]));
+                    newData.forEach(i => map.set(i.id, i));
+                    return Array.from(map.values());
+                };
+
+                setPublicData(prev => ({
+                    submissions: mergeData(prev.submissions, newSubs),
+                    imnci: mergeData(prev.imnci, newImnci),
+                    eenc: mergeData(prev.eenc, newEenc)
+                }));
+                
+                localStorage.setItem(timeKey, Date.now().toString());
+
             } else {
-                // Standard refresh for authenticated users
+                // Standard refresh for authenticated users (uses DataContext which now properly handles force=true and merges)
                 const promises = [
                     fetchSkillMentorshipSubmissions(true),
                     fetchIMNCIVisitReports(true),
@@ -2778,7 +2833,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                             setActiveDashboardWorkerName("");
                                             setActiveDashboardWorkerType("");
                                         }}
-
+                                        
                                         activeProject={activeDashboardProject}
                                         onProjectChange={(value) => {
                                             setActiveDashboardProject(value);
@@ -2994,7 +3049,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                         setActiveDashboardWorkerName("");
                                         setActiveDashboardWorkerType("");
                                     }}
-
+                                    
                                     activeProject={activeDashboardProject}
                                     onProjectChange={(value) => {
                                         setActiveDashboardProject(value);

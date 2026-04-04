@@ -856,6 +856,13 @@ const ChildHealthServicesView = ({
         fetchPendingStateSubmissions,
         fetchPendingLocalitySubmissions
     } = useDataCache();
+
+    // --- APPLY SOFT DELETE FILTER TO ALL CACHED DATA ---
+    const activeHealthFacilities = useMemo(() => {
+        if (!healthFacilities) return null;
+        return healthFacilities.filter(f => f.isDeleted !== true && f.isDeleted !== "true");
+    }, [healthFacilities]);
+
     const [editingFacility, setEditingFacility] = useState(null);
     const [view, setView] = useState('list');
     const [activeTab, setActiveTab] = useState(TABS.ALL);
@@ -958,22 +965,22 @@ const ChildHealthServicesView = ({
         try {
             if (permissions.canApproveSubmissions) {
                 await saveFacilitySnapshot(payload);
-                setToast({ show: true, message: "Facility location updated directly. (Click Refresh to update table)", type: "success" });
+                setToast({ show: true, message: "Facility location updated directly.", type: "success" });
+                await fetchHealthFacilities({}, true);
             } else {
                  await submitFacilityDataForApproval(payload, auth.currentUser?.email || 'Unknown User');
                  setToast({ show: true, message: "Facility location update submitted for approval.", type: "info" });
             }
-            // Removed forced fetch
         } catch (error) {
             setToast({ show: true, message: `Failed to update location: ${error.message}`, type: 'error' });
         }
     };
 
    const handleCheckLocations = useCallback(() => {
-        if (!localityBoundaries || !healthFacilities) { setToast({ show: true, message: 'Boundary data or facility list is not yet loaded.', type: 'info' }); return; }
+        if (!localityBoundaries || !activeHealthFacilities) { setToast({ show: true, message: 'Boundary data or facility list is not yet loaded.', type: 'info' }); return; }
         setIsCheckingLocations(true);
         const stateKeyToEnName = Object.entries(STATE_LOCALITIES).reduce((acc, [key, value]) => { acc[key] = value.en; return acc; }, {});
-        const mismatches = healthFacilities.filter(facility => {
+        const mismatches = activeHealthFacilities.filter(facility => {
             const lat = parseFloat(facility._الإحداثيات_latitude);
             const lng = parseFloat(facility._الإحداثيات_longitude);
             const stateKey = facility['الولاية'];
@@ -982,7 +989,6 @@ const ChildHealthServicesView = ({
             const facilityPoint = point([lng, lat]);
             const stateEn = stateKeyToEnName[stateKey];
             if (!stateEn) return false;
-            // UPDATE: Safe string cast before toLowerCase
             const preciseBoundaryFeature = localityBoundaries.features.find(f => f.properties.state_en?.toLowerCase() === stateEn.toLowerCase() && f.properties.locality_e?.toLowerCase() === String(localityKey || '').toLowerCase() );
             if (preciseBoundaryFeature) { return !booleanPointInPolygon(facilityPoint, preciseBoundaryFeature.geometry); }
             const stateBoundaryFeatures = localityBoundaries.features.filter(f => f.properties.state_en?.toLowerCase() === stateEn.toLowerCase() );
@@ -992,16 +998,16 @@ const ChildHealthServicesView = ({
         setMismatchedFacilities(mismatches);
         setIsMismatchModalOpen(true);
         setIsCheckingLocations(false);
-    }, [localityBoundaries, healthFacilities, setToast]);
+    }, [localityBoundaries, activeHealthFacilities, setToast]);
 
     const handleFixMismatch = (facility) => { setIsMismatchModalOpen(false); handleOpenMapModal(facility); };
 
     const projectNames = useMemo(() => {
-        if (!healthFacilities) return [];
+        if (!activeHealthFacilities) return [];
         const names = new Set();
-        healthFacilities.forEach(f => { if (f.project_name) { names.add(f.project_name); } });
+        activeHealthFacilities.forEach(f => { if (f.project_name) { names.add(f.project_name); } });
         return Array.from(names).sort();
-    }, [healthFacilities]);
+    }, [activeHealthFacilities]);
 
     const CLEANABLE_FIELDS_CONFIG = useMemo(() => ({
         'الولاية': { label: 'State', standardValues: Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar)), isStaffField: false },
@@ -1134,15 +1140,15 @@ const ChildHealthServicesView = ({
     }, [pendingSubmissions, pendingStartDate, pendingEndDate]);
 
     const filteredFacilities = useMemo(() => {
-        if (!healthFacilities || !hasManuallySelected) return [];
+        if (!activeHealthFacilities || !hasManuallySelected) return [];
         let facilitiesInScope = [];
         const userScope = permissions.manageScope;
         if (userScope === 'locality') {
-            if (userLocalities && userLocalities.length > 0) { const allowedLocalities = new Set(userLocalities); facilitiesInScope = healthFacilities.filter(f => allowedLocalities.has(f['المحلية']) && (!stateFilter || f['الولاية'] === stateFilter) ); } else { return []; }
+            if (userLocalities && userLocalities.length > 0) { const allowedLocalities = new Set(userLocalities); facilitiesInScope = activeHealthFacilities.filter(f => allowedLocalities.has(f['المحلية']) && (!stateFilter || f['الولاية'] === stateFilter) ); } else { return []; }
         } else if (userScope === 'state') {
-             if (userStates && userStates.length > 0) { const allowedStates = new Set(userStates); facilitiesInScope = healthFacilities.filter(f => allowedStates.has(f['الولاية'])); } else { return []; }
+             if (userStates && userStates.length > 0) { const allowedStates = new Set(userStates); facilitiesInScope = activeHealthFacilities.filter(f => allowedStates.has(f['الولاية'])); } else { return []; }
         } else {
-             facilitiesInScope = healthFacilities;
+             facilitiesInScope = activeHealthFacilities;
         }
         let filtered = facilitiesInScope.filter(f => {
             if (userScope !== 'state' && userScope !== 'locality') { if (stateFilter && stateFilter !== 'ALL_STATES' && stateFilter !== 'NOT_ASSIGNED' && f['الولاية'] !== stateFilter) { return false; } if (stateFilter === 'NOT_ASSIGNED' && f['الولاية']) { return false; } }
@@ -1151,7 +1157,6 @@ const ChildHealthServicesView = ({
             if (projectFilter && f.project_name !== projectFilter) return false;
             if (functioningFilter && functioningFilter !== 'NOT_SET' && f['هل_المؤسسة_تعمل'] !== functioningFilter) return false;
             if (functioningFilter === 'NOT_SET' && (f['هل_المؤسسة_تعمل'] != null && f['هل_المؤسسة_تعمل'] !== '')) return false;
-            // UPDATE: Safe string cast before toLowerCase
             if (searchQuery) { const lowerQuery = searchQuery.toLowerCase(); if (!String(f['اسم_المؤسسة'] || '').toLowerCase().includes(lowerQuery)) return false; }
             if (serviceTypeFilter) {
                  switch (serviceTypeFilter) {
@@ -1166,7 +1171,7 @@ const ChildHealthServicesView = ({
         });
         filtered.sort((a, b) => (b.lastSnapshotAt?.toMillis() || 0) - (a.lastSnapshotAt?.toMillis() || 0));
         return filtered;
-    }, [ healthFacilities, stateFilter, localityFilter, facilityTypeFilter, functioningFilter, projectFilter, searchQuery, serviceTypeFilter, userStates, userLocalities, permissions.manageScope, hasManuallySelected ]);
+    }, [ activeHealthFacilities, stateFilter, localityFilter, facilityTypeFilter, functioningFilter, projectFilter, searchQuery, serviceTypeFilter, userStates, userLocalities, permissions.manageScope, hasManuallySelected ]);
 
     useEffect(() => { setCurrentPage(1); }, [filteredFacilities]);
     
@@ -1197,10 +1202,16 @@ const ChildHealthServicesView = ({
         const finalPayload = { ...payload };
         if (editingFacility?.id) { finalPayload.id = editingFacility.id; }
         try {
-            if (permissions.canApproveSubmissions) { await saveFacilitySnapshot(finalPayload); setToast({ show: true, message: 'Facility saved directly. (Click Refresh to update table)', type: 'success' }); } else { await submitFacilityDataForApproval(finalPayload, user.email || 'Unknown User'); setToast({ show: true, message: 'Facility update submitted for approval.', type: 'info' }); }
+            if (permissions.canApproveSubmissions) { 
+                await saveFacilitySnapshot(finalPayload); 
+                setToast({ show: true, message: 'Facility saved directly.', type: 'success' }); 
+                await fetchHealthFacilities({}, true);
+            } else { 
+                await submitFacilityDataForApproval(finalPayload, user.email || 'Unknown User'); 
+                setToast({ show: true, message: 'Facility update submitted for approval.', type: 'info' }); 
+            }
             setEditingFacility(null);
             setView('list');
-            // Removed forced fetch
         } catch (error) {
              setToast({ show: true, message: `Failed to save/submit: ${error.message}`, type: 'error' });
         }
@@ -1237,14 +1248,14 @@ const ChildHealthServicesView = ({
             try {
                 if (permissions.canApproveSubmissions) {
                     await deleteHealthFacility(facilityId);
-                    setToast({ show: true, message: 'Facility deleted. (Click Refresh to update table)', type: 'success' });
+                    setToast({ show: true, message: 'Facility deleted.', type: 'success' });
+                    await fetchHealthFacilities({}, true);
                 } else {
                     const updaterIdentifier = user.displayName ? `${user.displayName} (${user.email})` : user.email;
                     const payload = { ...facility, _action: 'DELETE', updated_by: updaterIdentifier, 'اخر تحديث': new Date().toISOString(), };
                     await submitFacilityDataForApproval(payload, user.email || 'Unknown User');
                     setToast({ show: true, message: 'Deletion request submitted for approval.', type: 'info' });
                 }
-                // Removed forced fetch
             } catch (error) {
                 setToast({ show: true, message: `Failed to process request: ${error.message}`, type: 'error' });
             }
@@ -1258,10 +1269,10 @@ const ChildHealthServicesView = ({
             const { successes, errors, failedRowsData } = await importHealthFacilities(data, originalRows, (progress) => { setUploadStatus(prev => ({ ...prev, processed: progress.processed })); });
             const successCount = successes.length;
             const errorCount = errors.length;
-            let message = `${successCount} facilities imported/updated successfully. (Click Refresh to update table)`;
+            let message = `${successCount} facilities imported/updated successfully.`;
             if (errorCount > 0) { message += `\n${errorCount} rows failed to import.`; }
              setUploadStatus(prev => ({ ...prev, inProgress: false, message, errors: failedRowsData }));
-            // Removed forced fetch
+             await fetchHealthFacilities({}, true);
         } catch (error) {
              setUploadStatus({ inProgress: false, processed: 0, total: 0, errors: [{ message: error.message }], message: `Import failed: ${error.message}` });
         }
@@ -1277,7 +1288,7 @@ const ChildHealthServicesView = ({
                  const idsToClean = submissionData._mergedSubmissionIds || [submissionData.submissionId];
                  await Promise.all(idsToClean.map(id => rejectFacilitySubmission(id, auth.currentUser?.email || 'Unknown Approver')));
                  
-                 setToast({ show: true, message: "Facility deletion approved and completed. (Click Refresh to update table)", type: "success" });
+                 setToast({ show: true, message: "Facility deletion approved and completed.", type: "success" });
             } else {
                 // Process the combined submission using the main ID
                 await approveFacilitySubmission(submissionData, auth.currentUser?.email || 'Unknown Approver');
@@ -1288,12 +1299,12 @@ const ChildHealthServicesView = ({
                     await Promise.all(redundantIds.map(id => rejectFacilitySubmission(id, 'Merged into a combined submission')));
                 }
 
-                setToast({ show: true, message: "Submission approved and facility data updated. (Click Refresh to update table)", type: "success" });
+                setToast({ show: true, message: "Submission approved and facility data updated.", type: "success" });
             }
             setSubmissionForReview(null);
             setComparisonFacilities([]);
             refreshSubmissions(true); // Refreshes the pending submissions so the approved item vanishes
-            // Removed forced fetch for All Facilities
+            await fetchHealthFacilities({}, true);
         } catch (error) {
              setToast({ show: true, message: `Approval failed: ${error.message}`, type: 'error' });
         }
@@ -1322,7 +1333,7 @@ const ChildHealthServicesView = ({
         setIsReviewLoading(true);
         setSubmissionForReview(submission);
         try {
-             let relevantFacilities = healthFacilities || [];
+             let relevantFacilities = activeHealthFacilities || [];
              const userScope = permissions.manageScope;
              if(userScope === 'state' && userStates && userStates.length > 0) { const allowedStates = new Set(userStates); relevantFacilities = relevantFacilities.filter(f => allowedStates.has(f['الولاية'])); }
             setComparisonFacilities(relevantFacilities);
@@ -1331,7 +1342,7 @@ const ChildHealthServicesView = ({
         } finally {
             setIsReviewLoading(false);
         }
-    }, [healthFacilities, setToast, permissions.manageScope, userStates]);
+    }, [activeHealthFacilities, setToast, permissions.manageScope, userStates]);
 
 
     const handleGenerateLink = (facilityId) => {
@@ -1611,7 +1622,7 @@ const ChildHealthServicesView = ({
                 onClose={() => setIsDuplicateModalOpen(false)}
                 facilities={filteredFacilities || []}
                 onDuplicatesDeleted={() => {
-                    // Removed forced fetch
+                    fetchHealthFacilities({}, true);
                 }}
             />
             <DataCleanupModal
@@ -1619,7 +1630,7 @@ const ChildHealthServicesView = ({
                 onClose={() => setIsCleanupModalOpen(false)}
                 facilities={filteredFacilities || []}
                 onCleanupComplete={() => {
-                    // Removed forced fetch
+                    fetchHealthFacilities({}, true);
                 }}
                 setToast={setToast}
                 cleanupConfig={CLEANABLE_FIELDS_CONFIG}

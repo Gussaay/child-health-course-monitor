@@ -332,7 +332,7 @@ const isDataChanged = (newData, oldData) => {
          if (!(key in newData)) return true; 
     }
     return false;
-};
+}
 
 export async function importHealthFacilities(facilities, originalRows, onProgress) {
     const errors = [];
@@ -453,7 +453,7 @@ export async function submitLocalityBatchUpdate(updates, localityName) {
     return true;
 }
 
-export async function listHealthFacilities(filters = {}, sourceOptions = {}) {
+export async function listHealthFacilities(filters = {}, sourceOptions = {}, lastSyncTime = null) {
     let q = collection(db, "healthFacilities");
     const conditions = [];
 
@@ -470,14 +470,14 @@ export async function listHealthFacilities(filters = {}, sourceOptions = {}) {
         conditions.push(where("lastSnapshotAt", ">", timestamp));
     }
 
+    // Incremental Sync Logic
+    if (sourceOptions.source === 'server' && lastSyncTime) {
+        const firestoreTimestamp = Timestamp.fromMillis(lastSyncTime);
+        conditions.push(where("lastSnapshotAt", ">", firestoreTimestamp)); 
+    }
+
     if (conditions.length > 0) {
-        // CRITICAL FIX: Only apply orderBy if required by Firebase inequality rules.
-        // Unnecessary ordering causes cache query failures in offline/cache modes.
-        if (filters.lastUpdatedAfter instanceof Date) {
-            q = query(q, ...conditions, orderBy("lastSnapshotAt"));
-        } else {
-            q = query(q, ...conditions);
-        }
+        q = query(q, ...conditions);
     }
 
     try {
@@ -500,10 +500,14 @@ export async function getHealthFacilityById(facilityId) {
     if (docSnap.exists()) return { id: docSnap.id, ...docSnap.data() };
     return null;
 }
+
+// SOFT DELETE
 export async function deleteHealthFacility(facilityId) {
-    await deleteDoc(doc(db, "healthFacilities", facilityId));
+    await updateDoc(doc(db, "healthFacilities", facilityId), { isDeleted: true, lastSnapshotAt: serverTimestamp() });
     return true;
 }
+
+// SOFT DELETE
 export async function deleteFacilitiesBatch(facilityIds) {
     if (!facilityIds || facilityIds.length === 0) return 0;
     const BATCH_SIZE = 500;
@@ -511,12 +515,13 @@ export async function deleteFacilitiesBatch(facilityIds) {
     for (let i = 0; i < facilityIds.length; i += BATCH_SIZE) {
         const batch = writeBatch(db);
         const chunk = facilityIds.slice(i, i + BATCH_SIZE);
-        chunk.forEach(id => batch.delete(doc(db, "healthFacilities", id)));
+        chunk.forEach(id => batch.update(doc(db, "healthFacilities", id), { isDeleted: true, lastSnapshotAt: serverTimestamp() }));
         await batch.commit();
         deletedCount += chunk.length;
     }
     return deletedCount;
 }
+
 export async function submitFacilityDataForApproval(payload, submitterIdentifier = 'Unknown User') {
     const { id, ...dataToSubmit } = payload; 
     const submissionData = {
@@ -672,11 +677,11 @@ export async function getFacilitatorByEmail(email) {
 export async function upsertFacilitator(payload) {
     if (payload.id) {
         const facRef = doc(db, "facilitators", payload.id);
-        await setDoc(facRef, payload, { merge: true });
+        await setDoc(facRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
-        const newFacRef = await addDoc(collection(db, "facilitators"), dataToSave);
+        const newFacRef = await addDoc(collection(db, "facilitators"), { ...dataToSave, lastUpdatedAt: serverTimestamp() });
         return newFacRef.id;
     }
 }
@@ -685,10 +690,10 @@ export async function importFacilitators(facilitators) {
     facilitators.forEach(fac => {
         if (fac.id) {
             const facRef = doc(db, "facilitators", fac.id);
-            batch.update(facRef, fac);
+            batch.update(facRef, { ...fac, lastUpdatedAt: serverTimestamp() });
         } else {
             const facRef = doc(collection(db, "facilitators"));
-            batch.set(facRef, fac);
+            batch.set(facRef, { ...fac, lastUpdatedAt: serverTimestamp() });
         }
     });
     await batch.commit();
@@ -704,10 +709,13 @@ export async function listFacilitators(sourceOptions = {}) {
         throw error;
     }
 }
+
+// SOFT DELETE
 export async function deleteFacilitator(facilitatorId) {
-    await deleteDoc(doc(db, "facilitators", facilitatorId));
+    await updateDoc(doc(db, "facilitators", facilitatorId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
     return true;
 }
+
 export async function getFacilitatorSubmissionByEmail(email) {
     if (!email) return null;
     try {
@@ -739,7 +747,7 @@ export async function approveFacilitatorSubmission(submission, approverEmail) {
     const { id: submissionId, status, submittedAt, ...facilitatorData } = submission;
     const batch = writeBatch(db);
     const newFacRef = doc(collection(db, "facilitators"));
-    batch.set(newFacRef, facilitatorData);
+    batch.set(newFacRef, { ...facilitatorData, lastUpdatedAt: serverTimestamp() });
     const submissionRef = doc(db, "facilitatorSubmissions", submissionId);
     batch.update(submissionRef, { status: 'approved', approvedBy: approverEmail, approvedAt: serverTimestamp() });
     await batch.commit();
@@ -792,7 +800,7 @@ export async function approveCoordinatorSubmission(submission, approverEmail) {
     const userSnapshot = await getDocs(userQuery);
     const batch = writeBatch(db);
     const newCoordinatorRef = doc(collection(db, "stateCoordinators"));
-    batch.set(newCoordinatorRef, coordinatorData);
+    batch.set(newCoordinatorRef, { ...coordinatorData, lastUpdatedAt: serverTimestamp() });
     const submissionRef = doc(db, "coordinatorSubmissions", submissionId);
     batch.update(submissionRef, { status: 'approved', approvedBy: approverEmail, approvedAt: serverTimestamp() });
     if (!userSnapshot.empty) {
@@ -821,7 +829,7 @@ export async function approveFederalSubmission(submission, approverEmail) {
     const userSnapshot = await getDocs(userQuery);
     const batch = writeBatch(db);
     const newCoordinatorRef = doc(collection(db, "federalCoordinators"));
-    batch.set(newCoordinatorRef, coordinatorData); 
+    batch.set(newCoordinatorRef, { ...coordinatorData, lastUpdatedAt: serverTimestamp() }); 
     const submissionRef = doc(db, "federalCoordinatorSubmissions", submissionId);
     batch.update(submissionRef, { status: 'approved', approvedBy: approverEmail, approvedAt: serverTimestamp() });
     if (!userSnapshot.empty) {
@@ -851,7 +859,7 @@ export async function approveLocalitySubmission(submission, approverEmail) {
 
     const batch = writeBatch(db);
     const newCoordinatorRef = doc(collection(db, "localityCoordinators"));
-    batch.set(newCoordinatorRef, coordinatorData); 
+    batch.set(newCoordinatorRef, { ...coordinatorData, lastUpdatedAt: serverTimestamp() }); 
     const submissionRef = doc(db, "localityCoordinatorSubmissions", submissionId);
     batch.update(submissionRef, { status: 'approved', approvedBy: approverEmail, approvedAt: serverTimestamp() });
 
@@ -869,14 +877,15 @@ export async function rejectLocalitySubmission(submissionId, rejectorEmail) {
     const submissionRef = doc(db, "localityCoordinatorSubmissions", submissionId);
     await updateDoc(submissionRef, { status: 'rejected', rejectedBy: rejectorEmail, rejectedAt: serverTimestamp() });
 }
+
 export async function upsertCoordinator(payload) { 
     if (payload.id) {
         const coordinatorRef = doc(db, "coordinators", payload.id);
-        await setDoc(coordinatorRef, payload, { merge: true });
+        await setDoc(coordinatorRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
-        const newRef = await addDoc(collection(db, "coordinators"), dataToSave);
+        const newRef = await addDoc(collection(db, "coordinators"), { ...dataToSave, lastUpdatedAt: serverTimestamp() });
         return newRef.id;
     }
 }
@@ -885,18 +894,21 @@ export async function listCoordinators(sourceOptions = {}) {
     const snapshot = await getData(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
+
+// SOFT DELETE
 export async function deleteCoordinator(coordinatorId) { 
-    await deleteDoc(doc(db, "coordinators", coordinatorId));
+    await updateDoc(doc(db, "coordinators", coordinatorId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
     return true;
 }
+
 export async function upsertStateCoordinator(payload) {
     if (payload.id) {
         const coordinatorRef = doc(db, "stateCoordinators", payload.id);
-        await setDoc(coordinatorRef, payload, { merge: true });
+        await setDoc(coordinatorRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
-        const newRef = await addDoc(collection(db, "stateCoordinators"), dataToSave);
+        const newRef = await addDoc(collection(db, "stateCoordinators"), { ...dataToSave, lastUpdatedAt: serverTimestamp() });
         return newRef.id;
     }
 }
@@ -905,18 +917,21 @@ export async function listStateCoordinators(sourceOptions = {}) {
     const snapshot = await getData(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
+
+// SOFT DELETE
 export async function deleteStateCoordinator(coordinatorId) {
-    await deleteDoc(doc(db, "stateCoordinators", coordinatorId));
+    await updateDoc(doc(db, "stateCoordinators", coordinatorId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
     return true;
 }
+
 export async function upsertFederalCoordinator(payload) {
     if (payload.id) {
         const coordinatorRef = doc(db, "federalCoordinators", payload.id);
-        await setDoc(coordinatorRef, payload, { merge: true });
+        await setDoc(coordinatorRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
-        const newRef = await addDoc(collection(db, "federalCoordinators"), dataToSave);
+        const newRef = await addDoc(collection(db, "federalCoordinators"), { ...dataToSave, lastUpdatedAt: serverTimestamp() });
         return newRef.id;
     }
 }
@@ -925,18 +940,21 @@ export async function listFederalCoordinators(sourceOptions = {}) {
     const snapshot = await getData(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
+
+// SOFT DELETE
 export async function deleteFederalCoordinator(coordinatorId) {
-    await deleteDoc(doc(db, "federalCoordinators", coordinatorId));
+    await updateDoc(doc(db, "federalCoordinators", coordinatorId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
     return true;
 }
+
 export async function upsertLocalityCoordinator(payload) {
     if (payload.id) {
         const coordinatorRef = doc(db, "localityCoordinators", payload.id);
-        await setDoc(coordinatorRef, payload, { merge: true });
+        await setDoc(coordinatorRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
-        const newRef = await addDoc(collection(db, "localityCoordinators"), dataToSave);
+        const newRef = await addDoc(collection(db, "localityCoordinators"), { ...dataToSave, lastUpdatedAt: serverTimestamp() });
         return newRef.id;
     }
 }
@@ -945,18 +963,21 @@ export async function listLocalityCoordinators(sourceOptions = {}) {
     const snapshot = await getData(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
+
+// SOFT DELETE
 export async function deleteLocalityCoordinator(coordinatorId) {
-    await deleteDoc(doc(db, "localityCoordinators", coordinatorId));
+    await updateDoc(doc(db, "localityCoordinators", coordinatorId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
     return true;
 }
+
 export async function upsertFunder(payload) {
     if (payload.id) {
         const funderRef = doc(db, "funders", payload.id);
-        await setDoc(funderRef, payload, { merge: true });
+        await setDoc(funderRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
-        const newRef = await addDoc(collection(db, "funders"), dataToSave);
+        const newRef = await addDoc(collection(db, "funders"), { ...dataToSave, lastUpdatedAt: serverTimestamp() });
         return newRef.id;
     }
 }
@@ -965,18 +986,21 @@ export async function listFunders(sourceOptions = {}) {
     const snapshot = await getData(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
+
+// SOFT DELETE
 export async function deleteFunder(funderId) {
-    await deleteDoc(doc(db, "funders", funderId));
+    await updateDoc(doc(db, "funders", funderId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
     return true;
 }
+
 export async function upsertCourse(payload) {
     if (payload.id) {
         const courseRef = doc(db, "courses", payload.id);
-        await setDoc(courseRef, payload, { merge: true });
+        await setDoc(courseRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
-        const newCourseRef = await addDoc(collection(db, "courses"), dataToSave);
+        const newCourseRef = await addDoc(collection(db, "courses"), { ...dataToSave, lastUpdatedAt: serverTimestamp() });
         return newCourseRef.id;
     }
 }
@@ -985,13 +1009,14 @@ export async function updateCourseSharingSettings(courseId, settings) {
     const courseRef = doc(db, "courses", courseId);
     await updateDoc(courseRef, {
         isPublic: settings.isPublic,
-        sharedWith: settings.sharedWith
+        sharedWith: settings.sharedWith,
+        lastUpdatedAt: serverTimestamp()
     });
 }
 export async function updateCoursePublicStatus(courseId, isPublic) {
     if (!courseId) throw new Error("Course ID is required.");
     const courseRef = doc(db, "courses", courseId);
-    await updateDoc(courseRef, { isPublic: isPublic });
+    await updateDoc(courseRef, { isPublic: isPublic, lastUpdatedAt: serverTimestamp() });
 }
 export async function listCoursesByType(course_type, userStates, sourceOptions = {}) {
     try {
@@ -999,8 +1024,6 @@ export async function listCoursesByType(course_type, userStates, sourceOptions =
         if (userStates && userStates.length > 0) {
             conditions.push(where("state", "in", userStates));
         }
-         conditions.push(orderBy("start_date", "desc"));
-
         let q = query(collection(db, "courses"), ...conditions);
 
         const querySnapshot = await getData(q, sourceOptions);
@@ -1013,7 +1036,7 @@ export async function listCoursesByType(course_type, userStates, sourceOptions =
 }
 export async function listAllCourses(sourceOptions = {}) {
     try {
-        let q = query(collection(db, "courses"), orderBy("start_date", "desc"));
+        let q = query(collection(db, "courses"));
         const querySnapshot = await getData(q, sourceOptions);
         const courses = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         return courses;
@@ -1022,21 +1045,27 @@ export async function listAllCourses(sourceOptions = {}) {
         throw error;
     }
 }
+
+// SOFT DELETE
 export async function deleteCourse(courseId) {
     const batch = writeBatch(db);
-    batch.delete(doc(db, "courses", courseId));
+    batch.update(doc(db, "courses", courseId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
+    
     const participantsQuery = query(collection(db, "participants"), where("courseId", "==", courseId));
     const participantsSnap = await getDocs(participantsQuery);
-    participantsSnap.forEach(d => batch.delete(d.ref));
+    participantsSnap.forEach(d => batch.update(d.ref, { isDeleted: true, lastUpdatedAt: serverTimestamp() }));
+    
     const observationsQuery = query(collection(db, "observations"), where("courseId", "==", courseId));
     const observationsSnap = await getDocs(observationsQuery);
-    observationsSnap.forEach(d => batch.delete(d.ref));
+    observationsSnap.forEach(d => batch.update(d.ref, { isDeleted: true, lastUpdatedAt: serverTimestamp() }));
+    
     const casesQuery = query(collection(db, "cases"), where("courseId", "==", courseId));
     const casesSnap = await getDocs(casesQuery);
-    casesSnap.forEach(d => batch.delete(d.ref));
+    casesSnap.forEach(d => batch.update(d.ref, { isDeleted: true, lastUpdatedAt: serverTimestamp() }));
+    
     const finalReportQuery = query(collection(db, "finalReports"), where("courseId", "==", courseId));
     const finalReportSnap = await getDocs(finalReportQuery);
-    finalReportSnap.forEach(d => batch.delete(d.ref));
+    finalReportSnap.forEach(d => batch.update(d.ref, { isDeleted: true, lastUpdatedAt: serverTimestamp() }));
 
     await batch.commit();
     return true;
@@ -1052,7 +1081,8 @@ export async function approveCourseCertificates(courseId, managerName, signature
     const updateData = {
         isCertificateApproved: true,
         approvedByManagerName: managerName,
-        certificateApprovedAt: serverTimestamp()
+        certificateApprovedAt: serverTimestamp(),
+        lastUpdatedAt: serverTimestamp()
     };
 
     // Only set the signature URL if one was provided (or explicitly null to clear)
@@ -1072,7 +1102,8 @@ export async function unapproveCourseCertificates(courseId) {
         isCertificateApproved: false,
         approvedByManagerName: null, 
         approvedByManagerSignatureUrl: null, 
-        certificateApprovedAt: null
+        certificateApprovedAt: null,
+        lastUpdatedAt: serverTimestamp()
     });
     return true;
 }
@@ -1089,7 +1120,7 @@ export async function upsertParticipant(payload) {
                 if (existingDoc.id !== payload.id) throw new Error(`A participant with phone number '${payload.phone}' already exists in this course.`);
             }
         }
-        await setDoc(participantRef, payload, { merge: true }); 
+        await setDoc(participantRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true }); 
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
@@ -1097,7 +1128,7 @@ export async function upsertParticipant(payload) {
         const q = query(collection(db, "participants"), where("courseId", "==", dataToSave.courseId), where("phone", "==", dataToSave.phone), limit(1));
         const snapshot = await getDocs(q); 
         if (!snapshot.empty) throw new Error(`A participant with phone number '${dataToSave.phone}' already exists in this course.`);
-        const newParticipantRef = await addDoc(collection(db, "participants"), dataToSave); 
+        const newParticipantRef = await addDoc(collection(db, "participants"), { ...dataToSave, lastUpdatedAt: serverTimestamp() }); 
         return newParticipantRef.id;
     }
 }
@@ -1107,7 +1138,8 @@ export async function updateParticipantSharingSettings(participantId, settings) 
     const participantRef = doc(db, "participants", participantId);
     await updateDoc(participantRef, {
         isPublic: settings.isPublic,
-        sharedWith: settings.sharedWith
+        sharedWith: settings.sharedWith,
+        lastUpdatedAt: serverTimestamp()
     });
 }
 
@@ -1144,10 +1176,10 @@ export async function importParticipants(participants) {
 
         if (participant.id) {
             const participantRef = doc(db, "participants", participant.id);
-            batch.update(participantRef, participant);
+            batch.update(participantRef, { ...participant, lastUpdatedAt: serverTimestamp() });
         } else {
             const participantRef = doc(collection(db, "participants"));
-            batch.set(participantRef, participant);
+            batch.set(participantRef, { ...participant, lastUpdatedAt: serverTimestamp() });
         }
     }
     await batch.commit();
@@ -1157,7 +1189,7 @@ export async function importParticipants(participants) {
 export async function listParticipants(courseId, lastVisible = null, sourceOptions = {}) {
     if (!courseId) return { participants: [], lastVisible: null };
     const PAGE_SIZE = 50; 
-    let q = query(collection(db, "participants"), where("courseId", "==", courseId), orderBy("name"), limit(PAGE_SIZE));
+    let q = query(collection(db, "participants"), where("courseId", "==", courseId), limit(PAGE_SIZE));
     if (lastVisible) q = query(q, startAfter(lastVisible));
     const documentSnapshots = await getDocs(q, sourceOptions);
     const participants = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -1194,18 +1226,23 @@ export async function listAllParticipantsForCourse(courseId, sourceOptions = {})
     return allParticipants;
 }
 
+// SOFT DELETE
 export async function deleteParticipant(participantId) {
     const batch = writeBatch(db);
-    batch.delete(doc(db, "participants", participantId));
+    batch.update(doc(db, "participants", participantId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
+    
     const oq = query(collection(db, "observations"), where("participant_id", "==", participantId));
     const oSnap = await getDocs(oq);
-    oSnap.forEach(d => batch.delete(d.ref));
+    oSnap.forEach(d => batch.update(d.ref, { isDeleted: true, lastUpdatedAt: serverTimestamp() }));
+    
     const cq = query(collection(db, "cases"), where("participant_id", "==", participantId));
     const cSnap = await getDocs(cq);
-    cSnap.forEach(d => batch.delete(d.ref));
+    cSnap.forEach(d => batch.update(d.ref, { isDeleted: true, lastUpdatedAt: serverTimestamp() }));
+    
     await batch.commit();
     return true;
 }
+
 export async function saveParticipantAndSubmitFacilityUpdate(participantData, facilityUpdateData) {
     const participantId = await upsertParticipant(participantData);
     if (facilityUpdateData) {
@@ -1331,16 +1368,16 @@ export async function upsertCaseAndObservations(caseData, observations, editingC
     if (editingCaseId) {
         const oldObsQuery = query(collection(db, "observations"), where("caseId", "==", editingCaseId));
         const oldObsSnapshot = await getDocs(oldObsQuery); 
-        oldObsSnapshot.forEach(doc => batch.delete(doc.ref));
+        oldObsSnapshot.forEach(doc => batch.delete(doc.ref)); // Deliberate hard delete for intermediate observation edits to save DB bloat
     }
 
-    const savedCase = { ...caseData, id: caseId };
-    batch.set(caseRef, savedCase); 
+    const savedCase = { ...caseData, id: caseId, lastUpdatedAt: serverTimestamp() };
+    batch.set(caseRef, savedCase, { merge: true }); 
 
     const savedObservations = [];
     observations.forEach(obs => {
         const obsRef = doc(collection(db, "observations")); 
-        const finalObs = { ...obs, id: obsRef.id, caseId: caseId }; 
+        const finalObs = { ...obs, id: obsRef.id, caseId: caseId, lastUpdatedAt: serverTimestamp() }; 
         batch.set(obsRef, finalObs); 
         savedObservations.push(finalObs); 
     });
@@ -1349,14 +1386,18 @@ export async function upsertCaseAndObservations(caseData, observations, editingC
     return { savedCase, savedObservations };
 }
 
+// SOFT DELETE
 export async function deleteCaseAndObservations(caseId) {
     const batch = writeBatch(db);
-    batch.delete(doc(db, "cases", caseId));
+    batch.update(doc(db, "cases", caseId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
+    
     const q = query(collection(db, "observations"), where("caseId", "==", caseId));
     const snapshot = await getDocs(q); 
-    snapshot.forEach(d => batch.delete(d.ref));
+    snapshot.forEach(d => batch.update(d.ref, { isDeleted: true, lastUpdatedAt: serverTimestamp() }));
+    
     await batch.commit(); 
 }
+
 export async function listAllDataForCourse(courseId, sourceOptions = {}) {
     const obsQuery = query(collection(db, "observations"), where("courseId", "==", courseId));
     const casesQuery = query(collection(db, "cases"), where("courseId", "==", courseId));
@@ -1380,11 +1421,11 @@ export async function listAllDataForCourse(courseId, sourceOptions = {}) {
 export async function upsertFinalReport(payload) {
     if (payload.id) {
         const finalReportRef = doc(db, "finalReports", payload.id);
-        await setDoc(finalReportRef, payload, { merge: true });
+        await setDoc(finalReportRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
-        const newRef = await addDoc(collection(db, "finalReports"), dataToSave);
+        const newRef = await addDoc(collection(db, "finalReports"), { ...dataToSave, lastUpdatedAt: serverTimestamp() });
         return newRef.id;
     }
 }
@@ -1407,10 +1448,12 @@ export async function listFinalReport(sourceOptions = {}) {
         throw error;
     }
 }
+
+// SOFT DELETE
 export async function deleteFinalReport(reportId) {
     try {
         if (!reportId) throw new Error("Report ID is required to delete a final report.");
-        await deleteDoc(doc(db, "finalReports", reportId));
+        await updateDoc(doc(db, "finalReports", reportId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
         return true;
     } catch (error) {
         console.error("Error deleting final report:", error);
@@ -1422,7 +1465,8 @@ export async function saveMentorshipSession(payload, sessionId = null, externalB
     try {
         const sessionData = {
             ...payload,
-            ...( !sessionId ? { createdAt: serverTimestamp() } : { lastUpdatedAt: serverTimestamp() } ),
+            lastUpdatedAt: serverTimestamp(),
+            ...( !sessionId ? { createdAt: serverTimestamp() } : {} ),
         };
         const docRef = sessionId ? doc(db, "skillMentorship", sessionId) : doc(collection(db, "skillMentorship")); 
         if (externalBatch) {
@@ -1438,11 +1482,13 @@ export async function saveMentorshipSession(payload, sessionId = null, externalB
     }
 }
 
-export async function listMentorshipSessions(sourceOptions = {}) {
+export async function listMentorshipSessions(sourceOptions = {}, lastSyncTime = null) {
     try {
-        // CRITICAL FIX: Removed orderBy("effectiveDate", "desc")
-        // Ordering prevents cache resolution and triggers fallback to server, destroying performance.
-        const q = collection(db, "skillMentorship");
+        let q = collection(db, "skillMentorship");
+        if (sourceOptions.source === 'server' && lastSyncTime) {
+            const firestoreTimestamp = Timestamp.fromMillis(lastSyncTime);
+            q = query(q, where("lastUpdatedAt", ">", firestoreTimestamp));
+        }
         const snapshot = await getData(q, sourceOptions);
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
@@ -1501,10 +1547,11 @@ export async function importMentorshipSessions(sessions, originalRows, onProgres
     return { successes, errors, failedRowsData };
 }
 
+// SOFT DELETE
 export async function deleteMentorshipSession(sessionId) {
     if (!sessionId) throw new Error("Session ID is required to delete.");
     const sessionRef = doc(db, "skillMentorship", sessionId);
-    await deleteDoc(sessionRef); 
+    await updateDoc(sessionRef, { isDeleted: true, lastUpdatedAt: serverTimestamp() }); 
     return true;
 }
 
@@ -1512,7 +1559,8 @@ export async function saveIMNCIVisitReport(payload, reportId = null) {
     try {
         const sessionData = {
             ...payload,
-            ...( !reportId ? { createdAt: serverTimestamp() } : { lastUpdatedAt: serverTimestamp() } ),
+            lastUpdatedAt: serverTimestamp(),
+            ...( !reportId ? { createdAt: serverTimestamp() } : {} ),
         };
         const docRef = reportId ? doc(db, "imnciVisitReports", reportId) : doc(collection(db, "imnciVisitReports")); 
         await setDoc(docRef, sessionData, { merge: !!reportId });
@@ -1523,10 +1571,13 @@ export async function saveIMNCIVisitReport(payload, reportId = null) {
     }
 }
 
-export async function listIMNCIVisitReports(sourceOptions = {}) {
+export async function listIMNCIVisitReports(sourceOptions = {}, lastSyncTime = null) {
     try {
-        // CRITICAL FIX: Removed orderBy("visit_date", "desc")
-        const q = collection(db, "imnciVisitReports");
+        let q = collection(db, "imnciVisitReports");
+        if (sourceOptions.source === 'server' && lastSyncTime) {
+            const firestoreTimestamp = Timestamp.fromMillis(lastSyncTime);
+            q = query(q, where("lastUpdatedAt", ">", firestoreTimestamp));
+        }
         const snapshot = await getData(q, sourceOptions);
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
@@ -1535,10 +1586,11 @@ export async function listIMNCIVisitReports(sourceOptions = {}) {
     }
 }
 
+// SOFT DELETE
 export async function deleteIMNCIVisitReport(reportId) {
     if (!reportId) throw new Error("Report ID is required to delete.");
     const sessionRef = doc(db, "imnciVisitReports", reportId);
-    await deleteDoc(sessionRef); 
+    await updateDoc(sessionRef, { isDeleted: true, lastUpdatedAt: serverTimestamp() }); 
     return true;
 }
 
@@ -1546,7 +1598,8 @@ export async function saveEENCVisitReport(payload, reportId = null) {
     try {
         const sessionData = {
             ...payload,
-            ...( !reportId ? { createdAt: serverTimestamp() } : { lastUpdatedAt: serverTimestamp() } ),
+            lastUpdatedAt: serverTimestamp(),
+            ...( !reportId ? { createdAt: serverTimestamp() } : {} ),
         };
         const docRef = reportId ? doc(db, "eencVisitReports", reportId) : doc(collection(db, "eencVisitReports")); 
         await setDoc(docRef, sessionData, { merge: !!reportId });
@@ -1557,10 +1610,13 @@ export async function saveEENCVisitReport(payload, reportId = null) {
     }
 }
 
-export async function listEENCVisitReports(sourceOptions = {}) {
+export async function listEENCVisitReports(sourceOptions = {}, lastSyncTime = null) {
     try {
-        // CRITICAL FIX: Removed orderBy("visit_date", "desc")
-        const q = collection(db, "eencVisitReports");
+        let q = collection(db, "eencVisitReports");
+        if (sourceOptions.source === 'server' && lastSyncTime) {
+            const firestoreTimestamp = Timestamp.fromMillis(lastSyncTime);
+            q = query(q, where("lastUpdatedAt", ">", firestoreTimestamp));
+        }
         const snapshot = await getData(q, sourceOptions);
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
@@ -1569,10 +1625,11 @@ export async function listEENCVisitReports(sourceOptions = {}) {
     }
 }
 
+// SOFT DELETE
 export async function deleteEENCVisitReport(reportId) {
     if (!reportId) throw new Error("Report ID is required to delete.");
     const sessionRef = doc(db, "eencVisitReports", reportId);
-    await deleteDoc(sessionRef); 
+    await updateDoc(sessionRef, { isDeleted: true, lastUpdatedAt: serverTimestamp() }); 
     return true;
 }
 
@@ -1642,7 +1699,7 @@ export async function upsertParticipantTest(payload) {
     const testRecordRef = doc(db, "participantTests", testRecordId);
     const batch = writeBatch(db); 
     batch.update(participantRef, { [scoreFieldToUpdate]: percentage });
-    batch.set(testRecordRef, payload);
+    batch.set(testRecordRef, { ...payload, lastUpdatedAt: serverTimestamp() });
     await batch.commit();
 }
 
@@ -1658,6 +1715,7 @@ export async function listParticipantTestsForCourse(courseId, sourceOptions = {}
     }
 }
 
+// SOFT DELETE
 export async function deleteParticipantTest(courseId, participantId, testType) {
     if (!participantId || !testType) throw new Error("Participant ID and Test Type are required.");
     const testRecordId = `${participantId}_${testType}`;
@@ -1665,7 +1723,7 @@ export async function deleteParticipantTest(courseId, participantId, testType) {
     const participantRef = doc(db, "participants", participantId);
     const scoreFieldToReset = testType === 'pre-test' ? 'pre_test_score' : 'post_test_score';
     const batch = writeBatch(db);
-    batch.delete(testRecordRef);
+    batch.update(testRecordRef, { isDeleted: true, lastUpdatedAt: serverTimestamp() });
     batch.update(participantRef, { [scoreFieldToReset]: deleteField() });
     await batch.commit();
 }
