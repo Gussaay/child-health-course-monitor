@@ -806,7 +806,6 @@ export function CourseManagementView({
     facilitatorsList,
     onSaveCourse, 
     // These are no longer needed as adding new is disabled
-    onAddNewFacilitator,
     onAddNewCoordinator,
     onAddNewFunder,
     onOpenAttendanceManager // Receive prop
@@ -815,8 +814,11 @@ export function CourseManagementView({
         federalCoordinators, fetchFederalCoordinators,
         stateCoordinators, fetchStateCoordinators,
         localityCoordinators, fetchLocalityCoordinators,
-        funders, fetchFunders
+        funders, fetchFunders,
+        fetchCourses // Destructure fetchCourses for manual refresh
     } = useDataCache();
+
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     useEffect(() => {
         fetchFederalCoordinators();
@@ -921,6 +923,15 @@ export function CourseManagementView({
     // Permissions
     const canAccessAdminTab = canUseFederalManagerAdvancedFeatures || canManageCourse;
     const canAccessRecycleBin = canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures;
+
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        try {
+            await fetchCourses(true); // Incremental Delta Sync
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
 
     const handleOpenCourse = (id) => {
         onOpen(id);
@@ -1052,9 +1063,14 @@ export function CourseManagementView({
                         ) : (
                             <div>
                                 <div className="mb-4 flex flex-wrap justify-between items-center gap-2">
-                                    {canManageCourse && (
-                                        <Button onClick={handleOpenAddForm} className="bg-sky-600 text-white hover:bg-sky-700">Add New Course</Button>
-                                    )}
+                                    <div className="flex gap-2">
+                                        {canManageCourse && (
+                                            <Button onClick={handleOpenAddForm} className="bg-sky-600 text-white hover:bg-sky-700">Add New Course</Button>
+                                        )}
+                                        <Button variant="secondary" onClick={handleRefresh} disabled={isRefreshing}>
+                                            {isRefreshing ? <Spinner size="sm" /> : <><RefreshCw size={14} className="mr-1"/> Refresh Data</>}
+                                        </Button>
+                                    </div>
                                     <Button variant="secondary" onClick={() => setActiveCourseType(null)}>
                                         Change Course Package
                                     </Button>

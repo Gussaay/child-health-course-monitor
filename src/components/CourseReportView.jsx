@@ -69,7 +69,6 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
             sharedWith: accessLevel === 'private' ? sharedWith : []
         };
         try {
-            // Note: onSave passed here should be the function to UPDATE settings in DB
             await onSave(shareableItem.id, settings);
             setCopySuccess('');
         } catch (error) {
@@ -461,9 +460,17 @@ const generateFullCourseReportPdf = async (course, quality, onSuccess, onError, 
 
 // --- MAIN COMPONENT: CourseReportView ---
 export function CourseReportView({ 
-    course, onBack, participants, allObs, allCases, finalReportData, onEditFinalReport, 
-    onDeletePdf, onViewParticipantReport, isSharedView = false, onShare, setToast, allHealthFacilities
+    course, onBack, participants: rawParticipants, allObs: rawObs, allCases: rawCases, finalReportData, onEditFinalReport, 
+    onDeletePdf, onViewParticipantReport, isSharedView = false, onShare, setToast, allHealthFacilities: rawFacilities
 }) {
+    
+    // --- APPLY SOFT DELETE FILTERS ---
+    const participants = useMemo(() => (rawParticipants || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true"), [rawParticipants]);
+    const allObs = useMemo(() => (rawObs || []).filter(o => o.isDeleted !== true && o.isDeleted !== "true"), [rawObs]);
+    const allCases = useMemo(() => (rawCases || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true"), [rawCases]);
+    const allHealthFacilities = useMemo(() => (rawFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [rawFacilities]);
+    const activeFinalReport = (finalReportData && finalReportData.isDeleted !== true && finalReportData.isDeleted !== "true") ? finalReportData : null;
+
     const overallChartRef = useRef(null);
     const dailyChartRef = useRef(null);
     const prePostDistributionChartRef = useRef(null);
@@ -869,13 +876,13 @@ export function CourseReportView({
                     </div>
                 </Card>
 
-                {finalReportData && finalReportData.pdf_url && (
+                {activeFinalReport && activeFinalReport.pdf_url && (
                     <Card>
                         <h3 className="text-xl font-bold mb-4">Final Report Documents</h3>
                         <Table headers={['Link', 'Actions']}>
                             <tr>
-                                <td className="p-2 border"><a href={finalReportData.pdf_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-2"><PdfIcon className="text-blue-500" /> View Report PDF</a></td>
-                                <td className="p-2 border text-right"><div className="flex gap-2 justify-end"><a href={finalReportData.pdf_url} download={`Final_Report_${course.course_type}_${course.state}.pdf`} className="text-gray-600 hover:text-gray-900"><Button variant="secondary">Download</Button></a>
+                                <td className="p-2 border"><a href={activeFinalReport.pdf_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-2"><PdfIcon className="text-blue-500" /> View Report PDF</a></td>
+                                <td className="p-2 border text-right"><div className="flex gap-2 justify-end"><a href={activeFinalReport.pdf_url} download={`Final_Report_${course.course_type}_${course.state}.pdf`} className="text-gray-600 hover:text-gray-900"><Button variant="secondary">Download</Button></a>
                                 {!isSharedView && <><Button variant="secondary" onClick={() => onEditFinalReport(course.id)}>Edit</Button><Button variant="danger" onClick={() => onDeletePdf(course.id)}>Delete PDF</Button></>}</div></td>
                             </tr>
                         </Table>

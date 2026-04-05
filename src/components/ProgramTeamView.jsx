@@ -826,9 +826,9 @@ const updateUserRoleByEmail = async (email, newRole, state, locality) => {
 
 export function ProgramTeamView({ permissions, userStates }) {
     const {
-        federalCoordinators,
-        stateCoordinators,
-        localityCoordinators,
+        federalCoordinators: rawFederalCoordinators,
+        stateCoordinators: rawStateCoordinators,
+        localityCoordinators: rawLocalityCoordinators,
         
         pendingFederalSubmissions,
         pendingStateSubmissions,
@@ -848,6 +848,11 @@ export function ProgramTeamView({ permissions, userStates }) {
         
         fetchCoordinatorApplicationSettings,
     } = useDataCache();
+
+    // --- Soft Delete Filters ---
+    const federalCoordinators = useMemo(() => (rawFederalCoordinators || []).filter(m => m.isDeleted !== true && m.isDeleted !== "true"), [rawFederalCoordinators]);
+    const stateCoordinators = useMemo(() => (rawStateCoordinators || []).filter(m => m.isDeleted !== true && m.isDeleted !== "true"), [rawStateCoordinators]);
+    const localityCoordinators = useMemo(() => (rawLocalityCoordinators || []).filter(m => m.isDeleted !== true && m.isDeleted !== "true"), [rawLocalityCoordinators]);
     
     // Default Tab
     const [activeTab, setActiveTab] = useState('members'); 
@@ -915,15 +920,15 @@ export function ProgramTeamView({ permissions, userStates }) {
     
     useEffect(() => {
         if (activeTab === 'dashboard') {
-            fetchFederalCoordinators();
-            fetchStateCoordinators();
-            fetchLocalityCoordinators();
+            fetchFederalCoordinators(false);
+            fetchStateCoordinators(false);
+            fetchLocalityCoordinators(false);
         } else {
             const level = filters.level;
             if (!level || !fetchersByLevel[level]) return;
-            fetchersByLevel[level].list();
+            fetchersByLevel[level].list(false);
             if (permissions?.canApproveSubmissions) {
-                fetchersByLevel[level].listPending();
+                fetchersByLevel[level].listPending(false);
             }
         }
     }, [filters.level, activeTab, permissions, fetchersByLevel, fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators]);

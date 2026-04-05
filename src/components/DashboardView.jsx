@@ -78,12 +78,14 @@ const exportTableToPdf = (title, tableHeaders, tableBody, fileName, filters) => 
 
 function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFacilitatorReport, STATE_LOCALITIES, permissions, userStates }) {
 
-    const { courses: allCourses, participants: allParticipants, facilitators: allFacilitators, fetchCourses, fetchParticipants, fetchFacilitators, fetchHealthFacilities, isLoading } = useDataCache();
+    // ADDED healthFacilities to useDataCache destructuring
+    const { courses: allCourses, participants: allParticipants, facilitators: allFacilitators, healthFacilities: allFacilities, fetchCourses, fetchParticipants, fetchFacilitators, fetchHealthFacilities, isLoading } = useDataCache();
 
     // --- APPLY SOFT DELETE FILTER TO ALL CACHED DATA ---
     const activeCourses = useMemo(() => (allCourses || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true"), [allCourses]);
     const activeParticipants = useMemo(() => (allParticipants || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true"), [allParticipants]);
     const activeFacilitators = useMemo(() => (allFacilitators || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilitators]);
+    const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
     // Updated primary view types to include the EENC coverage dashboard and Compiled Reports
     const [viewType, setViewType] = useState('neonatalCoverage'); 
@@ -100,6 +102,8 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
     const [localityFilter, setLocalityFilter] = useState('All');
     const [yearFilter, setYearFilter] = useState('All');
     const [monthFilter, setMonthFilter] = useState('All');
+    const [projectFilter, setProjectFilter] = useState('All'); // NEW: Project Filter State
+    
     const [facSearchQuery, setFacSearchQuery] = useState('');
     const [facStateFilter, setFacStateFilter] = useState('All');
     const [facLocalityFilter, setFacLocalityFilter] = useState('All');
@@ -174,23 +178,81 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
         return ['All', ...months];
     }, []);
 
+    // --- RELATIONAL MAPPING LOGIC (Facility -> Participant -> Course) ---
+
+    // 1. Map Facility ID to Project Name
+    const facilityProjectMap = useMemo(() => {
+        const map = {};
+        activeFacilities.forEach(f => {
+            const proj = f.project_name || f.project || f.Project || f.projectName || f['اسم المشروع'];
+            if (proj && typeof proj === 'string' && proj.trim() !== '') {
+                map[f.id] = proj.trim();
+            } else if (Array.isArray(proj)) {
+                const validProjs = proj.filter(p => typeof p === 'string' && p.trim() !== '');
+                if (validProjs.length > 0) map[f.id] = validProjs[0].trim();
+            }
+        });
+        return map;
+    }, [activeFacilities]);
+
+    // 2. Map Participant ID to Project Name (via their facilityId)
+    const participantProjectMap = useMemo(() => {
+        const map = {};
+        activeParticipants.forEach(p => {
+            const facId = p.facilityId || p.facility_id || p.healthFacilityId || p.health_facility_id || p.workplace_id;
+            if (facId && facilityProjectMap[facId]) {
+                map[p.id] = facilityProjectMap[facId];
+            }
+        });
+        return map;
+    }, [activeParticipants, facilityProjectMap]);
+
+    // 3. Map Course ID to a Set of Project Names (via participants)
+    const courseProjectsMap = useMemo(() => {
+        const map = {};
+        activeParticipants.forEach(p => {
+            if (p.courseId && participantProjectMap[p.id]) {
+                if (!map[p.courseId]) map[p.courseId] = new Set();
+                map[p.courseId].add(participantProjectMap[p.id]);
+            }
+        });
+        return map;
+    }, [activeParticipants, participantProjectMap]);
+
+    // 4. Extract unique projects for the Dropdown filter
+    const allProjects = useMemo(() => {
+        const projects = new Set(Object.values(facilityProjectMap));
+        return ['All', ...Array.from(projects).sort()];
+    }, [facilityProjectMap]);
+
+    // --- END MAPPING LOGIC ---
+
     const filteredCourses = useMemo(() => {
         return activeCourses.filter(course => {
             const courseDate = new Date(course.start_date);
+            
             const matchesCourseType = courseTypeFilter === 'All' || course.course_type === courseTypeFilter;
             const matchesState = stateFilter === 'All' || course.state === stateFilter;
             const matchesLocality = localityFilter === 'All' || course.locality === localityFilter;
             const matchesYear = yearFilter === 'All' || courseDate.getFullYear() === Number(yearFilter);
             const matchesMonth = monthFilter === 'All' || (courseDate.getMonth()) === allMonths.indexOf(monthFilter) - 1;
+            
+            // Relational Filter: A course matches if any of its participants belong to the selected project
+            const matchesProject = projectFilter === 'All' || (courseProjectsMap[course.id] && courseProjectsMap[course.id].has(projectFilter));
 
-            return matchesCourseType && matchesState && matchesLocality && matchesYear && matchesMonth;
+            return matchesCourseType && matchesState && matchesLocality && matchesYear && matchesMonth && matchesProject;
         });
-    }, [activeCourses, courseTypeFilter, stateFilter, localityFilter, yearFilter, monthFilter, allMonths]);
+    }, [activeCourses, courseTypeFilter, stateFilter, localityFilter, yearFilter, monthFilter, projectFilter, allMonths, courseProjectsMap]);
 
     const filteredParticipants = useMemo(() => {
         const matchingCourseIds = new Set(filteredCourses.map(c => c.id));
-        return activeParticipants.filter(p => matchingCourseIds.has(p.courseId));
-    }, [filteredCourses, activeParticipants]);
+        return activeParticipants.filter(p => {
+            const inFilteredCourse = matchingCourseIds.has(p.courseId);
+            // Relational Filter: Direct participant -> facility project check
+            const matchesProject = projectFilter === 'All' || participantProjectMap[p.id] === projectFilter;
+            return inFilteredCourse && matchesProject;
+        });
+    }, [filteredCourses, activeParticipants, projectFilter, participantProjectMap]);
 
     const filteredFacilitators = useMemo(() => {
         return activeFacilitators.filter(f => {
@@ -268,12 +330,12 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
         const totalParticipants = filteredParticipants.length;
         const participantsByCourse = filteredCourses.reduce((acc, c) => {
             const courseName = c.course_type || 'Unknown Course';
-            const count = (activeParticipants || []).filter(p => p.courseId === c.id).length;
+            const count = (filteredParticipants || []).filter(p => p.courseId === c.id).length;
             acc[courseName] = (acc[courseName] || 0) + count;
             return acc;
         }, {});
         return { totalParticipants, participantsByCourse };
-    }, [filteredParticipants, filteredCourses, activeParticipants]);
+    }, [filteredParticipants, filteredCourses]);
 
     const trainedByCadreAndCourse = useMemo(() => {
         const data = {};
@@ -332,7 +394,8 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
       'State': stateFilter,
       'Locality': localityFilter,
       'Year': yearFilter,
-      'Month': monthFilter
+      'Month': monthFilter,
+      'Project': projectFilter // Included for PDF exports
     };
 
     const mapCoordinates = {
@@ -515,7 +578,7 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
             {['courses', 'participants', 'facilitators'].includes(viewType) && (
                 <div className="p-3 bg-gray-50 rounded-md mb-4 mx-4 md:mx-6 mt-4"> 
                     <h3 className="text-base font-semibold mb-2">Filters</h3>
-                    <div className="grid md:grid-cols-4 lg:grid-cols-5 gap-3">
+                    <div className="grid md:grid-cols-4 lg:grid-cols-6 gap-3">
                         {viewType === 'facilitators' ? (
                             <>
                                 <FormGroup label="Search by Name"><Input type="text" value={facSearchQuery} onChange={(e) => setFacSearchQuery(e.target.value)} placeholder="Search name..." /></FormGroup>
@@ -531,6 +594,11 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
                                 <FormGroup label="Locality"><Select value={localityFilter} onChange={e => setLocalityFilter(e.target.value)} disabled={stateFilter === 'All'}>{allLocalities.map(l => <option key={l} value={l}>{l}</option>)}</Select></FormGroup>
                                 <FormGroup label="Year"><Select value={yearFilter} onChange={e => setYearFilter(e.target.value)}>{allYears.map(y => <option key={y} value={y}>{y}</option>)}</Select></FormGroup>
                                 <FormGroup label="Month"><Select value={monthFilter} onChange={e => setMonthFilter(e.target.value)}>{allMonths.map(m => <option key={m} value={m}>{m}</option>)}</Select></FormGroup>
+                                <FormGroup label="Project">
+                                    <Select value={projectFilter} onChange={e => setProjectFilter(e.target.value)}>
+                                        {allProjects.map(p => <option key={p} value={p}>{p}</option>)}
+                                    </Select>
+                                </FormGroup>
                             </>
                         )}
                     </div>

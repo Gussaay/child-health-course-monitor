@@ -227,7 +227,7 @@ async function getData(query, sourceOptions = {}) {
         const snapshot = await getDocs(query, sourceOptions); 
         return snapshot;
     } catch (e) {
-        console.warn(`getData query failed with options ${JSON.stringify(sourceOptions)}:`, e.message);
+        console.error(`getData query failed with options ${JSON.stringify(sourceOptions)}:`, e.message);
         throw e; 
     }
 }
@@ -332,7 +332,7 @@ const isDataChanged = (newData, oldData) => {
          if (!(key in newData)) return true; 
     }
     return false;
-}
+};
 
 export async function importHealthFacilities(facilities, originalRows, onProgress) {
     const errors = [];
@@ -453,13 +453,15 @@ export async function submitLocalityBatchUpdate(updates, localityName) {
     return true;
 }
 
-export async function listHealthFacilities(filters = {}, sourceOptions = {}, lastSyncTime = null) {
+export async function listHealthFacilities(filters = {}, sourceOptions = {}) {
     let q = collection(db, "healthFacilities");
     const conditions = [];
+    let orderByClause = orderBy("الولاية"); 
 
     if (filters.state && filters.state !== 'NOT_ASSIGNED') conditions.push(where("الولاية", "==", filters.state));
     if (filters.locality) {
         conditions.push(where("المحلية", "==", filters.locality));
+        orderByClause = orderBy("اسم_المؤسسة");
     }
     if (filters.facilityType) conditions.push(where("نوع_المؤسسةالصحية", "==", filters.facilityType));
     if (filters.functioningStatus && filters.functioningStatus !== 'NOT_SET') conditions.push(where("هل_المؤسسة_تعمل", "==", filters.functioningStatus));
@@ -468,17 +470,11 @@ export async function listHealthFacilities(filters = {}, sourceOptions = {}, las
     if (filters.lastUpdatedAfter instanceof Date) { 
         const timestamp = Timestamp.fromDate(filters.lastUpdatedAfter);
         conditions.push(where("lastSnapshotAt", ">", timestamp));
+        orderByClause = orderBy("lastSnapshotAt");
     }
 
-    // Incremental Sync Logic
-    if (sourceOptions.source === 'server' && lastSyncTime) {
-        const firestoreTimestamp = Timestamp.fromMillis(lastSyncTime);
-        conditions.push(where("lastSnapshotAt", ">", firestoreTimestamp)); 
-    }
-
-    if (conditions.length > 0) {
-        q = query(q, ...conditions);
-    }
+    if (conditions.length > 0) q = query(q, ...conditions);
+    q = query(q, orderByClause);
 
     try {
         const querySnapshot = await getData(q, sourceOptions);
@@ -500,14 +496,10 @@ export async function getHealthFacilityById(facilityId) {
     if (docSnap.exists()) return { id: docSnap.id, ...docSnap.data() };
     return null;
 }
-
-// SOFT DELETE
 export async function deleteHealthFacility(facilityId) {
-    await updateDoc(doc(db, "healthFacilities", facilityId), { isDeleted: true, lastSnapshotAt: serverTimestamp() });
+    await deleteDoc(doc(db, "healthFacilities", facilityId));
     return true;
 }
-
-// SOFT DELETE
 export async function deleteFacilitiesBatch(facilityIds) {
     if (!facilityIds || facilityIds.length === 0) return 0;
     const BATCH_SIZE = 500;
@@ -515,13 +507,12 @@ export async function deleteFacilitiesBatch(facilityIds) {
     for (let i = 0; i < facilityIds.length; i += BATCH_SIZE) {
         const batch = writeBatch(db);
         const chunk = facilityIds.slice(i, i + BATCH_SIZE);
-        chunk.forEach(id => batch.update(doc(db, "healthFacilities", id), { isDeleted: true, lastSnapshotAt: serverTimestamp() }));
+        chunk.forEach(id => batch.delete(doc(db, "healthFacilities", id)));
         await batch.commit();
         deletedCount += chunk.length;
     }
     return deletedCount;
 }
-
 export async function submitFacilityDataForApproval(payload, submitterIdentifier = 'Unknown User') {
     const { id, ...dataToSubmit } = payload; 
     const submissionData = {
@@ -699,15 +690,9 @@ export async function importFacilitators(facilitators) {
     await batch.commit();
     return true;
 }
-
-// DELTA FETCH ENABLED
-export async function listFacilitators(sourceOptions = {}, lastSyncTime = null) {
+export async function listFacilitators(sourceOptions = {}) {
     try {
         let q = collection(db, "facilitators");
-        if (sourceOptions.source === 'server' && lastSyncTime) {
-            const firestoreTimestamp = Timestamp.fromMillis(lastSyncTime);
-            q = query(q, where("lastUpdatedAt", ">", firestoreTimestamp));
-        }
         const querySnapshot = await getData(q, sourceOptions);
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
@@ -715,13 +700,10 @@ export async function listFacilitators(sourceOptions = {}, lastSyncTime = null) 
         throw error;
     }
 }
-
-// SOFT DELETE
 export async function deleteFacilitator(facilitatorId) {
     await updateDoc(doc(db, "facilitators", facilitatorId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
     return true;
 }
-
 export async function getFacilitatorSubmissionByEmail(email) {
     if (!email) return null;
     try {
@@ -883,7 +865,6 @@ export async function rejectLocalitySubmission(submissionId, rejectorEmail) {
     const submissionRef = doc(db, "localityCoordinatorSubmissions", submissionId);
     await updateDoc(submissionRef, { status: 'rejected', rejectedBy: rejectorEmail, rejectedAt: serverTimestamp() });
 }
-
 export async function upsertCoordinator(payload) { 
     if (payload.id) {
         const coordinatorRef = doc(db, "coordinators", payload.id);
@@ -895,23 +876,15 @@ export async function upsertCoordinator(payload) {
         return newRef.id;
     }
 }
-
-// DELTA FETCH ENABLED
-export async function listCoordinators(sourceOptions = {}, lastSyncTime = null) { 
-    let q = collection(db, "coordinators");
-    if (sourceOptions.source === 'server' && lastSyncTime) {
-        q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSyncTime)));
-    }
+export async function listCoordinators(sourceOptions = {}) { 
+    const q = query(collection(db, "coordinators"));
     const snapshot = await getData(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
-
-// SOFT DELETE
 export async function deleteCoordinator(coordinatorId) { 
     await updateDoc(doc(db, "coordinators", coordinatorId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
     return true;
 }
-
 export async function upsertStateCoordinator(payload) {
     if (payload.id) {
         const coordinatorRef = doc(db, "stateCoordinators", payload.id);
@@ -923,23 +896,15 @@ export async function upsertStateCoordinator(payload) {
         return newRef.id;
     }
 }
-
-// DELTA FETCH ENABLED
-export async function listStateCoordinators(sourceOptions = {}, lastSyncTime = null) {
-    let q = collection(db, "stateCoordinators");
-    if (sourceOptions.source === 'server' && lastSyncTime) {
-        q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSyncTime)));
-    }
+export async function listStateCoordinators(sourceOptions = {}) {
+    const q = query(collection(db, "stateCoordinators"));
     const snapshot = await getData(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
-
-// SOFT DELETE
 export async function deleteStateCoordinator(coordinatorId) {
     await updateDoc(doc(db, "stateCoordinators", coordinatorId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
     return true;
 }
-
 export async function upsertFederalCoordinator(payload) {
     if (payload.id) {
         const coordinatorRef = doc(db, "federalCoordinators", payload.id);
@@ -951,23 +916,15 @@ export async function upsertFederalCoordinator(payload) {
         return newRef.id;
     }
 }
-
-// DELTA FETCH ENABLED
-export async function listFederalCoordinators(sourceOptions = {}, lastSyncTime = null) {
-    let q = collection(db, "federalCoordinators");
-    if (sourceOptions.source === 'server' && lastSyncTime) {
-        q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSyncTime)));
-    }
+export async function listFederalCoordinators(sourceOptions = {}) {
+    const q = query(collection(db, "federalCoordinators"));
     const snapshot = await getData(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
-
-// SOFT DELETE
 export async function deleteFederalCoordinator(coordinatorId) {
     await updateDoc(doc(db, "federalCoordinators", coordinatorId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
     return true;
 }
-
 export async function upsertLocalityCoordinator(payload) {
     if (payload.id) {
         const coordinatorRef = doc(db, "localityCoordinators", payload.id);
@@ -979,23 +936,15 @@ export async function upsertLocalityCoordinator(payload) {
         return newRef.id;
     }
 }
-
-// DELTA FETCH ENABLED
-export async function listLocalityCoordinators(sourceOptions = {}, lastSyncTime = null) {
-    let q = collection(db, "localityCoordinators");
-    if (sourceOptions.source === 'server' && lastSyncTime) {
-        q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSyncTime)));
-    }
+export async function listLocalityCoordinators(sourceOptions = {}) {
+    const q = query(collection(db, "localityCoordinators"));
     const snapshot = await getData(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
-
-// SOFT DELETE
 export async function deleteLocalityCoordinator(coordinatorId) {
     await updateDoc(doc(db, "localityCoordinators", coordinatorId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
     return true;
 }
-
 export async function upsertFunder(payload) {
     if (payload.id) {
         const funderRef = doc(db, "funders", payload.id);
@@ -1007,23 +956,15 @@ export async function upsertFunder(payload) {
         return newRef.id;
     }
 }
-
-// DELTA FETCH ENABLED
-export async function listFunders(sourceOptions = {}, lastSyncTime = null) {
-    let q = collection(db, "funders");
-    if (sourceOptions.source === 'server' && lastSyncTime) {
-        q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSyncTime)));
-    }
+export async function listFunders(sourceOptions = {}) {
+    const q = query(collection(db, "funders"));
     const snapshot = await getData(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
-
-// SOFT DELETE
 export async function deleteFunder(funderId) {
     await updateDoc(doc(db, "funders", funderId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
     return true;
 }
-
 export async function upsertCourse(payload) {
     if (payload.id) {
         const courseRef = doc(db, "courses", payload.id);
@@ -1065,15 +1006,9 @@ export async function listCoursesByType(course_type, userStates, sourceOptions =
         throw error;
     }
 }
-
-// DELTA FETCH ENABLED
-export async function listAllCourses(sourceOptions = {}, lastSyncTime = null) {
+export async function listAllCourses(sourceOptions = {}) {
     try {
         let q = collection(db, "courses");
-        if (sourceOptions.source === 'server' && lastSyncTime) {
-            const firestoreTimestamp = Timestamp.fromMillis(lastSyncTime);
-            q = query(q, where("lastUpdatedAt", ">", firestoreTimestamp));
-        }
         const querySnapshot = await getData(q, sourceOptions);
         const courses = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         return courses;
@@ -1082,8 +1017,6 @@ export async function listAllCourses(sourceOptions = {}, lastSyncTime = null) {
         throw error;
     }
 }
-
-// SOFT DELETE
 export async function deleteCourse(courseId) {
     const batch = writeBatch(db);
     batch.update(doc(db, "courses", courseId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
@@ -1234,14 +1167,9 @@ export async function listParticipants(courseId, lastVisible = null, sourceOptio
     return { participants, lastVisible: newLastVisible };
 }
 
-// DELTA FETCH ENABLED
-export async function listAllParticipants(sourceOptions = {}, lastSyncTime = null) {
+export async function listAllParticipants(sourceOptions = {}) {
     try {
-        let q = collection(db, "participants");
-        if (sourceOptions.source === 'server' && lastSyncTime) {
-            const firestoreTimestamp = Timestamp.fromMillis(lastSyncTime);
-            q = query(q, where("lastUpdatedAt", ">", firestoreTimestamp));
-        }
+        const q = collection(db, "participants");
         const querySnapshot = await getData(q, sourceOptions);
         const participants = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         return participants;
@@ -1268,7 +1196,6 @@ export async function listAllParticipantsForCourse(courseId, sourceOptions = {})
     return allParticipants;
 }
 
-// SOFT DELETE
 export async function deleteParticipant(participantId) {
     const batch = writeBatch(db);
     batch.update(doc(db, "participants", participantId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
@@ -1524,13 +1451,9 @@ export async function saveMentorshipSession(payload, sessionId = null, externalB
     }
 }
 
-export async function listMentorshipSessions(sourceOptions = {}, lastSyncTime = null) {
+export async function listMentorshipSessions(sourceOptions = {}) {
     try {
-        let q = collection(db, "skillMentorship");
-        if (sourceOptions.source === 'server' && lastSyncTime) {
-            const firestoreTimestamp = Timestamp.fromMillis(lastSyncTime);
-            q = query(q, where("lastUpdatedAt", ">", firestoreTimestamp));
-        }
+        const q = collection(db, "skillMentorship");
         const snapshot = await getData(q, sourceOptions);
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
@@ -1613,13 +1536,9 @@ export async function saveIMNCIVisitReport(payload, reportId = null) {
     }
 }
 
-export async function listIMNCIVisitReports(sourceOptions = {}, lastSyncTime = null) {
+export async function listIMNCIVisitReports(sourceOptions = {}) {
     try {
-        let q = collection(db, "imnciVisitReports");
-        if (sourceOptions.source === 'server' && lastSyncTime) {
-            const firestoreTimestamp = Timestamp.fromMillis(lastSyncTime);
-            q = query(q, where("lastUpdatedAt", ">", firestoreTimestamp));
-        }
+        const q = collection(db, "imnciVisitReports");
         const snapshot = await getData(q, sourceOptions);
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
@@ -1652,13 +1571,9 @@ export async function saveEENCVisitReport(payload, reportId = null) {
     }
 }
 
-export async function listEENCVisitReports(sourceOptions = {}, lastSyncTime = null) {
+export async function listEENCVisitReports(sourceOptions = {}) {
     try {
-        let q = collection(db, "eencVisitReports");
-        if (sourceOptions.source === 'server' && lastSyncTime) {
-            const firestoreTimestamp = Timestamp.fromMillis(lastSyncTime);
-            q = query(q, where("lastUpdatedAt", ">", firestoreTimestamp));
-        }
+        const q = collection(db, "eencVisitReports");
         const snapshot = await getData(q, sourceOptions);
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {

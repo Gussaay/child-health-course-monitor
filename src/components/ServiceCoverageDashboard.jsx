@@ -215,6 +215,7 @@ export const NeonatalCoverageDashboard = () => {
     const [stateFilter, setStateFilter] = useState(''); 
     const [localityFilter, setLocalityFilter] = useState(''); 
     const [ownershipFilter, setOwnershipFilter] = useState('');
+    const [projectFilter, setProjectFilter] = useState('');
     const [equipmentFilter, setEquipmentFilter] = useState('');
     const [sortConfig, setSortConfig] = useState({ key: 'localityCoverage', direction: 'descending' }); 
     const [isMapFullscreen, setIsMapFullscreen] = useState(false); 
@@ -223,7 +224,7 @@ export const NeonatalCoverageDashboard = () => {
     const [copyStatus, setCopyStatus] = useState(''); 
     const [table1CopyStatus, setTable1CopyStatus] = useState(''); 
     const [table2CopyStatus, setTable2CopyStatus] = useState(''); 
-    const [table3CopyStatus, setTable3CopyStatus] = useState(''); // Status for the new SCNU table
+    const [table3CopyStatus, setTable3CopyStatus] = useState(''); 
 
     const [tooltipData, setTooltipData] = useState(null); 
     const [hoveredFacilityData, setHoveredFacilityData] = useState(null); 
@@ -236,7 +237,7 @@ export const NeonatalCoverageDashboard = () => {
     const fullscreenModalRef = useRef(null);
     const coverageTableRef = useRef(null); 
     const equipmentTableRef = useRef(null); 
-    const scnuListTableRef = useRef(null); // Ref for the new SCNU table
+    const scnuListTableRef = useRef(null); 
     
     useEffect(() => {
         if (activeFacilities !== null && activeFacilities.length > 0) {
@@ -247,6 +248,17 @@ export const NeonatalCoverageDashboard = () => {
             return () => clearInterval(intervalId);
         }
     }, [activeFacilities, fetchHealthFacilities]);
+
+    // DYNAMIC PROJECT OPTIONS
+    const projectOptions = useMemo(() => {
+        const projects = new Set();
+        activeFacilities.forEach(f => {
+            if (f.project_name && f.project_name.trim() !== '') {
+                projects.add(f.project_name.trim());
+            }
+        });
+        return [...projects].sort();
+    }, [activeFacilities]);
 
     const filteredNationalFacilities = useMemo(() => activeFacilities.filter(f => f['الولاية'] !== 'إتحادي') || [], [activeFacilities]);
 
@@ -264,9 +276,10 @@ export const NeonatalCoverageDashboard = () => {
             if (stateFilter && f['الولاية'] !== stateFilter) return false;
             if (localityFilter && f['المحلية'] !== localityFilter) return false;
             if (ownershipFilter && f.facility_ownership !== ownershipFilter) return false;
+            if (projectFilter && f.project_name !== projectFilter) return false;
             return true;
         });
-    }, [activeFacilities, stateFilter, localityFilter, ownershipFilter]); 
+    }, [activeFacilities, stateFilter, localityFilter, ownershipFilter, projectFilter]); 
 
     const filteredFacilities = useMemo(() => {
         if (!equipmentFilter) {
@@ -317,19 +330,23 @@ export const NeonatalCoverageDashboard = () => {
         Object.entries(STATE_LOCALITIES).forEach(([sK,sD])=>{if(sK==='إتحادي')return;sD.localities.forEach(l=>{const k=l.en;s[k]={key:k,name:l.en,state:sK,totalSupposed:0,totalWithSCNU:0};});});
         filteredNationalFacilities.forEach(f=>{
             if (ownershipFilter && f.facility_ownership !== ownershipFilter) return;
+            if (projectFilter && f.project_name !== projectFilter) return;
             const k=f['المحلية'];
             if(!k||!s[k])return;
             if(isFacilitySupposedToProvideCare(f))s[k].totalSupposed++;
             if(hasFunctioningSCNU(f))s[k].totalWithSCNU++;
         });
         return Object.values(s).map(l=>({...l,coverage:l.totalSupposed>0?Math.round((l.totalWithSCNU/l.totalSupposed)*100):0,})); 
-    }, [filteredNationalFacilities, isFacilitySupposedToProvideCare, hasFunctioningSCNU, ownershipFilter]);
+    }, [filteredNationalFacilities, isFacilitySupposedToProvideCare, hasFunctioningSCNU, ownershipFilter, projectFilter]);
 
     const isLocalityView = !!stateFilter;
     const aggregationLevelName = isLocalityView ? 'Locality' : 'State';
 
     const { nationalAverageRow, stateData } = useMemo(() => {
-        const relevantNationalFacilities = filteredNationalFacilities.filter(f => !ownershipFilter || f.facility_ownership === ownershipFilter);
+        const relevantNationalFacilities = filteredNationalFacilities.filter(f => 
+            (!ownershipFilter || f.facility_ownership === ownershipFilter) && 
+            (!projectFilter || f.project_name === projectFilter)
+        );
         
         const allFunctioningScnusNational = relevantNationalFacilities.filter(hasFunctioningSCNU);
         const natLS = new Set(allFunctioningScnusNational.map(f => `${f['الولاية']}-${f['المحلية']}`));
@@ -365,12 +382,12 @@ export const NeonatalCoverageDashboard = () => {
 
         const sD = Object.values(sum).map(s => { const lC = isLocalityView ? (s.totalWithSCNU > 0 ? 1 : 0) : s.localitiesWithSCNUSet.size; return { ...s, coverage: s.totalSupposed > 0 ? Math.round((s.totalWithSCNU / s.totalSupposed) * 100) : 0, localitiesWithSCNUCount: lC, localityCoverage: s.totalLocalities > 0 ? Math.round((lC / s.totalLocalities) * 100) : 0 }; });
         return { nationalAverageRow: natAR, stateData: sD };
-    }, [filteredNationalFacilities, locationFilteredFacilities, filteredFacilities, stateFilter, isLocalityView, hasFunctioningSCNU, isFacilitySupposedToProvideCare, ownershipFilter]); 
+    }, [filteredNationalFacilities, locationFilteredFacilities, filteredFacilities, stateFilter, isLocalityView, hasFunctioningSCNU, isFacilitySupposedToProvideCare, ownershipFilter, projectFilter]); 
 
     const handleSort = (key) => { let d=(sortConfig.key===key&&sortConfig.direction==='descending')?'ascending':'descending';setSortConfig({key,direction:d}); };
     const sortedTableData = useMemo(() => { const items=[...stateData];items.sort((a,b)=>{if(a[sortConfig.key]<b[sortConfig.key])return sortConfig.direction==='ascending'?-1:1;if(a[sortConfig.key]>b[sortConfig.key])return sortConfig.direction==='ascending'?1:-1;return 0;});return items; }, [stateData, sortConfig]);
-    const getEquipmentSummary = useCallback((stateKey) => { if(isLocalityView)return null;const rel=filteredNationalFacilities.filter(f=>f['الولاية']===stateKey&&hasFunctioningSCNU(f) && (!ownershipFilter || f.facility_ownership === ownershipFilter));const sum={};NEONATAL_EQUIPMENT_KEYS.forEach(k=>{sum[NEONATAL_EQUIPMENT_SPEC[k]]=0;});rel.forEach(f=>{NEONATAL_EQUIPMENT_KEYS.forEach(k=>{sum[NEONATAL_EQUIPMENT_SPEC[k]]+=(Number(f[k])||0);});});return{totalUnits:rel.length,summary:sum}; }, [filteredNationalFacilities, isLocalityView, hasFunctioningSCNU, ownershipFilter]);
-    const getLocalityEquipmentSummary = useCallback((localityKey, stateKey) => { if(!stateKey||!localityKey){return{totalUnits:0,summary:Object.fromEntries(NEONATAL_EQUIPMENT_KEYS.map(k=>[NEONATAL_EQUIPMENT_SPEC[k],0]))};} const rel=filteredNationalFacilities.filter(f=>f['الولاية']===stateKey&&f['المحلية']===localityKey&&hasFunctioningSCNU(f) && (!ownershipFilter || f.facility_ownership === ownershipFilter));const sum={};NEONATAL_EQUIPMENT_KEYS.forEach(k=>{sum[NEONATAL_EQUIPMENT_SPEC[k]]=0;});rel.forEach(f=>{NEONATAL_EQUIPMENT_KEYS.forEach(k=>{sum[NEONATAL_EQUIPMENT_SPEC[k]]+=(Number(f[k])||0);});});return{totalUnits:rel.length,summary:sum}; }, [filteredNationalFacilities, hasFunctioningSCNU, ownershipFilter]);
+    const getEquipmentSummary = useCallback((stateKey) => { if(isLocalityView)return null;const rel=filteredNationalFacilities.filter(f=>f['الولاية']===stateKey&&hasFunctioningSCNU(f) && (!ownershipFilter || f.facility_ownership === ownershipFilter) && (!projectFilter || f.project_name === projectFilter));const sum={};NEONATAL_EQUIPMENT_KEYS.forEach(k=>{sum[NEONATAL_EQUIPMENT_SPEC[k]]=0;});rel.forEach(f=>{NEONATAL_EQUIPMENT_KEYS.forEach(k=>{sum[NEONATAL_EQUIPMENT_SPEC[k]]+=(Number(f[k])||0);});});return{totalUnits:rel.length,summary:sum}; }, [filteredNationalFacilities, isLocalityView, hasFunctioningSCNU, ownershipFilter, projectFilter]);
+    const getLocalityEquipmentSummary = useCallback((localityKey, stateKey) => { if(!stateKey||!localityKey){return{totalUnits:0,summary:Object.fromEntries(NEONATAL_EQUIPMENT_KEYS.map(k=>[NEONATAL_EQUIPMENT_SPEC[k],0]))};} const rel=filteredNationalFacilities.filter(f=>f['الولاية']===stateKey&&f['المحلية']===localityKey&&hasFunctioningSCNU(f) && (!ownershipFilter || f.facility_ownership === ownershipFilter) && (!projectFilter || f.project_name === projectFilter));const sum={};NEONATAL_EQUIPMENT_KEYS.forEach(k=>{sum[NEONATAL_EQUIPMENT_SPEC[k]]=0;});rel.forEach(f=>{NEONATAL_EQUIPMENT_KEYS.forEach(k=>{sum[NEONATAL_EQUIPMENT_SPEC[k]]+=(Number(f[k])||0);});});return{totalUnits:rel.length,summary:sum}; }, [filteredNationalFacilities, hasFunctioningSCNU, ownershipFilter, projectFilter]);
 
     // Equipment table data
     const equipmentTableData = useMemo(() => {
@@ -442,6 +459,7 @@ export const NeonatalCoverageDashboard = () => {
         const s={};
         filteredNationalFacilities.forEach(f=>{
             if (ownershipFilter && f.facility_ownership !== ownershipFilter) return; 
+            if (projectFilter && f.project_name !== projectFilter) return;
             const k=f['الولاية'];
             if(!k||k==='إتحادي')return;
             if(!s[k])s[k]={totalSupposed:0,totalWithSCNU:0};
@@ -449,7 +467,7 @@ export const NeonatalCoverageDashboard = () => {
             if(hasFunctioningSCNU(f))s[k].totalWithSCNU++;
         });
         return Object.entries(s).map(([sK,c])=>({state:sK,percentage:c.totalSupposed>0?Math.round((c.totalWithSCNU/c.totalSupposed)*100):0,coordinates:mapCoordinates[sK]?[mapCoordinates[sK].lng,mapCoordinates[sK].lat]:[0,0]})); 
-    }, [filteredNationalFacilities, isFacilitySupposedToProvideCare, hasFunctioningSCNU, ownershipFilter]);
+    }, [filteredNationalFacilities, isFacilitySupposedToProvideCare, hasFunctioningSCNU, ownershipFilter, projectFilter]);
     
     const handleStateChange = (e) => { setStateFilter(e.target.value); setLocalityFilter(''); };
 
@@ -482,9 +500,7 @@ export const NeonatalCoverageDashboard = () => {
     const isEquipmentByHospital = !!stateFilter && !localityFilter;
     const equipmentHeaders = [isEquipmentByHospital?'Hospital Name':aggregationLevelName, ...Object.values(NEONATAL_EQUIPMENT_SPEC)];
     
-    const currentMapViewLevel = isLocalityView ? 'locality' : mapViewLevel;
-
-     const handleStateHover = useCallback((key, event) => {
+    const handleStateHover = useCallback((key, event) => {
         const rowData = key === 'national' ? nationalAverageRow : stateData.find(d => d.key === key);
         if (!rowData || isLocalityView || mapViewLevel === 'locality') return;
         const equipmentSummary = getEquipmentSummary(rowData.key);
@@ -499,13 +515,15 @@ export const NeonatalCoverageDashboard = () => {
         setHoverPosition({ x: event.clientX, y: event.clientY });
     }, [stateData, nationalAverageRow, isLocalityView, mapViewLevel, getEquipmentSummary]);
 
-
     const handleMapLocalityHover = useCallback((geoProps, event) => { const localityKey=geoProps.admin_2;if(!localityKey)return;let dataStore=isLocalityView?stateData:allLocalitiesCoverageData;const localityData=dataStore.find(l=>l.key===localityKey);if(localityData){const stateKey=isLocalityView?stateFilter:localityData.state;const equipmentSummary=getLocalityEquipmentSummary(localityKey,stateKey);setTooltipData({title:`${localityData.name} (${localityData.key})`,dataRows:[{label:"Facility Coverage",value:`${localityData.coverage}% (${localityData.totalWithSCNU} / ${localityData.totalSupposed})`}],equipmentSummary:{...equipmentSummary,title:"SCNU Equipment Summary"}});setHoverPosition({x:event.clientX,y:event.clientY});} }, [isLocalityView, stateData, allLocalitiesCoverageData, stateFilter, getLocalityEquipmentSummary]);
     const handleMapMouseLeave = useCallback(() => { setTooltipData(null); }, []);
     const getFacilityEquipmentDetails = useCallback((facilityId) => { const facility=(activeFacilities || []).find(f=>f.id===facilityId);if(!facility)return null;const summary={};NEONATAL_EQUIPMENT_KEYS.forEach(key=>{summary[NEONATAL_EQUIPMENT_SPEC[key]]=Number(facility[key])||0;});return{name:facility['اسم_المؤسسة'],summary:summary}; }, [activeFacilities]);
     const handleFacilityHover = useCallback((facilityId, event) => { const details=getFacilityEquipmentDetails(facilityId);if(details){setHoveredFacilityData(details);setHoverPosition({x:event.clientX,y:event.clientY});} }, [getFacilityEquipmentDetails]);
     const handleFacilityLeave = useCallback(() => { setHoveredFacilityData(null); }, []);
     const handleMouseMove = useCallback((event) => { if (tooltipData || hoveredFacilityData) { setHoverPosition({ x: event.clientX, y: event.clientY }); } }, [tooltipData, hoveredFacilityData]);
+
+    // NEW LINE TO FIX THE REFERENCE ERROR
+    const currentMapViewLevel = isLocalityView ? 'locality' : mapViewLevel;
 
     const handleDownloadMap = useCallback((format = 'jpg') => {
         const targetRef = isMapFullscreen ? fullscreenModalRef : dashboardSectionRef;
@@ -559,7 +577,7 @@ export const NeonatalCoverageDashboard = () => {
             <div ref={dashboardSectionRef} className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch relative">
                 <div className="flex flex-col gap-6 lg:col-span-1">
                     <Card className="ignore-for-export">
-                        <div className="p-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="p-3 grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-3">
                             <FormGroup label="State">
                                 <Select value={stateFilter} onChange={handleStateChange}>
                                     <option value="">All States</option>
@@ -576,6 +594,12 @@ export const NeonatalCoverageDashboard = () => {
                                 <Select value={ownershipFilter} onChange={(e) => setOwnershipFilter(e.target.value)}>
                                     <option value="">All Ownerships</option>
                                     {OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </Select>
+                            </FormGroup>
+                            <FormGroup label="Project">
+                                <Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}>
+                                    <option value="">All Projects</option>
+                                    {projectOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 </Select>
                             </FormGroup>
                             <FormGroup label="Has Equipment">
@@ -865,6 +889,7 @@ export const EENCCoverageDashboard = () => {
     const [stateFilter, setStateFilter] = useState(''); 
     const [localityFilter, setLocalityFilter] = useState(''); 
     const [ownershipFilter, setOwnershipFilter] = useState(''); 
+    const [projectFilter, setProjectFilter] = useState('');
     const [equipmentFilter, setEquipmentFilter] = useState('');
     const [mapViewLevel, setMapViewLevel] = useState('state');
     const [copyStatus, setCopyStatus] = useState('');
@@ -896,6 +921,17 @@ export const EENCCoverageDashboard = () => {
         }
     }, [activeFacilities, fetchHealthFacilities]);
 
+    // DYNAMIC PROJECT OPTIONS
+    const projectOptions = useMemo(() => {
+        const projects = new Set();
+        activeFacilities.forEach(f => {
+            if (f.project_name && f.project_name.trim() !== '') {
+                projects.add(f.project_name.trim());
+            }
+        });
+        return [...projects].sort();
+    }, [activeFacilities]);
+
     const filteredNationalFacilities = useMemo(() => activeFacilities?.filter(f => f['الولاية'] !== 'إتحادي') || [], [activeFacilities]);
     const isEmONCFacility = useCallback((f) => { const s = f['eenc_service_type']; return s === 'BEmONC' || s === 'CEmONC'; }, []);
     const isEmONCFunctional = useCallback((f) => isEmONCFacility(f) && f['هل_المؤسسة_تعمل'] === 'Yes', [isEmONCFacility]);
@@ -907,9 +943,10 @@ export const EENCCoverageDashboard = () => {
             if (stateFilter && f['الولاية'] !== stateFilter) return false;
             if (localityFilter && f['المحلية'] !== localityFilter) return false;
             if (ownershipFilter && f.facility_ownership !== ownershipFilter) return false;
+            if (projectFilter && f.project_name !== projectFilter) return false;
             return true;
         });
-    }, [activeFacilities, stateFilter, localityFilter, ownershipFilter]); 
+    }, [activeFacilities, stateFilter, localityFilter, ownershipFilter, projectFilter]); 
     
     const facilitiesByFilter = useMemo(() => {
         if (!equipmentFilter) {
@@ -941,12 +978,13 @@ export const EENCCoverageDashboard = () => {
         Object.entries(STATE_LOCALITIES).forEach(([sK,sD])=>{if(sK==='إتحادي')return;sD.localities.forEach(l=>{s[l.en]={key:l.en,name:l.en,state:sK,totalEmONC:0, functionalEmONC: 0, eencProviders:0};});});
         filteredNationalFacilities.forEach(f=>{
             if (ownershipFilter && f.facility_ownership !== ownershipFilter) return;
+            if (projectFilter && f.project_name !== projectFilter) return;
             const key=f['المحلية'];
             if(!key||!s[key])return;
             if(isEmONCFacility(f)){s[key].totalEmONC++; if(isEmONCFunctional(f)){ s[key].functionalEmONC++; if(providesEENC(f)){s[key].eencProviders++;} } }
         });
         return Object.values(s).map(l=>({...l,coverage:l.functionalEmONC>0?Math.round((l.eencProviders/l.functionalEmONC)*100):0})); 
-    }, [filteredNationalFacilities, isEmONCFacility, isEmONCFunctional, providesEENC, ownershipFilter]);
+    }, [filteredNationalFacilities, isEmONCFacility, isEmONCFunctional, providesEENC, ownershipFilter, projectFilter]);
 
     const { tableData, mapData } = useMemo(() => {
         const s = {};
@@ -982,6 +1020,7 @@ export const EENCCoverageDashboard = () => {
         const mapS = {};
          mapDataSource.filter(isEmONCFacility).forEach(f => {
             if (ownershipFilter && f.facility_ownership !== ownershipFilter) return; 
+            if (projectFilter && f.project_name !== projectFilter) return;
             const key = f['الولاية'];
             if (!key || key === 'إتحادي') return;
              if (!mapS[key]) mapS[key] = {functionalEmONC: 0, eencProviders: 0 };
@@ -997,7 +1036,7 @@ export const EENCCoverageDashboard = () => {
          }));
 
         return { tableData: tD, mapData: mD };
-    }, [facilitiesByFilter, locationFilteredFacilities, filteredNationalFacilities, stateFilter, isEmONCFacility, isEmONCFunctional, providesEENC, ownershipFilter]); 
+    }, [facilitiesByFilter, locationFilteredFacilities, filteredNationalFacilities, stateFilter, isEmONCFacility, isEmONCFunctional, providesEENC, ownershipFilter, projectFilter]); 
 
     const equipmentTableData = useMemo(() => {
         const aggK = stateFilter ? 'اسم_المؤسسة' : 'الولاية';
@@ -1028,7 +1067,7 @@ export const EENCCoverageDashboard = () => {
     const handleStateChange = (e) => { setStateFilter(e.target.value); setLocalityFilter(''); };
     
     const getEENCStateEquipmentSummary = useCallback((stateKey) => { 
-        const rel = filteredNationalFacilities.filter(f => f['الولاية'] === stateKey && isEmONCFunctional(f) && providesEENC(f) && (!ownershipFilter || f.facility_ownership === ownershipFilter));
+        const rel = filteredNationalFacilities.filter(f => f['الولاية'] === stateKey && isEmONCFunctional(f) && providesEENC(f) && (!ownershipFilter || f.facility_ownership === ownershipFilter) && (!projectFilter || f.project_name === projectFilter));
         const sum = {};
         EENC_EQUIPMENT_KEYS.forEach(k => { sum[EENC_EQUIPMENT_SPEC[k]] = 0; });
         rel.forEach(f => {
@@ -1039,10 +1078,10 @@ export const EENCCoverageDashboard = () => {
             });
         });
         return { totalUnits: rel.length, summary: sum }; 
-    }, [filteredNationalFacilities, isEmONCFunctional, providesEENC, ownershipFilter]);
+    }, [filteredNationalFacilities, isEmONCFunctional, providesEENC, ownershipFilter, projectFilter]);
 
     const getEENCLocalityEquipmentSummary = useCallback((localityKey, stateKey) => { 
-        const rel = filteredNationalFacilities.filter(f => f['الولاية'] === stateKey && f['المحلية'] === localityKey && isEmONCFunctional(f) && providesEENC(f) && (!ownershipFilter || f.facility_ownership === ownershipFilter));
+        const rel = filteredNationalFacilities.filter(f => f['الولاية'] === stateKey && f['المحلية'] === localityKey && isEmONCFunctional(f) && providesEENC(f) && (!ownershipFilter || f.facility_ownership === ownershipFilter) && (!projectFilter || f.project_name === projectFilter));
         const sum = {};
         EENC_EQUIPMENT_KEYS.forEach(k => { sum[EENC_EQUIPMENT_SPEC[k]] = 0; });
         rel.forEach(f => {
@@ -1053,7 +1092,7 @@ export const EENCCoverageDashboard = () => {
             });
         });
         return { totalUnits: rel.length, summary: sum }; 
-    }, [filteredNationalFacilities, isEmONCFunctional, providesEENC, ownershipFilter]);
+    }, [filteredNationalFacilities, isEmONCFunctional, providesEENC, ownershipFilter, projectFilter]);
     
     const handleStateHover = useCallback((stateKey, event)=>{ if(stateFilter||mapViewLevel==='locality')return; const rowData=tableData.find(d=>d.key===stateKey); if(!rowData) return; const eqSum=getEENCStateEquipmentSummary(stateKey);setTooltipData({title:`${rowData.name} (${rowData.key})`,dataRows:[{label:"EENC Coverage",value:`${rowData.eencCoverage}% (${rowData.eencProviders} / ${rowData.functionalEmONC})`}],equipmentSummary:{...eqSum,title:"EENC Equipment Summary"}});setHoverPosition({x:event.clientX,y:event.clientY}); }, [tableData, stateFilter, mapViewLevel, getEENCStateEquipmentSummary]);
     
@@ -1146,7 +1185,7 @@ export const EENCCoverageDashboard = () => {
 
                  <div className="flex flex-col gap-6 lg:col-span-1">
                     <Card className="ignore-for-export">
-                        <div className="p-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="p-3 grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-3">
                             <FormGroup label="State">
                                 <Select value={stateFilter} onChange={handleStateChange}>
                                     <option value="">All States</option>
@@ -1163,6 +1202,12 @@ export const EENCCoverageDashboard = () => {
                                 <Select value={ownershipFilter} onChange={(e) => setOwnershipFilter(e.target.value)}>
                                     <option value="">All Ownerships</option>
                                     {OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </Select>
+                            </FormGroup>
+                            <FormGroup label="Project">
+                                <Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}>
+                                    <option value="">All Projects</option>
+                                    {projectOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 </Select>
                             </FormGroup>
                             <FormGroup label="Has Equipment">
@@ -1361,6 +1406,7 @@ export const IMNCICoverageDashboard = () => {
     const [stateFilter, setStateFilter] = useState('');
     const [localityFilter, setLocalityFilter] = useState('');
     const [ownershipFilter, setOwnershipFilter] = useState(''); 
+    const [projectFilter, setProjectFilter] = useState('');
     const [equipmentFilter, setEquipmentFilter] = useState('');
     const [mapViewLevel, setMapViewLevel] = useState('state');
     const [copyStatus, setCopyStatus] = useState('');
@@ -1389,15 +1435,27 @@ export const IMNCICoverageDashboard = () => {
         }
     }, [activeFacilities, fetchHealthFacilities]);
 
+    // DYNAMIC PROJECT OPTIONS
+    const projectOptions = useMemo(() => {
+        const projects = new Set();
+        activeFacilities.forEach(f => {
+            if (f.project_name && f.project_name.trim() !== '') {
+                projects.add(f.project_name.trim());
+            }
+        });
+        return [...projects].sort();
+    }, [activeFacilities]);
+
     const locationFilteredFacilities = useMemo(() => {
         return activeFacilities.filter(f => {
              if(f['الولاية'] === 'إتحادي') return false;
             if (stateFilter && f['الولاية'] !== stateFilter) return false;
             if (localityFilter && f['المحلية'] !== localityFilter) return false;
             if (ownershipFilter && f.facility_ownership !== ownershipFilter) return false;
+            if (projectFilter && f.project_name !== projectFilter) return false;
             return true;
         });
-    }, [activeFacilities, stateFilter, localityFilter, ownershipFilter]); 
+    }, [activeFacilities, stateFilter, localityFilter, ownershipFilter, projectFilter]); 
 
     const filteredFacilities = useMemo(() => {
         if (!equipmentFilter) {
@@ -1430,6 +1488,7 @@ export const IMNCICoverageDashboard = () => {
         });
         filteredNationalFacilities.forEach(f=>{
             if (ownershipFilter && f.facility_ownership !== ownershipFilter) return;
+            if (projectFilter && f.project_name !== projectFilter) return;
             const key=f['المحلية'];
             if(!key||!s[key])return;
             const isPhc=f['نوع_المؤسسةالصحية']==='وحدة صحة الاسرة'||f['نوع_المؤسسةالصحية']==='مركز صحة الاسرة';
@@ -1439,7 +1498,7 @@ export const IMNCICoverageDashboard = () => {
             }
         });
         return Object.values(s).map(l=>({...l,coverage:l.totalFunctioningPhc>0?Math.round((l.totalPhcWithImnci/l.totalFunctioningPhc)*100):0,}));
-    }, [activeFacilities, ownershipFilter]);
+    }, [activeFacilities, ownershipFilter, projectFilter]);
 
     const tableCoverageData = useMemo(() => {
         const s={};
@@ -1518,6 +1577,7 @@ export const IMNCICoverageDashboard = () => {
         const s = {};
         activeFacilities.forEach(f => {
             if (ownershipFilter && f.facility_ownership !== ownershipFilter) return;
+            if (projectFilter && f.project_name !== projectFilter) return;
             const k = f['الولاية'];
             if (!k || k === 'إتحادي') return;
             if (!s[k]) s[k] = { tFP: 0, tPI: 0 };
@@ -1532,15 +1592,15 @@ export const IMNCICoverageDashboard = () => {
             percentage: c.tFP > 0 ? Math.round((c.tPI / c.tFP) * 100) : 0,
             coordinates: mapCoordinates[sK] ? [mapCoordinates[sK].lng, mapCoordinates[sK].lat] : [0, 0]
         }));
-    }, [activeFacilities, ownershipFilter]);
+    }, [activeFacilities, ownershipFilter, projectFilter]);
 
     const selectedStateMapData = useMemo(() => { if(!stateFilter)return null;return nationalMapData.find(s=>s.state===stateFilter); }, [stateFilter, nationalMapData]);
     const mapViewConfig = useMemo(() => { const sC=stateFilter?mapCoordinates[stateFilter]:null;if(sC){return{center:[sC.lng,sC.lat],scale:sC.scale,focusedState:stateFilter};}return{center:[30,15.5],scale:2000,focusedState:null}; }, [stateFilter]);
     const fullscreenMapViewConfig = useMemo(() => ({ ...mapViewConfig }), [mapViewConfig]);
     const handleStateChange = (e) => { setStateFilter(e.target.value); setLocalityFilter(''); };
-    const getIMNCIStateToolsSummary = useCallback((stateKey)=>{ const rel=activeFacilities.filter(f=>f['الولاية']===stateKey&&f['وجود_العلاج_المتكامل_لامراض_الطفولة']==='Yes'&&(f['نوع_المؤسسةالصحية']==='وحدة صحة الاسرة'||f['نوع_المؤسسةالصحية']==='مركز صحة الاسرة') && f['هل_المؤسسة_تعمل']==='Yes' && (!ownershipFilter || f.facility_ownership === ownershipFilter));const sum={...Object.fromEntries(IMNCI_TOOLS_KEYS.map(k=>[IMNCI_TOOLS_SPEC[k],0]))};rel.forEach(f=>{if(f['وجود_سجل_علاج_متكامل']==='Yes')sum[IMNCI_TOOLS_SPEC.countWithRegister]++;if(f['وجود_كتيب_لوحات']==='Yes')sum[IMNCI_TOOLS_SPEC.countWithChartbooklet]++;if(f['ميزان_وزن']==='Yes')sum[IMNCI_TOOLS_SPEC.countWithWeightScale]++;if(f['غرفة_إرواء']==='Yes')sum[IMNCI_TOOLS_SPEC.countWithOrtCorner]++;});return{totalUnits:rel.length,summary:sum}; }, [activeFacilities, ownershipFilter]);
-    const getIMNCILocalityToolsSummary = useCallback((localityKey, stateKey)=>{ const rel=activeFacilities.filter(f=>f['الولاية']===stateKey&&f['المحلية']===localityKey&&f['وجود_العلاج_المتكامل_لامراض_الطفولة']==='Yes'&&(f['نوع_المؤسسةالصحية']==='وحدة صحة الاسرة'||f['نوع_المؤسسةالصحية']==='مركز صحة الاسرة') && f['هل_المؤسسة_تعمل']==='Yes' && (!ownershipFilter || f.facility_ownership === ownershipFilter));const sum={...Object.fromEntries(IMNCI_TOOLS_KEYS.map(k=>[IMNCI_TOOLS_SPEC[k],0]))};rel.forEach(f=>{if(f['وجود_سجل_علاج_متكامل']==='Yes')sum[IMNCI_TOOLS_SPEC.countWithRegister]++;if(f['وجود_كتيب_لوحات']==='Yes')sum[IMNCI_TOOLS_SPEC.countWithChartbooklet]++;if(f['ميزان_وزن']==='Yes')sum[IMNCI_TOOLS_SPEC.countWithWeightScale]++;if(f['غرفة_إرواء']==='Yes')sum[IMNCI_TOOLS_SPEC.countWithOrtCorner]++;});return{totalUnits:rel.length,summary:sum}; }, [activeFacilities, ownershipFilter]);
-    const handleStateHover = useCallback((stateKey, event)=>{ if(stateFilter||mapViewLevel==='locality')return; const rowData=nationalMapData.find(d=>d.state===stateKey); if(!rowData)return; const toolsSummary=getIMNCIStateToolsSummary(stateKey); const statePhcs = activeFacilities.filter(f => f['الولاية'] === stateKey && f['هل_المؤسسة_تعمل'] === 'Yes' && (f['نوع_المؤسسةالصحية'] === 'وحدة صحة الاسرة' || f['نوع_المؤسسةالصحية'] === 'مركز صحة الاسرة') && (!ownershipFilter || f.facility_ownership === ownershipFilter)); const stateImnciPhcs = statePhcs.filter(f => f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes'); setTooltipData({title:`${stateKey} (${stateKey})`,dataRows:[{label:"IMNCI Coverage",value:`${rowData.percentage}% (${stateImnciPhcs.length} / ${statePhcs.length})`}],equipmentSummary:{...toolsSummary,title:"IMNCI Tools Summary"}});setHoverPosition({x:event.clientX,y:event.clientY}); }, [activeFacilities, nationalMapData, stateFilter, mapViewLevel, getIMNCIStateToolsSummary, ownershipFilter]);
+    const getIMNCIStateToolsSummary = useCallback((stateKey)=>{ const rel=activeFacilities.filter(f=>f['الولاية']===stateKey&&f['وجود_العلاج_المتكامل_لامراض_الطفولة']==='Yes'&&(f['نوع_المؤسسةالصحية']==='وحدة صحة الاسرة'||f['نوع_المؤسسةالصحية']==='مركز صحة الاسرة') && f['هل_المؤسسة_تعمل']==='Yes' && (!ownershipFilter || f.facility_ownership === ownershipFilter) && (!projectFilter || f.project_name === projectFilter));const sum={...Object.fromEntries(IMNCI_TOOLS_KEYS.map(k=>[IMNCI_TOOLS_SPEC[k],0]))};rel.forEach(f=>{if(f['وجود_سجل_علاج_متكامل']==='Yes')sum[IMNCI_TOOLS_SPEC.countWithRegister]++;if(f['وجود_كتيب_لوحات']==='Yes')sum[IMNCI_TOOLS_SPEC.countWithChartbooklet]++;if(f['ميزان_وزن']==='Yes')sum[IMNCI_TOOLS_SPEC.countWithWeightScale]++;if(f['غرفة_إرواء']==='Yes')sum[IMNCI_TOOLS_SPEC.countWithOrtCorner]++;});return{totalUnits:rel.length,summary:sum}; }, [activeFacilities, ownershipFilter, projectFilter]);
+    const getIMNCILocalityToolsSummary = useCallback((localityKey, stateKey)=>{ const rel=activeFacilities.filter(f=>f['الولاية']===stateKey&&f['المحلية']===localityKey&&f['وجود_العلاج_المتكامل_لامراض_الطفولة']==='Yes'&&(f['نوع_المؤسسةالصحية']==='وحدة صحة الاسرة'||f['نوع_المؤسسةالصحية']==='مركز صحة الاسرة') && f['هل_المؤسسة_تعمل']==='Yes' && (!ownershipFilter || f.facility_ownership === ownershipFilter) && (!projectFilter || f.project_name === projectFilter));const sum={...Object.fromEntries(IMNCI_TOOLS_KEYS.map(k=>[IMNCI_TOOLS_SPEC[k],0]))};rel.forEach(f=>{if(f['وجود_سجل_علاج_متكامل']==='Yes')sum[IMNCI_TOOLS_SPEC.countWithRegister]++;if(f['وجود_كتيب_لوحات']==='Yes')sum[IMNCI_TOOLS_SPEC.countWithChartbooklet]++;if(f['ميزان_وزن']==='Yes')sum[IMNCI_TOOLS_SPEC.countWithWeightScale]++;if(f['غرفة_إرواء']==='Yes')sum[IMNCI_TOOLS_SPEC.countWithOrtCorner]++;});return{totalUnits:rel.length,summary:sum}; }, [activeFacilities, ownershipFilter, projectFilter]);
+    const handleStateHover = useCallback((stateKey, event)=>{ if(stateFilter||mapViewLevel==='locality')return; const rowData=nationalMapData.find(d=>d.state===stateKey); if(!rowData)return; const toolsSummary=getIMNCIStateToolsSummary(stateKey); const statePhcs = activeFacilities.filter(f => f['الولاية'] === stateKey && f['هل_المؤسسة_تعمل'] === 'Yes' && (f['نوع_المؤسسةالصحية'] === 'وحدة صحة الاسرة' || f['نوع_المؤسسةالصحية'] === 'مركز صحة الاسرة') && (!ownershipFilter || f.facility_ownership === ownershipFilter) && (!projectFilter || f.project_name === projectFilter)); const stateImnciPhcs = statePhcs.filter(f => f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes'); setTooltipData({title:`${stateKey} (${stateKey})`,dataRows:[{label:"IMNCI Coverage",value:`${rowData.percentage}% (${stateImnciPhcs.length} / ${statePhcs.length})`}],equipmentSummary:{...toolsSummary,title:"IMNCI Tools Summary"}});setHoverPosition({x:event.clientX,y:event.clientY}); }, [activeFacilities, nationalMapData, stateFilter, mapViewLevel, getIMNCIStateToolsSummary, ownershipFilter, projectFilter]);
     const handleMapLocalityHover = useCallback((geoProps, event)=>{ const locKey=geoProps.admin_2;if(!locKey) return; let dataStore=stateFilter?tableCoverageData:allLocalitiesCoverageDataIMNCI; const locData=dataStore.find(l=>l.key===locKey);if(!locData)return;const stateKey=stateFilter?stateFilter:locData.state; const toolsSummary=getIMNCILocalityToolsSummary(locKey,stateKey);setTooltipData({title:`${locData.name} (${locData.key})`,dataRows:[{label:"IMNCI Coverage",value:`${locData.coverage}% (${locData.totalPhcWithImnci} / ${locData.totalFunctioningPhc})`}],equipmentSummary:{...toolsSummary,title:"IMNCI Tools Summary"}});setHoverPosition({x:event.clientX,y:event.clientY}); }, [tableCoverageData, allLocalitiesCoverageDataIMNCI, stateFilter, getIMNCILocalityToolsSummary]);
     const handleMapMouseLeave = useCallback(() => { setTooltipData(null); }, []);
     const handleMouseMove = useCallback((event) => { if (tooltipData) { setHoverPosition({ x: event.clientX, y: event.clientY }); } }, [tooltipData]);
@@ -1604,13 +1664,19 @@ export const IMNCICoverageDashboard = () => {
 
                  <div className="flex flex-col gap-6 lg:col-span-1">
                     <Card className="ignore-for-export">
-                        <div className="p-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="p-3 grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-3">
                             <FormGroup label="State"><Select value={stateFilter} onChange={handleStateChange}><option value="">All States</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{sKey}</option>)}</Select></FormGroup>
                             <FormGroup label="Locality"><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">All Localities</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{l.en}</option>)}</Select></FormGroup>
                             <FormGroup label="Ownership">
                                 <Select value={ownershipFilter} onChange={(e) => setOwnershipFilter(e.target.value)}>
                                     <option value="">All Ownerships</option>
                                     {OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </Select>
+                            </FormGroup>
+                            <FormGroup label="Project">
+                                <Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}>
+                                    <option value="">All Projects</option>
+                                    {projectOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 </Select>
                             </FormGroup>
                             <FormGroup label="Has Tool">

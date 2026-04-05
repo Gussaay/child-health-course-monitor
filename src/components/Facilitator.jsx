@@ -597,12 +597,11 @@ export function FacilitatorsView({
     userStates,
     onApproveSubmission,
     onRejectSubmission,
-    refreshData,
     permissions
 }) {
     const {
-        facilitators,
-        courses,
+        facilitators: rawFacilitators,
+        courses: rawCourses,
         pendingFacilitatorSubmissions: pendingSubmissions,
         facilitatorApplicationSettings,
         isLoading,
@@ -611,6 +610,10 @@ export function FacilitatorsView({
         fetchPendingFacilitatorSubmissions,
         fetchFacilitatorApplicationSettings
     } = useDataCache();
+
+    // --- Soft Delete Filters ---
+    const facilitators = useMemo(() => (rawFacilitators || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [rawFacilitators]);
+    const courses = useMemo(() => (rawCourses || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true"), [rawCourses]);
 
     const isSubmissionsLoading = isLoading.pendingFacilitatorSubmissions;
     const isLoadingSettings = isLoading.facilitatorApplicationSettings;
@@ -624,12 +627,12 @@ export function FacilitatorsView({
     const [shareModalInfo, setShareModalInfo] = useState({ isOpen: false, link: '' });
 
     useEffect(() => {
-        fetchFacilitators(); 
-        if (fetchCourses) fetchCourses();
+        fetchFacilitators(false); 
+        if (fetchCourses) fetchCourses(false);
 
         if (permissions.canApproveSubmissions) {
-            fetchPendingFacilitatorSubmissions(); 
-            fetchFacilitatorApplicationSettings();
+            fetchPendingFacilitatorSubmissions(false); 
+            fetchFacilitatorApplicationSettings(false);
         }
     }, [permissions.canApproveSubmissions, fetchFacilitators, fetchCourses, fetchPendingFacilitatorSubmissions, fetchFacilitatorApplicationSettings]);
 
@@ -673,7 +676,8 @@ export function FacilitatorsView({
                  console.warn(`[RoleSync] Submission ${submission.id} has no email. Skipping role assignment.`);
             }
 
-            refreshData(); 
+            fetchFacilitators(true); 
+            fetchPendingFacilitatorSubmissions(true);
         } catch (error) {
              console.error("Error during approval or role assignment:", error);
         }
@@ -681,7 +685,7 @@ export function FacilitatorsView({
 
     const handleReject = async (submissionId) => {
         await onRejectSubmission(submissionId); 
-        refreshData(); 
+        fetchPendingFacilitatorSubmissions(true); 
     };
     
     const handleShare = (facilitator) => {

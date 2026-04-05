@@ -399,8 +399,8 @@ function SplashScreen() {
 // =============================================================================
 export default function App() {
     const {
-        courses: allCourses,
-        facilitators: allFacilitators,
+        courses: rawCourses,
+        facilitators: rawFacilitators,
         funders, federalCoordinators, stateCoordinators, localityCoordinators,
         healthFacilities,
         participantTests, 
@@ -409,6 +409,11 @@ export default function App() {
         fetchSkillMentorshipSubmissions,
         fetchParticipantTests
     } = useDataCache();
+
+    // --- APPLY SOFT DELETE FILTER TO CACHED RAW LISTS ---
+    const allCourses = useMemo(() => (rawCourses || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true"), [rawCourses]);
+    const allFacilitators = useMemo(() => (rawFacilitators || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [rawFacilitators]);
+
     const { user, userStates, authLoading, userLocalities } = useAuth();
 
     const isProfileIncomplete = useMemo(() => {
@@ -437,7 +442,7 @@ export default function App() {
     const [activeCoursesTab, setActiveCoursesTab] = useState('courses');
     const [activeHRTab, setActiveHRTab] = useState('facilitators');
 
-    // --- REPLACED: Single state for cache object ---
+    // --- Single state for cache object ---
     const [courseDetailsCache, setCourseDetailsCache] = useState({});
     // Dynamically grab details for the currently selected course
     const courseDetails = courseDetailsCache[selectedCourseId] || { participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null };
@@ -482,11 +487,9 @@ export default function App() {
     const [publicTestError, setPublicTestError] = useState(null);
     const [publicTestType, setPublicTestType] = useState(null);
 
-    // --- NEW STATE for Public Registration ---
     const [isPublicRegistrationView, setIsPublicRegistrationView] = useState(false);
     const [publicRegistrationCourseId, setPublicRegistrationCourseId] = useState(null);
 
-    // --- REPLACED LocalityBulkUpdate WITH BulkUpdate ---
     const [isBulkUpdateView, setIsBulkUpdateView] = useState(false);
     const [publicBulkUpdateParams, setPublicBulkUpdateParams] = useState({});
 
@@ -602,11 +605,15 @@ export default function App() {
                     try {
                         const [courseData, participantData] = await Promise.all([
                             getCourseById(courseId, 'server'),
-                            listAllParticipantsForCourse(courseId, 'server') 
+                            listAllParticipantsForCourse(courseId, { source: 'server' }) 
                         ]);
                         if (!courseData) throw new Error('Course not found.');
                         if (!participantData) throw new Error('Participants not found.'); 
-                        setPublicMonitorData({ course: courseData, participants: participantData });
+                        
+                        // APPLY SOFT DELETE FILTER TO PUBLIC DATA
+                        const activeParticipants = (participantData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
+                        
+                        setPublicMonitorData({ course: courseData, participants: activeParticipants });
                         setPublicMonitorError(null);
                     } catch (err) {
                         setPublicMonitorError(err.message);
@@ -677,8 +684,8 @@ export default function App() {
                     try {
                         const [courseData, participantData, testData] = await Promise.all([
                             getCourseById(courseId, 'server'),
-                            listAllParticipantsForCourse(courseId, 'server'),
-                            listParticipantTestsForCourse(courseId, 'server')
+                            listAllParticipantsForCourse(courseId, { source: 'server' }),
+                            listParticipantTestsForCourse(courseId, { source: 'server' })
                         ]);
 
                         if (!courseData) throw new Error('Course not found.');
@@ -691,8 +698,12 @@ export default function App() {
                             courseData.course_type !== 'ETAT') {
                             throw new Error('Test forms are only available for ICCM, EENC, Small & Sick Newborn, IMNCI, and ETAT courses.');
                         }
+                        
+                        // APPLY SOFT DELETE FILTER
+                        const activeParticipants = (participantData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
+                        const activeTests = (testData || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true");
 
-                        setPublicTestData({ course: courseData, participants: participantData, tests: testData || [] });
+                        setPublicTestData({ course: courseData, participants: activeParticipants, tests: activeTests });
                         setPublicTestError(null);
                     } catch (err) {
                         setPublicTestError(err.message);
@@ -941,30 +952,53 @@ export default function App() {
         }
     }, [view, isSharedView, user, fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchCoordinators, fetchHealthFacilities, fetchSkillMentorshipSubmissions, isPublicMentorshipDashboardView]);
 
+    // --- NEW: Cache-First Delta Sync for Course Details ---
     useEffect(() => {
         if (selectedCourseId && !courseDetailsCache[selectedCourseId]?.allObs && !courseDetailsLoading) {
             
             const fetchFullCourseDetails = async () => {
                 setCourseDetailsLoading(true);
                 try {
-                    const [participantsData, allCourseData, finalReport, testData] = await Promise.all([
-                        listAllParticipantsForCourse(selectedCourseId),
-                        listAllDataForCourse(selectedCourseId),
-                        getFinalReportByCourseId(selectedCourseId),
-                        listParticipantTestsForCourse(selectedCourseId) 
-                    ]);
-                    const { allObs, allCases } = allCourseData;
-                    
-                    setCourseDetailsCache(prev => ({
-                        ...prev,
-                        [selectedCourseId]: { 
-                            participants: participantsData || [], 
-                            allObs, 
-                            allCases, 
-                            finalReport, 
-                            participantTests: testData || [] 
-                        }
-                    })); 
+                    // 1. Try Cache First for instant UI rendering
+                    let participantsData = await listAllParticipantsForCourse(selectedCourseId, { source: 'cache' }).catch(()=>[]);
+                    let allCourseData = await listAllDataForCourse(selectedCourseId, { source: 'cache' }).catch(()=>({allObs:[], allCases:[]}));
+                    let finalReport = await getFinalReportByCourseId(selectedCourseId, { source: 'cache' }).catch(()=>null);
+                    let testData = await listParticipantTestsForCourse(selectedCourseId, { source: 'cache' }).catch(()=>[]);
+
+                    const hasData = participantsData.length > 0 || (allCourseData && allCourseData.allObs && allCourseData.allObs.length > 0);
+
+                    const processAndSet = (pData, cData, fData, tData) => {
+                        const activeParticipants = (pData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
+                        const activeTests = (tData || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true");
+                        const activeObs = (cData?.allObs || []).filter(o => o.isDeleted !== true && o.isDeleted !== "true");
+                        const activeCases = (cData?.allCases || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true");
+                        const activeFinalReport = (fData && fData.isDeleted !== true && fData.isDeleted !== "true") ? fData : null;
+                        
+                        setCourseDetailsCache(prev => ({
+                            ...prev,
+                            [selectedCourseId]: { 
+                                participants: activeParticipants, 
+                                allObs: activeObs, 
+                                allCases: activeCases, 
+                                finalReport: activeFinalReport, 
+                                participantTests: activeTests 
+                            }
+                        }));
+                    };
+
+                    if (hasData) {
+                        processAndSet(participantsData, allCourseData, finalReport, testData);
+                    }
+
+                    // 2. Fetch from Server if Cache is empty
+                    if (!hasData) {
+                        participantsData = await listAllParticipantsForCourse(selectedCourseId, { source: 'server' }).catch(()=>[]);
+                        allCourseData = await listAllDataForCourse(selectedCourseId, { source: 'server' }).catch(()=>({allObs:[], allCases:[]}));
+                        finalReport = await getFinalReportByCourseId(selectedCourseId, { source: 'server' }).catch(()=>null);
+                        testData = await listParticipantTestsForCourse(selectedCourseId, { source: 'server' }).catch(()=>[]);
+
+                        processAndSet(participantsData, allCourseData, finalReport, testData);
+                    }
                     
                 } catch (error) {
                     console.error("Background fetch of course details failed:", error);
@@ -1127,16 +1161,22 @@ export default function App() {
         setCourseDetailsLoading(true); 
         try {
             const [participantsData, allCourseData, finalReport, testData] = await Promise.all([
-                listAllParticipantsForCourse(courseId),
-                listAllDataForCourse(courseId),
-                getFinalReportByCourseId(courseId),
-                listParticipantTestsForCourse(courseId) 
+                listAllParticipantsForCourse(courseId, { source: 'server' }),
+                listAllDataForCourse(courseId, { source: 'server' }),
+                getFinalReportByCourseId(courseId, { source: 'server' }),
+                listParticipantTestsForCourse(courseId, { source: 'server' }) 
             ]);
-            const { allObs, allCases } = allCourseData;
+            
+            // APPLY SOFT DELETE FILTER
+            const activeParticipants = (participantsData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
+            const activeTests = (testData || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true");
+            const activeObs = (allCourseData.allObs || []).filter(o => o.isDeleted !== true && o.isDeleted !== "true");
+            const activeCases = (allCourseData.allCases || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true");
+            const activeFinalReport = (finalReport && finalReport.isDeleted !== true && finalReport.isDeleted !== "true") ? finalReport : null;
             
             setCourseDetailsCache(prev => ({
                 ...prev,
-                [courseId]: { participants: participantsData, allObs, allCases, finalReport, participantTests: testData || [] }
+                [courseId]: { participants: activeParticipants, allObs: activeObs, allCases: activeCases, finalReport: activeFinalReport, participantTests: activeTests }
             }));
             
             navigate('courseReport', { courseId });
@@ -1160,12 +1200,16 @@ export default function App() {
                 listParticipantTestsForCourse(courseId, { source: 'server' }) 
             ]);
             
+            // APPLY SOFT DELETE FILTER
+            const activeParticipants = (participantsData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
+            const activeTests = (testData || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true");
+            
             setCourseDetailsCache(prev => ({
                 ...prev,
                 [courseId]: { 
                     ...(prev[courseId] || {}), 
-                    participants: participantsData || [],
-                    participantTests: testData || []
+                    participants: activeParticipants,
+                    participantTests: activeTests
                 }
             }));
 
@@ -1264,7 +1308,6 @@ export default function App() {
         }
     }, [permissions, selectedCourseId, selectedParticipantId, navigate]);
 
-    // --- ADDED MISSING handleDeleteFacilitator ---
     const handleDeleteFacilitator = useCallback(async (facilitatorId) => {
         if (!permissions.canManageHumanResource) return;
         if (window.confirm('Are you sure you want to delete this facilitator?')) {
@@ -1360,12 +1403,17 @@ export default function App() {
         setLoading(true);
         try {
             const [participantsData, existingReport] = await Promise.all([
-                listAllParticipantsForCourse(courseId),
-                getFinalReportByCourseId(courseId)
+                listAllParticipantsForCourse(courseId, { source: 'server' }),
+                getFinalReportByCourseId(courseId, { source: 'server' })
             ]);
+            
+            // APPLY SOFT DELETE FILTER
+            const activeParticipants = (participantsData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
+            const activeFinalReport = (existingReport && existingReport.isDeleted !== true && existingReport.isDeleted !== "true") ? existingReport : null;
+            
             setCourseDetailsCache(prev => ({
                 ...prev,
-                [courseId]: { ...prev[courseId], participants: participantsData, finalReport: existingReport }
+                [courseId]: { ...prev[courseId], participants: activeParticipants, finalReport: activeFinalReport }
             }));
             navigate('finalReport');
         } catch (error) {
@@ -1391,7 +1439,7 @@ export default function App() {
             }
             const payload = { id: reportData.id, courseId: reportData.courseId, summary: reportData.summary, recommendations: reportData.recommendations, potentialFacilitators: reportData.participantsForFollowUp, pdfUrl: pdfUrl, galleryImageUrls: finalUrlsToSave, participantsForFollowUp: reportData.participantsForFollowUp };
             await upsertFinalReport(payload);
-            const savedReport = await getFinalReportByCourseId(reportData.courseId);
+            const savedReport = await getFinalReportByCourseId(reportData.courseId, { source: 'server' });
             setCourseDetailsCache(prev => ({
                 ...prev,
                 [reportData.courseId]: { ...prev[reportData.courseId], finalReport: savedReport }
@@ -1409,10 +1457,15 @@ export default function App() {
         if (!courseToEditReport) { setToast({ show: true, message: 'Course not found.', type: 'error' }); return; }
         setFinalReportCourse(courseToEditReport); setSelectedCourseId(courseId); setLoading(true);
         try {
-            const [participantsData, existingReport] = await Promise.all([ listAllParticipantsForCourse(courseId), getFinalReportByCourseId(courseId) ]);
+            const [participantsData, existingReport] = await Promise.all([ listAllParticipantsForCourse(courseId, { source: 'server' }), getFinalReportByCourseId(courseId, { source: 'server' }) ]);
+            
+            // APPLY SOFT DELETE FILTER
+            const activeParticipants = (participantsData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
+            const activeFinalReport = (existingReport && existingReport.isDeleted !== true && existingReport.isDeleted !== "true") ? existingReport : null;
+            
             setCourseDetailsCache(prev => ({
                 ...prev,
-                [courseId]: { ...prev[courseId], participants: participantsData, finalReport: existingReport }
+                [courseId]: { ...prev[courseId], participants: activeParticipants, finalReport: activeFinalReport }
             }));
             navigate('finalReport');
         } catch (error) { console.error("Error fetching final report for editing:", error); setToast({ show: true, message: 'Failed to load the final report.', type: 'error' }); }
@@ -1540,7 +1593,6 @@ export default function App() {
                     await fetchCourses(true); 
                     return id; 
                 }}
-                onAddNewFacilitator={async (data) => { await upsertFacilitator(data); await fetchFacilitators(true); }}
                 onAddNewCoordinator={handleAddNewCoordinator}
                 onAddNewFunder={handleAddNewFunder}
             />;
@@ -1584,7 +1636,6 @@ export default function App() {
                     facilitatorsList={allFacilitators || []}
                     onCancel={() => navigate(previousView)}
                     onSave={async (payload) => { const id = await upsertCourse({ ...payload, id: editingCourse?.id, course_type: activeCourseType || editingCourse?.course_type }); await fetchCourses(true); handleOpenCourse(id); }}
-                    onAddNewFacilitator={async (data) => { await upsertFacilitator(data); await fetchFacilitators(true); }}
                     onAddNewCoordinator={handleAddNewCoordinator}
                     onAddNewFunder={handleAddNewFunder}
                     fundersList={funders || []}
@@ -1604,7 +1655,20 @@ export default function App() {
 
             } catch (e) { setToast({ show: true, message: `Submission failed: ${e.message}`, type: 'error' }); } }} />) : null;
 
-            case 'participantReport': return permissions.canViewCourse ? (selectedCourse && currentParticipant && <ParticipantReportView course={selectedCourse} participant={currentParticipant} participants={courseDetails.participants} onChangeParticipant={(pid) => setSelectedParticipantId(pid)} onBack={() => navigate(previousView)} onNavigateToCase={(caseToEdit) => navigate('observe', { caseToEdit, courseId: caseToEdit.courseId, participantId: caseToEdit.participant_id })} onShare={(participant) => handleShare(participant, 'participant')} />) : null;
+            case 'participantReport': return permissions.canViewCourse ? (
+                selectedCourse && currentParticipant && 
+                <ParticipantReportView 
+                    course={selectedCourse} 
+                    participant={currentParticipant} 
+                    participants={courseDetails.participants} 
+                    observations={courseDetails.allObs?.filter(o => o.participant_id === currentParticipant.id) || []}
+                    cases={courseDetails.allCases?.filter(c => c.participant_id === currentParticipant.id) || []}
+                    onChangeParticipant={(pid) => setSelectedParticipantId(pid)} 
+                    onBack={() => navigate(previousView)} 
+                    onNavigateToCase={(caseToEdit) => navigate('observe', { caseToEdit, courseId: caseToEdit.courseId, participantId: caseToEdit.participant_id })} 
+                    onShare={(participant) => handleShare(participant, 'participant')} 
+                />
+            ) : null;
 
             case 'courseReport': return permissions.canViewCourse ? (selectedCourse && <CourseReportView course={selectedCourse} participants={courseDetails.participants} allObs={courseDetails.allObs} allCases={courseDetails.allCases} finalReportData={courseDetails.finalReport} onBack={() => navigate(previousView)} onEditFinalReport={handleEditFinalReport} onDeletePdf={handleDeletePdf} onViewParticipantReport={(pid) => { setSelectedParticipantId(pid); navigate('participantReport'); }} onShare={(course) => handleShare(course, 'course')} setToast={setToast} allHealthFacilities={healthFacilities} />) : null;
 
@@ -1930,7 +1994,12 @@ export default function App() {
                                         listParticipantTestsForCourse(publicTestData.course.id, 'server'),
                                         listAllParticipantsForCourse(publicTestData.course.id, 'server')
                                     ]);
-                                    setPublicTestData(prev => ({ ...prev, tests: testData || [], participants: participantData || [] }));
+                                    
+                                    // APPLY SOFT DELETE FILTER TO TEST UPDATES
+                                    const activeParticipants = (participantData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
+                                    const activeTests = (testData || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true");
+
+                                    setPublicTestData(prev => ({ ...prev, tests: activeTests, participants: activeParticipants }));
                                 } catch (err) {
                                     setToast({ show: true, message: 'Failed to refresh test data.', type: 'error' });
                                 } finally {

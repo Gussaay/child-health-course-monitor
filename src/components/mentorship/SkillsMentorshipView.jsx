@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useDataCache } from "../../DataContext";
 import { Timestamp } from 'firebase/firestore';
-import { PlusCircle, Trash2, FileText, Users, Building, ClipboardCheck, Archive, LayoutDashboard, Search, Share2, List, ArrowLeft } from 'lucide-react';
+import { PlusCircle, Trash2, FileText, Users, Building, ClipboardCheck, Archive, LayoutDashboard, Search, Share2, List, ArrowLeft, Target } from 'lucide-react';
 import {
     saveMentorshipSession,
     importMentorshipSessions,
@@ -55,6 +55,45 @@ import {
     IMNCIFormFields
 } from '../FacilityForms.jsx';
 import { onAuthStateChanged } from "firebase/auth";
+
+// --- Date Range Filter Helper ---
+const isDateInRange = (dateString, filterType) => {
+    if (!filterType) return true;
+    if (!dateString || dateString === 'N/A') return false;
+    
+    const dParts = dateString.split('-');
+    if (dParts.length !== 3) return false;
+    const dateToCompare = new Date(parseInt(dParts[0]), parseInt(dParts[1]) - 1, parseInt(dParts[2]));
+    
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    switch (filterType) {
+        case 'today':
+            return dateToCompare.getTime() === today.getTime();
+        case 'yesterday':
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            return dateToCompare.getTime() === yesterday.getTime();
+        case 'this_week':
+            const startOfWeek = new Date(today);
+            startOfWeek.setDate(today.getDate() - today.getDay());
+            return dateToCompare >= startOfWeek;
+        case 'last_week':
+            const startOfLastWeek = new Date(today);
+            startOfLastWeek.setDate(today.getDate() - today.getDay() - 7);
+            const endOfLastWeek = new Date(startOfLastWeek);
+            endOfLastWeek.setDate(startOfLastWeek.getDate() + 6);
+            return dateToCompare >= startOfLastWeek && dateToCompare <= endOfLastWeek;
+        case 'this_month':
+            return dateToCompare.getMonth() === today.getMonth() && dateToCompare.getFullYear() === today.getFullYear();
+        case 'last_month':
+            const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            return dateToCompare.getMonth() === lastMonth.getMonth() && dateToCompare.getFullYear() === lastMonth.getFullYear();
+        default:
+            return true;
+    }
+};
 
 // --- Normalization Helper for Job Titles ---
 const normalizeJobTitle = (title) => {
@@ -121,8 +160,6 @@ const ActionMenu = ({ onAction, activeService, draftCount, onBack, permissions, 
         permissions?.role === 'super_user' || 
         permissions?.role === 'federal_manager';
 
-    const canShareLink = permissions?.canManageSkillsMentorship || permissions?.canUseSuperUserAdvancedFeatures;
-
     // Section 1: Adding Forms
     const addItems = [
         { id: 'new_skill', label: 'Add New Skill Form', icon: PlusCircle, color: 'text-emerald-600', bg: 'bg-emerald-100', border: 'hover:border-emerald-400', shadow: 'hover:shadow-emerald-100' },
@@ -135,6 +172,7 @@ const ActionMenu = ({ onAction, activeService, draftCount, onBack, permissions, 
     const viewItems = [
         { id: 'view_dashboard', label: 'Show Dashboard', icon: LayoutDashboard, color: 'text-purple-600', bg: 'bg-purple-100', border: 'hover:border-purple-400', shadow: 'hover:shadow-purple-100' },
         { id: 'view_drafts', label: `Show Drafts (${draftCount})`, icon: Archive, color: 'text-amber-600', bg: 'bg-amber-100', border: 'hover:border-amber-400', shadow: 'hover:shadow-amber-100' },
+        { id: 'training_priorities', label: 'Training Priorities', icon: Target, color: 'text-teal-600', bg: 'bg-teal-100', border: 'hover:border-teal-400', shadow: 'hover:shadow-teal-100' },
     ];
 
     // Conditionally add 'Show Submitted Forms'
@@ -147,19 +185,6 @@ const ActionMenu = ({ onAction, activeService, draftCount, onBack, permissions, 
             bg: 'bg-blue-100', 
             border: 'hover:border-blue-400', 
             shadow: 'hover:shadow-blue-100' 
-        });
-    }
-
-    // Conditionally add 'Share Submission Link'
-    if (canShareLink) {
-        viewItems.push({ 
-            id: 'share_link', 
-            label: 'Share Submission Link', 
-            icon: Share2, 
-            color: 'text-teal-600', 
-            bg: 'bg-teal-100', 
-            border: 'hover:border-teal-400', 
-            shadow: 'hover:shadow-teal-100' 
         });
     }
 
@@ -204,6 +229,304 @@ const ActionMenu = ({ onAction, activeService, draftCount, onBack, permissions, 
         </div>
     );
 };
+
+// --- Training Priorities View Component ---
+const TrainingPrioritiesView = ({ activeService, submissions, currentUserEmail, onBack }) => {
+    
+    const [facilityFilter, setFacilityFilter] = useState('');
+    const [workerFilter, setWorkerFilter] = useState('');
+    const [visitCountFilter, setVisitCountFilter] = useState('');
+
+    const computeWeaknesses = useCallback((sessions, service) => {
+        if (!sessions || sessions.length === 0) return [];
+        let stats = {};
+
+        if (service === 'IMNCI') {
+            stats = {
+                skill_weight: { score: 0, max: 0, label: "وزن الطفل بصورة صحيحة" },
+                skill_temp: { score: 0, max: 0, label: "قياس درجة الطفل بصورة صحيحة" },
+                skill_height: { score: 0, max: 0, label: "قياس طول/ارتفاع الطفل بصورة صحيحة" },
+                skill_check_rr: { score: 0, max: 0, label: "قياس معدل التنفس بصورة صحيحة" },
+                skill_check_dehydration: { score: 0, max: 0, label: "تقييم فقدان السوائل بصورة صحيحة" },
+                skill_mal_muac: { score: 0, max: 0, label: "قياس المواك (MUAC) بصورة صحيحة" },
+                skill_mal_wfh: { score: 0, max: 0, label: "قياس نسبة الوزن للطول أو الارتفاع (Z-Score)" },
+                skill_edema: { score: 0, max: 0, label: "تقييم الورم (Edema)" },
+                skill_ds_drink: { score: 0, max: 0, label: "علامة خطورة: لا يستطيع ان يرضع أو يشرب" },
+                skill_ds_vomit: { score: 0, max: 0, label: "علامة خطورة: يتقيأ كل شئ" },
+                skill_ds_convulsion: { score: 0, max: 0, label: "علامة خطورة: تشنجات أثناء المرض الحالي" },
+                skill_ds_conscious: { score: 0, max: 0, label: "علامة خطورة: خامل أو فاقد للوعي" },
+            };
+
+            sessions.forEach(sub => {
+                const s = sub.scores || {};
+                const as = sub.assessmentSkills || sub.fullData?.assessment_skills || sub.fullData?.assessmentSkills || {};
+
+                const addScore = (key, scoreProp, maxProp) => {
+                    if (s[maxProp] > 0) {
+                        stats[key].score += (s[scoreProp] || 0);
+                        stats[key].max += s[maxProp];
+                    }
+                };
+
+                addScore('skill_weight', 'handsOnWeight_score', 'handsOnWeight_maxScore');
+                addScore('skill_temp', 'handsOnTemp_score', 'handsOnTemp_maxScore');
+                addScore('skill_height', 'handsOnHeight_score', 'handsOnHeight_maxScore');
+                addScore('skill_check_rr', 'handsOnRR_score', 'handsOnRR_maxScore');
+                if (s.respiratoryRateCalculation_maxScore > 0) {
+                     stats.skill_check_rr.score += (s.respiratoryRateCalculation_score || 0);
+                     stats.skill_check_rr.max += s.respiratoryRateCalculation_maxScore;
+                }
+                addScore('skill_check_dehydration', 'dehydrationAssessment_score', 'dehydrationAssessment_maxScore');
+                addScore('skill_mal_muac', 'handsOnMUAC_score', 'handsOnMUAC_maxScore');
+                addScore('skill_mal_wfh', 'handsOnWFH_score', 'handsOnWFH_maxScore');
+
+                const checkSkill = (key) => {
+                    if (as[key] === 'yes') { stats[key].score++; stats[key].max++; }
+                    else if (as[key] === 'no') { stats[key].max++; }
+                };
+                checkSkill('skill_ds_drink');
+                checkSkill('skill_ds_vomit');
+                checkSkill('skill_ds_convulsion');
+                checkSkill('skill_ds_conscious');
+                checkSkill('skill_edema');
+            });
+        } else if (service === 'EENC') {
+            Object.keys(EENC_SKILLS_LABELS).forEach(k => {
+                stats[k] = { score: 0, max: 0, label: EENC_SKILLS_LABELS[k] };
+            });
+            sessions.forEach(sub => {
+                const skills = sub.fullData?.skills || {};
+                Object.keys(EENC_SKILLS_LABELS).forEach(k => {
+                    if (skills[k] === 'yes') { stats[k].score++; stats[k].max++; }
+                    else if (skills[k] === 'partial') { stats[k].score += 0.5; stats[k].max++; } 
+                    else if (skills[k] === 'no') { stats[k].max++; }
+                });
+            });
+        }
+
+        const weakSkills = [];
+        Object.keys(stats).forEach(key => {
+            if (stats[key] && stats[key].max > 0) {
+                const pct = stats[key].score / stats[key].max;
+                if (pct < 0.75) {
+                    weakSkills.push({
+                        label: stats[key].label,
+                        pct: Math.round(pct * 100)
+                    });
+                }
+            }
+        });
+        return weakSkills;
+    }, []);
+
+    // 1. Filter out only complete sessions for this supervisor
+    const mySessions = useMemo(() => {
+        if (!submissions || !currentUserEmail) return [];
+        return submissions.filter(s =>
+            s.supervisorEmail === currentUserEmail &&
+            s.service === activeService &&
+            s.status === 'complete'
+        );
+    }, [submissions, currentUserEmail, activeService]);
+
+    // 2. Group by worker and calculate weaknesses per visit and collective
+    const workerData = useMemo(() => {
+        const map = new Map();
+        let globalMaxVisits = 0;
+
+        mySessions.forEach(sub => {
+            if (!sub.staff || sub.staff === 'N/A') return;
+            const key = `${sub.facilityId}_${sub.staff}`;
+            
+            if (!map.has(key)) {
+                map.set(key, {
+                    facilityName: sub.facility,
+                    staff: sub.staff,
+                    sessions: [],
+                    visitsMap: {} // Stores data by visitNumber
+                });
+            }
+            
+            const worker = map.get(key);
+            worker.sessions.push(sub);
+            
+            const vNum = parseInt(sub.visitNumber) || 1;
+            worker.visitsMap[vNum] = sub;
+            if (vNum > globalMaxVisits) globalMaxVisits = vNum;
+        });
+
+        // Compute weaknesses for each worker
+        const computedWorkers = Array.from(map.values()).map(worker => {
+            const rowData = {
+                facilityName: worker.facilityName,
+                staff: worker.staff,
+                totalVisits: worker.sessions.length,
+                visitWeaknesses: {},
+                collectiveWeaknesses: computeWeaknesses(worker.sessions, activeService)
+            };
+
+            // Calculate for each individual visit
+            Object.keys(worker.visitsMap).forEach(vNum => {
+                rowData.visitWeaknesses[vNum] = computeWeaknesses([worker.visitsMap[vNum]], activeService);
+            });
+
+            return rowData;
+        });
+
+        return { workers: computedWorkers.sort((a,b) => a.facilityName.localeCompare(b.facilityName) || a.staff.localeCompare(b.staff)), maxVisits: globalMaxVisits };
+    }, [mySessions, activeService, computeWeaknesses]);
+
+    // 3. Extract lists for filters
+    const filterOptions = useMemo(() => {
+        const facs = new Set();
+        const workers = new Set();
+        const visits = new Set();
+
+        workerData.workers.forEach(w => {
+            facs.add(w.facilityName);
+            workers.add(w.staff);
+            visits.add(w.totalVisits);
+        });
+
+        return {
+            facilities: Array.from(facs).sort(),
+            workers: Array.from(workers).sort(),
+            visits: Array.from(visits).sort((a,b) => a - b)
+        };
+    }, [workerData.workers]);
+
+    // 4. Apply Filters
+    const filteredWorkers = useMemo(() => {
+        return workerData.workers.filter(w => {
+            if (facilityFilter && w.facilityName !== facilityFilter) return false;
+            if (workerFilter && w.staff !== workerFilter) return false;
+            if (visitCountFilter && w.totalVisits !== parseInt(visitCountFilter)) return false;
+            return true;
+        });
+    }, [workerData.workers, facilityFilter, workerFilter, visitCountFilter]);
+
+    // --- Render Helpers ---
+    const renderWeaknessPills = (weaknesses) => {
+        if (!weaknesses || weaknesses.length === 0) {
+            return <span className="text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-1 rounded">ممتاز (بدون ضعف)</span>;
+        }
+        return (
+            <div className="flex flex-col gap-1">
+                {weaknesses.map((w, idx) => (
+                    <div key={idx} className="text-[10px] sm:text-xs font-semibold bg-red-50 text-red-700 border border-red-200 px-2 py-1 rounded leading-tight">
+                        {w.label} <span dir="ltr">({w.pct}%)</span>
+                    </div>
+                ))}
+            </div>
+        );
+    };
+
+    return (
+        <Card dir="rtl" className="w-full">
+            <div className="p-6">
+                <div className="flex items-center gap-4 mb-6 border-b pb-4">
+                    <Button variant="secondary" onClick={onBack}>
+                        <ArrowLeft className="w-4 h-4 ml-2" /> العودة للقائمة
+                    </Button>
+                    <div>
+                        <h2 className="text-2xl font-bold text-sky-800">جدول أولويات التدريب للكوادر</h2>
+                        <p className="text-gray-500 text-sm mt-1">يعرض هذا الجدول المهارات التي تحتاج للتدريب (بدرجة أقل من 75%) مجمعة لكل زيارة ولكل الكوادر التي قمت بالإشراف عليها.</p>
+                    </div>
+                </div>
+
+                {/* Filters */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 border p-4 rounded-lg bg-gray-50">
+                    <FormGroup label="المؤسسة الصحية" className="text-right">
+                        <Select value={facilityFilter} onChange={e => setFacilityFilter(e.target.value)}>
+                            <option value="">الكل</option>
+                            {filterOptions.facilities.map(f => <option key={f} value={f}>{f}</option>)}
+                        </Select>
+                    </FormGroup>
+                    <FormGroup label="اسم العامل الصحي" className="text-right">
+                        <Select value={workerFilter} onChange={e => setWorkerFilter(e.target.value)}>
+                            <option value="">الكل</option>
+                            {filterOptions.workers.map(w => <option key={w} value={w}>{w}</option>)}
+                        </Select>
+                    </FormGroup>
+                    <FormGroup label="عدد الزيارات الإجمالي" className="text-right">
+                        <Select value={visitCountFilter} onChange={e => setVisitCountFilter(e.target.value)}>
+                            <option value="">الكل</option>
+                            {filterOptions.visits.map(v => <option key={v} value={v}>{v} زيارات</option>)}
+                        </Select>
+                    </FormGroup>
+                </div>
+
+                {/* Table */}
+                <div className="overflow-x-auto border rounded-xl shadow-sm">
+                    <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-sky-50">
+                            <tr>
+                                <th className="px-4 py-3 text-right text-xs font-extrabold text-sky-900 uppercase tracking-wider border-l border-gray-200 min-w-[150px]">المنشأة</th>
+                                <th className="px-4 py-3 text-right text-xs font-extrabold text-sky-900 uppercase tracking-wider border-l border-gray-200 min-w-[150px]">العامل الصحي</th>
+                                <th className="px-4 py-3 text-center text-xs font-extrabold text-sky-900 uppercase tracking-wider border-l border-gray-200">الزيارات</th>
+                                
+                                {/* Dynamic Visit Columns */}
+                                {Array.from({ length: workerData.maxVisits }).map((_, i) => (
+                                    <th key={i} className="px-4 py-3 text-center text-xs font-extrabold text-gray-600 uppercase tracking-wider border-l border-gray-200 min-w-[200px]">
+                                        الزيارة رقم {i + 1}
+                                    </th>
+                                ))}
+                                
+                                <th className="px-4 py-3 text-center text-xs font-extrabold text-amber-900 bg-amber-100 uppercase tracking-wider min-w-[250px]">
+                                    الضعف التراكمي المجمع
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                            {filteredWorkers.length === 0 ? (
+                                <tr>
+                                    <td colSpan={workerData.maxVisits + 4} className="p-8 text-center text-gray-500 font-medium">
+                                        لا توجد بيانات متاحة تطابق خيارات التصفية الحالية، أو لم تقم بتسجيل أي زيارات مكتملة بعد.
+                                    </td>
+                                </tr>
+                            ) : (
+                                filteredWorkers.map((worker, idx) => (
+                                    <tr key={`${worker.facilityName}_${worker.staff}_${idx}`} className="hover:bg-gray-50 transition-colors">
+                                        <td className="px-4 py-4 text-sm font-semibold text-gray-800 border-l border-gray-200 align-top">
+                                            {worker.facilityName}
+                                        </td>
+                                        <td className="px-4 py-4 text-sm font-bold text-sky-700 border-l border-gray-200 align-top">
+                                            {worker.staff}
+                                        </td>
+                                        <td className="px-4 py-4 text-sm font-bold text-center border-l border-gray-200 align-top">
+                                            {worker.totalVisits}
+                                        </td>
+                                        
+                                        {/* Render cells for each possible visit */}
+                                        {Array.from({ length: workerData.maxVisits }).map((_, i) => {
+                                            const visitNum = i + 1;
+                                            const hasVisit = worker.visitWeaknesses[visitNum] !== undefined;
+                                            
+                                            return (
+                                                <td key={visitNum} className="px-4 py-4 align-top border-l border-gray-200">
+                                                    {hasVisit ? (
+                                                        renderWeaknessPills(worker.visitWeaknesses[visitNum])
+                                                    ) : (
+                                                        <div className="text-center text-gray-400 font-medium">-</div>
+                                                    )}
+                                                </td>
+                                            );
+                                        })}
+                                        
+                                        <td className="px-4 py-4 align-top bg-amber-50/50">
+                                            {renderWeaknessPills(worker.collectiveWeaknesses)}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </Card>
+    );
+};
+
 
 // --- AddHealthWorkerModal Component ---
 const IMNCI_JOB_TITLES = [
@@ -314,73 +637,184 @@ const FacilitySelectionModal = ({ isOpen, onClose, facilities, onSelect }) => {
     );
 };
 
-// --- Post-Save Modal Component ---
-const PostSaveModal = ({ isOpen, onClose, onSelect }) => {
+// --- Training Priorities Modal (Post Save) ---
+const TrainingPrioritiesModal = ({ isOpen, onClose, onSelect, currentSessionData, historicalSessions, healthWorkerName }) => {
+    
+    const computeWeaknesses = (sessions) => {
+        if (!sessions || sessions.length === 0) return [];
+        const stats = {
+            skill_weight: { score: 0, max: 0, label: "وزن الطفل بصورة صحيحة" },
+            skill_temp: { score: 0, max: 0, label: "قياس درجة الطفل بصورة صحيحة" },
+            skill_height: { score: 0, max: 0, label: "قياس طول/ارتفاع الطفل بصورة صحيحة" },
+            skill_check_rr: { score: 0, max: 0, label: "قياس معدل التنفس بصورة صحيحة" },
+            skill_check_dehydration: { score: 0, max: 0, label: "تقييم فقدان السوائل بصورة صحيحة" },
+            skill_mal_muac: { score: 0, max: 0, label: "قياس المواك (MUAC) بصورة صحيحة" },
+            skill_mal_wfh: { score: 0, max: 0, label: "قياس نسبة الوزن للطول أو الارتفاع (Z-Score)" },
+            skill_edema: { score: 0, max: 0, label: "تقييم الورم (Edema)" },
+            skill_ds_drink: { score: 0, max: 0, label: "علامة خطورة: لا يستطيع ان يرضع أو يشرب" },
+            skill_ds_vomit: { score: 0, max: 0, label: "علامة خطورة: يتقيأ كل شئ" },
+            skill_ds_convulsion: { score: 0, max: 0, label: "علامة خطورة: تشنجات أثناء المرض الحالي" },
+            skill_ds_conscious: { score: 0, max: 0, label: "علامة خطورة: خامل أو فاقد للوعي" },
+        };
+
+        sessions.forEach(sub => {
+            const s = sub.scores || {};
+            const as = sub.assessmentSkills || sub.fullData?.assessment_skills || sub.fullData?.assessmentSkills || {};
+
+            const addScore = (key, scoreProp, maxProp) => {
+                if (s[maxProp] > 0) {
+                    stats[key].score += (s[scoreProp] || 0);
+                    stats[key].max += s[maxProp];
+                }
+            };
+
+            addScore('skill_weight', 'handsOnWeight_score', 'handsOnWeight_maxScore');
+            addScore('skill_temp', 'handsOnTemp_score', 'handsOnTemp_maxScore');
+            addScore('skill_height', 'handsOnHeight_score', 'handsOnHeight_maxScore');
+            addScore('skill_check_rr', 'handsOnRR_score', 'handsOnRR_maxScore');
+            if (s.respiratoryRateCalculation_maxScore > 0) {
+                 stats.skill_check_rr.score += (s.respiratoryRateCalculation_score || 0);
+                 stats.skill_check_rr.max += s.respiratoryRateCalculation_maxScore;
+            }
+            addScore('skill_check_dehydration', 'dehydrationAssessment_score', 'dehydrationAssessment_maxScore');
+            addScore('skill_mal_muac', 'handsOnMUAC_score', 'handsOnMUAC_maxScore');
+            addScore('skill_mal_wfh', 'handsOnWFH_score', 'handsOnWFH_maxScore');
+
+            const checkSkill = (key) => {
+                if (as[key] === 'yes') { stats[key].score++; stats[key].max++; }
+                else if (as[key] === 'no') { stats[key].max++; }
+            };
+            checkSkill('skill_ds_drink');
+            checkSkill('skill_ds_vomit');
+            checkSkill('skill_ds_convulsion');
+            checkSkill('skill_ds_conscious');
+            checkSkill('skill_edema');
+        });
+
+        const weakSkills = [];
+        Object.keys(stats).forEach(key => {
+            if (stats[key].max > 0) {
+                const pct = stats[key].score / stats[key].max;
+                if (pct < 0.75) {
+                    weakSkills.push({
+                        label: stats[key].label,
+                        score: stats[key].score,
+                        max: stats[key].max,
+                        pct: Math.round(pct * 100)
+                    });
+                }
+            }
+        });
+        return weakSkills;
+    };
+
+    const currentWeaknesses = currentSessionData ? computeWeaknesses([currentSessionData]) : [];
+    const historyWeaknesses = computeWeaknesses(historicalSessions);
+
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="الجلسة حفظت بنجاح!" size="lg">
+        <Modal isOpen={isOpen} onClose={onClose} title={onSelect ? "الجلسة حفظت بنجاح! - أولويات التدريب" : "أولويات التدريب للعامل الصحي"} size="lg">
             <div className="p-6 text-right" dir="rtl">
-                <p className="text-lg mb-6">ماذا تريد أن تفعل الآن؟</p>
-                <div className="flex flex-col gap-4">
-                    <Button
-                        variant="primary"
-                        onClick={() => onSelect('skills_assessment')}
-                        className="w-full justify-center"
-                    >
-                        بدء جلسة إشراف فني جديدة (لنفس المنشأة)
-                    </Button>
-                    <Button
-                        variant="info"
-                        onClick={() => onSelect('mothers_form')}
-                        className="w-full justify-center"
-                    >
-                        بدء استبيان أم جديد (لنفس المنشأة)
-                    </Button>
-                    <Button
-                        variant="info"
-                        onClick={() => onSelect('visit_report')}
-                        className="w-full justify-center"
-                    >
-                        بدء تقرير زيارة جديد (لنفس المنشأة)
-                    </Button>
-                    <Button
-                        variant="secondary"
-                        onClick={() => onSelect('action_menu')}
-                        className="w-full justify-center"
-                    >
-                        العودة للقائمة الرئيسية
-                    </Button>
-                    <Button
-                        variant="secondary"
-                        onClick={() => onSelect('drafts')}
-                        className="w-full justify-center"
-                    >
-                        عرض المسودات
-                    </Button>
-                    <hr className="my-2" />
-                    <Button
-                        variant="secondary"
-                        onClick={onClose}
-                        className="w-full justify-center"
-                    >
-                        إغلاق النافذة
-                    </Button>
+                <h3 className="text-xl font-bold text-sky-800 mb-4">العامل الصحي: {healthWorkerName || 'غير محدد'}</h3>
+                
+                {currentSessionData && (
+                    <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+                        <h4 className="text-lg font-bold text-red-800 mb-3 border-b border-red-200 pb-2">مهارات تحتاج إلى تدريب (من الجلسة الحالية)</h4>
+                        {currentWeaknesses.length > 0 ? (
+                            <ul className="list-disc pr-6 space-y-2">
+                                {currentWeaknesses.map((w, i) => (
+                                    <li key={i} className="text-sm font-semibold text-gray-800">
+                                        {w.label} <span className="text-red-600 mr-2" dir="ltr">({w.pct}%)</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p className="text-green-700 font-bold text-sm">أداء ممتاز! لم تُسجل نقاط ضعف (أقل من 75%) في هذه الجلسة.</p>
+                        )}
+                    </div>
+                )}
+
+                <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <h4 className="text-lg font-bold text-yellow-800 mb-3 border-b border-yellow-200 pb-2">أولويات التدريب المتراكمة (من الجلسات السابقة)</h4>
+                    {historyWeaknesses.length > 0 ? (
+                        <ul className="list-disc pr-6 space-y-2">
+                            {historyWeaknesses.map((w, i) => (
+                                <li key={i} className="text-sm font-semibold text-gray-800">
+                                    {w.label} <span className="text-yellow-600 mr-2" dir="ltr">({w.pct}%)</span>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="text-green-700 font-bold text-sm">لا توجد نقاط ضعف متراكمة من الجلسات السابقة (أو لا توجد جلسات سابقة).</p>
+                    )}
                 </div>
+
+                {onSelect ? (
+                    <>
+                        <p className="text-lg mb-4 font-bold text-gray-800 border-t pt-4">ماذا تريد أن تفعل الآن؟</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <Button variant="primary" onClick={() => onSelect('skills_assessment')} className="justify-center">بدء جلسة إشراف فني جديدة</Button>
+                            <Button variant="info" onClick={() => onSelect('mothers_form')} className="justify-center">بدء استبيان أم جديد</Button>
+                            <Button variant="info" onClick={() => onSelect('visit_report')} className="justify-center">بدء تقرير زيارة جديد</Button>
+                            <Button variant="secondary" onClick={() => onSelect('action_menu')} className="justify-center">العودة للقائمة الرئيسية</Button>
+                        </div>
+                    </>
+                ) : (
+                    <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
+                        <Button variant="secondary" onClick={onClose}>إغلاق</Button>
+                    </div>
+                )}
             </div>
         </Modal>
     );
 };
 
 // --- Visit Reports Table Component ---
-const VisitReportsTable = ({ reports, onEdit, onDelete, onView, selectedIds, onSelectionChange, isReportsLoading, canManage }) => {
-    const isAllSelected = reports.length > 0 && reports.every(r => selectedIds.includes(r.id));
-    const isSomeSelected = reports.length > 0 && reports.some(r => selectedIds.includes(r.id));
+const VisitReportsTable = ({ 
+    reports, onEdit, onDelete, onView, selectedIds, onSelectionChange, isReportsLoading, canManage,
+    stateFilter, localityFilter, supervisorFilter, visitNumberFilter, facilityFilter, dateFilter
+}) => {
+
+    // 1. Filter and Sort logic
+    const filteredReports = useMemo(() => {
+        let filtered = reports;
+
+        if (stateFilter) {
+            filtered = filtered.filter(rep => rep.state === stateFilter);
+        }
+        if (localityFilter) {
+            filtered = filtered.filter(rep => rep.locality === localityFilter);
+        }
+        if (facilityFilter) {
+            filtered = filtered.filter(rep => rep.facilityName === facilityFilter);
+        }
+        if (supervisorFilter) {
+            filtered = filtered.filter(rep => rep.mentorEmail === supervisorFilter);
+        }
+        if (visitNumberFilter) {
+            filtered = filtered.filter(rep => String(rep.visitNumber) === String(visitNumberFilter));
+        }
+        if (dateFilter) {
+            filtered = filtered.filter(rep => isDateInRange(rep.visitDate, dateFilter));
+        }
+
+        // Sort from newest to oldest strictly by precise timestamps
+        return filtered.sort((a, b) => {
+            const timeA = a.fullData?.createdAt ? (a.fullData.createdAt.seconds || a.fullData.createdAt._seconds) : new Date(a.visitDate || 0).getTime() / 1000;
+            const timeB = b.fullData?.createdAt ? (b.fullData.createdAt.seconds || b.fullData.createdAt._seconds) : new Date(b.visitDate || 0).getTime() / 1000;
+            return timeB - timeA; 
+        });
+    }, [reports, stateFilter, localityFilter, facilityFilter, supervisorFilter, visitNumberFilter, dateFilter]);
+
+    // 2. Adjust selection logic to only affect filtered results
+    const isAllSelected = filteredReports.length > 0 && filteredReports.every(r => selectedIds.includes(r.id));
+    const isSomeSelected = filteredReports.length > 0 && filteredReports.some(r => selectedIds.includes(r.id));
 
     const handleSelectAll = (e) => {
         if (e.target.checked) {
-            const newSelection = new Set([...selectedIds, ...reports.map(r => r.id)]);
+            const newSelection = new Set([...selectedIds, ...filteredReports.map(r => r.id)]);
             onSelectionChange(Array.from(newSelection));
         } else {
-            const visibleIds = reports.map(r => r.id);
+            const visibleIds = filteredReports.map(r => r.id);
             onSelectionChange(selectedIds.filter(id => !visibleIds.includes(id)));
         }
     };
@@ -422,10 +856,10 @@ const VisitReportsTable = ({ reports, onEdit, onDelete, onView, selectedIds, onS
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                        {reports.length === 0 ? (
+                        {filteredReports.length === 0 ? (
                             <tr><td colSpan={canManage ? "8" : "7"} className="border border-gray-300"><EmptyState title="No Records Found" message="No visit reports found for this service." /></td></tr>
                         ) : (
-                            reports.map(rep => (
+                            filteredReports.map(rep => (
                                 <tr key={rep.id} className={selectedIds.includes(rep.id) ? 'bg-sky-50' : ''}>
                                     {canManage && (
                                         <td className="px-3 py-2 text-center border border-gray-300">
@@ -838,7 +1272,7 @@ const MentorshipSubmissionsTable = ({
     isSubmissionsLoading,
     filterServiceType,
     stateFilter, localityFilter, supervisorFilter, statusFilter, visitNumberFilter,
-    facilityFilter, workerFilter, projectFilter, workerTypeFilter,
+    facilityFilter, workerFilter, projectFilter, workerTypeFilter, dateFilter,
     selectedIds, onSelectionChange, canManage
 }) => {
     
@@ -889,8 +1323,16 @@ const MentorshipSubmissionsTable = ({
         if (workerTypeFilter) {
             filtered = filtered.filter(sub => sub.workerType === workerTypeFilter);
         }
-        return filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
-    }, [submissions, activeService, filterServiceType, stateFilter, localityFilter, supervisorFilter, statusFilter, visitNumberFilter, facilityFilter, workerFilter, projectFilter, workerTypeFilter]);
+        if (dateFilter) {
+            filtered = filtered.filter(sub => isDateInRange(sub.date, dateFilter));
+        }
+        // Strict chronological sorting based on accurate timestamp
+        return filtered.sort((a, b) => {
+            const timeA = a.effectiveDateTimestamp ? (a.effectiveDateTimestamp.seconds || a.effectiveDateTimestamp._seconds) : new Date(a.date).getTime() / 1000;
+            const timeB = b.effectiveDateTimestamp ? (b.effectiveDateTimestamp.seconds || b.effectiveDateTimestamp._seconds) : new Date(b.date).getTime() / 1000;
+            return timeB - timeA;
+        });
+    }, [submissions, activeService, filterServiceType, stateFilter, localityFilter, supervisorFilter, statusFilter, visitNumberFilter, facilityFilter, workerFilter, projectFilter, workerTypeFilter, dateFilter]);
 
     // --- Bulk Selection Handlers ---
     const allFilteredIds = filteredSubmissions.map(s => s.id);
@@ -1149,6 +1591,10 @@ const SkillsMentorshipView = ({
     // --- State for Standalone Facility Update Modal ---
     const [isStandaloneFacilityModalOpen, setIsStandaloneFacilityModalOpen] = useState(false);
 
+    // --- State for Training Priorities / Post Save Modal ---
+    const [lastSavedSessionData, setLastSavedSessionData] = useState(null);
+    const [isTrainingPrioritiesModalOpen, setIsTrainingPrioritiesModalOpen] = useState(false);
+
     const {
         healthFacilities,
         fetchHealthFacilities,
@@ -1293,7 +1739,6 @@ const SkillsMentorshipView = ({
     const [isMothersFormModalOpen, setIsMothersFormModalOpen] = useState(false);
     const [isDashboardModalOpen, setIsDashboardModalOpen] = useState(false);
     const [isVisitReportModalOpen, setIsVisitReportModalOpen] = useState(false);
-    const [isPostSaveModalOpen, setIsPostSaveModalOpen] = useState(false);
     const [lastSavedFacilityInfo, setLastSavedFacilityInfo] = useState(null);
  
     const formRef = useRef(null);
@@ -1308,6 +1753,7 @@ const SkillsMentorshipView = ({
     const [workerFilter, setWorkerFilter] = useState('');
     const [projectFilter, setProjectFilter] = useState('');
     const [workerTypeFilter, setWorkerTypeFilter] = useState('');
+    const [dateFilter, setDateFilter] = useState('');
 
     // --- Calculate permission to edit visit number ---
     const canEditVisitNumber = useMemo(() => {
@@ -1674,6 +2120,7 @@ const SkillsMentorshipView = ({
             setWorkerFilter('');
             setProjectFilter('');
             setWorkerTypeFilter('');
+            setDateFilter('');
         }
     }, [activeTab, publicDashboardMode]);
 
@@ -2004,8 +2451,8 @@ const SkillsMentorshipView = ({
         if (action === 'view_submissions') {
             setCurrentView('history');
             setActiveTab('skills_list');
-        } else if (action === 'share_link') {
-            handleShareSubmissionLink();
+        } else if (action === 'training_priorities') {
+            setCurrentView('training_priorities');
         } else if (action === 'view_dashboard') {
             setCurrentView('history');
             setActiveTab('dashboard');
@@ -2062,15 +2509,22 @@ const SkillsMentorshipView = ({
             lastFacilityInfo = {
                 state: savedData.state,
                 locality: savedData.locality,
-                facilityId: savedData.facilityId
+                facilityId: savedData.facilityId,
+                healthWorkerName: savedData.healthWorkerName
             };
+        }
+        
+        // IMMEDIATE SYNC
+        if (status === 'complete' || status === 'draft') {
+            fetchSkillMentorshipSubmissions(true);
         }
  
         resetSelection(); 
         
         if (status === 'complete' && !publicSubmissionMode) {
+            setLastSavedSessionData(savedData);
             setLastSavedFacilityInfo(lastFacilityInfo);
-            setIsPostSaveModalOpen(true);
+            setIsTrainingPrioritiesModalOpen(true);
         } else {
             if (publicSubmissionMode) {
                 if (status === 'complete') {
@@ -2102,10 +2556,11 @@ const SkillsMentorshipView = ({
     const handlePostSaveSelect = (actionType) => {
         if (!lastSavedFacilityInfo) return;
 
-        setIsPostSaveModalOpen(false);
+        setIsTrainingPrioritiesModalOpen(false);
 
         const savedInfo = lastSavedFacilityInfo;
         setLastSavedFacilityInfo(null);
+        setLastSavedSessionData(null);
 
         setSelectedState(savedInfo.state);
         setSelectedLocality(savedInfo.locality);
@@ -2126,8 +2581,9 @@ const SkillsMentorshipView = ({
     };
 
     const handlePostSaveClose = () => {
-        setIsPostSaveModalOpen(false);
+        setIsTrainingPrioritiesModalOpen(false);
         setLastSavedFacilityInfo(null);
+        setLastSavedSessionData(null);
         setCurrentView('action_menu');
     };
 
@@ -2162,15 +2618,6 @@ const SkillsMentorshipView = ({
         }
     };
 
-    const handleShareSubmissionLink = () => {
-        const publicUrl = `${window.location.origin}/mentorship/submit/${activeService}`;
-        navigator.clipboard.writeText(publicUrl).then(() => {
-            setToast({ show: true, message: 'Public submission link copied to clipboard!', type: 'success' });
-        }, (err) => {
-            setToast({ show: true, message: 'Failed to copy link.', type: 'error' });
-        });
-    };
-    
     const handleShareDashboardLink = () => {
         const baseUrl = `${window.location.origin}/public/mentorship/dashboard/${activeService}`;
         const params = new URLSearchParams();
@@ -2496,6 +2943,17 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
     if (currentView === 'service_selection') {
         return <ServiceSelector onSelectService={handleSelectService} />;
     }
+    
+    if (currentView === 'training_priorities') {
+        return (
+            <TrainingPrioritiesView
+                activeService={activeService}
+                submissions={processedSubmissions}
+                currentUserEmail={user?.email}
+                onBack={() => setCurrentView('action_menu')}
+            />
+        );
+    }
 
     if (currentView === 'action_menu') {
         return (
@@ -2622,7 +3080,20 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
 
                         {activeTab !== 'dashboard' && !publicDashboardMode && (
                             <>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6 border p-4 rounded-lg bg-gray-50">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-6 border p-4 rounded-lg bg-gray-50">
+                                    
+                                    <FormGroup label="Date Range" className="text-left" dir="ltr">
+                                        <Select value={dateFilter} onChange={(e) => setDateFilter(e.target.value)}>
+                                            <option value="">All Time</option>
+                                            <option value="today">Today</option>
+                                            <option value="yesterday">Yesterday</option>
+                                            <option value="this_week">This Week</option>
+                                            <option value="last_week">Last Week</option>
+                                            <option value="this_month">This Month</option>
+                                            <option value="last_month">Last Month</option>
+                                        </Select>
+                                    </FormGroup>
+
                                     <FormGroup label="State" className="text-left" dir="ltr">
                                         <Select value={stateFilter} onChange={(e) => { setStateFilter(e.target.value); setLocalityFilter(''); setFacilityFilter(''); setWorkerFilter(''); setProjectFilter(''); setWorkerTypeFilter(''); }}>
                                             {availableStates.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
@@ -2753,6 +3224,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     workerFilter={workerFilter}
                                     projectFilter={projectFilter}
                                     workerTypeFilter={workerTypeFilter}
+                                    dateFilter={dateFilter}
                                     selectedIds={selectedSubmissionIds}
                                     onSelectionChange={setSelectedSubmissionIds}
                                     canManage={canManageMentorship}
@@ -2776,6 +3248,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     workerFilter={workerFilter}
                                     projectFilter={projectFilter}
                                     workerTypeFilter={workerTypeFilter}
+                                    dateFilter={dateFilter}
                                     selectedIds={selectedSubmissionIds}
                                     onSelectionChange={setSelectedSubmissionIds}
                                     canManage={canManageMentorship}
@@ -2791,6 +3264,12 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     onSelectionChange={setSelectedReportIds}
                                     isReportsLoading={activeService === 'IMNCI' ? (isDataCacheLoading.imnciVisitReports && imnciVisitReports === null) : (isDataCacheLoading.eencVisitReports && eencVisitReports === null)}
                                     canManage={canManageMentorship}
+                                    stateFilter={stateFilter}
+                                    localityFilter={localityFilter}
+                                    facilityFilter={facilityFilter}
+                                    supervisorFilter={supervisorFilter}
+                                    visitNumberFilter={visitNumberFilter}
+                                    dateFilter={dateFilter}
                                 />
                             )}
 
@@ -2984,6 +3463,10 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                             onCancel={() => {
                                                 setIsVisitReportModalOpen(false);
                                             }}
+                                            onSaveSuccess={() => {
+                                                fetchIMNCIVisitReports(true);
+                                                setIsVisitReportModalOpen(false);
+                                            }}
                                             setToast={setToast}
                                             allSubmissions={processedSubmissions}
                                             existingReportData={null}
@@ -2995,6 +3478,10 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                             facility={facilityData}
                                             visitNumber={visitReportVisitNumber}
                                             onCancel={() => {
+                                                setIsVisitReportModalOpen(false);
+                                            }}
+                                            onSaveSuccess={() => {
+                                                if(fetchEENCVisitReports) fetchEENCVisitReports(true);
                                                 setIsVisitReportModalOpen(false);
                                             }}
                                             setToast={setToast}
@@ -3071,6 +3558,17 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                             </div>
                         </Modal>
                     )}
+                    
+                    {isTrainingPrioritiesModalOpen && (
+                        <TrainingPrioritiesModal
+                            isOpen={isTrainingPrioritiesModalOpen}
+                            onClose={handlePostSaveClose}
+                            onSelect={lastSavedSessionData ? handlePostSaveSelect : null}
+                            currentSessionData={lastSavedSessionData}
+                            historicalSessions={workerHistory.filter(s => !lastSavedSessionData || s.sessionDate !== lastSavedSessionData.sessionDate)}
+                            healthWorkerName={lastSavedFacilityInfo?.healthWorkerName || selectedHealthWorkerName}
+                        />
+                    )}
                 </>
             );
         }
@@ -3088,6 +3586,17 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         workerHistory={workerHistory}
                         canEditVisitNumber={canEditVisitNumber}
                     />
+                    
+                    {isTrainingPrioritiesModalOpen && (
+                        <TrainingPrioritiesModal
+                            isOpen={isTrainingPrioritiesModalOpen}
+                            onClose={handlePostSaveClose}
+                            onSelect={lastSavedSessionData ? handlePostSaveSelect : null}
+                            currentSessionData={lastSavedSessionData}
+                            historicalSessions={workerHistory.filter(s => !lastSavedSessionData || s.sessionDate !== lastSavedSessionData.sessionDate)}
+                            healthWorkerName={lastSavedFacilityInfo?.healthWorkerName || selectedHealthWorkerName}
+                        />
+                    )}
                 </>
             );
         }
@@ -3141,6 +3650,11 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         facility={facilityData}
                         visitNumber={visitReportVisitNumber}
                         onCancel={() => handleGenericFormExit('visit_reports')}
+                        onSaveSuccess={() => {
+                            if (activeService === 'IMNCI') fetchIMNCIVisitReports(true);
+                            if (activeService === 'EENC' && fetchEENCVisitReports) fetchEENCVisitReports(true);
+                            handleGenericFormExit('visit_reports');
+                        }}
                         setToast={setToast}
                         allSubmissions={processedSubmissions}
                         existingReportData={editingSubmission}
@@ -3328,7 +3842,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         </div>
                         
                         <div className="hidden sm:flex flex-col gap-2 items-end mt-6 pt-4 border-t">
-                            <div className="flex gap-2 flex-wrap justify-end">
+                            <div className="flex gap-2 flex-wrap justify-end w-full">
                                 <Button 
                                     onClick={handleBackToMainMenu}
                                     variant="secondary"
@@ -3336,6 +3850,23 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                 >
                                     إلغاء والعودة
                                 </Button>
+                                
+                                {isSkillsAssessmentSetup && selectedHealthWorkerName && (
+                                    <Button 
+                                        type="button" 
+                                        variant="warning"
+                                        onClick={() => {
+                                            setLastSavedSessionData(null);
+                                            setIsTrainingPrioritiesModalOpen(true);
+                                        }}
+                                        disabled={isFacilitiesLoading || workerHistory.length === 0}
+                                        title={workerHistory.length === 0 ? "لا توجد جلسات سابقة لعرض الأولويات" : "عرض أولويات التدريب للعامل بناءً على التقييمات السابقة"}
+                                        className="ml-auto"
+                                    >
+                                        أولويات التدريب (للعامل الصحي)
+                                    </Button>
+                                )}
+
                                 <Button
                                     onClick={handleProceedToForm}
                                     disabled={!selectedFacilityId || (isSkillsAssessmentSetup && !selectedHealthWorkerName) || isFacilitiesLoading || isWorkerInfoChanged}
@@ -3436,11 +3967,17 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         onClose={() => setViewingSubmission(null)}
                     />
                  )}
-                <PostSaveModal
-                    isOpen={isPostSaveModalOpen}
-                    onClose={handlePostSaveClose}
-                    onSelect={handlePostSaveSelect}
-                />
+                
+                {isTrainingPrioritiesModalOpen && (
+                    <TrainingPrioritiesModal
+                        isOpen={isTrainingPrioritiesModalOpen}
+                        onClose={handlePostSaveClose}
+                        onSelect={lastSavedSessionData ? handlePostSaveSelect : null}
+                        currentSessionData={lastSavedSessionData}
+                        historicalSessions={workerHistory.filter(s => !lastSavedSessionData || s.sessionDate !== lastSavedSessionData.sessionDate)}
+                        healthWorkerName={lastSavedFacilityInfo?.healthWorkerName || selectedHealthWorkerName}
+                    />
+                )}
 
                 {isStandaloneFacilityModalOpen && selectedFacility && (
                     <Modal 
@@ -3513,6 +4050,10 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                         onCancel={() => {
                                             setIsVisitReportModalOpen(false);
                                         }}
+                                        onSaveSuccess={() => {
+                                            fetchIMNCIVisitReports(true);
+                                            setIsVisitReportModalOpen(false);
+                                        }}
                                         setToast={setToast}
                                         allSubmissions={processedSubmissions}
                                         existingReportData={null}
@@ -3524,6 +4065,10 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                         facility={selectedFacility}
                                         visitNumber={visitReportVisitNumber}
                                         onCancel={() => {
+                                            setIsVisitReportModalOpen(false);
+                                        }}
+                                        onSaveSuccess={() => {
+                                            if (fetchEENCVisitReports) fetchEENCVisitReports(true);
                                             setIsVisitReportModalOpen(false);
                                         }}
                                         setToast={setToast}

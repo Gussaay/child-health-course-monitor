@@ -1,7 +1,6 @@
 // ReportsView.jsx
 import React, { useState, useMemo, useEffect } from 'react';
 import jsPDF from "jspdf";
-// autoTable is no longer used for generation, but kept for potential future use or reference
 import autoTable from "jspdf-autotable"; 
 import html2canvas from 'html2canvas';
 import { Capacitor } from '@capacitor/core';
@@ -25,7 +24,7 @@ import {
 import { ICCM_TEST_QUESTIONS, EENC_TEST_QUESTIONS } from './CourseTestForm'; 
 
 const PrintIcon = () => (
-    <svg xmlns="http://www.w-3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm7-8V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
     </svg>
 );
@@ -114,7 +113,7 @@ const addCanvasToPdfOnePage = (doc, headerCanvas, groupCanvas, profile, margin, 
     doc.addImage(groupImgData, profile.imageFormat, xOffset, currentY, finalWidth, finalHeight, undefined, profile.compression);
 };
 
-export function ReportsView({ course, participants }) {
+export function ReportsView({ course, participants, allObs: propAllObs, allCases: propAllCases, allTests: propAllTests }) {
     const [allObs, setAllObs] = useState([]);
     const [allCases, setAllCases] = useState([]);
     const [allTests, setAllTests] = useState([]); 
@@ -122,21 +121,47 @@ export function ReportsView({ course, participants }) {
     const [reportType, setReportType] = useState('standard'); 
 
     useEffect(() => {
+        // If props are provided, use them directly (inherits App.jsx central cache & soft delete logic)
+        if (propAllObs && propAllCases) {
+            setAllObs(propAllObs.filter(o => o.isDeleted !== true && o.isDeleted !== "true"));
+            setAllCases(propAllCases.filter(c => c.isDeleted !== true && c.isDeleted !== "true"));
+            setAllTests((propAllTests || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true"));
+            setLoading(false);
+            return;
+        }
+
         const fetchData = async () => {
             if (!course?.id) return;
             setLoading(true);
-            const [courseData, testData] = await Promise.all([
-                listAllDataForCourse(course.id),
-                (course.course_type === 'ICCM' || course.course_type === 'EENC') ? listParticipantTestsForCourse(course.id) : Promise.resolve([])
-            ]);
-            
-            setAllObs(courseData.allObs);
-            setAllCases(courseData.allCases);
-            setAllTests(testData || []);
-            setLoading(false);
+            try {
+                // 1. Try Cache First for instant rendering
+                let courseData = await listAllDataForCourse(course.id, { source: 'cache' }).catch(() => ({allObs: [], allCases: []}));
+                let testData = (course.course_type === 'ICCM' || course.course_type === 'EENC') ? await listParticipantTestsForCourse(course.id, { source: 'cache' }).catch(() => []) : [];
+
+                const hasData = (courseData.allObs && courseData.allObs.length > 0) || (courseData.allCases && courseData.allCases.length > 0);
+
+                // 2. Fetch from Server ONLY if Cache is empty
+                if (!hasData) {
+                    courseData = await listAllDataForCourse(course.id, { source: 'server' }).catch(() => ({allObs: [], allCases: []}));
+                    testData = (course.course_type === 'ICCM' || course.course_type === 'EENC') ? await listParticipantTestsForCourse(course.id, { source: 'server' }).catch(() => []) : [];
+                }
+
+                // 3. Apply Soft Delete Filter
+                const activeObs = (courseData.allObs || []).filter(o => o.isDeleted !== true && o.isDeleted !== "true");
+                const activeCases = (courseData.allCases || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true");
+                const activeTests = (testData || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true");
+
+                setAllObs(activeObs);
+                setAllCases(activeCases);
+                setAllTests(activeTests);
+            } catch (error) {
+                console.error("Error fetching report data:", error);
+            } finally {
+                setLoading(false);
+            }
         };
         fetchData();
-    }, [course?.id, course.course_type]);
+    }, [course?.id, course?.course_type, propAllObs, propAllCases, propAllTests]);
 
     if (loading) { return <Card><Spinner /></Card>; }
 
@@ -511,15 +536,12 @@ function CourseTestReports({ course, participants, allTests }) {
                                                 {parts.map(p => {
                                                     const test = allTests.find(t => t.participantId === p.id && t.testType === testTypeFilter);
                                                     const score = test ? test.score : '-';
-                                                    // --- MODIFICATION: Show Score (Pct) instead of Score/Total ---
-                                                    // Note: fmtPct includes the '%' sign
                                                     const pct = test ? test.percentage : null;
                                                     return (
                                                         <td key={p.id} className={`py-2 px-1 border text-center font-bold ${pctBgClass(pct)}`}>
                                                             {score !== '-' ? `${score} (${fmtPct(pct)})` : '-'}
                                                         </td>
                                                     );
-                                                    // --- END MODIFICATION ---
                                                 })}
                                                 <td className="bg-gray-200 border"></td>
                                             </tr>
@@ -535,7 +557,6 @@ function CourseTestReports({ course, participants, allTests }) {
     );
 }
 
-// ... (ImnciReports, EtatReports, IccmReports, EencReports remain unchanged)
 function ImnciReports({ course, participants, allObs, allCases }) {
     const [age, setAge] = useState('GE2M_LE5Y');
     const [settingFilter, setSettingFilter] = useState('All');
@@ -685,9 +706,7 @@ function ImnciReports({ course, participants, allObs, allCases }) {
                                                     const correctCount = allObsForSkill.filter(o => o.item_correct === 1).length;
                                                     const totalCount = allObsForSkill.length;
                                                     const percentage = calcPct(correctCount, totalCount);
-                                                    // --- MODIFICATION: Changed to `Count (Pct)` format ---
                                                     return <td key={p.id} className={`py-2 pr-4 text-center ${pctBgClass(percentage)}`}>{`${correctCount} (${fmtPct(percentage)})`}</td>;
-                                                    // --- END MODIFICATION ---
                                                 });
                                                 return <tr key={item} className="border-b"><td className="py-2 pl-4">{item}</td>{participantCells}</tr>;
                                             })}
@@ -891,9 +910,7 @@ function EtatReports({ course, participants, allObs, allCases }) {
                                                     const correctCount = allObsForSkill.filter(o => o.item_correct === 1).length;
                                                     const totalCount = allObsForSkill.length;
                                                     const percentage = calcPct(correctCount, totalCount);
-                                                    // --- MODIFICATION: Changed to `Count (Pct)` format ---
                                                     return <td key={p.id} className={`py-2 pr-4 text-center ${pctBgClass(percentage)}`}>{`${correctCount} (${fmtPct(percentage)})`}</td>;
-                                                    // --- END MODIFICATION ---
                                                 });
                                                 return <tr key={skill} className="border-b"><td className="py-2 pl-4">{skill}</td>{participantCells}</tr>;
                                             })}
@@ -1097,9 +1114,7 @@ function IccmReports({ course, participants, allObs, allCases }) {
                                                     const correctCount = allObsForSkill.filter(o => o.item_correct === 1).length;
                                                     const totalCount = allObsForSkill.length;
                                                     const percentage = calcPct(correctCount, totalCount);
-                                                    // --- MODIFICATION: Changed to `Count (Pct)` format ---
                                                     return <td key={p.id} className={`py-2 pr-4 text-center ${pctBgClass(percentage)}`}>{`${correctCount} (${fmtPct(percentage)})`}</td>;
-                                                    // --- END MODIFICATION ---
                                                 });
                                                 return <tr key={skill} className="border-b"><td className="py-2 pl-4">{skill}</td>{participantCells}</tr>;
                                             })}

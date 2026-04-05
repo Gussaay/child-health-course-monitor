@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+// ParticipantReport.jsx
+import React, { useState, useMemo, useRef } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { Bar } from 'react-chartjs-2';
@@ -11,10 +12,6 @@ import {
     DOMAIN_LABEL_IMNCI, ETAT_DOMAIN_LABEL, EENC_DOMAIN_LABEL_BREATHING, EENC_DOMAIN_LABEL_NOT_BREATHING,
     ETAT_DOMAINS, DOMAINS_BY_AGE_IMNCI
 } from './constants.js';
-import {
-    listObservationsForParticipant,
-    listCasesForParticipant
-} from "../data.js";
 
 // --- Reusable Share Icon for the button ---
 const ShareIcon = () => (
@@ -24,10 +21,18 @@ const ShareIcon = () => (
 );
 
 
-export function ParticipantReportView({ course, participant, participants, onChangeParticipant, onBack, onNavigateToCase, onShare, isSharedView = false }) {
-    const [observations, setObservations] = useState([]);
-    const [cases, setCases] = useState([]);
-    const [loading, setLoading] = useState(true);
+export function ParticipantReportView({ 
+    course, 
+    participant, 
+    participants, 
+    observations = [], 
+    cases = [], 
+    onChangeParticipant, 
+    onBack, 
+    onNavigateToCase, 
+    onShare, 
+    isSharedView = false 
+}) {
     const [selectedDay, setSelectedDay] = useState(null);
     const [isPdfGenerating, setIsPdfGenerating] = useState(false);
     
@@ -39,23 +44,8 @@ export function ParticipantReportView({ course, participant, participants, onCha
     const reportContentRef = useRef(null);
     const caseChartByDayRef = useRef(null);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            if (!participant?.id || !course?.id) return;
-            setLoading(true);
-            const [obsData, casesData] = await Promise.all([
-                listObservationsForParticipant(course.id, participant.id),
-                listCasesForParticipant(course.id, participant.id)
-            ]);
-            setObservations(obsData);
-            setCases(casesData);
-            setLoading(false);
-        };
-        fetchData();
-    }, [participant?.id, course?.id]);
-    
+    // Relies on props populated from the central incremental cache in App.jsx
     const casesWithCorrectness = useMemo(() => {
-        if (loading) return [];
         return cases.map(caseItem => {
             const caseObservations = observations.filter(obs => obs.caseId === caseItem.id);
             const is_correct = caseObservations.length > 0 && caseObservations.every(obs => obs.item_correct > 0);
@@ -64,14 +54,14 @@ export function ParticipantReportView({ course, participant, participants, onCha
                 is_correct
             };
         });
-    }, [cases, observations, loading]);
+    }, [cases, observations]);
 
     const kpiStats = useMemo(() => {
         const defaultKpis = {
             totalCases: 0, correctCases: 0, avgCasesPerDay: 0, caseCorrectnessPct: 0,
             totalSkills: 0, correctSkills: 0, avgSkillsPerDay: 0, skillCorrectnessPct: 0
         };
-        if (loading || observations.length === 0) return defaultKpis;
+        if (observations.length === 0) return defaultKpis;
 
         const totalCases = casesWithCorrectness.length;
         const correctCases = casesWithCorrectness.filter(c => c.is_correct).length;
@@ -91,7 +81,7 @@ export function ParticipantReportView({ course, participant, participants, onCha
             avgSkillsPerDay: totalSkills / numberOfDays,
             skillCorrectnessPct: calcPct(correctSkills, totalSkills)
         };
-    }, [casesWithCorrectness, observations, loading]);
+    }, [casesWithCorrectness, observations]);
     
     const casePerformanceByDay = useMemo(() => {
         const dataByDay = {};
@@ -134,7 +124,6 @@ export function ParticipantReportView({ course, participant, participants, onCha
     }, [casesWithCorrectness]);
 
     const detailedPerformance = useMemo(() => {
-        // --- MODIFIED: Added ICCM ---
         if (observations.length === 0) return (course.course_type === 'IMNCI' || course.course_type === 'ICCM') ? { LT2M: [], GE2M_LE5Y: [] } : [];
 
         const processSkills = (obs, isEenc) => {
@@ -154,7 +143,6 @@ export function ParticipantReportView({ course, participant, participants, onCha
             return skills;
         };
 
-        // --- MODIFIED: Added ICCM ---
         if (course.course_type === 'IMNCI' || course.course_type === 'ICCM') {
             const performanceByAge = { LT2M: [], GE2M_LE5Y: [] };
             for (const ageGroup in DOMAINS_BY_AGE_IMNCI) {
@@ -304,11 +292,9 @@ export function ParticipantReportView({ course, participant, participants, onCha
     };
 
     const excludedImnciSubtypes = ["Standard 7 days course for Medical Doctors", "Standard 7 days course for Medical Assistance", "Refreshment IMNCI Course"];
-    // --- MODIFIED: Added ICCM ---
     const showTestScores = (course.course_type !== 'IMNCI' && course.course_type !== 'ICCM') || 
                            ((course.course_type === 'IMNCI' || course.course_type === 'ICCM') && !excludedImnciSubtypes.includes(participant.imci_sub_type));
 
-    if (loading) return <Card><Spinner /></Card>;
 
     const chartOptions = {
         responsive: true,
@@ -332,14 +318,11 @@ export function ParticipantReportView({ course, participant, participants, onCha
 
     const hasKpiData = kpiStats.totalSkills > 0;
     const hasTestScores = showTestScores && (participant.pre_test_score != null || participant.post_test_score != null);
-    // --- MODIFIED: Only show chart for IMNCI ---
     const hasChartData = course.course_type === 'IMNCI' && casePerformanceByDay.length > 0;
-    // --- MODIFIED: Added ICCM ---
     const hasDomainData = ((course.course_type === 'IMNCI' || course.course_type === 'ICCM') && (detailedPerformance.LT2M.length > 0 || detailedPerformance.GE2M_LE5Y.length > 0)) || 
                           (!['IMNCI', 'ICCM'].includes(course.course_type) && detailedPerformance.length > 0);
     const hasCaseData = casesWithCorrectness.length > 0;
     
-    // --- NEW: Label for center_name column ---
     const centerNameLabel = course.course_type === 'ICCM' ? 'Village' : 'Setting';
 
     return (
@@ -476,7 +459,6 @@ export function ParticipantReportView({ course, participant, participants, onCha
                     <Card>
                         <h3 className="text-xl font-bold mb-4">Detailed Skill Performance by Domain</h3>
                         <div className="space-y-4">
-                        {/* --- MODIFIED: Added ICCM --- */}
                         {(course.course_type === 'IMNCI' || course.course_type === 'ICCM') ? (
                             Object.entries(detailedPerformance).map(([ageGroup, domains]) => (
                                 (domains.length > 0 &&
@@ -550,7 +532,6 @@ export function ParticipantReportView({ course, participant, participants, onCha
                     <Card>
                         <h3 className="text-xl font-bold mb-4">All Cases Summary</h3>
                         
-                        {/* --- MODIFIED: Hide setting filter for ICCM --- */}
                         {course.course_type !== 'ICCM' && (
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 p-4 border rounded-lg bg-gray-50">
                                 <FormGroup label="Filter by Setting">
@@ -584,7 +565,6 @@ export function ParticipantReportView({ course, participant, participants, onCha
                                 </div>
                             </div>
                         )}
-                        {/* --- MODIFIED: Show simplified filters for ICCM --- */}
                         {course.course_type === 'ICCM' && (
                              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 p-4 border rounded-lg bg-gray-50">
                                 <FormGroup label="Filter by Day">
@@ -613,7 +593,6 @@ export function ParticipantReportView({ course, participant, participants, onCha
 
 
                         <div className="overflow-x-auto">
-                            {/* --- MODIFIED: Use new centerNameLabel and hide setting column for ICCM --- */}
                             <Table headers={["Case #", "Age Group", ...(course.course_type !== 'ICCM' ? [centerNameLabel] : []), "Day of Course", "Overall Status", "Classifications"]}>
                                 {filteredCases.length > 0 ? (
                                     filteredCases.map((c, index) => {
