@@ -665,6 +665,8 @@ export async function getFacilitatorByEmail(email) {
         return null;
     }
 }
+
+// --- FIX APPLIED: Added lastSync param to facilitate incremental syncing ---
 export async function upsertFacilitator(payload) {
     if (payload.id) {
         const facRef = doc(db, "facilitators", payload.id);
@@ -690,9 +692,12 @@ export async function importFacilitators(facilitators) {
     await batch.commit();
     return true;
 }
-export async function listFacilitators(sourceOptions = {}) {
+export async function listFacilitators(sourceOptions = {}, lastSync = 0) {
     try {
         let q = collection(db, "facilitators");
+        if (lastSync > 0) {
+            q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
+        }
         const querySnapshot = await getData(q, sourceOptions);
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
@@ -876,8 +881,11 @@ export async function upsertCoordinator(payload) {
         return newRef.id;
     }
 }
-export async function listCoordinators(sourceOptions = {}) { 
-    const q = query(collection(db, "coordinators"));
+export async function listCoordinators(sourceOptions = {}, lastSync = 0) { 
+    let q = collection(db, "coordinators");
+    if (lastSync > 0) {
+        q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
+    }
     const snapshot = await getData(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
@@ -896,8 +904,11 @@ export async function upsertStateCoordinator(payload) {
         return newRef.id;
     }
 }
-export async function listStateCoordinators(sourceOptions = {}) {
-    const q = query(collection(db, "stateCoordinators"));
+export async function listStateCoordinators(sourceOptions = {}, lastSync = 0) {
+    let q = collection(db, "stateCoordinators");
+    if (lastSync > 0) {
+        q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
+    }
     const snapshot = await getData(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
@@ -916,8 +927,11 @@ export async function upsertFederalCoordinator(payload) {
         return newRef.id;
     }
 }
-export async function listFederalCoordinators(sourceOptions = {}) {
-    const q = query(collection(db, "federalCoordinators"));
+export async function listFederalCoordinators(sourceOptions = {}, lastSync = 0) {
+    let q = collection(db, "federalCoordinators");
+    if (lastSync > 0) {
+        q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
+    }
     const snapshot = await getData(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
@@ -936,8 +950,11 @@ export async function upsertLocalityCoordinator(payload) {
         return newRef.id;
     }
 }
-export async function listLocalityCoordinators(sourceOptions = {}) {
-    const q = query(collection(db, "localityCoordinators"));
+export async function listLocalityCoordinators(sourceOptions = {}, lastSync = 0) {
+    let q = collection(db, "localityCoordinators");
+    if (lastSync > 0) {
+        q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
+    }
     const snapshot = await getData(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
@@ -956,8 +973,11 @@ export async function upsertFunder(payload) {
         return newRef.id;
     }
 }
-export async function listFunders(sourceOptions = {}) {
-    const q = query(collection(db, "funders"));
+export async function listFunders(sourceOptions = {}, lastSync = 0) {
+    let q = collection(db, "funders");
+    if (lastSync > 0) {
+        q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
+    }
     const snapshot = await getData(q, sourceOptions);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
@@ -1006,9 +1026,12 @@ export async function listCoursesByType(course_type, userStates, sourceOptions =
         throw error;
     }
 }
-export async function listAllCourses(sourceOptions = {}) {
+export async function listAllCourses(sourceOptions = {}, lastSync = 0) {
     try {
         let q = collection(db, "courses");
+        if (lastSync > 0) {
+            q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
+        }
         const querySnapshot = await getData(q, sourceOptions);
         const courses = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         return courses;
@@ -1167,9 +1190,12 @@ export async function listParticipants(courseId, lastVisible = null, sourceOptio
     return { participants, lastVisible: newLastVisible };
 }
 
-export async function listAllParticipants(sourceOptions = {}) {
+export async function listAllParticipants(sourceOptions = {}, lastSync = 0) {
     try {
-        const q = collection(db, "participants");
+        let q = collection(db, "participants");
+        if (lastSync > 0) {
+            q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
+        }
         const querySnapshot = await getData(q, sourceOptions);
         const participants = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         return participants;
@@ -1451,9 +1477,12 @@ export async function saveMentorshipSession(payload, sessionId = null, externalB
     }
 }
 
-export async function listMentorshipSessions(sourceOptions = {}) {
+export async function listMentorshipSessions(sourceOptions = {}, lastSync = 0) {
     try {
-        const q = collection(db, "skillMentorship");
+        let q = collection(db, "skillMentorship");
+        if (lastSync > 0) {
+            q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
+        }
         const snapshot = await getData(q, sourceOptions);
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
@@ -1536,9 +1565,12 @@ export async function saveIMNCIVisitReport(payload, reportId = null) {
     }
 }
 
-export async function listIMNCIVisitReports(sourceOptions = {}) {
+export async function listIMNCIVisitReports(sourceOptions = {}, lastSync = 0) {
     try {
-        const q = collection(db, "imnciVisitReports");
+        let q = collection(db, "imnciVisitReports");
+        if (lastSync > 0) {
+            q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
+        }
         const snapshot = await getData(q, sourceOptions);
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
@@ -1571,9 +1603,12 @@ export async function saveEENCVisitReport(payload, reportId = null) {
     }
 }
 
-export async function listEENCVisitReports(sourceOptions = {}) {
+export async function listEENCVisitReports(sourceOptions = {}, lastSync = 0) {
     try {
-        const q = collection(db, "eencVisitReports");
+        let q = collection(db, "eencVisitReports");
+        if (lastSync > 0) {
+            q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
+        }
         const snapshot = await getData(q, sourceOptions);
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {

@@ -1899,41 +1899,35 @@ const SkillsMentorshipView = ({
         ).sort((a, b) => new Date(b.date) - new Date(a.date));
     }, [processedSubmissions, user, activeService]);
 
-    // UPDATED to map correctly between authenticated and unauthenticated sets
+    // UPDATED to map correctly between authenticated and unauthenticated sets AND extract project!
     // OPTIMISTIC UPDATE APPLIED: Filters out deletedReportIds and Soft Deletes
     const processedVisitReports = useMemo(() => {
         const rawImnci = publicDashboardMode ? publicData.imnci : imnciVisitReports;
         const rawEenc = publicDashboardMode ? publicData.eenc : eencVisitReports;
         
-        const imnci = (rawImnci || []).map(rep => ({
-            id: rep.id,
-            service: 'IMNCI',
-            facilityId: rep.facilityId || null,
-            facilityName: rep.facilityName || 'N/A',
-            state: rep.state || 'N/A',
-            locality: rep.locality || 'N/A',
-            visitDate: rep.visit_date || 'N/A',
-            visitNumber: rep.visitNumber || null, 
-            mentorEmail: rep.mentorEmail || null,
-            mentorName: rep.mentorName || null,
-            mentorDisplay: rep.mentorName || rep.mentorEmail || 'N/A',
-            fullData: rep
-        }));
+        const mapReport = (rep, serviceType) => {
+            const fac = facilityMap.get(rep.facilityId);
+            const projectInfo = rep.project || fac?.project_name || fac?.['المشروع'] || fac?.project || fac?.['الشركاء_الداعمين'] || fac?.['المنظمة_الداعمة'] || 'N/A';
+            
+            return {
+                id: rep.id,
+                service: serviceType,
+                facilityId: rep.facilityId || null,
+                facilityName: rep.facilityName || 'N/A',
+                state: rep.state || 'N/A',
+                locality: rep.locality || 'N/A',
+                visitDate: rep.visitDate || rep.visit_date || rep.date || 'N/A',
+                visitNumber: rep.visitNumber || null, 
+                mentorEmail: rep.mentorEmail || null,
+                mentorName: rep.mentorName || null,
+                mentorDisplay: rep.mentorName || rep.mentorEmail || 'N/A',
+                project: projectInfo, 
+                fullData: rep
+            };
+        };
         
-        const eenc = (rawEenc || []).map(rep => ({
-            id: rep.id,
-            service: 'EENC',
-            facilityId: rep.facilityId || null,
-            facilityName: rep.facilityName || 'N/A',
-            state: rep.state || 'N/A',
-            locality: rep.locality || 'N/A',
-            visitDate: rep.visit_date || 'N/A',
-            visitNumber: rep.visitNumber || null, 
-            mentorEmail: rep.mentorEmail || null,
-            mentorName: rep.mentorName || null,
-            mentorDisplay: rep.mentorName || rep.mentorEmail || 'N/A',
-            fullData: rep
-        }));
+        const imnci = (rawImnci || []).map(rep => mapReport(rep, 'IMNCI'));
+        const eenc = (rawEenc || []).map(rep => mapReport(rep, 'EENC'));
 
         const allReports = [...imnci, ...eenc];
         return allReports.filter(rep => 
@@ -1943,7 +1937,7 @@ const SkillsMentorshipView = ({
             rep.fullData?.isDeleted !== "true" // SOFT DELETE FILTER
         );
 
-    }, [imnciVisitReports, eencVisitReports, activeService, publicDashboardMode, publicData, deletedReportIds]);
+    }, [imnciVisitReports, eencVisitReports, activeService, publicDashboardMode, publicData, deletedReportIds, facilityMap]);
 
     const handleEditVisitReport = (reportId) => {
         if (!canManageMentorship) {

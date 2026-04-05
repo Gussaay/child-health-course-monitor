@@ -7,8 +7,8 @@ import {
     ScoreText, 
     KpiCard, 
     KpiBarChart,
-    IMNCI_MOTHER_SURVEY_ITEMS_EN, // <-- Imported to fix Error 2
-    EENC_MOTHER_SURVEY_ITEMS_EN   // <-- Imported to fix Error 2
+    IMNCI_MOTHER_SURVEY_ITEMS_EN,
+    EENC_MOTHER_SURVEY_ITEMS_EN   
 } from './MentorshipDashboardShared';
 import AdminDashboardTab from './AdminDashboardTab';
 import ProviderSkillsTab from './ProviderSkillsTab';
@@ -142,7 +142,8 @@ const MentorshipDashboard = ({
         if (activeLocality) filtered = filtered.filter(r => r.locality === activeLocality);
         if (activeFacilityId) filtered = filtered.filter(r => r.facilityId === activeFacilityId);
         if (activeProject) filtered = filtered.filter(r => r.project === activeProject);
-        filtered = filtered.filter(r => checkDateFilter(r.visitDate || r.date, weekFilter, monthFilter));
+        // FIX 1: Updated checkDateFilter to also look for visit_date
+        filtered = filtered.filter(r => checkDateFilter(r.visitDate || r.date || r.visit_date, weekFilter, monthFilter));
 
         const totalVisits = filtered.length;
         const isStateLevel = !activeState;
@@ -167,11 +168,15 @@ const MentorshipDashboard = ({
         });
 
         const groupedProblems = {}; let totalProblems = 0; let totalSkillsTrained = 0;
+        
+        // FIX 2: Check both r.fullData and flat r data
         filtered.forEach(r => {
-            if (r.service === 'IMNCI' && r.fullData && r.fullData.trained_skills) {
-                Object.values(r.fullData.trained_skills).forEach(val => { if (val === true || val === 'yes') totalSkillsTrained++; });
+            const data = r.fullData || r; // <--- This catches the flat data structure
+            
+            if (r.service === 'IMNCI' && data.trained_skills) {
+                Object.values(data.trained_skills).forEach(val => { if (val === true || val === 'yes') totalSkillsTrained++; });
             }
-            if (r.fullData && r.fullData.challenges_table) {
+            if (data.challenges_table) {
                 let locName = 'Unknown';
                 if (dynamicLocationLevel === 'State') locName = STATE_LOCALITIES[r.state]?.ar || r.state || 'Unknown';
                 else if (dynamicLocationLevel === 'Locality') {
@@ -181,22 +186,28 @@ const MentorshipDashboard = ({
                     } else locName = r.locality || 'Unknown';
                 } else locName = r.facilityName || 'Unknown';
 
-                r.fullData.challenges_table.forEach(ch => {
+                data.challenges_table.forEach(ch => {
                     if (ch.problem) {
                         let combinedSolution = ch.solution || '';
                         if (!combinedSolution && (ch.immediate_solution || ch.long_term_solution)) combinedSolution = [ch.immediate_solution, ch.long_term_solution].filter(Boolean).join(' / ');
                         if (!groupedProblems[locName]) groupedProblems[locName] = [];
-                        groupedProblems[locName].push({ reportId: r.id, challengeId: ch.id, facility: r.facilityName, date: r.visitDate, problem: ch.problem, solution: combinedSolution, status: ch.status || ch.immediate_status || 'Pending', person: ch.responsible_person });
+                        
+                        // Updated to include visit_date check
+                        groupedProblems[locName].push({ reportId: r.id, challengeId: ch.id, facility: r.facilityName, date: r.visitDate || r.visit_date || r.date, problem: ch.problem, solution: combinedSolution, status: ch.status || ch.immediate_status || 'Pending', person: ch.responsible_person });
                         totalProblems++;
                     }
                 });
             }
         });
 
+        // FIX 3: Process skill groups properly by checking fallback
         const processSkillGroup = (groupDef, visits, totalCountOverall) => {
             const details = groupDef.keys.map((key, idx) => {
                 let count = 0;
-                visits.forEach(r => { if (r.service === 'IMNCI' && r.fullData?.trained_skills?.[key]) count++; });
+                visits.forEach(r => { 
+                    const data = r.fullData || r;
+                    if (r.service === 'IMNCI' && data.trained_skills?.[key]) count++; 
+                });
                 return { label: groupDef.labels[idx], count, pct: totalCountOverall > 0 ? Math.round((count / totalCountOverall) * 100) : 0 };
             });
             return { details }; 
@@ -208,13 +219,16 @@ const MentorshipDashboard = ({
             group3: processSkillGroup(IMNCI_SKILL_GROUPS.group3, filtered, totalSkillsTrained)
         };
 
+        // FIX 4: Fix facility map building logic
         const facilityMap = {}; const skillKeys = new Set();
         filtered.forEach(r => {
             const fid = r.facilityId;
+            const data = r.fullData || r;
+            
             if (!facilityMap[fid]) facilityMap[fid] = { id: fid, facilityName: r.facilityName, state: r.state, locality: r.locality, visitCount: 0, skills: {} };
             facilityMap[fid].visitCount++;
-            if (r.fullData && r.fullData.trained_skills) {
-                Object.keys(r.fullData.trained_skills).forEach(k => { if (r.fullData.trained_skills[k]) { facilityMap[fid].skills[k] = (facilityMap[fid].skills[k] || 0) + 1; skillKeys.add(k); } });
+            if (data.trained_skills) {
+                Object.keys(data.trained_skills).forEach(k => { if (data.trained_skills[k]) { facilityMap[fid].skills[k] = (facilityMap[fid].skills[k] || 0) + 1; skillKeys.add(k); } });
             }
         });
         

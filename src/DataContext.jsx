@@ -149,7 +149,14 @@ export const DataProvider = ({ children }) => {
                         effectiveLastFetchTime = 0;
                     }
 
-                    const newOrUpdatedData = await listHealthFacilities(filters, { source: 'server' }, effectiveLastFetchTime); 
+                    // --- FIX APPLIED HERE: Pass the timestamp into the filters object ---
+                    const activeFilters = { ...filters };
+                    if (effectiveLastFetchTime > 0) {
+                        activeFilters.lastUpdatedAfter = new Date(effectiveLastFetchTime);
+                    }
+                    
+                    const newOrUpdatedData = await listHealthFacilities(activeFilters, { source: 'server' }); 
+                    // --------------------------------------------------------------------
                     
                     let finalMergedData = localData;
 
