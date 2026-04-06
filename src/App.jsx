@@ -571,7 +571,11 @@ export default function App() {
                     state: searchParams.get('state') || '',
                     locality: searchParams.get('locality') || '',
                     facilityId: searchParams.get('facilityId') || '',
-                    workerName: searchParams.get('workerName') || ''
+                    workerName: searchParams.get('workerName') || '',
+                    project: searchParams.get('project') || '',
+                    workerType: searchParams.get('workerType') || '',
+                    week: searchParams.get('week') || '',
+                    month: searchParams.get('month') || ''
                 });
                 return;
             }
@@ -1307,25 +1311,6 @@ export default function App() {
             }
         }
     }, [permissions, selectedCourseId, selectedParticipantId, navigate]);
-
-    const handleDeleteFacilitator = useCallback(async (facilitatorId) => {
-        if (!permissions.canManageHumanResource) return;
-        if (window.confirm('Are you sure you want to delete this facilitator?')) {
-            try {
-                await deleteFacilitator(facilitatorId);
-                await fetchFacilitators(true);
-                
-                if (selectedFacilitatorId === facilitatorId) {
-                    setSelectedFacilitatorId(null);
-                    navigate('humanResources');
-                }
-                setToast({ show: true, message: 'Facilitator deleted successfully.', type: 'success' });
-            } catch (error) {
-                console.error("Failed to delete facilitator:", error);
-                setToast({ show: true, message: `Failed to delete facilitator: ${error.message}`, type: 'error' });
-            }
-        }
-    }, [permissions.canManageHumanResource, fetchFacilitators, selectedFacilitatorId, navigate]);
 
     const handleImportParticipants = useCallback(async ({ participantsToImport, facilitiesToUpsert }) => {
         if (!permissions.canUseSuperUserAdvancedFeatures) return;

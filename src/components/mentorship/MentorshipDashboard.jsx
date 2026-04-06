@@ -1,5 +1,5 @@
 // MentorshipDashboard.jsx
-import React, { useMemo, useCallback, useState, useEffect } from 'react';
+import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { Spinner } from '../CommonComponents'; 
 import { 
     FilterSelect, 
@@ -47,55 +47,53 @@ const calculateAverage = (scores) => {
 const MentorshipDashboard = ({ 
     allSubmissions, STATE_LOCALITIES, activeService, activeState, onStateChange, activeLocality, onLocalityChange, activeFacilityId, onFacilityIdChange, activeWorkerName, onWorkerNameChange, activeProject, onProjectChange, visitReports, canEditStatus, onUpdateStatus, activeWorkerType, onWorkerTypeChange = () => {},
     publicDashboardMode = false, handleRefresh = () => {}, isRefreshing = false, isLoading = false,
-    lastUpdated = null, currentUserRole = ''
+    lastUpdated = null, currentUserRole = '',
+    dateFilter = '', onDateFilterChange = () => {}
 }) => {
 
     const [activeEencTab, setActiveEencTab] = useState('skills'); 
     const [activeImnciTab, setActiveImnciTab] = useState('skills'); 
+    
+    const recalcCacheRef = useRef({});
 
-    // --- DATE FILTERS ---
-    const [weekFilter, setWeekFilter] = useState('');
-    const [monthFilter, setMonthFilter] = useState('');
-
-    const handleWeekFilterChange = (val) => { setWeekFilter(val); if (val) setMonthFilter(''); };
-    const handleMonthFilterChange = (val) => { setMonthFilter(val); if (val) setWeekFilter(''); };
-
-    useEffect(() => {
-        if (activeService === 'IMNCI' && activeImnciTab !== 'admin') { setWeekFilter(''); setMonthFilter(''); }
-        if (activeService === 'EENC' && activeEencTab !== 'admin') { setWeekFilter(''); setMonthFilter(''); }
-    }, [activeImnciTab, activeEencTab, activeService]);
-
-    const checkDateFilter = useCallback((dateString, weekFilt, monthFilt) => {
-        if (!weekFilt && !monthFilt) return true;
+    const checkDateFilter = useCallback((dateString, dateFilt) => {
+        if (!dateFilt) return true;
         if (!dateString) return false;
         const d = new Date(dateString);
         if (isNaN(d.getTime())) return false;
+        
         const now = new Date();
-        
-        if (monthFilt === 'this_month') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-        if (monthFilt === 'last_month') {
-            const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            return d.getMonth() === lastMonth.getMonth() && d.getFullYear() === lastMonth.getFullYear();
-        }
-        
-        const getWeekBoundaries = (dateObj) => {
-            const date = new Date(dateObj); date.setHours(0, 0, 0, 0);
-            const diff = date.getDate() - date.getDay(); 
-            const start = new Date(date.setDate(diff));
-            const end = new Date(start); end.setDate(end.getDate() + 6); end.setHours(23, 59, 59, 999);
-            return { start, end };
-        };
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-        if (weekFilt === 'this_week') {
-            const { start, end } = getWeekBoundaries(now);
-            return d >= start && d <= end;
+        switch (dateFilt) {
+            case 'today':
+                return d.getTime() >= today.getTime() && d.getTime() < today.getTime() + 86400000;
+            case 'yesterday':
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                return d.getTime() >= yesterday.getTime() && d.getTime() < today.getTime();
+            case 'this_week':
+                const startOfWeek = new Date(today);
+                startOfWeek.setDate(today.getDate() - today.getDay());
+                return d >= startOfWeek;
+            case 'last_week':
+                const startOfLastWeek = new Date(today);
+                startOfLastWeek.setDate(today.getDate() - today.getDay() - 7);
+                const endOfLastWeek = new Date(startOfLastWeek);
+                endOfLastWeek.setDate(startOfLastWeek.getDate() + 7);
+                return d >= startOfLastWeek && d < endOfLastWeek;
+            case 'this_month':
+                return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+            case 'last_month':
+                const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                return d.getMonth() === lastMonth.getMonth() && d.getFullYear() === lastMonth.getFullYear();
+            case 'this_year':
+                return d.getFullYear() === now.getFullYear();
+            case 'last_year':
+                return d.getFullYear() === now.getFullYear() - 1;
+            default:
+                return true;
         }
-        if (weekFilt === 'last_week') {
-            const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            const { start, end } = getWeekBoundaries(lastWeek);
-            return d >= start && d <= end;
-        }
-        return true;
     }, []);
 
     // --- Local State for Optimistic Updates ---
@@ -129,7 +127,7 @@ const MentorshipDashboard = ({
     };
 
     const dynamicLocationLevel = !activeState ? 'State' : (!activeLocality ? 'Locality' : 'Facility');
-    const dynamicLocationLabel = dynamicLocationLevel === 'State' ? 'الولاية (State)' : (dynamicLocationLevel === 'Locality' ? 'المحلية (Locality)' : 'المنشأة (Facility & Date)');
+    const dynamicLocationLabel = dynamicLocationLevel === 'State' ? 'State' : (dynamicLocationLevel === 'Locality' ? 'Locality' : 'Facility & Date');
     const geographicLevelName = activeState ? 'Locality' : 'State';
 
 
@@ -142,8 +140,7 @@ const MentorshipDashboard = ({
         if (activeLocality) filtered = filtered.filter(r => r.locality === activeLocality);
         if (activeFacilityId) filtered = filtered.filter(r => r.facilityId === activeFacilityId);
         if (activeProject) filtered = filtered.filter(r => r.project === activeProject);
-        // FIX 1: Updated checkDateFilter to also look for visit_date
-        filtered = filtered.filter(r => checkDateFilter(r.visitDate || r.date || r.visit_date, weekFilter, monthFilter));
+        filtered = filtered.filter(r => checkDateFilter(r.visitDate || r.date || r.visit_date, dateFilter));
 
         const totalVisits = filtered.length;
         const isStateLevel = !activeState;
@@ -156,12 +153,12 @@ const MentorshipDashboard = ({
         
         const geographicChartData = Object.keys(locationCounts).map(k => {
              let locName = k;
-            if (isStateLevel) locName = STATE_LOCALITIES[k]?.ar || k;
+            if (isStateLevel) locName = STATE_LOCALITIES[k]?.en || k;
             else {
                 const stateObj = STATE_LOCALITIES[activeState];
                 if (stateObj && stateObj.localities) {
                     const locObj = stateObj.localities.find(l => l.en === k);
-                    if (locObj) locName = locObj.ar;
+                    if (locObj) locName = locObj.en;
                 }
             }
             return { stateName: locName, count: locationCounts[k] };
@@ -169,20 +166,19 @@ const MentorshipDashboard = ({
 
         const groupedProblems = {}; let totalProblems = 0; let totalSkillsTrained = 0;
         
-        // FIX 2: Check both r.fullData and flat r data
         filtered.forEach(r => {
-            const data = r.fullData || r; // <--- This catches the flat data structure
+            const data = r.fullData || r; 
             
             if (r.service === 'IMNCI' && data.trained_skills) {
                 Object.values(data.trained_skills).forEach(val => { if (val === true || val === 'yes') totalSkillsTrained++; });
             }
             if (data.challenges_table) {
                 let locName = 'Unknown';
-                if (dynamicLocationLevel === 'State') locName = STATE_LOCALITIES[r.state]?.ar || r.state || 'Unknown';
+                if (dynamicLocationLevel === 'State') locName = STATE_LOCALITIES[r.state]?.en || r.state || 'Unknown';
                 else if (dynamicLocationLevel === 'Locality') {
                     if (STATE_LOCALITIES[r.state]?.localities) {
                         const lObj = STATE_LOCALITIES[r.state].localities.find(l => l.en === r.locality || l.ar === r.locality);
-                        locName = lObj ? lObj.ar : (r.locality || 'Unknown');
+                        locName = lObj ? lObj.en : (r.locality || 'Unknown');
                     } else locName = r.locality || 'Unknown';
                 } else locName = r.facilityName || 'Unknown';
 
@@ -192,7 +188,6 @@ const MentorshipDashboard = ({
                         if (!combinedSolution && (ch.immediate_solution || ch.long_term_solution)) combinedSolution = [ch.immediate_solution, ch.long_term_solution].filter(Boolean).join(' / ');
                         if (!groupedProblems[locName]) groupedProblems[locName] = [];
                         
-                        // Updated to include visit_date check
                         groupedProblems[locName].push({ reportId: r.id, challengeId: ch.id, facility: r.facilityName, date: r.visitDate || r.visit_date || r.date, problem: ch.problem, solution: combinedSolution, status: ch.status || ch.immediate_status || 'Pending', person: ch.responsible_person });
                         totalProblems++;
                     }
@@ -200,7 +195,6 @@ const MentorshipDashboard = ({
             }
         });
 
-        // FIX 3: Process skill groups properly by checking fallback
         const processSkillGroup = (groupDef, visits, totalCountOverall) => {
             const details = groupDef.keys.map((key, idx) => {
                 let count = 0;
@@ -219,7 +213,6 @@ const MentorshipDashboard = ({
             group3: processSkillGroup(IMNCI_SKILL_GROUPS.group3, filtered, totalSkillsTrained)
         };
 
-        // FIX 4: Fix facility map building logic
         const facilityMap = {}; const skillKeys = new Set();
         filtered.forEach(r => {
             const fid = r.facilityId;
@@ -233,7 +226,7 @@ const MentorshipDashboard = ({
         });
         
         return { totalVisits, geographicChartData, facilityTableData: Object.values(facilityMap), distinctSkillKeys: Array.from(skillKeys), groupedProblems, totalProblems, trainedSkillsGroups, totalSkillsTrained, rawReports: filtered };
-    }, [visitReports, activeService, activeState, activeLocality, activeFacilityId, activeProject, STATE_LOCALITIES, dynamicLocationLevel, weekFilter, monthFilter, checkDateFilter]);
+    }, [visitReports, activeService, activeState, activeLocality, activeFacilityId, activeProject, STATE_LOCALITIES, dynamicLocationLevel, dateFilter, checkDateFilter]);
 
     const reCalculatedSubmissions = useMemo(() => {
         if (!allSubmissions) return [];
@@ -241,17 +234,26 @@ const MentorshipDashboard = ({
             if (sub.service === 'EENC_MOTHERS' || sub.service === 'IMNCI_MOTHERS') return sub; 
             if (sub.service !== 'IMNCI' || !sub.fullData) return sub;
             const s = sub.scores || {};
+            
             if (s.treatment_total_score_maxScore === undefined) {
+                if (recalcCacheRef.current[sub.id]) {
+                    return { ...sub, scores: recalcCacheRef.current[sub.id] };
+                }
+                
                 try {
                     const rehydratedData = rehydrateDraftData(sub.fullData, DIARRHEA_CLASSIFICATIONS, FEVER_CLASSIFICATIONS);
                     const reCalculatedScores = calculateScores(rehydratedData);
                     const newScoresPayload = {};
+                    
                     for (const key in reCalculatedScores) { 
                         if (key !== 'treatmentScoreForSave' && reCalculatedScores[key]?.score !== undefined && reCalculatedScores[key]?.maxScore !== undefined) {
                             newScoresPayload[`${key}_score`] = reCalculatedScores[key].score;
                             newScoresPayload[`${key}_maxScore`] = reCalculatedScores[key].maxScore;
                         }
                     }
+                    
+                    recalcCacheRef.current[sub.id] = newScoresPayload;
+                    
                     return { ...sub, scores: newScoresPayload };
                 } catch (e) { return sub; }
             }
@@ -383,7 +385,7 @@ const MentorshipDashboard = ({
                 const pushScore = (key, arrayName) => { if (skills[key] === 'yes') scores[arrayName].push(1); else if (skills[key] === 'no' || skills[key] === 'partial') scores[arrayName].push(0); };
                 pushScore('prep_wash_1', 'inf_wash1'); pushScore('prep_wash_2', 'inf_wash2'); pushScore('prep_gloves', 'inf_gloves');
                 pushScore('prep_cloths', 'prep_towel'); pushScore('prep_resuscitation_area', 'prep_equip'); pushScore('prep_ambu_check', 'prep_ambu');
-                pushScore('dry_start_5sec', 'care_dry'); pushScore('dry_skin_to_skin', 'care_skin'); pushScore('dry_cover_baby', 'care_cover');
+                pushScore('dry_start_5sec', 'care_dry'); pushScore('dry_skin_to_skin', 'care_skin'); pushScore('care_cover', 'care_cover'); 
                 if (status === 'yes') { pushScore('normal_remove_outer_glove', 'cord_hygiene'); pushScore('normal_cord_pulse_check', 'cord_delay'); pushScore('normal_cord_clamping', 'cord_clamp'); pushScore('normal_breastfeeding_guidance', 'bf_advice'); }
                 if (status === 'no') { pushScore('resus_position_head', 'resus_head'); pushScore('resus_mask_position', 'resus_mask'); pushScore('resus_check_chest_rise', 'resus_chest'); pushScore('resus_ventilation_rate', 'resus_rate'); }
             }
@@ -417,7 +419,7 @@ const MentorshipDashboard = ({
                 push(d.rubbed_with_oil, scores.skin_oil, 'rubbed_with_oil'); push(d.baby_bathed, scores.bath_6hr, 'baby_bathed');
                 push(d.polio_zero_dose, scores.polio, 'polio_zero_dose'); push(d.bcg_dose, scores.bcg, 'bcg_dose');
                 push(d.baby_weighed, scores.weight, 'baby_weighed'); push(d.baby_temp_measured, scores.temp, 'baby_temp_measured');
-                push(d.baby_registered, scores.civ_reg, 'baby_registered'); push(d.given_discharge_card, scores.dis_card, 'given_discharge_card');
+                push(d.baby_registered, scores.civ_reg, 'civ_reg'); push(d.given_discharge_card, scores.dis_card, 'given_discharge_card');
             }
         });
 
@@ -444,7 +446,7 @@ const MentorshipDashboard = ({
             const s = sub.mothersSatisfaction || sub.fullData?.mothersSatisfaction || {};
             const push = (val, arr, key) => { const isYes = val === 'نعم'; arr.push(isYes ? 1 : 0); if(skillStats[key]) { if(isYes) skillStats[key].yes++; else if(val === 'لا') skillStats[key].no++; } };
 
-            push(k.knows_med_details, scores.know_med, 'knows_med_details'); push(k.knows_ors_prep, scores.know_ors_prep, 'knows_ors_prep'); push(k.knows_treatment_details, scores.know_tx, 'knows_treatment_details'); push(k.knows_diarrhea_4rules, scores.know_4rules, 'knows_diarrhea_4rules');
+            push(k.knows_med_details, scores.know_med, 'knows_med_details'); push(k.knows_ors_prep, scores.know_ors_prep, 'knows_tx', 'knows_treatment_details'); push(k.knows_diarrhea_4rules, scores.know_4rules, 'knows_diarrhea_4rules');
             push(k.knows_return_date, scores.know_return, 'knows_return_date'); push(k.knows_home_fluids, scores.know_fluids, 'knows_home_fluids'); push(k.knows_ors_water_qty, scores.know_ors_qty, 'knows_ors_water_qty'); push(k.knows_ors_after_stool, scores.know_ors_stool, 'knows_ors_after_stool');
             push(s.time_spent, scores.sat_time, 'time_spent'); push(s.assessment_method, scores.sat_assess, 'assessment_method'); push(s.treatment_given, scores.sat_tx, 'treatment_given'); push(s.communication_style, scores.sat_comm, 'communication_style'); push(s.what_learned, scores.sat_learn, 'what_learned'); push(s.drug_availability, scores.sat_avail, 'drug_availability');
         });
@@ -467,8 +469,8 @@ const MentorshipDashboard = ({
     ), [reCalculatedSubmissions, activeService]);
 
     // Select Dropdown Options
-    const stateOptions = useMemo(() => !STATE_LOCALITIES ? [] : Object.keys(STATE_LOCALITIES).map(k => ({ key: k, name: STATE_LOCALITIES[k]?.ar || k })).sort((a, b) => a.name.localeCompare(b.name, 'ar')), [STATE_LOCALITIES]);
-    const localityOptions = useMemo(() => (!activeState || !STATE_LOCALITIES[activeState]?.localities) ? [] : STATE_LOCALITIES[activeState].localities.map(l => ({ key: l.en, name: l.ar })).sort((a, b) => a.name.localeCompare(b.name, 'ar')), [activeState, STATE_LOCALITIES]);
+    const stateOptions = useMemo(() => !STATE_LOCALITIES ? [] : Object.keys(STATE_LOCALITIES).map(k => ({ key: k, name: STATE_LOCALITIES[k]?.en || k })).sort((a, b) => a.name.localeCompare(b.name, 'en')), [STATE_LOCALITIES]);
+    const localityOptions = useMemo(() => (!activeState || !STATE_LOCALITIES[activeState]?.localities) ? [] : STATE_LOCALITIES[activeState].localities.map(l => ({ key: l.en, name: l.en })).sort((a, b) => a.name.localeCompare(b.name, 'en')), [activeState, STATE_LOCALITIES]);
     const facilityOptions = useMemo(() => {
         const map = new Map(); serviceCompletedSubmissions.filter(s => (!activeState || s.state === activeState) && (!activeLocality || s.locality === activeLocality)).forEach(s => { if (s.facilityId && !map.has(s.facilityId)) map.set(s.facilityId, { key: s.facilityId, name: s.facility || 'Unknown' }); });
         return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
@@ -502,8 +504,8 @@ const MentorshipDashboard = ({
         (!activeWorkerName || sub.staff === activeWorkerName) &&
         (!activeProject || sub.project === activeProject) &&
         (!activeWorkerType || sub.workerType === activeWorkerType) &&
-        checkDateFilter(sub.date || sub.sessionDate || sub.visitDate, weekFilter, monthFilter)
-    ), [serviceCompletedSubmissions, activeState, activeLocality, activeFacilityId, activeWorkerName, activeProject, activeWorkerType, weekFilter, monthFilter, checkDateFilter]);
+        checkDateFilter(sub.date || sub.sessionDate || sub.visitDate, dateFilter)
+    ), [serviceCompletedSubmissions, activeState, activeLocality, activeFacilityId, activeWorkerName, activeProject, activeWorkerType, dateFilter, checkDateFilter]);
 
     // ** KPI's must be evaluated BEFORE they are passed down **
     const overallKpis = useMemo(() => {
@@ -651,16 +653,16 @@ const MentorshipDashboard = ({
         }, {});
         return Object.keys(submissionsByLocation).map(locKey => {
             let locName = locKey;
-            if (isStateLevel) locName = STATE_LOCALITIES[locKey]?.ar || locKey;
+            if (isStateLevel) locName = STATE_LOCALITIES[locKey]?.en || locKey;
             else {
                 const stateObj = STATE_LOCALITIES[activeState];
                 if (stateObj && stateObj.localities) {
                     const locObj = stateObj.localities.find(l => l.en === locKey);
-                    if (locObj) locName = locObj.ar;
+                    if (locObj) locName = locObj.en;
                 }
             }
             return { stateKey: locKey, stateName: locName, ...kpisHelper(submissionsByLocation[locKey]) };
-        }).sort((a, b) => a.stateName.localeCompare(b.stateName, 'ar'));
+        }).sort((a, b) => a.stateName.localeCompare(b.stateName, 'en'));
     }, [filteredSubmissions, imnciKpiHelper, eencKpiHelper, activeService, STATE_LOCALITIES, activeState]);
 
     const motherGeographicKpis = useMemo(() => {
@@ -676,16 +678,16 @@ const MentorshipDashboard = ({
         const helper = isEenc ? eencMotherKpiHelper : imnciMotherKpiHelper;
         return Object.keys(submissionsByLocation).map(locKey => {
             let locName = locKey;
-            if (isStateLevel) locName = STATE_LOCALITIES[locKey]?.ar || locKey;
+            if (isStateLevel) locName = STATE_LOCALITIES[locKey]?.en || locKey;
             else {
                 const stateObj = STATE_LOCALITIES[activeState];
                 if (stateObj && stateObj.localities) {
                     const locObj = stateObj.localities.find(l => l.en === locKey);
-                    if (locObj) locName = locObj.ar;
+                    if (locObj) locName = locObj.en;
                 }
             }
             return { stateKey: locKey, stateName: locName, ...helper(submissionsByLocation[locKey]) };
-        }).sort((a, b) => a.stateName.localeCompare(b.stateName, 'ar'));
+        }).sort((a, b) => a.stateName.localeCompare(b.stateName, 'en'));
     }, [filteredSubmissions, eencMotherKpiHelper, imnciMotherKpiHelper, activeService, STATE_LOCALITIES, activeState]);
 
     const kpisByWorkerType = useMemo(() => {
@@ -723,8 +725,33 @@ const MentorshipDashboard = ({
         );
     }
 
-    const isFiltered = activeState || activeLocality || activeFacilityId || activeProject || activeWorkerName || activeWorkerType || weekFilter || monthFilter;
-    const scopeTitle = isFiltered ? "(Filtered Data)" : "(All Sudan Data)";
+    // --- Dynamic Scope Title Generator for Detailed Filter Logging ---
+    const activeFiltersList = [];
+    if (activeState) activeFiltersList.push(`State: ${STATE_LOCALITIES[activeState]?.en || activeState}`);
+    if (activeLocality) {
+        const locName = STATE_LOCALITIES[activeState]?.localities?.find(l => l.en === activeLocality)?.en || activeLocality;
+        activeFiltersList.push(`Locality: ${locName}`);
+    }
+    if (activeFacilityId) {
+        const facName = facilityOptions.find(f => f.key === activeFacilityId)?.name || activeFacilityId;
+        activeFiltersList.push(`Facility: ${facName}`);
+    }
+    if (activeProject) activeFiltersList.push(`Project: ${activeProject}`);
+    if (activeWorkerType) activeFiltersList.push(`Job: ${activeWorkerType}`);
+    if (activeWorkerName) activeFiltersList.push(`Worker: ${activeWorkerName}`);
+    if (dateFilter) {
+        const dateNames = {
+            today: 'Today', yesterday: 'Yesterday', this_week: 'This Week', last_week: 'Last Week',
+            this_month: 'This Month', last_month: 'Last Month', this_year: 'This Year', last_year: 'Last Year'
+        };
+        activeFiltersList.push(`Date: ${dateNames[dateFilter] || dateFilter}`);
+    }
+
+    const scopeTitle = activeFiltersList.length > 0 
+        ? `(Filtered by: ${activeFiltersList.join(' | ')})` 
+        : "(All Sudan Data)";
+
+    const isFiltered = activeFiltersList.length > 0;
     const serviceTitle = SERVICE_TITLES[activeService] || activeService;
     const activeTab = activeService === 'IMNCI' ? activeImnciTab : activeEencTab;
     const setActiveTabFunc = activeService === 'IMNCI' ? setActiveImnciTab : setActiveEencTab;
@@ -733,31 +760,28 @@ const MentorshipDashboard = ({
         <div className="p-4 sm:p-6 bg-slate-50/50 min-h-screen" dir="ltr">             
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <h3 className="text-2xl font-extrabold text-slate-800 text-left tracking-tight">
-                    Mentorship Dashboard: {serviceTitle} <span className="text-sky-600 text-xl font-semibold">{scopeTitle}</span>
+                    Mentorship Dashboard: {serviceTitle} <br/>
+                    <span className="text-sky-600 text-lg font-semibold block mt-1 break-words leading-snug">{scopeTitle}</span>
                 </h3>
-                
-                <div className="flex items-center gap-4 bg-white px-4 py-2 border border-black rounded-xl shadow-sm">
-                    {lastUpdated && (
-                        <div className="flex flex-col">
-                            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Last Updated (Server)</span>
-                            <span className="text-xs font-bold text-slate-700">
-                                {new Date(lastUpdated).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                            </span>
-                        </div>
-                    )}
-                    {lastUpdated && <div className="w-px h-8 bg-slate-200 mx-1"></div>}
-                    <button 
-                        onClick={handleRefresh} 
-                        disabled={isRefreshing || isLoading}
-                        className="flex items-center gap-2 p-2 text-sky-600 hover:text-sky-800 hover:bg-sky-50 rounded-lg transition-colors font-bold text-sm disabled:opacity-50"
-                        title="Force refresh data from server"
-                    >
-                        {isRefreshing ? <Spinner size="sm" /> : <span>↻ Refresh</span>}
-                    </button>
-                </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-5 mb-8 p-5 bg-white rounded-2xl shadow-md border border-black">
+            <div className="flex flex-row flex-nowrap overflow-x-auto gap-3 mb-8 p-4 bg-white rounded-2xl shadow-md border border-black scrollbar-thin scrollbar-thumb-sky-200 scrollbar-track-transparent">
+                {/* Unified Date Filter Option Moved to Beginning */}
+                <div className="min-w-[140px] flex-1 flex-shrink-0">
+                    <label className="block text-[10px] font-bold text-slate-600 mb-1 uppercase tracking-wider">Date Filter</label>
+                    <select value={dateFilter} onChange={(e) => onDateFilterChange(e.target.value)} className={`block w-full pl-3 pr-8 py-2 text-xs font-bold border focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-lg shadow-sm transition-colors cursor-pointer ${dateFilter ? 'border-sky-500 bg-sky-50 text-sky-900 ring-1 ring-sky-200' : 'border-black bg-white hover:bg-slate-50 text-slate-800'}`}>
+                        <option value="">All Time</option>
+                        <option value="today">Today</option>
+                        <option value="yesterday">Yesterday</option>
+                        <option value="this_week">This Week</option>
+                        <option value="last_week">Last Week</option>
+                        <option value="this_month">This Month</option>
+                        <option value="last_month">Last Month</option>
+                        <option value="this_year">This Year</option>
+                        <option value="last_year">Last Year</option>
+                    </select>
+                </div>
+                
                 <FilterSelect label="State" value={activeState} onChange={(v) => { onStateChange(v); onLocalityChange(""); onFacilityIdChange(""); onProjectChange(""); onWorkerNameChange(""); onWorkerTypeChange?.(""); }} options={stateOptions} defaultOption="All States" />
                 <FilterSelect label="Locality" value={activeLocality} onChange={(v) => { onLocalityChange(v); onFacilityIdChange(""); onProjectChange(""); onWorkerNameChange(""); onWorkerTypeChange?.(""); }} options={localityOptions} disabled={!activeState} defaultOption="All Localities" />
                 <FilterSelect label="Health Facility" value={activeFacilityId} onChange={(v) => { onFacilityIdChange(v); onProjectChange(""); onWorkerNameChange(""); onWorkerTypeChange?.(""); }} options={facilityOptions} disabled={!activeLocality} defaultOption="All Facilities" />
@@ -778,7 +802,7 @@ const MentorshipDashboard = ({
             {activeTab === 'admin' && canEditStatus && (
                 <AdminDashboardTab
                     activeService={activeService} overallKpis={overallKpis} visitReportStats={visitReportStats} motherKpis={motherKpis} volumeChartData={volumeChartData}
-                    geographicKpis={geographicKpis} filteredSubmissions={filteredSubmissions} geographicLevelName={geographicLevelName} scopeTitle={scopeTitle} weekFilter={weekFilter} monthFilter={monthFilter} handleWeekFilterChange={handleWeekFilterChange} handleMonthFilterChange={handleMonthFilterChange}
+                    geographicKpis={geographicKpis} filteredSubmissions={filteredSubmissions} geographicLevelName={geographicLevelName} scopeTitle={scopeTitle} dateFilter={dateFilter} onDateFilterChange={onDateFilterChange}
                 />
             )}
 
@@ -798,7 +822,7 @@ const MentorshipDashboard = ({
 
             {activeTab === 'visit_reports' && (
                 <VisitReportDashboardTab 
-                    activeService={activeService} visitReportStats={visitReportStats} geographicLevelName={geographicLevelName} dynamicLocationLabel={dynamicLocationLabel} dynamicLocationLevel={dynamicLocationLevel} renderStatusCell={renderStatusCell} IMNCI_SKILL_GROUPS={IMNCI_SKILL_GROUPS} EENC_SKILLS_LABELS={EENC_SKILLS_LABELS} KpiCard={KpiCard} KpiBarChart={KpiBarChart} ScoreText={ScoreText} CopyImageButton={CopyImageButton}
+                    activeService={activeService} visitReportStats={visitReportStats} geographicLevelName={geographicLevelName} dynamicLocationLabel={dynamicLocationLabel} dynamicLocationLevel={dynamicLocationLevel} renderStatusCell={renderStatusCell} IMNCI_SKILL_GROUPS={IMNCI_SKILL_GROUPS} EENC_SKILLS_LABELS={EENC_SKILLS_LABELS} KpiCard={KpiCard} KpiBarChart={KpiBarChart} ScoreText={ScoreText} CopyImageButton={CopyImageButton} scopeTitle={scopeTitle}
                 />
             )}
         </div>

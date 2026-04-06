@@ -121,13 +121,15 @@ export const DataProvider = ({ children }) => {
                             localData = cachedData;
                             facilitiesFilterCacheRef.current[filterKey] = localData;
                             
-                            // Instantly render UI if we aren't forcing server
+                            // INSTANT CACHE RENDERING: Unblock UI instantly by pushing cached data to state immediately!
+                            if (filterKey === currentFacilitiesFilterKeyRef.current || currentFacilitiesFilterKeyRef.current === 'all') {
+                                setCache(prev => ({ ...prev, healthFacilities: localData }));
+                                currentFacilitiesFilterKeyRef.current = filterKey;
+                            }
+                            setIsLoading(prev => prev.healthFacilities === false ? prev : { ...prev, healthFacilities: false });
+                            
+                            // Stop if we aren't forcing server
                             if (!shouldForceServer) {
-                                if (filterKey === currentFacilitiesFilterKeyRef.current || currentFacilitiesFilterKeyRef.current === 'all') {
-                                    setCache(prev => ({ ...prev, healthFacilities: localData }));
-                                    currentFacilitiesFilterKeyRef.current = filterKey;
-                                }
-                                setIsLoading(prev => prev.healthFacilities === false ? prev : { ...prev, healthFacilities: false });
                                 fetchingRef.current[filterKey] = false;
                                 return localData; 
                             }
@@ -220,10 +222,12 @@ export const DataProvider = ({ children }) => {
                     if (cachedData !== undefined && cachedData !== null) {
                         localData = cachedData;
                         
-                        // If we don't need to force server, we stop here and render
+                        // INSTANT CACHE RENDERING: Set state immediately so UI doesn't block while waiting for server delta!
+                        setCache(prev => ({ ...prev, [key]: localData }));
+                        setIsLoading(prev => prev[key] === false ? prev : { ...prev, [key]: false });
+                        
+                        // If we don't need to force server, we stop here
                         if (!shouldForceServer) {
-                            setCache(prev => ({ ...prev, [key]: localData }));
-                            setIsLoading(prev => prev[key] === false ? prev : { ...prev, [key]: false });
                             fetchingRef.current[key] = false;
                             return localData;
                         }

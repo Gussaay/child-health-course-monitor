@@ -90,6 +90,10 @@ const isDateInRange = (dateString, filterType) => {
         case 'last_month':
             const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
             return dateToCompare.getMonth() === lastMonth.getMonth() && dateToCompare.getFullYear() === lastMonth.getFullYear();
+        case 'this_year':
+            return dateToCompare.getFullYear() === today.getFullYear();
+        case 'last_year':
+            return dateToCompare.getFullYear() === today.getFullYear() - 1;
         default:
             return true;
     }
@@ -1581,6 +1585,7 @@ const SkillsMentorshipView = ({
     const [activeDashboardWorkerName, setActiveDashboardWorkerName] = useState(publicDashboardMode ? publicDashboardParams?.workerName || '' : '');
     const [activeDashboardProject, setActiveDashboardProject] = useState(publicDashboardMode ? publicDashboardParams?.project || '' : '');
     const [activeDashboardWorkerType, setActiveDashboardWorkerType] = useState(publicDashboardMode ? publicDashboardParams?.workerType || '' : '');
+    const [activeDashboardDate, setActiveDashboardDate] = useState(publicDashboardMode ? (publicDashboardParams?.dateFilter || publicDashboardParams?.week || '') : '');
 
     // --- State for Viewing Visit Reports ---
     const [viewingVisitReport, setViewingVisitReport] = useState(null);
@@ -1703,8 +1708,12 @@ const SkillsMentorshipView = ({
 
     // Ensure data is cached on mount without triggering new server loads unnecessarily
     useEffect(() => {
-        if (!publicDashboardMode) {
+        // ALWAYS fetch facilities, as they are required for Project/Partner mapping in all modes
+        if (fetchHealthFacilities) {
             fetchHealthFacilities({}, false);
+        }
+
+        if (!publicDashboardMode) {
             fetchSkillMentorshipSubmissions(false);
             fetchIMNCIVisitReports(false); 
             if (fetchEENCVisitReports) fetchEENCVisitReports(false);
@@ -1790,7 +1799,7 @@ const SkillsMentorshipView = ({
             const fac = facilityMap.get(sub.facilityId);
             
             // PRIORITIZE THE STANDARD 'project_name' KEY
-            const projectInfo = fac?.project_name || fac?.['المشروع'] || fac?.project || fac?.['الشركاء_الداعمين'] || fac?.['المنظمة_الداعمة'] || 'N/A';
+            const projectInfo = fac?.project_name || fac?.['المشروع'] || fac?.project || fac?.['الشركاء_الداعمين'] || fac?.['المنظمة_الداعمة'] || sub.project || 'N/A';
             
             return {
                 id: sub.id,
@@ -2058,6 +2067,11 @@ const SkillsMentorshipView = ({
                 // If we have no public data loaded, pull everything
                 if (!publicData.submissions || publicData.submissions.length === 0) {
                     effectiveLastFetch = 0;
+                }
+
+                // FIX: Refresh facility mapping data in public mode as well
+                if (fetchHealthFacilities) {
+                    fetchHealthFacilities({}, true);
                 }
 
                 const [newSubs, newImnci, newEenc] = await Promise.all([
@@ -2616,12 +2630,21 @@ const SkillsMentorshipView = ({
         const baseUrl = `${window.location.origin}/public/mentorship/dashboard/${activeService}`;
         const params = new URLSearchParams();
         
-        if (activeDashboardState) params.append('state', activeDashboardState);
-        if (activeDashboardLocality) params.append('locality', activeDashboardLocality);
-        if (activeDashboardFacilityId) params.append('facilityId', activeDashboardFacilityId);
-        if (activeDashboardWorkerName) params.append('workerName', activeDashboardWorkerName);
-        if (activeDashboardProject) params.append('project', activeDashboardProject);
-        if (activeDashboardWorkerType) params.append('workerType', activeDashboardWorkerType);
+        const stateToShare = activeDashboardState || selectedState;
+        const localityToShare = activeDashboardLocality || selectedLocality;
+        const facilityToShare = activeDashboardFacilityId || selectedFacilityId;
+        const workerToShare = activeDashboardWorkerName || selectedHealthWorkerName;
+        const projectToShare = activeDashboardProject || projectFilter;
+        const workerTypeToShare = activeDashboardWorkerType || workerTypeFilter;
+        const dateToShare = activeDashboardDate;
+
+        if (stateToShare) params.append('state', stateToShare);
+        if (localityToShare) params.append('locality', localityToShare);
+        if (facilityToShare) params.append('facilityId', facilityToShare);
+        if (workerToShare) params.append('workerName', workerToShare);
+        if (projectToShare) params.append('project', projectToShare);
+        if (workerTypeToShare) params.append('workerType', workerTypeToShare);
+        if (dateToShare) params.append('dateFilter', dateToShare);
         
         const shareUrl = `${baseUrl}?${params.toString()}`;
         
@@ -3085,6 +3108,8 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                             <option value="last_week">Last Week</option>
                                             <option value="this_month">This Month</option>
                                             <option value="last_month">Last Month</option>
+                                            <option value="this_year">This Year</option>
+                                            <option value="last_year">Last Year</option>
                                         </Select>
                                     </FormGroup>
 
@@ -3324,6 +3349,8 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                             setActiveDashboardWorkerType(value);
                                             setActiveDashboardWorkerName("");
                                         }}
+                                        dateFilter={activeDashboardDate}
+                                        onDateFilterChange={setActiveDashboardDate}
                                     />
                                 )
                             )}
@@ -3548,6 +3575,8 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                         setActiveDashboardWorkerType(value);
                                         setActiveDashboardWorkerName("");
                                     }}
+                                    dateFilter={activeDashboardDate}
+                                    onDateFilterChange={setActiveDashboardDate}
                                 />
                             </div>
                         </Modal>
@@ -4135,6 +4164,8 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     setActiveDashboardWorkerType(value);
                                     setActiveDashboardWorkerName("");
                                 }}
+                                dateFilter={activeDashboardDate}
+                                onDateFilterChange={setActiveDashboardDate}
                             />
                         </div>
                     </Modal>

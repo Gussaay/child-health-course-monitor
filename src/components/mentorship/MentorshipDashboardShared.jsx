@@ -237,12 +237,12 @@ export const CopyImageButton = ({ targetRef, title }) => {
             onClick={handleCopy} 
             disabled={isCopying}
             title="Copy as Image"
-            className="p-1.5 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded-lg transition-colors border border-transparent hover:border-sky-200 focus:outline-none"
+            className="p-1 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded-lg transition-colors border border-transparent hover:border-sky-200 focus:outline-none"
         >
             {isCopying ? (
                 <Spinner size="xs" /> 
             ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
                 </svg>
             )}
@@ -263,34 +263,42 @@ export const ScoreText = ({ value, showPercentage = true }) => {
     return (<span className={`font-extrabold text-sm ${colorClass}`}>{text}</span>);
 };
 
-export const KpiCard = ({ title, value, unit = '', scoreValue = null }) => (
-    <div className="bg-white p-6 rounded-2xl shadow-md border border-black border-t-4 border-t-sky-600 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col justify-center items-center h-full">
-        <h4 className="text-xs sm:text-sm font-bold text-slate-600 mb-3 text-center uppercase tracking-wider" title={title}>{title}</h4>
-        <div className="flex items-baseline justify-center gap-1.5 mt-auto">
-            {scoreValue !== null ? <ScoreText value={scoreValue} /> : <span className="text-4xl font-black text-slate-800 tracking-tight">{value}</span>}
-            {unit && <span className="text-sm font-bold text-slate-500">{unit}</span>}
+export const KpiCard = ({ title, value, unit = '', scoreValue = null }) => {
+    const cardRef = useRef(null);
+    return (
+        <div ref={cardRef} className="bg-white p-6 rounded-2xl shadow-md border border-black border-t-4 border-t-sky-600 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col justify-center items-center h-full relative group">
+            <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity"><CopyImageButton targetRef={cardRef} title={title} /></div>
+            <h4 className="text-xs sm:text-sm font-bold text-slate-600 mb-3 text-center uppercase tracking-wider break-words w-full px-4" title={title}>{title}</h4>
+            <div className="flex items-baseline justify-center gap-1.5 mt-auto">
+                {scoreValue !== null ? <ScoreText value={scoreValue} /> : <span className="text-4xl font-black text-slate-800 tracking-tight">{value}</span>}
+                {unit && <span className="text-sm font-bold text-slate-500">{unit}</span>}
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
-export const KpiGridItem = ({ title, scoreValue }) => (
-    <div className="bg-slate-50 p-4 rounded-xl border border-black text-center shadow-sm hover:border-sky-500 hover:bg-sky-50 transition-all flex flex-col justify-between h-full group">
-        <h5 className="text-xs font-bold text-slate-700 mb-3 leading-snug group-hover:text-sky-800" title={title}>{title}</h5>
-        <div className="mt-auto bg-white inline-block mx-auto px-4 py-1.5 rounded-lg border border-black shadow-sm">
-            <ScoreText value={scoreValue} />
+export const KpiGridItem = ({ title, scoreValue }) => {
+    const itemRef = useRef(null);
+    return (
+        <div ref={itemRef} className="bg-slate-50 p-4 rounded-xl border border-black text-center shadow-sm hover:border-sky-500 hover:bg-sky-50 transition-all flex flex-col justify-between h-full group relative">
+            <div className="absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity"><CopyImageButton targetRef={itemRef} title={title} /></div>
+            <h5 className="text-xs font-bold text-slate-700 mb-3 leading-snug group-hover:text-sky-800 break-words pr-6" title={title}>{title}</h5>
+            <div className="mt-auto bg-white inline-block mx-auto px-4 py-1.5 rounded-lg border border-black shadow-sm">
+                <ScoreText value={scoreValue} />
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 export const KpiGridCard = ({ title, kpis, cols = 2 }) => {
     const cardRef = useRef(null);
     return (
-        <div ref={cardRef} className="bg-white p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 relative">
+        <div ref={cardRef} className="bg-white p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 relative flex flex-col h-full">
             <div className="flex justify-between items-start mb-5">
-                <h4 className="text-base font-extrabold text-slate-800 text-left tracking-wide w-full pr-8" title={title}>{title}</h4>
+                <h4 className="text-base font-extrabold text-slate-800 text-left tracking-wide w-full pr-8 break-words" title={title}>{title}</h4>
                 <div className="absolute top-4 right-4"><CopyImageButton targetRef={cardRef} title={title} /></div>
             </div>
-            <div className={`grid grid-cols-${cols} gap-4`}>{kpis.map(kpi => (<KpiGridItem key={kpi.title} title={kpi.title} scoreValue={kpi.scoreValue} />))}</div>
+            <div className={`grid grid-cols-${cols} gap-4 flex-grow`}><div className="flex flex-col gap-4 w-full h-full">{kpis.map(kpi => (<KpiGridItem key={kpi.title} title={kpi.title} scoreValue={kpi.scoreValue} />))}</div></div>
         </div>
     );
 };
@@ -300,15 +308,15 @@ export const DetailedKpiCard = ({ title, overallScore, kpis }) => {
     return (
         <div ref={cardRef} className="bg-white p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
             <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
-            <div className="flex justify-between items-center mb-5 pb-3 border-b border-black pr-10">
-                <h4 className="text-base font-extrabold text-slate-800 text-left tracking-wide" title={title}>{title}</h4>
-                {overallScore !== null && (<div className="bg-sky-50 border border-black rounded-lg px-3 py-1 shadow-sm"><ScoreText value={overallScore} /></div>)}
+            <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center mb-5 pb-3 border-b border-black pr-10 gap-2">
+                <h4 className="text-base font-extrabold text-slate-800 text-left tracking-wide break-words" title={title}>{title}</h4>
+                {overallScore !== null && (<div className="bg-sky-50 border border-black rounded-lg px-3 py-1 shadow-sm whitespace-nowrap"><ScoreText value={overallScore} /></div>)}
             </div>
             <div className="space-y-3 flex-grow">
                 {kpis.map(kpi => (
                     <div key={kpi.title} className="flex justify-between items-center bg-slate-50 p-3.5 rounded-xl border border-black shadow-sm hover:border-sky-500 hover:bg-sky-50 transition-all duration-200 group">
                         <h5 className="text-xs font-bold text-slate-700 text-left pr-4 group-hover:text-sky-800">{kpi.title}</h5>
-                        <div className="bg-white px-3 py-1 rounded-lg shadow-sm border border-black"><ScoreText value={kpi.scoreValue} /></div>
+                        <div className="bg-white px-3 py-1 rounded-lg shadow-sm border border-black whitespace-nowrap"><ScoreText value={kpi.scoreValue} /></div>
                     </div>
                 ))}
             </div>
@@ -316,15 +324,18 @@ export const DetailedKpiCard = ({ title, overallScore, kpis }) => {
     );
 };
 
-export const FilterSelect = ({ label, value, onChange, options, disabled = false, defaultOption }) => (
-    <div>
-        <label htmlFor={label} className="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">{label}</label>
-        <select id={label} name={label} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} className="block w-full pl-4 pr-10 py-3 text-sm font-bold border border-black focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-xl shadow-sm bg-white hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-            <option value="">{defaultOption}</option>
-            {options.map(option => (<option key={option.key || option} value={option.key || option}>{option.name || option}</option>))}
-        </select>
-    </div>
-);
+export const FilterSelect = ({ label, value, onChange, options, disabled = false, defaultOption }) => {
+    const isSelected = value !== "" && value !== null && value !== undefined;
+    return (
+        <div className="min-w-[140px] flex-1 flex-shrink-0">
+            <label htmlFor={label} className="block text-[10px] font-bold text-slate-600 mb-1 uppercase tracking-wider">{label}</label>
+            <select id={label} name={label} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} className={`block w-full pl-3 pr-8 py-2 text-xs font-bold border focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${isSelected ? 'border-sky-500 bg-sky-50 text-sky-900 ring-1 ring-sky-200' : 'border-black bg-white hover:bg-slate-50 text-slate-800'}`}>
+                <option value="">{defaultOption}</option>
+                {options.map(option => (<option key={option.key || option} value={option.key || option}>{option.name || option}</option>))}
+            </select>
+        </div>
+    );
+};
 
 // --- Charts ---
 export const getSharedChartOptions = () => ({
@@ -371,7 +382,7 @@ export const VolumeLineChart = ({ title, chartData, kpiKeys }) => {
     return (
         <div ref={cardRef} className="bg-white p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
             <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
-            <h4 className="text-base font-extrabold text-slate-800 mb-5 text-center tracking-wide pr-8">{title}</h4>
+            <h4 className="text-base font-extrabold text-slate-800 mb-5 text-center tracking-wide pr-8 break-words">{title}</h4>
             <div className="relative flex-grow min-h-[250px]">{chartData.length > 0 ? <Line options={options} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">No data available.</div>}</div>
         </div>
     );
@@ -407,7 +418,7 @@ export const KpiLineChart = ({ title, chartData, kpiKeys }) => {
     return (
         <div ref={cardRef} className="bg-white p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
             <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
-            <h4 className="text-base font-extrabold text-slate-800 mb-5 text-center tracking-wide pr-8">{title}</h4>
+            <h4 className="text-base font-extrabold text-slate-800 mb-5 text-center tracking-wide pr-8 break-words">{title}</h4>
             <div className="relative flex-grow min-h-[250px]">{chartData.length > 0 ? <Line options={getSharedChartOptions()} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">No data available.</div>}</div>
         </div>
     );
@@ -427,7 +438,7 @@ export const KpiCardWithChart = ({ title, kpis, chartData, kpiKeys, cols = 2 }) 
     return (
         <div ref={cardRef} className="bg-white p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 flex flex-col h-full relative">
             <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
-            <h4 className="text-base font-extrabold text-slate-800 mb-5 text-center tracking-wide pr-8" title={title}>{title}</h4>
+            <h4 className="text-base font-extrabold text-slate-800 mb-5 text-center tracking-wide pr-8 break-words" title={title}>{title}</h4>
             <div className={`grid grid-cols-${cols} gap-4 mb-6`}>{kpis.map(kpi => (<KpiGridItem key={kpi.title} title={kpi.title} scoreValue={kpi.scoreValue} />))}</div>
             <div className="relative flex-grow min-h-[200px]">{chartData.length > 0 ? <Line options={getSharedChartOptions()} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">No data available.</div>}</div>
         </div>
@@ -462,7 +473,7 @@ export const KpiBarChart = ({ title, chartData, dataKey = 'avgOverall' }) => {
     return (
         <div ref={cardRef} className="bg-white p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 relative">
             <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
-            <h4 className="text-base font-extrabold text-slate-800 mb-5 text-center tracking-wide pr-8">{title}</h4>
+            <h4 className="text-base font-extrabold text-slate-800 mb-5 text-center tracking-wide pr-8 break-words">{title}</h4>
             <div className="relative" style={{ height: `${chartHeight}px` }}>{chartData.length > 0 ? <Bar options={options} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">No data available.</div>}</div>
         </div>
     );
@@ -658,10 +669,12 @@ export const renderTrendArrows = (val, type) => {
 };
 
 export const GeographicVolumeTable = ({ title, data, locationLabel }) => {
+    const tableRef = useRef(null);
     if (!data || data.length === 0) return null;
     return (
-        <div className="bg-white rounded-2xl shadow-md border border-black overflow-hidden mb-10">
-            <div className="p-5 border-b border-black bg-slate-100 flex justify-between items-center"><h4 className="text-lg font-extrabold text-slate-800">{title}</h4></div>
+        <div ref={tableRef} className="bg-white rounded-2xl shadow-md border border-black overflow-hidden mb-10 relative">
+            <div className="absolute top-3 right-4 z-10"><CopyImageButton targetRef={tableRef} title={title} /></div>
+            <div className="p-5 border-b border-black bg-slate-100 flex justify-between items-center pr-16"><h4 className="text-lg font-extrabold text-slate-800 break-words">{title}</h4></div>
             <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left border-collapse">
                     <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider">
@@ -697,10 +710,12 @@ export const GeographicVolumeTable = ({ title, data, locationLabel }) => {
 };
 
 export const SummaryKpiTable = ({ title, kpiDefinitions, overallKpis, kpisByWorkerType }) => {
+    const tableRef = useRef(null);
     if (!overallKpis || !kpisByWorkerType || kpisByWorkerType.length === 0) return null;
     return (
-        <div className="bg-white rounded-2xl shadow-md border border-black overflow-hidden mb-10">
-            <div className="p-5 border-b border-black bg-slate-100 flex justify-between items-center"><h4 className="text-lg font-extrabold text-slate-800">{title}</h4></div>
+        <div ref={tableRef} className="bg-white rounded-2xl shadow-md border border-black overflow-hidden mb-10 relative">
+            <div className="absolute top-3 right-4 z-10"><CopyImageButton targetRef={tableRef} title={title} /></div>
+            <div className="p-5 border-b border-black bg-slate-100 flex justify-between items-center pr-16"><h4 className="text-lg font-extrabold text-slate-800 break-words">{title}</h4></div>
             <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left border-collapse">
                     <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider">
@@ -726,6 +741,7 @@ export const SummaryKpiTable = ({ title, kpiDefinitions, overallKpis, kpisByWork
 };
 
 export const MentorPerformanceTable = ({ title, submissions, visitReports, activeService }) => {
+    const tableRef = useRef(null);
     const data = useMemo(() => {
         if (!submissions) return [];
         const mentorMap = {}; 
@@ -764,8 +780,9 @@ export const MentorPerformanceTable = ({ title, submissions, visitReports, activ
     if (!data || data.length === 0) return null;
 
     return (
-        <div className="bg-white rounded-2xl shadow-md border border-black overflow-hidden mb-10">
-            <div className="p-5 border-b border-black bg-slate-100 flex justify-between items-center"><h4 className="text-lg font-extrabold text-slate-800">{title}</h4></div>
+        <div ref={tableRef} className="bg-white rounded-2xl shadow-md border border-black overflow-hidden mb-10 relative">
+            <div className="absolute top-3 right-4 z-10"><CopyImageButton targetRef={tableRef} title={title} /></div>
+            <div className="p-5 border-b border-black bg-slate-100 flex justify-between items-center pr-16"><h4 className="text-lg font-extrabold text-slate-800 break-words">{title}</h4></div>
             <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left border-collapse">
                     <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider">
