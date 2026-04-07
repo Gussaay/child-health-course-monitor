@@ -266,12 +266,12 @@ export const ScoreText = ({ value, showPercentage = true }) => {
 export const KpiCard = ({ title, value, unit = '', scoreValue = null }) => {
     const cardRef = useRef(null);
     return (
-        <div ref={cardRef} className="bg-white p-6 rounded-2xl shadow-md border border-black border-t-4 border-t-sky-600 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col justify-center items-center h-full relative group">
+        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black border-t-4 border-t-sky-600 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col justify-center items-center h-full relative group">
             <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity"><CopyImageButton targetRef={cardRef} title={title} /></div>
-            <h4 className="text-xs sm:text-sm font-bold text-slate-600 mb-3 text-center uppercase tracking-wider break-words w-full px-4" title={title}>{title}</h4>
+            <h4 className="text-xs sm:text-sm font-bold text-slate-600 mb-2 sm:mb-3 text-center uppercase tracking-wider break-words w-full px-2 sm:px-4" title={title}>{title}</h4>
             <div className="flex items-baseline justify-center gap-1.5 mt-auto">
-                {scoreValue !== null ? <ScoreText value={scoreValue} /> : <span className="text-4xl font-black text-slate-800 tracking-tight">{value}</span>}
-                {unit && <span className="text-sm font-bold text-slate-500">{unit}</span>}
+                {scoreValue !== null ? <ScoreText value={scoreValue} /> : <span className="text-3xl sm:text-4xl font-black text-slate-800 tracking-tight">{value}</span>}
+                {unit && <span className="text-xs sm:text-sm font-bold text-slate-500">{unit}</span>}
             </div>
         </div>
     );
@@ -280,10 +280,9 @@ export const KpiCard = ({ title, value, unit = '', scoreValue = null }) => {
 export const KpiGridItem = ({ title, scoreValue }) => {
     const itemRef = useRef(null);
     return (
-        <div ref={itemRef} className="bg-slate-50 p-4 rounded-xl border border-black text-center shadow-sm hover:border-sky-500 hover:bg-sky-50 transition-all flex flex-col justify-between h-full group relative">
-            <div className="absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity"><CopyImageButton targetRef={itemRef} title={title} /></div>
-            <h5 className="text-xs font-bold text-slate-700 mb-3 leading-snug group-hover:text-sky-800 break-words pr-6" title={title}>{title}</h5>
-            <div className="mt-auto bg-white inline-block mx-auto px-4 py-1.5 rounded-lg border border-black shadow-sm">
+        <div ref={itemRef} className="bg-slate-50 p-3 sm:p-4 rounded-xl border border-black text-center shadow-sm hover:border-sky-500 hover:bg-sky-50 transition-all flex flex-col justify-between h-full group relative">
+            <h5 className="text-xs font-bold text-slate-700 mb-2 leading-snug group-hover:text-sky-800 break-words" title={title}>{title}</h5>
+            <div className="mt-auto bg-white inline-block mx-auto px-3 py-1 rounded-lg border border-black shadow-sm">
                 <ScoreText value={scoreValue} />
             </div>
         </div>
@@ -292,13 +291,17 @@ export const KpiGridItem = ({ title, scoreValue }) => {
 
 export const KpiGridCard = ({ title, kpis, cols = 2 }) => {
     const cardRef = useRef(null);
+    const gridColsClass = cols === 3 ? 'sm:grid-cols-3' : (cols === 4 ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-2');
+    
     return (
-        <div ref={cardRef} className="bg-white p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 relative flex flex-col h-full">
-            <div className="flex justify-between items-start mb-5">
+        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 relative flex flex-col h-full">
+            <div className="flex justify-between items-start mb-4 sm:mb-5">
                 <h4 className="text-base font-extrabold text-slate-800 text-left tracking-wide w-full pr-8 break-words" title={title}>{title}</h4>
                 <div className="absolute top-4 right-4"><CopyImageButton targetRef={cardRef} title={title} /></div>
             </div>
-            <div className={`grid grid-cols-${cols} gap-4 flex-grow`}><div className="flex flex-col gap-4 w-full h-full">{kpis.map(kpi => (<KpiGridItem key={kpi.title} title={kpi.title} scoreValue={kpi.scoreValue} />))}</div></div>
+            <div className={`grid grid-cols-1 ${gridColsClass} gap-3 sm:gap-4 flex-grow`}>
+                {kpis.map(kpi => (<KpiGridItem key={kpi.title} title={kpi.title} scoreValue={kpi.scoreValue} />))}
+            </div>
         </div>
     );
 };
@@ -306,17 +309,17 @@ export const KpiGridCard = ({ title, kpis, cols = 2 }) => {
 export const DetailedKpiCard = ({ title, overallScore, kpis }) => {
     const cardRef = useRef(null);
     return (
-        <div ref={cardRef} className="bg-white p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
+        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
             <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
-            <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center mb-5 pb-3 border-b border-black pr-10 gap-2">
+            <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center mb-4 sm:mb-5 pb-3 border-b border-black pr-10 gap-2">
                 <h4 className="text-base font-extrabold text-slate-800 text-left tracking-wide break-words" title={title}>{title}</h4>
                 {overallScore !== null && (<div className="bg-sky-50 border border-black rounded-lg px-3 py-1 shadow-sm whitespace-nowrap"><ScoreText value={overallScore} /></div>)}
             </div>
-            <div className="space-y-3 flex-grow">
+            <div className="space-y-2 sm:space-y-3 flex-grow">
                 {kpis.map(kpi => (
-                    <div key={kpi.title} className="flex justify-between items-center bg-slate-50 p-3.5 rounded-xl border border-black shadow-sm hover:border-sky-500 hover:bg-sky-50 transition-all duration-200 group">
-                        <h5 className="text-xs font-bold text-slate-700 text-left pr-4 group-hover:text-sky-800">{kpi.title}</h5>
-                        <div className="bg-white px-3 py-1 rounded-lg shadow-sm border border-black whitespace-nowrap"><ScoreText value={kpi.scoreValue} /></div>
+                    <div key={kpi.title} className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-black shadow-sm hover:border-sky-500 hover:bg-sky-50 transition-all duration-200 group">
+                        <h5 className="text-xs font-bold text-slate-700 text-left pr-2 group-hover:text-sky-800">{kpi.title}</h5>
+                        <div className="bg-white px-2 sm:px-3 py-1 rounded-lg shadow-sm border border-black whitespace-nowrap"><ScoreText value={kpi.scoreValue} /></div>
                     </div>
                 ))}
             </div>
@@ -327,7 +330,7 @@ export const DetailedKpiCard = ({ title, overallScore, kpis }) => {
 export const FilterSelect = ({ label, value, onChange, options, disabled = false, defaultOption }) => {
     const isSelected = value !== "" && value !== null && value !== undefined;
     return (
-        <div className="min-w-[140px] flex-1 flex-shrink-0">
+        <div className="w-full sm:flex-1 sm:min-w-[140px]">
             <label htmlFor={label} className="block text-[10px] font-bold text-slate-600 mb-1 uppercase tracking-wider">{label}</label>
             <select id={label} name={label} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} className={`block w-full pl-3 pr-8 py-2 text-xs font-bold border focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${isSelected ? 'border-sky-500 bg-sky-50 text-sky-900 ring-1 ring-sky-200' : 'border-black bg-white hover:bg-slate-50 text-slate-800'}`}>
                 <option value="">{defaultOption}</option>
@@ -380,9 +383,9 @@ export const VolumeLineChart = ({ title, chartData, kpiKeys }) => {
 
     const data = { labels: chartData.map(d => d.name), datasets: kpiKeys.map(kpi => getLineDatasetStyle(kpi.title, kpi.key, colors, chartData.map(d => d[kpi.key]))) };
     return (
-        <div ref={cardRef} className="bg-white p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
+        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
             <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
-            <h4 className="text-base font-extrabold text-slate-800 mb-5 text-center tracking-wide pr-8 break-words">{title}</h4>
+            <h4 className="text-base font-extrabold text-slate-800 mb-4 sm:mb-5 text-center tracking-wide pr-8 break-words">{title}</h4>
             <div className="relative flex-grow min-h-[250px]">{chartData.length > 0 ? <Line options={options} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">No data available.</div>}</div>
         </div>
     );
@@ -416,9 +419,9 @@ export const KpiLineChart = ({ title, chartData, kpiKeys }) => {
     
     const data = { labels: chartData.map(d => d.name), datasets: kpiKeys.map(kpi => getLineDatasetStyle(kpi.title, kpi.key, colors, chartData.map(d => d[kpi.key]))) };
     return (
-        <div ref={cardRef} className="bg-white p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
+        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
             <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
-            <h4 className="text-base font-extrabold text-slate-800 mb-5 text-center tracking-wide pr-8 break-words">{title}</h4>
+            <h4 className="text-base font-extrabold text-slate-800 mb-4 sm:mb-5 text-center tracking-wide pr-8 break-words">{title}</h4>
             <div className="relative flex-grow min-h-[250px]">{chartData.length > 0 ? <Line options={getSharedChartOptions()} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">No data available.</div>}</div>
         </div>
     );
@@ -426,6 +429,8 @@ export const KpiLineChart = ({ title, chartData, kpiKeys }) => {
 
 export const KpiCardWithChart = ({ title, kpis, chartData, kpiKeys, cols = 2 }) => {
     const cardRef = useRef(null);
+    const gridColsClass = cols === 3 ? 'sm:grid-cols-3' : (cols === 4 ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-2');
+
     const colors = { 
         'Overall': '#0ea5e9', 'Assessment': '#10b981', 'Decision': '#f59e0b', 'Treatment': '#ef4444', 
         'Pallor': '#78716c', 'Anemia Mgmt': '#dc2626', 'Resp. Rate': '#14b8a6', 'Dehydration': '#ec4899', 
@@ -436,10 +441,10 @@ export const KpiCardWithChart = ({ title, kpis, chartData, kpiKeys, cols = 2 }) 
     const data = { labels: chartData.map(d => d.name), datasets: kpiKeys.map(kpi => getLineDatasetStyle(kpi.title, kpi.key, colors, chartData.map(d => d[kpi.key]))) };
 
     return (
-        <div ref={cardRef} className="bg-white p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 flex flex-col h-full relative">
+        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 flex flex-col h-full relative">
             <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
-            <h4 className="text-base font-extrabold text-slate-800 mb-5 text-center tracking-wide pr-8 break-words" title={title}>{title}</h4>
-            <div className={`grid grid-cols-${cols} gap-4 mb-6`}>{kpis.map(kpi => (<KpiGridItem key={kpi.title} title={kpi.title} scoreValue={kpi.scoreValue} />))}</div>
+            <h4 className="text-base font-extrabold text-slate-800 mb-4 sm:mb-5 text-center tracking-wide pr-8 break-words" title={title}>{title}</h4>
+            <div className={`grid grid-cols-1 ${gridColsClass} gap-3 sm:gap-4 mb-4 sm:mb-6`}>{kpis.map(kpi => (<KpiGridItem key={kpi.title} title={kpi.title} scoreValue={kpi.scoreValue} />))}</div>
             <div className="relative flex-grow min-h-[200px]">{chartData.length > 0 ? <Line options={getSharedChartOptions()} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">No data available.</div>}</div>
         </div>
     );
@@ -471,9 +476,9 @@ export const KpiBarChart = ({ title, chartData, dataKey = 'avgOverall' }) => {
     const chartHeight = Math.max(300, chartData.length * 40); 
     
     return (
-        <div ref={cardRef} className="bg-white p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 relative">
+        <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 relative">
             <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
-            <h4 className="text-base font-extrabold text-slate-800 mb-5 text-center tracking-wide pr-8 break-words">{title}</h4>
+            <h4 className="text-base font-extrabold text-slate-800 mb-4 sm:mb-5 text-center tracking-wide pr-8 break-words">{title}</h4>
             <div className="relative" style={{ height: `${chartHeight}px` }}>{chartData.length > 0 ? <Bar options={options} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">No data available.</div>}</div>
         </div>
     );
