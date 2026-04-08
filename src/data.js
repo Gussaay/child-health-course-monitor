@@ -666,7 +666,6 @@ export async function getFacilitatorByEmail(email) {
     }
 }
 
-// --- FIX APPLIED: Added lastSync param to facilitate incremental syncing ---
 export async function upsertFacilitator(payload) {
     if (payload.id) {
         const facRef = doc(db, "facilitators", payload.id);
@@ -1078,7 +1077,6 @@ export async function approveCourseCertificates(courseId, managerName, signature
         lastUpdatedAt: serverTimestamp()
     };
 
-    // Only set the signature URL if one was provided (or explicitly null to clear)
     if (signatureUrl !== undefined) {
         updateData.approvedByManagerSignatureUrl = signatureUrl;
     }
@@ -1363,7 +1361,7 @@ export async function upsertCaseAndObservations(caseData, observations, editingC
     if (editingCaseId) {
         const oldObsQuery = query(collection(db, "observations"), where("caseId", "==", editingCaseId));
         const oldObsSnapshot = await getDocs(oldObsQuery); 
-        oldObsSnapshot.forEach(doc => batch.delete(doc.ref)); // Deliberate hard delete for intermediate observation edits to save DB bloat
+        oldObsSnapshot.forEach(doc => batch.delete(doc.ref)); 
     }
 
     const savedCase = { ...caseData, id: caseId, lastUpdatedAt: serverTimestamp() };
@@ -1541,7 +1539,6 @@ export async function importMentorshipSessions(sessions, originalRows, onProgres
     return { successes, errors, failedRowsData };
 }
 
-// SOFT DELETE
 export async function deleteMentorshipSession(sessionId) {
     if (!sessionId) throw new Error("Session ID is required to delete.");
     const sessionRef = doc(db, "skillMentorship", sessionId);
@@ -1579,7 +1576,6 @@ export async function listIMNCIVisitReports(sourceOptions = {}, lastSync = 0) {
     }
 }
 
-// SOFT DELETE
 export async function deleteIMNCIVisitReport(reportId) {
     if (!reportId) throw new Error("Report ID is required to delete.");
     const sessionRef = doc(db, "imnciVisitReports", reportId);
@@ -1617,7 +1613,6 @@ export async function listEENCVisitReports(sourceOptions = {}, lastSync = 0) {
     }
 }
 
-// SOFT DELETE
 export async function deleteEENCVisitReport(reportId) {
     if (!reportId) throw new Error("Report ID is required to delete.");
     const sessionRef = doc(db, "eencVisitReports", reportId);
@@ -1707,7 +1702,6 @@ export async function listParticipantTestsForCourse(courseId, sourceOptions = {}
     }
 }
 
-// SOFT DELETE
 export async function deleteParticipantTest(courseId, participantId, testType) {
     if (!participantId || !testType) throw new Error("Participant ID and Test Type are required.");
     const testRecordId = `${participantId}_${testType}`;
@@ -1755,3 +1749,111 @@ export const queueCertificateEmail = async (participant, link, language) => {
         return { success: false, error: error.message };
     }
 };
+
+// --- PROJECT TRACKER ---
+export async function upsertProject(payload) {
+    if (payload.id) {
+        const docRef = doc(db, "projects", payload.id);
+        await fbSetDoc(docRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
+        return payload.id;
+    } else {
+        const { id, ...dataToSave } = payload;
+        const newRef = await fbAddDoc(collection(db, "projects"), { 
+            ...dataToSave, 
+            createdAt: serverTimestamp(), 
+            lastUpdatedAt: serverTimestamp() 
+        });
+        return newRef.id;
+    }
+}
+
+export async function listProjects(sourceOptions = {}, lastSync = 0) {
+    try {
+        let q = collection(db, "projects");
+        if (lastSync > 0) {
+            q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
+        }
+        const snapshot = await getData(q, sourceOptions);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error fetching projects:", error);
+        throw error;
+    }
+}
+
+export async function deleteProject(projectId) {
+    await fbUpdateDoc(doc(db, "projects", projectId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
+    return true;
+}
+
+// --- MASTER PLAN (PLANNING) ---
+export async function upsertMasterPlan(payload) {
+    if (payload.id) {
+        const docRef = doc(db, "masterPlans", payload.id);
+        await fbSetDoc(docRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
+        return payload.id;
+    } else {
+        const { id, ...dataToSave } = payload;
+        const newRef = await fbAddDoc(collection(db, "masterPlans"), { 
+            ...dataToSave, 
+            createdAt: serverTimestamp(), 
+            lastUpdatedAt: serverTimestamp() 
+        });
+        return newRef.id;
+    }
+}
+
+export async function listMasterPlans(sourceOptions = {}, lastSync = 0) {
+    try {
+        let q = collection(db, "masterPlans");
+        if (lastSync > 0) {
+            q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
+        }
+        const snapshot = await getData(q, sourceOptions);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error fetching master plans:", error);
+        throw error;
+    }
+}
+
+export async function deleteMasterPlan(planId) {
+    await fbUpdateDoc(doc(db, "masterPlans", planId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
+    return true;
+}
+
+// --- OPERATIONAL PLANS (التخطيط التشغيلي) ---
+export async function upsertOperationalPlan(payload) {
+    if (payload.id) {
+        const docRef = doc(db, "operationalPlans", payload.id);
+        await fbUpdateDoc(docRef, { ...payload, lastUpdatedAt: serverTimestamp() });
+        return payload.id;
+    } else {
+        const { id, ...dataToSave } = payload;
+        const newRef = await fbAddDoc(collection(db, "operationalPlans"), { 
+            ...dataToSave, 
+            createdAt: serverTimestamp(), 
+            lastUpdatedAt: serverTimestamp() 
+        });
+        return newRef.id;
+    }
+}
+
+export async function listOperationalPlans(sourceOptions = {}, lastSync = 0) {
+    try {
+        let q = collection(db, "operationalPlans");
+        if (lastSync > 0) {
+            q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
+        }
+        const snapshot = await getDocs(q, sourceOptions);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error fetching operational plans:", error);
+        throw error;
+    }
+}
+
+export async function deleteOperationalPlan(planId) {
+    await fbUpdateDoc(doc(db, "operationalPlans", planId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
+    return true;
+}

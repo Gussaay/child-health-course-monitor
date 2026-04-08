@@ -13,6 +13,9 @@ import {
     Hospital,
     Database,
     ClipboardCheck,
+    ClipboardList,
+    FolderKanban,
+    TrendingUp, // <--- ADDED: Icon for Master Plan
     X 
 } from 'lucide-react';
 
@@ -57,6 +60,9 @@ const PublicFacilityUpdateForm = lazy(() => import('./components/FacilityForms.j
 const NewFacilityEntryForm = lazy(() => import('./components/FacilityForms.jsx').then(module => ({ default: module.NewFacilityEntryForm })));
 const SkillsMentorshipView = lazy(() => import('./components/mentorship/SkillsMentorshipView.jsx'));
 
+// --- New Features Lazy Loads ---
+const ProjectTrackerView = lazy(() => import('./components/ProjectTrackerView'));
+const PlanningView = lazy(() => import('./components/PlanningView')); // <--- ADDED: PlanningView
 
 // --- Data & Component Imports ---
 import {
@@ -332,6 +338,8 @@ function Landing({ navigate, permissions }) {
         { label: 'Human Resources', view: 'humanResources', icon: Users, permission: permissions.canViewHumanResource },
         { label: 'Child Health Services', view: 'childHealthServices', icon: Hospital, permission: permissions.canViewFacilities },
         { label: 'Skills Mentorship', view: 'skillsMentorship', icon: ClipboardCheck, permission: permissions.canViewSkillsMentorship },
+        { label: 'Project Tracker', view: 'projects', icon: FolderKanban, permission: permissions.canUseFederalManagerAdvancedFeatures },
+        { label: 'Master Plan', view: 'planning', icon: TrendingUp, permission: permissions.canUseFederalManagerAdvancedFeatures }, // <--- ADDED
         { label: 'Admin', view: 'admin', icon: User, permission: permissions.canViewAdmin },
     ];
 
@@ -366,7 +374,17 @@ function Landing({ navigate, permissions }) {
 }
 
 const BottomNav = React.memo(function BottomNav({ navItems, navigate }) {
-    const icons = { Dashboard: Home, Home: Home, Courses: Book, 'Human Resources': Users, 'Child Health Services': Hospital, 'Skills Mentorship': ClipboardCheck, Admin: User };
+    const icons = { 
+        Dashboard: Home, 
+        Home: Home, 
+        Courses: Book, 
+        'Human Resources': Users, 
+        'Child Health Services': Hospital, 
+        'Skills Mentorship': ClipboardCheck, 
+        'Project Tracker': FolderKanban,
+        'Master Plan': TrendingUp, // <--- ADDED
+        Admin: User 
+    };
     return (
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-800 border-t border-slate-700 flex justify-around items-center z-20">
             {navItems.map(item => {
@@ -1095,7 +1113,9 @@ export default function App() {
             'facilitators': permissions.canViewHumanResource,
             'programTeams': permissions.canViewHumanResource,
             'partnersPage': permissions.canViewHumanResource,
-            'attendanceManager': permissions.canManageCourse, // Permissions check for new view
+            'attendanceManager': permissions.canManageCourse,
+            'projects': permissions.canUseFederalManagerAdvancedFeatures, 
+            'planning': permissions.canUseFederalManagerAdvancedFeatures, // <--- ADDED: Planning module permission
         };
 
         if (user && !viewPermissions[newView]) {
@@ -1129,11 +1149,11 @@ export default function App() {
         if (state.openParticipantReport) { setSelectedParticipantId(state.openParticipantReport); setSelectedCourseId(state.openCourseReport); }
         if (state.caseToEdit) setEditingCaseFromReport(state.caseToEdit);
 
-        if (['courses', 'humanResources', 'dashboard', 'admin', 'landing', 'skillsMentorship'].includes(newView)) {
+        if (['courses', 'humanResources', 'dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning'].includes(newView)) {
             setSelectedCourseId(null);
             setSelectedParticipantId(null);
             setFinalReportCourse(null);
-            if (['dashboard', 'admin', 'landing', 'skillsMentorship'].includes(newView)) {
+            if (['dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning'].includes(newView)) {
                 setActiveCourseType(null);
             }
         }
@@ -1610,6 +1630,21 @@ export default function App() {
                     />
                 ) : null;
 
+            case 'projects':
+                return permissions.canUseFederalManagerAdvancedFeatures ? (
+                    <Suspense fallback={<Spinner />}>
+                        <ProjectTrackerView permissions={permissions} />
+                    </Suspense>
+                ) : null;
+
+            // <--- ADDED: Planning View render logic --->
+            case 'planning':
+                return permissions.canUseFederalManagerAdvancedFeatures ? (
+                    <Suspense fallback={<Spinner />}>
+                        <PlanningView permissions={permissions} />
+                    </Suspense>
+                ) : null;
+
             case 'monitoring': case 'observe':
                 const canMonitor = (permissions.canManageCourse && isCourseActive) || permissions.canUseFederalManagerAdvancedFeatures;
                 return canMonitor ? (selectedCourse && currentParticipant && <ObservationView course={selectedCourse} participant={currentParticipant} participants={courseDetails.participants} onChangeParticipant={(id) => setSelectedParticipantId(id)} initialCaseToEdit={editingCaseFromReport} />) : null;
@@ -1714,6 +1749,9 @@ export default function App() {
         { label: 'Human Resources', view: 'humanResources', active: ['humanResources', 'facilitatorForm', 'facilitatorReport'].includes(view), disabled: !permissions.canViewHumanResource },
         { label: 'Child Health Services', view: 'childHealthServices', active: view === 'childHealthServices', disabled: !permissions.canViewFacilities },
         { label: 'Skills Mentorship', view: 'skillsMentorship', active: view === 'skillsMentorship', disabled: !permissions.canViewSkillsMentorship },
+        { label: 'Project Tracker', view: 'projects', active: view === 'projects', disabled: !permissions.canUseFederalManagerAdvancedFeatures },
+        // <--- ADDED: Master Plan item --->
+        { label: 'Master Plan', view: 'planning', active: view === 'planning', disabled: !permissions.canUseFederalManagerAdvancedFeatures },
     ], [view, permissions]);
 
     const visibleNavItems = useMemo(() => navItems.filter(item => !item.disabled), [navItems]);

@@ -522,7 +522,6 @@ export const NeonatalCoverageDashboard = () => {
     const handleFacilityLeave = useCallback(() => { setHoveredFacilityData(null); }, []);
     const handleMouseMove = useCallback((event) => { if (tooltipData || hoveredFacilityData) { setHoverPosition({ x: event.clientX, y: event.clientY }); } }, [tooltipData, hoveredFacilityData]);
 
-    // NEW LINE TO FIX THE REFERENCE ERROR
     const currentMapViewLevel = isLocalityView ? 'locality' : mapViewLevel;
 
     const handleDownloadMap = useCallback((format = 'jpg') => {
@@ -1871,6 +1870,349 @@ export const IMNCICoverageDashboard = () => {
                 )}
                 {tooltipData && ( <div style={{ position: 'fixed', left: hoverPosition.x - 40, top: hoverPosition.y, pointerEvents: 'none', zIndex: 50 }}> <MapTooltip title={tooltipData.title} dataRows={tooltipData.dataRows} equipmentSummary={tooltipData.equipmentSummary} /> </div> )}
             </>
+            )}
+        </div>
+    );
+};
+
+// --- COMPACT KPI CARD ---
+const CompactKPICard = ({ percentage, title, numeratorLabel, numeratorValue, denominatorLabel, denominatorValue, colorClass = "bg-sky-600" }) => (
+    <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+        <div className={`px-3 py-2.5 text-white flex justify-between items-center ${colorClass}`}>
+            <h3 className="text-xs md:text-sm font-bold leading-tight w-2/3 text-right" dir="rtl">{title}</h3>
+            <span className="text-xl md:text-2xl font-extrabold">% {percentage}</span>
+        </div>
+        <div className="px-3 py-2 bg-gray-50 text-[11px] md:text-xs text-gray-700 space-y-1.5" dir="rtl">
+            <div className="flex justify-between border-b border-gray-200 pb-1.5">
+                <span className="text-gray-500">{numeratorLabel}:</span>
+                <span className="font-bold text-gray-900">{numeratorValue}</span>
+            </div>
+            <div className="flex justify-between pt-0.5">
+                <span className="text-gray-500">{denominatorLabel}:</span>
+                <span className="font-bold text-gray-900">{denominatorValue}</span>
+            </div>
+        </div>
+    </div>
+);
+
+// --- CUSTOM COMBINED MAP TOOLTIP ---
+const CombinedMapTooltip = ({ data }) => {
+    if (!data) return null;
+    return (
+        <div className="absolute z-50 p-4 bg-white border border-gray-300 shadow-2xl rounded-lg w-72 pointer-events-none transform -translate-x-full -translate-y-1/2">
+            <h4 className="text-lg font-bold text-gray-800 border-b pb-2 mb-2">{data.name}</h4>
+            <div className="text-sm font-bold text-sky-700 mb-3">
+                Overall Coverage: {data.percentage}%
+            </div>
+            <div className="space-y-2 text-xs" dir="rtl">
+                <div className="flex justify-between items-center bg-sky-50 p-1.5 rounded">
+                    <span className="font-semibold text-gray-700">IMNCI:</span>
+                    <span>{data.raw.imnci.perc}% <span className="text-gray-500 font-normal">({data.raw.imnci.n}/{data.raw.imnci.d})</span></span>
+                </div>
+                <div className="flex justify-between items-center bg-teal-50 p-1.5 rounded">
+                    <span className="font-semibold text-gray-700">ETAT:</span>
+                    <span>{data.raw.etat.perc}% <span className="text-gray-500 font-normal">({data.raw.etat.n}/{data.raw.etat.d})</span></span>
+                </div>
+                <div className="flex justify-between items-center bg-indigo-50 p-1.5 rounded">
+                    <span className="font-semibold text-gray-700">EENC:</span>
+                    <span>{data.raw.eenc.perc}% <span className="text-gray-500 font-normal">({data.raw.eenc.n}/{data.raw.eenc.d})</span></span>
+                </div>
+                <div className="flex justify-between items-center bg-purple-50 p-1.5 rounded">
+                    <span className="font-semibold text-gray-700">SCNU:</span>
+                    <span>{data.raw.scnu.perc}% <span className="text-gray-500 font-normal">({data.raw.scnu.n}/{data.raw.scnu.d})</span></span>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// --- COMBINED SERVICES DASHBOARD ---
+export const CombinedServiceDashboard = () => {
+    const { healthFacilities: allFacilities, isLoading } = useDataCache();
+    const loading = isLoading?.healthFacilities;
+    
+    // --- APPLY SOFT DELETE FILTER ---
+    const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
+
+    const [stateFilter, setStateFilter] = useState(''); 
+    const [localityFilter, setLocalityFilter] = useState(''); 
+    
+    const combinedExportRef = useRef(null);
+    const [combinedCopyStatus, setCombinedCopyStatus] = useState('');
+
+    const [hoverData, setHoverData] = useState(null);
+    const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
+
+    // Filter facilities based on State/Locality
+    const locationFilteredFacilities = useMemo(() => {
+        return activeFacilities.filter(f => {
+            if(f['الولاية'] === 'إتحادي') return false;
+            if (stateFilter && f['الولاية'] !== stateFilter) return false;
+            if (localityFilter && f['المحلية'] !== localityFilter) return false;
+            return true;
+        });
+    }, [activeFacilities, stateFilter, localityFilter]); 
+
+    // --- KPI CALCULATIONS (Global or Filtered) ---
+    const kpiData = useMemo(() => {
+        // 1. IMNCI
+        const functioningPhcs = locationFilteredFacilities.filter(f => f['هل_المؤسسة_تعمل'] === 'Yes' && ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(f['نوع_المؤسسةالصحية']));
+        const imnciInPhcs = functioningPhcs.filter(f => f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes');
+        const imnciPerc = functioningPhcs.length > 0 ? Math.round((imnciInPhcs.length / functioningPhcs.length) * 100) : 0;
+
+        // 2. ETAT (Pediatric + General Hospitals)
+        const supposedEtatFacilities = locationFilteredFacilities.filter(f => ['مستشفى', 'مستشفى ريفي'].includes(f['نوع_المؤسسةالصحية']) || f.eenc_service_type === 'pediatric');
+        const facilitiesWithEtat = supposedEtatFacilities.filter(f => f.etat_has_service === 'Yes');
+        const etatPerc = supposedEtatFacilities.length > 0 ? Math.round((facilitiesWithEtat.length / supposedEtatFacilities.length) * 100) : 0;
+
+        // 3. EENC
+        const emoncFacilities = locationFilteredFacilities.filter(f => ['BEmONC', 'CEmONC'].includes(f.eenc_service_type) && f['هل_المؤسسة_تعمل'] === 'Yes');
+        const eencProviders = emoncFacilities.filter(f => f.eenc_provides_essential_care === 'Yes');
+        const eencPerc = emoncFacilities.length > 0 ? Math.round((eencProviders.length / emoncFacilities.length) * 100) : 0;
+
+        // 4. SCNU (Neonatal)
+        const supposedScnuFacilities = locationFilteredFacilities.filter(f => ['CEmONC', 'pediatric'].includes(f.eenc_service_type) || f.neonatal_level_of_care?.primary || f.neonatal_level_of_care?.secondary || f.neonatal_level_of_care?.tertiary);
+        const functioningScnus = supposedScnuFacilities.filter(f => f['هل_المؤسسة_تعمل'] === 'Yes' && f.neonatal_level_of_care?.secondary);
+        const scnuPerc = supposedScnuFacilities.length > 0 ? Math.round((functioningScnus.length / supposedScnuFacilities.length) * 100) : 0;
+
+        return {
+            imnci: { num: imnciInPhcs.length, den: functioningPhcs.length, perc: imnciPerc },
+            etat: { num: facilitiesWithEtat.length, den: supposedEtatFacilities.length, perc: etatPerc },
+            eenc: { num: eencProviders.length, den: emoncFacilities.length, perc: eencPerc },
+            scnu: { num: functioningScnus.length, den: supposedScnuFacilities.length, perc: scnuPerc }
+        };
+    }, [locationFilteredFacilities]);
+
+    // --- MAP AGGREGATION HELPER ---
+    const aggregateCoverage = useCallback((facilitiesToAggregate, groupByField) => {
+        const agg = {};
+        facilitiesToAggregate.forEach(f => {
+            const key = f[groupByField];
+            if (!key || key === 'إتحادي') return;
+            if (!agg[key]) {
+                agg[key] = { imnci: {n:0, d:0}, etat: {n:0, d:0}, eenc: {n:0, d:0}, scnu: {n:0, d:0} };
+            }
+
+            if (f['هل_المؤسسة_تعمل'] === 'Yes' && ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(f['نوع_المؤسسةالصحية'])) {
+                agg[key].imnci.d++;
+                if (f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes') agg[key].imnci.n++;
+            }
+            if (['مستشفى', 'مستشفى ريفي'].includes(f['نوع_المؤسسةالصحية']) || f.eenc_service_type === 'pediatric') {
+                agg[key].etat.d++;
+                if (f.etat_has_service === 'Yes') agg[key].etat.n++;
+            }
+            if (['BEmONC', 'CEmONC'].includes(f.eenc_service_type) && f['هل_المؤسسة_تعمل'] === 'Yes') {
+                agg[key].eenc.d++;
+                if (f.eenc_provides_essential_care === 'Yes') agg[key].eenc.n++;
+            }
+            if (['CEmONC', 'pediatric'].includes(f.eenc_service_type) || f.neonatal_level_of_care?.primary || f.neonatal_level_of_care?.secondary || f.neonatal_level_of_care?.tertiary) {
+                agg[key].scnu.d++;
+                if (f['هل_المؤسسة_تعمل'] === 'Yes' && f.neonatal_level_of_care?.secondary) agg[key].scnu.n++;
+            }
+        });
+
+        // Calculate percentages and overall average
+        Object.keys(agg).forEach(key => {
+            const counts = agg[key];
+            counts.imnci.perc = counts.imnci.d > 0 ? Math.round((counts.imnci.n / counts.imnci.d) * 100) : 0;
+            counts.etat.perc  = counts.etat.d > 0 ? Math.round((counts.etat.n / counts.etat.d) * 100) : 0;
+            counts.eenc.perc  = counts.eenc.d > 0 ? Math.round((counts.eenc.n / counts.eenc.d) * 100) : 0;
+            counts.scnu.perc  = counts.scnu.d > 0 ? Math.round((counts.scnu.n / counts.scnu.d) * 100) : 0;
+            counts.overallAvg = Math.round((counts.imnci.perc + counts.etat.perc + counts.eenc.perc + counts.scnu.perc) / 4);
+        });
+
+        return agg;
+    }, []);
+
+    // State Map Data
+    const stateMapData = useMemo(() => {
+        const stateAgg = aggregateCoverage(activeFacilities, 'الولاية');
+        return Object.entries(stateAgg).map(([st, counts]) => ({
+            name: st,
+            state: st,
+            percentage: counts.overallAvg,
+            raw: counts,
+            coordinates: typeof mapCoordinates !== 'undefined' && mapCoordinates[st] ? [mapCoordinates[st].lng, mapCoordinates[st].lat] : [0, 0]
+        }));
+    }, [activeFacilities, aggregateCoverage]);
+
+    // Locality Map Data (Drilldown)
+    const localityMapData = useMemo(() => {
+        if (!stateFilter) return [];
+        const filteredForState = activeFacilities.filter(f => f['الولاية'] === stateFilter);
+        const localityAgg = aggregateCoverage(filteredForState, 'المحلية');
+        return Object.entries(localityAgg).map(([loc, counts]) => ({
+            key: loc,
+            name: loc,
+            state: stateFilter,
+            coverage: counts.overallAvg, 
+            percentage: counts.overallAvg,
+            raw: counts
+        }));
+    }, [activeFacilities, stateFilter, aggregateCoverage]);
+
+    // Dynamic Map Config (Zoom logic for container)
+    const mapViewConfig = useMemo(() => { 
+        const sC = stateFilter && typeof mapCoordinates !== 'undefined' ? mapCoordinates[stateFilter] : null;
+        if(sC) return { center: [sC.lng, sC.lat], scale: sC.scale * 1.8, focusedState: stateFilter };
+        return { center: [30, 15.5], scale: 2300, focusedState: null }; 
+    }, [stateFilter]);
+
+    // --- HANDLERS ---
+    const handleCopyCombined = async () => {
+        if (combinedExportRef.current && navigator.clipboard?.write) {
+            setCombinedCopyStatus('Copying...');
+            try {
+                const canvas = await html2canvas(combinedExportRef.current, { 
+                    useCORS: true, 
+                    scale: 2, 
+                    backgroundColor: '#ffffff', 
+                    ignoreElements: (el) => el.classList.contains('ignore-for-export') 
+                });
+                canvas.toBlob(async (blob) => { 
+                    if (blob) { 
+                        await navigator.clipboard.write([ new ClipboardItem({ 'image/png': blob }) ]); 
+                        setCombinedCopyStatus('Copied!'); 
+                    } 
+                }, 'image/png', 0.95);
+            } catch (err) { setCombinedCopyStatus('Failed'); }
+            finally { setTimeout(() => setCombinedCopyStatus(''), 2000); }
+        }
+    };
+
+    const handleMapHover = useCallback((isLocality, key, event) => {
+        const data = isLocality 
+            ? localityMapData.find(d => d.key === key) 
+            : stateMapData.find(d => d.state === key);
+        
+        if (data) {
+            setHoverData(data);
+            setHoverPosition({ x: event.clientX, y: event.clientY });
+        }
+    }, [stateMapData, localityMapData]);
+
+    const handleMouseMove = useCallback((e) => {
+        if (hoverData) setHoverPosition({ x: e.clientX, y: e.clientY });
+    }, [hoverData]);
+
+    const currentMapViewLevel = stateFilter ? 'locality' : 'state';
+
+    return (
+        <div className="mt-6 flex flex-col gap-6" onMouseMove={handleMouseMove}>
+            <PageHeader title="Child Health Services Overview" subtitle="Unified coverage metrics across all programs."/>
+            
+            {/* Filters */}
+            <Card className="ignore-for-export p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
+                    <FormGroup label="Filter by State">
+                        <Select value={stateFilter} onChange={(e) => {setStateFilter(e.target.value); setLocalityFilter('');}}>
+                            <option value="">All States</option>
+                            {Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{sKey}</option>)}
+                        </Select>
+                    </FormGroup>
+                    <FormGroup label="Filter by Locality">
+                        <Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}>
+                            <option value="">All Localities</option>
+                            {stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{l.en}</option>)}
+                        </Select>
+                    </FormGroup>
+                </div>
+            </Card>
+
+            {loading ? <div className="flex justify-center items-center h-64"><Spinner/></div> : (
+                <Card className="p-0 flex flex-col shadow-md" ref={combinedExportRef}>
+                    {/* Unified Header for Map & KPIs */}
+                    <div className="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-lg">
+                        <div>
+                            <h3 className="text-lg font-bold text-gray-800">Geographic Coverage & Service Performance</h3>
+                            <p className="text-xs text-gray-500">Average score combining IMNCI, ETAT, EENC, and SCNU with detailed breakdown.</p>
+                        </div>
+                        <button
+                            onClick={handleCopyCombined}
+                            className="px-3 py-1.5 text-xs font-semibold text-sky-700 bg-sky-100 rounded hover:bg-sky-200 transition-colors ignore-for-export shadow-sm border border-sky-200"
+                        >
+                            {combinedCopyStatus || 'Copy Dashboard View'}
+                        </button>
+                    </div>
+
+                    <div className="flex flex-col lg:flex-row items-stretch bg-white rounded-b-lg">
+                        {/* LEFT COLUMN: FULL MAP (2/3 width) */}
+                        <div className="lg:w-2/3 flex flex-col border-b lg:border-b-0 lg:border-r border-gray-200">
+                            <div className="flex justify-center items-center gap-4 p-2 text-xs text-gray-700 border-b bg-gray-50/50">
+                                <span className="font-bold">Legend (Average Coverage):</span>
+                                <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded shadow-sm bg-[#6B6B6B]"></div><span className='font-medium'>0-39%</span></div>
+                                <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded shadow-sm bg-[#6266B1]"></div><span className='font-medium'>40-74%</span></div>
+                                <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded shadow-sm bg-[#313695]"></div><span className='font-medium'>&ge;75%</span></div>
+                            </div>
+                            <div className="flex-grow min-h-[550px] relative p-2">
+                                <SudanMap
+                                    data={currentMapViewLevel === 'state' ? stateMapData : []}
+                                    localityData={currentMapViewLevel === 'locality' ? localityMapData : []}
+                                    facilityMarkers={[]} 
+                                    viewLevel={currentMapViewLevel}
+                                    center={mapViewConfig.center}
+                                    scale={mapViewConfig.scale}
+                                    focusedState={mapViewConfig.focusedState}
+                                    isMovable={false}
+                                    pannable={false}
+                                    onStateHover={(k, e) => handleMapHover(false, k, e)}
+                                    onLocalityHover={(g, e) => handleMapHover(true, g.admin_2, e)}
+                                    onStateLeave={() => setHoverData(null)}
+                                    onLocalityLeave={() => setHoverData(null)}
+                                />
+                            </div>
+                        </div>
+
+                        {/* RIGHT COLUMN: KPI CARDS (1/3 width) */}
+                        <div className="lg:w-1/3 flex flex-col p-4 bg-gray-50/30">
+                            <div className="flex flex-col gap-3 overflow-y-auto h-full justify-center">
+                                <CompactKPICard 
+                                    percentage={kpiData.imnci.perc}
+                                    title="العلاج المتكامل للاطفال قل من 5 سنوات (IMNCI)"
+                                    numeratorLabel="المراكز المطبقة"
+                                    numeratorValue={kpiData.imnci.num}
+                                    denominatorLabel="المراكز الكلية المستهدفة"
+                                    denominatorValue={kpiData.imnci.den}
+                                    colorClass="bg-sky-600"
+                                />
+                                <CompactKPICard 
+                                    percentage={kpiData.etat.perc}
+                                    title="الفرز والتقييم والمعالجة للاطفال في الطوارئ (ETAT)"
+                                    numeratorLabel="المستشفيات المطبقة"
+                                    numeratorValue={kpiData.etat.num}
+                                    denominatorLabel="المستشفيات المستهدفة (أطفال/عامة)"
+                                    denominatorValue={kpiData.etat.den}
+                                    colorClass="bg-teal-600"
+                                />
+                                <CompactKPICard 
+                                    percentage={kpiData.eenc.perc}
+                                    title="الرعاية الضرورية المبكرة للاطفال حديثي الولادة (EENC)"
+                                    numeratorLabel="المستشفيات المطبقة"
+                                    numeratorValue={kpiData.eenc.num}
+                                    denominatorLabel="مستشفيات طوارئ الحمل والولادة"
+                                    denominatorValue={kpiData.eenc.den}
+                                    colorClass="bg-indigo-600"
+                                />
+                                <CompactKPICard 
+                                    percentage={kpiData.scnu.perc}
+                                    title="الرعاية الخاصة للاطفال حديثي الولادة SCNU"
+                                    numeratorLabel="المستشفيات المطبقة"
+                                    numeratorValue={kpiData.scnu.num}
+                                    denominatorLabel="المستشفيات المستهدفة"
+                                    denominatorValue={kpiData.scnu.den}
+                                    colorClass="bg-purple-600"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </Card>
+            )}
+            
+            {/* TOOLTIP RENDER */}
+            {hoverData && (
+                <div style={{ position: 'fixed', left: hoverPosition.x - 20, top: hoverPosition.y, pointerEvents: 'none', zIndex: 999 }}>
+                    <CombinedMapTooltip data={hoverData} />
+                </div>
             )}
         </div>
     );

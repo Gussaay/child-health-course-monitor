@@ -5,8 +5,8 @@ import SudanMap from '../SudanMap';
 import autoTable from "jspdf-autotable";
 import { Bar, Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
-// Import separate dashboards as named exports, including EENCCoverageDashboard
-import { NeonatalCoverageDashboard, IMNCICoverageDashboard, EENCCoverageDashboard } from "./ServiceCoverageDashboard.jsx";
+// Import separate dashboards as named exports, including the new CombinedServiceDashboard
+import { NeonatalCoverageDashboard, IMNCICoverageDashboard, EENCCoverageDashboard, CombinedServiceDashboard } from "./ServiceCoverageDashboard.jsx";
 import { useDataCache } from '../DataContext';
 import CompiledReportView from './CompiledReportView.jsx';
 
@@ -87,8 +87,8 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
     const activeFacilitators = useMemo(() => (allFacilitators || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilitators]);
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
-    // Updated primary view types to include the EENC coverage dashboard and Compiled Reports
-    const [viewType, setViewType] = useState('neonatalCoverage'); 
+    // Updated primary view types to include the Combined dashboard, EENC coverage dashboard and Compiled Reports
+    const [viewType, setViewType] = useState('combinedCoverage'); 
 
     const [fetchedCourses, setFetchedCourses] = useState([]);
     const [fetchedParticipants, setFetchedParticipants] = useState([]);
@@ -512,6 +512,13 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
         <Card className="p-0">
             <div className="border-b border-gray-200 px-4 md:px-6 flex flex-col md:flex-row md:justify-between md:items-center py-2 gap-4">
                 <nav className="-mb-px flex flex-wrap space-x-4 overflow-x-auto">
+                    {/* NEW: Combined Coverage Tab */}
+                    <button
+                        onClick={() => setViewType('combinedCoverage')}
+                        className={`${viewType === 'combinedCoverage' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-3 px-3 border-b-2 font-medium text-sm transition-colors`} 
+                    >
+                        Combined Coverage
+                    </button>
                     {/* Neonatal Coverage Tab */}
                     <button
                         onClick={() => setViewType('neonatalCoverage')}
@@ -533,7 +540,7 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
                     >
                         IMNCI Coverage
                     </button>
-                    {/* NEW: Compiled Reports Tab */}
+                    {/* Compiled Reports Tab */}
                     <button 
                         onClick={() => setViewType('compiledReport')} 
                         className={`${viewType === 'compiledReport' ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'} whitespace-nowrap py-3 px-3 border-b-2 font-medium text-sm transition-colors`}
@@ -613,11 +620,12 @@ function DashboardView({ onOpenCourseReport, onOpenParticipantReport, onOpenFaci
             ) : (
                 <div className="px-4 md:px-6 pt-4">
                     {/* Render Coverage Dashboards */}
+                    {viewType === 'combinedCoverage' && <CombinedServiceDashboard />}
                     {viewType === 'neonatalCoverage' && <NeonatalCoverageDashboard />}
                     {viewType === 'eencCoverage' && <EENCCoverageDashboard />}
                     {viewType === 'imnciCoverage' && <IMNCICoverageDashboard />}
 
-                    {/* NEW: Compiled Reports View */}
+                    {/* Compiled Reports View */}
                     {viewType === 'compiledReport' && (
                         <CompiledReportView 
                             allCourses={activeCourses || []} 
