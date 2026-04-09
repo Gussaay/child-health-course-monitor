@@ -26,6 +26,7 @@ import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/fire
 import { onAuthStateChanged } from 'firebase/auth';
 import { useDataCache } from '../DataContext'; 
 import { DEFAULT_ROLE_PERMISSIONS, ALL_PERMISSIONS } from './AdminDashboard';
+import SudanMap from '../SudanMap'; // Imported the map for the dashboard
 
 const getCertificateName = (key) => {
     const names = {
@@ -734,6 +735,99 @@ export function FacilitatorsView({
         return result;
     }, [facilitators, userStates, permissions.manageScope, searchQuery, courses]);
 
+    // --- Dashboard Computations (Driven by the dynamically filtered facilitators) ---
+    const dashboardKpis = useMemo(() => {
+        return {
+            totalFacilitators: filteredFacilitators.length,
+            directors: filteredFacilitators.filter(f => f.directorCourse === 'Yes').length,
+            clinicalInstructors: filteredFacilitators.filter(f => f.isClinicalInstructor === 'Yes').length,
+            teamLeaders: filteredFacilitators.filter(f => f.teamLeaderCourse === 'Yes').length,
+            followUpSupervisors: filteredFacilitators.filter(f => f.followUpCourse === 'Yes').length,
+        };
+    }, [filteredFacilitators]);
+
+    const dashboardAvailabilityByState = useMemo(() => {
+        const data = {};
+        const allStatesInFilter = [...new Set(filteredFacilitators.map(f => f.currentState))].filter(Boolean).sort();
+        const allCourseTypes = [...new Set(filteredFacilitators.flatMap(f => f.courses || []))].sort();
+
+        filteredFacilitators.forEach(f => {
+            const state = f.currentState;
+            f.courses?.forEach(courseType => {
+                if (state) {
+                    data[state] = data[state] || {};
+                    data[state][courseType] = (data[state][courseType] || 0) + 1;
+                }
+            });
+        });
+
+        const tableBody = allStatesInFilter.map(state => {
+            const row = [state];
+            let rowTotal = 0;
+            allCourseTypes.forEach(courseType => {
+                const count = data[state]?.[courseType] || 0;
+                row.push(count);
+                rowTotal += count;
+            });
+            row.push(rowTotal);
+            return row;
+        });
+
+        const totalRow = ["Total"];
+        let grandTotal = 0;
+        allCourseTypes.forEach(courseType => {
+            const columnTotal = allStatesInFilter.reduce((sum, state) => sum + (data[state]?.[courseType] || 0), 0);
+            totalRow.push(columnTotal);
+            grandTotal += columnTotal;
+        });
+        totalRow.push(grandTotal);
+
+        return { tableHeaders: ["State", ...allCourseTypes, "Total"], tableBody, tableTotals: totalRow };
+    }, [filteredFacilitators]);
+
+    const dashboardMapData = useMemo(() => {
+        const mapCoordinates = {
+            "Khartoum": { lat: 15.6000, lng: 32.5000 },
+            "Gezira": { lat: 14.4000, lng: 33.5167 },
+            "White Nile": { lat: 13.1667, lng: 32.6667 },
+            "Blue Nile": { lat: 11.7667, lng: 34.3500 },
+            "Sennar": { lat: 13.1500, lng: 33.9333 },
+            "Gedarif": { lat: 14.0333, lng: 35.3833 },
+            "Kassala": { lat: 15.4500, lng: 36.4000 },
+            "Red Sea": { lat: 19.6167, lng: 37.2167 },
+            "Northern": { lat: 19.1698, lng: 30.4749 },
+            "River Nile": { lat: 17.5900, lng: 33.9600 },
+            "North Kordofan": { lat: 13.1833, lng: 30.2167 },
+            "South Kordofan": { lat: 11.0167, lng: 29.7167 },
+            "West Kordofan": { lat: 11.7175, lng: 28.3400 },
+            "North Darfur": { lat: 13.6306, lng: 25.3500 },
+            "South Darfur": { lat: 12.0500, lng: 24.8833 },
+            "West Darfur": { lat: 13.4500, lng: 22.4500 },
+            "Central Darfur": { lat: 12.9000, lng: 23.4833 },
+            "East Darfur": { lat: 11.4608, lng: 26.1283 }
+        };
+
+        const facCounts = {};
+        filteredFacilitators.forEach(f => {
+            if (f.currentState) {
+                facCounts[f.currentState] = (facCounts[f.currentState] || 0) + 1;
+            }
+        });
+
+        return Object.entries(facCounts).map(([state, count]) => {
+            const coords = mapCoordinates[state];
+            if (coords) {
+                return {
+                    state,
+                    percentage: count, // mapped to standard UI format expectations
+                    coordinates: [coords.lng, coords.lat]
+                };
+            }
+            return null;
+        }).filter(Boolean);
+    }, [filteredFacilitators]);
+
+
     return (
         <Card>
             <CardBody>
@@ -790,6 +884,9 @@ export function FacilitatorsView({
                 <div className="mt-6">
                     <div className="border-b border-gray-200">
                         <nav className="-mb-px flex gap-6" aria-label="Tabs">
+                            <Button variant="tab" isActive={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')}>
+                                Dashboard
+                            </Button>
                             <Button variant="tab" isActive={activeTab === 'current'} onClick={() => setActiveTab('current')}>
                                 Current Facilitators
                             </Button>
@@ -805,6 +902,34 @@ export function FacilitatorsView({
                     </div>
 
                     <div className="mt-4">
+                        {activeTab === 'dashboard' && (
+                            <div className="mt-4">
+                                <h3 className="text-xl font-bold mb-4">Facilitator KPIs</h3>
+                                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 text-center mb-6">
+                                    <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Total Facilitators</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.totalFacilitators}</div></div>
+                                    <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Course Directors</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.directors}</div></div>
+                                    <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Clinical Instructors</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.clinicalInstructors}</div></div>
+                                    <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Team Leaders</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.teamLeaders}</div></div>
+                                    <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Follow-up Supervisors</div><div className="text-3xl font-bold text-sky-700">{dashboardKpis.followUpSupervisors}</div></div>
+                                </div>
+                                <div className="grid md:grid-cols-2 gap-6 mb-6">
+                                    <Card className="p-0 border-0 shadow-none">
+                                        <h3 className="text-xl font-bold mb-4">Facilitator Availability by State</h3>
+                                        <Table headers={dashboardAvailabilityByState.tableHeaders}>
+                                            {dashboardAvailabilityByState.tableBody.length === 0 ? <EmptyState message="No data to display." colSpan={dashboardAvailabilityByState.tableHeaders.length} /> : <> 
+                                                {dashboardAvailabilityByState.tableBody.map((row, index) => (<tr key={index}>{row.map((cell, cellIndex) => (<td key={cellIndex} className="p-2 border text-center">{cell}</td>))}</tr>))} 
+                                                <tr className="font-bold bg-gray-100 text-center">{dashboardAvailabilityByState.tableTotals.map((cell, index) => (<td key={index} className="p-2 border">{cell}</td>))}</tr>
+                                            </>}
+                                        </Table>
+                                    </Card>
+                                    <Card className="p-0 border-0 shadow-none">
+                                        <h3 className="text-xl font-bold mb-4">Geographical Distribution</h3>
+                                        <SudanMap data={dashboardMapData} center={[30, 15.5]} scale={2000} isMovable={false} pannable={false} />
+                                    </Card>
+                                </div>
+                            </div>
+                        )}
+
                         {activeTab === 'current' && (
                              <Table headers={["Name", "Phone", "Courses", "Score", "Actions"]}>
                                 {isLoading.facilitators ? (

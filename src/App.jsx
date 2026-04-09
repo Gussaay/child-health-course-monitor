@@ -15,7 +15,7 @@ import {
     ClipboardCheck,
     ClipboardList,
     FolderKanban,
-    TrendingUp, // <--- ADDED: Icon for Master Plan
+    TrendingUp, 
     X 
 } from 'lucide-react';
 
@@ -62,7 +62,7 @@ const SkillsMentorshipView = lazy(() => import('./components/mentorship/SkillsMe
 
 // --- New Features Lazy Loads ---
 const ProjectTrackerView = lazy(() => import('./components/ProjectTrackerView'));
-const PlanningView = lazy(() => import('./components/PlanningView')); // <--- ADDED: PlanningView
+const PlanningView = lazy(() => import('./components/PlanningView'));
 
 // --- Data & Component Imports ---
 import {
@@ -339,7 +339,7 @@ function Landing({ navigate, permissions }) {
         { label: 'Child Health Services', view: 'childHealthServices', icon: Hospital, permission: permissions.canViewFacilities },
         { label: 'Skills Mentorship', view: 'skillsMentorship', icon: ClipboardCheck, permission: permissions.canViewSkillsMentorship },
         { label: 'Project Tracker', view: 'projects', icon: FolderKanban, permission: permissions.canUseFederalManagerAdvancedFeatures },
-        { label: 'Master Plan', view: 'planning', icon: TrendingUp, permission: permissions.canUseFederalManagerAdvancedFeatures }, // <--- ADDED
+        { label: 'Master Plan', view: 'planning', icon: TrendingUp, permission: permissions.canUseFederalManagerAdvancedFeatures }, 
         { label: 'Admin', view: 'admin', icon: User, permission: permissions.canViewAdmin },
     ];
 
@@ -382,7 +382,7 @@ const BottomNav = React.memo(function BottomNav({ navItems, navigate }) {
         'Child Health Services': Hospital, 
         'Skills Mentorship': ClipboardCheck, 
         'Project Tracker': FolderKanban,
-        'Master Plan': TrendingUp, // <--- ADDED
+        'Master Plan': TrendingUp,
         Admin: User 
     };
     return (
@@ -1115,7 +1115,7 @@ export default function App() {
             'partnersPage': permissions.canViewHumanResource,
             'attendanceManager': permissions.canManageCourse,
             'projects': permissions.canUseFederalManagerAdvancedFeatures, 
-            'planning': permissions.canUseFederalManagerAdvancedFeatures, // <--- ADDED: Planning module permission
+            'planning': permissions.canUseFederalManagerAdvancedFeatures, 
         };
 
         if (user && !viewPermissions[newView]) {
@@ -1331,6 +1331,31 @@ export default function App() {
             }
         }
     }, [permissions, selectedCourseId, selectedParticipantId, navigate]);
+
+    // --- NEW: Added handleDeleteFacilitator callback ---
+    const handleDeleteFacilitator = useCallback(async (facilitatorId) => {
+        if (!permissions.canManageHumanResource) return;
+        if (window.confirm('Are you sure you want to delete this facilitator?')) {
+            setLoading(true);
+            try {
+                await deleteFacilitator(facilitatorId);
+                await fetchFacilitators(true); // Refetch the updated list
+                
+                // Clear selection if the deleted facilitator was currently selected
+                if (selectedFacilitatorId === facilitatorId) {
+                    setSelectedFacilitatorId(null);
+                    navigate('humanResources');
+                }
+                
+                setToast({ show: true, message: 'Facilitator deleted successfully.', type: 'success' });
+            } catch (error) {
+                console.error("Error deleting facilitator:", error);
+                setToast({ show: true, message: `Failed to delete facilitator: ${error.message}`, type: 'error' });
+            } finally {
+                setLoading(false);
+            }
+        }
+    }, [permissions.canManageHumanResource, selectedFacilitatorId, navigate, fetchFacilitators]);
 
     const handleImportParticipants = useCallback(async ({ participantsToImport, facilitiesToUpsert }) => {
         if (!permissions.canUseSuperUserAdvancedFeatures) return;
@@ -1637,7 +1662,6 @@ export default function App() {
                     </Suspense>
                 ) : null;
 
-            // <--- ADDED: Planning View render logic --->
             case 'planning':
                 return permissions.canUseFederalManagerAdvancedFeatures ? (
                     <Suspense fallback={<Spinner />}>
@@ -1750,7 +1774,6 @@ export default function App() {
         { label: 'Child Health Services', view: 'childHealthServices', active: view === 'childHealthServices', disabled: !permissions.canViewFacilities },
         { label: 'Skills Mentorship', view: 'skillsMentorship', active: view === 'skillsMentorship', disabled: !permissions.canViewSkillsMentorship },
         { label: 'Project Tracker', view: 'projects', active: view === 'projects', disabled: !permissions.canUseFederalManagerAdvancedFeatures },
-        // <--- ADDED: Master Plan item --->
         { label: 'Master Plan', view: 'planning', active: view === 'planning', disabled: !permissions.canUseFederalManagerAdvancedFeatures },
     ], [view, permissions]);
 

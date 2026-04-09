@@ -2060,23 +2060,36 @@ export const CombinedServiceDashboard = () => {
 
     // --- HANDLERS ---
     const handleCopyCombined = async () => {
-        if (combinedExportRef.current && navigator.clipboard?.write) {
-            setCombinedCopyStatus('Copying...');
-            try {
-                const canvas = await html2canvas(combinedExportRef.current, { 
-                    useCORS: true, 
-                    scale: 2, 
-                    backgroundColor: '#ffffff', 
-                    ignoreElements: (el) => el.classList.contains('ignore-for-export') 
-                });
-                canvas.toBlob(async (blob) => { 
-                    if (blob) { 
-                        await navigator.clipboard.write([ new ClipboardItem({ 'image/png': blob }) ]); 
-                        setCombinedCopyStatus('Copied!'); 
-                    } 
-                }, 'image/png', 0.95);
-            } catch (err) { setCombinedCopyStatus('Failed'); }
-            finally { setTimeout(() => setCombinedCopyStatus(''), 2000); }
+        if (!combinedExportRef.current || !navigator.clipboard?.write) {
+            console.error("Clipboard API not available or target element not found.");
+            setCombinedCopyStatus('Failed');
+            setTimeout(() => setCombinedCopyStatus(''), 2000);
+            return;
+        }
+
+        setCombinedCopyStatus('Copying...');
+        try {
+            const canvas = await html2canvas(combinedExportRef.current, { 
+                useCORS: true, 
+                scale: 2, 
+                backgroundColor: '#ffffff', 
+                ignoreElements: (el) => el.classList.contains('ignore-for-export') 
+            });
+
+            // Wrap toBlob in a Promise to properly await it
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 0.95));
+            
+            if (blob) { 
+                await navigator.clipboard.write([ new ClipboardItem({ 'image/png': blob }) ]); 
+                setCombinedCopyStatus('Copied!'); 
+            } else {
+                throw new Error('Canvas to Blob failed');
+            }
+        } catch (err) { 
+            console.error("Failed to copy image:", err); 
+            setCombinedCopyStatus('Failed'); 
+        } finally { 
+            setTimeout(() => setCombinedCopyStatus(''), 2000); 
         }
     };
 
@@ -2120,92 +2133,94 @@ export const CombinedServiceDashboard = () => {
             </Card>
 
             {loading ? <div className="flex justify-center items-center h-64"><Spinner/></div> : (
-                <Card className="p-0 flex flex-col shadow-md" ref={combinedExportRef}>
-                    {/* Unified Header for Map & KPIs */}
-                    <div className="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-lg">
-                        <div>
-                            <h3 className="text-lg font-bold text-gray-800">Geographic Coverage & Service Performance</h3>
-                            <p className="text-xs text-gray-500">Average score combining IMNCI, ETAT, EENC, and SCNU with detailed breakdown.</p>
-                        </div>
-                        <button
-                            onClick={handleCopyCombined}
-                            className="px-3 py-1.5 text-xs font-semibold text-sky-700 bg-sky-100 rounded hover:bg-sky-200 transition-colors ignore-for-export shadow-sm border border-sky-200"
-                        >
-                            {combinedCopyStatus || 'Copy Dashboard View'}
-                        </button>
-                    </div>
-
-                    <div className="flex flex-col lg:flex-row items-stretch bg-white rounded-b-lg">
-                        {/* LEFT COLUMN: FULL MAP (2/3 width) */}
-                        <div className="lg:w-2/3 flex flex-col border-b lg:border-b-0 lg:border-r border-gray-200">
-                            <div className="flex justify-center items-center gap-4 p-2 text-xs text-gray-700 border-b bg-gray-50/50">
-                                <span className="font-bold">Legend (Average Coverage):</span>
-                                <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded shadow-sm bg-[#6B6B6B]"></div><span className='font-medium'>0-39%</span></div>
-                                <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded shadow-sm bg-[#6266B1]"></div><span className='font-medium'>40-74%</span></div>
-                                <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded shadow-sm bg-[#313695]"></div><span className='font-medium'>&ge;75%</span></div>
+                <div ref={combinedExportRef}>
+                    <Card className="p-0 flex flex-col shadow-md">
+                        {/* Unified Header for Map & KPIs */}
+                        <div className="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-lg">
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-800">Geographic Coverage & Service Performance</h3>
+                                <p className="text-xs text-gray-500">Average score combining IMNCI, ETAT, EENC, and SCNU with detailed breakdown.</p>
                             </div>
-                            <div className="flex-grow min-h-[550px] relative p-2">
-                                <SudanMap
-                                    data={currentMapViewLevel === 'state' ? stateMapData : []}
-                                    localityData={currentMapViewLevel === 'locality' ? localityMapData : []}
-                                    facilityMarkers={[]} 
-                                    viewLevel={currentMapViewLevel}
-                                    center={mapViewConfig.center}
-                                    scale={mapViewConfig.scale}
-                                    focusedState={mapViewConfig.focusedState}
-                                    isMovable={false}
-                                    pannable={false}
-                                    onStateHover={(k, e) => handleMapHover(false, k, e)}
-                                    onLocalityHover={(g, e) => handleMapHover(true, g.admin_2, e)}
-                                    onStateLeave={() => setHoverData(null)}
-                                    onLocalityLeave={() => setHoverData(null)}
-                                />
-                            </div>
+                            <button
+                                onClick={handleCopyCombined}
+                                className="px-3 py-1.5 text-xs font-semibold text-sky-700 bg-sky-100 rounded hover:bg-sky-200 transition-colors ignore-for-export shadow-sm border border-sky-200"
+                            >
+                                {combinedCopyStatus || 'Copy Dashboard View'}
+                            </button>
                         </div>
 
-                        {/* RIGHT COLUMN: KPI CARDS (1/3 width) */}
-                        <div className="lg:w-1/3 flex flex-col p-4 bg-gray-50/30">
-                            <div className="flex flex-col gap-3 overflow-y-auto h-full justify-center">
-                                <CompactKPICard 
-                                    percentage={kpiData.imnci.perc}
-                                    title="العلاج المتكامل للاطفال قل من 5 سنوات (IMNCI)"
-                                    numeratorLabel="المراكز المطبقة"
-                                    numeratorValue={kpiData.imnci.num}
-                                    denominatorLabel="المراكز الكلية المستهدفة"
-                                    denominatorValue={kpiData.imnci.den}
-                                    colorClass="bg-sky-600"
-                                />
-                                <CompactKPICard 
-                                    percentage={kpiData.etat.perc}
-                                    title="الفرز والتقييم والمعالجة للاطفال في الطوارئ (ETAT)"
-                                    numeratorLabel="المستشفيات المطبقة"
-                                    numeratorValue={kpiData.etat.num}
-                                    denominatorLabel="المستشفيات المستهدفة (أطفال/عامة)"
-                                    denominatorValue={kpiData.etat.den}
-                                    colorClass="bg-teal-600"
-                                />
-                                <CompactKPICard 
-                                    percentage={kpiData.eenc.perc}
-                                    title="الرعاية الضرورية المبكرة للاطفال حديثي الولادة (EENC)"
-                                    numeratorLabel="المستشفيات المطبقة"
-                                    numeratorValue={kpiData.eenc.num}
-                                    denominatorLabel="مستشفيات طوارئ الحمل والولادة"
-                                    denominatorValue={kpiData.eenc.den}
-                                    colorClass="bg-indigo-600"
-                                />
-                                <CompactKPICard 
-                                    percentage={kpiData.scnu.perc}
-                                    title="الرعاية الخاصة للاطفال حديثي الولادة SCNU"
-                                    numeratorLabel="المستشفيات المطبقة"
-                                    numeratorValue={kpiData.scnu.num}
-                                    denominatorLabel="المستشفيات المستهدفة"
-                                    denominatorValue={kpiData.scnu.den}
-                                    colorClass="bg-purple-600"
-                                />
+                        <div className="flex flex-col lg:flex-row items-stretch bg-white rounded-b-lg">
+                            {/* LEFT COLUMN: FULL MAP (2/3 width) */}
+                            <div className="lg:w-2/3 flex flex-col border-b lg:border-b-0 lg:border-r border-gray-200">
+                                <div className="flex justify-center items-center gap-4 p-2 text-xs text-gray-700 border-b bg-gray-50/50">
+                                    <span className="font-bold">Legend (Average Coverage):</span>
+                                    <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded shadow-sm bg-[#6B6B6B]"></div><span className='font-medium'>0-39%</span></div>
+                                    <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded shadow-sm bg-[#6266B1]"></div><span className='font-medium'>40-74%</span></div>
+                                    <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded shadow-sm bg-[#313695]"></div><span className='font-medium'>&ge;75%</span></div>
+                                </div>
+                                <div className="flex-grow min-h-[550px] relative p-2">
+                                    <SudanMap
+                                        data={currentMapViewLevel === 'state' ? stateMapData : []}
+                                        localityData={currentMapViewLevel === 'locality' ? localityMapData : []}
+                                        facilityMarkers={[]} 
+                                        viewLevel={currentMapViewLevel}
+                                        center={mapViewConfig.center}
+                                        scale={mapViewConfig.scale}
+                                        focusedState={mapViewConfig.focusedState}
+                                        isMovable={false}
+                                        pannable={false}
+                                        onStateHover={(k, e) => handleMapHover(false, k, e)}
+                                        onLocalityHover={(g, e) => handleMapHover(true, g.admin_2, e)}
+                                        onStateLeave={() => setHoverData(null)}
+                                        onLocalityLeave={() => setHoverData(null)}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* RIGHT COLUMN: KPI CARDS (1/3 width) */}
+                            <div className="lg:w-1/3 flex flex-col p-4 bg-gray-50/30">
+                                <div className="flex flex-col gap-3 overflow-y-auto h-full justify-center">
+                                    <CompactKPICard 
+                                        percentage={kpiData.imnci.perc}
+                                        title="العلاج المتكامل للاطفال قل من 5 سنوات (IMNCI)"
+                                        numeratorLabel="المراكز المطبقة"
+                                        numeratorValue={kpiData.imnci.num}
+                                        denominatorLabel="المراكز الكلية المستهدفة"
+                                        denominatorValue={kpiData.imnci.den}
+                                        colorClass="bg-sky-600"
+                                    />
+                                    <CompactKPICard 
+                                        percentage={kpiData.etat.perc}
+                                        title="الفرز والتقييم والمعالجة للاطفال في الطوارئ (ETAT)"
+                                        numeratorLabel="المستشفيات المطبقة"
+                                        numeratorValue={kpiData.etat.num}
+                                        denominatorLabel="المستشفيات المستهدفة (أطفال/عامة)"
+                                        denominatorValue={kpiData.etat.den}
+                                        colorClass="bg-teal-600"
+                                    />
+                                    <CompactKPICard 
+                                        percentage={kpiData.eenc.perc}
+                                        title="الرعاية الضرورية المبكرة للاطفال حديثي الولادة (EENC)"
+                                        numeratorLabel="المستشفيات المطبقة"
+                                        numeratorValue={kpiData.eenc.num}
+                                        denominatorLabel="مستشفيات طوارئ الحمل والولادة"
+                                        denominatorValue={kpiData.eenc.den}
+                                        colorClass="bg-indigo-600"
+                                    />
+                                    <CompactKPICard 
+                                        percentage={kpiData.scnu.perc}
+                                        title="الرعاية الخاصة للاطفال حديثي الولادة SCNU"
+                                        numeratorLabel="المستشفيات المطبقة"
+                                        numeratorValue={kpiData.scnu.num}
+                                        denominatorLabel="المستشفيات المستهدفة"
+                                        denominatorValue={kpiData.scnu.den}
+                                        colorClass="bg-purple-600"
+                                    />
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </Card>
+                    </Card>
+                </div>
             )}
             
             {/* TOOLTIP RENDER */}
