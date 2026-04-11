@@ -21,7 +21,8 @@ import {
     getCoordinatorApplicationSettings,
     listProjects,
     listMasterPlans,
-    listOperationalPlans
+    listOperationalPlans,
+    listUnitMeetings
 } from './data';
 import { useAuth } from './hooks/useAuth';
 
@@ -62,6 +63,7 @@ export const DataProvider = ({ children }) => {
         projects: null,
         masterPlans: null,
         operationalPlans: null,
+        unitMeetings: null,
     });
 
     const [isLoading, setIsLoading] = useState({
@@ -82,6 +84,7 @@ export const DataProvider = ({ children }) => {
         projects: true,
         masterPlans: true,
         operationalPlans: true,
+        unitMeetings: true,
     });
     
     const [lastFacilitiesFetchTime, setLastFacilitiesFetchTime] = useState({}); 
@@ -313,15 +316,16 @@ export const DataProvider = ({ children }) => {
         fetchProjects: createFetcher('projects', (opts, lastSync) => listProjects(opts, lastSync)),
         fetchMasterPlans: createFetcher('masterPlans', (opts, lastSync) => listMasterPlans(opts, lastSync)),
         fetchOperationalPlans: createFetcher('operationalPlans', (opts, lastSync) => listOperationalPlans(opts, lastSync)),
+        fetchUnitMeetings: createFetcher('unitMeetings', (opts, lastSync) => listUnitMeetings(opts, lastSync)),
     }), [createFetcher]);
 
     useEffect(() => {
         if (!user) {
             setCache({
-                courses: null, participants: null, facilitators: null, funders: null, federalCoordinators: null, stateCoordinators: null, localityCoordinators: null, healthFacilities: null, skillMentorshipSubmissions: null, imnciVisitReports: null, eencVisitReports: null, participantTests: null, pendingFacilitatorSubmissions: null, facilitatorApplicationSettings: { isActive: false, openCount: 0 }, pendingFederalSubmissions: null, pendingStateSubmissions: null, pendingLocalitySubmissions: null, coordinatorApplicationSettings: { isActive: false, openCount: 0 }, projects: null, masterPlans: null, operationalPlans: null,
+                courses: null, participants: null, facilitators: null, funders: null, federalCoordinators: null, stateCoordinators: null, localityCoordinators: null, healthFacilities: null, skillMentorshipSubmissions: null, imnciVisitReports: null, eencVisitReports: null, participantTests: null, pendingFacilitatorSubmissions: null, facilitatorApplicationSettings: { isActive: false, openCount: 0 }, pendingFederalSubmissions: null, pendingStateSubmissions: null, pendingLocalitySubmissions: null, coordinatorApplicationSettings: { isActive: false, openCount: 0 }, projects: null, masterPlans: null, operationalPlans: null, unitMeetings: null,
             });
             setIsLoading({
-                courses: true, participants: true, facilitators: true, healthFacilities: true, skillMentorshipSubmissions: true, imnciVisitReports: true, eencVisitReports: true, participantTests: true, pendingFacilitatorSubmissions: true, facilitatorApplicationSettings: true, pendingFederalSubmissions: true, pendingStateSubmissions: true, pendingLocalitySubmissions: true, coordinatorApplicationSettings: true, projects: true, masterPlans: true, operationalPlans: true,
+                courses: true, participants: true, facilitators: true, healthFacilities: true, skillMentorshipSubmissions: true, imnciVisitReports: true, eencVisitReports: true, participantTests: true, pendingFacilitatorSubmissions: true, facilitatorApplicationSettings: true, pendingFederalSubmissions: true, pendingStateSubmissions: true, pendingLocalitySubmissions: true, coordinatorApplicationSettings: true, projects: true, masterPlans: true, operationalPlans: true, unitMeetings: true,
             });
             setLastFacilitiesFetchTime({});
             facilitiesFilterCacheRef.current = {};

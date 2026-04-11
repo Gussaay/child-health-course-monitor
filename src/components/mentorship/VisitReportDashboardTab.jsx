@@ -1,6 +1,7 @@
 // VisitReportDashboardTab.jsx
 import React, { useRef } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
+import { useTranslation } from './LanguageContext'; // <-- ADDED TRANSLATION HOOK
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -27,12 +28,13 @@ ChartJS.register(
 
 // --- Local Component: Row containing Detailed Card (Left) and Horizontal Bar Chart (Right) ---
 const TrainedGroupRow = ({ title, details, color, ScoreText, CopyImageButton }) => {
+    const { t } = useTranslation();
     const cardRef = useRef(null);
 
     const chartData = {
-        labels: details.map(d => d.label),
+        labels: details.map(d => t(d.label)),
         datasets: [{
-            label: 'Times Trained',
+            label: t('Times Trained'),
             data: details.map(d => d.count),
             backgroundColor: color,
             hoverBackgroundColor: color + 'CC',
@@ -74,15 +76,15 @@ const TrainedGroupRow = ({ title, details, color, ScoreText, CopyImageButton }) 
             <div className="bg-white p-6 rounded-2xl shadow-md border border-black flex flex-col relative h-full">
                 <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
                 <div className="flex justify-between items-center mb-5 pb-3 border-b border-black pr-10">
-                    <h4 className="text-base font-extrabold text-slate-800 text-left">{title}</h4>
+                    <h4 className="text-base font-extrabold text-slate-800 text-left">{t(title)}</h4>
                 </div>
                 <div className="space-y-3 flex-grow">
                     {details.map((d, i) => (
                         <div key={i} className="flex justify-between items-center bg-slate-50 p-3.5 rounded-xl border border-black shadow-sm group hover:border-sky-500 hover:bg-sky-50 transition-all duration-200">
-                            <h5 className="text-xs font-bold text-slate-700 text-left pr-4 group-hover:text-sky-800">{d.label}</h5>
+                            <h5 className="text-xs font-bold text-slate-700 text-left pr-4 group-hover:text-sky-800">{t(d.label)}</h5>
                             <div className="flex items-center gap-3">
-                                <span className="text-xs font-extrabold text-slate-500 bg-white px-2 py-1 rounded border border-black">Count: {d.count}</span>
-                                <div className="bg-white px-3 py-1 rounded-lg shadow-sm border border-black min-w-[60px] text-center" title="% of Total Training Sessions">
+                                <span className="text-xs font-extrabold text-slate-500 bg-white px-2 py-1 rounded border border-black">{t('Count')}: {d.count}</span>
+                                <div className="bg-white px-3 py-1 rounded-lg shadow-sm border border-black min-w-[60px] text-center" title={t("% of Total Training Sessions")}>
                                     <ScoreText value={d.pct / 100} showPercentage={true} />
                                 </div>
                             </div>
@@ -92,9 +94,9 @@ const TrainedGroupRow = ({ title, details, color, ScoreText, CopyImageButton }) 
             </div>
 
             <div className="bg-white p-5 rounded-2xl shadow-md border border-black flex flex-col h-full min-h-[300px] relative">
-                <h4 className="text-sm font-extrabold text-slate-800 mb-4 text-center tracking-wide">{title} (Count)</h4>
+                <h4 className="text-sm font-extrabold text-slate-800 mb-4 text-center tracking-wide">{t(title)} ({t('Count')})</h4>
                 <div className="relative flex-grow w-full">
-                    {details.some(d => d.count > 0) ? <Bar options={options} data={chartData} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold text-xs">No training data recorded.</div>}
+                    {details.some(d => d.count > 0) ? <Bar options={options} data={chartData} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold text-xs">{t('No training data recorded.')}</div>}
                 </div>
             </div>
         </div>
@@ -115,6 +117,8 @@ const VisitReportDashboardTab = ({
     ScoreText,
     CopyImageButton
 }) => {
+    const { t } = useTranslation();
+
     if (!visitReportStats) return null;
 
     // --- AGGREGATE NEW KPIs DATA (Info System & Drug Availability) ---
@@ -197,7 +201,7 @@ const VisitReportDashboardTab = ({
     [1, 2, 3, 4].forEach(vNum => {
         const d = infoSystemByVisit[vNum];
         if (d.total_examined > 0 || d.examined_by_trained > 0) {
-            infoLineLabels.push(`Visit ${vNum}`);
+            infoLineLabels.push(`${t('Visit')} ${vNum}`);
             infoLineDataSets.seenByTrained.push(getInfoPct(vNum, 'examined_by_trained', 'total_examined'));
             infoLineDataSets.recordingForm.push(getInfoPct(vNum, 'completed_forms', 'examined_by_trained'));
             infoLineDataSets.followup.push(getInfoPct(vNum, 'completed_followup_forms', 'examined_by_trained'));
@@ -207,9 +211,9 @@ const VisitReportDashboardTab = ({
     const infoSystemLineData = {
         labels: infoLineLabels,
         datasets: [
-            { label: 'Seen by Trained Cadre (%)', data: infoLineDataSets.seenByTrained, borderColor: '#0ea5e9', backgroundColor: '#0ea5e9', tension: 0.3, pointRadius: 5 },
-            { label: 'With Recording Form (%)', data: infoLineDataSets.recordingForm, borderColor: '#8b5cf6', backgroundColor: '#8b5cf6', tension: 0.3, pointRadius: 5 },
-            { label: 'Return for Follow-up (%)', data: infoLineDataSets.followup, borderColor: '#f59e0b', backgroundColor: '#f59e0b', tension: 0.3, pointRadius: 5 }
+            { label: t('Seen by Trained Cadre (%)'), data: infoLineDataSets.seenByTrained, borderColor: '#0ea5e9', backgroundColor: '#0ea5e9', tension: 0.3, pointRadius: 5 },
+            { label: t('With Recording Form (%)'), data: infoLineDataSets.recordingForm, borderColor: '#8b5cf6', backgroundColor: '#8b5cf6', tension: 0.3, pointRadius: 5 },
+            { label: t('Return for Follow-up (%)'), data: infoLineDataSets.followup, borderColor: '#f59e0b', backgroundColor: '#f59e0b', tension: 0.3, pointRadius: 5 }
         ]
     };
 
@@ -224,7 +228,7 @@ const VisitReportDashboardTab = ({
 
     [1, 2, 3, 4].forEach(vNum => {
         if (drugAvailabilityByVisit[vNum].total > 0) {
-            drugLineLabels.push(`Visit ${vNum}`);
+            drugLineLabels.push(`${t('Visit')} ${vNum}`);
             drugLineDataSets.amoxicillin.push(getAvailabilityPct(vNum, 'amoxicillin'));
             drugLineDataSets.zinc.push(getAvailabilityPct(vNum, 'zinc'));
             drugLineDataSets.ors.push(getAvailabilityPct(vNum, 'ors'));
@@ -235,10 +239,10 @@ const VisitReportDashboardTab = ({
     const drugLineData = {
         labels: drugLineLabels,
         datasets: [
-            { label: 'Amoxicillin Availability', data: drugLineDataSets.amoxicillin, borderColor: '#10b981', backgroundColor: '#10b981', tension: 0.3, pointRadius: 5 },
-            { label: 'Zinc Availability', data: drugLineDataSets.zinc, borderColor: '#3b82f6', backgroundColor: '#3b82f6', tension: 0.3, pointRadius: 5 },
-            { label: 'ORS Availability', data: drugLineDataSets.ors, borderColor: '#8b5cf6', backgroundColor: '#8b5cf6', tension: 0.3, pointRadius: 5 },
-            { label: 'Coartem Availability', data: drugLineDataSets.coartem, borderColor: '#f59e0b', backgroundColor: '#f59e0b', tension: 0.3, pointRadius: 5 }
+            { label: t('Amoxicillin Availability'), data: drugLineDataSets.amoxicillin, borderColor: '#10b981', backgroundColor: '#10b981', tension: 0.3, pointRadius: 5 },
+            { label: t('Zinc Availability'), data: drugLineDataSets.zinc, borderColor: '#3b82f6', backgroundColor: '#3b82f6', tension: 0.3, pointRadius: 5 },
+            { label: t('ORS Availability'), data: drugLineDataSets.ors, borderColor: '#8b5cf6', backgroundColor: '#8b5cf6', tension: 0.3, pointRadius: 5 },
+            { label: t('Coartem Availability'), data: drugLineDataSets.coartem, borderColor: '#f59e0b', backgroundColor: '#f59e0b', tension: 0.3, pointRadius: 5 }
         ]
     };
 
@@ -261,17 +265,17 @@ const VisitReportDashboardTab = ({
             {activeService === 'IMNCI' ? (
                 <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                        <KpiCard title="Total Visit Reports" value={visitReportStats.totalVisits} />
+                        <KpiCard title={t("Total Visit Reports")} value={visitReportStats.totalVisits} />
                         <KpiCard 
-                            title="Total Number of Training Sessions" 
+                            title={t("Total Number of Training Sessions")} 
                             value={visitReportStats.totalSkillsTrained} 
-                            unit={`(${visitReportStats.totalVisits > 0 ? (visitReportStats.totalSkillsTrained / visitReportStats.totalVisits).toFixed(1) : 0} mean sessions per visit)`}
+                            unit={`(${visitReportStats.totalVisits > 0 ? (visitReportStats.totalSkillsTrained / visitReportStats.totalVisits).toFixed(1) : 0} ${t('mean sessions per visit')})`}
                         />
                     </div>
 
                     {!rawReports && (
                         <div className="bg-amber-50 text-amber-800 p-4 rounded-xl border border-amber-300 mb-8 font-bold text-sm" dir="rtl">
-                            ⚠️ ملاحظة: لعرض إحصائيات <b>نظام المعلومات وانقطاع الأدوية</b>، يرجى التأكد من إضافة <code>rawReports</code> داخل كائن <code>visitReportStats</code> في الشاشة الرئيسية.
+                            ⚠️ {t('Note: To view Information System and Drug Shortage data, ensure rawReports is included.')}
                         </div>
                     )}
 
@@ -279,37 +283,37 @@ const VisitReportDashboardTab = ({
                         <>
                             {/* --- Information System KPIs --- */}
                             <div className="bg-white p-6 rounded-2xl shadow-md border border-black mb-8">
-                                <h4 className="text-lg font-extrabold text-slate-800 mb-6 border-b border-black pb-2">Information System KPIs (Overall)</h4>
+                                <h4 className="text-lg font-extrabold text-slate-800 mb-6 border-b border-black pb-2">{t('Information System KPIs (Overall)')}</h4>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                                     <KpiCard 
-                                        title="Children seen by IMNCI trained cadre" 
+                                        title={t("Children seen by IMNCI trained cadre")} 
                                         value={`${pctExaminedByTrained}%`} 
-                                        unit={`(${infoSystemAgg.examined_by_trained} / ${infoSystemAgg.total_examined} total)`}
+                                        unit={`(${infoSystemAgg.examined_by_trained} / ${infoSystemAgg.total_examined} ${t('total')})`}
                                     />
                                     <KpiCard 
-                                        title="Children with IMNCI recording form" 
+                                        title={t("Children with IMNCI recording form")} 
                                         value={`${pctCompletedForms}%`} 
-                                        unit={`(${infoSystemAgg.completed_forms} / ${infoSystemAgg.examined_by_trained} trained)`}
+                                        unit={`(${infoSystemAgg.completed_forms} / ${infoSystemAgg.examined_by_trained} ${t('trained')})`}
                                     />
                                     <KpiCard 
-                                        title="Children returning for follow up" 
+                                        title={t("Children returning for follow up")} 
                                         value={`${pctFollowupForms}%`} 
-                                        unit={`(${infoSystemAgg.completed_followup_forms} / ${infoSystemAgg.examined_by_trained} trained)`}
+                                        unit={`(${infoSystemAgg.completed_followup_forms} / ${infoSystemAgg.examined_by_trained} ${t('trained')})`}
                                     />
                                 </div>
 
                                 {/* Information System Trend Line Chart */}
                                 {infoLineLabels.length > 0 && (
                                     <div className="relative h-[350px] w-full border-t border-slate-200 pt-6">
-                                        <h5 className="text-sm font-bold text-slate-600 mb-4 text-center">Information System Performance Over Time</h5>
-                                        <Line options={getLineOptions('KPI Performance (%)')} data={infoSystemLineData} />
+                                        <h5 className="text-sm font-bold text-slate-600 mb-4 text-center">{t('Information System Performance Over Time')}</h5>
+                                        <Line options={getLineOptions(t('KPI Performance (%)'))} data={infoSystemLineData} />
                                     </div>
                                 )}
                             </div>
 
                             {/* --- Drug Availability KPIs & Chart --- */}
                             <div className="bg-white p-6 rounded-2xl shadow-md border border-black mb-8">
-                                <h4 className="text-lg font-extrabold text-slate-800 mb-6 border-b border-black pb-2">Facility Drug Availability (Percentage of facilities reporting drugs always available)</h4>
+                                <h4 className="text-lg font-extrabold text-slate-800 mb-6 border-b border-black pb-2">{t('Facility Drug Availability (Percentage of facilities reporting drugs always available)')}</h4>
                                 
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                                     {[
@@ -323,9 +327,9 @@ const VisitReportDashboardTab = ({
                                         const pct = ((count / total) * 100).toFixed(1);
                                         return (
                                             <div key={drug.key} className="bg-emerald-50 p-4 rounded-xl border border-emerald-300 shadow-sm text-center">
-                                                <h5 className="text-sm font-extrabold text-emerald-800 mb-2">{drug.label} Availability</h5>
+                                                <h5 className="text-sm font-extrabold text-emerald-800 mb-2">{t(drug.label)} {t('Availability')}</h5>
                                                 <div className="text-2xl font-extrabold text-emerald-600 mb-1">{pct}%</div>
-                                                <div className="text-xs text-emerald-600 font-bold">{count} of {total} facilities</div>
+                                                <div className="text-xs text-emerald-600 font-bold">{count} {t('of')} {total} {t('facilities')}</div>
                                             </div>
                                         );
                                     })}
@@ -334,8 +338,8 @@ const VisitReportDashboardTab = ({
                                 {/* Drug Availability Trend Line Chart */}
                                 {drugLineLabels.length > 0 && (
                                     <div className="relative h-[350px] w-full border-t border-slate-200 pt-6">
-                                        <h5 className="text-sm font-bold text-slate-600 mb-4 text-center">Drug Availability Over Time</h5>
-                                        <Line options={getLineOptions('Facilities with Drug Available (%)')} data={drugLineData} />
+                                        <h5 className="text-sm font-bold text-slate-600 mb-4 text-center">{t('Drug Availability Over Time')}</h5>
+                                        <Line options={getLineOptions(t('Facilities with Drug Available (%)'))} data={drugLineData} />
                                     </div>
                                 )}
                             </div>
@@ -370,19 +374,19 @@ const VisitReportDashboardTab = ({
             ) : (
                 <>
                     <div className="grid grid-cols-1 gap-6 mb-8">
-                        <KpiCard title="Total Visit Reports" value={visitReportStats.totalVisits} />
+                        <KpiCard title={t("Total Visit Reports")} value={visitReportStats.totalVisits} />
                     </div>
                     <div className="mb-8 bg-white rounded-2xl shadow-md border border-black overflow-hidden">
-                        <h4 className="text-lg font-extrabold text-slate-800 p-5 border-b border-black bg-slate-100">Visit Breakdown & Skills Trained by Facility</h4>
+                        <h4 className="text-lg font-extrabold text-slate-800 p-5 border-b border-black bg-slate-100">{t('Visit Breakdown & Skills Trained by Facility')}</h4>
                         <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
+                        <table className="w-full text-sm text-left" dir="ltr">
                             <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider">
                                 <tr>
-                                    <th className="px-5 py-4 border-b border-black">Facility</th>
-                                    <th className="px-5 py-4 border-b border-black border-l border-black text-center bg-sky-100">Total Visits</th>
+                                    <th className="px-5 py-4 border-b border-black">{t('Facility')}</th>
+                                    <th className="px-5 py-4 border-b border-black border-l border-black text-center bg-sky-100">{t('Total Visits')}</th>
                                     {visitReportStats.distinctSkillKeys.map(skillKey => (
                                         <th key={skillKey} className="px-3 py-4 border-b border-l border-black text-center break-words whitespace-normal text-[11px] max-w-[120px]">
-                                            {EENC_SKILLS_LABELS[skillKey] || skillKey}
+                                            {t(EENC_SKILLS_LABELS[skillKey] || skillKey)}
                                         </th>
                                     ))}
                                 </tr>
@@ -400,7 +404,7 @@ const VisitReportDashboardTab = ({
                                     </tr>
                                 ))}
                                 {visitReportStats.facilityTableData.length === 0 && (
-                                    <tr><td colSpan={2 + visitReportStats.distinctSkillKeys.length} className="p-8 text-center text-slate-500 font-bold">No visits found for current filter.</td></tr>
+                                    <tr><td colSpan={2 + visitReportStats.distinctSkillKeys.length} className="p-8 text-center text-slate-500 font-bold">{t('No visits found for current filter.')}</td></tr>
                                 )}
                             </tbody>
                         </table>
@@ -410,36 +414,36 @@ const VisitReportDashboardTab = ({
             )}
 
             <div className="mb-8">
-                <KpiBarChart title={`Total Visits by ${geographicLevelName}`} chartData={visitReportStats.geographicChartData} dataKey="count" />
+                <KpiBarChart title={`${t('Total Visits by')} ${t(geographicLevelName)}`} chartData={visitReportStats.geographicChartData} dataKey="count" />
             </div>
 
             <div className="mb-8 bg-white rounded-2xl shadow-md border border-black overflow-hidden">
-                <h4 className="text-lg font-extrabold text-slate-800 p-5 border-b border-black bg-slate-100">Facility Problems & Solutions (Combined)</h4>
+                <h4 className="text-lg font-extrabold text-slate-800 p-5 border-b border-black bg-slate-100">{t('Facility Problems & Solutions (Combined)')}</h4>
                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left border-collapse" dir="rtl">
+                    <table className="w-full text-sm text-left border-collapse" dir="ltr">
                         <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider sticky top-0 z-10 shadow-sm border-b border-black">
                             <tr>
-                                <th className="px-4 py-4 border-l border-black w-[15%] text-right">{dynamicLocationLabel}</th>
-                                <th className="px-4 py-4 border-l border-black w-[30%] text-right">المشكلة / التحدي</th>
-                                <th className="px-4 py-4 border-l border-black w-[30%] text-right">الحل المتبع</th>
-                                <th className="px-4 py-4 border-l border-black w-[15%] text-center">الحالة</th>
-                                <th className="px-4 py-4 w-[10%] text-right">المسؤول</th>
+                                <th className="px-4 py-4 border-l border-black w-[15%]">{t(dynamicLocationLabel)}</th>
+                                <th className="px-4 py-4 border-l border-black w-[30%]">{t('Problem / Challenge')}</th>
+                                <th className="px-4 py-4 border-l border-black w-[30%]">{t('Implemented Solution')}</th>
+                                <th className="px-4 py-4 border-l border-black w-[15%] text-center">{t('Status')}</th>
+                                <th className="px-4 py-4 w-[10%]">{t('Responsible Person')}</th>
                             </tr>
                         </thead>
                         <tbody>
                             {visitReportStats.totalProblems === 0 && (
-                                <tr><td colSpan="5" className="p-8 text-center text-slate-500 font-bold">لا توجد مشاكل مسجلة.</td></tr>
+                                <tr><td colSpan="5" className="p-8 text-center text-slate-500 font-bold">{t('No problems recorded.')}</td></tr>
                             )}
                             {Object.keys(visitReportStats.groupedProblems).sort().map(locName => {
                                 const problems = visitReportStats.groupedProblems[locName];
                                 return problems.map((item, idx) => (
                                     <tr key={`${locName}-${idx}`} className="hover:bg-sky-50 transition-colors border-b border-black">
                                         {idx === 0 && (
-                                            <td rowSpan={problems.length} className="px-4 py-3 border-l border-black align-top font-extrabold text-slate-800 bg-slate-100 w-[15%] border-b border-black text-right">
+                                            <td rowSpan={problems.length} className="px-4 py-3 border-l border-black align-top font-extrabold text-slate-800 bg-slate-100 w-[15%] border-b border-black">
                                                 {locName}
                                             </td>
                                         )}
-                                        <td className="px-4 py-3 border-l border-black align-top text-xs text-rose-700 whitespace-pre-wrap font-medium text-right">
+                                        <td className="px-4 py-3 border-l border-black align-top text-xs text-rose-700 whitespace-pre-wrap font-medium">
                                             {item.problem}
                                             {dynamicLocationLevel !== 'Facility' && (
                                                 <div className="mt-2 text-[10px] text-slate-500 font-bold bg-white inline-block px-1.5 py-0.5 rounded border border-slate-300">
@@ -448,7 +452,7 @@ const VisitReportDashboardTab = ({
                                             )}
                                         </td>
                                         
-                                        <td className="px-4 py-3 border-l border-black align-top text-xs text-emerald-700 whitespace-pre-wrap font-medium text-right">
+                                        <td className="px-4 py-3 border-l border-black align-top text-xs text-emerald-700 whitespace-pre-wrap font-medium">
                                             {item.solution}
                                         </td>
 
@@ -456,7 +460,7 @@ const VisitReportDashboardTab = ({
                                             {renderStatusCell(item.status, item.reportId, item.challengeId, 'status')}
                                         </td>
 
-                                        <td className="px-4 py-3 align-top text-[10px] font-bold text-slate-600 uppercase tracking-wider text-right">
+                                        <td className="px-4 py-3 align-top text-[10px] font-bold text-slate-600 uppercase tracking-wider">
                                             {item.person}
                                         </td>
                                     </tr>

@@ -62,6 +62,7 @@ const SkillsMentorshipView = lazy(() => import('./components/mentorship/SkillsMe
 
 // --- New Features Lazy Loads ---
 const ProjectTrackerView = lazy(() => import('./components/ProjectTrackerView'));
+const PublicMeetingAttendanceView = lazy(() => import('./components/ProjectTrackerView').then(module => ({ default: module.PublicMeetingAttendanceView })));
 const PlanningView = lazy(() => import('./components/PlanningView'));
 
 // --- Data & Component Imports ---
@@ -81,7 +82,9 @@ import {
     listMentorshipSessions,
     saveMentorshipSession,
     importMentorshipSessions,
-    upsertParticipantTest
+    upsertParticipantTest,
+    getUnitMeetingById,
+    upsertUnitMeeting
 } from './data.js';
 import { STATE_LOCALITIES } from './components/constants.js';
 import { Card, PageHeader, Button, Table, EmptyState, Spinner, PdfIcon, CourseIcon, Footer, Toast, Modal, Input } from './components/CommonComponents';
@@ -511,6 +514,11 @@ export default function App() {
     const [isBulkUpdateView, setIsBulkUpdateView] = useState(false);
     const [publicBulkUpdateParams, setPublicBulkUpdateParams] = useState({});
 
+    // --- NEW: Public Meeting Attendance ---
+    const [isPublicMeetingView, setIsPublicMeetingView] = useState(false);
+    const [publicMeetingId, setPublicMeetingId] = useState(null);
+    const [publicMeetingData, setPublicMeetingData] = useState(null);
+
     const [operationCounts, setOperationCounts] = useState({ reads: 0, writes: 0 });
     const [isMonitorVisible, setIsMonitorVisible] = useState(true);
 
@@ -578,6 +586,28 @@ export default function App() {
             // --- Reset Bulk Update View ---
             setIsBulkUpdateView(false);
             setPublicBulkUpdateParams({});
+
+            // --- Reset Public Meeting View ---
+            setIsPublicMeetingView(false);
+            setPublicMeetingId(null);
+            setPublicMeetingData(null);
+
+            // --- NEW: Public Meeting Attendance Route ---
+            const publicMeetingMatch = path.match(/^\/public\/meeting\/([a-zA-Z0-9_-]+)\/?$/);
+            if (publicMeetingMatch && publicMeetingMatch[1]) {
+                setIsPublicMeetingView(true);
+                setPublicMeetingId(publicMeetingMatch[1]);
+                setPublicViewLoading(true);
+                
+                getUnitMeetingById(publicMeetingMatch[1], 'server')
+                    .then(data => {
+                        if (!data) throw new Error("Meeting not found.");
+                        setPublicMeetingData(data);
+                    })
+                    .catch(err => setSharedViewError(err.message))
+                    .finally(() => setPublicViewLoading(false));
+                return;
+            }
 
             // --- NEW: Public Mentorship Dashboard Route ---
             const publicMentorshipDashboardMatch = path.match(/^\/public\/mentorship\/dashboard\/([a-zA-Z0-9_]+)\/?$/);
@@ -1789,7 +1819,7 @@ export default function App() {
     const isCourseCertPagePath = typeof window !== 'undefined' && window.location.pathname.startsWith('/public/course/certificates/');
     const isAttendancePath = typeof window !== 'undefined' && window.location.pathname.startsWith('/attendance/course/');
 
-    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath || isCertDownloadPath || isCourseCertPagePath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || isBulkUpdateView || publicViewType === 'attendance' || isPublicRegistrationView;
+    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath || isCertDownloadPath || isCourseCertPagePath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || isBulkUpdateView || publicViewType === 'attendance' || isPublicRegistrationView || isPublicMeetingView;
 
     let mainContent;
 
@@ -1870,6 +1900,29 @@ export default function App() {
             );
         } else {
             mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">Invalid Registration Link.</div></Card>;
+        }
+    }
+
+    else if (isPublicMeetingView) {
+        if (publicViewLoading) {
+            mainContent = <Card><div className="flex justify-center p-8"><Spinner /></div></Card>;
+        } else if (sharedViewError) {
+            mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">{sharedViewError}</div></Card>;
+        } else if (publicMeetingData) {
+            mainContent = (
+                <Suspense fallback={<Card><Spinner /></Card>}>
+                    <PublicMeetingAttendanceView
+                        meeting={publicMeetingData}
+                        onSave={async (updatedMeeting) => {
+                            await upsertUnitMeeting(updatedMeeting);
+                            setPublicMeetingData(updatedMeeting);
+                            setToast({ show: true, message: 'Attendance updated successfully!', type: 'success' });
+                        }}
+                    />
+                </Suspense>
+            );
+        } else {
+            mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">Could not load meeting data.</div></Card>;
         }
     }
 

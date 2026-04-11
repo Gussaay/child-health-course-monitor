@@ -169,12 +169,10 @@ export const IMNCIVisitReport = ({
         }, {});
 
         if (existingReportData) {
-            // Deep copy to prevent accidental mutation of defaults
             let initialMatrix = existingReportData.mentoring_matrix 
                 ? JSON.parse(JSON.stringify(existingReportData.mentoring_matrix)) 
                 : JSON.parse(JSON.stringify(defaultMentoringMatrix));
 
-            // CRITICAL: Backward compatibility map for older reports
             if (existingReportData.trained_skills) {
                 Object.keys(existingReportData.trained_skills).forEach(k => {
                     if (existingReportData.trained_skills[k]) {
@@ -249,7 +247,6 @@ export const IMNCIVisitReport = ({
         return allSubmissions.filter(sub => sub.facilityId === facility.id && sub.sessionDate === formData.visit_date && sub.service === 'IMNCI' && sub.status === 'complete');
     }, [allSubmissions, facility, formData.visit_date]);
 
-    // --- LOGIC: Auto-Detect Weaknesses from today's sessions ---
     const detectedWeaknesses = useMemo(() => {
         if (!sessionsForThisVisit || sessionsForThisVisit.length === 0) return [];
         
@@ -272,7 +269,6 @@ export const IMNCIVisitReport = ({
             const s = sub.scores || {};
             const as = sub.assessmentSkills || sub.fullData?.assessment_skills || sub.fullData?.assessmentSkills || {};
 
-            // Map Hands-On Scores
             if (s.handsOnWeight_maxScore > 0) { stats.skill_weight.score += s.handsOnWeight_score; stats.skill_weight.max += s.handsOnWeight_maxScore; }
             if (s.handsOnTemp_maxScore > 0) { stats.skill_temp.score += s.handsOnTemp_score; stats.skill_temp.max += s.handsOnTemp_maxScore; }
             if (s.handsOnHeight_maxScore > 0) { stats.skill_height.score += s.handsOnHeight_score; stats.skill_height.max += s.handsOnHeight_maxScore; }
@@ -281,7 +277,6 @@ export const IMNCIVisitReport = ({
             if (s.handsOnMUAC_maxScore > 0) { stats.skill_mal_muac.score += s.handsOnMUAC_score; stats.skill_mal_muac.max += s.handsOnMUAC_maxScore; }
             if (s.handsOnWFH_maxScore > 0) { stats.skill_mal_wfh.score += s.handsOnWFH_score; stats.skill_mal_wfh.max += s.handsOnWFH_maxScore; }
 
-            // Map Danger Signs & Edema (Raw Assessment Data)
             const checkSkill = (key) => {
                 if (as[key] === 'yes') { stats[key].score++; stats[key].max++; }
                 else if (as[key] === 'no') { stats[key].max++; }
@@ -343,7 +338,8 @@ export const IMNCIVisitReport = ({
         }));
     };
 
-    const addChallengeRow = () => {
+    const addChallengeRow = (e) => {
+        if (e && e.preventDefault) e.preventDefault(); // FIX: Prevent form submission
         setFormData(prev => ({
             ...prev,
             challenges_table: [
@@ -399,7 +395,6 @@ export const IMNCIVisitReport = ({
             for (const file of newImageFiles.filter(f => f)) { newUploadedUrls.push(await uploadFile(file)); }
             const finalImageUrls = [...currentUrls, ...newUploadedUrls];
             
-            // Sync `trained_skills` for backward compatibility with downstream dashboards
             const updatedTrainedSkills = {};
             Object.keys(formData.mentoring_matrix).forEach(k => {
                 if (formData.mentoring_matrix[k].isTrained) {
@@ -478,11 +473,9 @@ export const IMNCIVisitReport = ({
             topKeys = allKeys;
         } else {
             allKeys.forEach(key => {
-                // If it's a known weakness, or the mentor previously checked it as trained, keep it at top
                 if (detectedWeaknesses.includes(key) || formData.mentoring_matrix[key]?.isTrained) {
                     topKeys.push(key);
                 } else {
-                    // Otherwise, it's considered a strong/good skill and goes to the bottom
                     bottomKeys.push(key);
                 }
             });
@@ -794,7 +787,7 @@ export const IMNCIVisitReport = ({
                                                             />
                                                         )}
                                                     </td>
-                                                    <td className="border text-center p-1">{index > 0 && (<Button type="button" variant="danger" size="sm" onClick={() => removeChallengeRow(row.id)}><Trash2 size={14} /></Button>)}</td>
+                                                    <td className="border text-center p-1">{index > 0 && (<Button type="button" variant="danger" size="sm" onClick={(e) => { e.preventDefault(); removeChallengeRow(row.id); }}><Trash2 size={14} /></Button>)}</td>
                                                 </tr>
                                             );
                                         })}
@@ -813,7 +806,7 @@ export const IMNCIVisitReport = ({
                             serviceType="IMNCI"
                         />
 
-                        <div className="mb-6 border-t pt-4"><h3 className="text-lg font-bold text-sky-800 mb-2">الصور</h3><div className="grid grid-cols-3 gap-2">{formData.imageUrls.map((url, i) => <div key={i} className="relative"><img src={url} className="h-20 w-full object-cover" /><Button type="button" variant="danger" size="xs" className="absolute top-0 left-0" onClick={()=>removeExistingImage(i)}>x</Button></div>)} {newImageFiles.map((f, i) => <div key={i} className="relative"><img src={URL.createObjectURL(f)} className="h-20 w-full object-cover" /><Button type="button" variant="danger" size="xs" className="absolute top-0 left-0" onClick={()=>removeNewImage(i)}>x</Button></div>)} <label className="border-2 border-dashed p-4 flex justify-center items-center cursor-pointer"><Camera /><Input type="file" accept="image/*" multiple onChange={handleImageChange} className="hidden"/></label></div></div>
+                        <div className="mb-6 border-t pt-4"><h3 className="text-lg font-bold text-sky-800 mb-2">الصور</h3><div className="grid grid-cols-3 gap-2">{formData.imageUrls.map((url, i) => <div key={i} className="relative"><img src={url} className="h-20 w-full object-cover" /><Button type="button" variant="danger" size="xs" className="absolute top-0 left-0" onClick={(e)=>{ e.preventDefault(); removeExistingImage(i); }}>x</Button></div>)} {newImageFiles.map((f, i) => <div key={i} className="relative"><img src={URL.createObjectURL(f)} className="h-20 w-full object-cover" /><Button type="button" variant="danger" size="xs" className="absolute top-0 left-0" onClick={(e)=>{ e.preventDefault(); removeNewImage(i); }}>x</Button></div>)} <label className="border-2 border-dashed p-4 flex justify-center items-center cursor-pointer"><Camera /><Input type="file" accept="image/*" multiple onChange={handleImageChange} className="hidden"/></label></div></div>
                         <div className="mb-6"><FormGroup label="ملاحظات" className="text-right"><Textarea name="notes" value={formData.notes} onChange={handleFormChange} rows={3} /></FormGroup></div>
                     </div>
                     
@@ -906,7 +899,8 @@ export const EENCVisitReport = ({
         }));
     };
 
-    const addChallengeRow = () => { 
+    const addChallengeRow = (e) => { 
+        if (e && e.preventDefault) e.preventDefault(); // FIX: Prevent form submission
         setFormData(prev => ({ 
             ...prev, 
             challenges_table: [...prev.challenges_table, { id: Date.now(), problem: '', solution: '', status: 'Pending', responsible_person: '' }] 
@@ -1092,7 +1086,7 @@ export const EENCVisitReport = ({
                                                             />
                                                         )}
                                                     </td>
-                                                    <td className="border text-center p-1">{index > 0 && (<Button type="button" variant="danger" size="sm" onClick={() => removeChallengeRow(row.id)}><Trash2 size={14} /></Button>)}</td>
+                                                    <td className="border text-center p-1">{index > 0 && (<Button type="button" variant="danger" size="sm" onClick={(e) => { e.preventDefault(); removeChallengeRow(row.id); }}><Trash2 size={14} /></Button>)}</td>
                                                 </tr>
                                             );
                                         })}
@@ -1111,7 +1105,7 @@ export const EENCVisitReport = ({
                             serviceType="EENC"
                         />
 
-                        <div className="mb-6 border-t pt-4"><h3 className="text-lg font-bold text-sky-800 mb-2">الصور</h3><div className="grid grid-cols-3 gap-2">{formData.imageUrls.map((url, i) => <div key={i} className="relative"><img src={url} className="h-20 w-full object-cover" /><Button type="button" variant="danger" size="xs" className="absolute top-0 left-0" onClick={()=>removeExistingImage(i)}>x</Button></div>)} {newImageFiles.map((f, i) => <div key={i} className="relative"><img src={URL.createObjectURL(f)} className="h-20 w-full object-cover" /><Button type="button" variant="danger" size="xs" className="absolute top-0 left-0" onClick={()=>removeNewImage(i)}>x</Button></div>)} <label className="border-2 border-dashed p-4 flex justify-center items-center cursor-pointer"><Camera /><Input type="file" accept="image/*" multiple onChange={handleImageChange} className="hidden"/></label></div></div>
+                        <div className="mb-6 border-t pt-4"><h3 className="text-lg font-bold text-sky-800 mb-2">الصور</h3><div className="grid grid-cols-3 gap-2">{formData.imageUrls.map((url, i) => <div key={i} className="relative"><img src={url} className="h-20 w-full object-cover" /><Button type="button" variant="danger" size="xs" className="absolute top-0 left-0" onClick={(e)=>{ e.preventDefault(); removeExistingImage(i); }}>x</Button></div>)} {newImageFiles.map((f, i) => <div key={i} className="relative"><img src={URL.createObjectURL(f)} className="h-20 w-full object-cover" /><Button type="button" variant="danger" size="xs" className="absolute top-0 left-0" onClick={(e)=>{ e.preventDefault(); removeNewImage(i); }}>x</Button></div>)} <label className="border-2 border-dashed p-4 flex justify-center items-center cursor-pointer"><Camera /><Input type="file" accept="image/*" multiple onChange={handleImageChange} className="hidden"/></label></div></div>
                         <div className="mb-6"><FormGroup label="ملاحظات" className="text-right"><Textarea name="notes" value={formData.notes} onChange={handleFormChange} rows={3} /></FormGroup></div>
                     </div>
                     

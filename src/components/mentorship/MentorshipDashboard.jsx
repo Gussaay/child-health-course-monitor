@@ -18,6 +18,10 @@ import VisitReportDashboardTab from './VisitReportDashboardTab';
 import { IMNCI_FORM_STRUCTURE, calculateScores, rehydrateDraftData, DIARRHEA_CLASSIFICATIONS, FEVER_CLASSIFICATIONS } from './IMNCSkillsAssessmentForm.jsx';
 import { PREPARATION_ITEMS, DRYING_STIMULATION_ITEMS, NORMAL_BREATHING_ITEMS, RESUSCITATION_ITEMS } from './EENCSkillsAssessmentForm.jsx';
 
+// --- ADDED FOR TRANSLATION ---
+import { useTranslation } from './LanguageContext';
+import LanguageSwitcher from './LanguageSwitcher';
+
 // --- Constants & Dictionaries ---
 const SERVICE_TITLES = {
     'IMNCI': 'Integrated Management of Newborn and Childhood Illnesses (IMNCI)',
@@ -51,6 +55,8 @@ const MentorshipDashboard = ({
     dateFilter = '', onDateFilterChange = () => {}
 }) => {
 
+    const { t, language } = useTranslation(); // --- Added translation hook ---
+
     const [activeEencTab, setActiveEencTab] = useState('skills'); 
     const [activeImnciTab, setActiveImnciTab] = useState('skills'); 
     
@@ -66,37 +72,18 @@ const MentorshipDashboard = ({
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
         switch (dateFilt) {
-            case 'today':
-                return d.getTime() >= today.getTime() && d.getTime() < today.getTime() + 86400000;
-            case 'yesterday':
-                const yesterday = new Date(today);
-                yesterday.setDate(yesterday.getDate() - 1);
-                return d.getTime() >= yesterday.getTime() && d.getTime() < today.getTime();
-            case 'this_week':
-                const startOfWeek = new Date(today);
-                startOfWeek.setDate(today.getDate() - today.getDay());
-                return d >= startOfWeek;
-            case 'last_week':
-                const startOfLastWeek = new Date(today);
-                startOfLastWeek.setDate(today.getDate() - today.getDay() - 7);
-                const endOfLastWeek = new Date(startOfLastWeek);
-                endOfLastWeek.setDate(startOfLastWeek.getDate() + 7);
-                return d >= startOfLastWeek && d < endOfLastWeek;
-            case 'this_month':
-                return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-            case 'last_month':
-                const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                return d.getMonth() === lastMonth.getMonth() && d.getFullYear() === lastMonth.getFullYear();
-            case 'this_year':
-                return d.getFullYear() === now.getFullYear();
-            case 'last_year':
-                return d.getFullYear() === now.getFullYear() - 1;
-            default:
-                return true;
+            case 'today': return d.getTime() >= today.getTime() && d.getTime() < today.getTime() + 86400000;
+            case 'yesterday': const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1); return d.getTime() >= yesterday.getTime() && d.getTime() < today.getTime();
+            case 'this_week': const startOfWeek = new Date(today); startOfWeek.setDate(today.getDate() - today.getDay()); return d >= startOfWeek;
+            case 'last_week': const startOfLastWeek = new Date(today); startOfLastWeek.setDate(today.getDate() - today.getDay() - 7); const endOfLastWeek = new Date(startOfLastWeek); endOfLastWeek.setDate(startOfLastWeek.getDate() + 7); return d >= startOfLastWeek && d < endOfLastWeek;
+            case 'this_month': return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+            case 'last_month': const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1); return d.getMonth() === lastMonth.getMonth() && d.getFullYear() === lastMonth.getFullYear();
+            case 'this_year': return d.getFullYear() === now.getFullYear();
+            case 'last_year': return d.getFullYear() === now.getFullYear() - 1;
+            default: return true;
         }
     }, []);
 
-    // --- Local State for Optimistic Updates ---
     const [localStatusUpdates, setLocalStatusUpdates] = useState({});
     useEffect(() => { setLocalStatusUpdates({}); }, [visitReports]);
 
@@ -130,9 +117,7 @@ const MentorshipDashboard = ({
     const dynamicLocationLabel = dynamicLocationLevel === 'State' ? 'State' : (dynamicLocationLevel === 'Locality' ? 'Locality' : 'Facility & Date');
     const geographicLevelName = activeState ? 'Locality' : 'State';
 
-
     // --- 1. DATA PROCESSING PIPELINE ---
-    
     const visitReportStats = useMemo(() => {
         if (!visitReports) return null;
         let filtered = visitReports.filter(r => r.service === activeService);
@@ -153,12 +138,12 @@ const MentorshipDashboard = ({
         
         const geographicChartData = Object.keys(locationCounts).map(k => {
              let locName = k;
-            if (isStateLevel) locName = STATE_LOCALITIES[k]?.en || k;
+            if (isStateLevel) locName = STATE_LOCALITIES[k]?.[language === 'ar' ? 'ar' : 'en'] || STATE_LOCALITIES[k]?.en || k;
             else {
                 const stateObj = STATE_LOCALITIES[activeState];
                 if (stateObj && stateObj.localities) {
                     const locObj = stateObj.localities.find(l => l.en === k);
-                    if (locObj) locName = locObj.en;
+                    if (locObj) locName = locObj[language === 'ar' ? 'ar' : 'en'] || locObj.en;
                 }
             }
             return { stateName: locName, count: locationCounts[k] };
@@ -168,17 +153,16 @@ const MentorshipDashboard = ({
         
         filtered.forEach(r => {
             const data = r.fullData || r; 
-            
             if (r.service === 'IMNCI' && data.trained_skills) {
                 Object.values(data.trained_skills).forEach(val => { if (val === true || val === 'yes') totalSkillsTrained++; });
             }
             if (data.challenges_table) {
                 let locName = 'Unknown';
-                if (dynamicLocationLevel === 'State') locName = STATE_LOCALITIES[r.state]?.en || r.state || 'Unknown';
+                if (dynamicLocationLevel === 'State') locName = STATE_LOCALITIES[r.state]?.[language === 'ar' ? 'ar' : 'en'] || r.state || 'Unknown';
                 else if (dynamicLocationLevel === 'Locality') {
                     if (STATE_LOCALITIES[r.state]?.localities) {
                         const lObj = STATE_LOCALITIES[r.state].localities.find(l => l.en === r.locality || l.ar === r.locality);
-                        locName = lObj ? lObj.en : (r.locality || 'Unknown');
+                        locName = lObj ? (lObj[language === 'ar' ? 'ar' : 'en'] || lObj.en) : (r.locality || 'Unknown');
                     } else locName = r.locality || 'Unknown';
                 } else locName = r.facilityName || 'Unknown';
 
@@ -217,7 +201,6 @@ const MentorshipDashboard = ({
         filtered.forEach(r => {
             const fid = r.facilityId;
             const data = r.fullData || r;
-            
             if (!facilityMap[fid]) facilityMap[fid] = { id: fid, facilityName: r.facilityName, state: r.state, locality: r.locality, visitCount: 0, skills: {} };
             facilityMap[fid].visitCount++;
             if (data.trained_skills) {
@@ -226,7 +209,7 @@ const MentorshipDashboard = ({
         });
         
         return { totalVisits, geographicChartData, facilityTableData: Object.values(facilityMap), distinctSkillKeys: Array.from(skillKeys), groupedProblems, totalProblems, trainedSkillsGroups, totalSkillsTrained, rawReports: filtered };
-    }, [visitReports, activeService, activeState, activeLocality, activeFacilityId, activeProject, STATE_LOCALITIES, dynamicLocationLevel, dateFilter, checkDateFilter]);
+    }, [visitReports, activeService, activeState, activeLocality, activeFacilityId, activeProject, STATE_LOCALITIES, dynamicLocationLevel, dateFilter, checkDateFilter, language]);
 
     const reCalculatedSubmissions = useMemo(() => {
         if (!allSubmissions) return [];
@@ -236,24 +219,18 @@ const MentorshipDashboard = ({
             const s = sub.scores || {};
             
             if (s.treatment_total_score_maxScore === undefined) {
-                if (recalcCacheRef.current[sub.id]) {
-                    return { ...sub, scores: recalcCacheRef.current[sub.id] };
-                }
-                
+                if (recalcCacheRef.current[sub.id]) return { ...sub, scores: recalcCacheRef.current[sub.id] };
                 try {
                     const rehydratedData = rehydrateDraftData(sub.fullData, DIARRHEA_CLASSIFICATIONS, FEVER_CLASSIFICATIONS);
                     const reCalculatedScores = calculateScores(rehydratedData);
                     const newScoresPayload = {};
-                    
                     for (const key in reCalculatedScores) { 
                         if (key !== 'treatmentScoreForSave' && reCalculatedScores[key]?.score !== undefined && reCalculatedScores[key]?.maxScore !== undefined) {
                             newScoresPayload[`${key}_score`] = reCalculatedScores[key].score;
                             newScoresPayload[`${key}_maxScore`] = reCalculatedScores[key].maxScore;
                         }
                     }
-                    
                     recalcCacheRef.current[sub.id] = newScoresPayload;
-                    
                     return { ...sub, scores: newScoresPayload };
                 } catch (e) { return sub; }
             }
@@ -262,19 +239,8 @@ const MentorshipDashboard = ({
     }, [allSubmissions]);
 
 
-    // KPI Helpers
     const imnciKpiHelper = useCallback((submissions) => {
-        const scores = {
-            overall: [], assessment: [], decision: [], treatment: [],
-            handsOnWeight: [], handsOnTemp: [], handsOnHeight: [],
-            respiratoryRateCalculation: [], dehydrationAssessment: [],
-            handsOnMUAC: [], handsOnWFH: [], handsOnPallor: [],
-            pneuAmox: [], diarOrs: [], diarZinc: [], anemiaIron: [],
-            immunization: [], vitaminAssessment: [], malariaCoartem: [], returnImm: [], returnFu: [],
-            recordSigns: [], recordClassifications: [], recordTreatments: [],
-            vitalSigns: [], dangerSigns: [], mainSymptoms: [], malnutrition: [], otherProblems: [],
-            measurementSkills: [], malnutritionAnemiaSkills: [],
-        };
+        const scores = { overall: [], assessment: [], decision: [], treatment: [], handsOnWeight: [], handsOnTemp: [], handsOnHeight: [], respiratoryRateCalculation: [], dehydrationAssessment: [], handsOnMUAC: [], handsOnWFH: [], handsOnPallor: [], pneuAmox: [], diarOrs: [], diarZinc: [], anemiaIron: [], immunization: [], vitaminAssessment: [], malariaCoartem: [], returnImm: [], returnFu: [], recordSigns: [], recordClassifications: [], recordTreatments: [], vitalSigns: [], dangerSigns: [], mainSymptoms: [], malnutrition: [], otherProblems: [], measurementSkills: [], malnutritionAnemiaSkills: [] };
         const uniqueVisits = new Set(submissions.map(s => `${s.facilityId || 'unk'}_${s.staff || 'unk'}_${s.date || 'unk'}`));
         const uniqueWorkers = new Set(submissions.map(s => `${s.facilityId || 'unk'}_${s.staff || 'unk'}`));
         const skillStats = {};
@@ -354,12 +320,7 @@ const MentorshipDashboard = ({
     }, []);
 
     const eencKpiHelper = useCallback((submissions) => {
-        const scores = {
-            overall: [], preparation: [], drying: [], normal_breathing: [], resuscitation: [],
-            inf_wash1: [], inf_wash2: [], inf_gloves: [], prep_towel: [], prep_equip: [], prep_ambu: [],
-            care_dry: [], care_skin: [], care_cover: [], cord_hygiene: [], cord_delay: [], cord_clamp: [],
-            bf_advice: [], resus_head: [], resus_mask: [], resus_chest: [], resus_rate: []
-        };
+        const scores = { overall: [], preparation: [], drying: [], normal_breathing: [], resuscitation: [], inf_wash1: [], inf_wash2: [], inf_gloves: [], prep_towel: [], prep_equip: [], prep_ambu: [], care_dry: [], care_skin: [], care_cover: [], cord_hygiene: [], cord_delay: [], cord_clamp: [], bf_advice: [], resus_head: [], resus_mask: [], resus_chest: [], resus_rate: [] };
         const uniqueVisits = new Set(submissions.map(s => `${s.facilityId || 'unk'}_${s.staff || 'unk'}_${s.date || 'unk'}`));
         const uniqueWorkers = new Set(submissions.map(s => `${s.facilityId || 'unk'}_${s.staff || 'unk'}`));
 
@@ -469,12 +430,15 @@ const MentorshipDashboard = ({
     ), [reCalculatedSubmissions, activeService]);
 
     // Select Dropdown Options
-    const stateOptions = useMemo(() => !STATE_LOCALITIES ? [] : Object.keys(STATE_LOCALITIES).map(k => ({ key: k, name: STATE_LOCALITIES[k]?.en || k })).sort((a, b) => a.name.localeCompare(b.name, 'en')), [STATE_LOCALITIES]);
-    const localityOptions = useMemo(() => (!activeState || !STATE_LOCALITIES[activeState]?.localities) ? [] : STATE_LOCALITIES[activeState].localities.map(l => ({ key: l.en, name: l.en })).sort((a, b) => a.name.localeCompare(b.name, 'en')), [activeState, STATE_LOCALITIES]);
+    const stateOptions = useMemo(() => !STATE_LOCALITIES ? [] : Object.keys(STATE_LOCALITIES).map(k => ({ key: k, name: STATE_LOCALITIES[k]?.[language === 'ar' ? 'ar' : 'en'] || k })).sort((a, b) => a.name.localeCompare(b.name, language)), [STATE_LOCALITIES, language]);
+    
+    const localityOptions = useMemo(() => (!activeState || !STATE_LOCALITIES[activeState]?.localities) ? [] : STATE_LOCALITIES[activeState].localities.map(l => ({ key: l.en, name: l[language === 'ar' ? 'ar' : 'en'] || l.en })).sort((a, b) => a.name.localeCompare(b.name, language)), [activeState, STATE_LOCALITIES, language]);
+    
     const facilityOptions = useMemo(() => {
         const map = new Map(); serviceCompletedSubmissions.filter(s => (!activeState || s.state === activeState) && (!activeLocality || s.locality === activeLocality)).forEach(s => { if (s.facilityId && !map.has(s.facilityId)) map.set(s.facilityId, { key: s.facilityId, name: s.facility || 'Unknown' }); });
         return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
     }, [serviceCompletedSubmissions, activeState, activeLocality]);
+    
     const projectOptions = useMemo(() => {
         const map = new Map(); 
         serviceCompletedSubmissions.filter(s => (!activeState || s.state === activeState) && (!activeLocality || s.locality === activeLocality) && (!activeFacilityId || s.facilityId === activeFacilityId)).forEach(s => { 
@@ -482,10 +446,12 @@ const MentorshipDashboard = ({
         });
         return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
     }, [serviceCompletedSubmissions, activeState, activeLocality, activeFacilityId]);
+    
     const workerOptions = useMemo(() => {
         const map = new Map(); serviceCompletedSubmissions.filter(s => (!activeState || s.state === activeState) && (!activeLocality || s.locality === activeLocality) && (!activeFacilityId || s.facilityId === activeFacilityId) && (!activeProject || s.project === activeProject)).forEach(s => { if (s.staff && !map.has(s.staff)) map.set(s.staff, { key: s.staff, name: s.staff }); });
         return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
     }, [serviceCompletedSubmissions, activeState, activeLocality, activeFacilityId, activeProject]);
+    
     const workerTypeOptions = useMemo(() => {
         const types = new Set();
         serviceCompletedSubmissions.forEach(s => {
@@ -507,7 +473,6 @@ const MentorshipDashboard = ({
         checkDateFilter(sub.date || sub.sessionDate || sub.visitDate, dateFilter)
     ), [serviceCompletedSubmissions, activeState, activeLocality, activeFacilityId, activeWorkerName, activeProject, activeWorkerType, dateFilter, checkDateFilter]);
 
-    // ** KPI's must be evaluated BEFORE they are passed down **
     const overallKpis = useMemo(() => {
         if (activeService === 'IMNCI') return imnciKpiHelper(filteredSubmissions.filter(s => s.service === 'IMNCI'));
         if (activeService === 'EENC') return eencKpiHelper(filteredSubmissions.filter(s => s.service === 'EENC'));
@@ -520,7 +485,6 @@ const MentorshipDashboard = ({
         return null;
     }, [filteredSubmissions, eencMotherKpiHelper, imnciMotherKpiHelper, activeService]);
 
-    // Chart Data calculations
     const volumeChartData = useMemo(() => {
         const targetMotherService = activeService === 'IMNCI' ? 'IMNCI_MOTHERS' : 'EENC_MOTHERS';
         const visitGroups = filteredSubmissions.reduce((acc, sub) => {
@@ -653,17 +617,17 @@ const MentorshipDashboard = ({
         }, {});
         return Object.keys(submissionsByLocation).map(locKey => {
             let locName = locKey;
-            if (isStateLevel) locName = STATE_LOCALITIES[locKey]?.en || locKey;
+            if (isStateLevel) locName = STATE_LOCALITIES[locKey]?.[language === 'ar' ? 'ar' : 'en'] || locKey;
             else {
                 const stateObj = STATE_LOCALITIES[activeState];
                 if (stateObj && stateObj.localities) {
                     const locObj = stateObj.localities.find(l => l.en === locKey);
-                    if (locObj) locName = locObj.en;
+                    if (locObj) locName = locObj[language === 'ar' ? 'ar' : 'en'] || locObj.en;
                 }
             }
             return { stateKey: locKey, stateName: locName, ...kpisHelper(submissionsByLocation[locKey]) };
-        }).sort((a, b) => a.stateName.localeCompare(b.stateName, 'en'));
-    }, [filteredSubmissions, imnciKpiHelper, eencKpiHelper, activeService, STATE_LOCALITIES, activeState]);
+        }).sort((a, b) => a.stateName.localeCompare(b.stateName, language));
+    }, [filteredSubmissions, imnciKpiHelper, eencKpiHelper, activeService, STATE_LOCALITIES, activeState, language]);
 
     const motherGeographicKpis = useMemo(() => {
         if (activeService !== 'EENC' && activeService !== 'IMNCI') return [];
@@ -678,17 +642,17 @@ const MentorshipDashboard = ({
         const helper = isEenc ? eencMotherKpiHelper : imnciMotherKpiHelper;
         return Object.keys(submissionsByLocation).map(locKey => {
             let locName = locKey;
-            if (isStateLevel) locName = STATE_LOCALITIES[locKey]?.en || locKey;
+            if (isStateLevel) locName = STATE_LOCALITIES[locKey]?.[language === 'ar' ? 'ar' : 'en'] || locKey;
             else {
                 const stateObj = STATE_LOCALITIES[activeState];
                 if (stateObj && stateObj.localities) {
                     const locObj = stateObj.localities.find(l => l.en === locKey);
-                    if (locObj) locName = locObj.en;
+                    if (locObj) locName = locObj[language === 'ar' ? 'ar' : 'en'] || locObj.en;
                 }
             }
             return { stateKey: locKey, stateName: locName, ...helper(submissionsByLocation[locKey]) };
-        }).sort((a, b) => a.stateName.localeCompare(b.stateName, 'en'));
-    }, [filteredSubmissions, eencMotherKpiHelper, imnciMotherKpiHelper, activeService, STATE_LOCALITIES, activeState]);
+        }).sort((a, b) => a.stateName.localeCompare(b.stateName, language));
+    }, [filteredSubmissions, eencMotherKpiHelper, imnciMotherKpiHelper, activeService, STATE_LOCALITIES, activeState, language]);
 
     const kpisByWorkerType = useMemo(() => {
         const kpisHelper = activeService === 'IMNCI' ? imnciKpiHelper : (activeService === 'EENC' ? eencKpiHelper : null);
@@ -719,83 +683,77 @@ const MentorshipDashboard = ({
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] bg-slate-50/50 p-6">
                 <Spinner size="lg" />
-                <h3 className="text-2xl font-extrabold text-slate-800 tracking-tight animate-pulse mb-2 mt-4">Loading Dashboard Data...</h3>
-                <p className="text-sm font-semibold text-slate-500">Please wait while we fetch the latest records.</p>
+                <h3 className="text-2xl font-extrabold text-slate-800 tracking-tight animate-pulse mb-2 mt-4">{t('msg.loading')}</h3>
+                <p className="text-sm font-semibold text-slate-500">{t('msg.please_wait')}</p>
             </div>
         );
     }
 
-    // --- Dynamic Scope Title Generator for Detailed Filter Logging ---
     const activeFiltersList = [];
-    if (activeState) activeFiltersList.push(`State: ${STATE_LOCALITIES[activeState]?.en || activeState}`);
+    if (activeState) activeFiltersList.push(`${t('filter.state')}: ${STATE_LOCALITIES[activeState]?.[language === 'ar' ? 'ar' : 'en'] || activeState}`);
     if (activeLocality) {
-        const locName = STATE_LOCALITIES[activeState]?.localities?.find(l => l.en === activeLocality)?.en || activeLocality;
-        activeFiltersList.push(`Locality: ${locName}`);
+        const locObj = STATE_LOCALITIES[activeState]?.localities?.find(l => l.en === activeLocality);
+        const locName = locObj ? (locObj[language === 'ar' ? 'ar' : 'en'] || locObj.en) : activeLocality;
+        activeFiltersList.push(`${t('filter.locality')}: ${locName}`);
     }
     if (activeFacilityId) {
         const facName = facilityOptions.find(f => f.key === activeFacilityId)?.name || activeFacilityId;
-        activeFiltersList.push(`Facility: ${facName}`);
+        activeFiltersList.push(`${t('filter.facility')}: ${facName}`);
     }
-    if (activeProject) activeFiltersList.push(`Project: ${activeProject}`);
-    if (activeWorkerType) activeFiltersList.push(`Job: ${activeWorkerType}`);
-    if (activeWorkerName) activeFiltersList.push(`Worker: ${activeWorkerName}`);
-    if (dateFilter) {
-        const dateNames = {
-            today: 'Today', yesterday: 'Yesterday', this_week: 'This Week', last_week: 'Last Week',
-            this_month: 'This Month', last_month: 'Last Month', this_year: 'This Year', last_year: 'Last Year'
-        };
-        activeFiltersList.push(`Date: ${dateNames[dateFilter] || dateFilter}`);
-    }
+    if (activeProject) activeFiltersList.push(`${t('filter.project')}: ${activeProject}`);
+    if (activeWorkerType) activeFiltersList.push(`${t('filter.job_title')}: ${activeWorkerType}`);
+    if (activeWorkerName) activeFiltersList.push(`${t('filter.worker_name')}: ${activeWorkerName}`);
+    if (dateFilter) activeFiltersList.push(`${t('filter.date')}: ${t(`date.${dateFilter}`) || dateFilter}`);
 
     const scopeTitle = activeFiltersList.length > 0 
-        ? `(Filtered by: ${activeFiltersList.join(' | ')})` 
-        : "(All Sudan Data)";
+        ? `(${t('msg.filtered_by')}: ${activeFiltersList.join(' | ')})` 
+        : `(${t('msg.all_sudan')})`;
 
-    const isFiltered = activeFiltersList.length > 0;
     const serviceTitle = SERVICE_TITLES[activeService] || activeService;
     const activeTab = activeService === 'IMNCI' ? activeImnciTab : activeEencTab;
     const setActiveTabFunc = activeService === 'IMNCI' ? setActiveImnciTab : setActiveEencTab;
 
     return (
-        <div className="p-4 sm:p-6 bg-slate-50/50 min-h-screen" dir="ltr">             
+        <div className="p-4 sm:p-6 bg-slate-50/50 min-h-screen">             
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <h3 className="text-2xl font-extrabold text-slate-800 text-left tracking-tight">
-                    Mentorship Dashboard: {serviceTitle} <br/>
+                    {t('app.title')}: {serviceTitle} <br/>
                     <span className="text-sky-600 text-lg font-semibold block mt-1 break-words leading-snug">{scopeTitle}</span>
                 </h3>
+                
+                <LanguageSwitcher />
             </div>
             
             <div className="flex flex-row flex-nowrap overflow-x-auto gap-3 mb-8 p-4 bg-white rounded-2xl shadow-md border border-black scrollbar-thin scrollbar-thumb-sky-200 scrollbar-track-transparent">
-                {/* Unified Date Filter Option Moved to Beginning */}
                 <div className="min-w-[140px] flex-1 flex-shrink-0">
-                    <label className="block text-[10px] font-bold text-slate-600 mb-1 uppercase tracking-wider">Date Filter</label>
-                    <select value={dateFilter} onChange={(e) => onDateFilterChange(e.target.value)} className={`block w-full pl-3 pr-8 py-2 text-xs font-bold border focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-lg shadow-sm transition-colors cursor-pointer ${dateFilter ? 'border-sky-500 bg-sky-50 text-sky-900 ring-1 ring-sky-200' : 'border-black bg-white hover:bg-slate-50 text-slate-800'}`}>
-                        <option value="">All Time</option>
-                        <option value="today">Today</option>
-                        <option value="yesterday">Yesterday</option>
-                        <option value="this_week">This Week</option>
-                        <option value="last_week">Last Week</option>
-                        <option value="this_month">This Month</option>
-                        <option value="last_month">Last Month</option>
-                        <option value="this_year">This Year</option>
-                        <option value="last_year">Last Year</option>
+                    <label className="block text-[10px] font-bold text-slate-600 mb-1 uppercase tracking-wider">{t('filter.date')}</label>
+                    <select value={dateFilter} onChange={(e) => onDateFilterChange(e.target.value)} className={`block w-full px-3 py-2 text-xs font-bold border focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-lg shadow-sm transition-colors cursor-pointer ${dateFilter ? 'border-sky-500 bg-sky-50 text-sky-900 ring-1 ring-sky-200' : 'border-black bg-white hover:bg-slate-50 text-slate-800'}`}>
+                        <option value="">{t('filter.all.time')}</option>
+                        <option value="today">{t('date.today')}</option>
+                        <option value="yesterday">{t('date.yesterday')}</option>
+                        <option value="this_week">{t('date.this_week')}</option>
+                        <option value="last_week">{t('date.last_week')}</option>
+                        <option value="this_month">{t('date.this_month')}</option>
+                        <option value="last_month">{t('date.last_month')}</option>
+                        <option value="this_year">{t('date.this_year')}</option>
+                        <option value="last_year">{t('date.last_year')}</option>
                     </select>
                 </div>
                 
-                <FilterSelect label="State" value={activeState} onChange={(v) => { onStateChange(v); onLocalityChange(""); onFacilityIdChange(""); onProjectChange(""); onWorkerNameChange(""); onWorkerTypeChange?.(""); }} options={stateOptions} defaultOption="All States" />
-                <FilterSelect label="Locality" value={activeLocality} onChange={(v) => { onLocalityChange(v); onFacilityIdChange(""); onProjectChange(""); onWorkerNameChange(""); onWorkerTypeChange?.(""); }} options={localityOptions} disabled={!activeState} defaultOption="All Localities" />
-                <FilterSelect label="Health Facility" value={activeFacilityId} onChange={(v) => { onFacilityIdChange(v); onProjectChange(""); onWorkerNameChange(""); onWorkerTypeChange?.(""); }} options={facilityOptions} disabled={!activeLocality} defaultOption="All Facilities" />
-                <FilterSelect label="Project / Partner" value={activeProject} onChange={(v) => { onProjectChange(v); onWorkerNameChange(""); onWorkerTypeChange?.(""); }} options={projectOptions} defaultOption="All Projects" />
-                <FilterSelect label="Job Title" value={activeWorkerType || ""} onChange={(v) => { if(onWorkerTypeChange) onWorkerTypeChange(v); onWorkerNameChange(""); }} options={workerTypeOptions || []} defaultOption="All Titles" />
-                <FilterSelect label="Health Worker Name" value={activeWorkerName} onChange={onWorkerNameChange} options={workerOptions} disabled={!activeFacilityId} defaultOption="All Workers" />
+                <FilterSelect label={t('filter.state')} value={activeState} onChange={(v) => { onStateChange(v); onLocalityChange(""); onFacilityIdChange(""); onProjectChange(""); onWorkerNameChange(""); onWorkerTypeChange?.(""); }} options={stateOptions} defaultOption={t('filter.all.states')} />
+                <FilterSelect label={t('filter.locality')} value={activeLocality} onChange={(v) => { onLocalityChange(v); onFacilityIdChange(""); onProjectChange(""); onWorkerNameChange(""); onWorkerTypeChange?.(""); }} options={localityOptions} disabled={!activeState} defaultOption={t('filter.all.localities')} />
+                <FilterSelect label={t('filter.facility')} value={activeFacilityId} onChange={(v) => { onFacilityIdChange(v); onProjectChange(""); onWorkerNameChange(""); onWorkerTypeChange?.(""); }} options={facilityOptions} disabled={!activeLocality} defaultOption={t('filter.all.facilities')} />
+                <FilterSelect label={t('filter.project')} value={activeProject} onChange={(v) => { onProjectChange(v); onWorkerNameChange(""); onWorkerTypeChange?.(""); }} options={projectOptions} defaultOption={t('filter.all.projects')} />
+                <FilterSelect label={t('filter.job_title')} value={activeWorkerType || ""} onChange={(v) => { if(onWorkerTypeChange) onWorkerTypeChange(v); onWorkerNameChange(""); }} options={workerTypeOptions || []} defaultOption={t('filter.all.titles')} />
+                <FilterSelect label={t('filter.worker_name')} value={activeWorkerName} onChange={onWorkerNameChange} options={workerOptions} disabled={!activeFacilityId} defaultOption={t('filter.all.workers')} />
             </div>
             
             <div className="flex flex-wrap gap-2 mb-8 bg-slate-200 p-1.5 rounded-xl border border-black w-fit">
-                <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'skills' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveTabFunc('skills')}>Skills Observation (Provider)</button>
-                <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'mothers' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveTabFunc('mothers')}>Mother Interviews</button>
-                <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'visit_reports' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveTabFunc('visit_reports')}>Visit Reports (Facility)</button>
+                <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'skills' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveTabFunc('skills')}>{t('tab.skills')}</button>
+                <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'mothers' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveTabFunc('mothers')}>{t('tab.mothers')}</button>
+                <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'visit_reports' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveTabFunc('visit_reports')}>{t('tab.visit_reports')}</button>
                 {canEditStatus && (
-                    <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'admin' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveTabFunc('admin')}>Admin Dashboard</button>
+                    <button className={`py-2 px-5 font-semibold text-sm rounded-lg transition-all ${activeTab === 'admin' ? 'bg-white shadow-sm text-sky-700 border border-black' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-300/50 border border-transparent'}`} onClick={() => setActiveTabFunc('admin')}>{t('tab.admin')}</button>
                 )}
             </div>
 

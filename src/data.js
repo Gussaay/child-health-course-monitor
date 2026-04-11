@@ -1857,3 +1857,50 @@ export async function deleteOperationalPlan(planId) {
     await fbUpdateDoc(doc(db, "operationalPlans", planId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
     return true;
 }
+
+// --- UNIT MEETINGS ---
+export async function upsertUnitMeeting(payload) {
+    if (payload.id) {
+        const docRef = doc(db, "unitMeetings", payload.id);
+        // Using fbSetDoc with merge to safely update specific fields without overwriting
+        await fbSetDoc(docRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
+        return payload.id;
+    } else {
+        const { id, ...dataToSave } = payload;
+        const newRef = await fbAddDoc(collection(db, "unitMeetings"), { 
+            ...dataToSave, 
+            createdAt: serverTimestamp(), 
+            lastUpdatedAt: serverTimestamp() 
+        });
+        return newRef.id;
+    }
+}
+
+export async function listUnitMeetings(sourceOptions = {}, lastSync = 0) {
+    try {
+        let q = collection(db, "unitMeetings");
+        if (lastSync > 0) {
+            // Only fetch meetings modified since the last sync
+            q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
+        }
+        const snapshot = await getData(q, sourceOptions);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error fetching unit meetings:", error);
+        throw error;
+    }
+}
+
+export async function deleteUnitMeeting(meetingId) {
+    // Soft delete to maintain historical records
+    await fbUpdateDoc(doc(db, "unitMeetings", meetingId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
+    return true;
+}
+
+export async function getUnitMeetingById(meetingId, sourceOptions = {}) {
+    if (!meetingId) return null;
+    const docRef = doc(db, "unitMeetings", meetingId);
+    const docSnap = await fbGetDoc(docRef, sourceOptions);
+    if (docSnap.exists()) return { id: docSnap.id, ...docSnap.data() };
+    return null;
+}
