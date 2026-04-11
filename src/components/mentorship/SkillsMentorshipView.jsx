@@ -28,6 +28,7 @@ import {
 import { STATE_LOCALITIES } from "../constants.js";
 import SkillsAssessmentForm from './SkillsAssessmentForm';
 import MentorshipDashboard from './MentorshipDashboard';
+import { LanguageProvider } from './LanguageContext';
 import { getAuth } from "firebase/auth";
 
 // --- Bulk Upload Modal ---
@@ -155,7 +156,7 @@ const EENC_ORIENTATIONS_LABELS = {
 };
 
 // --- Action Menu Component (Enhanced Visualization) ---
-const ActionMenu = ({ onAction, activeService, draftCount, onBack, permissions, canManage }) => {
+const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, permissions, canManage }) => {
     
     // STRICT ROLE CHECK: Only Super Users and Federal Managers can view main submissions
     const canViewSubmissions = 
@@ -175,7 +176,7 @@ const ActionMenu = ({ onAction, activeService, draftCount, onBack, permissions, 
     // Section 2: Viewing Forms
     const viewItems = [
         { id: 'view_dashboard', label: 'Show Dashboard', icon: LayoutDashboard, color: 'text-purple-600', bg: 'bg-purple-100', border: 'hover:border-purple-400', shadow: 'hover:shadow-purple-100' },
-        { id: 'view_drafts', label: `Show Drafts (${draftCount})`, icon: Archive, color: 'text-amber-600', bg: 'bg-amber-100', border: 'hover:border-amber-400', shadow: 'hover:shadow-amber-100' },
+        { id: 'view_drafts', label: `My Drafts & Reports (${draftCount + (reportCount || 0)})`, icon: Archive, color: 'text-amber-600', bg: 'bg-amber-100', border: 'hover:border-amber-400', shadow: 'hover:shadow-amber-100' },
         { id: 'training_priorities', label: 'Training Priorities', icon: Target, color: 'text-teal-600', bg: 'bg-teal-100', border: 'hover:border-teal-400', shadow: 'hover:shadow-teal-100' },
     ];
 
@@ -774,7 +775,7 @@ const TrainingPrioritiesModal = ({ isOpen, onClose, onSelect, currentSessionData
 
 // --- Visit Reports Table Component ---
 const VisitReportsTable = ({ 
-    reports, onEdit, onDelete, onView, selectedIds, onSelectionChange, isReportsLoading, canManage,
+    reports, onEdit, onDelete, onView, selectedIds, onSelectionChange, isReportsLoading, canManage, currentUserEmail,
     stateFilter, localityFilter, supervisorFilter, visitNumberFilter, facilityFilter, dateFilter
 }) => {
 
@@ -884,7 +885,7 @@ const VisitReportsTable = ({
                                     <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-left border border-gray-300">
                                         <div className="flex gap-2">
                                             <Button size="sm" variant="info" onClick={() => onView(rep.id)}>View</Button>
-                                            {canManage && <Button size="sm" variant="warning" onClick={() => onEdit(rep.id)}>Edit</Button>}
+                                            {(canManage || rep.mentorEmail === currentUserEmail) && <Button size="sm" variant="warning" onClick={() => onEdit(rep.id)}>Edit</Button>}
                                             {canManage && <Button size="sm" variant="danger" onClick={() => onDelete(rep.id)}>Delete</Button>}
                                         </div>
                                     </td>
@@ -1227,39 +1228,60 @@ const ViewSubmissionModal = ({ submission, onClose }) => {
 };
 
 // --- Drafts Modal ---
-const DraftsModal = ({ isOpen, onClose, drafts, onView, onEdit, onDelete, canManage }) => {
-    const handleAction = (action, submissionId) => {
-        if (action === 'view') {
-            onView(submissionId);
-        } else if (action === 'edit') {
-            onEdit(submissionId);
-        } else if (action === 'delete') {
-            onDelete(submissionId);
-        }
-        onClose();
-    };
-
+const DraftsModal = ({ isOpen, onClose, drafts, reports = [], onViewSession, onEditSession, onDeleteSession, onViewReport, onEditReport, canManage, userEmail }) => {
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="المسودات المحفوظة" size="xl">
+        <Modal isOpen={isOpen} onClose={onClose} title="مسوداتي وتقاريري (My Drafts & Reports)" size="2xl">
             <div className="p-6 text-right" dir="rtl">
-                {drafts.length === 0 ? (
-                    <EmptyState message="لا توجد مسودات محفوظة لهذا المستخدم/الخدمة." />
+                {drafts.length === 0 && reports.length === 0 ? (
+                    <EmptyState message="لا توجد مسودات أو تقارير محفوظة لك." />
                 ) : (
-                    <div className="space-y-3 max-h-96 overflow-y-auto">
-                        {drafts.map(draft => (
-                            <div key={draft.id} className="p-3 border rounded-lg bg-yellow-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                                <div className="text-sm flex-grow">
-                                    <p><span className="font-medium text-gray-600">العامل الصحي:</span> <span className="font-semibold text-gray-900">{draft.staff}</span></p>
-                                    <p><span className="font-medium text-gray-600">المؤسسة:</span> <span className="font-semibold text-gray-900">{draft.facility}</span></p>
-                                    <p><span className="font-medium text-gray-600">تاريخ المسودة:</span> <span className="font-semibold text-gray-900">{draft.date}</span></p>
-                                </div>
-                                <div className="flex gap-2 flex-shrink-0 mt-2 sm:mt-0">
-                                    <Button size="sm" variant="info" onClick={() => handleAction('view', draft.id)}>عرض</Button>
-                                    {canManage && <Button size="sm" variant="warning" onClick={() => handleAction('edit', draft.id)}>تعديل</Button>}
-                                    {canManage && <Button size="sm" variant="danger" onClick={() => handleAction('delete', draft.id)}>حذف</Button>}
+                    <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2">
+                        
+                        {/* Section 1: Mentorship Drafts */}
+                        {drafts.length > 0 && (
+                            <div>
+                                <h4 className="text-lg font-bold text-amber-700 mb-3 border-b pb-2">مسودات الإشراف غير المكتملة</h4>
+                                <div className="space-y-3">
+                                    {drafts.map(draft => (
+                                        <div key={draft.id} className="p-3 border rounded-lg bg-yellow-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                            <div className="text-sm flex-grow">
+                                                <p><span className="font-medium text-gray-600">العامل الصحي:</span> <span className="font-semibold text-gray-900">{draft.staff}</span></p>
+                                                <p><span className="font-medium text-gray-600">المؤسسة:</span> <span className="font-semibold text-gray-900">{draft.facility}</span></p>
+                                                <p><span className="font-medium text-gray-600">تاريخ المسودة:</span> <span className="font-semibold text-gray-900">{draft.date}</span></p>
+                                            </div>
+                                            <div className="flex gap-2 flex-shrink-0 mt-2 sm:mt-0">
+                                                <Button size="sm" variant="info" onClick={() => { onViewSession(draft.id); onClose(); }}>عرض</Button>
+                                                <Button size="sm" variant="warning" onClick={() => { onEditSession(draft.id); onClose(); }}>تعديل</Button>
+                                                <Button size="sm" variant="danger" onClick={() => { onDeleteSession(draft.id); onClose(); }}>حذف</Button>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
-                        ))}
+                        )}
+
+                        {/* Section 2: Visit Reports */}
+                        {reports.length > 0 && (
+                            <div>
+                                <h4 className="text-lg font-bold text-sky-700 mb-3 border-b pb-2">تقارير الزيارات الخاصة بي</h4>
+                                <div className="space-y-3">
+                                    {reports.map(rep => (
+                                        <div key={rep.id} className="p-3 border rounded-lg bg-sky-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                            <div className="text-sm flex-grow">
+                                                <p><span className="font-medium text-gray-600">المؤسسة:</span> <span className="font-semibold text-gray-900">{rep.facilityName}</span></p>
+                                                <p><span className="font-medium text-gray-600">رقم الزيارة:</span> <span className="font-semibold text-gray-900">{rep.visitNumber || '-'}</span></p>
+                                                <p><span className="font-medium text-gray-600">التاريخ:</span> <span className="font-semibold text-gray-900">{rep.visitDate}</span></p>
+                                            </div>
+                                            <div className="flex gap-2 flex-shrink-0 mt-2 sm:mt-0">
+                                                <Button size="sm" variant="info" onClick={() => { onViewReport(rep.id); onClose(); }}>عرض</Button>
+                                                <Button size="sm" variant="warning" onClick={() => { onEditReport(rep.id); onClose(); }}>تعديل</Button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                     </div>
                 )}
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
@@ -1948,16 +1970,30 @@ const SkillsMentorshipView = ({
 
     }, [imnciVisitReports, eencVisitReports, activeService, publicDashboardMode, publicData, deletedReportIds, facilityMap]);
 
+    // NEW: Fetch user's own visit reports
+    const currentUserVisitReports = useMemo(() => {
+        if (!user || !processedVisitReports || !activeService) return [];
+        return processedVisitReports.filter(rep =>
+            rep.mentorEmail === user.email &&
+            rep.service === activeService
+        ).sort((a, b) => new Date(b.visitDate) - new Date(a.visitDate));
+    }, [processedVisitReports, user, activeService]);
+
+    // UPDATED: Allow editing if author
     const handleEditVisitReport = (reportId) => {
-        if (!canManageMentorship) {
-            setToast({ show: true, message: 'You do not have permission to perform this action.', type: 'error' });
-            return;
-        }
         const reportList = activeService === 'IMNCI' ? imnciVisitReports : eencVisitReports;
         if (!reportList) return;
 
         const report = reportList.find(r => r.id === reportId);
         if (!report) return;
+
+        const isAuthor = report.mentorEmail === user?.email;
+
+        // Strict Check: Must be admin OR the original author
+        if (!canManageMentorship && !isAuthor) {
+            setToast({ show: true, message: 'You do not have permission to edit this report.', type: 'error' });
+            return;
+        }
 
         setSelectedState(report.state);
         setSelectedLocality(report.locality);
@@ -2979,6 +3015,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                     onAction={handleActionMenuClick} 
                     activeService={activeService} 
                     draftCount={currentUserDrafts.length}
+                    reportCount={currentUserVisitReports.length}
                     permissions={permissions}
                     canManage={canManageMentorship}
                     onBack={() => {
@@ -2991,10 +3028,14 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                     isOpen={isDraftsModalOpen}
                     onClose={() => setIsDraftsModalOpen(false)}
                     drafts={currentUserDrafts}
-                    onView={handleViewSubmission}
-                    onEdit={handleEditSubmission}
-                    onDelete={handleDeleteSubmission}
+                    reports={currentUserVisitReports}
+                    onViewSession={handleViewSubmission}
+                    onEditSession={handleEditSubmission}
+                    onDeleteSession={handleDeleteSubmission}
+                    onViewReport={handleViewVisitReport}
+                    onEditReport={handleEditVisitReport}
                     canManage={canManageMentorship}
+                    userEmail={user?.email}
                 />
                 {viewingSubmission && (
                     <ViewSubmissionModal
@@ -3283,6 +3324,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     onSelectionChange={setSelectedReportIds}
                                     isReportsLoading={activeService === 'IMNCI' ? (isDataCacheLoading.imnciVisitReports && imnciVisitReports === null) : (isDataCacheLoading.eencVisitReports && eencVisitReports === null)}
                                     canManage={canManageMentorship}
+                                    currentUserEmail={user?.email}
                                     stateFilter={stateFilter}
                                     localityFilter={localityFilter}
                                     facilityFilter={facilityFilter}
@@ -3434,10 +3476,14 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         isOpen={isDraftsModalOpen}
                         onClose={() => setIsDraftsModalOpen(false)}
                         drafts={currentUserDrafts}
-                        onView={handleViewSubmission}
-                        onEdit={handleEditSubmission}
-                        onDelete={handleDeleteSubmission}
+                        reports={currentUserVisitReports}
+                        onViewSession={handleViewSubmission}
+                        onEditSession={handleEditSubmission}
+                        onDeleteSession={handleDeleteSubmission}
+                        onViewReport={handleViewVisitReport}
+                        onEditReport={handleEditVisitReport}
                         canManage={canManageMentorship}
+                        userEmail={user?.email}
                     />
                     {viewingSubmission && (
                         <ViewSubmissionModal
@@ -3979,10 +4025,14 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                     isOpen={isDraftsModalOpen}
                     onClose={() => setIsDraftsModalOpen(false)}
                     drafts={currentUserDrafts}
-                    onView={handleViewSubmission}
-                    onEdit={handleEditSubmission}
-                    onDelete={handleDeleteSubmission}
+                    reports={currentUserVisitReports}
+                    onViewSession={handleViewSubmission}
+                    onEditSession={handleEditSubmission}
+                    onDeleteSession={handleDeleteSubmission}
+                    onViewReport={handleViewVisitReport}
+                    onEditReport={handleEditVisitReport}
                     canManage={canManageMentorship}
+                    userEmail={user?.email}
                  />
                  {viewingSubmission && (
                     <ViewSubmissionModal
@@ -4154,7 +4204,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     setActiveDashboardWorkerType("");
                                 }}
 
-                                activeWorkerName={activeDashboardWorkerName}
+                                 activ eWorkerName={activeDashboardWorkerName}
                                 onWorkerNameChange={(value) => {
                                     setActiveDashboardWorkerName(value);
                                 }}
@@ -4182,5 +4232,11 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
 
     return null;
 };
-
-export default SkillsMentorshipView;
+// Wrap the main view to provide Language Translation Context safely
+export default function SkillsMentorshipViewWrapper(props) {
+    return (
+        <LanguageProvider>
+            <SkillsMentorshipView {...props} />
+        </LanguageProvider>
+    );
+}

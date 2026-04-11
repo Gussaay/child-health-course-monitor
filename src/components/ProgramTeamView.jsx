@@ -27,7 +27,7 @@ import {
     uploadFile 
 
 } from '../data';
-import { Button, Card, Table, Modal, Input, Select, Textarea, Spinner, PageHeader, EmptyState, FormGroup, CardBody, CardFooter } from './CommonComponents';
+import { Button, Card, Table, Modal, Input, Select, Textarea, Spinner, PageHeader, EmptyState, FormGroup, CardBody, CardFooter, PdfIcon } from './CommonComponents';
 import { STATE_LOCALITIES } from './constants';
 import { auth, db } from '../firebase'; 
 import { onAuthStateChanged } from 'firebase/auth';
@@ -38,6 +38,12 @@ import {
     applyDerivedPermissions, 
     ALL_PERMISSIONS 
 } from './AdminDashboard';
+import jsPDF from "jspdf";
+import autoTable from 'jspdf-autotable';
+import { amiriFontBase64 } from './AmiriFont.js';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { FileOpener } from '@capacitor-community/file-opener';
 
 // Standard job titles for normalization
 const STANDARD_JOB_TITLES = ['صحة عامة', 'طبيب', 'ممرض', 'ظابط تغذية', 'مساعد طبي', 'صيدلي', 'إحصائي', 'إدارة اعمال'];
@@ -54,6 +60,44 @@ const normalizeState = (rawState) => {
         }
     }
     return trimmed; // Return original if no match found
+};
+
+// Simple CSV Parser
+const parseCSV = (str) => {
+    const rows = [];
+    let currentRow = [];
+    let currentCell = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < str.length; i++) {
+        const char = str[i];
+        const nextChar = str[i + 1];
+
+        if (char === '"' && inQuotes && nextChar === '"') {
+            currentCell += '"';
+            i++;
+        } else if (char === '"') {
+            inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+            currentRow.push(currentCell.trim());
+            currentCell = '';
+        } else if ((char === '\n' || char === '\r') && !inQuotes) {
+            if (char === '\r' && nextChar === '\n') {
+                i++;
+            }
+            currentRow.push(currentCell.trim());
+            rows.push(currentRow);
+            currentRow = [];
+            currentCell = '';
+        } else {
+            currentCell += char;
+        }
+    }
+    if (currentCell || currentRow.length > 0) {
+        currentRow.push(currentCell.trim());
+        rows.push(currentRow);
+    }
+    return rows.filter(r => r.some(c => c)); // filter empty rows
 };
 
 // Reusable Share Link Modal
@@ -441,8 +485,145 @@ function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleSta
     );
 }
 
+// --- NEW PDF EXPORT LOGIC FOR DASHBOARD ---
+const generateHrReportPdf = async (quality, onSuccess, onError, groupedByState, showLocality, getOverallExp) => {
+    const qualityProfiles = {
+        print: { scale: 2 },
+        screen: { scale: 1.5 }
+    };
+    const profile = qualityProfiles[quality] || qualityProfiles.print;
+    
+    // Set up doc and embedded Arabic font
+    const doc = new jsPDF('portrait', 'mm', 'a4');
+    const fileName = `Human_Resources_Dashboard_Report.pdf`;
+    
+    doc.addFileToVFS('Amiri-Regular.ttf', amiriFontBase64);
+    doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
+    doc.setFont('Amiri');
+
+    let y = 15;
+    const margin = 14;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    
+    const checkPageBreak = (currentY, elementHeight) => {
+        if (currentY + elementHeight + margin > pageHeight) {
+            doc.addPage();
+            doc.setFont('Amiri');
+            return margin;
+        }
+        return currentY;
+    };
+
+    const addTitle = (text, currentY) => {
+        currentY = checkPageBreak(currentY, 10);
+        doc.setFontSize(16); doc.setFont('Amiri', 'normal');
+        doc.text(text, margin, currentY, { align: 'left' });
+        return currentY + 10;
+    };
+
+    const autoTableStyles = {
+        theme: 'grid',
+        styles: { font: 'Amiri', fontSize: 9, cellPadding: 2, overflow: 'linebreak' },
+        headStyles: { font: 'Amiri', fillColor: [41, 128, 185], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center', fontSize: 10 },
+    };
+
+    try {
+        doc.setFontSize(20); doc.setFont('Amiri', 'normal');
+        doc.text(`Human Resources Dashboard Report`, margin, y, { align: 'left' });
+        y += 15;
+
+        // Flatten data for table
+        const flatData = [];
+        Object.entries(groupedByState).forEach(([state, members]) => {
+            members.forEach((m, idx) => {
+                let locArabic = '-';
+                if (m.locality) {
+                    const locs = STATE_LOCALITIES[m.state]?.localities || [];
+                    const foundLoc = locs.find(l => l.en === m.locality);
+                    locArabic = foundLoc ? foundLoc.ar : m.locality;
+                }
+                
+                const row = [
+                    STATE_LOCALITIES[state]?.ar || state,
+                    m.nameAr || m.name,
+                    m.phone || '-',
+                    m.jobTitle === 'اخرى' ? m.jobTitleOther : m.jobTitle,
+                    `${getOverallExp(m)} Years`
+                ];
+                if (showLocality) row.push(locArabic);
+                flatData.push(row);
+            });
+        });
+
+        if (flatData.length > 0) {
+            const headers = ['State', 'Name', 'Phone Number', 'Job Description', 'Overall Experience'];
+            if (showLocality) headers.push('Locality');
+            
+            y = addTitle('Human Resources List', y);
+            
+            doc.setFont('Amiri');
+            autoTable(doc, {
+                ...autoTableStyles,
+                head: [headers],
+                body: flatData,
+                startY: y,
+                didDrawPage: (data) => { y = data.cursor.y; doc.setFont('Amiri'); },
+                didParseCell: (data) => {
+                    data.cell.styles.font = 'Amiri';
+                    if (data.section === 'head') {
+                        data.cell.styles.halign = 'center';
+                        data.cell.styles.fontStyle = 'bold';
+                    } else if (data.section === 'body') {
+                        // Align arabic text to the right
+                        data.cell.styles.halign = 'right';
+                    }
+                }
+            });
+            y = doc.lastAutoTable.finalY + 10;
+        } else {
+             y = addTitle('No human resources match your filters.', y);
+        }
+
+        // Add page numbers
+        const pageCount = doc.internal.getNumberOfPages();
+        doc.setFont('Amiri'); doc.setFontSize(10); doc.setTextColor(150);
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            const text = `Page ${i} of ${pageCount}`;
+            const textWidth = doc.getStringUnitWidth(text) * doc.internal.getFontSize() / doc.internal.scaleFactor;
+            const x = (pageWidth - textWidth) / 2;
+            doc.text(text, x, pageHeight - 10);
+        }
+
+        // Save PDF logic identical to course report
+        if (Capacitor.isNativePlatform()) {
+            const base64Data = doc.output('datauristring').split('base64,')[1];
+            const writeResult = await Filesystem.writeFile({ path: fileName, data: base64Data, directory: Directory.Downloads });
+            await FileOpener.open({ filePath: writeResult.uri, contentType: 'application/pdf' });
+            onSuccess(`PDF saved to Downloads folder: ${fileName}`);
+        } else {
+            doc.save(fileName);
+            onSuccess("PDF download initiated.");
+        }
+    } catch (e) {
+        console.error("Error generating or saving PDF:", e);
+        onError(`Failed to save PDF: ${e.message || 'Unknown error'}`);
+    }
+};
+
 // --- NEW DASHBOARD COMPONENT ---
-function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, localityCoordinators, filters }) {
+function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, localityCoordinators, filters, setToast }) {
+    const [isPdfGenerating, setIsPdfGenerating] = useState(false);
+
+    const notify = (message, type = 'info') => {
+        if (setToast) {
+            setToast({ show: true, message, type });
+        } else {
+            alert(message);
+        }
+    };
+
     // Helper to extract numeric years of experience
     const extractYears = (durationStr) => {
         if (!durationStr) return 0;
@@ -467,7 +648,7 @@ function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, locality
 
     // Apply global filters to dashboard data
     const filteredMembers = useMemo(() => allMembers.filter(m => {
-        if (filters.state && m.state !== filters.state && m._level !== 'federal') return false;
+        if (filters.state && m.state !== filters.state) return false;
         if (filters.locality && m.locality !== filters.locality) return false;
         
         const actualJobTitle = m.jobTitle === 'اخرى' ? m.jobTitleOther : m.jobTitle;
@@ -503,14 +684,22 @@ function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, locality
                 roleHead: 0,
                 roleMember: 0,
                 roleSec: 0,
-                hrLocalityCount: 0 
+                hrLocalityCount: 0,
+                coveredLocalities: new Set() // Tracks unique localities covered
             };
         }
         
         // Count Levels
         if (m._level === 'state') stateCounts[stateKey].hrStateCount += 1;
-        if (m._level === 'locality') stateCounts[stateKey].hrLocalityCount += 1;
         if (m._level === 'federal') stateCounts[stateKey].hrStateCount += 1;
+        
+        if (m._level === 'locality') {
+            stateCounts[stateKey].hrLocalityCount += 1;
+            // Add unique localities into set for coverage calculations
+            if (m.locality) {
+                stateCounts[stateKey].coveredLocalities.add(m.locality);
+            }
+        }
 
         // Count Responsibilities/Roles (الصفة)
         if (m.role === 'مدير البرنامج') stateCounts[stateKey].roleManager += 1;
@@ -550,7 +739,7 @@ function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, locality
 
     // EXPORT FUNCTIONS
     const handleExportCSV = () => {
-        const headers = ['State', 'Name', 'Job Description', 'Overall Experience'];
+        const headers = ['State', 'Name', 'Phone Number', 'Job Description', 'Overall Experience'];
         if (showLocality) headers.push('Locality');
 
         let csv = headers.join(',') + '\n';
@@ -564,9 +753,13 @@ function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, locality
                     locArabic = foundLoc ? foundLoc.ar : m.locality;
                 }
 
+                // Append tab to prevent Excel converting long phone numbers
+                let safePhone = m.phone ? `\t${m.phone}` : '';
+
                 const row = [
                     `"${STATE_LOCALITIES[state]?.ar || state}"`,
                     `"${m.nameAr || m.name}"`,
+                    `"${safePhone}"`,
                     `"${m.jobTitle === 'اخرى' ? m.jobTitleOther : m.jobTitle}"`,
                     `"${getOverallExp(m)} Years"`
                 ];
@@ -585,34 +778,28 @@ function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, locality
         URL.revokeObjectURL(url);
     };
 
-    const handleExportPDF = () => {
-        const printWindow = window.open('', '_blank');
-        const tableHtml = document.getElementById('hr-list-table').outerHTML;
+    const handleGeneratePdf = async (quality) => {
+        setIsPdfGenerating(true);
+        // Small delay to let the UI show the loading spinner before the heavy jsPDF blocking task runs
+        await new Promise(resolve => setTimeout(resolve, 100));
         
-        printWindow.document.write(`
-            <html dir="rtl">
-                <head>
-                    <title>Human Resources List</title>
-                    <style>
-                        body { font-family: sans-serif; padding: 20px; color: #333; }
-                        h2 { text-align: center; color: #1e3a8a; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 20px; }
-                        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
-                        th, td { border: 1px solid #ddd; padding: 10px; text-align: right; }
-                        th { background-color: #f9fafb; font-weight: bold; color: #4b5563; }
-                        tr:nth-child(even) { background-color: #fcfcfc; }
-                    </style>
-                </head>
-                <body>
-                    <h2>قائمة الموارد البشرية (Human Resources List)</h2>
-                    ${tableHtml}
-                    <script>
-                        window.onload = () => { window.print(); window.close(); };
-                    </script>
-                </body>
-            </html>
-        `);
-        printWindow.document.close();
+        try {
+            await generateHrReportPdf(
+                quality,
+                (message) => notify(message, 'success'),
+                (message) => notify(message, 'error'),
+                groupedByState,
+                showLocality,
+                getOverallExp
+            );
+        } catch (error) {
+            console.error("Failed to generate PDF:", error);
+            notify("Sorry, there was an error generating the PDF.", 'error');
+        } finally {
+            setIsPdfGenerating(false);
+        }
     };
+
 
     return (
         <div className="space-y-6">
@@ -633,89 +820,109 @@ function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, locality
                 </div>
             </div>
 
-            {/* Summary Table by State */}
-            <Card>
-                <CardBody>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">HR Distribution by State</h3>
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200 border">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">State</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200">HR in State Level</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 border-l border-gray-200">مدير البرنامج</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50">رئيس وحدة</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50">عضو في وحدة</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50">سكرتارية</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200">HR in Locality Level</th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                                {Object.entries(stateCounts).map(([state, counts]) => (
-                                    <tr key={state}>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{STATE_LOCALITIES[state]?.ar || state}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-700 border-l border-gray-200">{counts.hrStateCount}</td>
-                                        
-                                        {/* Responsibilities Breakdown Columns */}
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 bg-blue-50/30 border-l border-gray-200">{counts.roleManager}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 bg-blue-50/30">{counts.roleHead}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 bg-blue-50/30">{counts.roleMember}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 bg-blue-50/30">{counts.roleSec}</td>
+            {/* Main Content Layout - Table and Graphs Side by Side */}
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                
+                {/* Summary Table by State (Spans 2 columns on extra large screens) */}
+                <div className="xl:col-span-2 flex flex-col">
+                    <Card className="flex-1">
+                        <CardBody>
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">HR Distribution by State</h3>
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-gray-200 border">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">State</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200">HR in State Level</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 border-l border-gray-200">مدير البرنامج</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50">رئيس وحدة</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50">عضو في وحدة</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50">سكرتارية</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200">HR in Locality Level</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {Object.entries(stateCounts).map(([state, counts]) => {
+                                            // Calculate Locality Coverage % for the current state
+                                            const totalLocalities = STATE_LOCALITIES[state]?.localities?.length || 0;
+                                            const uniqueLocalities = counts.coveredLocalities.size;
+                                            const coveragePercent = totalLocalities > 0 ? Math.round((uniqueLocalities / totalLocalities) * 100) : 0;
+                                            
+                                            return (
+                                            <tr key={state}>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{STATE_LOCALITIES[state]?.ar || state}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-700 border-l border-gray-200">{counts.hrStateCount}</td>
+                                                
+                                                {/* Responsibilities Breakdown Columns */}
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 bg-blue-50/30 border-l border-gray-200">{counts.roleManager}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 bg-blue-50/30">{counts.roleHead}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 bg-blue-50/30">{counts.roleMember}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 bg-blue-50/30">{counts.roleSec}</td>
 
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-700 border-l border-gray-200">{counts.hrLocalityCount}</td>
-                                    </tr>
+                                                {/* Formatting with Coverage Percentage Logic */}
+                                                <td className="px-6 py-4 whitespace-nowrap border-l border-gray-200">
+                                                    <div className="text-sm font-bold text-gray-700">{counts.hrLocalityCount}</div>
+                                                    {totalLocalities > 0 && (
+                                                        <div className="text-xs text-gray-500 mt-1">
+                                                            {uniqueLocalities}/{totalLocalities} {coveragePercent}%
+                                                        </div>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        )})}
+                                        {Object.keys(stateCounts).length === 0 && (
+                                            <tr><td colSpan="7" className="px-6 py-4 text-center text-gray-500">No data matching filters.</td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </CardBody>
+                    </Card>
+                </div>
+
+                {/* Graphs Column (Spans 1 column on extra large screens) */}
+                <div className="space-y-6 xl:col-span-1 flex flex-col">
+                    {/* Job Distribution */}
+                    <Card className="flex-1">
+                        <CardBody>
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Job Description Distribution</h3>
+                            <div className="space-y-3">
+                                {Object.entries(jobDist).sort((a,b) => b[1] - a[1]).map(([job, count]) => (
+                                    <div key={job}>
+                                        <div className="flex justify-between text-sm mb-1">
+                                            <span className="font-medium text-gray-700">{job}</span>
+                                            <span className="text-gray-500">{count}</span>
+                                        </div>
+                                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                            <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${(count / maxJobCount) * 100}%` }}></div>
+                                        </div>
+                                    </div>
                                 ))}
-                                {Object.keys(stateCounts).length === 0 && (
-                                    <tr><td colSpan="7" className="px-6 py-4 text-center text-gray-500">No data matching filters.</td></tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </CardBody>
-            </Card>
+                                {Object.keys(jobDist).length === 0 && <span className="text-sm text-gray-500">No data available.</span>}
+                            </div>
+                        </CardBody>
+                    </Card>
 
-            {/* Graphs Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Job Distribution */}
-                <Card>
-                    <CardBody>
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Job Description Distribution</h3>
-                        <div className="space-y-3">
-                            {Object.entries(jobDist).sort((a,b) => b[1] - a[1]).map(([job, count]) => (
-                                <div key={job}>
-                                    <div className="flex justify-between text-sm mb-1">
-                                        <span className="font-medium text-gray-700">{job}</span>
-                                        <span className="text-gray-500">{count}</span>
+                    {/* Experience Distribution */}
+                    <Card className="flex-1">
+                        <CardBody>
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Years of Experience</h3>
+                            <div className="space-y-3">
+                                {Object.entries(expDist).map(([range, count]) => (
+                                    <div key={range}>
+                                        <div className="flex justify-between text-sm mb-1">
+                                            <span className="font-medium text-gray-700">{range}</span>
+                                            <span className="text-gray-500">{count}</span>
+                                        </div>
+                                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                            <div className="bg-purple-600 h-2.5 rounded-full" style={{ width: `${maxExpCount === 0 ? 0 : (count / maxExpCount) * 100}%` }}></div>
+                                        </div>
                                     </div>
-                                    <div className="w-full bg-gray-200 rounded-full h-2.5">
-                                        <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${(count / maxJobCount) * 100}%` }}></div>
-                                    </div>
-                                </div>
-                            ))}
-                            {Object.keys(jobDist).length === 0 && <span className="text-sm text-gray-500">No data available.</span>}
-                        </div>
-                    </CardBody>
-                </Card>
-
-                {/* Experience Distribution */}
-                <Card>
-                    <CardBody>
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Years of Experience</h3>
-                        <div className="space-y-3">
-                            {Object.entries(expDist).map(([range, count]) => (
-                                <div key={range}>
-                                    <div className="flex justify-between text-sm mb-1">
-                                        <span className="font-medium text-gray-700">{range}</span>
-                                        <span className="text-gray-500">{count}</span>
-                                    </div>
-                                    <div className="w-full bg-gray-200 rounded-full h-2.5">
-                                        <div className="bg-purple-600 h-2.5 rounded-full" style={{ width: `${maxExpCount === 0 ? 0 : (count / maxExpCount) * 100}%` }}></div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </CardBody>
-                </Card>
+                                ))}
+                            </div>
+                        </CardBody>
+                    </Card>
+                </div>
             </div>
 
             {/* Detailed HR List Table */}
@@ -723,9 +930,19 @@ function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, locality
                 <CardBody>
                     <div className="flex flex-wrap justify-between items-center mb-4 border-b pb-2 gap-4">
                         <h3 className="text-lg font-semibold text-gray-800">Human Resources List</h3>
-                        <div className="flex gap-2">
+                        <div className="flex items-center gap-2">
                             <Button size="sm" variant="secondary" onClick={handleExportCSV}>Export Excel (CSV)</Button>
-                            <Button size="sm" variant="secondary" onClick={handleExportPDF}>Export PDF</Button>
+                            
+                            {/* Updated PDF export buttons styled exactly like course report */}
+                            <Button size="sm" variant="secondary" onClick={() => handleGeneratePdf('print')} disabled={isPdfGenerating}>
+                                <PdfIcon /> Print PDF
+                            </Button>
+                            
+                            {isPdfGenerating && (
+                                <div className="flex items-center gap-2 text-gray-500 text-sm">
+                                    <Spinner size="sm" /><span>Generating...</span>
+                                </div>
+                            )}
                         </div>
                     </div>
                     
@@ -735,6 +952,7 @@ function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, locality
                                 <tr>
                                     <th className="border p-3 text-left text-xs font-medium text-gray-500 uppercase">State</th>
                                     <th className="border p-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                                    <th className="border p-3 text-left text-xs font-medium text-gray-500 uppercase">Phone Number</th>
                                     <th className="border p-3 text-left text-xs font-medium text-gray-500 uppercase">Job Description</th>
                                     <th className="border p-3 text-left text-xs font-medium text-gray-500 uppercase">Overall Experience</th>
                                     {showLocality && <th className="border p-3 text-left text-xs font-medium text-gray-500 uppercase">Locality</th>}
@@ -759,6 +977,7 @@ function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, locality
                                                     </td>
                                                 )}
                                                 <td className="border p-3 text-sm text-gray-900">{m.nameAr || m.name}</td>
+                                                <td className="border p-3 text-sm text-gray-700" dir="ltr" style={{ textAlign: 'right' }}>{m.phone || '-'}</td>
                                                 <td className="border p-3 text-sm text-gray-700">{m.jobTitle === 'اخرى' ? m.jobTitleOther : m.jobTitle}</td>
                                                 <td className="border p-3 text-sm text-gray-700">{getOverallExp(m)} Years</td>
                                                 {showLocality && <td className="border p-3 text-sm text-gray-700">{locArabic}</td>}
@@ -766,7 +985,7 @@ function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, locality
                                         );
                                     })
                                 )) : (
-                                    <tr><td colSpan={showLocality ? "5" : "4"} className="p-6 text-center text-gray-500">No human resources match your filters.</td></tr>
+                                    <tr><td colSpan={showLocality ? "6" : "5"} className="p-6 text-center text-gray-500">No human resources match your filters.</td></tr>
                                 )}
                             </tbody>
                         </table>
@@ -778,6 +997,420 @@ function ProgramTeamDashboard({ federalCoordinators, stateCoordinators, locality
 }
 // --- END NEW DASHBOARD COMPONENT ---
 
+// --- NEW COMPONENT: Bulk Import Modal ---
+function BulkImportModal({ isOpen, onClose, allData, fetchers, permissions, setToast }) {
+    const [step, setStep] = useState(1);
+    const [parsedRows, setParsedRows] = useState([]);
+    
+    // Mappings
+    const [mappingData, setMappingData] = useState({
+        levels: {},
+        states: {},
+        jobs: {},
+        roles: {},
+        units: {}
+    });
+    
+    const [unmappedLists, setUnmappedLists] = useState({
+        levels: [], states: [], jobs: [], roles: [], units: []
+    });
+
+    const [isExecuting, setIsExecuting] = useState(false);
+    const [summary, setSummary] = useState({ updates: 0, adds: 0 });
+
+    const STD_LEVELS = ['federal', 'state', 'locality'];
+    const STD_ROLES = ['مدير البرنامج', 'رئيس وحدة', 'عضو في وحدة', 'سكرتارية'];
+    const STD_UNITS = ['العلاج المتكامل للاطفال اقل من 5 سنوات', 'حديثي الولادة', 'المراهقين وحماية الاطفال', 'المتابعة والتقييم والمعلومات', 'الامداد', 'تعزيز صحة الاطفال والمراهقين'];
+    const STD_STATES = Object.keys(STATE_LOCALITIES);
+    const STD_JOBS = STANDARD_JOB_TITLES;
+
+    useEffect(() => {
+        if (isOpen) {
+            setStep(1);
+            setParsedRows([]);
+            setMappingData({ levels: {}, states: {}, jobs: {}, roles: {}, units: {} });
+            setUnmappedLists({ levels: [], states: [], jobs: [], roles: [], units: [] });
+            setIsExecuting(false);
+            setSummary({ updates: 0, adds: 0 });
+        }
+    }, [isOpen]);
+
+    const handleDownloadTemplate = () => {
+        // Ensure the ID header clearly warns users not to alter it
+        const headers = ['ID_(DO_NOT_EDIT)', 'Level', 'State', 'Locality', 'Name_En', 'Name_Ar', 'Phone', 'Email', 'Job_Title', 'Job_Title_Other', 'Role', 'Unit', 'Join_Date', 'Bank_Account', 'Bank_Name', 'Bank_Branch', 'Account_Holder', 'Comments'];
+        
+        let csv = '\uFEFF' + headers.join(',') + '\n';
+        allData.forEach(row => {
+            const rowData = headers.map(h => {
+                let val = row[h];
+                if (h === 'Level') val = row._level || '';
+                if (h === 'ID_(DO_NOT_EDIT)') val = row.id || '';
+                if (h === 'Name_En') val = row.name || '';
+                if (h === 'Name_Ar') val = row.nameAr || '';
+                if (h === 'Job_Title') val = row.jobTitle || '';
+                if (h === 'Job_Title_Other') val = row.jobTitleOther || '';
+                if (h === 'Bank_Account') val = row.bankAccount || '';
+                if (h === 'Bank_Name') val = row.bankName || '';
+                if (h === 'Bank_Branch') val = row.bankBranch || '';
+                if (h === 'Account_Holder') val = row.accountHolder || '';
+                if (h === 'Join_Date') val = row.joinDate || '';
+                if (h === 'Phone') val = row.phone || '';
+
+                if (val == null) return '""';
+                
+                // CRITICAL FIX FOR EXCEL:
+                // Prepend an invisible tab (\t) to IDs, Phones, and Bank Accounts.
+                // This prevents Excel from treating them as numbers, dropping leading zeros, or converting long IDs to scientific notation.
+                // Our parsing function (.trim()) will remove this tab upon upload.
+                if ((h === 'ID_(DO_NOT_EDIT)' || h === 'Phone' || h === 'Bank_Account') && val !== '') {
+                    val = '\t' + val;
+                }
+
+                return `"${String(val).replace(/"/g, '""')}"`;
+            });
+            csv += rowData.join(',') + '\n';
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Program_Team_Template.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const handleFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            const text = evt.target.result;
+            const rows = parseCSV(text);
+            if (rows.length < 2) {
+                setToast({ show: true, message: 'Invalid CSV file. Must have headers and at least one data row.', type: 'error' });
+                return;
+            }
+
+            const headers = rows[0].map(h => h.trim().replace(/^\uFEFF/, '')); // strip BOM
+            const dataRows = rows.slice(1);
+            
+            const parsed = [];
+            const unmapped = { levels: new Set(), states: new Set(), jobs: new Set(), roles: new Set(), units: new Set() };
+            
+            let updates = 0;
+            let adds = 0;
+            
+            // Allow flexibility if the user changes the column name slightly in Excel
+            const idHeader = headers.find(h => h === 'ID_(DO_NOT_EDIT)' || h === 'ID') || 'ID_(DO_NOT_EDIT)';
+
+            dataRows.forEach(rowArr => {
+                const obj = {};
+                headers.forEach((h, i) => {
+                    // .trim() safely removes the \t we added to protect the data in Excel
+                    obj[h] = rowArr[i] ? rowArr[i].trim() : '';
+                });
+
+                if (!obj.Name_En && !obj.Name_Ar) return; // Skip entirely empty rows
+
+                const rowId = obj[idHeader];
+                if (rowId) {
+                    obj.ID = rowId;
+                    updates++;
+                } else {
+                    adds++;
+                }
+
+                // Collect unique unmapped values
+                if (obj.Level && !STD_LEVELS.includes(obj.Level)) unmapped.levels.add(obj.Level);
+                
+                const normState = normalizeState(obj.State);
+                if (obj.State && !STATE_LOCALITIES[normState]) unmapped.states.add(obj.State);
+                
+                if (obj.Job_Title && obj.Job_Title !== 'اخرى' && !STD_JOBS.includes(obj.Job_Title)) unmapped.jobs.add(obj.Job_Title);
+                if (obj.Role && !STD_ROLES.includes(obj.Role)) unmapped.roles.add(obj.Role);
+                if (obj.Unit && !STD_UNITS.includes(obj.Unit)) unmapped.units.add(obj.Unit);
+
+                parsed.push(obj);
+            });
+
+            setParsedRows(parsed);
+            setSummary({ updates, adds });
+
+            const needsMapping = Object.values(unmapped).some(set => set.size > 0);
+            if (needsMapping) {
+                setUnmappedLists({
+                    levels: Array.from(unmapped.levels),
+                    states: Array.from(unmapped.states),
+                    jobs: Array.from(unmapped.jobs),
+                    roles: Array.from(unmapped.roles),
+                    units: Array.from(unmapped.units)
+                });
+                setStep(2);
+            } else {
+                setStep(3); // Skip directly to execution if everything is standard
+            }
+        };
+        reader.readAsText(file);
+    };
+
+    const handleMappingChange = (category, originalValue, mappedValue) => {
+        setMappingData(prev => ({
+            ...prev,
+            [category]: { ...prev[category], [originalValue]: mappedValue }
+        }));
+    };
+
+    const executeImport = async () => {
+        setIsExecuting(true);
+        try {
+            const promises = [];
+            
+            for (const row of parsedRows) {
+                // Apply Mappings
+                const levelRaw = row.Level;
+                const level = mappingData.levels[levelRaw] || levelRaw;
+                if (!level) continue; // Skip if no level is determined
+
+                const stateRaw = row.State;
+                let state = normalizeState(stateRaw);
+                if (mappingData.states[stateRaw]) state = mappingData.states[stateRaw];
+
+                const jobRaw = row.Job_Title;
+                const job = mappingData.jobs[jobRaw] || jobRaw;
+
+                const roleRaw = row.Role;
+                const role = mappingData.roles[roleRaw] || roleRaw;
+
+                const unitRaw = row.Unit;
+                const unit = mappingData.units[unitRaw] || unitRaw;
+
+                const payload = {
+                    name: row.Name_En || '',
+                    nameAr: row.Name_Ar || '',
+                    phone: row.Phone || '',
+                    email: row.Email || '',
+                    state: state || '',
+                    locality: row.Locality || '',
+                    jobTitle: job || '',
+                    jobTitleOther: row.Job_Title_Other || '',
+                    role: role || '',
+                    unit: unit || '',
+                    joinDate: row.Join_Date || '',
+                    bankAccount: row.Bank_Account || '',
+                    bankName: row.Bank_Name || '',
+                    bankBranch: row.Bank_Branch || '',
+                    accountHolder: row.Account_Holder || '',
+                    comments: row.Comments || '',
+                };
+
+                if (row.ID) payload.id = row.ID;
+
+                // Adjust based on level exactly as the main form does
+                if (payload.jobTitle !== 'اخرى') payload.jobTitleOther = '';
+                if (level === 'federal') {
+                     delete payload.state;
+                     delete payload.locality;
+                     if (payload.role !== 'مدير البرنامج') payload.directorDate = '';
+                     if (payload.role !== 'رئيس وحدة' && payload.role !== 'عضو في وحدة') payload.unit = '';
+                } else if (level === 'state') {
+                     delete payload.locality;
+                     if (payload.role !== 'مدير البرنامج') payload.directorDate = '';
+                     if (payload.role !== 'رئيس وحدة' && payload.role !== 'عضو في وحدة') payload.unit = '';
+                } else if (level === 'locality') {
+                    delete payload.role;
+                    delete payload.directorDate;
+                    delete payload.unit;
+                    delete payload.joinDate; 
+                }
+
+                // Determine upsert function
+                let upsertFn;
+                if (level === 'federal') upsertFn = upsertFederalCoordinator;
+                else if (level === 'state') upsertFn = upsertStateCoordinator;
+                else if (level === 'locality') upsertFn = upsertLocalityCoordinator;
+                
+                if (upsertFn) {
+                    const upsertPromise = upsertFn(payload).then(async (newId) => {
+                        // Role Assignment Logic (identical to main form)
+                        let newRole = null;
+                        const isManagerOrHead = payload.role === 'مدير البرنامج' || payload.role === 'رئيس وحدة';
+                        if (level === 'federal') newRole = isManagerOrHead ? 'federal_manager' : 'federal_coordinator';
+                        else if (level === 'state') newRole = isManagerOrHead ? 'states_manager' : 'state_coordinator';
+                        else if (level === 'locality') newRole = 'locality_manager';
+
+                        if (newRole && payload.email) {
+                            try { await updateUserRoleByEmail(payload.email, newRole, payload.state, payload.locality); } 
+                            catch (e) { console.warn("Could not update role during bulk import for", payload.email); }
+                        }
+                    });
+                    promises.push(upsertPromise);
+                }
+            }
+
+            await Promise.all(promises);
+            
+            // Refresh data
+            await fetchers.federal.list(true);
+            await fetchers.state.list(true);
+            await fetchers.locality.list(true);
+            
+            setToast({ show: true, message: `Successfully processed ${promises.length} records.`, type: 'success' });
+            onClose();
+        } catch (error) {
+            console.error("Bulk Import Failed", error);
+            setToast({ show: true, message: `Bulk Import Failed: ${error.message}`, type: 'error' });
+        } finally {
+            setIsExecuting(false);
+        }
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Bulk Import/Update Program Team" size="3xl">
+            <div className="p-4" dir="ltr">
+                {/* STEP 1: UPLOAD */}
+                {step === 1 && (
+                    <div className="space-y-6">
+                        <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
+                            <h4 className="font-bold text-blue-800 mb-2">Step 1: Prepare your data</h4>
+                            <p className="text-sm text-blue-700 mb-4">
+                                Download the current data template. <strong>Do NOT change the <code className="bg-blue-100 px-1 rounded">ID_(DO_NOT_EDIT)</code> column for existing members</strong> if you want to update them. Leave ID blank to add new members. 
+                                <br/><br/>
+                                <em>Note: IDs and Phone Numbers are exported as raw text to prevent Excel from removing leading zeros. If Excel asks to perform Data Conversions, please click <strong>"Don't Convert"</strong>.</em>
+                            </p>
+                            <Button onClick={handleDownloadTemplate} variant="primary">Download Current Data Template (CSV)</Button>
+                        </div>
+
+                        <div className="bg-gray-50 p-4 rounded-md border">
+                            <h4 className="font-bold text-gray-800 mb-2">Step 2: Upload CSV</h4>
+                            <input 
+                                type="file" 
+                                accept=".csv" 
+                                onChange={handleFileUpload} 
+                                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {/* STEP 2: MAPPING */}
+                {step === 2 && (
+                    <div className="space-y-6">
+                        <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200">
+                            <h4 className="font-bold text-yellow-800 mb-2">Map Unrecognized Values</h4>
+                            <p className="text-sm text-yellow-700">The uploaded file contains values that don't match the system's standard dropdowns. Please map them below. Unmapped items will be imported exactly as they appear in the file.</p>
+                        </div>
+                        
+                        <div className="max-h-96 overflow-y-auto space-y-4 pr-2">
+                            {unmappedLists.levels.length > 0 && (
+                                <div className="border p-3 rounded bg-white">
+                                    <h5 className="font-bold text-sm mb-2 text-gray-700 border-b pb-1">Map Levels</h5>
+                                    {unmappedLists.levels.map(val => (
+                                        <div key={val} className="flex items-center justify-between gap-4 mb-2">
+                                            <span className="text-sm text-red-600 break-all w-1/2">"{val}"</span>
+                                            <Select value={mappingData.levels[val] || ''} onChange={(e) => handleMappingChange('levels', val, e.target.value)} className="w-1/2 text-sm">
+                                                <option value="">-- Keep Original --</option>
+                                                {STD_LEVELS.map(s => <option key={s} value={s}>{s}</option>)}
+                                            </Select>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {unmappedLists.states.length > 0 && (
+                                <div className="border p-3 rounded bg-white">
+                                    <h5 className="font-bold text-sm mb-2 text-gray-700 border-b pb-1">Map States</h5>
+                                    {unmappedLists.states.map(val => (
+                                        <div key={val} className="flex items-center justify-between gap-4 mb-2">
+                                            <span className="text-sm text-red-600 break-all w-1/2">"{val}"</span>
+                                            <Select value={mappingData.states[val] || ''} onChange={(e) => handleMappingChange('states', val, e.target.value)} className="w-1/2 text-sm">
+                                                <option value="">-- Keep Original --</option>
+                                                {STD_STATES.map(s => <option key={s} value={s}>{STATE_LOCALITIES[s]?.ar || s}</option>)}
+                                            </Select>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {unmappedLists.jobs.length > 0 && (
+                                <div className="border p-3 rounded bg-white">
+                                    <h5 className="font-bold text-sm mb-2 text-gray-700 border-b pb-1">Map Job Titles</h5>
+                                    {unmappedLists.jobs.map(val => (
+                                        <div key={val} className="flex items-center justify-between gap-4 mb-2">
+                                            <span className="text-sm text-red-600 break-all w-1/2">"{val}"</span>
+                                            <Select value={mappingData.jobs[val] || ''} onChange={(e) => handleMappingChange('jobs', val, e.target.value)} className="w-1/2 text-sm">
+                                                <option value="">-- Keep Original --</option>
+                                                {STD_JOBS.map(s => <option key={s} value={s}>{s}</option>)}
+                                                <option value="اخرى">اخرى (Other)</option>
+                                            </Select>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {unmappedLists.roles.length > 0 && (
+                                <div className="border p-3 rounded bg-white">
+                                    <h5 className="font-bold text-sm mb-2 text-gray-700 border-b pb-1">Map Job Responsibilities (الصفة)</h5>
+                                    {unmappedLists.roles.map(val => (
+                                        <div key={val} className="flex items-center justify-between gap-4 mb-2">
+                                            <span className="text-sm text-red-600 break-all w-1/2">"{val}"</span>
+                                            <Select value={mappingData.roles[val] || ''} onChange={(e) => handleMappingChange('roles', val, e.target.value)} className="w-1/2 text-sm" dir="rtl">
+                                                <option value="">-- Keep Original --</option>
+                                                {STD_ROLES.map(s => <option key={s} value={s}>{s}</option>)}
+                                            </Select>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {unmappedLists.units.length > 0 && (
+                                <div className="border p-3 rounded bg-white">
+                                    <h5 className="font-bold text-sm mb-2 text-gray-700 border-b pb-1">Map Units</h5>
+                                    {unmappedLists.units.map(val => (
+                                        <div key={val} className="flex items-center justify-between gap-4 mb-2">
+                                            <span className="text-sm text-red-600 break-all w-1/2">"{val}"</span>
+                                            <Select value={mappingData.units[val] || ''} onChange={(e) => handleMappingChange('units', val, e.target.value)} className="w-1/2 text-sm" dir="rtl">
+                                                <option value="">-- Keep Original --</option>
+                                                {STD_UNITS.map(s => <option key={s} value={s}>{s}</option>)}
+                                            </Select>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex justify-end gap-2 border-t pt-4">
+                            <Button variant="secondary" onClick={() => setStep(1)}>Back</Button>
+                            <Button variant="primary" onClick={() => setStep(3)}>Continue to Import</Button>
+                        </div>
+                    </div>
+                )}
+
+                {/* STEP 3: EXECUTE */}
+                {step === 3 && (
+                    <div className="space-y-6 text-center py-6">
+                        <h3 className="text-2xl font-bold text-gray-800">Ready to Import</h3>
+                        <div className="bg-gray-100 inline-block p-6 rounded-lg text-left">
+                            <ul className="space-y-2 text-lg">
+                                <li><span className="font-bold text-blue-600">{summary.updates}</span> records will be <strong>updated</strong>.</li>
+                                <li><span className="font-bold text-green-600">{summary.adds}</span> new records will be <strong>added</strong>.</li>
+                            </ul>
+                        </div>
+                        <p className="text-sm text-gray-500 mt-4">Depending on the size of the file, this may take a few moments. Please do not close this window.</p>
+                        
+                        <div className="flex justify-center gap-4 mt-8">
+                            <Button variant="secondary" onClick={() => setStep(1)} disabled={isExecuting}>Cancel</Button>
+                            <Button variant="primary" onClick={executeImport} disabled={isExecuting}>
+                                {isExecuting ? <><Spinner size="sm" className="mr-2" /> Processing...</> : "Execute Import"}
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </Modal>
+    );
+}
 
 const updateUserRoleByEmail = async (email, newRole, state, locality) => {
     if (!email || !newRole) return; 
@@ -873,6 +1506,8 @@ export function ProgramTeamView({ permissions, userStates }) {
 
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+
     const [modalMode, setModalMode] = useState(null); 
     const [editingMember, setEditingMember] = useState(null);
     const [originalMember, setOriginalMember] = useState(null); // Used for pending diff view
@@ -952,7 +1587,7 @@ export function ProgramTeamView({ permissions, userStates }) {
             const localityMatch = !filters.locality || m.locality === filters.locality;
             const jobMatch = !filters.jobTitle || (m.jobTitle === 'اخرى' ? m.jobTitleOther : m.jobTitle) === filters.jobTitle;
             const roleMatch = !filters.role || m.role === filters.role; 
-            const unitMatch = !filters.unit || m.unit === filters.unit; // ADDED UNIT CHECK
+            const unitMatch = !filters.unit || m.unit === filters.unit; 
 
             return stateMatch && localityMatch && jobMatch && roleMatch && unitMatch;
         });
@@ -970,12 +1605,11 @@ export function ProgramTeamView({ permissions, userStates }) {
                 else { newFilters.locality = ''; }
                 if (value === 'locality') {
                     newFilters.role = '';
-                    newFilters.unit = ''; // Reset unit when switching to locality
+                    newFilters.unit = ''; 
                 }
             }
             if (filterName === 'state') newFilters.locality = '';
             
-            // Clean up unit filter if role changes to a non-unit role
             if (filterName === 'role' && value !== 'رئيس وحدة' && value !== 'عضو في وحدة' && value !== '') {
                 newFilters.unit = '';
             }
@@ -992,7 +1626,6 @@ export function ProgramTeamView({ permissions, userStates }) {
         setEditingMember(member); 
         
         if (isPending) {
-            // Find if this pending member exists in the currently approved list
             const allApproved = [
                 ...(federalCoordinators || []),
                 ...(stateCoordinators || []),
@@ -1041,7 +1674,6 @@ export function ProgramTeamView({ permissions, userStates }) {
         }
     };
     
-    // --- SINGLE AND BULK DELETE LOGIC (UPDATED W/ MODAL) ---
     const handleDeleteSingleClick = (level, id) => {
         setDeleteConfig({ isOpen: true, type: 'single', level, id });
     };
@@ -1088,7 +1720,6 @@ export function ProgramTeamView({ permissions, userStates }) {
     };
 
 
-    // --- AUTO NORMALIZE JOB DESCRIPTIONS LOGIC ---
     const handleOpenAutoNormalize = async () => {
         if (!federalCoordinators || !stateCoordinators || !localityCoordinators) {
             await fetchFederalCoordinators();
@@ -1166,8 +1797,6 @@ export function ProgramTeamView({ permissions, userStates }) {
         }
     };
 
-
-    // --- SELECTION HANDLERS ---
     const toggleSelection = (id) => {
         const newSet = new Set(selectedMemberIds);
         if (newSet.has(id)) newSet.delete(id);
@@ -1183,7 +1812,6 @@ export function ProgramTeamView({ permissions, userStates }) {
         }
     };
     
-    // --- APPROVE/REJECT LOGIC ---
     const handleOpenLinkModal = async () => { setIsLinkModalOpen(true); fetchCoordinatorApplicationSettings(); };
     const handleToggleLinkStatus = async () => {
         try {
@@ -1199,7 +1827,7 @@ export function ProgramTeamView({ permissions, userStates }) {
         const currentUser = auth.currentUser;
         if (!currentUser) return setFeedbackModal({ isOpen: true, type: 'error', message: 'Error: You must be logged in to approve submissions.' });
         
-        setIsActionDisabled(true); // Disable global action buttons
+        setIsActionDisabled(true); 
         try {
             const approveFn = approveFnMap[filters.level];
             const approverInfo = { uid: currentUser.uid, email: currentUser.email, approvedAt: new Date() };
@@ -1230,7 +1858,7 @@ export function ProgramTeamView({ permissions, userStates }) {
         if (!auth.currentUser) return setFeedbackModal({ isOpen: true, type: 'error', message: 'Error: You must be logged in.' });
         
         if (window.confirm("Are you sure you want to reject this submission?")) {
-            setIsActionDisabled(true); // Disable global action buttons
+            setIsActionDisabled(true); 
             try {
                 const rejectFn = rejectFnMap[filters.level];
                 const rejecterInfo = { uid: auth.currentUser.uid, email: auth.currentUser.email, rejectedAt: new Date() };
@@ -1270,6 +1898,12 @@ export function ProgramTeamView({ permissions, userStates }) {
         });
         return Array.from(jobs).sort();
     }, [federalCoordinators, stateCoordinators, localityCoordinators]);
+
+    const allCoordinatorsWithLevel = useMemo(() => [
+        ...(federalCoordinators || []).map(c => ({...c, _level: 'federal'})),
+        ...(stateCoordinators || []).map(c => ({...c, _level: 'state'})),
+        ...(localityCoordinators || []).map(c => ({...c, _level: 'locality'}))
+    ], [federalCoordinators, stateCoordinators, localityCoordinators]);
 
     return (
         <div>
@@ -1328,6 +1962,9 @@ export function ProgramTeamView({ permissions, userStates }) {
                         <div className="flex gap-2">
                             {permissions.canManageHumanResource && <Button onClick={handleAdd}>Add New Team Member</Button>}
                             {permissions.canManageHumanResource && <Button variant="secondary" onClick={handleOpenAutoNormalize}>Auto-Normalize Jobs</Button>}
+                            {permissions.canUseFederalManagerAdvancedFeatures && (
+                                <Button variant="secondary" onClick={() => setIsBulkImportOpen(true)}>Bulk Import/Update</Button>
+                            )}
                         </div>
                     </FormGroup>
                 )}
@@ -1418,7 +2055,6 @@ export function ProgramTeamView({ permissions, userStates }) {
                         {currentLevelData.loading ? <Spinner /> : (
                             <Table headers={tableHeaders[filters.level]}>
                                 {filteredMembers.length > 0 ? filteredMembers.map(c => {
-                                    // Make sure locality in table is displayed in Arabic if applicable
                                     let locAr = c.locality;
                                     if (c.state && c.locality) {
                                         const locs = STATE_LOCALITIES[c.state]?.localities || [];
@@ -1436,7 +2072,6 @@ export function ProgramTeamView({ permissions, userStates }) {
                                                 onChange={() => toggleSelection(c.id)}
                                             />
                                         </td>
-                                        {/* CHANGED: Using Arabic Name if available, otherwise English Name */}
                                         <td className="p-4 text-sm">{c.nameAr || c.name}</td>
                                         {filters.level !== 'federal' && <td className="p-4 text-sm">{STATE_LOCALITIES[c.state]?.ar || c.state}</td>}
                                         {filters.level === 'locality' && <td className="p-4 text-sm">{locAr}</td>}
@@ -1548,6 +2183,20 @@ export function ProgramTeamView({ permissions, userStates }) {
                     <TeamMemberForm member={editingMember} onSave={handleSave} onCancel={handleCloseModal} />
                 )}
             </Modal>
+
+            {/* NEW BULK IMPORT MODAL WITH INLINE SETTOAST RE-ADDED */}
+            <BulkImportModal 
+                isOpen={isBulkImportOpen}
+                onClose={() => setIsBulkImportOpen(false)}
+                allData={allCoordinatorsWithLevel}
+                fetchers={fetchersByLevel}
+                permissions={permissions}
+                setToast={(toastData) => setFeedbackModal({ 
+                    isOpen: true, 
+                    type: toastData.type, 
+                    message: toastData.message 
+                })}
+            />
         </div>
     );
 }

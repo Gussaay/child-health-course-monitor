@@ -419,10 +419,22 @@ export default function ProjectTrackerView({ permissions }) {
     const handleSaveMeeting = async (e) => {
         e.preventDefault();
         try {
+            // Generate the name map for public links
+            const map = currentMeeting.inviteeNamesMap || {};
+            (currentMeeting.invitees || []).forEach(inv => {
+                if (!map[inv]) {
+                    const m = allTeamMembers.find(x => x.name === inv);
+                    map[inv] = m?.nameAr || m?.name || inv;
+                }
+            });
+
             const meetingData = {
                 ...currentMeeting,
-                unit: activeUnit
+                unit: activeUnit,
+                inviteeNamesMap: map,
+                inviterNameAr: allTeamMembers.find(x => x.name === currentMeeting.inviter)?.nameAr || currentMeeting.inviter
             };
+
             await upsertUnitMeeting(meetingData);
             fetchUnitMeetings(true);
             setViewMode('unit-dashboard'); 
@@ -442,6 +454,17 @@ export default function ProjectTrackerView({ permissions }) {
 
     const handleUpdateActiveMeeting = async (updatedMeetingData) => {
         try {
+            // Ensure map stays updated
+            const map = updatedMeetingData.inviteeNamesMap || {};
+            (updatedMeetingData.invitees || []).forEach(inv => {
+                if (!map[inv]) {
+                    const m = allTeamMembers.find(x => x.name === inv);
+                    map[inv] = m?.nameAr || m?.name || inv;
+                }
+            });
+            updatedMeetingData.inviteeNamesMap = map;
+            updatedMeetingData.inviterNameAr = allTeamMembers.find(x => x.name === updatedMeetingData.inviter)?.nameAr || updatedMeetingData.inviter;
+
             await upsertUnitMeeting(updatedMeetingData);
             fetchUnitMeetings(true); 
         } catch (error) {
@@ -705,7 +728,6 @@ export default function ProjectTrackerView({ permissions }) {
                                                     setActiveProjectId(task.projectId);
                                                     setMainTab('units');
                                                     setViewMode('tasks');
-                                                    setUnitSubTab('projects');
                                                 }}>
                                                     Go to Project <ArrowRight className="w-3 h-3 ml-1 inline" />
                                                 </Button>
@@ -889,7 +911,7 @@ export default function ProjectTrackerView({ permissions }) {
                                                             <td className="p-3 border font-medium text-gray-900">{m.title}</td>
                                                             <td className="p-3 border text-gray-600 text-sm">{m.schedule || 'Not specified'}</td>
                                                             <td className="p-3 border text-gray-600 text-sm">
-                                                                {getInviteeDetails(m.inviter, allTeamMembers).displayName}
+                                                                {m.inviterNameAr || m.inviter}
                                                             </td>
                                                             <td className="p-3 border text-gray-600 text-sm">
                                                                 <span className="bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-bold">
@@ -1126,7 +1148,7 @@ export default function ProjectTrackerView({ permissions }) {
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <div className="space-y-4">
                                                 <div className="flex gap-2"><Calendar className="w-5 h-5 text-gray-400"/> <span><strong>Schedule:</strong> {activeMeeting.schedule || 'N/A'}</span></div>
-                                                <div className="flex gap-2"><UserCheck className="w-5 h-5 text-gray-400"/> <span><strong>Inviter:</strong> {getInviteeDetails(activeMeeting.inviter, allTeamMembers).displayName}</span></div>
+                                                <div className="flex gap-2"><UserCheck className="w-5 h-5 text-gray-400"/> <span><strong>Inviter:</strong> {activeMeeting.inviterNameAr || activeMeeting.inviter}</span></div>
                                                 <div className="flex gap-2">
                                                     <Users className="w-5 h-5 text-gray-400"/> 
                                                     <span><strong>Total Attendees:</strong> {(activeMeeting.invitees?.length || 0) + (activeMeeting.guests?.length || 0)}</span>

@@ -1,7 +1,7 @@
 // VisitReportDashboardTab.jsx
 import React, { useRef } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
-import { useTranslation } from './LanguageContext'; // <-- ADDED TRANSLATION HOOK
+import { useTranslation } from './LanguageContext'; 
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -28,7 +28,8 @@ ChartJS.register(
 
 // --- Local Component: Row containing Detailed Card (Left) and Horizontal Bar Chart (Right) ---
 const TrainedGroupRow = ({ title, details, color, ScoreText, CopyImageButton }) => {
-    const { t } = useTranslation();
+    const { t, language } = useTranslation();
+    const isAr = language === 'ar';
     const cardRef = useRef(null);
 
     const chartData = {
@@ -60,11 +61,13 @@ const TrainedGroupRow = ({ title, details, color, ScoreText, CopyImageButton }) 
         },
         scales: {
             x: { 
+                reverse: isAr,
                 beginAtZero: true, 
                 grid: { color: '#e2e8f0', drawBorder: false },
                 ticks: { precision: 0, color: '#475569', font: { family: "'Inter', sans-serif", weight: '500' } } 
             },
             y: { 
+                position: isAr ? 'right' : 'left',
                 grid: { display: false, drawBorder: false },
                 ticks: { color: '#334155', font: { size: 11, family: "'Inter', sans-serif", weight: 'bold' } } 
             }
@@ -76,13 +79,13 @@ const TrainedGroupRow = ({ title, details, color, ScoreText, CopyImageButton }) 
             <div className="bg-white p-6 rounded-2xl shadow-md border border-black flex flex-col relative h-full">
                 <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
                 <div className="flex justify-between items-center mb-5 pb-3 border-b border-black pr-10">
-                    <h4 className="text-base font-extrabold text-slate-800 text-left">{t(title)}</h4>
+                    <h4 className={`text-base font-extrabold text-slate-800 ${isAr ? 'text-right' : 'text-left'}`}>{t(title)}</h4>
                 </div>
                 <div className="space-y-3 flex-grow">
                     {details.map((d, i) => (
                         <div key={i} className="flex justify-between items-center bg-slate-50 p-3.5 rounded-xl border border-black shadow-sm group hover:border-sky-500 hover:bg-sky-50 transition-all duration-200">
-                            <h5 className="text-xs font-bold text-slate-700 text-left pr-4 group-hover:text-sky-800">{t(d.label)}</h5>
-                            <div className="flex items-center gap-3">
+                            <h5 className={`text-xs font-bold text-slate-700 ${isAr ? 'text-right pl-4' : 'text-left pr-4'} group-hover:text-sky-800`}>{t(d.label)}</h5>
+                            <div className="flex items-center gap-3" dir="ltr">
                                 <span className="text-xs font-extrabold text-slate-500 bg-white px-2 py-1 rounded border border-black">{t('Count')}: {d.count}</span>
                                 <div className="bg-white px-3 py-1 rounded-lg shadow-sm border border-black min-w-[60px] text-center" title={t("% of Total Training Sessions")}>
                                     <ScoreText value={d.pct / 100} showPercentage={true} />
@@ -95,7 +98,7 @@ const TrainedGroupRow = ({ title, details, color, ScoreText, CopyImageButton }) 
 
             <div className="bg-white p-5 rounded-2xl shadow-md border border-black flex flex-col h-full min-h-[300px] relative">
                 <h4 className="text-sm font-extrabold text-slate-800 mb-4 text-center tracking-wide">{t(title)} ({t('Count')})</h4>
-                <div className="relative flex-grow w-full">
+                <div className="relative flex-grow w-full" dir="ltr">
                     {details.some(d => d.count > 0) ? <Bar options={options} data={chartData} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold text-xs">{t('No training data recorded.')}</div>}
                 </div>
             </div>
@@ -117,7 +120,8 @@ const VisitReportDashboardTab = ({
     ScoreText,
     CopyImageButton
 }) => {
-    const { t } = useTranslation();
+    const { t, language } = useTranslation();
+    const isAr = language === 'ar';
 
     if (!visitReportStats) return null;
 
@@ -256,7 +260,7 @@ const VisitReportDashboardTab = ({
         },
         scales: {
             y: { beginAtZero: true, max: 100, title: { display: true, text: yAxisTitle, font: { weight: 'bold' } } },
-            x: { grid: { display: false } }
+            x: { reverse: isAr, grid: { display: false } }
         }
     });
 
@@ -283,7 +287,7 @@ const VisitReportDashboardTab = ({
                         <>
                             {/* --- Information System KPIs --- */}
                             <div className="bg-white p-6 rounded-2xl shadow-md border border-black mb-8">
-                                <h4 className="text-lg font-extrabold text-slate-800 mb-6 border-b border-black pb-2">{t('Information System KPIs (Overall)')}</h4>
+                                <h4 className={`text-lg font-extrabold text-slate-800 mb-6 border-b border-black pb-2 ${isAr ? 'text-right' : 'text-left'}`}>{t('Information System KPIs (Overall)')}</h4>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                                     <KpiCard 
                                         title={t("Children seen by IMNCI trained cadre")} 
@@ -306,14 +310,16 @@ const VisitReportDashboardTab = ({
                                 {infoLineLabels.length > 0 && (
                                     <div className="relative h-[350px] w-full border-t border-slate-200 pt-6">
                                         <h5 className="text-sm font-bold text-slate-600 mb-4 text-center">{t('Information System Performance Over Time')}</h5>
-                                        <Line options={getLineOptions(t('KPI Performance (%)'))} data={infoSystemLineData} />
+                                        <div dir="ltr" className="h-full w-full">
+                                            <Line options={getLineOptions(t('KPI Performance (%)'))} data={infoSystemLineData} />
+                                        </div>
                                     </div>
                                 )}
                             </div>
 
                             {/* --- Drug Availability KPIs & Chart --- */}
                             <div className="bg-white p-6 rounded-2xl shadow-md border border-black mb-8">
-                                <h4 className="text-lg font-extrabold text-slate-800 mb-6 border-b border-black pb-2">{t('Facility Drug Availability (Percentage of facilities reporting drugs always available)')}</h4>
+                                <h4 className={`text-lg font-extrabold text-slate-800 mb-6 border-b border-black pb-2 ${isAr ? 'text-right' : 'text-left'}`}>{t('Facility Drug Availability (Percentage of facilities reporting drugs always available)')}</h4>
                                 
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                                     {[
@@ -328,8 +334,8 @@ const VisitReportDashboardTab = ({
                                         return (
                                             <div key={drug.key} className="bg-emerald-50 p-4 rounded-xl border border-emerald-300 shadow-sm text-center">
                                                 <h5 className="text-sm font-extrabold text-emerald-800 mb-2">{t(drug.label)} {t('Availability')}</h5>
-                                                <div className="text-2xl font-extrabold text-emerald-600 mb-1">{pct}%</div>
-                                                <div className="text-xs text-emerald-600 font-bold">{count} {t('of')} {total} {t('facilities')}</div>
+                                                <div className="text-2xl font-extrabold text-emerald-600 mb-1" dir="ltr">{pct}%</div>
+                                                <div className="text-xs text-emerald-600 font-bold" dir="ltr">{count} {t('of')} {total} {t('facilities')}</div>
                                             </div>
                                         );
                                     })}
@@ -339,7 +345,9 @@ const VisitReportDashboardTab = ({
                                 {drugLineLabels.length > 0 && (
                                     <div className="relative h-[350px] w-full border-t border-slate-200 pt-6">
                                         <h5 className="text-sm font-bold text-slate-600 mb-4 text-center">{t('Drug Availability Over Time')}</h5>
-                                        <Line options={getLineOptions(t('Facilities with Drug Available (%)'))} data={drugLineData} />
+                                        <div dir="ltr" className="h-full w-full">
+                                            <Line options={getLineOptions(t('Facilities with Drug Available (%)'))} data={drugLineData} />
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -377,15 +385,15 @@ const VisitReportDashboardTab = ({
                         <KpiCard title={t("Total Visit Reports")} value={visitReportStats.totalVisits} />
                     </div>
                     <div className="mb-8 bg-white rounded-2xl shadow-md border border-black overflow-hidden">
-                        <h4 className="text-lg font-extrabold text-slate-800 p-5 border-b border-black bg-slate-100">{t('Visit Breakdown & Skills Trained by Facility')}</h4>
+                        <h4 className={`text-lg font-extrabold text-slate-800 p-5 border-b border-black bg-slate-100 ${isAr ? 'text-right' : 'text-left'}`}>{t('Visit Breakdown & Skills Trained by Facility')}</h4>
                         <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left" dir="ltr">
+                        <table className="w-full text-sm border-collapse" dir={isAr ? 'rtl' : 'ltr'}>
                             <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider">
                                 <tr>
-                                    <th className="px-5 py-4 border-b border-black">{t('Facility')}</th>
-                                    <th className="px-5 py-4 border-b border-black border-l border-black text-center bg-sky-100">{t('Total Visits')}</th>
+                                    <th className={`px-5 py-4 border-b border-black ${isAr ? 'text-right border-l' : 'text-left border-r'}`}>{t('Facility')}</th>
+                                    <th className={`px-5 py-4 border-b border-black text-center bg-sky-100 ${isAr ? 'border-l' : 'border-r'}`}>{t('Total Visits')}</th>
                                     {visitReportStats.distinctSkillKeys.map(skillKey => (
-                                        <th key={skillKey} className="px-3 py-4 border-b border-l border-black text-center break-words whitespace-normal text-[11px] max-w-[120px]">
+                                        <th key={skillKey} className={`px-3 py-4 border-b border-black text-center break-words whitespace-normal text-[11px] max-w-[120px] ${isAr ? 'border-l' : 'border-r'}`}>
                                             {t(EENC_SKILLS_LABELS[skillKey] || skillKey)}
                                         </th>
                                     ))}
@@ -394,10 +402,10 @@ const VisitReportDashboardTab = ({
                             <tbody>
                                 {visitReportStats.facilityTableData.map(row => (
                                     <tr key={row.id} className="hover:bg-sky-50 transition-colors border-b border-black">
-                                        <td className="px-5 py-3 font-semibold text-slate-800">{row.facilityName}</td>
-                                        <td className="px-5 py-3 border-l border-black text-center font-bold bg-sky-50 text-sky-800">{row.visitCount}</td>
+                                        <td className={`px-5 py-3 font-semibold text-slate-800 ${isAr ? 'text-right border-l' : 'text-left border-r'} border-black`}>{row.facilityName}</td>
+                                        <td className={`px-5 py-3 text-center font-bold bg-sky-50 text-sky-800 ${isAr ? 'border-l' : 'border-r'} border-black`} dir="ltr">{row.visitCount}</td>
                                         {visitReportStats.distinctSkillKeys.map(skillKey => (
-                                            <td key={skillKey} className="px-3 py-3 border-l border-black text-center text-slate-700 font-medium">
+                                            <td key={skillKey} className={`px-3 py-3 text-center text-slate-700 font-medium ${isAr ? 'border-l' : 'border-r'} border-black`} dir="ltr">
                                                 {row.skills[skillKey] || 0}
                                             </td>
                                         ))}
@@ -418,16 +426,16 @@ const VisitReportDashboardTab = ({
             </div>
 
             <div className="mb-8 bg-white rounded-2xl shadow-md border border-black overflow-hidden">
-                <h4 className="text-lg font-extrabold text-slate-800 p-5 border-b border-black bg-slate-100">{t('Facility Problems & Solutions (Combined)')}</h4>
+                <h4 className={`text-lg font-extrabold text-slate-800 p-5 border-b border-black bg-slate-100 ${isAr ? 'text-right' : 'text-left'}`}>{t('Facility Problems & Solutions (Combined)')}</h4>
                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left border-collapse" dir="ltr">
+                    <table className="w-full text-sm border-collapse" dir={isAr ? 'rtl' : 'ltr'}>
                         <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider sticky top-0 z-10 shadow-sm border-b border-black">
                             <tr>
-                                <th className="px-4 py-4 border-l border-black w-[15%]">{t(dynamicLocationLabel)}</th>
-                                <th className="px-4 py-4 border-l border-black w-[30%]">{t('Problem / Challenge')}</th>
-                                <th className="px-4 py-4 border-l border-black w-[30%]">{t('Implemented Solution')}</th>
-                                <th className="px-4 py-4 border-l border-black w-[15%] text-center">{t('Status')}</th>
-                                <th className="px-4 py-4 w-[10%]">{t('Responsible Person')}</th>
+                                <th className={`px-4 py-4 border-black ${isAr ? 'border-l text-right' : 'border-r text-left'} w-[15%]`}>{t(dynamicLocationLabel)}</th>
+                                <th className={`px-4 py-4 border-black ${isAr ? 'border-l text-right' : 'border-r text-left'} w-[30%]`}>{t('Problem / Challenge')}</th>
+                                <th className={`px-4 py-4 border-black ${isAr ? 'border-l text-right' : 'border-r text-left'} w-[30%]`}>{t('Implemented Solution')}</th>
+                                <th className={`px-4 py-4 border-black ${isAr ? 'border-l' : 'border-r'} w-[15%] text-center`}>{t('Status')}</th>
+                                <th className="px-4 py-4 w-[10%] text-center">{t('Responsible Person')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -439,28 +447,28 @@ const VisitReportDashboardTab = ({
                                 return problems.map((item, idx) => (
                                     <tr key={`${locName}-${idx}`} className="hover:bg-sky-50 transition-colors border-b border-black">
                                         {idx === 0 && (
-                                            <td rowSpan={problems.length} className="px-4 py-3 border-l border-black align-top font-extrabold text-slate-800 bg-slate-100 w-[15%] border-b border-black">
+                                            <td rowSpan={problems.length} className={`px-4 py-3 border-black ${isAr ? 'border-l' : 'border-r'} align-top font-extrabold text-slate-800 bg-slate-100 w-[15%] border-b border-black`}>
                                                 {locName}
                                             </td>
                                         )}
-                                        <td className="px-4 py-3 border-l border-black align-top text-xs text-rose-700 whitespace-pre-wrap font-medium">
+                                        <td className={`px-4 py-3 border-black ${isAr ? 'border-l text-right' : 'border-r text-left'} align-top text-xs text-rose-700 whitespace-pre-wrap font-medium`}>
                                             {item.problem}
                                             {dynamicLocationLevel !== 'Facility' && (
-                                                <div className="mt-2 text-[10px] text-slate-500 font-bold bg-white inline-block px-1.5 py-0.5 rounded border border-slate-300">
+                                                <div className="mt-2 text-[10px] text-slate-500 font-bold bg-white inline-block px-1.5 py-0.5 rounded border border-slate-300" dir="ltr">
                                                     {item.facility} - {item.date}
                                                 </div>
                                             )}
                                         </td>
                                         
-                                        <td className="px-4 py-3 border-l border-black align-top text-xs text-emerald-700 whitespace-pre-wrap font-medium">
+                                        <td className={`px-4 py-3 border-black ${isAr ? 'border-l text-right' : 'border-r text-left'} align-top text-xs text-emerald-700 whitespace-pre-wrap font-medium`}>
                                             {item.solution}
                                         </td>
 
-                                        <td className="px-4 py-3 border-l border-black align-top text-center">
+                                        <td className={`px-4 py-3 border-black ${isAr ? 'border-l' : 'border-r'} align-top text-center`}>
                                             {renderStatusCell(item.status, item.reportId, item.challengeId, 'status')}
                                         </td>
 
-                                        <td className="px-4 py-3 align-top text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                                        <td className="px-4 py-3 align-top text-center text-[10px] font-bold text-slate-600 uppercase tracking-wider">
                                             {item.person}
                                         </td>
                                     </tr>

@@ -1903,6 +1903,7 @@ export default function App() {
         }
     }
 
+    // --- NEW: Public Meeting Attendance View ---
     else if (isPublicMeetingView) {
         if (publicViewLoading) {
             mainContent = <Card><div className="flex justify-center p-8"><Spinner /></div></Card>;

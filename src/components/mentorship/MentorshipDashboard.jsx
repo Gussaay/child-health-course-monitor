@@ -18,7 +18,6 @@ import VisitReportDashboardTab from './VisitReportDashboardTab';
 import { IMNCI_FORM_STRUCTURE, calculateScores, rehydrateDraftData, DIARRHEA_CLASSIFICATIONS, FEVER_CLASSIFICATIONS } from './IMNCSkillsAssessmentForm.jsx';
 import { PREPARATION_ITEMS, DRYING_STIMULATION_ITEMS, NORMAL_BREATHING_ITEMS, RESUSCITATION_ITEMS } from './EENCSkillsAssessmentForm.jsx';
 
-// --- ADDED FOR TRANSLATION ---
 import { useTranslation } from './LanguageContext';
 import LanguageSwitcher from './LanguageSwitcher';
 
@@ -55,7 +54,8 @@ const MentorshipDashboard = ({
     dateFilter = '', onDateFilterChange = () => {}
 }) => {
 
-    const { t, language } = useTranslation(); // --- Added translation hook ---
+    const { t, language } = useTranslation(); 
+    const isAr = language === 'ar';
 
     const [activeEencTab, setActiveEencTab] = useState('skills'); 
     const [activeImnciTab, setActiveImnciTab] = useState('skills'); 
@@ -654,16 +654,35 @@ const MentorshipDashboard = ({
         }).sort((a, b) => a.stateName.localeCompare(b.stateName, language));
     }, [filteredSubmissions, eencMotherKpiHelper, imnciMotherKpiHelper, activeService, STATE_LOCALITIES, activeState, language]);
 
+    // --- NORMALIZED KPI BY WORKER TYPE LOGIC ---
     const kpisByWorkerType = useMemo(() => {
         const kpisHelper = activeService === 'IMNCI' ? imnciKpiHelper : (activeService === 'EENC' ? eencKpiHelper : null);
         if (!kpisHelper) return [];
+        
+        const normalizeWt = (wt) => {
+            if (!wt || wt === 'N/A') return 'Unknown Title';
+            const lower = wt.toLowerCase();
+            // Combine General Practitioner, Medical Officer, and Arabic equivalents
+            if (lower.includes('general practitioner') || lower.includes('general practioner') || lower.includes('medical officer') || wt === 'طبيب' || wt === 'طبيب عمومي') return 'Medical Officer';
+            if (lower.includes('medical assist') || wt === 'مساعد طبي') return 'Medical Assistant';
+            if (lower.includes('nurse') || wt === 'ممرض') return 'Nurse';
+            if (lower.includes('midwife') || wt === 'قابلة') return 'Midwife';
+            return wt;
+        };
+
         const submissionsByWt = filteredSubmissions.reduce((acc, sub) => {
             if (sub.service === 'EENC_MOTHERS' || sub.service === 'IMNCI_MOTHERS') return acc;
-            const wt = sub.workerType && sub.workerType !== 'N/A' ? sub.workerType : 'Unknown Title';
+            
+            const wt = normalizeWt(sub.workerType);
+            
             if (!acc[wt]) acc[wt] = [];
-            acc[wt].push(sub); return acc;
+            acc[wt].push(sub); 
+            return acc;
         }, {});
-        return Object.keys(submissionsByWt).map(wt => ({ workerType: wt, kpis: kpisHelper(submissionsByWt[wt]) })).sort((a, b) => a.workerType.localeCompare(b.workerType));
+
+        return Object.keys(submissionsByWt)
+            .map(wt => ({ workerType: wt, kpis: kpisHelper(submissionsByWt[wt]) }))
+            .sort((a, b) => a.workerType.localeCompare(b.workerType));
     }, [filteredSubmissions, imnciKpiHelper, eencKpiHelper, activeService]);
 
     const imnciSummaryDefs = [
@@ -701,7 +720,7 @@ const MentorshipDashboard = ({
         activeFiltersList.push(`${t('filter.facility')}: ${facName}`);
     }
     if (activeProject) activeFiltersList.push(`${t('filter.project')}: ${activeProject}`);
-    if (activeWorkerType) activeFiltersList.push(`${t('filter.job_title')}: ${activeWorkerType}`);
+    if (activeWorkerType) activeFiltersList.push(`${t('filter.job_title')}: ${t(activeWorkerType) || activeWorkerType}`);
     if (activeWorkerName) activeFiltersList.push(`${t('filter.worker_name')}: ${activeWorkerName}`);
     if (dateFilter) activeFiltersList.push(`${t('filter.date')}: ${t(`date.${dateFilter}`) || dateFilter}`);
 
@@ -709,14 +728,14 @@ const MentorshipDashboard = ({
         ? `(${t('msg.filtered_by')}: ${activeFiltersList.join(' | ')})` 
         : `(${t('msg.all_sudan')})`;
 
-    const serviceTitle = SERVICE_TITLES[activeService] || activeService;
+    const serviceTitle = t(SERVICE_TITLES[activeService] || activeService);
     const activeTab = activeService === 'IMNCI' ? activeImnciTab : activeEencTab;
     const setActiveTabFunc = activeService === 'IMNCI' ? setActiveImnciTab : setActiveEencTab;
 
     return (
-        <div className="p-4 sm:p-6 bg-slate-50/50 min-h-screen">             
+        <div className="p-4 sm:p-6 bg-slate-50/50 min-h-screen" dir={isAr ? 'rtl' : 'ltr'}>             
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                <h3 className="text-2xl font-extrabold text-slate-800 text-left tracking-tight">
+                <h3 className={`text-2xl font-extrabold text-slate-800 ${isAr ? 'text-right' : 'text-left'} tracking-tight`}>
                     {t('app.title')}: {serviceTitle} <br/>
                     <span className="text-sky-600 text-lg font-semibold block mt-1 break-words leading-snug">{scopeTitle}</span>
                 </h3>
@@ -757,32 +776,34 @@ const MentorshipDashboard = ({
                 )}
             </div>
 
-            {activeTab === 'admin' && canEditStatus && (
-                <AdminDashboardTab
-                    activeService={activeService} overallKpis={overallKpis} visitReportStats={visitReportStats} motherKpis={motherKpis} volumeChartData={volumeChartData}
-                    geographicKpis={geographicKpis} filteredSubmissions={filteredSubmissions} geographicLevelName={geographicLevelName} scopeTitle={scopeTitle} dateFilter={dateFilter} onDateFilterChange={onDateFilterChange}
-                />
-            )}
+            <div>
+                {activeTab === 'admin' && canEditStatus && (
+                    <AdminDashboardTab
+                        activeService={activeService} overallKpis={overallKpis} visitReportStats={visitReportStats} motherKpis={motherKpis} volumeChartData={volumeChartData}
+                        geographicKpis={geographicKpis} filteredSubmissions={filteredSubmissions} geographicLevelName={geographicLevelName} scopeTitle={scopeTitle} dateFilter={dateFilter} onDateFilterChange={onDateFilterChange}
+                    />
+                )}
 
-            {activeTab === 'skills' && (
-                <ProviderSkillsTab 
-                    activeService={activeService} overallKpis={overallKpis} chartData={activeService === 'IMNCI' ? imnciChartData : eencChartData}
-                    geographicKpis={geographicKpis} kpisByWorkerType={kpisByWorkerType} imnciSummaryDefs={imnciSummaryDefs} eencSummaryDefs={eencSummaryDefs} scopeTitle={scopeTitle} geographicLevelName={geographicLevelName}
-                />
-            )}
+                {activeTab === 'skills' && (
+                    <ProviderSkillsTab 
+                        activeService={activeService} overallKpis={overallKpis} chartData={activeService === 'IMNCI' ? imnciChartData : eencChartData}
+                        geographicKpis={geographicKpis} kpisByWorkerType={kpisByWorkerType} imnciSummaryDefs={imnciSummaryDefs} eencSummaryDefs={eencSummaryDefs} scopeTitle={scopeTitle} geographicLevelName={geographicLevelName}
+                    />
+                )}
 
-            {activeTab === 'mothers' && (
-                <MotherInterviewsTab 
-                    activeService={activeService} motherKpis={motherKpis} chartData={activeService === 'IMNCI' ? imnciMotherChartData : eencMotherChartData}
-                    motherGeographicKpis={motherGeographicKpis} scopeTitle={scopeTitle} geographicLevelName={geographicLevelName}
-                />
-            )}
+                {activeTab === 'mothers' && (
+                    <MotherInterviewsTab 
+                        activeService={activeService} motherKpis={motherKpis} chartData={activeService === 'IMNCI' ? imnciMotherChartData : eencMotherChartData}
+                        motherGeographicKpis={motherGeographicKpis} scopeTitle={scopeTitle} geographicLevelName={geographicLevelName}
+                    />
+                )}
 
-            {activeTab === 'visit_reports' && (
-                <VisitReportDashboardTab 
-                    activeService={activeService} visitReportStats={visitReportStats} geographicLevelName={geographicLevelName} dynamicLocationLabel={dynamicLocationLabel} dynamicLocationLevel={dynamicLocationLevel} renderStatusCell={renderStatusCell} IMNCI_SKILL_GROUPS={IMNCI_SKILL_GROUPS} EENC_SKILLS_LABELS={EENC_SKILLS_LABELS} KpiCard={KpiCard} KpiBarChart={KpiBarChart} ScoreText={ScoreText} CopyImageButton={CopyImageButton} scopeTitle={scopeTitle}
-                />
-            )}
+                {activeTab === 'visit_reports' && (
+                    <VisitReportDashboardTab 
+                        activeService={activeService} visitReportStats={visitReportStats} geographicLevelName={geographicLevelName} dynamicLocationLabel={dynamicLocationLabel} dynamicLocationLevel={dynamicLocationLevel} renderStatusCell={renderStatusCell} IMNCI_SKILL_GROUPS={IMNCI_SKILL_GROUPS} EENC_SKILLS_LABELS={EENC_SKILLS_LABELS} KpiCard={KpiCard} KpiBarChart={KpiBarChart} ScoreText={ScoreText} CopyImageButton={CopyImageButton} scopeTitle={scopeTitle}
+                    />
+                )}
+            </div>
         </div>
     );
 };

@@ -16,7 +16,7 @@ import {
 } from 'chart.js';
 
 import { Spinner } from '../CommonComponents'; 
-import { useTranslation } from './LanguageContext'; // <-- ADDED TRANSLATION HOOK
+import { useTranslation } from './LanguageContext'; 
 
 import { 
     IMNCI_FORM_STRUCTURE 
@@ -208,7 +208,7 @@ export const CopyImageButton = ({ targetRef, title }) => {
                 if (blob) {
                     const item = new ClipboardItem({ 'image/png': blob });
                     await navigator.clipboard.write([item]);
-                    alert(`"${title}" copied to clipboard!`);
+                    alert(`${t("Copy as Image")}: "${t(title)}"`);
                 }
             }, 'image/png');
         } catch (error) {
@@ -227,8 +227,9 @@ export const CopyImageButton = ({ targetRef, title }) => {
 };
 
 export const ScoreText = ({ value, showPercentage = true }) => {
+    const { t } = useTranslation();
     let colorClass = 'text-slate-800';
-    let text = 'N/A';
+    let text = t('N/A');
     if (value !== null && !isNaN(value) && isFinite(value)) {
         const percentage = Math.round(value * 100);
         if (percentage >= 80) colorClass = 'text-emerald-700';
@@ -236,17 +237,18 @@ export const ScoreText = ({ value, showPercentage = true }) => {
         else colorClass = 'text-rose-700';
         text = showPercentage ? `${percentage}%` : percentage.toString();
     }
-    return (<span className={`font-extrabold text-sm ${colorClass}`}>{text}</span>);
+    return (<span className={`font-extrabold text-sm ${colorClass}`} dir="ltr">{text}</span>);
 };
 
 export const KpiCard = ({ title, value, unit = '', scoreValue = null }) => {
+    const { t } = useTranslation();
     const cardRef = useRef(null);
     return (
         <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black border-t-4 border-t-sky-600 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col justify-center items-center h-full relative group">
-            <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity"><CopyImageButton targetRef={cardRef} title={title} /></div>
-            <h4 className="text-xs sm:text-sm font-bold text-slate-600 mb-2 sm:mb-3 text-center uppercase tracking-wider break-words w-full px-2 sm:px-4" title={title}>{title}</h4>
+            <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
+            <h4 className="text-xs sm:text-sm font-bold text-slate-600 mb-2 sm:mb-3 text-center uppercase tracking-wider break-words w-full px-2 sm:px-4" title={t(title)}>{t(title)}</h4>
             <div className="flex items-baseline justify-center gap-1.5 mt-auto">
-                {scoreValue !== null ? <ScoreText value={scoreValue} /> : <span className="text-3xl sm:text-4xl font-black text-slate-800 tracking-tight">{value}</span>}
+                {scoreValue !== null ? <ScoreText value={scoreValue} /> : <span className="text-3xl sm:text-4xl font-black text-slate-800 tracking-tight" dir="ltr">{value}</span>}
                 {unit && <span className="text-xs sm:text-sm font-bold text-slate-500">{unit}</span>}
             </div>
         </div>
@@ -254,24 +256,26 @@ export const KpiCard = ({ title, value, unit = '', scoreValue = null }) => {
 };
 
 export const KpiGridItem = ({ title, scoreValue }) => {
+    const { t } = useTranslation();
     const itemRef = useRef(null);
     return (
         <div ref={itemRef} className="bg-slate-50 p-3 sm:p-4 rounded-xl border border-black text-center shadow-sm hover:border-sky-500 hover:bg-sky-50 transition-all flex flex-col justify-between h-full group relative">
-            <h5 className="text-xs font-bold text-slate-700 mb-2 leading-snug group-hover:text-sky-800 break-words" title={title}>{title}</h5>
+            <h5 className="text-xs font-bold text-slate-700 mb-2 leading-snug group-hover:text-sky-800 break-words" title={t(title)}>{t(title)}</h5>
             <div className="mt-auto bg-white inline-block mx-auto px-3 py-1 rounded-lg border border-black shadow-sm"><ScoreText value={scoreValue} /></div>
         </div>
     );
 };
 
 export const KpiGridCard = ({ title, kpis, cols = 2 }) => {
+    const { t, language } = useTranslation();
     const cardRef = useRef(null);
     const gridColsClass = cols === 3 ? 'sm:grid-cols-3' : (cols === 4 ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-2');
     
     return (
         <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 relative flex flex-col h-full">
             <div className="flex justify-between items-start mb-4 sm:mb-5">
-                <h4 className="text-base font-extrabold text-slate-800 text-left tracking-wide w-full pr-8 break-words" title={title}>{title}</h4>
-                <div className="absolute top-4 right-4"><CopyImageButton targetRef={cardRef} title={title} /></div>
+                <h4 className={`text-base font-extrabold text-slate-800 ${language === 'ar' ? 'text-right' : 'text-left'} tracking-wide w-full pr-8 break-words`} title={t(title)}>{t(title)}</h4>
+                <div className="absolute top-4 right-4"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
             </div>
             <div className={`grid grid-cols-1 ${gridColsClass} gap-3 sm:gap-4 flex-grow`}>
                 {kpis.map(kpi => (<KpiGridItem key={kpi.title} title={kpi.title} scoreValue={kpi.scoreValue} />))}
@@ -281,18 +285,19 @@ export const KpiGridCard = ({ title, kpis, cols = 2 }) => {
 };
 
 export const DetailedKpiCard = ({ title, overallScore, kpis }) => {
+    const { t, language } = useTranslation();
     const cardRef = useRef(null);
     return (
         <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
-            <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
+            <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
             <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center mb-4 sm:mb-5 pb-3 border-b border-black pr-10 gap-2">
-                <h4 className="text-base font-extrabold text-slate-800 text-left tracking-wide break-words" title={title}>{title}</h4>
+                <h4 className={`text-base font-extrabold text-slate-800 ${language === 'ar' ? 'text-right' : 'text-left'} tracking-wide break-words`} title={t(title)}>{t(title)}</h4>
                 {overallScore !== null && (<div className="bg-sky-50 border border-black rounded-lg px-3 py-1 shadow-sm whitespace-nowrap"><ScoreText value={overallScore} /></div>)}
             </div>
             <div className="space-y-2 sm:space-y-3 flex-grow">
                 {kpis.map(kpi => (
                     <div key={kpi.title} className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-black shadow-sm hover:border-sky-500 hover:bg-sky-50 transition-all duration-200 group">
-                        <h5 className="text-xs font-bold text-slate-700 text-left pr-2 group-hover:text-sky-800">{kpi.title}</h5>
+                        <h5 className={`text-xs font-bold text-slate-700 ${language === 'ar' ? 'text-right pl-2' : 'text-left pr-2'} group-hover:text-sky-800`}>{t(kpi.title)}</h5>
                         <div className="bg-white px-2 sm:px-3 py-1 rounded-lg shadow-sm border border-black whitespace-nowrap"><ScoreText value={kpi.scoreValue} /></div>
                     </div>
                 ))}
@@ -315,72 +320,106 @@ export const FilterSelect = ({ label, value, onChange, options, disabled = false
 };
 
 // --- Charts ---
-export const getSharedChartOptions = () => ({
-    responsive: true, maintainAspectRatio: false, animation: { duration: 1000, easing: 'easeOutQuart' }, interaction: { mode: 'index', intersect: false },
-    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true, pointStyle: 'circle', padding: 20, font: { size: 12, family: "'Inter', sans-serif", weight: '600' }, color: '#334155' } }, tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.95)', titleFont: { size: 13, family: "'Inter', sans-serif", weight: 'bold' }, bodyFont: { size: 12, family: "'Inter', sans-serif" }, padding: 12, cornerRadius: 8, boxPadding: 6, callbacks: { label: (context) => ` ${context.dataset.label}: ${context.parsed.y}%` } } },
-    scales: { y: { beginAtZero: true, max: 100, grid: { color: '#e2e8f0', drawBorder: false }, ticks: { callback: (value) => `${value}%`, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' }, padding: 8 } }, x: { grid: { display: false, drawBorder: false }, ticks: { maxTicksLimit: 10, autoSkip: true, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' }, padding: 8 } } }
-});
+export const getSharedChartOptions = (language) => {
+    const isAr = language === 'ar';
+    return {
+        responsive: true, 
+        maintainAspectRatio: false, 
+        animation: { duration: 1000, easing: 'easeOutQuart' }, 
+        interaction: { mode: 'index', intersect: false },
+        plugins: { 
+            legend: { 
+                position: 'bottom', 
+                labels: { boxWidth: 10, usePointStyle: true, pointStyle: 'circle', padding: 20, font: { size: 12, family: "'Inter', sans-serif", weight: '600' }, color: '#334155' } 
+            }, 
+            tooltip: { 
+                backgroundColor: 'rgba(15, 23, 42, 0.95)', 
+                titleFont: { size: 13, family: "'Inter', sans-serif", weight: 'bold' }, 
+                bodyFont: { size: 12, family: "'Inter', sans-serif" }, 
+                padding: 12, 
+                cornerRadius: 8, 
+                boxPadding: 6, 
+                callbacks: { label: (context) => ` ${context.dataset.label}: ${context.parsed.y}%` } 
+            } 
+        },
+        scales: { 
+            y: { 
+                beginAtZero: true, 
+                max: 100, 
+                grid: { color: '#e2e8f0', drawBorder: false }, 
+                ticks: { callback: (value) => `${value}%`, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' }, padding: 8 } 
+            }, 
+            x: { 
+                reverse: isAr, // RTL Magic: Reverses the X-axis direction for Arabic
+                grid: { display: false, drawBorder: false }, 
+                ticks: { maxTicksLimit: 10, autoSkip: true, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' }, padding: 8 } 
+            } 
+        }
+    };
+};
 
 export const getLineDatasetStyle = (title, key, colors, data) => ({
     label: title, data: data, borderColor: colors[key] || '#64748b', backgroundColor: (colors[key] || '#64748b') + '26', fill: true, tension: 0.4, pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: '#ffffff', pointBorderColor: colors[key] || '#64748b', pointBorderWidth: 2, borderWidth: 2.5, 
 });
 
 export const VolumeLineChart = ({ title, chartData, kpiKeys }) => {
-    const { t } = useTranslation();
+    const { t, language } = useTranslation();
     const cardRef = useRef(null);
     const colors = { 'Cases Observed': '#3b82f6', 'Completed Visits': '#10b981' };
+    const isAr = language === 'ar';
     
     const options = {
         responsive: true, maintainAspectRatio: false, animation: { duration: 1000, easing: 'easeOutQuart' }, interaction: { mode: 'index', intersect: false },
         plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true, pointStyle: 'circle', padding: 20, font: { size: 12, family: "'Inter', sans-serif", weight: '600' }, color: '#334155' } }, tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.95)', titleFont: { size: 13, family: "'Inter', sans-serif", weight: 'bold' }, bodyFont: { size: 12, family: "'Inter', sans-serif" }, padding: 12, cornerRadius: 8, boxPadding: 6, callbacks: { label: (context) => ` ${context.dataset.label}: ${context.parsed.y}` } } },
-        scales: { y: { beginAtZero: true, grid: { color: '#e2e8f0', drawBorder: false }, ticks: { precision: 0, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' }, padding: 8 } }, x: { grid: { display: false, drawBorder: false }, ticks: { maxTicksLimit: 10, autoSkip: true, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' }, padding: 8 } } }
+        scales: { y: { beginAtZero: true, grid: { color: '#e2e8f0', drawBorder: false }, ticks: { precision: 0, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' }, padding: 8 } }, x: { reverse: isAr, grid: { display: false, drawBorder: false }, ticks: { maxTicksLimit: 10, autoSkip: true, color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '600' }, padding: 8 } } }
     };
 
-    const data = { labels: chartData.map(d => d.name), datasets: kpiKeys.map(kpi => getLineDatasetStyle(t(kpi.title), kpi.key, colors, chartData.map(d => d[kpi.key]))) };
+    const data = { labels: chartData.map(d => t(d.name)), datasets: kpiKeys.map(kpi => getLineDatasetStyle(t(kpi.title), kpi.key, colors, chartData.map(d => d[kpi.key]))) };
     return (
         <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
-            <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
-            <h4 className="text-base font-extrabold text-slate-800 mb-4 sm:mb-5 text-center tracking-wide pr-8 break-words">{title}</h4>
-            <div className="relative flex-grow min-h-[250px]">{chartData.length > 0 ? <Line options={options} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">{t('No data available.')}</div>}</div>
+            <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
+            <h4 className="text-base font-extrabold text-slate-800 mb-4 sm:mb-5 text-center tracking-wide pr-8 break-words">{t(title)}</h4>
+            <div className="relative flex-grow min-h-[250px]" dir="ltr">{chartData.length > 0 ? <Line options={options} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">{t('No data available.')}</div>}</div>
         </div>
     );
 };
 
 export const KpiLineChart = ({ title, chartData, kpiKeys }) => {
-    const { t } = useTranslation();
+    const { t, language } = useTranslation();
     const cardRef = useRef(null);
     const colors = { 'Overall': '#0ea5e9', 'Assessment': '#10b981', 'Decision': '#f59e0b', 'Treatment': '#ef4444', 'Weight': '#06b6d4', 'Temp': '#3b82f6', 'Height': '#8b5cf6', 'Resp. Rate': '#14b8a6', 'Dehydration': '#ec4899', 'Malaria RDT': '#d946ef', 'Ear Check': '#f97316', 'Pneumonia Amox': '#a855f7', 'Diarrhea ORS': '#3b82f6', 'Diarrhea Zinc': '#eab308', 'Anemia Iron': '#dc2626', 'MUAC': '#0891b2', 'WFH': '#0284c7', 'Pallor': '#78716c', 'DangerSigns': '#f97316', 'Malnutrition Assessment': '#0284c7', 'Measurement Skills': '#8b5cf6', 'Immunization': '#10b981', 'Vitamin Assessment': '#f59e0b', 'Malaria Coartem': '#d946ef', 'Return Immediately': '#ef4444', 'Return Followup': '#3b82f6', 'Record Signs': '#06b6d4', 'Record Classifications': '#3b82f6', 'Record Treatments': '#8b5cf6', 'Preparation': '#10b981', 'Drying': '#3b82f6', 'Breathing Mgmt': '#f59e0b', 'Resuscitation': '#ef4444', 'Hand Washing (1st)': '#0d9488', 'Hand Washing (2nd)': '#14b8a6', 'Sterile Gloves': '#2dd4bf', 'Towels Ready': '#7c3aed', 'Resus Equip Ready': '#8b5cf6', 'Ambu Check': '#a78bfa', 'Drying < 5s': '#ea580c', 'Skin-to-Skin': '#f97316', 'Dry Towel/Hat': '#fb923c', 'Hygienic Check': '#be123c', 'Delayed Clamp': '#e11d48', 'Correct Clamp': '#f43f5e', 'Early BF Advice': '#d946ef', 'Head Pos': '#b91c1c', 'Mask Seal': '#dc2626', 'Chest Rise': '#ef4444', 'Rate 30-50': '#f87171', 'Imm. Skin-to-Skin': '#f97316', '90min Skin-to-Skin': '#fdba74', 'BF 1st Hour': '#ec4899', 'Other Fluids': '#f43f5e', 'Bottle Feeding': '#be123c', 'Vitamin K': '#8b5cf6', 'Eye Ointment': '#a78bfa', 'Cord Substance': '#d946ef', 'Skin Oiling': '#eab308', 'Bathing < 6hrs': '#f59e0b', 'Polio Vaccine': '#10b981', 'BCG Vaccine': '#34d399', 'Weight Measured': '#06b6d4', 'Temp Measured': '#22d3ee', 'Civil Reg': '#3b82f6', 'Discharge Card': '#6366f1', 'M: Knows Meds': '#4f46e5', 'M: Knows ORS': '#3b82f6', 'M: Knows Tx': '#0ea5e9', 'M: Knows 4 Rules': '#06b6d4', 'M: Knows Return': '#14b8a6', 'M: Knows Fluids': '#10b981', 'M: Time Spent': '#f59e0b', 'M: Assess Method': '#f97316', 'M: Tx Given': '#ef4444', 'M: Comm Style': '#ec4899', 'M: What Learned': '#d946ef', 'M: Drug Avail': '#8b5cf6' };
-    const data = { labels: chartData.map(d => d.name), datasets: kpiKeys.map(kpi => getLineDatasetStyle(t(kpi.title), kpi.key, colors, chartData.map(d => d[kpi.key]))) };
+    const data = { labels: chartData.map(d => t(d.name)), datasets: kpiKeys.map(kpi => getLineDatasetStyle(t(kpi.title), kpi.key, colors, chartData.map(d => d[kpi.key]))) };
     return (
         <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
-            <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
-            <h4 className="text-base font-extrabold text-slate-800 mb-4 sm:mb-5 text-center tracking-wide pr-8 break-words">{title}</h4>
-            <div className="relative flex-grow min-h-[250px]">{chartData.length > 0 ? <Line options={getSharedChartOptions()} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">{t('No data available.')}</div>}</div>
+            <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
+            <h4 className="text-base font-extrabold text-slate-800 mb-4 sm:mb-5 text-center tracking-wide pr-8 break-words">{t(title)}</h4>
+            <div className="relative flex-grow min-h-[250px]" dir="ltr">{chartData.length > 0 ? <Line options={getSharedChartOptions(language)} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">{t('No data available.')}</div>}</div>
         </div>
     );
 };
 
 export const KpiCardWithChart = ({ title, kpis, chartData, kpiKeys, cols = 2 }) => {
-    const { t } = useTranslation();
+    const { t, language } = useTranslation();
     const cardRef = useRef(null);
     const gridColsClass = cols === 3 ? 'sm:grid-cols-3' : (cols === 4 ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-2');
 
     const colors = { 'Overall': '#0ea5e9', 'Assessment': '#10b981', 'Decision': '#f59e0b', 'Treatment': '#ef4444', 'Pallor': '#78716c', 'Anemia Mgmt': '#dc2626', 'Resp. Rate': '#14b8a6', 'Dehydration': '#ec4899', 'Malaria RDT': '#d946ef', 'Ear Check': '#f97316', 'Pneumonia Amox': '#a855f7', 'Diarrhea ORS': '#3b82f6', 'Diarrhea Zinc': '#eab308', 'Anemia Iron': '#dc2626', 'Immunization': '#10b981', 'Vitamin Assessment': '#f59e0b', 'Malaria Coartem': '#d946ef', 'Return Immediately': '#ef4444', 'Return Followup': '#3b82f6', 'Record Signs': '#06b6d4', 'Record Classifications': '#3b82f6', 'Record Treatments': '#8b5cf6' };
-    const data = { labels: chartData.map(d => d.name), datasets: kpiKeys.map(kpi => getLineDatasetStyle(t(kpi.title), kpi.key, colors, chartData.map(d => d[kpi.key]))) };
+    const data = { labels: chartData.map(d => t(d.name)), datasets: kpiKeys.map(kpi => getLineDatasetStyle(t(kpi.title), kpi.key, colors, chartData.map(d => d[kpi.key]))) };
 
     return (
         <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 flex flex-col h-full relative">
-            <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
-            <h4 className="text-base font-extrabold text-slate-800 mb-4 sm:mb-5 text-center tracking-wide pr-8 break-words" title={title}>{title}</h4>
+            <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
+            <h4 className="text-base font-extrabold text-slate-800 mb-4 sm:mb-5 text-center tracking-wide pr-8 break-words" title={t(title)}>{t(title)}</h4>
             <div className={`grid grid-cols-1 ${gridColsClass} gap-3 sm:gap-4 mb-4 sm:mb-6`}>{kpis.map(kpi => (<KpiGridItem key={kpi.title} title={kpi.title} scoreValue={kpi.scoreValue} />))}</div>
-            <div className="relative flex-grow min-h-[200px]">{chartData.length > 0 ? <Line options={getSharedChartOptions()} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">{t('No data available.')}</div>}</div>
+            <div className="relative flex-grow min-h-[200px]" dir="ltr">{chartData.length > 0 ? <Line options={getSharedChartOptions(language)} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">{t('No data available.')}</div>}</div>
         </div>
     );
 };
 
 export const KpiBarChart = ({ title, chartData, dataKey = 'avgOverall' }) => {
-    const { t } = useTranslation();
+    const { t, language } = useTranslation();
     const cardRef = useRef(null);
+    const isAr = language === 'ar';
     const getBarColor = (value) => { if (value >= 80) return '#10b981'; if (value >= 50) return '#f59e0b'; return '#ef4444'; };
     const getHoverColor = (value) => { if (value >= 80) return '#059669'; if (value >= 50) return '#d97706'; return '#dc2626'; };
 
@@ -395,25 +434,26 @@ export const KpiBarChart = ({ title, chartData, dataKey = 'avgOverall' }) => {
     const options = { 
         indexAxis: 'y', responsive: true, maintainAspectRatio: false, animation: { duration: 1000, easing: 'easeOutQuart' },
         plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.95)', titleFont: { size: 13, family: "'Inter', sans-serif" }, bodyFont: { size: 12, family: "'Inter', sans-serif", weight: 'bold' }, padding: 10, cornerRadius: 8, callbacks: { label: (c) => `${c.dataset.label}: ${c.raw}${dataKey === 'count' ? '' : '%'}` } } }, 
-        scales: { x: { beginAtZero: true, max: dataKey === 'count' ? undefined : 100, grid: { color: '#e2e8f0', drawBorder: false }, ticks: { callback: (v) => `${v}${dataKey === 'count' ? '' : '%'}`, color: '#475569', font: { family: "'Inter', sans-serif", weight: '500' } } }, y: { grid: { display: false, drawBorder: false }, ticks: { autoSkip: false, color: '#334155', font: { size: 12, family: "'Inter', sans-serif", weight: 'bold' } } } } 
+        scales: { x: { reverse: isAr, beginAtZero: true, max: dataKey === 'count' ? undefined : 100, grid: { color: '#e2e8f0', drawBorder: false }, ticks: { callback: (v) => `${v}${dataKey === 'count' ? '' : '%'}`, color: '#475569', font: { family: "'Inter', sans-serif", weight: '500' } } }, y: { position: isAr ? 'right' : 'left', grid: { display: false, drawBorder: false }, ticks: { autoSkip: false, color: '#334155', font: { size: 12, family: "'Inter', sans-serif", weight: 'bold' } } } } 
     };
     const chartHeight = Math.max(300, chartData.length * 40); 
     
     return (
         <div ref={cardRef} className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-black hover:shadow-lg transition-shadow duration-300 relative">
-            <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={title} /></div>
-            <h4 className="text-base font-extrabold text-slate-800 mb-4 sm:mb-5 text-center tracking-wide pr-8 break-words">{title}</h4>
-            <div className="relative" style={{ height: `${chartHeight}px` }}>{chartData.length > 0 ? <Bar options={options} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">{t('No data available.')}</div>}</div>
+            <div className="absolute top-4 right-4 z-10"><CopyImageButton targetRef={cardRef} title={t(title)} /></div>
+            <h4 className="text-base font-extrabold text-slate-800 mb-4 sm:mb-5 text-center tracking-wide pr-8 break-words">{t(title)}</h4>
+            <div className="relative" style={{ height: `${chartHeight}px` }} dir="ltr">{chartData.length > 0 ? <Bar options={options} data={data} /> : <div className="flex items-center justify-center h-full text-slate-500 font-semibold">{t('No data available.')}</div>}</div>
         </div>
     );
 };
 
 // --- Tables ---
 export const CompactSkillRow = ({ label, stats }) => {
+    const { language } = useTranslation();
     const yes = stats?.yes || 0; const no = stats?.no || 0; const total = yes + no; const percentage = total > 0 ? (yes / total) : null;
     return (
         <tr className="bg-white hover:bg-sky-50 transition-colors duration-150 group border-b border-black">
-            <td className="p-3 text-xs font-bold text-slate-700 w-3/5 text-left group-hover:text-sky-800">{label}</td>
+            <td className={`p-3 text-xs font-bold text-slate-700 w-3/5 ${language === 'ar' ? 'text-right' : 'text-left'} group-hover:text-sky-800`}>{label}</td>
             <td className="p-3 text-xs font-bold text-slate-600 border-l border-black w-1/5 text-center" dir="ltr">{yes} / {total}</td>
             <td className="p-3 border-l border-black w-1/5 text-center bg-slate-50/50 group-hover:bg-sky-100/50"><ScoreText value={percentage} /></td>
         </tr>
@@ -422,6 +462,7 @@ export const CompactSkillRow = ({ label, stats }) => {
 
 export const CompactSkillsTable = ({ overallKpis }) => {
     const { t, language } = useTranslation();
+    const isAr = language === 'ar';
     const skillStats = overallKpis?.skillStats;
     if (!overallKpis || !skillStats || Object.keys(skillStats).length === 0) return (<div className="bg-white p-8 rounded-2xl shadow-md border border-black text-center text-slate-500 font-bold">{t('No detailed skill data available.')}</div>);
     
@@ -433,13 +474,13 @@ export const CompactSkillsTable = ({ overallKpis }) => {
     };
 
     return (
-        <div className="bg-white rounded-2xl shadow-md border border-black overflow-hidden" dir="ltr">
+        <div className="bg-white rounded-2xl shadow-md border border-black overflow-hidden" dir={isAr ? 'rtl' : 'ltr'}>
             <table className="w-full border-collapse">
                 <thead className="sticky top-0 z-10 shadow-sm border-b border-black">
                     <tr className="bg-slate-200">
-                        <th className="p-4 text-xs font-extrabold text-slate-800 w-3/5 text-left tracking-wide uppercase">{t('Skill')}</th>
-                        <th className="p-4 text-xs font-extrabold text-slate-800 border-l border-black w-1/5 text-center tracking-wide uppercase">{t('Count (Yes / Total)')}</th>
-                        <th className="p-4 text-xs font-extrabold text-slate-800 border-l border-black w-1/5 text-center tracking-wide uppercase">{t('Percentage')}</th>
+                        <th className={`p-4 text-xs font-extrabold text-slate-800 w-3/5 ${isAr ? 'text-right' : 'text-left'} tracking-wide uppercase border-l border-black`}>{t('Skill')}</th>
+                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide uppercase border-l border-black">{t('Count (Yes / Total)')}</th>
+                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide uppercase">{t('Percentage')}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -452,13 +493,14 @@ export const CompactSkillsTable = ({ overallKpis }) => {
                         else if (group.group.includes('الخطورة')) groupAggregateScore = overallKpis.avgDangerSigns;
                         else if (group.sectionKey === 'recording_skills') groupAggregateScore = calculateAverage([overallKpis.avgRecordSigns, overallKpis.avgRecordClass, overallKpis.avgRecordTreat]);
 
-                        const groupName = language === 'en' ? (IMNCI_ENGLISH_LABELS[group.group] || group.group) : group.group;
+                        // Fetching correctly through the dictionary and fallback.
+                        const groupName = t(IMNCI_ENGLISH_LABELS[group.group] || group.group);
 
                         return (
                             <React.Fragment key={group.group}>
                                 <tr className="bg-slate-800 text-white border-b border-black">
-                                    <td className="p-3 text-sm font-bold text-left tracking-wide" colSpan="2">{groupName}</td>
-                                    <td className="p-3 text-center border-l border-black">
+                                    <td className={`p-3 text-sm font-bold ${isAr ? 'text-right' : 'text-left'} tracking-wide border-l border-black`} colSpan="2">{groupName}</td>
+                                    <td className="p-3 text-center">
                                         {groupAggregateScore !== null && (<div className="bg-white/10 backdrop-blur-md rounded-lg px-3 py-1 inline-block border border-black shadow-inner"><ScoreText value={groupAggregateScore} showPercentage={true}/></div>)}
                                     </td>
                                 </tr>
@@ -473,13 +515,13 @@ export const CompactSkillsTable = ({ overallKpis }) => {
                                             else if (symptomKey === 'symptom_ear') skillsToRender = ['skill_ask_ear', 'skill_check_ear', 'skill_classify_ear']; 
                                             
                                             const symptomScore = getAggregatedScore(skillsToRender);
-                                            const symptomGroupName = language === 'en' ? (IMNCI_ENGLISH_LABELS[symptomGroup.mainSkill.key] || symptomGroup.mainSkill.label) : symptomGroup.mainSkill.label;
+                                            const symptomGroupName = t(IMNCI_ENGLISH_LABELS[symptomGroup.mainSkill.key] || symptomGroup.mainSkill.label);
                                             
                                             return (
                                                 <React.Fragment key={symptomKey}>
-                                                    <tr className="bg-sky-600 text-white border-b border-black"><td className="p-2.5 text-xs font-bold text-left" colSpan="2">{symptomGroupName}</td><td className="p-2.5 text-center border-l border-black">{symptomScore !== null && (<div className="bg-white/10 backdrop-blur-md rounded-md px-2 py-0.5 inline-block border border-black"><ScoreText value={symptomScore} showPercentage={true} /></div>)}</td></tr>
+                                                    <tr className="bg-sky-600 text-white border-b border-black"><td className={`p-2.5 text-xs font-bold ${isAr ? 'text-right' : 'text-left'} border-l border-black`} colSpan="2">{symptomGroupName}</td><td className="p-2.5 text-center">{symptomScore !== null && (<div className="bg-white/10 backdrop-blur-md rounded-md px-2 py-0.5 inline-block border border-black"><ScoreText value={symptomScore} showPercentage={true} /></div>)}</td></tr>
                                                     {skillsToRender.map(skillKey => {
-                                                        const label = language === 'en' ? (IMNCI_ENGLISH_LABELS[skillKey] || skillKey) : (IMNCI_ENGLISH_LABELS[skillKey] ? t(IMNCI_ENGLISH_LABELS[skillKey]) : skillKey);
+                                                        const label = t(IMNCI_ENGLISH_LABELS[skillKey] || skillKey);
                                                         return <CompactSkillRow key={skillKey} label={label} stats={skillStats[skillKey]} />;
                                                     })}
                                                 </React.Fragment>
@@ -487,12 +529,12 @@ export const CompactSkillsTable = ({ overallKpis }) => {
                                         }); 
                                     }
                                     const skillsToRender = subgroup.skills?.map(s => s.key) || []; const subgroupScore = getAggregatedScore(skillsToRender); 
-                                    const subgroupTitle = language === 'en' ? (IMNCI_ENGLISH_LABELS[subgroup.subgroupTitle] || subgroup.subgroupTitle) : subgroup.subgroupTitle;
+                                    const subgroupTitle = t(IMNCI_ENGLISH_LABELS[subgroup.subgroupTitle] || subgroup.subgroupTitle);
                                     return (
                                         <React.Fragment key={subgroup.subgroupTitle}>
-                                            <tr className="bg-sky-600 text-white border-b border-black"><td className="p-2.5 text-xs font-bold text-left" colSpan="2">{subgroupTitle}</td><td className="p-2.5 text-center border-l border-black">{subgroupScore !== null && (<div className="bg-white/10 backdrop-blur-md rounded-md px-2 py-0.5 inline-block border border-black"><ScoreText value={subgroupScore} showPercentage={true}/></div>)}</td></tr>
+                                            <tr className="bg-sky-600 text-white border-b border-black"><td className={`p-2.5 text-xs font-bold ${isAr ? 'text-right' : 'text-left'} border-l border-black`} colSpan="2">{subgroupTitle}</td><td className="p-2.5 text-center">{subgroupScore !== null && (<div className="bg-white/10 backdrop-blur-md rounded-md px-2 py-0.5 inline-block border border-black"><ScoreText value={subgroupScore} showPercentage={true}/></div>)}</td></tr>
                                             {subgroup.skills?.map(skill => {
-                                                const label = language === 'en' ? (IMNCI_ENGLISH_LABELS[skill.key] || skill.label) : skill.label;
+                                                const label = t(IMNCI_ENGLISH_LABELS[skill.key] || skill.label);
                                                 return <CompactSkillRow key={skill.key} label={label} stats={skillStats[skill.key]} />;
                                             })}
                                         </React.Fragment>
@@ -509,11 +551,12 @@ export const CompactSkillsTable = ({ overallKpis }) => {
 };
 
 export const EENCCompactSkillRow = ({ label, stats }) => {
-    const { t } = useTranslation();
+    const { t, language } = useTranslation();
+    const isAr = language === 'ar';
     const yes = stats?.yes || 0; const partial = stats?.partial || 0; const no = stats?.no || 0; const totalResponses = yes + partial + no; const score = (yes * 2) + (partial * 1); const maxScore = totalResponses * 2; const percentage = maxScore > 0 ? (score / maxScore) : null;
     return (
         <tr className="bg-white hover:bg-sky-50 transition-colors duration-150 group border-b border-black">
-            <td className="p-3 text-xs font-bold text-slate-700 w-3/5 text-left group-hover:text-sky-800">{label}</td>
+            <td className={`p-3 text-xs font-bold text-slate-700 w-3/5 ${isAr ? 'text-right' : 'text-left'} group-hover:text-sky-800`}>{label}</td>
             <td className="p-3 text-xs font-bold text-slate-600 border-l border-black w-1/5 text-center" dir="ltr">
                 <span title={t("Yes")} className="text-emerald-600">{yes}</span> / <span title={t("Partial")} className="text-amber-500">{partial}</span> / <span title={t("No")} className="text-rose-600">{no}</span>
             </td>
@@ -524,23 +567,24 @@ export const EENCCompactSkillRow = ({ label, stats }) => {
 
 export const EENCCompactSkillsTable = ({ overallKpis }) => {
     const { t, language } = useTranslation();
+    const isAr = language === 'ar';
     const skillStats = overallKpis?.skillStats;
     if (!overallKpis || !skillStats || Object.keys(skillStats).length === 0) return (<div className="bg-white p-8 rounded-2xl shadow-md border border-black text-center text-slate-500 font-bold">{t('No detailed EENC skill data available.')}</div>);
     const sections = [
-        { title: language === 'ar' ? 'تجهيزات ما قبل الولادة' : 'Pre-delivery Preparation', items: PREPARATION_ITEMS, score: overallKpis.avgPreparation }, 
-        { title: language === 'ar' ? 'التجفيف والتحفيز والتدفئة والشفط' : 'Drying, Stimulation, Warming & Suction', items: DRYING_STIMULATION_ITEMS, score: overallKpis.avgDrying }, 
-        { title: language === 'ar' ? 'التعامل مع الطفل الذي يتنفس بصورة طبيعية' : 'Normal Breathing Baby Management', items: NORMAL_BREATHING_ITEMS, score: overallKpis.avgNormalBreathing }, 
-        { title: language === 'ar' ? 'إنعاش حديثي الولادة (الدقيقة الذهبية)' : 'Newborn Resuscitation (Golden Minute)', items: RESUSCITATION_ITEMS, score: overallKpis.avgResuscitation }
+        { title: t('Pre-delivery Preparation'), items: PREPARATION_ITEMS, score: overallKpis.avgPreparation }, 
+        { title: t('Drying, Stimulation, Warming & Suction'), items: DRYING_STIMULATION_ITEMS, score: overallKpis.avgDrying }, 
+        { title: t('Normal Breathing Baby Management'), items: NORMAL_BREATHING_ITEMS, score: overallKpis.avgNormalBreathing }, 
+        { title: t('Newborn Resuscitation (Golden Minute)'), items: RESUSCITATION_ITEMS, score: overallKpis.avgResuscitation }
     ];
 
     return (
-        <div className="bg-white rounded-2xl shadow-md border border-black overflow-hidden" dir="ltr">
+        <div className="bg-white rounded-2xl shadow-md border border-black overflow-hidden" dir={isAr ? 'rtl' : 'ltr'}>
             <table className="w-full border-collapse">
                 <thead className="sticky top-0 z-10 shadow-sm border-b border-black">
                     <tr className="bg-slate-200">
-                        <th className="p-4 text-xs font-extrabold text-slate-800 w-3/5 text-left uppercase tracking-wide">{t('Skill (EENC)')}</th>
-                        <th className="p-4 text-xs font-extrabold text-slate-800 border-l border-black w-1/5 text-center uppercase tracking-wide">{t('Count (Yes / Partial / No)')}</th>
-                        <th className="p-4 text-xs font-extrabold text-slate-800 border-l border-black w-1/5 text-center uppercase tracking-wide">{t('Percentage')}</th>
+                        <th className={`p-4 text-xs font-extrabold text-slate-800 w-3/5 ${isAr ? 'text-right' : 'text-left'} uppercase tracking-wide border-l border-black`}>{t('Skill (EENC)')}</th>
+                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center uppercase tracking-wide border-l border-black">{t('Count (Yes / Partial / No)')}</th>
+                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center uppercase tracking-wide">{t('Percentage')}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -549,9 +593,9 @@ export const EENCCompactSkillsTable = ({ overallKpis }) => {
                         if (!hasData) return null; 
                         return (
                             <React.Fragment key={section.title}>
-                                <tr className="bg-slate-800 text-white border-b border-black"><td className="p-3 text-sm font-bold text-left tracking-wide" colSpan="2">{section.title}</td><td className="p-3 text-center border-l border-black">{section.score !== null && (<div className="bg-white/10 backdrop-blur-md rounded-lg px-3 py-1 inline-block border border-black shadow-inner"><ScoreText value={section.score} showPercentage={true}/></div>)}</td></tr>
+                                <tr className="bg-slate-800 text-white border-b border-black"><td className={`p-3 text-sm font-bold ${isAr ? 'text-right' : 'text-left'} tracking-wide border-l border-black`} colSpan="2">{section.title}</td><td className="p-3 text-center">{section.score !== null && (<div className="bg-white/10 backdrop-blur-md rounded-lg px-3 py-1 inline-block border border-black shadow-inner"><ScoreText value={section.score} showPercentage={true}/></div>)}</td></tr>
                                 {section.items.map(item => {
-                                    const label = language === 'en' ? (EENC_SKILL_KEYS_TO_ENGLISH[item.key] || item.label) : item.label;
+                                    const label = t(EENC_SKILL_KEYS_TO_ENGLISH[item.key] || item.label);
                                     return <EENCCompactSkillRow key={item.key} label={label} stats={skillStats[item.key]} />;
                                 })}
                             </React.Fragment>
@@ -565,24 +609,25 @@ export const EENCCompactSkillsTable = ({ overallKpis }) => {
 
 export const MothersCompactSkillsTable = ({ motherKpis, serviceType }) => {
     const { t, language } = useTranslation();
+    const isAr = language === 'ar';
     const skillStats = motherKpis?.skillStats;
     if (!motherKpis || !skillStats) return (<div className="bg-white p-8 rounded-2xl shadow-md border border-black text-center text-slate-500 font-bold">{t('No mother survey data available.')}</div>);
     const items = serviceType === 'IMNCI' ? IMNCI_MOTHER_SURVEY_ITEMS_EN : EENC_MOTHER_SURVEY_ITEMS_EN;
 
     return (
-        <div className="bg-white rounded-2xl shadow-md border border-black overflow-hidden" dir="ltr">
+        <div className="bg-white rounded-2xl shadow-md border border-black overflow-hidden" dir={isAr ? 'rtl' : 'ltr'}>
             <table className="w-full border-collapse">
                 <thead className="sticky top-0 z-10 shadow-sm border-b border-black">
                     <tr className="bg-slate-200">
-                        <th className="p-4 text-xs font-extrabold text-slate-800 w-3/5 text-left tracking-wide uppercase">{t('Question (Mother Survey)')}</th>
-                        <th className="p-4 text-xs font-extrabold text-slate-800 border-l border-black w-1/5 text-center tracking-wide uppercase">{t('Count (Yes / Total)')}</th>
-                        <th className="p-4 text-xs font-extrabold text-slate-800 border-l border-black w-1/5 text-center tracking-wide uppercase">{t('Percentage')}</th>
+                        <th className={`p-4 text-xs font-extrabold text-slate-800 w-3/5 ${isAr ? 'text-right' : 'text-left'} tracking-wide uppercase border-l border-black`}>{t('Question (Mother Survey)')}</th>
+                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide uppercase border-l border-black">{t('Count (Yes / Total)')}</th>
+                        <th className="p-4 text-xs font-extrabold text-slate-800 w-1/5 text-center tracking-wide uppercase">{t('Percentage')}</th>
                     </tr>
                 </thead>
                 <tbody>
                     {items.map(group => (
                         <React.Fragment key={group.title}>
-                            <tr className="bg-slate-800 text-white border-b border-black"><td className="p-3 text-sm font-bold text-left tracking-wide" colSpan="3">{t(group.title)}</td></tr>
+                            <tr className="bg-slate-800 text-white border-b border-black"><td className={`p-3 text-sm font-bold ${isAr ? 'text-right' : 'text-left'} tracking-wide`} colSpan="3">{t(group.title)}</td></tr>
                             {group.items.map(item => (<CompactSkillRow key={item.key} label={t(item.label)} stats={skillStats[item.key]} />))}
                         </React.Fragment>
                     ))}
@@ -612,22 +657,23 @@ export const renderTrendArrows = (val, type) => {
 };
 
 export const GeographicVolumeTable = ({ title, data, locationLabel }) => {
-    const { t } = useTranslation();
+    const { t, language } = useTranslation();
+    const isAr = language === 'ar';
     const tableRef = useRef(null);
     if (!data || data.length === 0) return null;
     return (
         <div ref={tableRef} className="bg-white rounded-2xl shadow-md border border-black overflow-hidden mb-10 relative">
-            <div className="absolute top-3 right-4 z-10"><CopyImageButton targetRef={tableRef} title={title} /></div>
-            <div className="p-5 border-b border-black bg-slate-100 flex justify-between items-center pr-16"><h4 className="text-lg font-extrabold text-slate-800 break-words">{title}</h4></div>
+            <div className="absolute top-3 right-4 z-10"><CopyImageButton targetRef={tableRef} title={t(title)} /></div>
+            <div className="p-5 border-b border-black bg-slate-100 flex justify-between items-center pr-16"><h4 className="text-lg font-extrabold text-slate-800 break-words">{t(title)}</h4></div>
             <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left border-collapse" dir="ltr">
+                <table className="w-full text-sm border-collapse" dir={isAr ? 'rtl' : 'ltr'}>
                     <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider">
                         <tr>
-                            <th className="px-5 py-4 border-b border-r border-black font-extrabold">{locationLabel}</th>
-                            <th className="px-5 py-4 border-b border-r border-black font-extrabold text-center bg-sky-50">{t('Total Completed Visits')}</th>
-                            <th className="px-5 py-4 border-b border-r border-black font-extrabold text-center bg-sky-50">{t('Visits per HW')}</th>
-                            <th className="px-5 py-4 border-b border-r border-black font-extrabold text-center">{t('Total HWs Visited')}</th>
-                            <th className="px-5 py-4 border-b border-r border-black font-extrabold text-center bg-emerald-50">{t('Total Cases Observed')}</th>
+                            <th className={`px-5 py-4 border-b border-black font-extrabold border-l border-black ${isAr ? 'text-right' : 'text-left'}`}>{t(locationLabel)}</th>
+                            <th className="px-5 py-4 border-b border-black font-extrabold border-l border-black text-center bg-sky-50">{t('Total Completed Visits')}</th>
+                            <th className="px-5 py-4 border-b border-black font-extrabold border-l border-black text-center bg-sky-50">{t('Visits per HW')}</th>
+                            <th className="px-5 py-4 border-b border-black font-extrabold border-l border-black text-center">{t('Total HWs Visited')}</th>
+                            <th className="px-5 py-4 border-b border-black font-extrabold border-l border-black text-center bg-emerald-50">{t('Total Cases Observed')}</th>
                             <th className="px-5 py-4 border-b border-black font-extrabold text-center bg-emerald-50">{t('Cases per Visit')}</th>
                         </tr>
                     </thead>
@@ -637,12 +683,12 @@ export const GeographicVolumeTable = ({ title, data, locationLabel }) => {
                             const casesPerVisit = row.totalVisits > 0 ? (row.totalCasesObserved / row.totalVisits).toFixed(1) : '0';
                             return (
                                 <tr key={idx} className="hover:bg-sky-50 transition-colors border-b border-black">
-                                    <td className="px-5 py-3 border-r border-black font-bold text-slate-800">{row.stateName}</td>
-                                    <td className="px-5 py-3 border-r border-black text-center font-bold text-sky-800 bg-sky-50/50">{row.totalVisits}</td>
-                                    <td className="px-5 py-3 border-r border-black text-center text-slate-600 bg-sky-50/50"><div className="flex items-center justify-center"><span>{visitsPerHw}</span>{renderTrendArrows(visitsPerHw, 'visits')}</div></td>
-                                    <td className="px-5 py-3 border-r border-black text-center font-bold text-slate-700">{row.totalHealthWorkers}</td>
-                                    <td className="px-5 py-3 border-r border-black text-center font-bold text-emerald-800 bg-emerald-50/50">{row.totalCasesObserved}</td>
-                                    <td className="px-5 py-3 text-center text-slate-600 bg-emerald-50/50"><div className="flex items-center justify-center"><span>{casesPerVisit}</span>{renderTrendArrows(casesPerVisit, 'cases')}</div></td>
+                                    <td className={`px-5 py-3 border-l border-black font-bold text-slate-800 ${isAr ? 'text-right' : 'text-left'}`}>{row.stateName}</td>
+                                    <td className="px-5 py-3 border-l border-black text-center font-bold text-sky-800 bg-sky-50/50" dir="ltr">{row.totalVisits}</td>
+                                    <td className="px-5 py-3 border-l border-black text-center text-slate-600 bg-sky-50/50" dir="ltr"><div className="flex items-center justify-center"><span>{visitsPerHw}</span>{renderTrendArrows(visitsPerHw, 'visits')}</div></td>
+                                    <td className="px-5 py-3 border-l border-black text-center font-bold text-slate-700" dir="ltr">{row.totalHealthWorkers}</td>
+                                    <td className="px-5 py-3 border-l border-black text-center font-bold text-emerald-800 bg-emerald-50/50" dir="ltr">{row.totalCasesObserved}</td>
+                                    <td className="px-5 py-3 text-center text-slate-600 bg-emerald-50/50" dir="ltr"><div className="flex items-center justify-center"><span>{casesPerVisit}</span>{renderTrendArrows(casesPerVisit, 'cases')}</div></td>
                                 </tr>
                             );
                         })}
@@ -654,28 +700,29 @@ export const GeographicVolumeTable = ({ title, data, locationLabel }) => {
 };
 
 export const SummaryKpiTable = ({ title, kpiDefinitions, overallKpis, kpisByWorkerType }) => {
-    const { t } = useTranslation();
+    const { t, language } = useTranslation();
+    const isAr = language === 'ar';
     const tableRef = useRef(null);
     if (!overallKpis || !kpisByWorkerType || kpisByWorkerType.length === 0) return null;
     return (
         <div ref={tableRef} className="bg-white rounded-2xl shadow-md border border-black overflow-hidden mb-10 relative">
-            <div className="absolute top-3 right-4 z-10"><CopyImageButton targetRef={tableRef} title={title} /></div>
-            <div className="p-5 border-b border-black bg-slate-100 flex justify-between items-center pr-16"><h4 className="text-lg font-extrabold text-slate-800 break-words">{title}</h4></div>
+            <div className="absolute top-3 right-4 z-10"><CopyImageButton targetRef={tableRef} title={t(title)} /></div>
+            <div className="p-5 border-b border-black bg-slate-100 flex justify-between items-center pr-16"><h4 className="text-lg font-extrabold text-slate-800 break-words">{t(title)}</h4></div>
             <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left border-collapse" dir="ltr">
+                <table className="w-full text-sm border-collapse" dir={isAr ? 'rtl' : 'ltr'}>
                     <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider">
                         <tr>
-                            <th className="px-5 py-4 border-b border-r border-black font-extrabold min-w-[200px]">{t('KPI Name')}</th>
-                            <th className="px-5 py-4 border-b border-r border-black font-extrabold text-center bg-sky-100 whitespace-nowrap">{t('Overall Score')}</th>
-                            {kpisByWorkerType.map(group => (<th key={group.workerType} className="px-5 py-4 border-b border-r border-black font-extrabold text-center whitespace-nowrap">{group.workerType}</th>))}
+                            <th className={`px-5 py-4 border-b border-black border-l border-black font-extrabold min-w-[200px] ${isAr ? 'text-right' : 'text-left'}`}>{t('KPI Name')}</th>
+                            <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center bg-sky-100 whitespace-nowrap">{t('Overall Score')}</th>
+                            {kpisByWorkerType.map(group => (<th key={group.workerType} className="px-5 py-4 border-b border-l border-black font-extrabold text-center whitespace-nowrap">{t(group.workerType)}</th>))}
                         </tr>
                     </thead>
                     <tbody>
                         {kpiDefinitions.map((kpi, idx) => (
                             <tr key={idx} className="hover:bg-sky-50 transition-colors border-b border-black">
-                                <td className="px-5 py-3 border-r border-black font-bold text-slate-800">{t(kpi.label)}</td>
-                                <td className="px-5 py-3 border-r border-black text-center bg-sky-50/50"><ScoreText value={kpi.getValue(overallKpis)} /></td>
-                                {kpisByWorkerType.map(group => (<td key={group.workerType} className="px-5 py-3 border-r border-black text-center"><ScoreText value={kpi.getValue(group.kpis)} /></td>))}
+                                <td className={`px-5 py-3 border-l border-black font-bold text-slate-800 ${isAr ? 'text-right' : 'text-left'}`}>{t(kpi.label)}</td>
+                                <td className="px-5 py-3 border-l border-black text-center bg-sky-50/50"><ScoreText value={kpi.getValue(overallKpis)} /></td>
+                                {kpisByWorkerType.map(group => (<td key={group.workerType} className="px-5 py-3 border-l border-black text-center"><ScoreText value={kpi.getValue(group.kpis)} /></td>))}
                             </tr>
                         ))}
                     </tbody>
@@ -686,7 +733,8 @@ export const SummaryKpiTable = ({ title, kpiDefinitions, overallKpis, kpisByWork
 };
 
 export const MentorPerformanceTable = ({ title, submissions, visitReports, activeService }) => {
-    const { t } = useTranslation();
+    const { t, language } = useTranslation();
+    const isAr = language === 'ar';
     const tableRef = useRef(null);
     const data = useMemo(() => {
         if (!submissions) return [];
@@ -727,29 +775,29 @@ export const MentorPerformanceTable = ({ title, submissions, visitReports, activ
 
     return (
         <div ref={tableRef} className="bg-white rounded-2xl shadow-md border border-black overflow-hidden mb-10 relative">
-            <div className="absolute top-3 right-4 z-10"><CopyImageButton targetRef={tableRef} title={title} /></div>
-            <div className="p-5 border-b border-black bg-slate-100 flex justify-between items-center pr-16"><h4 className="text-lg font-extrabold text-slate-800 break-words">{title}</h4></div>
+            <div className="absolute top-3 right-4 z-10"><CopyImageButton targetRef={tableRef} title={t(title)} /></div>
+            <div className="p-5 border-b border-black bg-slate-100 flex justify-between items-center pr-16"><h4 className="text-lg font-extrabold text-slate-800 break-words">{t(title)}</h4></div>
             <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left border-collapse" dir="ltr">
+                <table className="w-full text-sm border-collapse" dir={isAr ? 'rtl' : 'ltr'}>
                     <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider">
                         <tr>
-                            <th className="px-5 py-4 border-b border-r border-black font-extrabold">{t('Mentor Name')}</th>
-                            <th className="px-5 py-4 border-b border-r border-black font-extrabold text-center">{t('Health Workers')}</th>
-                            <th className="px-5 py-4 border-b border-r border-black font-extrabold text-center bg-sky-50">{t('Total Visits')}<div className="text-[10px] text-slate-500 normal-case mt-1 tracking-normal">{t('Visits per HW')}</div></th>
-                            <th className="px-5 py-4 border-b border-r border-black font-extrabold text-center">{t('Total Cases')}<div className="text-[10px] text-slate-500 normal-case mt-1 tracking-normal">{t('Cases per Visit')}</div></th>
-                            <th className="px-5 py-4 border-b border-r border-black font-extrabold text-center bg-emerald-50">{t('Mother Forms')}<div className="text-[10px] text-slate-500 normal-case mt-1 tracking-normal">{t('Forms per Visit')}</div></th>
+                            <th className={`px-5 py-4 border-b border-black border-l border-black font-extrabold ${isAr ? 'text-right' : 'text-left'}`}>{t('Mentor Name')}</th>
+                            <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center">{t('Health Workers')}</th>
+                            <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center bg-sky-50">{t('Total Visits')}<div className="text-[10px] text-slate-500 normal-case mt-1 tracking-normal">{t('Visits per HW')}</div></th>
+                            <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center">{t('Total Cases')}<div className="text-[10px] text-slate-500 normal-case mt-1 tracking-normal">{t('Cases per Visit')}</div></th>
+                            <th className="px-5 py-4 border-b border-black border-l border-black font-extrabold text-center bg-emerald-50">{t('Mother Forms')}<div className="text-[10px] text-slate-500 normal-case mt-1 tracking-normal">{t('Forms per Visit')}</div></th>
                             <th className="px-5 py-4 border-b border-black font-extrabold text-center bg-purple-50">{t('Visit Reports')}<div className="text-[10px] text-slate-500 normal-case mt-1 tracking-normal">{t('% of Completed Visits')}</div></th>
                         </tr>
                     </thead>
                     <tbody>
                         {data.map((row, idx) => (
                             <tr key={idx} className="hover:bg-sky-50 transition-colors border-b border-black">
-                                <td className="px-5 py-3 border-r border-black font-bold text-slate-800">{row.mentorName}</td>
-                                <td className="px-5 py-3 border-r border-black text-center font-bold text-slate-700">{row.hwCount}</td>
-                                <td className="px-5 py-3 border-r border-black text-center bg-sky-50/50"><div className="font-bold text-sky-800 text-base">{row.visitCount}</div><div className="text-xs text-slate-500 font-semibold">{row.visitsPerHw} {t('visits/hw')}</div></td>
-                                <td className="px-5 py-3 border-r border-black text-center"><div className="font-bold text-slate-700 text-base">{row.cases}</div><div className="text-xs text-slate-500 font-semibold">{row.casesPerVisit} {t('cases/visit')}</div></td>
-                                <td className="px-5 py-3 border-r border-black text-center bg-emerald-50/50"><div className="font-bold text-emerald-800 text-base">{row.mothers}</div><div className="text-xs text-slate-500 font-semibold">{row.mothersPerVisit} {t('forms/visit')}</div></td>
-                                <td className="px-5 py-3 text-center bg-purple-50/50"><div className="font-bold text-purple-800 text-base">{row.reports}</div><div className={`text-xs font-bold ${row.reportCompliance >= 100 ? 'text-emerald-600' : 'text-rose-600'}`}>{row.reportCompliance}% {t('submitted')}</div></td>
+                                <td className={`px-5 py-3 border-l border-black font-bold text-slate-800 ${isAr ? 'text-right' : 'text-left'}`}>{row.mentorName}</td>
+                                <td className="px-5 py-3 border-l border-black text-center font-bold text-slate-700" dir="ltr">{row.hwCount}</td>
+                                <td className="px-5 py-3 border-l border-black text-center bg-sky-50/50" dir="ltr"><div className="font-bold text-sky-800 text-base">{row.visitCount}</div><div className="text-xs text-slate-500 font-semibold">{row.visitsPerHw} {t('visits/hw')}</div></td>
+                                <td className="px-5 py-3 border-l border-black text-center" dir="ltr"><div className="font-bold text-slate-700 text-base">{row.cases}</div><div className="text-xs text-slate-500 font-semibold">{row.casesPerVisit} {t('cases/visit')}</div></td>
+                                <td className="px-5 py-3 border-l border-black text-center bg-emerald-50/50" dir="ltr"><div className="font-bold text-emerald-800 text-base">{row.mothers}</div><div className="text-xs text-slate-500 font-semibold">{row.mothersPerVisit} {t('forms/visit')}</div></td>
+                                <td className="px-5 py-3 text-center bg-purple-50/50" dir="ltr"><div className="font-bold text-purple-800 text-base">{row.reports}</div><div className={`text-xs font-bold ${row.reportCompliance >= 100 ? 'text-emerald-600' : 'text-rose-600'}`}>{row.reportCompliance}% {t('submitted')}</div></td>
                             </tr>
                         ))}
                     </tbody>
