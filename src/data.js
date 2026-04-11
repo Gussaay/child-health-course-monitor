@@ -235,13 +235,20 @@ async function getData(query, sourceOptions = {}) {
 // --- STORAGE HELPERS ---
 export async function uploadFile(file) {
     if (!file) return null;
+    
+    // --- OFFLINE UPLOAD GUARD ---
+    if (!navigator.onLine) {
+        throw new Error("Cannot upload files while offline. Please connect to the internet to upload PDFs or images.");
+    }
+    // ----------------------------
+
     const storageRef = ref(storage, `uploads/${Date.now()}_${file.name}`);
     try {
         const snapshot = await uploadBytes(storageRef, file);
         return await getDownloadURL(snapshot.ref);
     } catch (error) {
         console.error("Error uploading file:", error);
-        throw error;
+        throw new Error(`Upload failed: ${error.message}`);
     }
 }
 

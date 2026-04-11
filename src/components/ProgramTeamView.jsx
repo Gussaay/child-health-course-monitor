@@ -1,6 +1,8 @@
 // src/components/ProgramTeamView.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { QRCodeCanvas } from 'qrcode.react'; 
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import {
     upsertStateCoordinator,
     deleteStateCoordinator,
@@ -60,44 +62,6 @@ const normalizeState = (rawState) => {
         }
     }
     return trimmed; // Return original if no match found
-};
-
-// Simple CSV Parser
-const parseCSV = (str) => {
-    const rows = [];
-    let currentRow = [];
-    let currentCell = '';
-    let inQuotes = false;
-
-    for (let i = 0; i < str.length; i++) {
-        const char = str[i];
-        const nextChar = str[i + 1];
-
-        if (char === '"' && inQuotes && nextChar === '"') {
-            currentCell += '"';
-            i++;
-        } else if (char === '"') {
-            inQuotes = !inQuotes;
-        } else if (char === ',' && !inQuotes) {
-            currentRow.push(currentCell.trim());
-            currentCell = '';
-        } else if ((char === '\n' || char === '\r') && !inQuotes) {
-            if (char === '\r' && nextChar === '\n') {
-                i++;
-            }
-            currentRow.push(currentCell.trim());
-            rows.push(currentRow);
-            currentRow = [];
-            currentCell = '';
-        } else {
-            currentCell += char;
-        }
-    }
-    if (currentCell || currentRow.length > 0) {
-        currentRow.push(currentCell.trim());
-        rows.push(currentRow);
-    }
-    return rows.filter(r => r.some(c => c)); // filter empty rows
 };
 
 // Reusable Share Link Modal
@@ -1035,49 +999,102 @@ function BulkImportModal({ isOpen, onClose, allData, fetchers, permissions, setT
         }
     }, [isOpen]);
 
-    const handleDownloadTemplate = () => {
-        // Ensure the ID header clearly warns users not to alter it
-        const headers = ['ID_(DO_NOT_EDIT)', 'Level', 'State', 'Locality', 'Name_En', 'Name_Ar', 'Phone', 'Email', 'Job_Title', 'Job_Title_Other', 'Role', 'Unit', 'Join_Date', 'Bank_Account', 'Bank_Name', 'Bank_Branch', 'Account_Holder', 'Comments'];
-        
-        let csv = '\uFEFF' + headers.join(',') + '\n';
-        allData.forEach(row => {
-            const rowData = headers.map(h => {
-                let val = row[h];
-                if (h === 'Level') val = row._level || '';
-                if (h === 'ID_(DO_NOT_EDIT)') val = row.id || '';
-                if (h === 'Name_En') val = row.name || '';
-                if (h === 'Name_Ar') val = row.nameAr || '';
-                if (h === 'Job_Title') val = row.jobTitle || '';
-                if (h === 'Job_Title_Other') val = row.jobTitleOther || '';
-                if (h === 'Bank_Account') val = row.bankAccount || '';
-                if (h === 'Bank_Name') val = row.bankName || '';
-                if (h === 'Bank_Branch') val = row.bankBranch || '';
-                if (h === 'Account_Holder') val = row.accountHolder || '';
-                if (h === 'Join_Date') val = row.joinDate || '';
-                if (h === 'Phone') val = row.phone || '';
+    const handleDownloadTemplate = async () => {
+        try {
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Team Template');
 
-                if (val == null) return '""';
-                
-                // CRITICAL FIX FOR EXCEL:
-                // Prepend an invisible tab (\t) to IDs, Phones, and Bank Accounts.
-                // This prevents Excel from treating them as numbers, dropping leading zeros, or converting long IDs to scientific notation.
-                // Our parsing function (.trim()) will remove this tab upon upload.
-                if ((h === 'ID_(DO_NOT_EDIT)' || h === 'Phone' || h === 'Bank_Account') && val !== '') {
-                    val = '\t' + val;
-                }
+            // Define columns
+            worksheet.columns = [
+                { header: 'ID_(LOCKED)', key: 'id', width: 25 },
+                { header: 'Level', key: 'level', width: 15 },
+                { header: 'State', key: 'state', width: 20 },
+                { header: 'Locality', key: 'locality', width: 20 },
+                { header: 'Name_En', key: 'name', width: 25 },
+                { header: 'Name_Ar', key: 'nameAr', width: 25 },
+                { header: 'Phone', key: 'phone', width: 20 },
+                { header: 'Email', key: 'email', width: 25 },
+                { header: 'Job_Title', key: 'jobTitle', width: 20 },
+                { header: 'Job_Title_Other', key: 'jobTitleOther', width: 20 },
+                { header: 'Role', key: 'role', width: 20 },
+                { header: 'Unit', key: 'unit', width: 25 },
+                { header: 'Join_Date', key: 'joinDate', width: 15 },
+                { header: 'Bank_Account', key: 'bankAccount', width: 25 },
+                { header: 'Bank_Name', key: 'bankName', width: 20 },
+                { header: 'Bank_Branch', key: 'bankBranch', width: 20 },
+                { header: 'Account_Holder', key: 'accountHolder', width: 25 },
+                { header: 'Comments', key: 'comments', width: 30 }
+            ];
 
-                return `"${String(val).replace(/"/g, '""')}"`;
+            // Add data
+            allData.forEach(row => {
+                worksheet.addRow({
+                    id: row.id || '',
+                    level: row._level || '',
+                    state: row.state || '',
+                    locality: row.locality || '',
+                    name: row.name || '',
+                    nameAr: row.nameAr || '',
+                    phone: row.phone || '',
+                    email: row.email || '',
+                    jobTitle: row.jobTitle || '',
+                    jobTitleOther: row.jobTitleOther || '',
+                    role: row.role || '',
+                    unit: row.unit || '',
+                    joinDate: row.joinDate || '',
+                    bankAccount: row.bankAccount || '',
+                    bankName: row.bankName || '',
+                    bankBranch: row.bankBranch || '',
+                    accountHolder: row.accountHolder || '',
+                    comments: row.comments || ''
+                });
             });
-            csv += rowData.join(',') + '\n';
-        });
 
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'Program_Team_Template.csv';
-        a.click();
-        URL.revokeObjectURL(url);
+            // Unlock all columns EXCEPT the first one (ID)
+            worksheet.columns.forEach((col, index) => {
+                if (index !== 0) { // Not the ID column
+                    col.eachCell({ includeEmpty: true }, (cell) => {
+                        cell.protection = { locked: false };
+                    });
+                } else { // The ID column
+                    col.eachCell({ includeEmpty: true }, (cell) => {
+                        cell.protection = { locked: true };
+                        // Add grey background to indicate it's locked
+                        cell.fill = {
+                            type: 'pattern',
+                            pattern: 'solid',
+                            fgColor: { argb: 'FFF2F2F2' }
+                        };
+                    });
+                }
+            });
+
+            // Format Header Row
+            worksheet.getRow(1).font = { bold: true };
+            worksheet.getRow(1).eachCell((cell) => {
+                cell.protection = { locked: true }; // Keep all headers locked
+            });
+
+            // Protect the sheet with a password. 
+            // Users can edit cells where 'locked' is false, but cannot edit 'locked: true'
+            await worksheet.protect('SystemLock2026!', {
+                selectLockedCells: true,
+                selectUnlockedCells: true,
+                formatColumns: true,
+                formatRows: true,
+                sort: true,
+                autoFilter: true,
+                insertRows: true, // Allow users to add new rows at the bottom
+            });
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            saveAs(blob, 'Program_Team_Template.xlsx');
+            
+        } catch (error) {
+            console.error("Error generating Excel:", error);
+            setToast({ show: true, message: 'Failed to generate Excel template.', type: 'error' });
+        }
     };
 
     const handleFileUpload = (e) => {
@@ -1085,74 +1102,103 @@ function BulkImportModal({ isOpen, onClose, allData, fetchers, permissions, setT
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = (evt) => {
-            const text = evt.target.result;
-            const rows = parseCSV(text);
-            if (rows.length < 2) {
-                setToast({ show: true, message: 'Invalid CSV file. Must have headers and at least one data row.', type: 'error' });
-                return;
-            }
-
-            const headers = rows[0].map(h => h.trim().replace(/^\uFEFF/, '')); // strip BOM
-            const dataRows = rows.slice(1);
-            
-            const parsed = [];
-            const unmapped = { levels: new Set(), states: new Set(), jobs: new Set(), roles: new Set(), units: new Set() };
-            
-            let updates = 0;
-            let adds = 0;
-            
-            // Allow flexibility if the user changes the column name slightly in Excel
-            const idHeader = headers.find(h => h === 'ID_(DO_NOT_EDIT)' || h === 'ID') || 'ID_(DO_NOT_EDIT)';
-
-            dataRows.forEach(rowArr => {
-                const obj = {};
-                headers.forEach((h, i) => {
-                    // .trim() safely removes the \t we added to protect the data in Excel
-                    obj[h] = rowArr[i] ? rowArr[i].trim() : '';
-                });
-
-                if (!obj.Name_En && !obj.Name_Ar) return; // Skip entirely empty rows
-
-                const rowId = obj[idHeader];
-                if (rowId) {
-                    obj.ID = rowId;
-                    updates++;
-                } else {
-                    adds++;
+        reader.onload = async (evt) => {
+            try {
+                const buffer = evt.target.result;
+                const workbook = new ExcelJS.Workbook();
+                await workbook.xlsx.load(buffer);
+                
+                const worksheet = workbook.getWorksheet(1);
+                if (!worksheet) {
+                    setToast({ show: true, message: 'Invalid Excel file.', type: 'error' });
+                    return;
                 }
 
-                // Collect unique unmapped values
-                if (obj.Level && !STD_LEVELS.includes(obj.Level)) unmapped.levels.add(obj.Level);
-                
-                const normState = normalizeState(obj.State);
-                if (obj.State && !STATE_LOCALITIES[normState]) unmapped.states.add(obj.State);
-                
-                if (obj.Job_Title && obj.Job_Title !== 'اخرى' && !STD_JOBS.includes(obj.Job_Title)) unmapped.jobs.add(obj.Job_Title);
-                if (obj.Role && !STD_ROLES.includes(obj.Role)) unmapped.roles.add(obj.Role);
-                if (obj.Unit && !STD_UNITS.includes(obj.Unit)) unmapped.units.add(obj.Unit);
-
-                parsed.push(obj);
-            });
-
-            setParsedRows(parsed);
-            setSummary({ updates, adds });
-
-            const needsMapping = Object.values(unmapped).some(set => set.size > 0);
-            if (needsMapping) {
-                setUnmappedLists({
-                    levels: Array.from(unmapped.levels),
-                    states: Array.from(unmapped.states),
-                    jobs: Array.from(unmapped.jobs),
-                    roles: Array.from(unmapped.roles),
-                    units: Array.from(unmapped.units)
+                const headers = [];
+                worksheet.getRow(1).eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                    headers[colNumber] = cell.value ? cell.value.toString().trim() : '';
                 });
-                setStep(2);
-            } else {
-                setStep(3); // Skip directly to execution if everything is standard
+
+                const parsed = [];
+                const unmapped = { levels: new Set(), states: new Set(), jobs: new Set(), roles: new Set(), units: new Set() };
+                
+                let updates = 0;
+                let adds = 0;
+                
+                const idHeaderIndex = headers.findIndex(h => h === 'ID_(LOCKED)' || h === 'ID');
+
+                worksheet.eachRow((row, rowNumber) => {
+                    if (rowNumber === 1) return; // Skip header
+
+                    const obj = {};
+                    let hasData = false;
+
+                    headers.forEach((h, colNumber) => {
+                        if (!h) return;
+                        let val = row.getCell(colNumber).value;
+                        
+                        // Clean up Excel specific data types (Rich Text, Dates)
+                        if (val !== null && typeof val === 'object') {
+                            if (val.richText) val = val.richText.map(rt => rt.text).join('');
+                            else if (val.hyperlink) val = val.text;
+                            else if (val instanceof Date) {
+                                const y = val.getFullYear();
+                                const m = String(val.getMonth() + 1).padStart(2, '0');
+                                const d = String(val.getDate()).padStart(2, '0');
+                                val = `${y}-${m}-${d}`;
+                            }
+                        }
+
+                        const strVal = val != null ? String(val).trim() : '';
+                        obj[h] = strVal;
+                        if (h !== headers[idHeaderIndex] && strVal !== '') hasData = true;
+                    });
+
+                    if (!hasData && !obj['Name_En'] && !obj['Name_Ar']) return; // Skip entirely empty rows
+
+                    const rowId = idHeaderIndex !== -1 ? obj[headers[idHeaderIndex]] : null;
+                    if (rowId) {
+                        obj.ID = rowId;
+                        updates++;
+                    } else {
+                        adds++;
+                    }
+
+                    // Collect unique unmapped values
+                    if (obj.Level && !STD_LEVELS.includes(obj.Level)) unmapped.levels.add(obj.Level);
+                    
+                    const normState = normalizeState(obj.State);
+                    if (obj.State && !STATE_LOCALITIES[normState]) unmapped.states.add(obj.State);
+                    
+                    if (obj.Job_Title && obj.Job_Title !== 'اخرى' && !STD_JOBS.includes(obj.Job_Title)) unmapped.jobs.add(obj.Job_Title);
+                    if (obj.Role && !STD_ROLES.includes(obj.Role)) unmapped.roles.add(obj.Role);
+                    if (obj.Unit && !STD_UNITS.includes(obj.Unit)) unmapped.units.add(obj.Unit);
+
+                    parsed.push(obj);
+                });
+
+                setParsedRows(parsed);
+                setSummary({ updates, adds });
+
+                const needsMapping = Object.values(unmapped).some(set => set.size > 0);
+                if (needsMapping) {
+                    setUnmappedLists({
+                        levels: Array.from(unmapped.levels),
+                        states: Array.from(unmapped.states),
+                        jobs: Array.from(unmapped.jobs),
+                        roles: Array.from(unmapped.roles),
+                        units: Array.from(unmapped.units)
+                    });
+                    setStep(2);
+                } else {
+                    setStep(3); // Skip directly to execution if everything is standard
+                }
+            } catch (err) {
+                console.error("File processing error:", err);
+                setToast({ show: true, message: 'Could not read Excel file. Please ensure it is a valid .xlsx file.', type: 'error' });
             }
         };
-        reader.readAsText(file);
+        reader.readAsArrayBuffer(file);
     };
 
     const handleMappingChange = (category, originalValue, mappedValue) => {
@@ -1275,18 +1321,18 @@ function BulkImportModal({ isOpen, onClose, allData, fetchers, permissions, setT
                         <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
                             <h4 className="font-bold text-blue-800 mb-2">Step 1: Prepare your data</h4>
                             <p className="text-sm text-blue-700 mb-4">
-                                Download the current data template. <strong>Do NOT change the <code className="bg-blue-100 px-1 rounded">ID_(DO_NOT_EDIT)</code> column for existing members</strong> if you want to update them. Leave ID blank to add new members. 
+                                Download the current data template. The <strong><code className="bg-blue-100 px-1 rounded">ID_(LOCKED)</code></strong> column is locked and protected by the system to prevent accidental changes to existing users. 
                                 <br/><br/>
-                                <em>Note: IDs and Phone Numbers are exported as raw text to prevent Excel from removing leading zeros. If Excel asks to perform Data Conversions, please click <strong>"Don't Convert"</strong>.</em>
+                                <em>Note: Leave the ID column blank to add new members. The file downloads as a protected Excel Sheet (.xlsx) ensuring phone numbers and IDs are preserved properly.</em>
                             </p>
-                            <Button onClick={handleDownloadTemplate} variant="primary">Download Current Data Template (CSV)</Button>
+                            <Button onClick={handleDownloadTemplate} variant="primary">Download Current Data Template (Excel)</Button>
                         </div>
 
                         <div className="bg-gray-50 p-4 rounded-md border">
-                            <h4 className="font-bold text-gray-800 mb-2">Step 2: Upload CSV</h4>
+                            <h4 className="font-bold text-gray-800 mb-2">Step 2: Upload Excel File</h4>
                             <input 
                                 type="file" 
-                                accept=".csv" 
+                                accept=".xlsx" 
                                 onChange={handleFileUpload} 
                                 className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                             />

@@ -16,8 +16,22 @@ import {
     ClipboardList,
     FolderKanban,
     TrendingUp, 
-    X 
+    X,
+    WifiOff,
+    RefreshCw
 } from 'lucide-react';
+
+// --- PRE-FLIGHT LANGUAGE CHECK ---
+// Ensures language is set synchronously before any Context initializes
+if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    const lang = params.get('lang');
+    if (lang) {
+        localStorage.setItem('language', lang);
+        localStorage.setItem('app_language', lang);
+    }
+}
+// ---------------------------------
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, LineElement, PointElement);
 
@@ -89,7 +103,7 @@ import {
 import { STATE_LOCALITIES } from './components/constants.js';
 import { Card, PageHeader, Button, Table, EmptyState, Spinner, PdfIcon, CourseIcon, Footer, Toast, Modal, Input } from './components/CommonComponents';
 import { auth, db } from './firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, waitForPendingWrites } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { useDataCache } from './DataContext';
 import { useAuth } from './hooks/useAuth';
@@ -405,7 +419,7 @@ const BottomNav = React.memo(function BottomNav({ navItems, navigate }) {
 
 function SplashScreen() {
     return (
-        <div className="fixed inset-0 bg-sky-50 flex flex-col items-center justify-center gap-6 text-center p-4">
+        <div className="fixed inset-0 bg-sky-50 flex flex-col items-center justify-center gap-6 text-center p-4 z-[9999]">
             <div className="h-24 w-24 bg-white rounded-full flex items-center justify-center p-1 shadow-xl animate-pulse"><img src="/child.png" alt="NCHP Logo" className="h-20 w-20 object-contain" /></div>
             <div><h1 className="text-3xl font-bold text-slate-800">National Child Health Program</h1><p className="text-lg text-slate-500 mt-1">Program & Course Monitoring System</p></div>
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600 mt-4"></div>
@@ -419,6 +433,38 @@ function SplashScreen() {
 // Root App Component
 // =============================================================================
 export default function App() {
+    // --- OFFLINE & SYNC STATE ---
+    const [isOffline, setIsOffline] = useState(!navigator.onLine);
+    const [isSyncing, setIsSyncing] = useState(false);
+
+    useEffect(() => {
+        const handleOnline = async () => {
+            setIsOffline(false);
+            setIsSyncing(true);
+            try {
+                // Wait for writes to hit backend, but timeout after 5s so UI doesn't spin forever
+                await Promise.race([
+                    waitForPendingWrites(db),
+                    new Promise(resolve => setTimeout(resolve, 5000))
+                ]);
+            } catch (e) {
+                console.error("Error waiting for pending writes during sync:", e);
+            } finally {
+                setIsSyncing(false);
+            }
+        };
+
+        const handleOffline = () => setIsOffline(true);
+
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, []);
+
     const {
         courses: rawCourses,
         facilitators: rawFacilitators,
@@ -614,6 +660,14 @@ export default function App() {
             if (publicMentorshipDashboardMatch && publicMentorshipDashboardMatch[1]) {
                 setIsPublicMentorshipDashboardView(true);
                 const searchParams = new URLSearchParams(window.location.search);
+                
+                // Identify and apply language from URL
+                const langParam = searchParams.get('lang');
+                if (langParam) {
+                    localStorage.setItem('language', langParam);
+                    localStorage.setItem('app_language', langParam); // Common fallback
+                }
+
                 setPublicMentorshipDashboardParams({
                     serviceType: publicMentorshipDashboardMatch[1],
                     state: searchParams.get('state') || '',
@@ -623,7 +677,8 @@ export default function App() {
                     project: searchParams.get('project') || '',
                     workerType: searchParams.get('workerType') || '',
                     week: searchParams.get('week') || '',
-                    month: searchParams.get('month') || ''
+                    month: searchParams.get('month') || '',
+                    lang: langParam || ''
                 });
                 return;
             }
@@ -1286,7 +1341,7 @@ export default function App() {
                 await approveFacilitatorSubmission(submission, user.email);
                 setToast({ show: true, message: 'Facilitator approved.', type: 'success' });
                 await fetchPendingSubmissions();
-                await fetchFacilitators(true);
+                await fetchFacilitators(navigator.onLine);
             } catch (error) {
                 setToast({ show: true, message: `Approval failed: ${error.message}`, type: 'error' });
             }
@@ -1315,7 +1370,7 @@ export default function App() {
         try {
             if (shareType === 'course') await updateCourseSharingSettings(itemId, settings);
             else if (shareType === 'participant') await updateParticipantSharingSettings(itemId, settings);
-            await fetchCourses(true);
+            await fetchCourses(navigator.onLine);
             setToast({ show: true, message: "Sharing settings updated.", type: "success" });
         } catch (error) {
             setToast({ show: true, message: "Failed to update sharing settings.", type: "error" });
@@ -1326,7 +1381,7 @@ export default function App() {
         if (!permissions.canManageCourse) return;
         if (window.confirm('Are you sure you want to delete this course and all its data?')) {
             await deleteCourse(courseId);
-            await fetchCourses(true);
+            await fetchCourses(navigator.onLine);
             
             setCourseDetailsCache(prev => {
                 const newCache = { ...prev };
@@ -1369,7 +1424,7 @@ export default function App() {
             setLoading(true);
             try {
                 await deleteFacilitator(facilitatorId);
-                await fetchFacilitators(true); // Refetch the updated list
+                await fetchFacilitators(navigator.onLine); // Refetch the updated list safely
                 
                 // Clear selection if the deleted facilitator was currently selected
                 if (selectedFacilitatorId === facilitatorId) {
@@ -1451,8 +1506,8 @@ export default function App() {
             setLoading(false); 
         }
     }, [navigate, selectedCourseId, setToast]); 
-    const handleAddNewCoordinator = useCallback(async (coordinatorData) => { await upsertCoordinator(coordinatorData); await fetchCoordinators(true); }, [fetchCoordinators]);
-    const handleAddNewFunder = useCallback(async (funderData) => { await upsertFunder(funderData); await fetchFunders(true); }, [fetchFunders]);
+    const handleAddNewCoordinator = useCallback(async (coordinatorData) => { await upsertCoordinator(coordinatorData); await fetchCoordinators(navigator.onLine); }, [fetchCoordinators]);
+    const handleAddNewFunder = useCallback(async (funderData) => { await upsertFunder(funderData); await fetchFunders(navigator.onLine); }, [fetchFunders]);
 
     const handleAddFinalReport = useCallback(async (courseId) => {
         if (!permissions.canUseFederalManagerAdvancedFeatures) return;
@@ -1571,7 +1626,7 @@ export default function App() {
                 onEditFacilitator={(f) => navigate('facilitatorForm', { editFacilitator: f })}
                 onDeleteFacilitator={handleDeleteFacilitator}
                 onOpenFacilitatorReport={(fid) => navigate('facilitatorReport', { openFacilitatorReport: fid })}
-                onImportFacilitators={async (data) => { await importParticipants(data); await fetchFacilitators(true); }}
+                onImportFacilitators={async (data) => { await importParticipants(data); await fetchFacilitators(navigator.onLine); }}
                 userStates={userStates}
                 onApproveSubmission={handleApproveSubmission}
                 onRejectSubmission={handleRejectSubmission}
@@ -1650,7 +1705,7 @@ export default function App() {
                 localityCoordinatorsList={localityCoordinators || []}
                 onSaveCourse={async (payload) => { 
                     const id = await upsertCourse({ ...payload, id: payload.id }); 
-                    await fetchCourses(true); 
+                    await fetchCourses(navigator.onLine); 
                     return id; 
                 }}
                 onAddNewCoordinator={handleAddNewCoordinator}
@@ -1709,7 +1764,7 @@ export default function App() {
                     initialData={editingCourse}
                     facilitatorsList={allFacilitators || []}
                     onCancel={() => navigate(previousView)}
-                    onSave={async (payload) => { const id = await upsertCourse({ ...payload, id: editingCourse?.id, course_type: activeCourseType || editingCourse?.course_type }); await fetchCourses(true); handleOpenCourse(id); }}
+                    onSave={async (payload) => { const id = await upsertCourse({ ...payload, id: editingCourse?.id, course_type: activeCourseType || editingCourse?.course_type }); await fetchCourses(navigator.onLine); handleOpenCourse(id); }}
                     onAddNewCoordinator={handleAddNewCoordinator}
                     onAddNewFunder={handleAddNewFunder}
                     fundersList={funders || []}
@@ -1751,7 +1806,7 @@ export default function App() {
                     initialData={editingFacilitator} 
                     onCancel={() => navigate(previousView)} 
                     onSave={async () => { 
-                        await fetchFacilitators(true); 
+                        await fetchFacilitators(navigator.onLine); 
                         setToast({ show: true, message: 'Facilitator saved.', type: 'success' }); 
                         navigate('humanResources'); 
                     }}
@@ -2137,8 +2192,24 @@ export default function App() {
 
 
     return (
-        <div className="min-h-screen bg-sky-50 flex flex-col">
-            <header className="bg-slate-800 shadow-lg sticky top-0 z-10">
+        <div className="min-h-screen bg-sky-50 flex flex-col pt-0 relative">
+            
+            {/* --- OFFLINE & SYNC BANNERS (Fixed to absolutely top) --- */}
+            <div className="fixed top-0 left-0 w-full z-[100] flex flex-col">
+                {isOffline && (
+                    <div className="bg-amber-500 text-white text-center py-2 px-4 text-sm font-bold flex justify-center items-center gap-2 shadow-md">
+                        <WifiOff className="w-5 h-5" /> You are offline. Changes are saved locally and will sync when reconnected.
+                    </div>
+                )}
+                {isSyncing && !isOffline && (
+                    <div className="bg-sky-500 text-white text-center py-2 px-4 text-sm font-bold flex justify-center items-center gap-2 shadow-md">
+                        <RefreshCw className="w-5 h-5 animate-spin" /> Syncing offline data to the cloud...
+                    </div>
+                )}
+            </div>
+
+            {/* Header uses mt-10 if offline banner is showing so it doesn't overlap */}
+            <header className={`bg-slate-800 shadow-lg sticky z-40 transition-all ${isOffline || isSyncing ? 'top-10' : 'top-0'}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4 cursor-pointer" onClick={() => !isSharedView && navigate('landing')}>

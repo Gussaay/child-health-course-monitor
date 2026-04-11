@@ -19,7 +19,6 @@ import { IMNCI_FORM_STRUCTURE, calculateScores, rehydrateDraftData, DIARRHEA_CLA
 import { PREPARATION_ITEMS, DRYING_STIMULATION_ITEMS, NORMAL_BREATHING_ITEMS, RESUSCITATION_ITEMS } from './EENCSkillsAssessmentForm.jsx';
 
 import { useTranslation } from './LanguageContext';
-import LanguageSwitcher from './LanguageSwitcher';
 
 // --- Constants & Dictionaries ---
 const SERVICE_TITLES = {
@@ -138,9 +137,9 @@ const MentorshipDashboard = ({
         
         const geographicChartData = Object.keys(locationCounts).map(k => {
              let locName = k;
-            if (isStateLevel) locName = STATE_LOCALITIES[k]?.[language === 'ar' ? 'ar' : 'en'] || STATE_LOCALITIES[k]?.en || k;
+            if (isStateLevel) locName = STATE_LOCALITIES?.[k]?.[language === 'ar' ? 'ar' : 'en'] || STATE_LOCALITIES?.[k]?.en || k;
             else {
-                const stateObj = STATE_LOCALITIES[activeState];
+                const stateObj = STATE_LOCALITIES?.[activeState];
                 if (stateObj && stateObj.localities) {
                     const locObj = stateObj.localities.find(l => l.en === k);
                     if (locObj) locName = locObj[language === 'ar' ? 'ar' : 'en'] || locObj.en;
@@ -158,10 +157,10 @@ const MentorshipDashboard = ({
             }
             if (data.challenges_table) {
                 let locName = 'Unknown';
-                if (dynamicLocationLevel === 'State') locName = STATE_LOCALITIES[r.state]?.[language === 'ar' ? 'ar' : 'en'] || r.state || 'Unknown';
+                if (dynamicLocationLevel === 'State') locName = STATE_LOCALITIES?.[r.state]?.[language === 'ar' ? 'ar' : 'en'] || r.state || 'Unknown';
                 else if (dynamicLocationLevel === 'Locality') {
-                    if (STATE_LOCALITIES[r.state]?.localities) {
-                        const lObj = STATE_LOCALITIES[r.state].localities.find(l => l.en === r.locality || l.ar === r.locality);
+                    if (STATE_LOCALITIES?.[r.state]?.localities) {
+                        const lObj = STATE_LOCALITIES?.[r.state]?.localities.find(l => l.en === r.locality || l.ar === r.locality);
                         locName = lObj ? (lObj[language === 'ar' ? 'ar' : 'en'] || lObj.en) : (r.locality || 'Unknown');
                     } else locName = r.locality || 'Unknown';
                 } else locName = r.facilityName || 'Unknown';
@@ -430,9 +429,9 @@ const MentorshipDashboard = ({
     ), [reCalculatedSubmissions, activeService]);
 
     // Select Dropdown Options
-    const stateOptions = useMemo(() => !STATE_LOCALITIES ? [] : Object.keys(STATE_LOCALITIES).map(k => ({ key: k, name: STATE_LOCALITIES[k]?.[language === 'ar' ? 'ar' : 'en'] || k })).sort((a, b) => a.name.localeCompare(b.name, language)), [STATE_LOCALITIES, language]);
+    const stateOptions = useMemo(() => !STATE_LOCALITIES ? [] : Object.keys(STATE_LOCALITIES).map(k => ({ key: k, name: STATE_LOCALITIES?.[k]?.[language === 'ar' ? 'ar' : 'en'] || k })).sort((a, b) => a.name.localeCompare(b.name, language)), [STATE_LOCALITIES, language]);
     
-    const localityOptions = useMemo(() => (!activeState || !STATE_LOCALITIES[activeState]?.localities) ? [] : STATE_LOCALITIES[activeState].localities.map(l => ({ key: l.en, name: l[language === 'ar' ? 'ar' : 'en'] || l.en })).sort((a, b) => a.name.localeCompare(b.name, language)), [activeState, STATE_LOCALITIES, language]);
+    const localityOptions = useMemo(() => (!activeState || !STATE_LOCALITIES?.[activeState]?.localities) ? [] : STATE_LOCALITIES?.[activeState]?.localities.map(l => ({ key: l.en, name: l[language === 'ar' ? 'ar' : 'en'] || l.en })).sort((a, b) => a.name.localeCompare(b.name, language)), [activeState, STATE_LOCALITIES, language]);
     
     const facilityOptions = useMemo(() => {
         const map = new Map(); serviceCompletedSubmissions.filter(s => (!activeState || s.state === activeState) && (!activeLocality || s.locality === activeLocality)).forEach(s => { if (s.facilityId && !map.has(s.facilityId)) map.set(s.facilityId, { key: s.facilityId, name: s.facility || 'Unknown' }); });
@@ -617,9 +616,9 @@ const MentorshipDashboard = ({
         }, {});
         return Object.keys(submissionsByLocation).map(locKey => {
             let locName = locKey;
-            if (isStateLevel) locName = STATE_LOCALITIES[locKey]?.[language === 'ar' ? 'ar' : 'en'] || locKey;
+            if (isStateLevel) locName = STATE_LOCALITIES?.[locKey]?.[language === 'ar' ? 'ar' : 'en'] || locKey;
             else {
-                const stateObj = STATE_LOCALITIES[activeState];
+                const stateObj = STATE_LOCALITIES?.[activeState];
                 if (stateObj && stateObj.localities) {
                     const locObj = stateObj.localities.find(l => l.en === locKey);
                     if (locObj) locName = locObj[language === 'ar' ? 'ar' : 'en'] || locObj.en;
@@ -642,9 +641,9 @@ const MentorshipDashboard = ({
         const helper = isEenc ? eencMotherKpiHelper : imnciMotherKpiHelper;
         return Object.keys(submissionsByLocation).map(locKey => {
             let locName = locKey;
-            if (isStateLevel) locName = STATE_LOCALITIES[locKey]?.[language === 'ar' ? 'ar' : 'en'] || locKey;
+            if (isStateLevel) locName = STATE_LOCALITIES?.[locKey]?.[language === 'ar' ? 'ar' : 'en'] || locKey;
             else {
-                const stateObj = STATE_LOCALITIES[activeState];
+                const stateObj = STATE_LOCALITIES?.[activeState];
                 if (stateObj && stateObj.localities) {
                     const locObj = stateObj.localities.find(l => l.en === locKey);
                     if (locObj) locName = locObj[language === 'ar' ? 'ar' : 'en'] || locObj.en;
@@ -698,7 +697,15 @@ const MentorshipDashboard = ({
     ];
 
     // --- Loading State Check ---
-    if (isLoading || !allSubmissions || !visitReports || !STATE_LOCALITIES) {
+    const safeSubmissions = allSubmissions || [];
+    const safeVisitReports = visitReports || [];
+
+    const isEmptyData = safeSubmissions.length === 0 && safeVisitReports.length === 0;
+
+    // Only show the full-screen spinner if the app explicitly says it's loading AND we have zero cached data to show.
+    // We removed the strict 'hasCoreData' check because optional arrays like visitReports might be null in public views,
+    // which previously caused an infinite loading loop.
+    if (isLoading && isEmptyData) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] bg-slate-50/50 p-6">
                 <Spinner size="lg" />
@@ -709,9 +716,9 @@ const MentorshipDashboard = ({
     }
 
     const activeFiltersList = [];
-    if (activeState) activeFiltersList.push(`${t('filter.state')}: ${STATE_LOCALITIES[activeState]?.[language === 'ar' ? 'ar' : 'en'] || activeState}`);
+    if (activeState) activeFiltersList.push(`${t('filter.state')}: ${STATE_LOCALITIES?.[activeState]?.[language === 'ar' ? 'ar' : 'en'] || activeState}`);
     if (activeLocality) {
-        const locObj = STATE_LOCALITIES[activeState]?.localities?.find(l => l.en === activeLocality);
+        const locObj = STATE_LOCALITIES?.[activeState]?.localities?.find(l => l.en === activeLocality);
         const locName = locObj ? (locObj[language === 'ar' ? 'ar' : 'en'] || locObj.en) : activeLocality;
         activeFiltersList.push(`${t('filter.locality')}: ${locName}`);
     }
@@ -736,11 +743,12 @@ const MentorshipDashboard = ({
         <div className="p-4 sm:p-6 bg-slate-50/50 min-h-screen" dir={isAr ? 'rtl' : 'ltr'}>             
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <h3 className={`text-2xl font-extrabold text-slate-800 ${isAr ? 'text-right' : 'text-left'} tracking-tight`}>
-                    {t('app.title')}: {serviceTitle} <br/>
+                    <div className="flex items-center gap-3">
+                        {t('app.title')}: {serviceTitle}
+                        {(isLoading || isRefreshing) && <Spinner size="sm" className="text-sky-600" />}
+                    </div>
                     <span className="text-sky-600 text-lg font-semibold block mt-1 break-words leading-snug">{scopeTitle}</span>
                 </h3>
-                
-                <LanguageSwitcher />
             </div>
             
             <div className="flex flex-row flex-nowrap overflow-x-auto gap-3 mb-8 p-4 bg-white rounded-2xl shadow-md border border-black scrollbar-thin scrollbar-thumb-sky-200 scrollbar-track-transparent">

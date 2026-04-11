@@ -28,7 +28,8 @@ import {
 import { STATE_LOCALITIES } from "../constants.js";
 import SkillsAssessmentForm from './SkillsAssessmentForm';
 import MentorshipDashboard from './MentorshipDashboard';
-import { LanguageProvider } from './LanguageContext';
+import { LanguageProvider, useTranslation } from './LanguageContext';
+import LanguageSwitcher from './LanguageSwitcher';
 import { getAuth } from "firebase/auth";
 
 // --- Bulk Upload Modal ---
@@ -1557,6 +1558,19 @@ const SkillsMentorshipView = ({
     publicDashboardMode = false, 
     publicDashboardParams = null 
 }) => {
+// Add or update this logic to identify language from URL parameters
+    useEffect(() => {
+        if (publicDashboardMode) {
+            const params = new URLSearchParams(window.location.search);
+            const langParam = params.get('lang');
+            
+            if (langParam) {
+                // Synchronize with localStorage so LanguageContext picks it up
+                localStorage.setItem('language', langParam);
+                localStorage.setItem('app_language', langParam);
+            }
+        }
+    }, [publicDashboardMode]);
     const defaultService = publicDashboardMode ? publicDashboardParams?.serviceType : (publicSubmissionMode ? publicServiceType : null);
 
     const [currentView, setCurrentView] = useState(() => {
@@ -1566,7 +1580,7 @@ const SkillsMentorshipView = ({
     });
     
     // Check if the user is allowed to manage (add, edit, delete).
-    // Public submission mode implies they are submitting fresh data, so they are granted temporary creation rights.
+    // Public submission mode implies they are granted temporary creation rights.
     const canManageMentorship = publicSubmissionMode || permissions?.canManageSkillsMentorship || permissions?.canUseSuperUserAdvancedFeatures || permissions?.role === 'super_user' || false;
 
     const [activeService, setActiveService] = useState(defaultService);
@@ -1593,12 +1607,46 @@ const SkillsMentorshipView = ({
     const [lastSyncTime, setLastSyncTime] = useState(null);
 
     const updateLastSyncTime = useCallback(() => {
-        const now = new Date();
-        setLastSyncTime(now.toLocaleString('en-US', { 
-            month: 'short', day: 'numeric', year: 'numeric', 
-            hour: 'numeric', minute: '2-digit', hour12: true 
-        }));
-    }, []);
+        let lastTimeMs = 0;
+        
+        if (publicDashboardMode) {
+            lastTimeMs = parseInt(localStorage.getItem('publicDashboardLastSync') || '0', 10);
+        } else {
+            // Check all relevant authenticated cache keys to find the most recent server fetch
+            const keys = [
+                'lastServerFetch_skillMentorshipSubmissions', 
+                'lastServerFetch_imnciVisitReports', 
+                'lastServerFetch_eencVisitReports'
+            ];
+            keys.forEach(k => {
+                const t = parseInt(localStorage.getItem(k) || '0', 10);
+                if (t > lastTimeMs) lastTimeMs = t;
+            });
+        }
+        
+        if (lastTimeMs > 0) {
+            const d = new Date(lastTimeMs);
+            setLastSyncTime(d.toLocaleString('en-US', { 
+                month: 'short', day: 'numeric', year: 'numeric', 
+                hour: 'numeric', minute: '2-digit', hour12: true 
+            }));
+        } else {
+            setLastSyncTime('Never synced');
+        }
+    }, [publicDashboardMode]);
+
+    // Automatically update the sync time badge when background server fetches complete
+    useEffect(() => {
+        if (!publicDashboardMode) {
+            updateLastSyncTime();
+        }
+    }, [
+        useDataCache().isLoading?.skillMentorshipSubmissions, 
+        useDataCache().isLoading?.imnciVisitReports, 
+        useDataCache().isLoading?.eencVisitReports, 
+        updateLastSyncTime, 
+        publicDashboardMode
+    ]);
 
     // Initialize Dashboard Filters with parameters if available
     const [activeDashboardState, setActiveDashboardState] = useState(publicDashboardMode ? publicDashboardParams?.state || '' : '');
@@ -1640,6 +1688,8 @@ const SkillsMentorshipView = ({
     // --- Local State for direct Public Fetching ---
     const [publicData, setPublicData] = useState({ submissions: null, imnci: null, eenc: null });
     const [publicLoading, setPublicLoading] = useState(publicDashboardMode);
+
+    const { language } = useTranslation();
 
     useEffect(() => {
         if (healthFacilities) {
@@ -2681,15 +2731,18 @@ const SkillsMentorshipView = ({
         if (projectToShare) params.append('project', projectToShare);
         if (workerTypeToShare) params.append('workerType', workerTypeToShare);
         if (dateToShare) params.append('dateFilter', dateToShare);
-        
-        const shareUrl = `${baseUrl}?${params.toString()}`;
-        
-        navigator.clipboard.writeText(shareUrl).then(() => {
-            setToast({ show: true, message: 'Public Dashboard link copied to clipboard!', type: 'success' });
-        }).catch((err) => {
-            setToast({ show: true, message: 'Failed to copy dashboard link.', type: 'error' });
-        });
-    };
+    if (language) {
+        params.append('lang', language);
+    }
+    
+    const shareUrl = `${baseUrl}?${params.toString()}`;
+    
+    navigator.clipboard.writeText(shareUrl).then(() => {
+        setToast({ show: true, message: 'Public Dashboard link copied to clipboard!', type: 'success' });
+    }).catch((err) => {
+        setToast({ show: true, message: 'Failed to copy dashboard link.', type: 'error' });
+    });
+};
 
     const handleImportMentorships = async (data, originalRows) => {
         if (!canBulkUploadMentorships) {
@@ -3062,6 +3115,9 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                         <ArrowLeft className="w-4 h-4 mr-2" /> Back to Main Menu
                                     </Button>
                                 )}
+                                
+                                <LanguageSwitcher />
+
                                 <Button 
                                     variant="secondary" 
                                     onClick={handleRefresh} 

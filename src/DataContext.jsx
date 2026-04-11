@@ -133,7 +133,7 @@ export const DataProvider = ({ children }) => {
                             localData = cachedData;
                             facilitiesFilterCacheRef.current[filterKey] = localData;
                             
-                            // INSTANT CACHE RENDERING: Unblock UI instantly by pushing cached data to state immediately!
+                            // INSTANT CACHE RENDERING
                             if (filterKey === currentFacilitiesFilterKeyRef.current || currentFacilitiesFilterKeyRef.current === 'all') {
                                 setCache(prev => ({ ...prev, healthFacilities: localData }));
                                 currentFacilitiesFilterKeyRef.current = filterKey;
@@ -153,17 +153,17 @@ export const DataProvider = ({ children }) => {
                     localData = internalCache[filterKey];
                 }
 
-                setIsLoading(prev => prev.healthFacilities === true ? prev : { ...prev, healthFacilities: true });
+                if (!localData || localData.length === 0) {
+                    setIsLoading(prev => prev.healthFacilities === true ? prev : { ...prev, healthFacilities: true });
+                }
 
                 // 3. Fetch ONLY Deltas from Server
                 try {
                     let effectiveLastFetchTime = lastFetchTime;
-                    // If localData is empty, we must fetch everything (reset fetch time)
                     if (!localData || localData.length === 0) {
                         effectiveLastFetchTime = 0;
                     }
 
-                    // Pass the timestamp into the filters object
                     const activeFilters = { ...filters };
                     if (effectiveLastFetchTime > 0) {
                         activeFilters.lastUpdatedAfter = new Date(effectiveLastFetchTime);
@@ -173,7 +173,6 @@ export const DataProvider = ({ children }) => {
                     
                     let finalMergedData = localData;
 
-                    // MERGE LOGIC: Combine old cache with new server updates
                     if (newOrUpdatedData && newOrUpdatedData.length > 0) {
                         const dataMap = new Map((localData || []).map(item => [item.id, item]));
                         
@@ -233,11 +232,9 @@ export const DataProvider = ({ children }) => {
                     if (cachedData !== undefined && cachedData !== null) {
                         localData = cachedData;
                         
-                        // INSTANT CACHE RENDERING: Set state immediately so UI doesn't block while waiting for server delta!
                         setCache(prev => ({ ...prev, [key]: localData }));
                         setIsLoading(prev => prev[key] === false ? prev : { ...prev, [key]: false });
                         
-                        // If we don't need to force server, we stop here
                         if (!shouldForceServer) {
                             fetchingRef.current[key] = false;
                             return localData;
@@ -248,12 +245,13 @@ export const DataProvider = ({ children }) => {
                 }
             }
 
-            setIsLoading(prev => prev[key] === true ? prev : { ...prev, [key]: true });
+            if (!localData || (Array.isArray(localData) && localData.length === 0)) {
+                setIsLoading(prev => prev[key] === true ? prev : { ...prev, [key]: true });
+            }
             
             // 3. Fetch ONLY Deltas from Server
             try {
                 let effectiveLastFetchTime = lastFetchTime;
-                // If localData is empty, we must fetch everything (reset fetch time)
                 if ((!localData || (Array.isArray(localData) && localData.length === 0)) && !key.includes('Settings')) {
                     effectiveLastFetchTime = 0;
                 }
@@ -320,12 +318,15 @@ export const DataProvider = ({ children }) => {
     }), [createFetcher]);
 
     useEffect(() => {
+        // --- THIS IS THE FIX ---
+        // If the user is null (like on a public link), we empty the cache but we 
+        // strictly force all loading flags to FALSE so the public dashboard doesn't hang.
         if (!user) {
             setCache({
                 courses: null, participants: null, facilitators: null, funders: null, federalCoordinators: null, stateCoordinators: null, localityCoordinators: null, healthFacilities: null, skillMentorshipSubmissions: null, imnciVisitReports: null, eencVisitReports: null, participantTests: null, pendingFacilitatorSubmissions: null, facilitatorApplicationSettings: { isActive: false, openCount: 0 }, pendingFederalSubmissions: null, pendingStateSubmissions: null, pendingLocalitySubmissions: null, coordinatorApplicationSettings: { isActive: false, openCount: 0 }, projects: null, masterPlans: null, operationalPlans: null, unitMeetings: null,
             });
             setIsLoading({
-                courses: true, participants: true, facilitators: true, healthFacilities: true, skillMentorshipSubmissions: true, imnciVisitReports: true, eencVisitReports: true, participantTests: true, pendingFacilitatorSubmissions: true, facilitatorApplicationSettings: true, pendingFederalSubmissions: true, pendingStateSubmissions: true, pendingLocalitySubmissions: true, coordinatorApplicationSettings: true, projects: true, masterPlans: true, operationalPlans: true, unitMeetings: true,
+                courses: false, participants: false, facilitators: false, healthFacilities: false, skillMentorshipSubmissions: false, imnciVisitReports: false, eencVisitReports: false, participantTests: false, pendingFacilitatorSubmissions: false, facilitatorApplicationSettings: false, pendingFederalSubmissions: false, pendingStateSubmissions: false, pendingLocalitySubmissions: false, coordinatorApplicationSettings: false, projects: false, masterPlans: false, operationalPlans: false, unitMeetings: false,
             });
             setLastFacilitiesFetchTime({});
             facilitiesFilterCacheRef.current = {};
