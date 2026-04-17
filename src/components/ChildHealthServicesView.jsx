@@ -9,6 +9,7 @@ import { amiriFontBase64 } from './AmiriFont.js';
 
 // --- ICONS ---
 import { PdfIcon } from './CommonComponents';
+import { List, FileText, Users, Building, PlusCircle, ArrowLeft } from 'lucide-react';
 
 import LocationMapModal from './ChildHealthServicesMap.jsx';
 
@@ -114,7 +115,7 @@ const getServiceConfig = (serviceType) => {
     const MAX_STAFF = 5;
     for (let i = 1; i <= MAX_STAFF; i++) { baseImnciHeaders.push(`اسم الكادر ${i}`, `الوصف الوظيفي للكادر ${i}`, `هل الكادر ${i} مدرب`, `تاريخ تدريب الكادر ${i}`, `رقم هاتف الكادر ${i}`); baseImnciDataKeys.push(`imnci_staff_${i}_name`, `imnci_staff_${i}_job_title`, `imnci_staff_${i}_is_trained`, `imnci_staff_${i}_training_date`, `imnci_staff_${i}_phone`); }
     const imnciConfig = { headers: baseImnciHeaders, dataKeys: baseImnciDataKeys };
-    const eencConfig = { headers: ["هل تقدم الرعاية الضرورية المبكرة EENC", "عدد الكوادر الصحية المدربة", "العدد الكلي لسرير الولادة", "العدد الكلي لمحطات الانعاش", "العدد الكلي لاجهزة التدفئة", "العدد الكلي لجهاز الامبوباق", "العدد الكلي لجهاز الشفط اليدوي", "ساعة حائط", "جهاز التعقيم بالبخار", "تاريخ الزيارة لغرفة الولادة"], dataKeys: ["eenc_provides_essential_care", "eenc_trained_workers", "eenc_delivery_beds", "eenc_resuscitation_stations", "eenc_warmers", "eenc_ambu_bags", "eenc_manual_suction", "eenc_wall_clock", "eenc_steam_sterilizer", "eenc_delivery_room_visit_date"] };
+    const eencConfig = { headers: ["هل تقدم الرعاية الضرورية المبكرة EENC", "عدد الكوادر الصحية المدربة", "العدد الكلي لسرير الولادة", "العدد الكلي لمحطات الانعاش", "العدد الكلي لاجهزة التدفئة", "العدد الكلي لجهاز الامبوباق", "العدد الكلي لجهاز الشفط اليدوي", "ساعة حائط", "جهاز التعقيم بالبخار", "تاريخ الز الزيارة لغرفة الولادة"], dataKeys: ["eenc_provides_essential_care", "eenc_trained_workers", "eenc_delivery_beds", "eenc_resuscitation_stations", "eenc_warmers", "eenc_ambu_bags", "eenc_manual_suction", "eenc_wall_clock", "eenc_steam_sterilizer", "eenc_delivery_room_visit_date"] };
     const neonatalConfig = { headers: ["Level of Care - Primary", "Level of Care - Secondary", "Level of Care - Tertiary", "وحدة رعاية الكنغر (KMC unit)", "وحدة الرضاعة الطبيعية (breastfeeding unit)", "وحدة تعقيم (sterilization unit)", "الترصد والحماية من عدوى التسمم الدموي", "إجمالي سعة الأسرة", "العدد الكلي للحضانات (incubators)", "العدد الكلي للاسرة للاطفال مكتملي النمو (cots)", "أجهزة CPAP", "جهاز تدفئة حرارية (warmer)", "مضخة تسريب (infusion pump)", "مضخات الحقن (Syringe pump)", "جهاز شفط (suction machine)", "وحدات العلاج الضوئي (Phototherapy)", "أكياس الإنعاش (Ambu Bag)", "جهاز مراقبة التنفس والاكسجين (Pulse and oxygen Monitor)", "جهاز أكسجين (Oxygen concentrator)", "أسطوانة الاكسجين (oxygen cylinder)", "جهاز تنفس صناعي (Mechanical ventilator)", "حاضنة محمولة (Portable Incubator)", "تاريخ زيارة وحدة حديثي الولادة"], dataKeys: ["neonatal_level_of_care_primary", "neonatal_level_of_care_secondary", "neonatal_level_of_care_tertiary", "neonatal_kmc_unit", "neonatal_breastfeeding_unit", "neonatal_sterilization_unit", "neonatal_sepsis_surveillance", "neonatal_total_beds", "neonatal_total_incubators", "neonatal_total_cots", "neonatal_cpap", "neonatal_warmer", "neonatal_infusion_pump", "neonatal_syringe_pump", "neonatal_sucker", "neonatal_phototherapy", "neonatal_ambu_bag", "neonatal_respiration_monitor", "neonatal_oxygen_machine", "neonatal_oxygen_cylinder", "neonatal_mechanical_ventilator", "neonatal_portable_incubator", "neonatal_unit_visit_date"] };
     const criticalCareConfig = { headers: ["etat_has_service", "etat_trained_workers", "hdu_has_service", "hdu_bed_capacity", "picu_has_service", "picu_bed_capacity"], dataKeys: ["etat_has_service", "etat_trained_workers", "hdu_has_service", "hdu_bed_capacity", "picu_has_service", "picu_has_service"] };
     let finalHeaders = [...baseConfig.headers], finalDataKeys = [...baseConfig.dataKeys], fileName = 'Facility_Template.xlsx';
@@ -137,6 +138,44 @@ const getStateName = (stateKey) => STATE_LOCALITIES[stateKey]?.ar || stateKey ||
 const getLocalityName = (stateKey, localityKey) => { if (!stateKey || !localityKey) return 'N/A'; const state = STATE_LOCALITIES[stateKey]; if (!state) return localityKey; const locality = state.localities.find(l => l.en === localityKey); return locality?.ar || localityKey; };
 
 // --- SUB-COMPONENTS ---
+
+// --- Action Menu Component ---
+const ActionMenu = ({ onAction }) => {
+    const items = [
+        { id: 'show_list', label: 'Show Facilities List', icon: List, color: 'text-blue-600', bg: 'bg-blue-100', border: 'hover:border-blue-400', shadow: 'hover:shadow-blue-100' },
+        { id: 'share_imnci', label: 'Update IMNCI Facilities', icon: FileText, color: 'text-emerald-600', bg: 'bg-emerald-100', border: 'hover:border-emerald-400', shadow: 'hover:shadow-emerald-100' },
+        { id: 'share_eenc', label: 'Update EENC Facilities', icon: Users, color: 'text-teal-600', bg: 'bg-teal-100', border: 'hover:border-teal-400', shadow: 'hover:shadow-teal-100' },
+        { id: 'share_neonatal', label: 'Update Neonatal Unit Facilities', icon: Building, color: 'text-indigo-600', bg: 'bg-indigo-100', border: 'hover:border-indigo-400', shadow: 'hover:shadow-indigo-100' },
+        { id: 'share_etat', label: 'Update ETAT Facilities', icon: PlusCircle, color: 'text-red-600', bg: 'bg-red-100', border: 'hover:border-red-400', shadow: 'hover:shadow-red-100' },
+    ];
+
+    return (
+        <div className="max-w-7xl mx-auto mt-8 p-4 space-y-12" dir="ltr">
+            <section>
+                <h3 className="text-xl font-bold text-gray-800 mb-6 border-b border-gray-200 pb-2">Child Health Services Navigation</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+                    {items.map(item => {
+                        const Icon = item.icon;
+                        return (
+                            <button
+                                key={item.id}
+                                onClick={() => onAction(item.id)}
+                                className={`flex flex-col items-center justify-center p-8 border border-gray-100 rounded-2xl bg-white shadow-sm hover:shadow-lg transition-all duration-300 group ${item.border} ${item.shadow} transform hover:-translate-y-1`}
+                            >
+                                <div className={`p-5 rounded-2xl mb-5 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 ${item.bg}`}>
+                                    <Icon className={`w-8 h-8 ${item.color}`} strokeWidth={1.5} />
+                                </div>
+                                <div className="font-semibold text-gray-700 text-lg group-hover:text-gray-900 transition-colors text-center">
+                                    {item.label}
+                                </div>
+                            </button>
+                        );
+                    })}
+                </div>
+            </section>
+        </div>
+    );
+};
 
 const AllFacilitiesTab = ({ facilities, onEdit, onDelete, onGenerateLink, onOpenMap, emptyMessage, canApproveSubmissions, canManageFacilities }) => {
     const getServiceBadges = (f) => {
@@ -810,13 +849,63 @@ const ChildHealthServicesView = ({
     canFindFacilityDuplicates,
     canCheckFacilityLocations
 }) => {
+    
+    // Set default view to 'action_menu'
+    const [view, setView] = useState('action_menu');
+    
+    const handleActionMenuClick = (action) => {
+        if (action === 'show_list') {
+            setView('list');
+        } else if (action === 'share_imnci') {
+            copyShareLink('IMNCI');
+        } else if (action === 'share_eenc') {
+            copyShareLink('EENC');
+        } else if (action === 'share_neonatal') {
+            copyShareLink('Neonatal');
+        } else if (action === 'share_etat') {
+            copyShareLink('Critical Care'); // Matches Critical Care config keys
+        }
+    };
+
+    const copyShareLink = (service) => {
+         const params = new URLSearchParams();
+         if (service) { params.append('service', service); }
+         
+         // Instructions for the destination component
+         params.append('hideAddNew', 'true');
+         params.append('showBack', 'true');
+         
+         // Pre-load state and locality if they are set
+         if (stateFilter && stateFilter !== 'ALL_STATES' && stateFilter !== 'NOT_ASSIGNED') {
+             params.append('state', stateFilter);
+         }
+         if (localityFilter) {
+             params.append('locality', localityFilter);
+         }
+
+         let url = `${window.location.origin}/facilities/data-entry/new?${params.toString()}`;
+         
+         navigator.clipboard.writeText(url).then(() => { 
+             setToast({ show: true, message: `Public link for ${service || 'All Services'} copied to clipboard!`, type: 'success' }); 
+             // Open in same window so back button works
+             window.location.href = url;
+         }, (err) => { 
+             setToast({ show: true, message: 'Failed to copy link.', type: 'error' }); 
+         });
+    };
+
     const handleShareBulkUpdateLink = () => {
         const params = new URLSearchParams();
 
-        // Add any active filters to the query parameters
-        if (stateFilter && stateFilter !== 'NOT_ASSIGNED') {
-            params.append('state', stateFilter);
+        // Enforce State Selection to prevent "Failed to load" errors in target component
+        if (!stateFilter || stateFilter === 'NOT_ASSIGNED' || stateFilter === 'ALL_STATES') {
+            setToast({ show: true, message: "Please select a specific State before sharing the bulk update link to prevent load errors.", type: "warning" });
+            return;
         }
+
+        params.append('state', stateFilter);
+
+        // Add any active filters to the query parameters
         if (localityFilter) {
             params.append('locality', localityFilter);
         }
@@ -832,18 +921,14 @@ const ChildHealthServicesView = ({
         if (serviceTypeFilter) {
             params.append('service', serviceTypeFilter);
         }
-
-        // Ensure at least one filter is applied so users don't accidentally share the entire database
-        if (Array.from(params.keys()).length === 0) {
-            setToast({ show: true, message: "Please select at least one filter first.", type: "error" });
-            return;
-        }
         
         // Use a generic route and attach query parameters
         const url = `${window.location.origin}/public/bulk-update?${params.toString()}`;
         
         navigator.clipboard.writeText(url).then(() => {
             setToast({ show: true, message: "Bulk update link copied to clipboard!", type: "success" });
+            // Open in same window so back button works
+            window.location.href = url;
         });
     };
 
@@ -864,7 +949,6 @@ const ChildHealthServicesView = ({
     }, [healthFacilities]);
 
     const [editingFacility, setEditingFacility] = useState(null);
-    const [view, setView] = useState('list');
     const [activeTab, setActiveTab] = useState(TABS.ALL);
     const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
     const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
@@ -1351,12 +1435,6 @@ const ChildHealthServicesView = ({
         navigator.clipboard.writeText(url).then(() => { setToast({ show: true, message: 'Public update link copied to clipboard!', type: 'success' }); }, (err) => { setToast({ show: true, message: 'Failed to copy link.', type: 'error' }); });
     };
 
-    const handleShareLink = () => {
-         let url = `${window.location.origin}/facilities/data-entry/new`;
-         if (serviceTypeFilter) { url += `?service=${encodeURIComponent(serviceTypeFilter)}`; }
-         navigator.clipboard.writeText(url).then(() => { setToast({ show: true, message: 'Public "Add New Facility" link copied to clipboard!', type: 'success' }); }, (err) => { setToast({ show: true, message: 'Failed to copy link.', type: 'error' }); });
-    };
-
     const handleExportExcel = () => {
         if (!filteredFacilities) return;
         const configKey = serviceTypeFilter || activeTab;
@@ -1429,10 +1507,15 @@ const ChildHealthServicesView = ({
         return (<Card>
             <div className="p-6">
                 <div className="flex justify-between items-center">
-                    <PageHeader 
-                        title="Child Health Services Management" 
-                        subtitle="Manage health facilities and their pediatric services."
-                    />
+                    <div className="flex items-center gap-4">
+                        <Button variant="secondary" onClick={() => setView('action_menu')} className="mr-4">
+                            <ArrowLeft className="w-4 h-4 mr-1 inline" /> Back
+                        </Button>
+                        <PageHeader 
+                            title="Child Health Services Management" 
+                            subtitle="Manage health facilities and their pediatric services."
+                        />
+                    </div>
                     <Button 
                         variant="secondary" 
                         onClick={handleRefresh} 
@@ -1489,7 +1572,6 @@ const ChildHealthServicesView = ({
                         <div className="flex flex-wrap gap-2">
                             {permissions.canManageFacilities && ( <Button onClick={() => { setEditingFacility(null); setView('form'); }}>Add New</Button> )}
                             {canBulkUploadFacilities && ( <Button onClick={() => setIsBulkUploadModalOpen(true)}>Bulk Upload</Button> )}
-                            <Button variant="info" onClick={handleShareLink}>Share Entry Link</Button>
                             
                             <Button variant="info" onClick={handleShareBulkUpdateLink}>Share Bulk Update Link</Button>
                             
@@ -1594,7 +1676,13 @@ const ChildHealthServicesView = ({
     
     return (
         <>
-            {view === 'list' ? renderListView() : renderFormView()}
+            {view === 'action_menu' ? (
+                <ActionMenu onAction={handleActionMenuClick} />
+            ) : view === 'list' ? (
+                renderListView()
+            ) : (
+                renderFormView()
+            )}
             <ApprovalComparisonModal
                 submission={submissionForReview}
                 allFacilities={comparisonFacilities}

@@ -1,8 +1,7 @@
-// ServiceCoverageDashboard.jsx
+// src/components/ServiceCoverageDashboard.jsx
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
-import { Card, PageHeader, Spinner, FormGroup, Select, Table, Input, EmptyState } from './CommonComponents';
+import { Card, Spinner, FormGroup, Select } from './CommonComponents';
 import { useDataCache } from '../DataContext';
 import { STATE_LOCALITIES } from "./constants.js";
 import SudanMap from '../SudanMap';
@@ -30,113 +29,79 @@ const mapCoordinates = {
     "East Darfur":    { lat: 11.46, lng: 26.12, scale: 7500 }
 };
 
+const CopyIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
+    </svg>
+);
+
 // --- KPI Card Components ---
-const NumberPercentageCard = ({ title, value, percentage }) => (
-    <Card className="border-2 border-gray-300">
-        <div className="p-4">
-            <h3 className="text-lg font-medium text-gray-700">{title}</h3>
-            <div className="mt-2 text-center">
-                 <span className="text-4xl font-bold text-sky-600 mr-2">{value}</span>
-                 <span className="text-2xl font-semibold text-gray-500">({percentage}%)</span>
+const KPIWrapper = ({ children, borderClass = 'border-l-slate-400', decorationColor = 'bg-slate-500', className = '', percentage, colorTheme = 'slate' }) => {
+    const bgLight = `bg-${colorTheme}-100`;
+    const textDark = `text-${colorTheme}-700`;
+    return (
+        <div className={`bg-white rounded-xl shadow-sm border border-gray-200 p-5 border-l-4 ${borderClass} hover:shadow-md transition-all duration-200 flex flex-col items-center justify-center relative overflow-hidden text-center min-h-[140px] ${className}`}>
+            <div className={`absolute -left-8 -bottom-8 w-28 h-28 rounded-full opacity-10 ${decorationColor} pointer-events-none`}></div>
+            {percentage !== undefined && (
+                <div className={`absolute top-2 right-2 w-14 h-14 rounded-full flex items-center justify-center font-black text-[15px] ${bgLight} ${textDark} ring-4 ring-white shadow-md z-20`}>
+                    {percentage}%
+                </div>
+            )}
+            <div className="relative z-10 w-full flex flex-col items-center justify-center h-full mt-2">
+                {children}
             </div>
         </div>
-    </Card>
+    );
+};
+
+const ValueTotalPercentageCard = ({ title, value, total, percentage, borderClass = 'border-l-sky-500', valueClass = 'text-sky-600', decorationColor = 'bg-sky-500', colorTheme='sky', className = '' }) => (
+    <KPIWrapper borderClass={borderClass} decorationColor={decorationColor} percentage={percentage} colorTheme={colorTheme} className={className}>
+        <h3 className="text-[12px] font-bold text-slate-500 uppercase tracking-wider leading-snug mb-1">{title}</h3>
+        <div className="flex flex-col items-center justify-center">
+            <span className={`text-4xl font-black ${valueClass}`}>{value}</span>
+            {total > 0 && <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wide mt-1">out of {total}</span>}
+        </div>
+    </KPIWrapper>
 );
-const ValueTotalPercentageCard = ({ title, value, total, percentage }) => (
-    <Card className="border-2 border-gray-300">
-        <div className="p-4">
-            <h3 className="text-lg font-medium text-gray-700">{title}</h3>
-            <div className="mt-2 text-center">
-                <span className="text-4xl font-bold text-sky-600">{value}</span>
-                <span className="text-2xl font-semibold text-gray-500 ml-1">({percentage}%)</span>
-                { total > 0 && <p className="text-sm text-gray-500 mt-1">out of {total}</p>}
-            </div>
+
+const TotalCountCard = ({ title, count, borderClass = 'border-l-slate-500', valueClass = 'text-slate-700', decorationColor = 'bg-slate-500', className = '' }) => (
+    <KPIWrapper borderClass={borderClass} decorationColor={decorationColor} className={className}>
+        <h3 className="text-[12px] font-bold text-slate-500 uppercase tracking-wider leading-snug mb-1">{title}</h3>
+        <div className="flex items-center justify-center">
+            <span className={`text-4xl font-black ${valueClass}`}>{count}</span>
         </div>
-    </Card>
-);
-const ValueOutOfTotalPercentageCard_V2 = ({ title, value, total, percentage }) => (
-    <Card className="border-2 border-gray-300">
-        <div className="p-4">
-            <h3 className="text-lg font-medium text-gray-700">{title}</h3>
-            <div className="mt-2 text-center">
-                <span className="text-4xl font-bold text-sky-600">{value}</span>
-                { total > 0 && <span className="text-sm text-gray-500 mx-1">out of {total}</span> }
-                <span className="text-2xl font-semibold text-gray-500 ml-1">({percentage}%)</span>
-            </div>
-        </div>
-    </Card>
-);
-const TotalCountCard = ({ title, count }) => (
-    <Card className="border-2 border-gray-300">
-        <div className="p-4">
-            <h3 className="text-lg font-medium text-gray-700">{title}</h3>
-            <div className="mt-2 text-center">
-                <span className="text-4xl font-bold text-slate-700">{count}</span>
-            </div>
-        </div>
-    </Card>
+    </KPIWrapper>
 );
 
 // --- HELPER FUNCTIONS ---
-
 const copyTableAsImage = async (tableRef, setStatusCallback) => {
     if (!tableRef.current) return;
     setStatusCallback('Copying...');
     try {
-        const canvas = await html2canvas(tableRef.current, {
-            useCORS: true,
-            scale: 2, 
-            backgroundColor: '#ffffff' 
-        });
-        
+        const canvas = await html2canvas(tableRef.current, { useCORS: true, scale: 2, backgroundColor: '#ffffff' });
         canvas.toBlob(async (blob) => {
             if (blob) {
                 try {
                     const item = new ClipboardItem({ 'image/png': blob });
                     await navigator.clipboard.write([item]);
-                    setStatusCallback('Copied Image!');
-                } catch (writeErr) {
-                    console.error('Clipboard write failed', writeErr);
-                    setStatusCallback('Failed');
-                }
+                    setStatusCallback('Copied!');
+                } catch (writeErr) { setStatusCallback('Failed'); }
             }
         });
-    } catch (err) {
-        console.error('Image generation failed', err);
-        setStatusCallback('Failed');
-    } finally {
-        setTimeout(() => setStatusCallback(''), 2000);
-    }
+    } catch (err) { setStatusCallback('Failed'); } 
+    finally { setTimeout(() => setStatusCallback(''), 2000); }
 };
 
-const SortIcon = ({ direction }) => {
-    if (!direction) return <span className="text-gray-400 ml-1">▲▼</span>;
-    return <span className="ml-1">{direction === 'ascending' ? '▲' : '▼'}</span>;
-};
 const MapLegend = () => (
-    <div className="flex justify-center items-center gap-2 p-1 text-sm text-gray-600">
+    <div className="flex justify-center items-center flex-wrap gap-4 text-sm text-gray-700">
         <span className="font-bold">Legend:</span>
-        <div className="flex items-center gap-1"><div className="w-4 h-4 rounded-full border border-gray-300" style={{ backgroundColor: '#6B6B6B' }}></div><span className='text-xs'>0-39% (or No Data)</span></div>
-        <div className="flex items-center gap-1"><div className="w-4 h-4 rounded-full border border-gray-300" style={{ backgroundColor: '#6266B1' }}></div><span className='text-xs'>40-74%</span></div>
-        <div className="flex items-center gap-1"><div className="w-4 h-4 rounded-full border border-gray-300" style={{ backgroundColor: '#313695' }}></div><span className='text-xs'>&ge;75%</span></div>
-        <div className="flex items-center gap-1"><div className="w-4 h-4 rounded-full border-2 border-white ring-1 ring-[#313695]" style={{ backgroundColor: '#313695' }}></div><span className='text-xs'>Facility</span></div>
+        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full shadow-sm bg-[#6B6B6B]"></div><span className='text-xs font-medium'>0-39% (or No Data)</span></div>
+        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full shadow-sm bg-[#6266B1]"></div><span className='text-xs font-medium'>40-74%</span></div>
+        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full shadow-sm bg-[#313695]"></div><span className='text-xs font-medium'>&ge;75%</span></div>
+        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full border-2 border-white shadow-sm ring-1 ring-[#313695] bg-[#313695]"></div><span className='text-xs font-medium'>Facility</span></div>
     </div>
 );
-const getCoverageBar = (c) => {
-    const coverage = Number(c) || 0;
-    const isZero = coverage === 0;
-    const colorClass = coverage >= 75 ? 'bg-sky-700' : coverage >= 40 ? 'bg-sky-400' : 'bg-gray-600';
-    const barWidth = isZero ? '2px' : `${coverage}%`;
-    const barStyle = { width: barWidth, minWidth: isZero ? '2px' : undefined };
-    return (
-        <div className="flex items-center w-full">
-            <span className="text-sm font-medium w-10 text-right mr-2">{coverage}%</span>
-            <div className="flex-grow bg-gray-200 rounded-full h-2.5">
-                <div className={`h-2.5 rounded-full ${colorClass}`} style={barStyle}></div>
-            </div>
-        </div>
-    );
-};
+
 const MapTooltip = ({ title, dataRows = [], equipmentSummary }) => (
     <div className="absolute z-50 p-4 bg-white border border-gray-300 shadow-xl rounded-lg w-80 pointer-events-none transform -translate-x-full -translate-y-1/2">
         <h4 className="text-lg font-bold text-gray-800 border-b pb-2 mb-2">{title}</h4>
@@ -154,6 +119,7 @@ const MapTooltip = ({ title, dataRows = [], equipmentSummary }) => (
         </div>
     </div>
 );
+
 const FacilityTooltip = ({ data }) => (
     <div className="absolute z-50 p-3 bg-white border border-gray-300 shadow-xl rounded-lg w-64 pointer-events-none transform -translate-x-1/2">
         <h4 className="text-md font-bold text-gray-800 border-b pb-1 mb-2">{data.name}</h4>
@@ -164,52 +130,15 @@ const FacilityTooltip = ({ data }) => (
     </div>
 );
 
-
-// --- CONSTANTS DEFINITIONS ---
-
 const OWNERSHIP_OPTIONS = ['حكومي', 'خاص', 'منظمات', 'اهلي'];
 
-// 1. NEONATAL
-const NEONATAL_EQUIPMENT_SPEC = {
-    'neonatal_total_beds': 'Total Beds', 'neonatal_total_incubators': 'Incubators', 'neonatal_total_cots': 'Cots', 'neonatal_phototherapy': 'Phototherapy Units', 'neonatal_oxygen_machine': 'Oxygen Machines', 'neonatal_oxygen_cylinder': 'Oxygen Cylinders', 'neonatal_respiration_monitor': 'Respiration Monitors', 'neonatal_cpap': 'CPAP Machines', 'neonatal_mechanical_ventilator': 'Mechanical Ventilators', 'neonatal_warmer': 'Neonatal Warmers', 'neonatal_infusion_pump': 'Infusion Pumps', 'neonatal_syringe_pump': 'Syringe Pumps', 'neonatal_sucker': 'Suction Devices', 'neonatal_ambu_bag': 'Resuscitation Bags', 'neonatal_portable_incubator': 'Portable Incubators'
-};
+// --- NEONATAL DASHBOARD ---
+const NEONATAL_EQUIPMENT_SPEC = { 'neonatal_total_beds': 'Total Beds', 'neonatal_total_incubators': 'Incubators', 'neonatal_total_cots': 'Cots', 'neonatal_phototherapy': 'Phototherapy Units', 'neonatal_oxygen_machine': 'Oxygen Machines', 'neonatal_oxygen_cylinder': 'Oxygen Cylinders', 'neonatal_respiration_monitor': 'Respiration Monitors', 'neonatal_cpap': 'CPAP Machines', 'neonatal_mechanical_ventilator': 'Mechanical Ventilators', 'neonatal_warmer': 'Neonatal Warmers', 'neonatal_infusion_pump': 'Infusion Pumps', 'neonatal_syringe_pump': 'Syringe Pumps', 'neonatal_sucker': 'Suction Devices', 'neonatal_ambu_bag': 'Resuscitation Bags', 'neonatal_portable_incubator': 'Portable Incubators' };
 const NEONATAL_EQUIPMENT_KEYS = Object.keys(NEONATAL_EQUIPMENT_SPEC);
-
-// 2. EENC
-const EENC_EQUIPMENT_SPEC = {
-    'eenc_delivery_beds': 'Delivery Beds',
-    'eenc_resuscitation_stations': 'Resuscitation Stations',
-    'eenc_warmers': 'Warmers',
-    'eenc_ambu_bags': 'Ambu Bags',
-    'eenc_manual_suction': 'Manual Suction',
-    'eenc_wall_clock': 'Wall Clock',        
-    'eenc_steam_sterilizer': 'Steam Sterilizer'
-};
-const EENC_EQUIPMENT_KEYS = Object.keys(EENC_EQUIPMENT_SPEC);
-
-// 3. IMNCI
-const IMNCI_FILTER_SPEC = {
-    'وجود_سجل_علاج_متكامل': 'IMNCI Register',
-    'وجود_كتيب_لوحات': 'Chart Booklet',
-    'ميزان_وزن': 'Weight Scale',
-    'غرفة_إرواء': 'ORT Corner'
-};
-const IMNCI_TOOLS_SPEC = {
-    'countWithRegister': 'IMNCI Register',
-    'countWithChartbooklet': 'Chart Booklet',
-    'countWithWeightScale': 'Weight Scale',
-    'countWithOrtCorner': 'ORT Corner'
-};
-const IMNCI_TOOLS_KEYS = Object.keys(IMNCI_TOOLS_SPEC);
-
-
-// --- NEONATAL COVERAGE DASHBOARD ---
 
 export const NeonatalCoverageDashboard = () => {
     const { healthFacilities: allFacilities, isLoading, fetchHealthFacilities } = useDataCache();
     const loading = isLoading.healthFacilities;
-    
-    // --- APPLY SOFT DELETE FILTER ---
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
     const [stateFilter, setStateFilter] = useState(''); 
@@ -217,9 +146,8 @@ export const NeonatalCoverageDashboard = () => {
     const [ownershipFilter, setOwnershipFilter] = useState('');
     const [projectFilter, setProjectFilter] = useState('');
     const [equipmentFilter, setEquipmentFilter] = useState('');
-    const [sortConfig, setSortConfig] = useState({ key: 'localityCoverage', direction: 'descending' }); 
     const [isMapFullscreen, setIsMapFullscreen] = useState(false); 
-    const [mapViewLevel, setMapViewLevel] = useState('locality');
+    const [mapViewLevel, setMapViewLevel] = useState('state');
     
     const [copyStatus, setCopyStatus] = useState(''); 
     const [table1CopyStatus, setTable1CopyStatus] = useState(''); 
@@ -239,36 +167,7 @@ export const NeonatalCoverageDashboard = () => {
     const equipmentTableRef = useRef(null); 
     const scnuListTableRef = useRef(null); 
     
-    useEffect(() => {
-        if (activeFacilities !== null && activeFacilities.length > 0) {
-            const intervalId = setInterval(() => {
-                fetchHealthFacilities({}, true); // Incremental Sync Delta Fetch
-            }, 15 * 60 * 1000); 
-
-            return () => clearInterval(intervalId);
-        }
-    }, [activeFacilities, fetchHealthFacilities]);
-
-    // DYNAMIC PROJECT OPTIONS
-    const projectOptions = useMemo(() => {
-        const projects = new Set();
-        activeFacilities.forEach(f => {
-            if (f.project_name && f.project_name.trim() !== '') {
-                projects.add(f.project_name.trim());
-            }
-        });
-        return [...projects].sort();
-    }, [activeFacilities]);
-
-    const filteredNationalFacilities = useMemo(() => activeFacilities.filter(f => f['الولاية'] !== 'إتحادي') || [], [activeFacilities]);
-
-    const isFacilitySupposedToProvideCare = useCallback((f) => {
-        const pediatricOrCEmONC = ['CEmONC', 'pediatric'].includes(f.eenc_service_type);
-        const hasNeonatalCare = f.neonatal_level_of_care?.primary || f.neonatal_level_of_care?.secondary || f.neonatal_level_of_care?.tertiary;
-        return pediatricOrCEmONC || hasNeonatalCare;
-    }, []);
-
-    const hasFunctioningSCNU = useCallback((f) => f['هل_المؤسسة_تعمل'] === 'Yes' && f.neonatal_level_of_care?.secondary, []);
+    const projectOptions = useMemo(() => [...new Set(activeFacilities.filter(f => f.project_name?.trim()).map(f => f.project_name.trim()))].sort(), [activeFacilities]);
 
     const locationFilteredFacilities = useMemo(() => {
         return activeFacilities.filter(f => {
@@ -277,189 +176,83 @@ export const NeonatalCoverageDashboard = () => {
             if (localityFilter && f['المحلية'] !== localityFilter) return false;
             if (ownershipFilter && f.facility_ownership !== ownershipFilter) return false;
             if (projectFilter && f.project_name !== projectFilter) return false;
+            if (equipmentFilter && (Number(f[equipmentFilter]) || 0) === 0) return false; // Global Tool Filter
             return true;
         });
-    }, [activeFacilities, stateFilter, localityFilter, ownershipFilter, projectFilter]); 
+    }, [activeFacilities, stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter]); 
 
-    const filteredFacilities = useMemo(() => {
-        if (!equipmentFilter) {
-            return locationFilteredFacilities; 
-        }
-        return locationFilteredFacilities.filter(f => {
-            return (Number(f[equipmentFilter]) || 0) > 0;
-        });
-    }, [locationFilteredFacilities, equipmentFilter]); 
+    const isFacilitySupposedToProvideCare = useCallback((f) => ['CEmONC', 'pediatric'].includes(f.eenc_service_type) || f.neonatal_level_of_care?.primary || f.neonatal_level_of_care?.secondary || f.neonatal_level_of_care?.tertiary, []);
+    const hasFunctioningSCNU = useCallback((f) => f['هل_المؤسسة_تعمل'] === 'Yes' && f.neonatal_level_of_care?.secondary, []);
 
-    const hospitalsWithSCNU = useMemo(() => filteredFacilities.filter(hasFunctioningSCNU), [filteredFacilities, hasFunctioningSCNU]);
+    const hospitalsWithSCNU = useMemo(() => locationFilteredFacilities.filter(hasFunctioningSCNU), [locationFilteredFacilities, hasFunctioningSCNU]);
 
     const kpiData = useMemo(() => {
-        let totalLocalitiesCount;
-        if (stateFilter) {
-            totalLocalitiesCount = STATE_LOCALITIES[stateFilter]?.localities.length || 0;
-        } else {
-            totalLocalitiesCount = Object.entries(STATE_LOCALITIES)
-                .filter(([stateKeyAbbr]) => stateKeyAbbr !== 'إتحادي')
-                .reduce((a, [, s]) => a + s.localities.length, 0);
-        }
-
-        const functioningScnus = filteredFacilities.filter(hasFunctioningSCNU);
-        const localitiesWithScnuSet = new Set(functioningScnus.map(f => `${f['الولاية']}-${f['المحلية']}`));
-        
-        const totalSupposedFacilities = locationFilteredFacilities.filter(isFacilitySupposedToProvideCare).length;
-        
-        const totalFunctioningScnusCount = functioningScnus.length;
-        const facilitiesWithCpapCount = functioningScnus.filter(f => (Number(f['neonatal_cpap']) || 0) > 0).length;
-        const cpapPercentage = totalFunctioningScnusCount > 0 ? Math.round((facilitiesWithCpapCount / totalFunctioningScnusCount) * 100) : 0;
-        const localitiesWithScnuCount = localitiesWithScnuSet.size;
-        const localityCoveragePercentage = totalLocalitiesCount > 0 ? Math.round((localitiesWithScnuCount / totalLocalitiesCount) * 100) : 0;
-
+        const functioningScnus = locationFilteredFacilities.filter(hasFunctioningSCNU);
+        const totalSupposed = locationFilteredFacilities.filter(isFacilitySupposedToProvideCare).length;
+        const totalWithSCNU = functioningScnus.length;
+        const totalWithCPAP = functioningScnus.filter(f => (Number(f['neonatal_cpap']) || 0) > 0).length;
         return {
-            totalSupposed: totalSupposedFacilities,
-            totalWithSCNU: totalFunctioningScnusCount,
-            scnuCoveragePercentage: totalSupposedFacilities > 0 ? Math.round((totalFunctioningScnusCount / totalSupposedFacilities) * 100) : 0,
-            totalLocalitiesCount: totalLocalitiesCount,
-            totalLocalitiesWithSCNU: localitiesWithScnuCount,
-            localityCoveragePercentage: localityCoveragePercentage,
-            totalWithCPAP: facilitiesWithCpapCount,
-            cpapPercentage: cpapPercentage,
+            totalSupposed,
+            totalWithSCNU,
+            scnuCoveragePercentage: totalSupposed > 0 ? Math.round((totalWithSCNU / totalSupposed) * 100) : 0,
+            totalWithCPAP,
+            cpapPercentage: totalWithSCNU > 0 ? Math.round((totalWithCPAP / totalWithSCNU) * 100) : 0,
         };
-    }, [filteredFacilities, locationFilteredFacilities, stateFilter, hasFunctioningSCNU, isFacilitySupposedToProvideCare]); 
-
-    const allLocalitiesCoverageData = useMemo(() => { 
-        const s={};
-        Object.entries(STATE_LOCALITIES).forEach(([sK,sD])=>{if(sK==='إتحادي')return;sD.localities.forEach(l=>{const k=l.en;s[k]={key:k,name:l.en,state:sK,totalSupposed:0,totalWithSCNU:0};});});
-        filteredNationalFacilities.forEach(f=>{
-            if (ownershipFilter && f.facility_ownership !== ownershipFilter) return;
-            if (projectFilter && f.project_name !== projectFilter) return;
-            const k=f['المحلية'];
-            if(!k||!s[k])return;
-            if(isFacilitySupposedToProvideCare(f))s[k].totalSupposed++;
-            if(hasFunctioningSCNU(f))s[k].totalWithSCNU++;
-        });
-        return Object.values(s).map(l=>({...l,coverage:l.totalSupposed>0?Math.round((l.totalWithSCNU/l.totalSupposed)*100):0,})); 
-    }, [filteredNationalFacilities, isFacilitySupposedToProvideCare, hasFunctioningSCNU, ownershipFilter, projectFilter]);
+    }, [locationFilteredFacilities, hasFunctioningSCNU, isFacilitySupposedToProvideCare]); 
 
     const isLocalityView = !!stateFilter;
     const aggregationLevelName = isLocalityView ? 'Locality' : 'State';
 
-    const { nationalAverageRow, stateData } = useMemo(() => {
-        const relevantNationalFacilities = filteredNationalFacilities.filter(f => 
-            (!ownershipFilter || f.facility_ownership === ownershipFilter) && 
-            (!projectFilter || f.project_name === projectFilter)
-        );
-        
-        const allFunctioningScnusNational = relevantNationalFacilities.filter(hasFunctioningSCNU);
-        const natLS = new Set(allFunctioningScnusNational.map(f => `${f['الولاية']}-${f['المحلية']}`));
-        const totNL = Object.entries(STATE_LOCALITIES)
-            .filter(([stateKeyAbbr]) => stateKeyAbbr !== 'إتحادي')
-            .reduce((a, [, s]) => a + s.localities.length, 0);
-        const natTS = relevantNationalFacilities.filter(isFacilitySupposedToProvideCare).length;
-        const natTW = allFunctioningScnusNational.length;
-        const natAR = { name: 'National Average', key: 'national', totalSupposed: natTS, totalWithSCNU: natTW, coverage: natTS > 0 ? Math.round((natTW / natTS) * 100) : 0, localitiesWithSCNUCount: natLS.size, totalLocalities: totNL, localityCoverage: totNL > 0 ? Math.round((natLS.size / totNL) * 100) : 0, };
-
+    const { stateData } = useMemo(() => {
         const sum = {};
         const aggF = isLocalityView ? 'المحلية' : 'الولاية';
 
         locationFilteredFacilities.forEach(f => {
             const key = f[aggF];
             if (!key || key === 'إتحادي') return;
-            if (!sum[key]) {
-                let name = isLocalityView ? (STATE_LOCALITIES[stateFilter]?.localities.find(l => l.en === key)?.en || key) : key;
-                let totL = isLocalityView ? 1 : (STATE_LOCALITIES[key]?.localities.length || 0);
-                sum[key] = { name, key, totalSupposed: 0, totalWithSCNU: 0, localitiesWithSCNUSet: new Set(), totalLocalities: totL };
-            }
+            if (!sum[key]) sum[key] = { name: isLocalityView ? (STATE_LOCALITIES[stateFilter]?.localities.find(l => l.en === key)?.en || key) : key, key, totalSupposed: 0, totalWithSCNU: 0 };
             if (isFacilitySupposedToProvideCare(f)) sum[key].totalSupposed++;
+            if (hasFunctioningSCNU(f)) sum[key].totalWithSCNU++;
         });
 
-        filteredFacilities.forEach(f => { 
-            const key = f[aggF];
-            if (!key || key === 'إتحادي' || !sum[key]) return; 
-            if (hasFunctioningSCNU(f)) {
-                sum[key].totalWithSCNU++;
-                if (!isLocalityView) sum[key].localitiesWithSCNUSet.add(f['المحلية']);
-            }
-        });
+        const sD = Object.values(sum).map(s => ({ ...s, coverage: s.totalSupposed > 0 ? Math.round((s.totalWithSCNU / s.totalSupposed) * 100) : 0 }));
+        return { stateData: sD };
+    }, [locationFilteredFacilities, stateFilter, isLocalityView, hasFunctioningSCNU, isFacilitySupposedToProvideCare]); 
 
-        const sD = Object.values(sum).map(s => { const lC = isLocalityView ? (s.totalWithSCNU > 0 ? 1 : 0) : s.localitiesWithSCNUSet.size; return { ...s, coverage: s.totalSupposed > 0 ? Math.round((s.totalWithSCNU / s.totalSupposed) * 100) : 0, localitiesWithSCNUCount: lC, localityCoverage: s.totalLocalities > 0 ? Math.round((lC / s.totalLocalities) * 100) : 0 }; });
-        return { nationalAverageRow: natAR, stateData: sD };
-    }, [filteredNationalFacilities, locationFilteredFacilities, filteredFacilities, stateFilter, isLocalityView, hasFunctioningSCNU, isFacilitySupposedToProvideCare, ownershipFilter, projectFilter]); 
+    // Horizontal Inline Chart Array (Sorted High to Low)
+    const sortedTableData = useMemo(() => [...stateData].sort((a,b) => b.coverage - a.coverage), [stateData]);
 
-    const handleSort = (key) => { let d=(sortConfig.key===key&&sortConfig.direction==='descending')?'ascending':'descending';setSortConfig({key,direction:d}); };
-    const sortedTableData = useMemo(() => { const items=[...stateData];items.sort((a,b)=>{if(a[sortConfig.key]<b[sortConfig.key])return sortConfig.direction==='ascending'?-1:1;if(a[sortConfig.key]>b[sortConfig.key])return sortConfig.direction==='ascending'?1:-1;return 0;});return items; }, [stateData, sortConfig]);
-    const getEquipmentSummary = useCallback((stateKey) => { if(isLocalityView)return null;const rel=filteredNationalFacilities.filter(f=>f['الولاية']===stateKey&&hasFunctioningSCNU(f) && (!ownershipFilter || f.facility_ownership === ownershipFilter) && (!projectFilter || f.project_name === projectFilter));const sum={};NEONATAL_EQUIPMENT_KEYS.forEach(k=>{sum[NEONATAL_EQUIPMENT_SPEC[k]]=0;});rel.forEach(f=>{NEONATAL_EQUIPMENT_KEYS.forEach(k=>{sum[NEONATAL_EQUIPMENT_SPEC[k]]+=(Number(f[k])||0);});});return{totalUnits:rel.length,summary:sum}; }, [filteredNationalFacilities, isLocalityView, hasFunctioningSCNU, ownershipFilter, projectFilter]);
-    const getLocalityEquipmentSummary = useCallback((localityKey, stateKey) => { if(!stateKey||!localityKey){return{totalUnits:0,summary:Object.fromEntries(NEONATAL_EQUIPMENT_KEYS.map(k=>[NEONATAL_EQUIPMENT_SPEC[k],0]))};} const rel=filteredNationalFacilities.filter(f=>f['الولاية']===stateKey&&f['المحلية']===localityKey&&hasFunctioningSCNU(f) && (!ownershipFilter || f.facility_ownership === ownershipFilter) && (!projectFilter || f.project_name === projectFilter));const sum={};NEONATAL_EQUIPMENT_KEYS.forEach(k=>{sum[NEONATAL_EQUIPMENT_SPEC[k]]=0;});rel.forEach(f=>{NEONATAL_EQUIPMENT_KEYS.forEach(k=>{sum[NEONATAL_EQUIPMENT_SPEC[k]]+=(Number(f[k])||0);});});return{totalUnits:rel.length,summary:sum}; }, [filteredNationalFacilities, hasFunctioningSCNU, ownershipFilter, projectFilter]);
-
-    // Equipment table data
     const equipmentTableData = useMemo(() => {
-        const isH = !!stateFilter;
-        const aggK = isH ? 'اسم_المؤسسة' : 'الولاية';
-        const dL = 30; const oL = 60;
-        const facP = filteredFacilities.filter(f => hasFunctioningSCNU(f)); 
+        const aggK = !!stateFilter ? 'اسم_المؤسسة' : 'الولاية';
         const sum = {};
-        facP.forEach(f => {
+        hospitalsWithSCNU.forEach(f => {
             const key = f[aggK];
             if (!key || key === 'إتحادي') return;
-            if (!sum[key]) {
-                let name = isH ? f['اسم_المؤسسة'] : key;
-                sum[key] = { name, key, hasData: false, ...Object.fromEntries(NEONATAL_EQUIPMENT_KEYS.map(k => [k, 0])) };
-            }
+            if (!sum[key]) sum[key] = { name: !!stateFilter ? f['اسم_المؤسسة'] : key, key, hasData: false, ...Object.fromEntries(NEONATAL_EQUIPMENT_KEYS.map(k => [k, 0])) };
             NEONATAL_EQUIPMENT_KEYS.forEach(eK => {
                 const fV = Number(f[eK]) || 0;
                 sum[key][eK] += fV;
                 if (fV > 0) sum[key].hasData = true;
             });
         });
-        let allR = Object.values(sum).filter(s => s.key !== 'إتحادي');
-        allR.sort((a, b) => (b.neonatal_total_beds || 0) - (a.neonatal_total_beds || 0));
-        const rWd = allR.filter(r => r.hasData);
-        const rWoD = allR.filter(r => !r.hasData);
-        const fRWd = rWd.slice(0, dL);
-        const rL = oL - fRWd.length;
-        const fRWoD = rWoD.slice(0, rL); 
-        return [...fRWd, ...fRWoD];
-    }, [filteredFacilities, stateFilter, hasFunctioningSCNU]);
+        return Object.values(sum).filter(s => s.key !== 'إتحادي' && s.hasData).sort((a, b) => (b.neonatal_total_beds || 0) - (a.neonatal_total_beds || 0)).slice(0, 30);
+    }, [hospitalsWithSCNU, stateFilter]);
 
-    // NEW SCNU Facility Detail Data
     const facilitySCNUTableData = useMemo(() => {
-        const data = hospitalsWithSCNU.map(f => {
-            const incubators = Number(f['neonatal_total_incubators']) || 0;
-            const cots = Number(f['neonatal_total_cots']) || 0;
-            
+        return hospitalsWithSCNU.map(f => {
             let localityEn = f['المحلية'];
             const state = f['الولاية'];
-            if (STATE_LOCALITIES[state]) {
-                const loc = STATE_LOCALITIES[state].localities.find(l => l.en === localityEn || l.ar === localityEn);
-                if (loc) localityEn = loc.en;
-            }
-
-            return {
-                id: f.id,
-                state: state,
-                locality: localityEn,
-                facilityName: f['اسم_المؤسسة'],
-                incubators: incubators,
-                cots: cots,
-                totalBeds: incubators + cots
-            };
-        });
-
-        return data.sort((a, b) => {
-            if (a.state !== b.state) return (a.state || '').localeCompare(b.state || '');
-            if (a.locality !== b.locality) return (a.locality || '').localeCompare(b.locality || '');
-            return (a.facilityName || '').localeCompare(b.facilityName || '');
-        });
+            if (STATE_LOCALITIES[state]) localityEn = STATE_LOCALITIES[state].localities.find(l => l.en === localityEn || l.ar === localityEn)?.en || localityEn;
+            return { id: f.id, state, locality: localityEn, facilityName: f['اسم_المؤسسة'], incubators: Number(f['neonatal_total_incubators']) || 0, cots: Number(f['neonatal_total_cots']) || 0, totalBeds: (Number(f['neonatal_total_incubators']) || 0) + (Number(f['neonatal_total_cots']) || 0) };
+        }).sort((a, b) => a.state.localeCompare(b.state) || a.locality.localeCompare(b.locality) || a.facilityName.localeCompare(b.facilityName));
     }, [hospitalsWithSCNU]);
 
     const facilityLocationMarkers = useMemo(() => hospitalsWithSCNU.filter(f=>f['_الإحداثيات_longitude']&&f['_الإحداثيات_latitude']).map(f=>({key:f.id,name:f['اسم_المؤسسة'],coordinates:[f['_الإحداثيات_longitude'],f['_الإحداثيات_latitude']]})), [hospitalsWithSCNU]);
-    
-    const mapViewConfig = useMemo(() => { const sC=stateFilter?mapCoordinates[stateFilter]:null;if(sC)return{center:[sC.lng,sC.lat],scale:sC.scale,focusedState:stateFilter};return{center:[30,15.5],scale:2000,focusedState:null}; }, [stateFilter]);
-    const fullscreenMapViewConfig = useMemo(() => ({ ...mapViewConfig }), [mapViewConfig]);
+    const mapViewConfig = useMemo(() => { const sC=stateFilter?mapCoordinates[stateFilter]:null; return sC ? {center:[sC.lng,sC.lat],scale:sC.scale,focusedState:stateFilter} : {center:[30,15.5],scale:2000,focusedState:null}; }, [stateFilter]);
     
     const nationalMapData = useMemo(() => { 
         const s={};
-        filteredNationalFacilities.forEach(f=>{
-            if (ownershipFilter && f.facility_ownership !== ownershipFilter) return; 
-            if (projectFilter && f.project_name !== projectFilter) return;
+        locationFilteredFacilities.forEach(f=>{
             const k=f['الولاية'];
             if(!k||k==='إتحادي')return;
             if(!s[k])s[k]={totalSupposed:0,totalWithSCNU:0};
@@ -467,270 +260,116 @@ export const NeonatalCoverageDashboard = () => {
             if(hasFunctioningSCNU(f))s[k].totalWithSCNU++;
         });
         return Object.entries(s).map(([sK,c])=>({state:sK,percentage:c.totalSupposed>0?Math.round((c.totalWithSCNU/c.totalSupposed)*100):0,coordinates:mapCoordinates[sK]?[mapCoordinates[sK].lng,mapCoordinates[sK].lat]:[0,0]})); 
-    }, [filteredNationalFacilities, isFacilitySupposedToProvideCare, hasFunctioningSCNU, ownershipFilter, projectFilter]);
+    }, [locationFilteredFacilities, isFacilitySupposedToProvideCare, hasFunctioningSCNU]);
     
     const handleStateChange = (e) => { setStateFilter(e.target.value); setLocalityFilter(''); };
-
-     const coverageTableHeaders = [
-        {key:'name',label:aggregationLevelName,class:'w-[30%]'},
-        {key:'totalSupposed',label:'total pediatric and Comperhensive EmONC',class:'w-[20%] text-center'},
-        {key:'totalWithSCNU',label:'Facilities with SCNU',class:'w-[20%] text-center'},
-        {key:'localitiesWithSCNUCount',label:'Localities with SCNU',class:'w-[10%] text-center'},
-        {key:'localityCoverage',label:'Locality Coverage (%)',class:'w-[20%] text-left'}
-    ];
-
-    const tableHeadersJsx = coverageTableHeaders.map(h => {
-        const isSortable = h.key === 'localityCoverage';
-        return (
-            <th
-                key={h.key}
-                onClick={isSortable ? () => handleSort(h.key) : undefined}
-                className={`py-3 px-4 font-semibold tracking-wider border border-gray-200 bg-gray-100 ${isSortable ? 'cursor-pointer' : ''} ${h.class}`}
-            >
-                {h.label}
-                {isSortable && (sortConfig.key === h.key ? <SortIcon direction={sortConfig.direction} /> : <SortIcon />)}
-            </th>
-        );
-    });
-
-    const selectedStateData = useMemo(() => { if(!stateFilter)return{stateName:'All States',coverage:null};const sE=stateData.find(d=>d.key===stateFilter);const sAN=stateFilter;return{stateName:sAN,coverage:sE?sE.coverage:'N/A'}; }, [stateFilter, stateData]);
-    const dynamicTitlePrefix = isLocalityView ? `${selectedStateData.stateName} (${selectedStateData.coverage}%) - ` : '';
-    const equipmentTitlePrefix = isLocalityView ? ` (${selectedStateData.stateName})` : '';
-    
-    const isEquipmentByHospital = !!stateFilter && !localityFilter;
-    const equipmentHeaders = [isEquipmentByHospital?'Hospital Name':aggregationLevelName, ...Object.values(NEONATAL_EQUIPMENT_SPEC)];
-    
-    const handleStateHover = useCallback((key, event) => {
-        const rowData = key === 'national' ? nationalAverageRow : stateData.find(d => d.key === key);
-        if (!rowData || isLocalityView || mapViewLevel === 'locality') return;
-        const equipmentSummary = getEquipmentSummary(rowData.key);
-        setTooltipData({
-            title: `${rowData.name}${rowData.key !== 'national' ? ` (${rowData.key})` : ''}`,
-            dataRows: [
-                { label: "Facility Coverage", value: `${rowData.coverage}% (${rowData.totalWithSCNU} / ${rowData.totalSupposed})` },
-                { label: "Locality Coverage", value: `${rowData.localityCoverage}% (${rowData.localitiesWithSCNUCount} / ${rowData.totalLocalities})` }
-            ],
-            equipmentSummary: { ...equipmentSummary, title: "SCNU Equipment Summary" }
-        });
-        setHoverPosition({ x: event.clientX, y: event.clientY });
-    }, [stateData, nationalAverageRow, isLocalityView, mapViewLevel, getEquipmentSummary]);
-
-    const handleMapLocalityHover = useCallback((geoProps, event) => { const localityKey=geoProps.admin_2;if(!localityKey)return;let dataStore=isLocalityView?stateData:allLocalitiesCoverageData;const localityData=dataStore.find(l=>l.key===localityKey);if(localityData){const stateKey=isLocalityView?stateFilter:localityData.state;const equipmentSummary=getLocalityEquipmentSummary(localityKey,stateKey);setTooltipData({title:`${localityData.name} (${localityData.key})`,dataRows:[{label:"Facility Coverage",value:`${localityData.coverage}% (${localityData.totalWithSCNU} / ${localityData.totalSupposed})`}],equipmentSummary:{...equipmentSummary,title:"SCNU Equipment Summary"}});setHoverPosition({x:event.clientX,y:event.clientY});} }, [isLocalityView, stateData, allLocalitiesCoverageData, stateFilter, getLocalityEquipmentSummary]);
+    const handleMapHover = useCallback((key, event) => setHoverPosition({ x: event.clientX, y: event.clientY }), []);
     const handleMapMouseLeave = useCallback(() => { setTooltipData(null); }, []);
-    const getFacilityEquipmentDetails = useCallback((facilityId) => { const facility=(activeFacilities || []).find(f=>f.id===facilityId);if(!facility)return null;const summary={};NEONATAL_EQUIPMENT_KEYS.forEach(key=>{summary[NEONATAL_EQUIPMENT_SPEC[key]]=Number(facility[key])||0;});return{name:facility['اسم_المؤسسة'],summary:summary}; }, [activeFacilities]);
-    const handleFacilityHover = useCallback((facilityId, event) => { const details=getFacilityEquipmentDetails(facilityId);if(details){setHoveredFacilityData(details);setHoverPosition({x:event.clientX,y:event.clientY});} }, [getFacilityEquipmentDetails]);
+    const handleFacilityHover = useCallback((facilityId, event) => setHoverPosition({ x: event.clientX, y: event.clientY }), []);
     const handleFacilityLeave = useCallback(() => { setHoveredFacilityData(null); }, []);
-    const handleMouseMove = useCallback((event) => { if (tooltipData || hoveredFacilityData) { setHoverPosition({ x: event.clientX, y: event.clientY }); } }, [tooltipData, hoveredFacilityData]);
-
+    const handleMouseMove = useCallback((event) => { if (tooltipData || hoveredFacilityData) setHoverPosition({ x: event.clientX, y: event.clientY }); }, [tooltipData, hoveredFacilityData]);
     const currentMapViewLevel = isLocalityView ? 'locality' : mapViewLevel;
 
-    const handleDownloadMap = useCallback((format = 'jpg') => {
-        const targetRef = isMapFullscreen ? fullscreenModalRef : dashboardSectionRef;
-        if (targetRef.current) { 
-            html2canvas(targetRef.current, { 
-                useCORS: true, 
-                scale: 2, 
-                backgroundColor: '#ffffff',
-                ignoreElements: (element) => element.classList.contains('ignore-for-export')
-            }).then(canvas => { 
-                const baseName = isMapFullscreen ? 'scnu-map-fullscreen' : 'scnu-dashboard';
-                const filename = `${baseName}-${stateFilter || 'sudan'}.${format}`; 
-                if (format === 'pdf') { 
-                    const imgData = canvas.toDataURL('image/jpeg', 0.9); 
-                    const pdf = new jsPDF({ orientation: canvas.width > canvas.height ? 'l' : 'p', unit: 'px', format: [canvas.width, canvas.height] }); 
-                    pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height); 
-                    pdf.save(filename); 
-                } else { 
-                    const image = canvas.toDataURL("image/jpeg", 0.9); 
-                    const link = document.createElement('a'); 
-                    link.href = image; 
-                    link.download = filename; 
-                    document.body.appendChild(link); 
-                    link.click(); 
-                    document.body.removeChild(link); 
-                } 
-            }).catch(err => console.error("Error generating map image:", err)); 
-        }
-    }, [stateFilter, currentMapViewLevel, isMapFullscreen, dashboardSectionRef, fullscreenModalRef]); 
-
     const handleCopyImage = useCallback(async () => {
-        const targetRef = dashboardSectionRef;
-        if (targetRef.current && navigator.clipboard?.write) {
+        if (dashboardSectionRef.current && navigator.clipboard?.write) {
             setCopyStatus('Copying...');
             try {
-                const canvas = await html2canvas(targetRef.current, {
-                    useCORS: true, scale: 2, backgroundColor: '#ffffff', logging: false,
-                    ignoreElements: (element) => element.classList.contains('ignore-for-export')
-                });
-                canvas.toBlob(async (blob) => { if (blob) { await navigator.clipboard.write([ new ClipboardItem({ 'image/png': blob }) ]); setCopyStatus('Copied!'); } else { throw new Error('Canvas to Blob failed'); } }, 'image/png', 0.95);
-            } catch (err) { console.error("Failed to copy image:", err); setCopyStatus('Failed'); }
+                const canvas = await html2canvas(dashboardSectionRef.current, { useCORS: true, scale: 2, backgroundColor: '#ffffff', ignoreElements: (e) => e.classList.contains('ignore-for-export') });
+                canvas.toBlob(async (blob) => { if (blob) { await navigator.clipboard.write([ new ClipboardItem({ 'image/png': blob }) ]); setCopyStatus('Copied!'); } }, 'image/png', 0.95);
+            } catch (err) { setCopyStatus('Failed'); }
             finally { setTimeout(() => setCopyStatus(''), 2000); }
-        } else { console.error("Clipboard API not available or target element not found."); setCopyStatus('Failed'); setTimeout(() => setCopyStatus(''), 2000); }
+        }
     }, []);
 
-    const mapLocationName = stateFilter ? stateFilter : 'Sudan';
-    const mapTitle = `Functioning Special Care Newborn Unit in (${mapLocationName}) (${kpiData.totalWithSCNU} out of ${kpiData.totalSupposed}, ${kpiData.scnuCoveragePercentage}%)`;
+    const equipmentHeaders = [
+        !!stateFilter ? 'Hospital Name' : aggregationLevelName,
+        ...Object.values(NEONATAL_EQUIPMENT_SPEC)
+    ];
 
     return (
         <div onMouseMove={handleMouseMove}>
-            <div ref={dashboardSectionRef} className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch relative">
-                <div className="flex flex-col gap-6 lg:col-span-1">
-                    <Card className="ignore-for-export">
-                        <div className="p-3 grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                            <FormGroup label="State">
-                                <Select value={stateFilter} onChange={handleStateChange}>
-                                    <option value="">All States</option>
-                                    {Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{sKey}</option>)}
-                                </Select>
-                            </FormGroup>
-                            <FormGroup label="Locality">
-                                <Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}>
-                                    <option value="">All Localities</option>
-                                    {stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{l.en}</option>)}
-                                </Select>
-                            </FormGroup>
-                            <FormGroup label="Ownership">
-                                <Select value={ownershipFilter} onChange={(e) => setOwnershipFilter(e.target.value)}>
-                                    <option value="">All Ownerships</option>
-                                    {OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                </Select>
-                            </FormGroup>
-                            <FormGroup label="Project">
-                                <Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}>
-                                    <option value="">All Projects</option>
-                                    {projectOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                </Select>
-                            </FormGroup>
-                            <FormGroup label="Has Equipment">
-                                <Select value={equipmentFilter} onChange={(e) => setEquipmentFilter(e.target.value)}>
-                                    <option value="">Any</option>
-                                    {Object.entries(NEONATAL_EQUIPMENT_SPEC).map(([key, label]) => (
-                                        <option key={key} value={key}>{label}</option>
-                                    ))}
-                                </Select>
-                            </FormGroup>
-                        </div>
-                    </Card>
+            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm ignore-for-export mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <FormGroup label="State"><Select value={stateFilter} onChange={handleStateChange}><option value="">All States</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{sKey}</option>)}</Select></FormGroup>
+                    <FormGroup label="Locality"><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">All Localities</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{l.en}</option>)}</Select></FormGroup>
+                    <FormGroup label="Ownership"><Select value={ownershipFilter} onChange={(e) => setOwnershipFilter(e.target.value)}><option value="">All Ownerships</option>{OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
+                    <FormGroup label="Project"><Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}><option value="">All Projects</option>{projectOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
+                    <FormGroup label="Has Equipment"><Select value={equipmentFilter} onChange={(e) => setEquipmentFilter(e.target.value)}><option value="">Any</option>{Object.entries(NEONATAL_EQUIPMENT_SPEC).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</Select></FormGroup>
+                </div>
+            </div>
 
+            <div ref={dashboardSectionRef} className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch relative">
+                <div className="lg:col-span-1 flex flex-col gap-4 h-full">
                     {loading ? <Spinner/> : (
                         <>
-                            <TotalCountCard title="Total Pediatrics and Comprehensive EmONC Hospital" count={kpiData.totalSupposed}/>
-                            <ValueOutOfTotalPercentageCard_V2
-                                title="Total Number of Functioning special care newborn units (SCNU)"
-                                value={kpiData.totalWithSCNU}
-                                total={kpiData.totalSupposed}
-                                percentage={kpiData.scnuCoveragePercentage}
-                            />
-                             <ValueTotalPercentageCard
-                                title="Localities with at least one SCNU"
-                                value={kpiData.totalLocalitiesWithSCNU}
-                                total={kpiData.totalLocalitiesCount}
-                                percentage={kpiData.localityCoveragePercentage}
-                            />
-                            <ValueTotalPercentageCard
-                                title="Facilities with at least one CPAP"
-                                value={kpiData.totalWithCPAP}
-                                total={kpiData.totalWithSCNU}
-                                percentage={kpiData.cpapPercentage}
-                            />
+                            <TotalCountCard title="Total Pediatrics & EmONC" count={kpiData.totalSupposed} className="flex-1" borderClass="border-l-slate-400" valueClass="text-slate-700" decorationColor="bg-slate-500" colorTheme="slate" />
+                            <ValueTotalPercentageCard title="Functioning SCNU Facilities" value={kpiData.totalWithSCNU} total={kpiData.totalSupposed} percentage={kpiData.scnuCoveragePercentage} className="flex-1" borderClass="border-l-sky-500" valueClass="text-sky-600" decorationColor="bg-sky-500" colorTheme="sky" />
+                            <ValueTotalPercentageCard title="Facilities with CPAP" value={kpiData.totalWithCPAP} total={kpiData.totalWithSCNU} percentage={kpiData.cpapPercentage} className="flex-1" borderClass="border-l-teal-500" valueClass="text-teal-600" decorationColor="bg-teal-500" colorTheme="teal" />
                         </>
                     )}
                 </div>
-                
                  {loading ? <div className="lg:col-span-2 flex justify-center items-center h-64"><Spinner/></div> : (
-                    <Card className="p-0 flex flex-col flex-grow lg:col-span-2">
-                         <div className="p-4 border-b flex flex-col sm:flex-row sm:justify-between sm:items-center flex-shrink-0 gap-2 sm:gap-0">
-                            <h3 className="text-xl font-medium text-gray-700 text-left sm:text-center">SCNU Geographical Distribution</h3>
-                            <div className="flex items-center flex-wrap justify-start sm:justify-end gap-1 w-full sm:w-auto ignore-for-export">
-                                {!isLocalityView && (
-                                    <>
-                                        <div className="text-sm font-medium text-gray-500">View:</div>
-                                        <div className="flex rounded-md shadow-sm">
-                                            <button onClick={() => setMapViewLevel('state')} className={`px-2 py-1 text-xs font-semibold rounded-l-md ${mapViewLevel === 'state' ? 'bg-sky-700 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}>State</button>
-                                            <button onClick={() => setMapViewLevel('locality')} className={`px-2 py-1 text-xs font-semibold rounded-r-md border-l border-gray-300 ${mapViewLevel === 'locality' ? 'bg-sky-700 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}>Locality</button>
-                                        </div>
-                                    </>
-                                )}
-                                <button onClick={() => handleDownloadMap('jpg')} title="Download Map as JPG" className="ml-1 px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">JPG</button>
-                                <button onClick={() => handleDownloadMap('pdf')} title="Download Map as PDF" className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">PDF</button>
-                                <button
-                                    onClick={handleCopyImage}
-                                    title="Copy Dashboard Image"
-                                    disabled={!!copyStatus && copyStatus !== 'Failed'}
-                                    className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors relative min-w-[70px] text-center disabled:opacity-50 disabled:cursor-wait"
-                                >
-                                    {copyStatus || 'Copy Image'}
-                                </button>
-                                <button
-                                    onClick={() => setShowFacilityMarkers(!showFacilityMarkers)}
-                                    title={showFacilityMarkers ? "Hide Facilities" : "Show Facilities"}
-                                    className={`ml-1 px-2 py-1 text-xs font-semibold rounded-md transition-colors ${
-                                        showFacilityMarkers ? 'bg-sky-700 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                    }`}
-                                >
-                                    {showFacilityMarkers ? 'Hide' : 'Show'} Facilities
-                                </button>
-                                <button onClick={() => setIsMapFullscreen(true)} className="px-2 py-1 text-xs font-semibold text-sky-700 bg-sky-100 rounded-md hover:bg-sky-200 transition-colors">Full</button>
+                    <div className="lg:col-span-2 flex flex-col h-full">
+                        <Card className="p-0 flex flex-col flex-grow shadow-sm border border-gray-200 rounded-xl h-full">
+                            <div className="p-4 md:p-5 border-b bg-slate-50/50 rounded-t-xl flex justify-between items-start gap-4">
+                                <h3 className="text-lg font-bold text-gray-800 leading-tight">Geographical Map</h3>
+                                <button onClick={handleCopyImage} className="text-gray-400 hover:text-sky-600 transition-colors p-1 shrink-0" disabled={!!copyStatus && copyStatus !== 'Failed'}>{copyStatus ? <span className="text-[10px] font-semibold text-sky-600">{copyStatus}</span> : <CopyIcon />}</button>
                             </div>
-                        </div>
-
-                        <div ref={mapContainerRef} className="flex-grow flex flex-col bg-white">
-                            <h4 className="text-center text-lg font-bold text-gray-600 py-1 flex-shrink-0">{mapTitle}</h4>
-                            <MapLegend />
-                            <div className="flex-grow min-h-[450px]">
-                                <div className='flex-grow min-h-0 h-full'>
-                                    <SudanMap
-                                        data={!isLocalityView && currentMapViewLevel === 'state' ? nationalMapData : []}
-                                        localityData={isLocalityView ? stateData : (currentMapViewLevel === 'locality' ? allLocalitiesCoverageData : [])}
-                                        facilityMarkers={showFacilityMarkers ? facilityLocationMarkers : []}
-                                        viewLevel={currentMapViewLevel}
-                                        {...mapViewConfig}
-                                        onStateHover={handleStateHover} onStateLeave={handleMapMouseLeave}
-                                        onFacilityHover={handleFacilityHover} onFacilityLeave={handleFacilityLeave}
-                                        onLocalityHover={handleMapLocalityHover} onLocalityLeave={handleMapMouseLeave}
-                                        isMovable={false}
-                                        pannable={false}
-                                     />
+                            <div className="flex-grow min-h-[400px] p-2 relative flex flex-col">
+                                <div className='flex-grow min-h-0 h-full w-full'>
+                                    <SudanMap data={!isLocalityView && currentMapViewLevel === 'state' ? nationalMapData : []} localityData={isLocalityView ? stateData : []} facilityMarkers={showFacilityMarkers ? facilityLocationMarkers : []} viewLevel={currentMapViewLevel} {...mapViewConfig} isMovable={false} pannable={false} />
                                 </div>
                             </div>
-                        </div>
-                    </Card>
+                            <div className="bg-slate-50 border-t border-gray-200 rounded-b-xl py-3 px-4 flex flex-col xl:flex-row justify-between items-center gap-4">
+                                <MapLegend />
+                                <div className="flex flex-nowrap items-center gap-2 overflow-x-auto w-full xl:w-auto justify-end ignore-for-export">
+                                    {!isLocalityView && (
+                                        <div className="flex rounded-md shadow-sm shrink-0 mr-1">
+                                            <button onClick={() => setMapViewLevel('state')} className={`px-3 py-1.5 text-xs font-semibold rounded-l-md ${mapViewLevel === 'state' ? 'bg-sky-700 text-white' : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'}`}>State</button>
+                                            <button onClick={() => setMapViewLevel('locality')} className={`px-3 py-1.5 text-xs font-semibold rounded-r-md ${mapViewLevel === 'locality' ? 'bg-sky-700 text-white border border-sky-700' : 'bg-white text-gray-700 hover:bg-gray-50 border border-l-0 border-gray-200'}`}>Locality</button>
+                                        </div>
+                                    )}
+                                    <button onClick={() => setShowFacilityMarkers(!showFacilityMarkers)} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors shadow-sm shrink-0 ${showFacilityMarkers ? 'bg-slate-700 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>{showFacilityMarkers ? 'Hide Fac.' : 'Show Fac.'}</button>
+                                    <button onClick={() => setIsMapFullscreen(true)} className="px-3 py-1.5 text-xs font-semibold text-sky-700 bg-sky-100 rounded-md hover:bg-sky-200 transition-colors shadow-sm shrink-0">Full</button>
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
                  )}
             </div>
             
             {!loading && (
             <>
-                <div className="mt-6 grid grid-cols-1 lg:grid-cols-1 gap-6 items-stretch relative">
-                    <Card className="p-0 flex flex-col">
-                        <div className="p-4 border-b flex justify-between items-center">
-                            <h3 className="text-lg font-medium text-gray-700">{dynamicTitlePrefix}SCNU Coverage by {aggregationLevelName} (Facility & Locality)</h3>
-                            <button
-                                onClick={() => copyTableAsImage(coverageTableRef, setTable1CopyStatus)}
-                                className="px-2 py-1 text-xs font-semibold text-sky-700 bg-sky-50 border border-sky-200 rounded hover:bg-sky-100 transition-colors"
-                            >
-                                {table1CopyStatus || 'Copy Image'}
-                            </button>
+                {/* HORIZONTAL SCNU Chart & Table */}
+                <div className="mt-6 grid grid-cols-1 gap-6 items-stretch relative">
+                    <Card className="p-0 flex flex-col overflow-hidden border border-gray-200 rounded-xl">
+                        <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
+                            <h3 className="text-lg font-bold text-gray-800">SCNU Coverage by {aggregationLevelName}</h3>
+                            <button onClick={() => copyTableAsImage(coverageTableRef, setTable1CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table1CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table1CopyStatus}</span> : <CopyIcon />} </button>
                         </div>
-                        <div className="flex-grow relative overflow-x-auto">
-                           <table ref={coverageTableRef} className='min-w-full table-fixed text-sm'>
-                                <thead><tr>{tableHeadersJsx}</tr></thead>
+                        <div className="flex-grow overflow-x-auto p-4">
+                           <table ref={coverageTableRef} className='min-w-full text-xs border border-gray-200 rounded-lg overflow-hidden'>
+                                <thead>
+                                    <tr>
+                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-left font-semibold text-gray-600 uppercase tracking-wider w-[25%]">{aggregationLevelName}</th>
+                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider w-[15%]">Total Supposed</th>
+                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider w-[15%]">With SCNU</th>
+                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-left font-semibold text-gray-600 uppercase tracking-wider w-[45%]">Coverage Chart</th>
+                                    </tr>
+                                </thead>
                                 <tbody>
-                                    {!isLocalityView && nationalAverageRow && (
-                                        <tr key="national-average" className="bg-slate-100 font-bold text-slate-800">
-                                            <td className="p-2 whitespace-nowrap w-[30%]">{nationalAverageRow.name}</td>
-                                            <td className="p-2 text-center w-[20%]">{nationalAverageRow.totalSupposed}</td>
-                                            <td className="p-2 text-center w-[20%]">{nationalAverageRow.totalWithSCNU}</td>
-                                            <td className="p-2 text-center w-[10%]">{nationalAverageRow.localitiesWithSCNUCount}</td>
-                                            <td className="p-2 w-[20%]">{getCoverageBar(nationalAverageRow.localityCoverage)}</td>
-                                        </tr>
-                                    )}
-                                    {sortedTableData.map(row => (
-                                        <tr key={row.key} className='hover:bg-blue-50 transition-colors cursor-pointer relative' onMouseEnter={(e) => handleStateHover(row.key, e)} onMouseLeave={handleMapMouseLeave} >
-                                            <td className="p-2 whitespace-nowrap font-medium text-gray-800 w-[30%]">{row.name}</td>
-                                            <td className="p-2 text-center w-[20%]">{row.totalSupposed}</td>
-                                            <td className="p-2 text-center w-[20%]">{row.totalWithSCNU}</td>
-                                            <td className="p-2 text-center w-[10%]">{row.localitiesWithSCNUCount}</td>
-                                            <td className="p-2 w-[20%]">{getCoverageBar(row.localityCoverage)}</td>
+                                    {sortedTableData.length === 0 ? <tr><td colSpan={4} className="p-4 text-center text-gray-500">No data matches the current filters.</td></tr> :
+                                     sortedTableData.map(row => (
+                                        <tr key={row.key} className='hover:bg-blue-50/50 transition-colors border-b border-gray-100'>
+                                            <td className="p-3 whitespace-nowrap font-medium text-gray-700">{row.name}</td>
+                                            <td className="p-3 text-center align-middle font-medium">{row.totalSupposed}</td>
+                                            <td className="p-3 text-center font-bold text-sky-700 align-middle">{row.totalWithSCNU} <span className="text-gray-400 font-normal ml-1">({row.coverage}%)</span></td>
+                                            <td className="p-3 align-middle">
+                                                <div className="flex items-center w-full">
+                                                    <div className="flex-grow bg-gray-200 rounded-sm h-3 overflow-hidden flex"><div className={`h-full transition-all shadow-sm ${row.coverage >= 75 ? 'bg-sky-700' : row.coverage >= 40 ? 'bg-sky-400' : 'bg-gray-600'}`} style={{ width: `${Math.max(row.coverage, 1)}%` }}></div></div>
+                                                    <span className="ml-3 text-[11px] font-bold text-gray-700 w-8 text-right">{row.coverage}%</span>
+                                                </div>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -740,39 +379,21 @@ export const NeonatalCoverageDashboard = () => {
                 </div>
 
                 <div className="mt-6">
-                    <Card>
-                        <div className="p-4 border-b flex justify-between items-center">
-                            <div>
-                                <h3 className="text-lg font-medium text-gray-700">Neonatal Unit Equipment Availability by Unit{equipmentTitlePrefix}</h3>
-                                <p className="text-sm text-gray-500 mt-1">Total number of equipment items available per facility/unit.</p>
-                            </div>
-                            <button
-                                onClick={() => copyTableAsImage(equipmentTableRef, setTable2CopyStatus)}
-                                className="px-2 py-1 text-xs font-semibold text-sky-700 bg-sky-50 border border-sky-200 rounded hover:bg-sky-100 transition-colors"
-                            >
-                                {table2CopyStatus || 'Copy Image'}
-                            </button>
+                    <Card className="p-0 overflow-hidden border border-gray-200 rounded-xl">
+                        <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
+                            <h3 className="text-lg font-bold text-gray-800">Neonatal Unit Equipment Availability</h3>
+                            <button onClick={() => copyTableAsImage(equipmentTableRef, setTable2CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table2CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table2CopyStatus}</span> : <CopyIcon />} </button>
                         </div>
-                        <div className="w-full">
-                            <table ref={equipmentTableRef} className="w-full table-fixed border-collapse text-[10px]">
-                                <thead className="bg-gray-100">
-                                    <tr>
-                                        {equipmentHeaders.map((header, index) => ( 
-                                            <th key={index} className={`p-1 text-left font-semibold tracking-wider border-b border-gray-200 bg-gray-100 align-bottom leading-tight ${index === 0 ? 'w-[15%]' : ''}`}> 
-                                                <div className='font-bold break-words text-center'>{header}</div> 
-                                            </th> 
-                                        ))}
-                                    </tr>
+                        <div className="w-full overflow-x-auto p-4">
+                            <table ref={equipmentTableRef} className="w-full table-fixed border-collapse text-[10px] border border-gray-200">
+                                <thead className="bg-slate-50 border-b border-gray-200">
+                                    <tr>{equipmentHeaders.map((header, index) => ( <th key={index} className={`p-2 text-left font-semibold tracking-wider text-gray-600 uppercase align-bottom leading-tight ${index === 0 ? 'w-[15%]' : ''}`}> <div className='font-bold break-words text-center'>{header}</div> </th> ))}</tr>
                                 </thead>
                                 <tbody>
                                     {equipmentTableData.map(row => ( 
-                                        <tr key={row.name}>
-                                            <td className="font-medium text-gray-800 p-1 break-words border-b border-gray-100 leading-tight">{row.name}</td>
-                                            {NEONATAL_EQUIPMENT_KEYS.map(key => { 
-                                                const value = row[key]; 
-                                                const cellClass = value === 0 ? 'bg-red-200 font-bold' : ''; 
-                                                return ( <td key={key} className={`p-1 ${cellClass} text-center border-b border-gray-100`}> {value} </td> ); 
-                                            })}
+                                        <tr key={row.name} className="hover:bg-slate-50 transition-colors border-b border-gray-100">
+                                            <td className="font-medium text-gray-700 p-2 break-words leading-tight">{row.name}</td>
+                                            {NEONATAL_EQUIPMENT_KEYS.map(key => { const value = row[key]; const cellClass = value === 0 ? 'bg-red-50 text-red-600 font-bold' : 'text-gray-700 font-medium'; return ( <td key={key} className={`p-2 ${cellClass} text-center border-l border-gray-100`}> {value} </td> ); })}
                                         </tr> 
                                     ))}
                                 </tbody>
@@ -783,46 +404,34 @@ export const NeonatalCoverageDashboard = () => {
 
                 {/* NEW SCNU FACILITY LIST TABLE */}
                 <div className="mt-6">
-                    <Card>
-                        <div className="p-4 border-b flex justify-between items-center">
-                            <div>
-                                <h3 className="text-lg font-medium text-gray-700">Functioning Neonatal Units (SCNU) List</h3>
-                                <p className="text-sm text-gray-500 mt-1">Detailed list of facilities providing SCNU services, grouped by State.</p>
-                            </div>
-                            <button
-                                onClick={() => copyTableAsImage(scnuListTableRef, setTable3CopyStatus)}
-                                className="px-2 py-1 text-xs font-semibold text-sky-700 bg-sky-50 border border-sky-200 rounded hover:bg-sky-100 transition-colors"
-                            >
-                                {table3CopyStatus || 'Copy Image'}
-                            </button>
+                    <Card className="p-0 overflow-hidden border border-gray-200 rounded-xl">
+                        <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
+                            <h3 className="text-lg font-bold text-gray-800">Functioning Neonatal Units (SCNU) List</h3>
+                            <button onClick={() => copyTableAsImage(scnuListTableRef, setTable3CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table3CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table3CopyStatus}</span> : <CopyIcon />} </button>
                         </div>
-                        <div className="overflow-x-auto w-full max-h-[500px] overflow-y-auto">
-                            <table ref={scnuListTableRef} className="min-w-full table-auto border-collapse text-sm">
-                                <thead className="bg-gray-100 sticky top-0 z-10 shadow-sm">
+                        <div className="overflow-x-auto w-full max-h-[500px] overflow-y-auto p-4">
+                            <table ref={scnuListTableRef} className="min-w-full table-auto border-collapse text-sm border border-gray-200">
+                                <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm border-b border-gray-200">
                                     <tr>
-                                        <th className="p-2 text-left font-semibold tracking-wider border-b border-gray-200">State</th>
-                                        <th className="p-2 text-left font-semibold tracking-wider border-b border-gray-200">Locality</th>
-                                        <th className="p-2 text-left font-semibold tracking-wider border-b border-gray-200">Facility Name</th>
-                                        <th className="p-2 text-center font-semibold tracking-wider border-b border-gray-200">Incubators</th>
-                                        <th className="p-2 text-center font-semibold tracking-wider border-b border-gray-200">Cots</th>
-                                        <th className="p-2 text-center font-semibold tracking-wider border-b border-gray-200">Total Beds <br/><span className="text-[10px] font-normal">(Incubators + Cots)</span></th>
+                                        <th className="p-3 text-left font-semibold text-gray-600 uppercase text-[11px] tracking-wider">State</th>
+                                        <th className="p-3 text-left font-semibold text-gray-600 uppercase text-[11px] tracking-wider">Locality</th>
+                                        <th className="p-3 text-left font-semibold text-gray-600 uppercase text-[11px] tracking-wider">Facility Name</th>
+                                        <th className="p-3 text-center font-semibold text-gray-600 uppercase text-[11px] tracking-wider">Incubators</th>
+                                        <th className="p-3 text-center font-semibold text-gray-600 uppercase text-[11px] tracking-wider">Cots</th>
+                                        <th className="p-3 text-center font-semibold text-gray-600 uppercase text-[11px] tracking-wider">Total Beds</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {facilitySCNUTableData.length === 0 ? (
-                                        <tr><td colSpan="6" className="p-4 text-center text-gray-500">No facilities found matching the current filters.</td></tr>
-                                    ) : (
-                                        facilitySCNUTableData.map(row => (
-                                            <tr key={row.id} className="hover:bg-blue-50 transition-colors border-b border-gray-100">
-                                                <td className="p-2 font-medium text-gray-800">{row.state}</td>
-                                                <td className="p-2 text-gray-600">{row.locality}</td>
-                                                <td className="p-2 font-medium text-sky-700">{row.facilityName}</td>
-                                                <td className="p-2 text-center">{row.incubators}</td>
-                                                <td className="p-2 text-center">{row.cots}</td>
-                                                <td className="p-2 text-center font-bold text-gray-800 bg-gray-50">{row.totalBeds}</td>
+                                    {facilitySCNUTableData.length === 0 ? <tr><td colSpan="6" className="p-4 text-center text-gray-500">No facilities found matching the current filters.</td></tr> : facilitySCNUTableData.map(row => (
+                                            <tr key={row.id} className="hover:bg-blue-50/50 transition-colors border-b border-gray-100">
+                                                <td className="p-3 font-medium text-gray-800">{row.state}</td>
+                                                <td className="p-3 text-gray-600">{row.locality}</td>
+                                                <td className="p-3 font-bold text-sky-700">{row.facilityName}</td>
+                                                <td className="p-3 text-center font-medium">{row.incubators}</td>
+                                                <td className="p-3 text-center font-medium">{row.cots}</td>
+                                                <td className="p-3 text-center font-black text-indigo-700 bg-indigo-50/30">{row.totalBeds}</td>
                                             </tr>
-                                        ))
-                                    )}
+                                        ))}
                                 </tbody>
                             </table>
                         </div>
@@ -833,39 +442,48 @@ export const NeonatalCoverageDashboard = () => {
                     <div ref={fullscreenModalRef} className="fixed inset-0 bg-white z-50 p-4 flex flex-col">
                         <div className="flex justify-between items-center mb-4 flex-shrink-0">
                              <h3 className="text-xl font-bold text-gray-800">{mapTitle}</h3>
-                             <div className='flex items-center gap-1 ignore-for-export'>
-                                <button onClick={() => handleDownloadMap('jpg')} title="Download Map as JPG" className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">JPG</button>
-                                <button onClick={() => handleDownloadMap('pdf')} title="Download Map as PDF" className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">PDF</button>
-                                <button onClick={() => setIsMapFullscreen(false)} className="px-4 py-2 text-sm font-bold text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 ml-1">Close</button>
+                             <div className='flex items-center gap-2 ignore-for-export'>
+                                <button onClick={() => setIsMapFullscreen(false)} className="px-4 py-2 text-sm font-bold text-white bg-slate-800 rounded-md hover:bg-slate-700 ml-2 shadow-sm">Close</button>
                              </div>
                         </div>
+
                         <div className="flex-grow min-h-0 flex gap-4">
-                            <div ref={fullscreenMapContainerRef} className="flex-grow min-h-0 bg-white w-2/3">
-                                <SudanMap
-                                    data={nationalMapData}
-                                    localityData={isLocalityView ? stateData : (currentMapViewLevel === 'locality' ? allLocalitiesCoverageData : [])}
-                                    facilityMarkers={showFacilityMarkers ? facilityLocationMarkers : []}
-                                    viewLevel={currentMapViewLevel}
-                                    {...fullscreenMapViewConfig}
-                                    onStateHover={handleStateHover} onStateLeave={handleMapMouseLeave}
-                                    onFacilityHover={handleFacilityHover} onFacilityLeave={handleFacilityLeave}
-                                    onLocalityHover={handleMapLocalityHover} onLocalityLeave={handleMapMouseLeave}
-                                    isMovable={false}
-                                    pannable={false}
-                                />
-                            </div>
-                            <div className="w-1/3 flex flex-col border border-gray-200 rounded-lg">
-                                <h4 className="text-lg font-semibold p-3 border-b bg-gray-50">Facilities with SCNU ({facilityLocationMarkers.length})</h4>
-                                <div className="overflow-y-auto flex-grow min-h-0">
-                                    <ul className="divide-y divide-gray-200">
-                                        {facilityLocationMarkers.map(facility => (
-                                            <li key={facility.key} className="p-3 text-sm">
-                                                {facility.name}
-                                            </li>
-                                        ))}
-                                    </ul>
+                            <div className={`flex-grow min-h-0 bg-gray-50 rounded-xl overflow-hidden border border-gray-200 relative flex flex-col ${isLocalityView ? 'w-2/3' : 'w-full'}`}>
+                                <div className="flex-grow min-h-0">
+                                    <SudanMap
+                                        data={!isLocalityView && currentMapViewLevel === 'state' ? nationalMapData : []}
+                                        localityData={isLocalityView ? stateData : []}
+                                        facilityMarkers={showFacilityMarkers ? facilityLocationMarkers : []}
+                                        viewLevel={currentMapViewLevel}
+                                        {...fullscreenMapViewConfig}
+                                        onStateHover={handleStateHover} onStateLeave={handleMapMouseLeave}
+                                        onFacilityHover={handleFacilityHover} onFacilityLeave={handleFacilityLeave}
+                                        onLocalityHover={handleMapLocalityHover} onLocalityLeave={handleMapMouseLeave}
+                                        isMovable={false}
+                                        pannable={false}
+                                    />
+                                </div>
+                                <div className="bg-slate-50 border-t border-gray-200 py-2 shrink-0">
+                                    <MapLegend />
                                 </div>
                             </div>
+
+                            {isLocalityView && (
+                                <div className="w-1/3 flex flex-col border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden">
+                                    <div className="p-4 bg-slate-50 border-b">
+                                        <h4 className="text-lg font-bold text-slate-800">Facilities with SCNU</h4>
+                                    </div>
+                                    <div className="overflow-y-auto flex-grow min-h-0 p-2">
+                                        <ul className="divide-y divide-gray-100">
+                                            {facilityLocationMarkers.map(facility => (
+                                                <li key={facility.key} className="p-3 text-sm font-medium text-gray-700 hover:bg-slate-50 rounded-md transition-colors">
+                                                    {facility.name}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -877,12 +495,13 @@ export const NeonatalCoverageDashboard = () => {
     );
 };
 
+// --- EENC DASHBOARD ---
+const EENC_EQUIPMENT_SPEC = { 'eenc_delivery_beds': 'Delivery Beds', 'eenc_resuscitation_stations': 'Resuscitation Stations', 'eenc_warmers': 'Warmers', 'eenc_ambu_bags': 'Ambu Bags', 'eenc_manual_suction': 'Manual Suction', 'eenc_wall_clock': 'Wall Clock', 'eenc_steam_sterilizer': 'Steam Sterilizer' };
+const EENC_EQUIPMENT_KEYS = Object.keys(EENC_EQUIPMENT_SPEC);
 
 export const EENCCoverageDashboard = () => {
     const { healthFacilities: allFacilities, isLoading, fetchHealthFacilities } = useDataCache();
     const loading = isLoading.healthFacilities;
-
-    // SOFT DELETE FILTER
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
     const [stateFilter, setStateFilter] = useState(''); 
@@ -893,46 +512,20 @@ export const EENCCoverageDashboard = () => {
     const [mapViewLevel, setMapViewLevel] = useState('state');
     const [copyStatus, setCopyStatus] = useState('');
     const [tooltipData, setTooltipData] = useState(null); 
-    const [hoveredFacilityData, setHoveredFacilityData] = useState(null); 
     const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
-    const [isMapFullscreen, setIsMapFullscreen] = useState(false);
     const [showFacilityMarkers, setShowFacilityMarkers] = useState(true);
-
     const [table1CopyStatus, setTable1CopyStatus] = useState('');
     const [table2CopyStatus, setTable2CopyStatus] = useState('');
-
-    const mapContainerRef = useRef(null);
-    const fullscreenMapContainerRef = useRef(null);
     const dashboardSectionRef = useRef(null);
-    const fullscreenModalRef = useRef(null);
     const coverageTableRef = useRef(null);
     const equipmentTableRef = useRef(null);
+    const fullscreenModalRef = useRef(null);
+    const [isMapFullscreen, setIsMapFullscreen] = useState(false);
     
     const isLocalityView = !!stateFilter; 
+    const projectOptions = useMemo(() => [...new Set(activeFacilities.map(f => f.project_name?.trim()).filter(Boolean))].sort(), [activeFacilities]);
 
-    useEffect(() => {
-        if (activeFacilities !== null && activeFacilities.length > 0) {
-            const intervalId = setInterval(() => {
-                fetchHealthFacilities({}, true); // Force incremental delta fetch
-            }, 15 * 60 * 1000); 
-
-            return () => clearInterval(intervalId);
-        }
-    }, [activeFacilities, fetchHealthFacilities]);
-
-    // DYNAMIC PROJECT OPTIONS
-    const projectOptions = useMemo(() => {
-        const projects = new Set();
-        activeFacilities.forEach(f => {
-            if (f.project_name && f.project_name.trim() !== '') {
-                projects.add(f.project_name.trim());
-            }
-        });
-        return [...projects].sort();
-    }, [activeFacilities]);
-
-    const filteredNationalFacilities = useMemo(() => activeFacilities?.filter(f => f['الولاية'] !== 'إتحادي') || [], [activeFacilities]);
-    const isEmONCFacility = useCallback((f) => { const s = f['eenc_service_type']; return s === 'BEmONC' || s === 'CEmONC'; }, []);
+    const isEmONCFacility = useCallback((f) => ['BEmONC', 'CEmONC'].includes(f['eenc_service_type']), []);
     const isEmONCFunctional = useCallback((f) => isEmONCFacility(f) && f['هل_المؤسسة_تعمل'] === 'Yes', [isEmONCFacility]);
     const providesEENC = useCallback((f) => isEmONCFacility(f) && f['eenc_provides_essential_care'] === 'Yes', [isEmONCFacility]);
     
@@ -943,377 +536,201 @@ export const EENCCoverageDashboard = () => {
             if (localityFilter && f['المحلية'] !== localityFilter) return false;
             if (ownershipFilter && f.facility_ownership !== ownershipFilter) return false;
             if (projectFilter && f.project_name !== projectFilter) return false;
+            if (equipmentFilter) { const val = f[equipmentFilter]; if (val !== 'Yes' && (Number(val) || 0) === 0) return false; } // Global Tool Filter
             return true;
         });
-    }, [activeFacilities, stateFilter, localityFilter, ownershipFilter, projectFilter]); 
-    
-    const facilitiesByFilter = useMemo(() => {
-        if (!equipmentFilter) {
-            return locationFilteredFacilities; 
-        }
-        return locationFilteredFacilities.filter(f => {
-            return (Number(f[equipmentFilter]) || 0) > 0;
-        });
-    }, [locationFilteredFacilities, equipmentFilter]); 
+    }, [activeFacilities, stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter]); 
 
     const kpiData = useMemo(() => {
-        const relevantFacilities = locationFilteredFacilities.filter(isEmONCFacility);
-        const functionalFacilities = relevantFacilities.filter(isEmONCFunctional);
-        const eencProviders = facilitiesByFilter.filter(isEmONCFunctional).filter(providesEENC);
-        const totalEmONC = relevantFacilities.length;
-        const totalFunctionalEmONC = functionalFacilities.length;
-        const totalEENCProviders = eencProviders.length;
-        const eencCoveragePercentage = totalFunctionalEmONC > 0 ? Math.round((totalEENCProviders / totalFunctionalEmONC) * 100) : 0;
+        const totalEmONC = locationFilteredFacilities.filter(isEmONCFacility).length;
+        const totalFunctionalEmONC = locationFilteredFacilities.filter(isEmONCFunctional).length;
+        const totalEENCProviders = locationFilteredFacilities.filter(isEmONCFunctional).filter(providesEENC).length;
         return {
-            totalEmONC: totalEmONC, 
-            totalFunctionalEmONC: totalFunctionalEmONC, 
-            totalEENCProviders: totalEENCProviders, 
-            eencCoveragePercentage: eencCoveragePercentage
+            totalEmONC, totalFunctionalEmONC, totalEENCProviders, 
+            eencCoveragePercentage: totalFunctionalEmONC > 0 ? Math.round((totalEENCProviders / totalFunctionalEmONC) * 100) : 0
         };
-    }, [facilitiesByFilter, locationFilteredFacilities, isEmONCFacility, isEmONCFunctional, providesEENC]); 
-
-    const allLocalitiesCoverageDataEENC = useMemo(() => { 
-        const s={};
-        Object.entries(STATE_LOCALITIES).forEach(([sK,sD])=>{if(sK==='إتحادي')return;sD.localities.forEach(l=>{s[l.en]={key:l.en,name:l.en,state:sK,totalEmONC:0, functionalEmONC: 0, eencProviders:0};});});
-        filteredNationalFacilities.forEach(f=>{
-            if (ownershipFilter && f.facility_ownership !== ownershipFilter) return;
-            if (projectFilter && f.project_name !== projectFilter) return;
-            const key=f['المحلية'];
-            if(!key||!s[key])return;
-            if(isEmONCFacility(f)){s[key].totalEmONC++; if(isEmONCFunctional(f)){ s[key].functionalEmONC++; if(providesEENC(f)){s[key].eencProviders++;} } }
-        });
-        return Object.values(s).map(l=>({...l,coverage:l.functionalEmONC>0?Math.round((l.eencProviders/l.functionalEmONC)*100):0})); 
-    }, [filteredNationalFacilities, isEmONCFacility, isEmONCFunctional, providesEENC, ownershipFilter, projectFilter]);
+    }, [locationFilteredFacilities, isEmONCFacility, isEmONCFunctional, providesEENC]); 
 
     const { tableData, mapData } = useMemo(() => {
         const s = {};
         const aggF = stateFilter ? 'المحلية' : 'الولاية';
-
         locationFilteredFacilities.forEach(f => {
             const key = f[aggF];
             if (!key || key === 'إتحادي') return;
-            if (!s[key]) {
-                let name = stateFilter ? (STATE_LOCALITIES[stateFilter]?.localities.find(l => l.en === key)?.en || key) : key;
-                s[key] = { name, key, totalEmONC: 0, functionalEmONC: 0, eencProviders: 0 };
-            }
-            if (isEmONCFacility(f)) {
-                s[key].totalEmONC++;
-                if (isEmONCFunctional(f)) {
-                    s[key].functionalEmONC++;
-                }
+            if (!s[key]) s[key] = { name: stateFilter ? (STATE_LOCALITIES[stateFilter]?.localities.find(l => l.en === key)?.en || key) : key, key, functionalEmONC: 0, eencProviders: 0 };
+            if (isEmONCFunctional(f)) {
+                s[key].functionalEmONC++;
+                if (providesEENC(f)) s[key].eencProviders++;
             }
         });
-
-        facilitiesByFilter.forEach(f => {
-            const key = f[aggF];
-            if (!key || key === 'إتحادي' || !s[key]) return; 
-
-            if (isEmONCFunctional(f) && providesEENC(f)) {
-                s[key].eencProviders++;
-            }
-        });
-        
-        const tD = Object.values(s).map(st => ({ ...st, eencCoverage: st.functionalEmONC > 0 ? Math.round((st.eencProviders / st.functionalEmONC) * 100) : 0 })).sort((a, b) => a.name.localeCompare(b.name));
-
-        const mapDataSource = stateFilter ? [] : filteredNationalFacilities;
-        const mapS = {};
-         mapDataSource.filter(isEmONCFacility).forEach(f => {
-            if (ownershipFilter && f.facility_ownership !== ownershipFilter) return; 
-            if (projectFilter && f.project_name !== projectFilter) return;
-            const key = f['الولاية'];
-            if (!key || key === 'إتحادي') return;
-             if (!mapS[key]) mapS[key] = {functionalEmONC: 0, eencProviders: 0 };
-              if (isEmONCFunctional(f)) {
-                  mapS[key].functionalEmONC++;
-                  if (providesEENC(f)) mapS[key].eencProviders++;
-              }
-         });
-         const mD = Object.entries(mapS).map(([stKey, counts]) => ({
-             state: stKey,
-             percentage: counts.functionalEmONC > 0 ? Math.round((counts.eencProviders / counts.functionalEmONC) * 100) : 0,
-             coordinates: mapCoordinates[stKey] ? [mapCoordinates[stKey].lng, mapCoordinates[stKey].lat] : [0, 0]
-         }));
-
+        const tD = Object.values(s).map(st => ({ ...st, eencCoverage: st.functionalEmONC > 0 ? Math.round((st.eencProviders / st.functionalEmONC) * 100) : 0 })).sort((a, b) => b.eencCoverage - a.eencCoverage); // Sort high to low
+        const mD = tD.map(st => ({ state: st.key, percentage: st.eencCoverage, coordinates: mapCoordinates[st.key] ? [mapCoordinates[st.key].lng, mapCoordinates[st.key].lat] : [0, 0] }));
         return { tableData: tD, mapData: mD };
-    }, [facilitiesByFilter, locationFilteredFacilities, filteredNationalFacilities, stateFilter, isEmONCFacility, isEmONCFunctional, providesEENC, ownershipFilter, projectFilter]); 
+    }, [locationFilteredFacilities, stateFilter, isEmONCFunctional, providesEENC]); 
 
     const equipmentTableData = useMemo(() => {
         const aggK = stateFilter ? 'اسم_المؤسسة' : 'الولاية';
-        const facP = facilitiesByFilter.filter(f => isEmONCFunctional(f) && providesEENC(f)); 
+        const facP = locationFilteredFacilities.filter(f => isEmONCFunctional(f) && providesEENC(f)); 
         const s = {};
         facP.forEach(f => {
             const key = f[aggK];
             if (!key || key === 'إتحادي') return;
-            if (!s[key]) {
-                let name = stateFilter ? f['اسم_المؤسسة'] : key;
-                s[key] = { name, key, ...Object.fromEntries(EENC_EQUIPMENT_KEYS.map(k => [k, 0])) };
-            }
-            EENC_EQUIPMENT_KEYS.forEach(eK => {
-                const val = f[eK];
-                const numericVal = (val === 'Yes') ? 1 : (Number(val) || 0);
-                s[key][eK] += numericVal;
-            });
+            if (!s[key]) s[key] = { name: stateFilter ? f['اسم_المؤسسة'] : key, key, ...Object.fromEntries(EENC_EQUIPMENT_KEYS.map(k => [k, 0])) };
+            EENC_EQUIPMENT_KEYS.forEach(eK => { const val = f[eK]; s[key][eK] += (val === 'Yes') ? 1 : (Number(val) || 0); });
         });
-        let allR = Object.values(s).filter(st => st.key !== 'إتحادي');
-        allR.sort((a, b) => (b.eenc_delivery_beds || 0) - (a.eenc_delivery_beds || 0));
-        return allR;
-    }, [facilitiesByFilter, stateFilter, isEmONCFunctional, providesEENC]);
+        return Object.values(s).filter(st => st.key !== 'إتحادي').sort((a, b) => (b.eenc_delivery_beds || 0) - (a.eenc_delivery_beds || 0));
+    }, [locationFilteredFacilities, stateFilter, isEmONCFunctional, providesEENC]);
 
-    const facilityLocationMarkers = useMemo(() => facilitiesByFilter.filter(f=> isEmONCFunctional(f) && providesEENC(f) &&f['_الإحداثيات_longitude']&&f['_الإحداثيات_latitude']).map(f=>({key:f.id,name:f['اسم_المؤسسة'],coordinates:[f['_الإحداثيات_longitude'],f['_الإحداثيات_latitude']]})), [facilitiesByFilter, isEmONCFunctional, providesEENC]);
-    
-    const mapViewConfig = useMemo(() => { const sC=stateFilter?mapCoordinates[stateFilter]:null;if(sC)return{center:[sC.lng,sC.lat],scale:sC.scale,focusedState:stateFilter};return{center:[30,15.5],scale:2000,focusedState:null}; }, [stateFilter]);
-    const fullscreenMapViewConfig = useMemo(() => ({ ...mapViewConfig }), [mapViewConfig]);
+    const facilityLocationMarkers = useMemo(() => locationFilteredFacilities.filter(f=> isEmONCFunctional(f) && providesEENC(f) &&f['_الإحداثيات_longitude']).map(f=>({key:f.id,name:f['اسم_المؤسسة'],coordinates:[f['_الإحداثيات_longitude'],f['_الإحداثيات_latitude']]})), [locationFilteredFacilities, isEmONCFunctional, providesEENC]);
+    const mapViewConfig = useMemo(() => { const sC=stateFilter?mapCoordinates[stateFilter]:null; return sC ? {center:[sC.lng,sC.lat],scale:sC.scale,focusedState:stateFilter} : {center:[30,15.5],scale:2000,focusedState:null}; }, [stateFilter]);
     const handleStateChange = (e) => { setStateFilter(e.target.value); setLocalityFilter(''); };
-    
+    const currentMapViewLevel = stateFilter ? 'locality' : mapViewLevel;
+    const aggregationLevelName = stateFilter ? 'Locality' : 'State';
+
     const getEENCStateEquipmentSummary = useCallback((stateKey) => { 
-        const rel = filteredNationalFacilities.filter(f => f['الولاية'] === stateKey && isEmONCFunctional(f) && providesEENC(f) && (!ownershipFilter || f.facility_ownership === ownershipFilter) && (!projectFilter || f.project_name === projectFilter));
+        const rel = activeFacilities.filter(f => f['الولاية'] === stateKey && isEmONCFunctional(f) && providesEENC(f) && (!ownershipFilter || f.facility_ownership === ownershipFilter) && (!projectFilter || f.project_name === projectFilter));
         const sum = {};
         EENC_EQUIPMENT_KEYS.forEach(k => { sum[EENC_EQUIPMENT_SPEC[k]] = 0; });
         rel.forEach(f => {
             EENC_EQUIPMENT_KEYS.forEach(k => {
                 const val = f[k];
-                const numericVal = (val === 'Yes') ? 1 : (Number(val) || 0);
-                sum[EENC_EQUIPMENT_SPEC[k]] += numericVal;
+                sum[EENC_EQUIPMENT_SPEC[k]] += (val === 'Yes') ? 1 : (Number(val) || 0);
             });
         });
         return { totalUnits: rel.length, summary: sum }; 
-    }, [filteredNationalFacilities, isEmONCFunctional, providesEENC, ownershipFilter, projectFilter]);
+    }, [activeFacilities, isEmONCFunctional, providesEENC, ownershipFilter, projectFilter]);
 
     const getEENCLocalityEquipmentSummary = useCallback((localityKey, stateKey) => { 
-        const rel = filteredNationalFacilities.filter(f => f['الولاية'] === stateKey && f['المحلية'] === localityKey && isEmONCFunctional(f) && providesEENC(f) && (!ownershipFilter || f.facility_ownership === ownershipFilter) && (!projectFilter || f.project_name === projectFilter));
+        const rel = activeFacilities.filter(f => f['الولاية'] === stateKey && f['المحلية'] === localityKey && isEmONCFunctional(f) && providesEENC(f) && (!ownershipFilter || f.facility_ownership === ownershipFilter) && (!projectFilter || f.project_name === projectFilter));
         const sum = {};
         EENC_EQUIPMENT_KEYS.forEach(k => { sum[EENC_EQUIPMENT_SPEC[k]] = 0; });
         rel.forEach(f => {
             EENC_EQUIPMENT_KEYS.forEach(k => {
                 const val = f[k];
-                const numericVal = (val === 'Yes') ? 1 : (Number(val) || 0);
-                sum[EENC_EQUIPMENT_SPEC[k]] += numericVal;
+                sum[EENC_EQUIPMENT_SPEC[k]] += (val === 'Yes') ? 1 : (Number(val) || 0);
             });
         });
         return { totalUnits: rel.length, summary: sum }; 
-    }, [filteredNationalFacilities, isEmONCFunctional, providesEENC, ownershipFilter, projectFilter]);
+    }, [activeFacilities, isEmONCFunctional, providesEENC, ownershipFilter, projectFilter]);
     
     const handleStateHover = useCallback((stateKey, event)=>{ if(stateFilter||mapViewLevel==='locality')return; const rowData=tableData.find(d=>d.key===stateKey); if(!rowData) return; const eqSum=getEENCStateEquipmentSummary(stateKey);setTooltipData({title:`${rowData.name} (${rowData.key})`,dataRows:[{label:"EENC Coverage",value:`${rowData.eencCoverage}% (${rowData.eencProviders} / ${rowData.functionalEmONC})`}],equipmentSummary:{...eqSum,title:"EENC Equipment Summary"}});setHoverPosition({x:event.clientX,y:event.clientY}); }, [tableData, stateFilter, mapViewLevel, getEENCStateEquipmentSummary]);
     
     const handleMapLocalityHover = useCallback((geoProps, event)=>{ 
         const locKey=geoProps.admin_2;
         if (!locKey) return; 
-        
-        let dataStore = isLocalityView ? tableData : allLocalitiesCoverageDataEENC;
-        const locData = dataStore.find(l=>l.key===locKey);
-        
+        const locData = tableData.find(l=>l.key===locKey);
         if(!locData) return;
-        
-        const stateKey = isLocalityView ? stateFilter : locData.state;
+        const stateKey = stateFilter;
         const eqSum = getEENCLocalityEquipmentSummary(locKey,stateKey);
-        const cov = locData.eencCoverage !== undefined ? locData.eencCoverage : locData.coverage;
-        
         setTooltipData({
             title: `${locData.name} (${locData.key})`,
-            dataRows: [{label: "EENC Coverage", value: `${cov}% (${locData.eencProviders} / ${locData.functionalEmONC})`}],
+            dataRows: [{label: "EENC Coverage", value: `${locData.eencCoverage}% (${locData.eencProviders} / ${locData.functionalEmONC})`}],
             equipmentSummary: {...eqSum, title: "EENC Equipment Summary"}
         });
         setHoverPosition({x:event.clientX,y:event.clientY}); 
-    }, [isLocalityView, tableData, stateFilter, allLocalitiesCoverageDataEENC, getEENCLocalityEquipmentSummary]);
+    }, [tableData, stateFilter, getEENCLocalityEquipmentSummary]);
 
-    const getFacilityEquipmentDetails = useCallback((facilityId)=>{ const facility=(activeFacilities || []).find(f=>f.id===facilityId);if(!facility)return null;const summary={};EENC_EQUIPMENT_KEYS.forEach(key=>{summary[EENC_EQUIPMENT_SPEC[key]]=Number(facility[key])||0;});return{name:facility['اسم_المؤسسة'],summary:summary}; }, [activeFacilities]);
-    const handleFacilityHover = useCallback((facilityId, event)=>{ const details=getFacilityEquipmentDetails(facilityId);if(details){setHoveredFacilityData(details);setHoverPosition({x:event.clientX,y:event.clientY});} }, [getFacilityEquipmentDetails]);
-    const handleFacilityLeave = useCallback(()=>{ setHoveredFacilityData(null); }, []);
     const handleMapMouseLeave = useCallback(()=>{ setTooltipData(null); }, []);
-    const handleMouseMove = useCallback((event)=>{ if(tooltipData||hoveredFacilityData){setHoverPosition({x:event.clientX,y:event.clientY});} }, [tooltipData, hoveredFacilityData]);
-
-    const currentMapViewLevel = stateFilter ? 'locality' : mapViewLevel;
-
-    const handleDownloadMap = useCallback((format = 'jpg') => {
-        const targetRef = isMapFullscreen ? fullscreenModalRef : dashboardSectionRef; 
-        if (targetRef.current) { 
-            html2canvas(targetRef.current, { 
-                useCORS: true, 
-                scale: 2, 
-                backgroundColor: '#ffffff',
-                ignoreElements: (element) => element.classList.contains('ignore-for-export')
-            }).then(canvas => { 
-                const baseName = isMapFullscreen ? 'eenc-map-fullscreen' : 'eenc-dashboard';
-                const filename = `${baseName}-${stateFilter || 'sudan'}.${format}`; 
-                if (format === 'pdf') { 
-                    const imgData = canvas.toDataURL('image/jpeg', 0.9); 
-                    const pdf = new jsPDF({ orientation: canvas.width > canvas.height ? 'l' : 'p', unit: 'px', format: [canvas.width, canvas.height] }); 
-                    pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height); 
-                    pdf.save(filename); 
-                } else { 
-                    const image = canvas.toDataURL("image/jpeg", 0.9); 
-                    const link = document.createElement('a'); 
-                    link.href = image; 
-                    link.download = filename; 
-                    document.body.appendChild(link); 
-                    link.click(); 
-                    document.body.removeChild(link); 
-                } 
-            }).catch(err => console.error("Error generating map image:", err)); 
-        }
-    }, [stateFilter, currentMapViewLevel, isMapFullscreen, dashboardSectionRef, fullscreenModalRef]); 
+    const handleMouseMove = useCallback((event)=>{ if(tooltipData){setHoverPosition({x:event.clientX,y:event.clientY});} }, [tooltipData]);
 
     const handleCopyImage = useCallback(async () => {
-        const targetRef = dashboardSectionRef;
-        if (targetRef.current && navigator.clipboard?.write) {
+        if (dashboardSectionRef.current && navigator.clipboard?.write) {
             setCopyStatus('Copying...');
             try {
-                const canvas = await html2canvas(targetRef.current, { 
-                    useCORS: true, 
-                    scale: 2, 
-                    backgroundColor: '#ffffff', 
-                    logging: false, 
-                    ignoreElements: (element) => element.classList.contains('ignore-for-export') 
-                });
-                canvas.toBlob(async (blob) => { if (blob) { await navigator.clipboard.write([ new ClipboardItem({ 'image/png': blob }) ]); setCopyStatus('Copied!'); } else { throw new Error('Canvas to Blob failed'); } }, 'image/png', 0.95);
-            } catch (err) { console.error("Failed to copy image:", err); setCopyStatus('Failed'); }
-            finally { setTimeout(() => setCopyStatus(''), 2000); }
-        } else { console.error("Clipboard API not available or target element not found."); setCopyStatus('Failed'); setTimeout(() => setCopyStatus(''), 2000); }
+                const canvas = await html2canvas(dashboardSectionRef.current, { useCORS: true, scale: 2, backgroundColor: '#ffffff', ignoreElements: (e) => e.classList.contains('ignore-for-export') });
+                canvas.toBlob(async (blob) => { if (blob) { await navigator.clipboard.write([ new ClipboardItem({ 'image/png': blob }) ]); setCopyStatus('Copied!'); } }, 'image/png', 0.95);
+            } catch (err) { setCopyStatus('Failed'); } finally { setTimeout(() => setCopyStatus(''), 2000); }
+        }
     }, []);
-
-    const aggregationLevelName = stateFilter ? 'Locality' : 'State';
-    const dynamicTitlePrefix = stateFilter ? `${stateFilter} - ` : '';
-    const mapLocationName = stateFilter ? stateFilter : 'Sudan';
-    const mapTitle = `EENC Coverage & Facility Locations in ${mapLocationName} (${facilityLocationMarkers.length})`;
 
     return (
         <div onMouseMove={handleMouseMove}>
-            <PageHeader title="Early Essential Newborn Care (EENC) Coverage" subtitle="Key indicators for EmONC facilities providing EENC."/>
+            
+            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm ignore-for-export mb-6 mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <FormGroup label="State"><Select value={stateFilter} onChange={handleStateChange}><option value="">All States</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{sKey}</option>)}</Select></FormGroup>
+                    <FormGroup label="Locality"><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">All Localities</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{l.en}</option>)}</Select></FormGroup>
+                    <FormGroup label="Ownership"><Select value={ownershipFilter} onChange={(e) => setOwnershipFilter(e.target.value)}><option value="">All Ownerships</option>{OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
+                    <FormGroup label="Project"><Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}><option value="">All Projects</option>{projectOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
+                    <FormGroup label="Has Equipment"><Select value={equipmentFilter} onChange={(e) => setEquipmentFilter(e.target.value)}><option value="">Any</option>{Object.entries(EENC_EQUIPMENT_SPEC).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</Select></FormGroup>
+                </div>
+            </div>
 
-             <div ref={dashboardSectionRef} className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch relative">
-
-                 <div className="flex flex-col gap-6 lg:col-span-1">
-                    <Card className="ignore-for-export">
-                        <div className="p-3 grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                            <FormGroup label="State">
-                                <Select value={stateFilter} onChange={handleStateChange}>
-                                    <option value="">All States</option>
-                                    {Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{sKey}</option>)}
-                                </Select>
-                            </FormGroup>
-                            <FormGroup label="Locality">
-                                <Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}>
-                                    <option value="">All Localities</option>
-                                    {stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{l.en}</option>)}
-                                </Select>
-                            </FormGroup>
-                            <FormGroup label="Ownership">
-                                <Select value={ownershipFilter} onChange={(e) => setOwnershipFilter(e.target.value)}>
-                                    <option value="">All Ownerships</option>
-                                    {OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                </Select>
-                            </FormGroup>
-                            <FormGroup label="Project">
-                                <Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}>
-                                    <option value="">All Projects</option>
-                                    {projectOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                </Select>
-                            </FormGroup>
-                            <FormGroup label="Has Equipment">
-                                <Select value={equipmentFilter} onChange={(e) => setEquipmentFilter(e.target.value)}>
-                                    <option value="">Any</option>
-                                    {Object.entries(EENC_EQUIPMENT_SPEC).map(([key, label]) => (
-                                        <option key={key} value={key}>{label}</option>
-                                    ))}
-                                </Select>
-                            </FormGroup>
-                        </div>
-                    </Card>
-
+             <div ref={dashboardSectionRef} className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch relative">
+                 <div className="lg:col-span-1 flex flex-col gap-4 h-full">
                     {loading ? <Spinner/> : (
                         <>
-                            <TotalCountCard title="Total EmONC Facilities" count={kpiData.totalEmONC}/>
-                            <TotalCountCard title="Functional EmONC Facilities" count={kpiData.totalFunctionalEmONC}/>
-                            <ValueTotalPercentageCard
-                                title="EENC Coverage in Functional EmONC Facilities"
-                                value={kpiData.totalEENCProviders}
-                                total={kpiData.totalFunctionalEmONC}
-                                percentage={kpiData.eencCoveragePercentage} />
+                            <TotalCountCard title="Total EmONC Facilities" count={kpiData.totalEmONC} className="flex-1" borderClass="border-l-slate-400" valueClass="text-slate-700" decorationColor="bg-slate-500" />
+                            <TotalCountCard title="Functional EmONC Facilities" count={kpiData.totalFunctionalEmONC} className="flex-1" borderClass="border-l-indigo-400" valueClass="text-indigo-700" decorationColor="bg-indigo-500" />
+                            <ValueTotalPercentageCard title="EENC Coverage in Functional EmONC" value={kpiData.totalEENCProviders} total={kpiData.totalFunctionalEmONC} percentage={kpiData.eencCoveragePercentage} className="flex-1" borderClass="border-l-sky-500" valueClass="text-sky-600" decorationColor="bg-sky-500" colorTheme="sky" />
                         </>
                     )}
                 </div>
 
                  {loading ? <div className="lg:col-span-2 flex justify-center items-center h-64"><Spinner/></div> : (
-                    <Card className="p-0 flex flex-col flex-grow lg:col-span-2">
-                        <div className="p-4 border-b flex flex-col sm:flex-row sm:justify-between sm:items-center flex-shrink-0 gap-2 sm:gap-0">
-                            <h3 className="text-xl font-medium text-gray-700 text-left sm:text-center">EENC Geographical Distribution</h3>
-                            <div className="flex items-center flex-wrap justify-start sm:justify-end gap-1 w-full sm:w-auto ignore-for-export">
-                                {!stateFilter && (
-                                     <>
-                                        <div className="text-sm font-medium text-gray-500">View:</div>
-                                        <div className="flex rounded-md shadow-sm">
-                                            <button onClick={() => setMapViewLevel('state')} className={`px-2 py-1 text-xs font-semibold rounded-l-md ${mapViewLevel === 'state' ? 'bg-sky-700 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}> State </button>
-                                            <button onClick={() => setMapViewLevel('locality')} className={`px-2 py-1 text-xs font-semibold rounded-r-md border-l border-gray-300 ${mapViewLevel === 'locality' ? 'bg-sky-700 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}> Locality </button>
-                                        </div>
-                                     </>
-                                )}
-                                <button onClick={() => handleDownloadMap('jpg')} title="Download Map as JPG" className="ml-1 px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">JPG</button>
-                                <button onClick={() => handleDownloadMap('pdf')} title="Download Map as PDF" className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">PDF</button>
-                                <button
-                                    onClick={handleCopyImage}
-                                    title="Copy Dashboard Image"
-                                    disabled={!!copyStatus && copyStatus !== 'Failed'}
-                                    className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors relative min-w-[70px] text-center disabled:opacity-50 disabled:cursor-wait"
-                                >
-                                    {copyStatus || 'Copy Image'}
-                                </button>
-                                <button
-                                    onClick={() => setShowFacilityMarkers(!showFacilityMarkers)}
-                                    title={showFacilityMarkers ? "Hide Facilities" : "Show Facilities"}
-                                    className={`ml-1 px-2 py-1 text-xs font-semibold rounded-md transition-colors ${
-                                        showFacilityMarkers ? 'bg-sky-700 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                    }`}
-                                >
-                                    {showFacilityMarkers ? 'Hide' : 'Show'} Facilities
-                                </button>
-                                <button onClick={() => setIsMapFullscreen(true)} className="px-2 py-1 text-xs font-semibold text-sky-700 bg-sky-100 rounded-md hover:bg-sky-200 transition-colors">Full</button>
-                             </div>
-                        </div>
-                        <div ref={mapContainerRef} className="flex-grow flex flex-col bg-white">
-                             <h4 className="text-center text-lg font-bold text-gray-600 py-1 flex-shrink-0">{mapTitle}</h4>
-                             <MapLegend />
-                            <div className='flex-grow min-h-[450px]'>
-                                 <div className='flex-grow min-h-0 h-full'>
-                                    <SudanMap
-                                        data={!stateFilter && currentMapViewLevel === 'state' ? mapData : []}
-                                        localityData={stateFilter ? tableData : (!stateFilter && currentMapViewLevel === 'locality' ? allLocalitiesCoverageDataEENC : [])}
-                                        facilityMarkers={showFacilityMarkers ? facilityLocationMarkers : []}
-                                        viewLevel={currentMapViewLevel}
-                                        {...mapViewConfig}
-                                        onStateHover={handleStateHover} onStateLeave={handleMapMouseLeave}
-                                        onLocalityHover={handleMapLocalityHover} onLocalityLeave={handleMapMouseLeave}
-                                        onFacilityHover={handleFacilityHover} onFacilityLeave={handleFacilityLeave}
-                                        isMovable={false}
-                                        pannable={false}
-                                    />
+                    <div className="lg:col-span-2 flex flex-col h-full">
+                        <Card className="p-0 flex flex-col flex-grow shadow-sm border border-gray-200 rounded-xl h-full">
+                             <div className="p-4 md:p-5 border-b bg-slate-50/50 rounded-t-xl flex justify-between items-start gap-4">
+                                 <h3 className="text-lg font-bold text-gray-800 leading-tight">Geographical Map</h3>
+                                 <button onClick={handleCopyImage} className="text-gray-400 hover:text-sky-600 transition-colors p-1 mt-0.5 shrink-0" disabled={!!copyStatus && copyStatus !== 'Failed'}>{copyStatus ? <span className="text-[10px] font-semibold text-sky-600">{copyStatus}</span> : <CopyIcon />}</button>
+                            </div>
+                            <div className="flex-grow min-h-[400px] p-2 relative flex flex-col">
+                                 <div className='flex-grow min-h-0 h-full w-full'>
+                                    <SudanMap data={!stateFilter && currentMapViewLevel === 'state' ? mapData : []} localityData={stateFilter ? tableData : []} facilityMarkers={showFacilityMarkers ? facilityLocationMarkers : []} viewLevel={currentMapViewLevel} {...mapViewConfig} isMovable={false} pannable={false} />
                                 </div>
                             </div>
-                        </div>
-                    </Card>
+                            <div className="bg-slate-50 border-t border-gray-200 rounded-b-xl py-3 px-4 flex flex-col xl:flex-row justify-between items-center gap-4">
+                                <MapLegend />
+                                <div className="flex flex-nowrap items-center gap-2 overflow-x-auto w-full xl:w-auto justify-end ignore-for-export">
+                                    {!stateFilter && (
+                                        <div className="flex rounded-md shadow-sm shrink-0 mr-1">
+                                            <button onClick={() => setMapViewLevel('state')} className={`px-3 py-1.5 text-xs font-semibold rounded-l-md ${mapViewLevel === 'state' ? 'bg-sky-700 text-white' : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'}`} > State </button>
+                                            <button onClick={() => setMapViewLevel('locality')} className={`px-3 py-1.5 text-xs font-semibold rounded-r-md ${mapViewLevel === 'locality' ? 'bg-sky-700 text-white border border-sky-700' : 'bg-white text-gray-700 hover:bg-gray-50 border border-l-0 border-gray-200'}`} > Locality </button>
+                                        </div>
+                                    )}
+                                    <button onClick={() => setShowFacilityMarkers(!showFacilityMarkers)} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors shadow-sm shrink-0 ${showFacilityMarkers ? 'bg-slate-700 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>{showFacilityMarkers ? 'Hide Fac.' : 'Show Fac.'}</button>
+                                    <button onClick={() => setIsMapFullscreen(true)} className="px-3 py-1.5 text-xs font-semibold text-sky-700 bg-sky-100 rounded-md hover:bg-sky-200 transition-colors shadow-sm shrink-0">Full</button>
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
                  )}
-            </div>
-             
+             </div>
+
             {!loading && (
             <>
-                <div className="mt-6 grid grid-cols-1 lg:grid-cols-1 gap-6 items-stretch">
-                    <Card className="p-0 flex flex-col">
-                        <div className="p-4 border-b flex justify-between items-center">
-                            <h3 className="text-lg font-medium text-gray-700">{dynamicTitlePrefix}EENC Coverage by {aggregationLevelName}</h3>
-                            <button onClick={() => copyTableAsImage(coverageTableRef, setTable1CopyStatus)} className="px-2 py-1 text-xs font-semibold text-sky-700 bg-sky-50 border border-sky-200 rounded hover:bg-sky-100 transition-colors"> {table1CopyStatus || 'Copy Image'} </button>
+                {/* HORIZONTAL EENC Chart & Table Combo */}
+                <div className="mt-6 grid grid-cols-1 gap-6 items-stretch relative">
+                    <Card className="p-0 flex flex-col overflow-hidden border border-gray-200 rounded-xl">
+                        <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
+                            <h3 className="text-lg font-bold text-gray-800">EENC Coverage by {aggregationLevelName}</h3>
+                            <button onClick={() => copyTableAsImage(coverageTableRef, setTable1CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table1CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table1CopyStatus}</span> : <CopyIcon />} </button>
                         </div>
-                        <div className="flex-grow overflow-x-auto">
-                            <table ref={coverageTableRef} className='min-w-full text-sm'>
+                        <div className="flex-grow overflow-x-auto p-4">
+                            <table ref={coverageTableRef} className='min-w-full text-xs border border-gray-200 rounded-lg overflow-hidden'>
                                 <thead>
                                     <tr>
-                                        <th className='py-3 px-4 font-semibold tracking-wider border border-gray-200 bg-gray-100 w-[20%]'>{aggregationLevelName}</th>
-                                        <th className='py-3 px-4 font-semibold tracking-wider border border-gray-200 bg-gray-100 w-[15%] text-center'>Total EmONC</th>
-                                        <th className='py-3 px-4 font-semibold tracking-wider border border-gray-200 bg-gray-100 w-[15%] text-center'>Functional EmONC</th>
-                                        <th className='py-3 px-4 font-semibold tracking-wider border border-gray-200 bg-gray-100 w-[20%] text-center'>Facilities with EENC</th>
-                                        <th className='py-3 px-4 font-semibold tracking-wider border border-gray-200 bg-gray-100 w-[30%] text-left'>EENC Coverage (%)</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-left font-semibold text-gray-600 uppercase tracking-wider w-[25%]'>{aggregationLevelName}</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider w-[15%]'>Functional EmONC</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider w-[15%]'>With EENC</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-left font-semibold text-gray-600 uppercase tracking-wider w-[45%]'>Coverage Chart</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {tableData.map(row => ( <tr key={row.key} className='hover:bg-blue-50 transition-colors'><td className="p-2 whitespace-nowrap font-medium text-gray-800">{row.name}</td><td className="p-2 text-center">{row.totalEmONC}</td><td className="p-2 text-center">{row.functionalEmONC}</td><td className="p-2 text-center">{row.eencProviders}</td><td className="p-2">{getCoverageBar(row.eencCoverage)}</td></tr> ))}
+                                    {tableData.length === 0 ? <tr><td colSpan={4} className="p-4 text-center text-gray-500">No data matches the current filters.</td></tr> :
+                                     tableData.map(row => ( 
+                                        <tr key={row.key} className='hover:bg-blue-50/50 transition-colors border-b border-gray-100'>
+                                            <td className="p-3 font-medium text-gray-700">{row.name}</td>
+                                            <td className="p-3 text-center align-middle font-medium">{row.functionalEmONC}</td>
+                                            <td className="p-3 text-center font-bold text-sky-700 align-middle">{row.eencProviders} <span className="text-gray-400 font-normal ml-1">({row.eencCoverage}%)</span></td>
+                                            <td className="p-3 align-middle">
+                                                <div className="flex items-center w-full">
+                                                    <div className="flex-grow bg-gray-200 rounded-sm h-3 overflow-hidden flex"><div className={`h-full transition-all shadow-sm ${row.eencCoverage >= 75 ? 'bg-sky-700' : row.eencCoverage >= 40 ? 'bg-sky-400' : 'bg-gray-600'}`} style={{ width: `${Math.max(row.eencCoverage, 1)}%` }}></div></div>
+                                                    <span className="ml-3 text-[11px] font-bold text-gray-700 w-8 text-right">{row.eencCoverage}%</span>
+                                                </div>
+                                            </td>
+                                        </tr> 
+                                    ))}
                                 </tbody>
                             </table>
                         </div>
@@ -1321,85 +738,46 @@ export const EENCCoverageDashboard = () => {
                 </div>
 
                 <div className="mt-6">
-                    <Card>
-                        <div className="p-4 border-b flex justify-between items-center">
-                            <div>
-                                <h3 className="text-lg font-medium text-gray-700">EENC Equipment Availability by Unit ({stateFilter ? 'Hospitals' : 'State'}){stateFilter ? ` in ${stateFilter}` : ''}</h3>
-                                <p className="text-sm text-gray-500 mt-1">Total number of equipment items available per facility/unit providing EENC.</p>
-                            </div>
-                            <button onClick={() => copyTableAsImage(equipmentTableRef, setTable2CopyStatus)} className="px-2 py-1 text-xs font-semibold text-sky-700 bg-sky-50 border border-sky-200 rounded hover:bg-sky-100 transition-colors"> {table2CopyStatus || 'Copy Image'} </button>
+                    <Card className="p-0 overflow-hidden border border-gray-200 rounded-xl">
+                        <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
+                            <h3 className="text-lg font-bold text-gray-800">EENC Equipment Availability by Unit</h3>
+                            <button onClick={() => copyTableAsImage(equipmentTableRef, setTable2CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table2CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table2CopyStatus}</span> : <CopyIcon />} </button>
                         </div>
-                        <div className="overflow-x-auto">
-                            <table ref={equipmentTableRef} className="min-w-full table-auto border-collapse">
-                                <thead className="bg-gray-100">
+                        <div className="overflow-x-auto p-4">
+                            <table ref={equipmentTableRef} className="min-w-full table-auto border-collapse text-[10px] border border-gray-200">
+                                <thead className="bg-slate-50 border-b border-gray-200">
                                     <tr>
-                                        <th className={`p-2 text-left font-semibold tracking-wider border-b border-gray-200 bg-gray-100 text-xs align-top w-40`}><div className='font-bold break-words text-center'>{stateFilter ? 'Hospital Name' : aggregationLevelName}</div></th>
-                                        {Object.values(EENC_EQUIPMENT_SPEC).map((header, index) => ( <th key={index} className={`p-2 text-left font-semibold tracking-wider border-b border-gray-200 bg-gray-100 text-xs align-top w-20`}><div className='font-bold break-words text-center'>{header}</div></th> ))}
+                                        <th className={`p-2 text-left font-semibold tracking-wider text-gray-600 uppercase align-bottom w-40`}><div className='font-bold break-words text-center'>{stateFilter ? 'Hospital Name' : aggregationLevelName}</div></th>
+                                        {Object.values(EENC_EQUIPMENT_SPEC).map((header, index) => ( <th key={index} className={`p-2 text-left font-semibold tracking-wider text-gray-600 uppercase align-bottom w-20`}><div className='font-bold break-words text-center'>{header}</div></th> ))}
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {equipmentTableData.map(row => ( <tr key={row.name}><td className={`font-medium text-gray-800 p-2 break-words`}>{row.name}</td>{EENC_EQUIPMENT_KEYS.map(key => { const value = row[key]; const cellClass = value === 0 ? 'bg-red-200 font-bold' : ''; return ( <td key={key} className={`p-2 ${cellClass} text-center`}> {value} </td> ); })}</tr> ))}
+                                    {equipmentTableData.map(row => ( 
+                                        <tr key={row.name} className="hover:bg-slate-50 transition-colors border-b border-gray-100">
+                                            <td className={`font-medium text-gray-700 p-2 break-words`}>{row.name}</td>
+                                            {EENC_EQUIPMENT_KEYS.map(key => { const value = row[key]; const cellClass = value === 0 ? 'bg-red-50 text-red-600 font-bold' : 'text-gray-700 font-medium'; return ( <td key={key} className={`p-2 ${cellClass} text-center border-l border-gray-100`}> {value} </td> ); })}
+                                        </tr> 
+                                    ))}
                                 </tbody>
                             </table>
                         </div>
                     </Card>
                 </div>
-
-                {isMapFullscreen && (
-                    <div ref={fullscreenModalRef} className="fixed inset-0 bg-white z-50 p-4 flex flex-col">
-                        <div className="flex justify-between items-center mb-4 flex-shrink-0">
-                             <h3 className="text-xl font-bold text-gray-800">{mapTitle}</h3>
-                             <div className='flex items-center gap-1 ignore-for-export'>
-                                <button onClick={() => handleDownloadMap('jpg')} title="Download Map as JPG" className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">JPG</button>
-                                <button onClick={() => handleDownloadMap('pdf')} title="Download Map as PDF" className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">PDF</button>
-                                <button onClick={() => setIsMapFullscreen(false)} className="px-4 py-2 text-sm font-bold text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 ml-1">Close</button>
-                             </div>
-                        </div>
-
-                        <div className="flex-grow min-h-0 flex gap-4">
-                            <div ref={fullscreenMapContainerRef} className="flex-grow min-h-0 bg-white w-2/3">
-                                <SudanMap
-                                    data={!stateFilter && currentMapViewLevel === 'state' ? mapData : []}
-                                    localityData={stateFilter ? tableData : (!stateFilter && currentMapViewLevel === 'locality' ? allLocalitiesCoverageDataEENC : [])}
-                                    facilityMarkers={showFacilityMarkers ? facilityLocationMarkers : []}
-                                    viewLevel={currentMapViewLevel}
-                                    {...fullscreenMapViewConfig}
-                                    onStateHover={handleStateHover} onStateLeave={handleMapMouseLeave}
-                                    onLocalityHover={handleMapLocalityHover} onLocalityLeave={handleMapMouseLeave}
-                                    onFacilityHover={handleFacilityHover} onFacilityLeave={handleFacilityLeave}
-                                    isMovable={false}
-                                    pannable={false}
-                                />
-                            </div>
-
-                            <div className="w-1/3 flex flex-col border border-gray-200 rounded-lg">
-                                <h4 className="text-lg font-semibold p-3 border-b bg-gray-50">Facilities Providing EENC ({facilityLocationMarkers.length})</h4>
-                                <div className="overflow-y-auto flex-grow min-h-0">
-                                    <ul className="divide-y divide-gray-200">
-                                        {facilityLocationMarkers.map(facility => (
-                                            <li key={facility.key} className="p-3 text-sm">
-                                                {facility.name}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-                {tooltipData && ( <div style={{ position: 'fixed', left: hoverPosition.x - 40, top: hoverPosition.y, pointerEvents: 'none', zIndex: 50 }}> <MapTooltip title={tooltipData.title} dataRows={tooltipData.dataRows} equipmentSummary={tooltipData.equipmentSummary} /> </div> )}
-                {hoveredFacilityData && ( <div style={{ position: 'fixed', left: hoverPosition.x, top: hoverPosition.y, pointerEvents: 'none', zIndex: 51 }}> <FacilityTooltip data={hoveredFacilityData} /> </div> )}
             </>
             )}
         </div>
     );
 };
 
+// --- IMNCI DASHBOARD ---
+const IMNCI_FILTER_SPEC = { 'وجود_سجل_علاج_متكامل': 'IMNCI Register', 'وجود_كتيب_لوحات': 'Chart Booklet', 'ميزان_وزن': 'Weight Scale', 'غرفة_إرواء': 'ORT Corner' };
+const IMNCI_TOOLS_SPEC = { 'countWithRegister': 'IMNCI Register', 'countWithChartbooklet': 'Chart Booklet', 'countWithWeightScale': 'Weight Scale', 'countWithOrtCorner': 'ORT Corner' };
+const IMNCI_TOOLS_KEYS = Object.keys(IMNCI_TOOLS_SPEC);
+
 export const IMNCICoverageDashboard = () => {
     const { healthFacilities: allFacilities, isLoading, fetchHealthFacilities } = useDataCache();
     const loading = isLoading.healthFacilities;
     
-    // SOFT DELETE FILTER
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
     const [stateFilter, setStateFilter] = useState('');
@@ -1411,43 +789,341 @@ export const IMNCICoverageDashboard = () => {
     const [copyStatus, setCopyStatus] = useState('');
     const [tooltipData, setTooltipData] = useState(null);
     const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
-    const [isMapFullscreen, setIsMapFullscreen] = useState(false);
-    const [showFacilityMarkers, setShowFacilityMarkers] = useState(true);
+    // IMPORTANT: Default Hide Facilities for IMNCI to prevent map clutter
+    const [showFacilityMarkers, setShowFacilityMarkers] = useState(false); 
 
     const [table1CopyStatus, setTable1CopyStatus] = useState('');
     const [table2CopyStatus, setTable2CopyStatus] = useState('');
 
-    const mapContainerRef = useRef(null);
-    const fullscreenMapContainerRef = useRef(null);
     const dashboardSectionRef = useRef(null);
-    const fullscreenModalRef = useRef(null);
     const coverageTableRef = useRef(null);
     const toolsTableRef = useRef(null);
     
     useEffect(() => {
         if (activeFacilities !== null && activeFacilities.length > 0) {
-            const intervalId = setInterval(() => {
-                fetchHealthFacilities({}, true); 
-            }, 15 * 60 * 1000); 
-
+            const intervalId = setInterval(() => { fetchHealthFacilities({}, true); }, 15 * 60 * 1000); 
             return () => clearInterval(intervalId);
         }
     }, [activeFacilities, fetchHealthFacilities]);
 
-    // DYNAMIC PROJECT OPTIONS
-    const projectOptions = useMemo(() => {
-        const projects = new Set();
-        activeFacilities.forEach(f => {
-            if (f.project_name && f.project_name.trim() !== '') {
-                projects.add(f.project_name.trim());
-            }
-        });
-        return [...projects].sort();
-    }, [activeFacilities]);
+    const projectOptions = useMemo(() => [...new Set(activeFacilities.map(f => f.project_name?.trim()).filter(Boolean))].sort(), [activeFacilities]);
 
     const locationFilteredFacilities = useMemo(() => {
         return activeFacilities.filter(f => {
-             if(f['الولاية'] === 'إتحادي') return false;
+            if(f['الولاية'] === 'إتحادي') return false;
+            if (stateFilter && f['الولاية'] !== stateFilter) return false;
+            if (localityFilter && f['المحلية'] !== localityFilter) return false;
+            if (ownershipFilter && f.facility_ownership !== ownershipFilter) return false;
+            if (projectFilter && f.project_name !== projectFilter) return false;
+            if (equipmentFilter && f[equipmentFilter] !== 'Yes') return false; // Global Tool Filter
+            return true;
+        });
+    }, [activeFacilities, stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter]); 
+
+    const functioningPhcs = useMemo(() => locationFilteredFacilities.filter(f => f['هل_المؤسسة_تعمل'] === 'Yes' && ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(f['نوع_المؤسسةالصحية'])), [locationFilteredFacilities]);
+    const imnciInPhcs = useMemo(() => functioningPhcs.filter(f => f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes'), [functioningPhcs]);
+    const imnciCoveragePercentage = useMemo(() => functioningPhcs.length > 0 ? Math.round((imnciInPhcs.length / functioningPhcs.length) * 100) : 0, [imnciInPhcs, functioningPhcs]);
+
+    const isLocalityView = !!stateFilter && !localityFilter;
+    const isFacilityView = !!localityFilter;
+    const aggregationLevelName = isFacilityView ? 'Facility' : (isLocalityView ? 'Locality' : 'State');
+
+    const tableCoverageData = useMemo(() => {
+        const s={};
+        const aggKey = isFacilityView ? 'اسم_المؤسسة' : (isLocalityView ? 'المحلية' : 'الولاية');
+
+        locationFilteredFacilities.forEach(f=>{
+            const isPhc=f['هل_المؤسسة_تعمل']==='Yes' && ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(f['نوع_المؤسسةالصحية']);
+            if(!isPhc) return;
+
+            const key=f[aggKey];
+            if(!key || key === 'إتحادي')return;
+            
+            if(!s[key]){
+                s[key]={name: key, key, totalFunctioningPhc:0, totalPhcWithImnci:0};
+            }
+            s[key].totalFunctioningPhc++;
+            if(f['وجود_العلاج_المتكامل_لامراض_الطفولة']==='Yes') s[key].totalPhcWithImnci++;
+        });
+
+        return Object.values(s).map(st=>({...st,coverage:st.totalFunctioningPhc>0?Math.round((st.totalPhcWithImnci/st.totalFunctioningPhc)*100):0})).sort((a,b) => b.coverage - a.coverage);
+    }, [locationFilteredFacilities, stateFilter, isLocalityView, isFacilityView]); 
+
+    const tableToolsData = useMemo(() => {
+        const s={};
+        const aggKey = isFacilityView ? 'اسم_المؤسسة' : (isLocalityView ? 'المحلية' : 'الولاية');
+        
+        imnciInPhcs.forEach(f=>{
+            const key=f[aggKey];
+             if(!key || key === 'إتحادي')return;
+            if(!s[key]){
+                s[key]={name:key, key, totalImnciPhcs:0, countWithRegister:0, countWithChartbooklet:0, countWithWeightScale:0, countWithOrtCorner:0};
+            }
+            s[key].totalImnciPhcs++;
+            if(f['وجود_سجل_علاج_متكامل']==='Yes')s[key].countWithRegister++;
+            if(f['وجود_كتيب_لوحات']==='Yes')s[key].countWithChartbooklet++;
+            if(f['ميزان_وزن']==='Yes')s[key].countWithWeightScale++;
+            if(f['غرفة_إرواء']==='Yes')s[key].countWithOrtCorner++;
+        });
+        return Object.values(s).map(st=>{const total=st.totalImnciPhcs;return{...st,percentageWithRegister:total>0?Math.round((st.countWithRegister/total)*100):0,percentageWithChartbooklet:total>0?Math.round((st.countWithChartbooklet/total)*100):0,percentageWithWeightScale:total>0?Math.round((st.countWithWeightScale/total)*100):0,percentageWithOrtCorner:total>0?Math.round((st.countWithOrtCorner/total)*100):0};}).sort((a,b)=> a.name.localeCompare(b.name));
+    }, [imnciInPhcs, isLocalityView, isFacilityView]);
+
+    const toolsAverages = useMemo(() => {
+        if (imnciInPhcs.length === 0) return null;
+        let totalRegister = 0, totalChart = 0, totalScale = 0, totalOrt = 0;
+        imnciInPhcs.forEach(f => {
+            if(f['وجود_سجل_علاج_متكامل']==='Yes') totalRegister++;
+            if(f['وجود_كتيب_لوحات']==='Yes') totalChart++;
+            if(f['ميزان_وزن']==='Yes') totalScale++;
+            if(f['غرفة_إرواء']==='Yes') totalOrt++;
+        });
+        const total = imnciInPhcs.length;
+        return { total, totalRegister, pRegister: total > 0 ? Math.round((totalRegister/total)*100) : 0, totalChart, pChart: total > 0 ? Math.round((totalChart/total)*100) : 0, totalScale, pScale: total > 0 ? Math.round((totalScale/total)*100) : 0, totalOrt, pOrt: total > 0 ? Math.round((totalOrt/total)*100) : 0 };
+    }, [imnciInPhcs]);
+
+    const facilityLocationMarkers = useMemo(() => imnciInPhcs.filter(f => f['_الإحداثيات_longitude'] && f['_الإحداثيات_latitude']).map(f => ({key: f.id, name: f['اسم_المؤسسة'], coordinates: [f['_الإحداثيات_longitude'], f['_الإحداثيات_latitude']]})), [imnciInPhcs]);
+    const nationalMapData = useMemo(() => { 
+        const s = {};
+        locationFilteredFacilities.forEach(f => {
+            const k = f['الولاية'];
+            if (!k || k === 'إتحادي') return;
+            if (!s[k]) s[k] = { tFP: 0, tPI: 0 };
+            if (f['هل_المؤسسة_تعمل'] === 'Yes' && ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(f['نوع_المؤسسةالصحية'])) {
+                s[k].tFP++;
+                if (f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes') s[k].tPI++;
+            }
+        });
+        return Object.entries(s).map(([sK, c]) => ({ state: sK, percentage: c.tFP > 0 ? Math.round((c.tPI / c.tFP) * 100) : 0, coordinates: mapCoordinates[sK] ? [mapCoordinates[sK].lng, mapCoordinates[sK].lat] : [0, 0] }));
+    }, [locationFilteredFacilities]);
+
+    const mapViewConfig = useMemo(() => { const sC=stateFilter?mapCoordinates[stateFilter]:null; return sC ? {center:[sC.lng,sC.lat],scale:sC.scale,focusedState:stateFilter} : {center:[30,15.5],scale:2000,focusedState:null}; }, [stateFilter]);
+    const handleStateChange = (e) => { setStateFilter(e.target.value); setLocalityFilter(''); };
+    
+    const handleMapHover = useCallback((key, event) => setHoverPosition({ x: event.clientX, y: event.clientY }), []);
+    const handleMapMouseLeave = useCallback(() => setTooltipData(null), []);
+    const handleMouseMove = useCallback((e) => { if (tooltipData) setHoverPosition({ x: e.clientX, y: e.clientY }); }, [tooltipData]);
+    const currentMapViewLevel = stateFilter && !localityFilter ? 'locality' : mapViewLevel;
+
+    const handleCopyImage = useCallback(async () => {
+        if (dashboardSectionRef.current && navigator.clipboard?.write) {
+            setCopyStatus('Copying...');
+            try {
+                const canvas = await html2canvas(dashboardSectionRef.current, { useCORS: true, scale: 2, backgroundColor: '#ffffff', ignoreElements: (e) => e.classList.contains('ignore-for-export') });
+                canvas.toBlob(async (blob) => { if (blob) { await navigator.clipboard.write([ new ClipboardItem({ 'image/png': blob }) ]); setCopyStatus('Copied!'); } }, 'image/png', 0.95);
+            } catch (err) { setCopyStatus('Failed'); } finally { setTimeout(() => setCopyStatus(''), 2000); }
+        }
+    }, []);
+
+    const getPercentageColorClass = (percentage) => {
+        if (percentage >= 75) return 'bg-green-50 text-green-800 font-bold';
+        if (percentage >= 50) return 'bg-yellow-50 text-yellow-800 font-bold';
+        return 'bg-red-50 text-red-800 font-bold';
+    };
+
+    return (
+        <div onMouseMove={handleMouseMove}>
+            
+            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm ignore-for-export mb-6 mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <FormGroup label="State"><Select value={stateFilter} onChange={handleStateChange}><option value="">All States</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{sKey}</option>)}</Select></FormGroup>
+                    <FormGroup label="Locality"><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">All Localities</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{l.en}</option>)}</Select></FormGroup>
+                    <FormGroup label="Ownership"><Select value={ownershipFilter} onChange={(e) => setOwnershipFilter(e.target.value)}><option value="">All Ownerships</option>{OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
+                    <FormGroup label="Project"><Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}><option value="">All Projects</option>{projectOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
+                    <FormGroup label="Has Tool"><Select value={equipmentFilter} onChange={(e) => setEquipmentFilter(e.target.value)}><option value="">Any</option>{Object.entries(IMNCI_FILTER_SPEC).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</Select></FormGroup>
+                </div>
+            </div>
+
+             <div ref={dashboardSectionRef} className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch relative">
+                 <div className="lg:col-span-1 flex flex-col gap-4 h-full">
+                    {loading ? <Spinner/> : (
+                        <>
+                            <TotalCountCard title="Total Functioning PHC Facilities" count={functioningPhcs.length} className="flex-1" borderClass="border-l-slate-400" valueClass="text-slate-700" decorationColor="bg-slate-500" />
+                            <TotalCountCard title="Total PHC Facilities with IMNCI" count={imnciInPhcs.length} className="flex-1" borderClass="border-l-indigo-400" valueClass="text-indigo-700" decorationColor="bg-indigo-500" />
+                            <ValueTotalPercentageCard title="IMNCI Service Coverage in PHCs" value={imnciInPhcs.length} total={functioningPhcs.length} percentage={imnciCoveragePercentage} className="flex-1" borderClass="border-l-sky-500" valueClass="text-sky-600" decorationColor="bg-sky-500" colorTheme="sky" />
+                        </>
+                    )}
+                </div>
+
+                 {loading ? <div className="lg:col-span-2 flex justify-center items-center h-64"><Spinner/></div> : (
+                    <div className="lg:col-span-2 flex flex-col h-full">
+                        <Card className="p-0 flex flex-col flex-grow shadow-sm border border-gray-200 rounded-xl h-full">
+                             <div className="p-4 md:p-5 border-b bg-slate-50/50 rounded-t-xl flex justify-between items-start gap-4">
+                                 <h3 className="text-lg font-bold text-gray-800 leading-tight">Geographical Map</h3>
+                                 <button onClick={handleCopyImage} className="text-gray-400 hover:text-sky-600 transition-colors p-1 mt-0.5 shrink-0" disabled={!!copyStatus && copyStatus !== 'Failed'}>{copyStatus ? <span className="text-[10px] font-semibold text-sky-600">{copyStatus}</span> : <CopyIcon />}</button>
+                            </div>
+                            <div className="flex-grow min-h-[400px] p-2 relative flex flex-col">
+                                 <div className='flex-grow min-h-0 h-full w-full'>
+                                    <SudanMap data={!stateFilter && currentMapViewLevel === 'state' ? nationalMapData : []} localityData={stateFilter ? tableCoverageData : []} facilityMarkers={showFacilityMarkers ? facilityLocationMarkers : []} viewLevel={currentMapViewLevel} {...mapViewConfig} isMovable={false} pannable={false} />
+                                </div>
+                            </div>
+                            <div className="bg-slate-50 border-t border-gray-200 rounded-b-xl py-3 px-4 flex flex-col xl:flex-row justify-between items-center gap-4">
+                                <MapLegend />
+                                <div className="flex flex-nowrap items-center gap-2 overflow-x-auto w-full xl:w-auto justify-end ignore-for-export">
+                                    {!stateFilter && (
+                                        <div className="flex rounded-md shadow-sm shrink-0 mr-1">
+                                            <button onClick={() => setMapViewLevel('state')} className={`px-3 py-1.5 text-xs font-semibold rounded-l-md ${mapViewLevel === 'state' ? 'bg-sky-700 text-white' : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'}`} > State </button>
+                                            <button onClick={() => setMapViewLevel('locality')} className={`px-3 py-1.5 text-xs font-semibold rounded-r-md ${mapViewLevel === 'locality' ? 'bg-sky-700 text-white border border-sky-700' : 'bg-white text-gray-700 hover:bg-gray-50 border border-l-0 border-gray-200'}`} > Locality </button>
+                                        </div>
+                                    )}
+                                    <button onClick={() => setShowFacilityMarkers(!showFacilityMarkers)} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors shadow-sm shrink-0 ${showFacilityMarkers ? 'bg-slate-700 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>{showFacilityMarkers ? 'Hide Fac.' : 'Show Fac.'}</button>
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
+                 )}
+             </div>
+
+            {!loading && (
+            <>
+                {/* HORIZONTAL INLINE Chart & Table */}
+                <div className="mt-6 grid grid-cols-1 gap-6 items-stretch relative">
+                    <Card className="p-0 flex flex-col overflow-hidden border border-gray-200 rounded-xl">
+                        <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
+                            <h3 className="text-lg font-bold text-gray-800">IMNCI Coverage by {aggregationLevelName}</h3>
+                            <button onClick={() => copyTableAsImage(coverageTableRef, setTable1CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table1CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table1CopyStatus}</span> : <CopyIcon />} </button>
+                        </div>
+                        <div className="flex-grow overflow-x-auto p-4">
+                            <table ref={coverageTableRef} className="min-w-full text-xs border border-gray-200 rounded-lg overflow-hidden">
+                                <thead>
+                                    <tr>
+                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-left font-semibold text-gray-600 uppercase text-[11px] tracking-wider w-[25%]">{aggregationLevelName}</th>
+                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase text-[11px] tracking-wider w-[15%]">Functioning PHCs</th>
+                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase text-[11px] tracking-wider w-[15%]">PHCs with IMNCI</th>
+                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-left font-semibold text-gray-600 uppercase text-[11px] tracking-wider w-[45%]">Coverage Chart</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                 {tableCoverageData.length === 0 ? <tr><td colSpan={4} className="p-4 text-center text-gray-500">No data matches the current filters.</td></tr> :
+                                 tableCoverageData.map(row => (
+                                     <tr key={row.key} className="hover:bg-blue-50/50 transition-colors border-b border-gray-100">
+                                         <td className="p-3 font-medium text-gray-800 align-middle">{row.name}</td>
+                                         <td className="p-3 text-center align-middle font-medium">{row.totalFunctioningPhc}</td>
+                                         <td className="p-3 text-center font-bold text-sky-700 align-middle">
+                                             {row.totalPhcWithImnci} <span className="text-gray-400 font-normal ml-1">({row.coverage}%)</span>
+                                         </td>
+                                         <td className="p-3 align-middle">
+                                            <div className="flex items-center w-full">
+                                                <div className="flex-grow bg-gray-200 rounded-sm h-3 overflow-hidden flex">
+                                                    <div 
+                                                        className={`h-full transition-all shadow-sm ${row.coverage >= 75 ? 'bg-sky-700' : row.coverage >= 40 ? 'bg-sky-400' : 'bg-gray-600'}`} 
+                                                        style={{ width: `${Math.max(row.coverage, 1)}%` }}
+                                                    ></div>
+                                                </div>
+                                                <span className="ml-3 text-[11px] font-bold text-gray-700 w-8 text-right">{row.coverage}%</span>
+                                            </div>
+                                         </td>
+                                     </tr>
+                                 ))
+                                 }
+                                </tbody>
+                            </table>
+                        </div>
+                    </Card>
+                </div>
+                
+                {/* --- MODIFIED TABLE: Tools Availability --- */}
+                <div className="mt-6">
+                    <Card className="p-0 overflow-hidden border border-gray-200 rounded-xl">
+                        <div className="p-4 border-b flex flex-col gap-2 bg-slate-50/50">
+                            <div className="flex justify-between items-center">
+                                <h3 className="text-lg font-bold text-gray-800"> IMNCI Tools Availability by {aggregationLevelName} </h3>
+                                <button onClick={() => copyTableAsImage(toolsTableRef, setTable2CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table2CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table2CopyStatus}</span> : <CopyIcon />} </button>
+                            </div>
+                            <div className="flex items-center gap-3 text-xs mt-2">
+                                <span className="font-bold text-gray-600">Legend:</span>
+                                <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-green-50 border border-green-300 rounded-sm"></div> <span className="text-gray-600 font-medium">&ge; 75%</span></div>
+                                <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-yellow-50 border border-yellow-300 rounded-sm"></div> <span className="text-gray-600 font-medium">50% - 74%</span></div>
+                                <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-red-50 border border-red-300 rounded-sm"></div> <span className="text-gray-600 font-medium">&lt; 50%</span></div>
+                            </div>
+                        </div>
+                         <div className="overflow-x-auto p-4">
+                             <table ref={toolsTableRef} className="min-w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+                                <thead>
+                                    <tr>
+                                        {[aggregationLevelName, 'PHCs w/ IMNCI', 'IMNCI registers', 'IMNCI chartbooklet', 'weight scale', 'ORT corner'].map((h, i) => (
+                                            <th key={i} className="p-3 border-b border-gray-200 bg-slate-50 text-left font-semibold text-gray-600 uppercase text-[11px] tracking-wider">{h}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                 {toolsAverages && !isFacilityView && (
+                                     <tr className="bg-slate-100/80 font-bold border-b-2 border-gray-300">
+                                         <td className="p-3 border-r border-gray-200 text-gray-800 uppercase text-[11px] tracking-wider">Overall Average</td>
+                                         <td className="p-3 border-r border-gray-200 text-center font-black text-slate-700">{toolsAverages.total}</td>
+                                         <td className={`p-3 border-r border-gray-200 text-center ${getPercentageColorClass(toolsAverages.pRegister)}`}>{toolsAverages.totalRegister} <span className="text-gray-500 font-normal ml-1">({toolsAverages.pRegister}%)</span></td>
+                                         <td className={`p-3 border-r border-gray-200 text-center ${getPercentageColorClass(toolsAverages.pChart)}`}>{toolsAverages.totalChart} <span className="text-gray-500 font-normal ml-1">({toolsAverages.pChart}%)</span></td>
+                                         <td className={`p-3 border-r border-gray-200 text-center ${getPercentageColorClass(toolsAverages.pScale)}`}>{toolsAverages.totalScale} <span className="text-gray-500 font-normal ml-1">({toolsAverages.pScale}%)</span></td>
+                                         <td className={`p-3 text-center ${getPercentageColorClass(toolsAverages.pOrt)}`}>{toolsAverages.totalOrt} <span className="text-gray-500 font-normal ml-1">({toolsAverages.pOrt}%)</span></td>
+                                     </tr>
+                                 )}
+                                 {tableToolsData.length === 0 ? <tr><td colSpan={6} className="p-4 text-center text-gray-500">No data matches the current filters.</td></tr> :
+                                  tableToolsData.map(row => (
+                                      <tr key={row.key} className="hover:bg-gray-50 border-b border-gray-100">
+                                          <td className="p-3 border-r border-gray-100 font-medium text-gray-800">{row.name}</td>
+                                          <td className="p-3 border-r border-gray-100 text-center font-medium text-slate-600">{row.totalImnciPhcs}</td>
+                                          <td className={`p-3 border-r border-gray-100 text-center ${getPercentageColorClass(row.percentageWithRegister)}`}>{row.countWithRegister} <span className="text-gray-400 font-normal ml-1">({row.percentageWithRegister}%)</span></td>
+                                          <td className={`p-3 border-r border-gray-100 text-center ${getPercentageColorClass(row.percentageWithChartbooklet)}`}>{row.countWithChartbooklet} <span className="text-gray-400 font-normal ml-1">({row.percentageWithChartbooklet}%)</span></td>
+                                          <td className={`p-3 border-r border-gray-100 text-center ${getPercentageColorClass(row.percentageWithWeightScale)}`}>{row.countWithWeightScale} <span className="text-gray-400 font-normal ml-1">({row.percentageWithWeightScale}%)</span></td>
+                                          <td className={`p-3 text-center ${getPercentageColorClass(row.percentageWithOrtCorner)}`}>{row.countWithOrtCorner} <span className="text-gray-400 font-normal ml-1">({row.percentageWithOrtCorner}%)</span></td>
+                                      </tr>
+                                  ))
+                                  }
+                                </tbody>
+                            </table>
+                        </div>
+                    </Card>
+                </div>
+            </>
+            )}
+        </div>
+    );
+};
+
+
+// --- CRITICAL CARE DASHBOARD ---
+const CRITICAL_EQUIPMENT_SPEC = { 
+    'etat_cpap': 'ETAT CPAP', 
+    'etat_suction_machine': 'ETAT Suction',
+    'hdu_bed_capacity': 'HDU Beds', 
+    'hdu_cpap': 'HDU CPAP', 
+    'picu_bed_capacity': 'PICU Beds' 
+};
+const CRITICAL_EQUIPMENT_KEYS = Object.keys(CRITICAL_EQUIPMENT_SPEC);
+
+export const CriticalCareCoverageDashboard = () => {
+    const { healthFacilities: allFacilities, isLoading } = useDataCache();
+    const loading = isLoading.healthFacilities;
+    const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
+
+    const [stateFilter, setStateFilter] = useState(''); 
+    const [localityFilter, setLocalityFilter] = useState(''); 
+    const [ownershipFilter, setOwnershipFilter] = useState(''); 
+    const [projectFilter, setProjectFilter] = useState('');
+    const [mapViewLevel, setMapViewLevel] = useState('state');
+    
+    const [copyStatus, setCopyStatus] = useState('');
+    const [table1CopyStatus, setTable1CopyStatus] = useState('');
+    const [table2CopyStatus, setTable2CopyStatus] = useState('');
+    
+    const [tooltipData, setTooltipData] = useState(null); 
+    const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
+    const [showFacilityMarkers, setShowFacilityMarkers] = useState(true);
+
+    const dashboardSectionRef = useRef(null);
+    const coverageTableRef = useRef(null);
+    const equipmentTableRef = useRef(null);
+    
+    const isLocalityView = !!stateFilter; 
+    const projectOptions = useMemo(() => [...new Set(activeFacilities.map(f => f.project_name?.trim()).filter(Boolean))].sort(), [activeFacilities]);
+
+    const isTargetFacility = useCallback((f) => ['مستشفى', 'مستشفى ريفي'].includes(f['نوع_المؤسسةالصحية']) || f.eenc_service_type === 'pediatric', []);
+    const hasETAT = useCallback((f) => isTargetFacility(f) && f.etat_has_service === 'Yes', [isTargetFacility]);
+    const hasHDU = useCallback((f) => f.hdu_has_service === 'Yes', []);
+    const hasPICU = useCallback((f) => f.picu_has_service === 'Yes', []);
+    
+    const locationFilteredFacilities = useMemo(() => {
+        return activeFacilities.filter(f => {
+            if(f['الولاية'] === 'إتحادي') return false;
             if (stateFilter && f['الولاية'] !== stateFilter) return false;
             if (localityFilter && f['المحلية'] !== localityFilter) return false;
             if (ownershipFilter && f.facility_ownership !== ownershipFilter) return false;
@@ -1456,433 +1132,232 @@ export const IMNCICoverageDashboard = () => {
         });
     }, [activeFacilities, stateFilter, localityFilter, ownershipFilter, projectFilter]); 
 
-    const filteredFacilities = useMemo(() => {
-        if (!equipmentFilter) {
-            return locationFilteredFacilities; 
-        }
-        return locationFilteredFacilities.filter(f => {
-            return f[equipmentFilter] === 'Yes';
-        });
-    }, [locationFilteredFacilities, equipmentFilter]); 
+    const kpiData = useMemo(() => {
+        const totalTarget = locationFilteredFacilities.filter(isTargetFacility).length;
+        const totalETAT = locationFilteredFacilities.filter(hasETAT).length;
+        const totalHDU = locationFilteredFacilities.filter(hasHDU).length;
+        const totalPICU = locationFilteredFacilities.filter(hasPICU).length;
+        return {
+            totalTarget, totalETAT, totalHDU, totalPICU,
+            etatCoveragePercentage: totalTarget > 0 ? Math.round((totalETAT / totalTarget) * 100) : 0
+        };
+    }, [locationFilteredFacilities, isTargetFacility, hasETAT, hasHDU, hasPICU]); 
 
-    const functioningPhcs = useMemo(() => locationFilteredFacilities.filter(f => f['هل_المؤسسة_تعمل'] === 'Yes' && (f['نوع_المؤسسةالصحية'] === 'وحدة صحة الاسرة' || f['نوع_المؤسسةالصحية'] === 'مركز صحة الاسرة')), [locationFilteredFacilities]);
-    
-    const imnciInPhcs = useMemo(() => filteredFacilities.filter(f => 
-        f['هل_المؤسسة_تعمل'] === 'Yes' && 
-        (f['نوع_المؤسسةالصحية'] === 'وحدة صحة الاسرة' || f['نوع_المؤسسةالصحية'] === 'مركز صحة الاسرة') && 
-        f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes'
-    ), [filteredFacilities]);
-
-    const imnciCoveragePercentage = useMemo(() => functioningPhcs.length > 0 ? Math.round((imnciInPhcs.length / functioningPhcs.length) * 100) : 0, [imnciInPhcs, functioningPhcs]);
-
-    const isLocalityView = !!stateFilter;
-    const aggregationLevelName = isLocalityView ? 'Locality' : 'State';
-
-    const allLocalitiesCoverageDataIMNCI = useMemo(() => {
-        const filteredNationalFacilities = activeFacilities.filter(f => f['الولاية'] !== 'إتحادي');
-        const s={};
-        Object.entries(STATE_LOCALITIES).forEach(([sK,sD])=>{
-            if(sK==='إتحادي')return;
-            sD.localities.forEach(l=>{s[l.en]={key:l.en,name:l.en,state:sK,totalFunctioningPhc:0,totalPhcWithImnci:0};});
-        });
-        filteredNationalFacilities.forEach(f=>{
-            if (ownershipFilter && f.facility_ownership !== ownershipFilter) return;
-            if (projectFilter && f.project_name !== projectFilter) return;
-            const key=f['المحلية'];
-            if(!key||!s[key])return;
-            const isPhc=f['نوع_المؤسسةالصحية']==='وحدة صحة الاسرة'||f['نوع_المؤسسةالصحية']==='مركز صحة الاسرة';
-            if(isPhc&&f['هل_المؤسسة_تعمل']==='Yes'){
-                s[key].totalFunctioningPhc++;
-                if(f['وجود_العلاج_المتكامل_لامراض_الطفولة']==='Yes'){s[key].totalPhcWithImnci++;}
-            }
-        });
-        return Object.values(s).map(l=>({...l,coverage:l.totalFunctioningPhc>0?Math.round((l.totalPhcWithImnci/l.totalFunctioningPhc)*100):0,}));
-    }, [activeFacilities, ownershipFilter, projectFilter]);
-
-    const tableCoverageData = useMemo(() => {
-        const s={};
-        const aggKey=isLocalityView?'المحلية':'الولاية';
-
-        locationFilteredFacilities.forEach(f=>{
-            const key=f[aggKey];
-            if(!key || key === 'إتحادي')return;
-            if(!s[key]){
-                let name;
-                if(isLocalityView){
-                    const lI=STATE_LOCALITIES[stateFilter]?.localities.find(l=>l.en===key);
-                    name=lI?.en||key;
-                }else{
-                    name=key;
-                }
-                s[key]={name,key,totalFunctioningPhc:0,totalPhcWithImnci:0};
-            }
-            const isPhc=f['نوع_المؤسسةالصحية']==='وحدة صحة الاسرة'||f['نوع_المؤسسةالصحية']==='مركز صحة الاسرة';
-            if(isPhc&&f['هل_المؤسسة_تعمل']==='Yes'){
-                s[key].totalFunctioningPhc++;
-            }
-        });
-
-        filteredFacilities.forEach(f => {
-            const key=f[aggKey];
-            if(!key || key === 'إتحادي' || !s[key]) return; 
-            
-            const isPhc=f['نوع_المؤسسةالصحية']==='وحدة صحة الاسرة'||f['نوع_المؤسسةالصحية']==='مركز صحة الاسرة';
-            if(isPhc && f['هل_المؤسسة_تعمل']==='Yes' && f['وجود_العلاج_المتكامل_لامراض_الطفولة']==='Yes'){
-                s[key].totalPhcWithImnci++;
-            }
-        });
-
-        return Object.values(s).map(st=>({...st,coverage:st.totalFunctioningPhc>0?Math.round((st.totalPhcWithImnci/st.totalFunctioningPhc)*100):0})).sort((a,b)=>a.name.localeCompare(b.name));
-    }, [locationFilteredFacilities, filteredFacilities, stateFilter, isLocalityView]); 
-
-    const tableToolsData = useMemo(() => {
-        const s={};
-        const aggKey=isLocalityView?'المحلية':'الولاية';
-        const facProc = imnciInPhcs; 
-        facProc.forEach(f=>{
-            const key=f[aggKey];
-             if(!key || key === 'إتحادي')return;
-            if(!s[key]){
-                let name;
-                if(isLocalityView){
-                    const lI=STATE_LOCALITIES[stateFilter]?.localities.find(l=>l.en===key);
-                    name=lI?.en||key;
-                }else{
-                    name=key;
-                }
-                s[key]={name,key,totalImnciPhcs:0,countWithRegister:0,countWithChartbooklet:0,countWithWeightScale:0,countWithOrtCorner:0};
-            }
-            s[key].totalImnciPhcs++;
-            if(f['وجود_سجل_علاج_متكامل']==='Yes')s[key].countWithRegister++;
-            if(f['وجود_كتيب_لوحات']==='Yes')s[key].countWithChartbooklet++;
-            if(f['ميزان_وزن']==='Yes')s[key].countWithWeightScale++;
-            if(f['غرفة_إرواء']==='Yes')s[key].countWithOrtCorner++;
-        });
-        return Object.values(s).map(st=>{const total=st.totalImnciPhcs;return{...st,percentageWithRegister:total>0?Math.round((st.countWithRegister/total)*100):0,percentageWithChartbooklet:total>0?Math.round((st.countWithChartbooklet/total)*100):0,percentageWithWeightScale:total>0?Math.round((st.countWithWeightScale/total)*100):0,percentageWithOrtCorner:total>0?Math.round((st.countWithOrtCorner/total)*100):0};}).sort((a,b)=>a.name.localeCompare(b.name));
-    }, [imnciInPhcs, stateFilter, isLocalityView]);
-
-    const facilityLocationMarkers = useMemo(() =>
-        imnciInPhcs.filter(f => f['_الإحداثيات_longitude'] && f['_الإحداثيات_latitude'])
-                   .map(f => ({
-                       key: f.id,
-                       name: f['اسم_المؤسسة'],
-                       coordinates: [f['_الإحداثيات_longitude'], f['_الإحداثيات_latitude']]
-                   })),
-        [imnciInPhcs]
-    );
-    
-    const nationalMapData = useMemo(() => {
-        if (!activeFacilities.length) return [];
+    const { tableData, mapData } = useMemo(() => {
         const s = {};
-        activeFacilities.forEach(f => {
-            if (ownershipFilter && f.facility_ownership !== ownershipFilter) return;
-            if (projectFilter && f.project_name !== projectFilter) return;
-            const k = f['الولاية'];
-            if (!k || k === 'إتحادي') return;
-            if (!s[k]) s[k] = { tFP: 0, tPI: 0 };
-            const isPhc = f['نوع_المؤسسةالصحية'] === 'وحدة صحة الاسرة' || f['نوع_المؤسسةالصحية'] === 'مركز صحة الاسرة';
-            if (isPhc && f['هل_المؤسسة_تعمل'] === 'Yes') {
-                s[k].tFP++;
-                if (f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes') s[k].tPI++;
+        const aggF = stateFilter ? 'المحلية' : 'الولاية';
+        locationFilteredFacilities.forEach(f => {
+            const key = f[aggF];
+            if (!key || key === 'إتحادي') return;
+            if (!s[key]) s[key] = { name: stateFilter ? (STATE_LOCALITIES[stateFilter]?.localities.find(l => l.en === key)?.en || key) : key, key, totalTarget: 0, withETAT: 0, withHDU: 0, withPICU: 0 };
+            
+            if (isTargetFacility(f)) {
+                s[key].totalTarget++;
+                if (hasETAT(f)) s[key].withETAT++;
             }
+            if (hasHDU(f)) s[key].withHDU++;
+            if (hasPICU(f)) s[key].withPICU++;
         });
-        return Object.entries(s).map(([sK, c]) => ({
-            state: sK,
-            percentage: c.tFP > 0 ? Math.round((c.tPI / c.tFP) * 100) : 0,
-            coordinates: mapCoordinates[sK] ? [mapCoordinates[sK].lng, mapCoordinates[sK].lat] : [0, 0]
-        }));
-    }, [activeFacilities, ownershipFilter, projectFilter]);
+        const tD = Object.values(s).map(st => ({ ...st, etatCoverage: st.totalTarget > 0 ? Math.round((st.withETAT / st.totalTarget) * 100) : 0 })).sort((a, b) => b.etatCoverage - a.etatCoverage); 
+        const mD = tD.map(st => ({ state: st.key, percentage: st.etatCoverage, coordinates: mapCoordinates[st.key] ? [mapCoordinates[st.key].lng, mapCoordinates[st.key].lat] : [0, 0] }));
+        return { tableData: tD, mapData: mD };
+    }, [locationFilteredFacilities, stateFilter, isTargetFacility, hasETAT, hasHDU, hasPICU]); 
 
-    const selectedStateMapData = useMemo(() => { if(!stateFilter)return null;return nationalMapData.find(s=>s.state===stateFilter); }, [stateFilter, nationalMapData]);
-    const mapViewConfig = useMemo(() => { const sC=stateFilter?mapCoordinates[stateFilter]:null;if(sC){return{center:[sC.lng,sC.lat],scale:sC.scale,focusedState:stateFilter};}return{center:[30,15.5],scale:2000,focusedState:null}; }, [stateFilter]);
-    const fullscreenMapViewConfig = useMemo(() => ({ ...mapViewConfig }), [mapViewConfig]);
+    const equipmentTableData = useMemo(() => {
+        const aggK = stateFilter ? 'اسم_المؤسسة' : 'الولاية';
+        const facP = locationFilteredFacilities.filter(f => hasETAT(f) || hasHDU(f) || hasPICU(f)); 
+        const s = {};
+        facP.forEach(f => {
+            const key = f[aggK];
+            if (!key || key === 'إتحادي') return;
+            if (!s[key]) s[key] = { name: stateFilter ? f['اسم_المؤسسة'] : key, key, ...Object.fromEntries(CRITICAL_EQUIPMENT_KEYS.map(k => [k, 0])) };
+            CRITICAL_EQUIPMENT_KEYS.forEach(eK => { const val = f[eK]; s[key][eK] += (Number(val) || 0); });
+        });
+        return Object.values(s).filter(st => st.key !== 'إتحادي').sort((a, b) => (b.hdu_bed_capacity || 0) - (a.hdu_bed_capacity || 0));
+    }, [locationFilteredFacilities, stateFilter, hasETAT, hasHDU, hasPICU]);
+
+    const facilityLocationMarkers = useMemo(() => locationFilteredFacilities.filter(f => (hasETAT(f) || hasHDU(f) || hasPICU(f)) && f['_الإحداثيات_longitude']).map(f=>({key:f.id,name:f['اسم_المؤسسة'],coordinates:[f['_الإحداثيات_longitude'],f['_الإحداثيات_latitude']]})), [locationFilteredFacilities, hasETAT, hasHDU, hasPICU]);
+    const mapViewConfig = useMemo(() => { const sC=stateFilter?mapCoordinates[stateFilter]:null; return sC ? {center:[sC.lng,sC.lat],scale:sC.scale,focusedState:stateFilter} : {center:[30,15.5],scale:2000,focusedState:null}; }, [stateFilter]);
+    
     const handleStateChange = (e) => { setStateFilter(e.target.value); setLocalityFilter(''); };
-    const getIMNCIStateToolsSummary = useCallback((stateKey)=>{ const rel=activeFacilities.filter(f=>f['الولاية']===stateKey&&f['وجود_العلاج_المتكامل_لامراض_الطفولة']==='Yes'&&(f['نوع_المؤسسةالصحية']==='وحدة صحة الاسرة'||f['نوع_المؤسسةالصحية']==='مركز صحة الاسرة') && f['هل_المؤسسة_تعمل']==='Yes' && (!ownershipFilter || f.facility_ownership === ownershipFilter) && (!projectFilter || f.project_name === projectFilter));const sum={...Object.fromEntries(IMNCI_TOOLS_KEYS.map(k=>[IMNCI_TOOLS_SPEC[k],0]))};rel.forEach(f=>{if(f['وجود_سجل_علاج_متكامل']==='Yes')sum[IMNCI_TOOLS_SPEC.countWithRegister]++;if(f['وجود_كتيب_لوحات']==='Yes')sum[IMNCI_TOOLS_SPEC.countWithChartbooklet]++;if(f['ميزان_وزن']==='Yes')sum[IMNCI_TOOLS_SPEC.countWithWeightScale]++;if(f['غرفة_إرواء']==='Yes')sum[IMNCI_TOOLS_SPEC.countWithOrtCorner]++;});return{totalUnits:rel.length,summary:sum}; }, [activeFacilities, ownershipFilter, projectFilter]);
-    const getIMNCILocalityToolsSummary = useCallback((localityKey, stateKey)=>{ const rel=activeFacilities.filter(f=>f['الولاية']===stateKey&&f['المحلية']===localityKey&&f['وجود_العلاج_المتكامل_لامراض_الطفولة']==='Yes'&&(f['نوع_المؤسسةالصحية']==='وحدة صحة الاسرة'||f['نوع_المؤسسةالصحية']==='مركز صحة الاسرة') && f['هل_المؤسسة_تعمل']==='Yes' && (!ownershipFilter || f.facility_ownership === ownershipFilter) && (!projectFilter || f.project_name === projectFilter));const sum={...Object.fromEntries(IMNCI_TOOLS_KEYS.map(k=>[IMNCI_TOOLS_SPEC[k],0]))};rel.forEach(f=>{if(f['وجود_سجل_علاج_متكامل']==='Yes')sum[IMNCI_TOOLS_SPEC.countWithRegister]++;if(f['وجود_كتيب_لوحات']==='Yes')sum[IMNCI_TOOLS_SPEC.countWithChartbooklet]++;if(f['ميزان_وزن']==='Yes')sum[IMNCI_TOOLS_SPEC.countWithWeightScale]++;if(f['غرفة_إرواء']==='Yes')sum[IMNCI_TOOLS_SPEC.countWithOrtCorner]++;});return{totalUnits:rel.length,summary:sum}; }, [activeFacilities, ownershipFilter, projectFilter]);
-    const handleStateHover = useCallback((stateKey, event)=>{ if(stateFilter||mapViewLevel==='locality')return; const rowData=nationalMapData.find(d=>d.state===stateKey); if(!rowData)return; const toolsSummary=getIMNCIStateToolsSummary(stateKey); const statePhcs = activeFacilities.filter(f => f['الولاية'] === stateKey && f['هل_المؤسسة_تعمل'] === 'Yes' && (f['نوع_المؤسسةالصحية'] === 'وحدة صحة الاسرة' || f['نوع_المؤسسةالصحية'] === 'مركز صحة الاسرة') && (!ownershipFilter || f.facility_ownership === ownershipFilter) && (!projectFilter || f.project_name === projectFilter)); const stateImnciPhcs = statePhcs.filter(f => f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes'); setTooltipData({title:`${stateKey} (${stateKey})`,dataRows:[{label:"IMNCI Coverage",value:`${rowData.percentage}% (${stateImnciPhcs.length} / ${statePhcs.length})`}],equipmentSummary:{...toolsSummary,title:"IMNCI Tools Summary"}});setHoverPosition({x:event.clientX,y:event.clientY}); }, [activeFacilities, nationalMapData, stateFilter, mapViewLevel, getIMNCIStateToolsSummary, ownershipFilter, projectFilter]);
-    const handleMapLocalityHover = useCallback((geoProps, event)=>{ const locKey=geoProps.admin_2;if(!locKey) return; let dataStore=stateFilter?tableCoverageData:allLocalitiesCoverageDataIMNCI; const locData=dataStore.find(l=>l.key===locKey);if(!locData)return;const stateKey=stateFilter?stateFilter:locData.state; const toolsSummary=getIMNCILocalityToolsSummary(locKey,stateKey);setTooltipData({title:`${locData.name} (${locData.key})`,dataRows:[{label:"IMNCI Coverage",value:`${locData.coverage}% (${locData.totalPhcWithImnci} / ${locData.totalFunctioningPhc})`}],equipmentSummary:{...toolsSummary,title:"IMNCI Tools Summary"}});setHoverPosition({x:event.clientX,y:event.clientY}); }, [tableCoverageData, allLocalitiesCoverageDataIMNCI, stateFilter, getIMNCILocalityToolsSummary]);
-    const handleMapMouseLeave = useCallback(() => { setTooltipData(null); }, []);
-    const handleMouseMove = useCallback((event) => { if (tooltipData) { setHoverPosition({ x: event.clientX, y: event.clientY }); } }, [tooltipData]);
-    const currentMapViewLevel = isLocalityView ? 'locality' : mapViewLevel;
-    
-    const handleDownloadMap = useCallback((format = 'jpg') => {
-        const targetRef = isMapFullscreen ? fullscreenModalRef : dashboardSectionRef;
-         if (targetRef.current) { 
-            html2canvas(targetRef.current, { 
-                useCORS: true, 
-                scale: 2, 
-                backgroundColor: '#ffffff',
-                ignoreElements: (element) => element.classList.contains('ignore-for-export')
-            }).then(canvas => { 
-                const baseName = isMapFullscreen ? 'imnci-map-fullscreen' : 'imnci-dashboard';
-                const filename = `${baseName}-${stateFilter || 'sudan'}.${format}`; 
-                if (format === 'pdf') { 
-                    const imgData = canvas.toDataURL('image/jpeg', 0.9); 
-                    const pdf = new jsPDF({ orientation: canvas.width > canvas.height ? 'l' : 'p', unit: 'px', format: [canvas.width, canvas.height] }); 
-                    pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height); 
-                    pdf.save(filename); 
-                } else { 
-                    const image = canvas.toDataURL("image/jpeg", 0.9); 
-                    const link = document.createElement('a'); 
-                    link.href = image; 
-                    link.download = filename; 
-                    document.body.appendChild(link); 
-                    link.click(); 
-                    document.body.removeChild(link); 
-                } 
-            }).catch(err => console.error("Error generating map image:", err)); 
-        }
-    }, [stateFilter, currentMapViewLevel, isMapFullscreen, dashboardSectionRef, fullscreenModalRef]); 
-    
+    const currentMapViewLevel = stateFilter ? 'locality' : mapViewLevel;
+    const aggregationLevelName = stateFilter ? 'Locality' : 'State';
+
+    const handleMapLocalityHover = useCallback((geoProps, event)=>{ 
+        const locKey=geoProps.admin_2;
+        if (!locKey) return; 
+        const locData = tableData.find(l=>l.key===locKey);
+        if(!locData) return;
+        setTooltipData({
+            title: `${locData.name} (${locData.key})`,
+            dataRows: [{label: "ETAT Coverage", value: `${locData.etatCoverage}% (${locData.withETAT} / ${locData.totalTarget})`}]
+        });
+        setHoverPosition({x:event.clientX,y:event.clientY}); 
+    }, [tableData]);
+
+    const handleStateHover = useCallback((stateKey, event)=>{ 
+        if(stateFilter||mapViewLevel==='locality')return; 
+        const rowData=tableData.find(d=>d.key===stateKey); 
+        if(!rowData) return; 
+        setTooltipData({
+            title: `${rowData.name} (${rowData.key})`,
+            dataRows: [{label: "ETAT Coverage", value: `${rowData.etatCoverage}% (${rowData.withETAT} / ${rowData.totalTarget})`}]
+        });
+        setHoverPosition({x:event.clientX,y:event.clientY}); 
+    }, [tableData, stateFilter, mapViewLevel]);
+
+    const handleMapMouseLeave = useCallback(()=>{ setTooltipData(null); }, []);
+    const handleMouseMove = useCallback((event)=>{ if(tooltipData){setHoverPosition({x:event.clientX,y:event.clientY});} }, [tooltipData]);
+
     const handleCopyImage = useCallback(async () => {
-        const targetRef = dashboardSectionRef;
-        if (targetRef.current && navigator.clipboard?.write) {
+        if (dashboardSectionRef.current && navigator.clipboard?.write) {
             setCopyStatus('Copying...');
             try {
-                const canvas = await html2canvas(targetRef.current, { 
-                    useCORS: true, 
-                    scale: 2, 
-                    backgroundColor: '#ffffff', 
-                    logging: false, 
-                    ignoreElements: (element) => element.classList.contains('ignore-for-export') 
-                });
-                canvas.toBlob(async (blob) => { if (blob) { await navigator.clipboard.write([ new ClipboardItem({ 'image/png': blob }) ]); setCopyStatus('Copied!'); } else { throw new Error('Canvas to Blob failed'); } }, 'image/png', 0.95);
-            } catch (err) { console.error("Failed to copy image:", err); setCopyStatus('Failed'); }
-            finally { setTimeout(() => setCopyStatus(''), 2000); }
-        } else { console.error("Clipboard API not available or target element not found."); setCopyStatus('Failed'); setTimeout(() => setCopyStatus(''), 2000); }
+                const canvas = await html2canvas(dashboardSectionRef.current, { useCORS: true, scale: 2, backgroundColor: '#ffffff', ignoreElements: (e) => e.classList.contains('ignore-for-export') });
+                canvas.toBlob(async (blob) => { if (blob) { await navigator.clipboard.write([ new ClipboardItem({ 'image/png': blob }) ]); setCopyStatus('Copied!'); } }, 'image/png', 0.95);
+            } catch (err) { setCopyStatus('Failed'); } finally { setTimeout(() => setCopyStatus(''), 2000); }
+        }
     }, []);
-
-    const mapLocationName = stateFilter ? stateFilter : 'Sudan';
-    const mapTitle = `IMNCI Geographical Distribution in ${mapLocationName}`;
 
     return (
         <div onMouseMove={handleMouseMove}>
-            <PageHeader title="IMNCI Service Coverage Overview" subtitle="Key performance indicators for child health services." />
+            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm ignore-for-export mb-6 mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <FormGroup label="State"><Select value={stateFilter} onChange={handleStateChange}><option value="">All States</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{sKey}</option>)}</Select></FormGroup>
+                    <FormGroup label="Locality"><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">All Localities</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{l.en}</option>)}</Select></FormGroup>
+                    <FormGroup label="Ownership"><Select value={ownershipFilter} onChange={(e) => setOwnershipFilter(e.target.value)}><option value="">All Ownerships</option>{OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
+                    <FormGroup label="Project"><Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}><option value="">All Projects</option>{projectOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
+                </div>
+            </div>
 
-             <div ref={dashboardSectionRef} className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch relative">
-
-                 <div className="flex flex-col gap-6 lg:col-span-1">
-                    <Card className="ignore-for-export">
-                        <div className="p-3 grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                            <FormGroup label="State"><Select value={stateFilter} onChange={handleStateChange}><option value="">All States</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{sKey}</option>)}</Select></FormGroup>
-                            <FormGroup label="Locality"><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">All Localities</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{l.en}</option>)}</Select></FormGroup>
-                            <FormGroup label="Ownership">
-                                <Select value={ownershipFilter} onChange={(e) => setOwnershipFilter(e.target.value)}>
-                                    <option value="">All Ownerships</option>
-                                    {OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                </Select>
-                            </FormGroup>
-                            <FormGroup label="Project">
-                                <Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}>
-                                    <option value="">All Projects</option>
-                                    {projectOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                </Select>
-                            </FormGroup>
-                            <FormGroup label="Has Tool">
-                                <Select value={equipmentFilter} onChange={(e) => setEquipmentFilter(e.target.value)}>
-                                    <option value="">Any</option>
-                                    {Object.entries(IMNCI_FILTER_SPEC).map(([key, label]) => (
-                                        <option key={key} value={key}>{label}</option>
-                                    ))}
-                                </Select>
-                            </FormGroup>
-                        </div>
-                    </Card>
-
+            <div ref={dashboardSectionRef} className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch relative">
+                <div className="lg:col-span-1 flex flex-col gap-4 h-full">
                     {loading ? <Spinner/> : (
                         <>
-                            <TotalCountCard title="Total Functioning PHC Facilities" count={functioningPhcs.length} />
-                            <TotalCountCard title="Total PHC Facilities with IMNCI" count={imnciInPhcs.length} />
-                            <ValueTotalPercentageCard title="IMNCI Service Coverage in PHCs" value={imnciInPhcs.length} total={functioningPhcs.length} percentage={imnciCoveragePercentage} />
+                            <TotalCountCard title="Target Hospitals (ETAT)" count={kpiData.totalTarget} className="flex-1" borderClass="border-l-slate-400" valueClass="text-slate-700" decorationColor="bg-slate-500" />
+                            <ValueTotalPercentageCard title="Hospitals with ETAT" value={kpiData.totalETAT} total={kpiData.totalTarget} percentage={kpiData.etatCoveragePercentage} className="flex-1" borderClass="border-l-sky-500" valueClass="text-sky-600" decorationColor="bg-sky-500" colorTheme="sky" />
+                            <div className="flex gap-4 flex-1">
+                                <TotalCountCard title="Facilities with HDU" count={kpiData.totalHDU} className="flex-1" borderClass="border-l-teal-500" valueClass="text-teal-700" decorationColor="bg-teal-500" />
+                                <TotalCountCard title="Facilities with PICU" count={kpiData.totalPICU} className="flex-1" borderClass="border-l-indigo-500" valueClass="text-indigo-700" decorationColor="bg-indigo-500" />
+                            </div>
                         </>
                     )}
                 </div>
 
-                 {loading ? <div className="lg:col-span-2 flex justify-center items-center h-64"><Spinner/></div> : (
-                    <Card className="p-0 flex flex-col flex-grow lg:col-span-2">
-                         <div className="p-4 border-b flex flex-col sm:flex-row sm:justify-between sm:items-center flex-shrink-0 gap-2 sm:gap-0">
-                             <h3 className="text-xl font-medium text-gray-700 text-left sm:text-center">IMNCI Geographical Distribution</h3>
-                             <div className="flex items-center flex-wrap justify-start sm:justify-end gap-1 w-full sm:w-auto ignore-for-export">
-                                {!isLocalityView && (
-                                    <>
-                                        <div className="text-sm font-medium text-gray-500">View:</div>
-                                        <div className="flex rounded-md shadow-sm">
-                                            <button onClick={() => setMapViewLevel('state')} className={`px-2 py-1 text-xs font-semibold rounded-l-md ${mapViewLevel === 'state' ? 'bg-sky-700 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`} > State </button>
-                                            <button onClick={() => setMapViewLevel('locality')} className={`px-2 py-1 text-xs font-semibold rounded-r-md border-l border-gray-300 ${mapViewLevel === 'locality' ? 'bg-sky-700 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`} > Locality </button>
-                                        </div>
-                                    </>
-                                )}
-                                <button onClick={() => handleDownloadMap('jpg')} title="Download Map as JPG" className="ml-1 px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">JPG</button>
-                                <button onClick={() => handleDownloadMap('pdf')} title="Download Map as PDF" className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">PDF</button>
-                                 <button
-                                    onClick={handleCopyImage}
-                                    title="Copy Dashboard Image"
-                                    disabled={!!copyStatus && copyStatus !== 'Failed'}
-                                    className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors relative min-w-[70px] text-center disabled:opacity-50 disabled:cursor-wait"
-                                >
-                                    {copyStatus || 'Copy Image'}
-                                </button>
-                                <button
-                                    onClick={() => setShowFacilityMarkers(!showFacilityMarkers)}
-                                    title={showFacilityMarkers ? "Hide Facilities" : "Show Facilities"}
-                                    className={`ml-1 px-2 py-1 text-xs font-semibold rounded-md transition-colors ${
-                                        showFacilityMarkers ? 'bg-sky-700 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                    }`}
-                                >
-                                    {showFacilityMarkers ? 'Hide' : 'Show'} Facilities
-                                </button>
-                                <button onClick={() => setIsMapFullscreen(true)} className="px-2 py-1 text-xs font-semibold text-sky-700 bg-sky-100 rounded-md hover:bg-sky-200 transition-colors">Full</button>
+                {loading ? <div className="lg:col-span-2 flex justify-center items-center h-64"><Spinner/></div> : (
+                    <div className="lg:col-span-2 flex flex-col h-full">
+                        <Card className="p-0 flex flex-col flex-grow shadow-sm border border-gray-200 rounded-xl h-full">
+                             <div className="p-4 md:p-5 border-b bg-slate-50/50 rounded-t-xl flex justify-between items-start gap-4">
+                                 <h3 className="text-lg font-bold text-gray-800 leading-tight">Geographical Map (ETAT Coverage)</h3>
+                                 <button onClick={handleCopyImage} className="text-gray-400 hover:text-sky-600 transition-colors p-1 mt-0.5 shrink-0" disabled={!!copyStatus && copyStatus !== 'Failed'}>{copyStatus ? <span className="text-[10px] font-semibold text-sky-600">{copyStatus}</span> : <CopyIcon />}</button>
                             </div>
-                        </div>
-                        <div ref={mapContainerRef} className="flex-grow flex flex-col bg-white">
-                             <h4 className="text-center text-lg font-bold text-gray-600 py-1 flex-shrink-0">{mapTitle}</h4>
-                             <div className="flex justify-center items-center gap-2 p-1 text-sm text-gray-600">
-                                <span className="font-bold">Legend:</span>
-                                <div className="flex items-center gap-1"><div className="w-4 h-4 rounded-full border border-gray-300" style={{ backgroundColor: '#6B6B6B' }}></div><span className='text-xs'>0-39% (or No Data)</span></div>
-                                <div className="flex items-center gap-1"><div className="w-4 h-4 rounded-full border border-gray-300" style={{ backgroundColor: '#6266B1' }}></div><span className='text-xs'>40-74%</span></div>
-                                <div className="flex items-center gap-1"><div className="w-4 h-4 rounded-full border border-gray-300" style={{ backgroundColor: '#313695' }}></div><span className='text-xs'>&ge;75%</span></div>
-                                <div className="flex items-center gap-1"><div className="w-4 h-4 rounded-full border-2 border-white ring-1 ring-[#313695]" style={{ backgroundColor: '#313695' }}></div><span className='text-xs'>Facility</span></div>
-                             </div>
-                             <div className='flex-grow min-h-[450px]'>
-                                <div className='flex-grow min-h-0 h-full'>
-                                    <SudanMap
-                                        data={!isLocalityView && currentMapViewLevel === 'state' ? nationalMapData : []}
-                                        localityData={isLocalityView ? tableCoverageData : (!isLocalityView && currentMapViewLevel === 'locality' ? allLocalitiesCoverageDataIMNCI : [])}
-                                        facilityMarkers={showFacilityMarkers ? facilityLocationMarkers : []}
-                                        viewLevel={currentMapViewLevel}
-                                        center={mapViewConfig.center}
-                                        scale={mapViewConfig.scale}
-                                        focusedState={mapViewConfig.focusedState}
-                                        onStateHover={handleStateHover} onStateLeave={handleMapMouseLeave}
-                                        onLocalityHover={handleMapLocalityHover} onLocalityLeave={handleMapMouseLeave}
-                                        isMovable={false}
-                                        pannable={false}
-                                    />
+                            <div className="flex-grow min-h-[400px] p-2 relative flex flex-col">
+                                 <div className='flex-grow min-h-0 h-full w-full'>
+                                    <SudanMap data={!stateFilter && currentMapViewLevel === 'state' ? mapData : []} localityData={stateFilter ? tableData : []} facilityMarkers={showFacilityMarkers ? facilityLocationMarkers : []} viewLevel={currentMapViewLevel} {...mapViewConfig} onStateHover={handleStateHover} onLocalityHover={handleMapLocalityHover} onStateLeave={handleMapMouseLeave} onLocalityLeave={handleMapMouseLeave} isMovable={false} pannable={false} />
                                 </div>
                             </div>
-                        </div>
-                    </Card>
+                            <div className="bg-slate-50 border-t border-gray-200 rounded-b-xl py-3 px-4 flex flex-col xl:flex-row justify-between items-center gap-4">
+                                <MapLegend />
+                                <div className="flex flex-nowrap items-center gap-2 overflow-x-auto w-full xl:w-auto justify-end ignore-for-export">
+                                    {!stateFilter && (
+                                        <div className="flex rounded-md shadow-sm shrink-0 mr-1">
+                                            <button onClick={() => setMapViewLevel('state')} className={`px-3 py-1.5 text-xs font-semibold rounded-l-md ${mapViewLevel === 'state' ? 'bg-sky-700 text-white' : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'}`} > State </button>
+                                            <button onClick={() => setMapViewLevel('locality')} className={`px-3 py-1.5 text-xs font-semibold rounded-r-md ${mapViewLevel === 'locality' ? 'bg-sky-700 text-white border border-sky-700' : 'bg-white text-gray-700 hover:bg-gray-50 border border-l-0 border-gray-200'}`} > Locality </button>
+                                        </div>
+                                    )}
+                                    <button onClick={() => setShowFacilityMarkers(!showFacilityMarkers)} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors shadow-sm shrink-0 ${showFacilityMarkers ? 'bg-slate-700 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>{showFacilityMarkers ? 'Hide Fac.' : 'Show Fac.'}</button>
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
                  )}
-             </div>
+            </div>
 
             {!loading && (
             <>
-                <div className="mt-6 grid grid-cols-1 lg:grid-cols-1 gap-6">
-                    <Card className="p-0">
-                        <div className="p-4 border-b flex justify-between items-center">
-                            <div>
-                                <h3 className="text-lg font-medium text-gray-700"> {isLocalityView && selectedStateMapData ? `IMNCI Coverage in ${stateFilter} (State Overall: ${selectedStateMapData.percentage}%)` : `IMNCI Coverage by ${aggregationLevelName}` } </h3>
-                                <p className="text-sm text-gray-500 mt-1">Summary of PHC facilities based on current filters.</p>
-                            </div>
-                            <button onClick={() => copyTableAsImage(coverageTableRef, setTable1CopyStatus)} className="px-2 py-1 text-xs font-semibold text-sky-700 bg-sky-50 border border-sky-200 rounded hover:bg-sky-100 transition-colors"> {table1CopyStatus || 'Copy Image'} </button>
+                <div className="mt-6 grid grid-cols-1 gap-6 items-stretch relative">
+                    <Card className="p-0 flex flex-col overflow-hidden border border-gray-200 rounded-xl">
+                        <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
+                            <h3 className="text-lg font-bold text-gray-800">Critical Care Coverage by {aggregationLevelName}</h3>
+                            <button onClick={() => copyTableAsImage(coverageTableRef, setTable1CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table1CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table1CopyStatus}</span> : <CopyIcon />} </button>
                         </div>
-                        <div className="overflow-x-auto">
-                            <table ref={coverageTableRef} className="min-w-full text-sm">
+                        <div className="flex-grow overflow-x-auto p-4">
+                            <table ref={coverageTableRef} className='min-w-full text-xs border border-gray-200 rounded-lg overflow-hidden'>
                                 <thead>
                                     <tr>
-                                        {[aggregationLevelName, 'Functioning PHCs', 'PHCs with IMNCI', 'Coverage (%)'].map((h, i) => (
-                                            <th key={i} className="p-2 border bg-gray-100 text-left font-semibold">{h}</th>
-                                        ))}
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-left font-semibold text-gray-600 uppercase tracking-wider'>{aggregationLevelName}</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider'>Target Hospitals</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider'>With HDU</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider'>With PICU</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider'>With ETAT</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-left font-semibold text-gray-600 uppercase tracking-wider w-[35%]'>ETAT Coverage Chart</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                 {tableCoverageData.length === 0 ? <tr><td colSpan={4} className="p-4 text-center text-gray-500">No data matches the current filters.</td></tr> :
-                                 tableCoverageData.map(row => (<tr key={row.key}><td className="p-2 border font-medium text-gray-800">{row.name}</td><td className="p-2 border text-center">{row.totalFunctioningPhc}</td><td className="p-2 border text-center">{row.totalPhcWithImnci}</td><td className="p-2 border">{getCoverageBar(row.coverage)}</td></tr>))
-                                 }
+                                    {tableData.length === 0 ? <tr><td colSpan={6} className="p-4 text-center text-gray-500">No data matches the current filters.</td></tr> :
+                                     tableData.map(row => ( 
+                                        <tr key={row.key} className='hover:bg-blue-50/50 transition-colors border-b border-gray-100'>
+                                            <td className="p-3 font-medium text-gray-700">{row.name}</td>
+                                            <td className="p-3 text-center align-middle font-medium">{row.totalTarget}</td>
+                                            <td className="p-3 text-center align-middle font-medium">{row.withHDU}</td>
+                                            <td className="p-3 text-center align-middle font-medium">{row.withPICU}</td>
+                                            <td className="p-3 text-center font-bold text-sky-700 align-middle">{row.withETAT}</td>
+                                            <td className="p-3 align-middle">
+                                                <div className="flex items-center w-full">
+                                                    <div className="flex-grow bg-gray-200 rounded-sm h-3 overflow-hidden flex"><div className={`h-full transition-all shadow-sm ${row.etatCoverage >= 75 ? 'bg-sky-700' : row.etatCoverage >= 40 ? 'bg-sky-400' : 'bg-gray-600'}`} style={{ width: `${Math.max(row.etatCoverage, 1)}%` }}></div></div>
+                                                    <span className="ml-3 text-[11px] font-bold text-gray-700 w-8 text-right">{row.etatCoverage}%</span>
+                                                </div>
+                                            </td>
+                                        </tr> 
+                                    ))}
                                 </tbody>
                             </table>
                         </div>
                     </Card>
                 </div>
+
                 <div className="mt-6">
-                    <Card className="p-0">
-                        <div className="p-4 border-b flex justify-between items-center">
-                            <div>
-                                <h3 className="text-lg font-medium text-gray-700"> {isLocalityView && selectedStateMapData ? `IMNCI Tools Availability in ${stateFilter}` : `IMNCI Tools Availability by ${aggregationLevelName}` } </h3>
-                                <p className="text-sm text-gray-500 mt-1">Availability of key supplies in PHC facilities providing IMNCI services.</p>
-                            </div>
-                            <button onClick={() => copyTableAsImage(toolsTableRef, setTable2CopyStatus)} className="px-2 py-1 text-xs font-semibold text-sky-700 bg-sky-50 border border-sky-200 rounded hover:bg-sky-100 transition-colors"> {table2CopyStatus || 'Copy Image'} </button>
+                    <Card className="p-0 overflow-hidden border border-gray-200 rounded-xl">
+                        <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
+                            <h3 className="text-lg font-bold text-gray-800">Critical Care Capacity & Equipment</h3>
+                            <button onClick={() => copyTableAsImage(equipmentTableRef, setTable2CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table2CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table2CopyStatus}</span> : <CopyIcon />} </button>
                         </div>
-                         <div className="overflow-x-auto">
-                             <table ref={toolsTableRef} className="min-w-full text-sm">
-                                <thead>
+                        <div className="overflow-x-auto p-4">
+                            <table ref={equipmentTableRef} className="min-w-full table-auto border-collapse text-[10px] border border-gray-200">
+                                <thead className="bg-slate-50 border-b border-gray-200">
                                     <tr>
-                                        {[aggregationLevelName, 'PHCs w/ IMNCI', 'سجلات', 'كتيبات', 'ميزان وزن', 'غرفة ارواء'].map((h, i) => (
-                                            <th key={i} className="p-2 border bg-gray-100 text-left font-semibold">{h}</th>
-                                        ))}
+                                        <th className={`p-2 text-left font-semibold tracking-wider text-gray-600 uppercase align-bottom w-40`}><div className='font-bold break-words text-center'>{stateFilter ? 'Hospital Name' : aggregationLevelName}</div></th>
+                                        {Object.values(CRITICAL_EQUIPMENT_SPEC).map((header, index) => ( <th key={index} className={`p-2 text-left font-semibold tracking-wider text-gray-600 uppercase align-bottom w-20`}><div className='font-bold break-words text-center'>{header}</div></th> ))}
                                     </tr>
                                 </thead>
                                 <tbody>
-                                 {tableToolsData.length === 0 ? <tr><td colSpan={6} className="p-4 text-center text-gray-500">No data matches the current filters.</td></tr> :
-                                  tableToolsData.map(row => (<tr key={row.key}><td className="p-2 border font-medium text-gray-800">{row.name}</td><td className="p-2 border text-center">{row.totalImnciPhcs}</td><td className="p-2 border text-center">{`${row.countWithRegister} (${row.percentageWithRegister}%)`}</td><td className="p-2 border text-center">{`${row.countWithChartbooklet} (${row.percentageWithChartbooklet}%)`}</td><td className="p-2 border text-center">{`${row.countWithWeightScale} (${row.percentageWithWeightScale}%)`}</td><td className="p-2 border text-center">{`${row.countWithOrtCorner} (${row.percentageWithOrtCorner}%)`}</td></tr>))
-                                  }
+                                    {equipmentTableData.map(row => ( 
+                                        <tr key={row.name} className="hover:bg-slate-50 transition-colors border-b border-gray-100">
+                                            <td className={`font-medium text-gray-700 p-2 break-words`}>{row.name}</td>
+                                            {CRITICAL_EQUIPMENT_KEYS.map(key => { const value = row[key]; const cellClass = value === 0 ? 'bg-red-50 text-red-600 font-bold' : 'text-gray-700 font-medium'; return ( <td key={key} className={`p-2 ${cellClass} text-center border-l border-gray-100`}> {value} </td> ); })}
+                                        </tr> 
+                                    ))}
                                 </tbody>
                             </table>
                         </div>
                     </Card>
                 </div>
-
-                {isMapFullscreen && (
-                    <div ref={fullscreenModalRef} className="fixed inset-0 bg-white z-50 p-4 flex flex-col">
-                        <div className="flex justify-between items-center mb-4 flex-shrink-0">
-                             <h3 className="text-xl font-bold text-gray-800">{mapTitle}</h3>
-                             <div className='flex items-center gap-1 ignore-for-export'>
-                                <button onClick={() => handleDownloadMap('jpg')} title="Download Map as JPG" className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">JPG</button>
-                                <button onClick={() => handleDownloadMap('pdf')} title="Download Map as PDF" className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">PDF</button>
-                                <button onClick={() => setIsMapFullscreen(false)} className="px-4 py-2 text-sm font-bold text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 ml-1">Close</button>
-                             </div>
-                        </div>
-
-                        <div className="flex-grow min-h-0 flex gap-4">
-                            <div ref={fullscreenMapContainerRef} className={`flex-grow min-h-0 bg-white ${isLocalityView ? 'w-2/3' : 'w-full'}`}>
-                                <SudanMap
-                                    data={!isLocalityView && currentMapViewLevel === 'state' ? nationalMapData : []}
-                                    localityData={isLocalityView ? tableCoverageData : (!isLocalityView && currentMapViewLevel === 'locality' ? allLocalitiesCoverageDataIMNCI : [])}
-                                    facilityMarkers={showFacilityMarkers ? facilityLocationMarkers : []}
-                                    viewLevel={currentMapViewLevel}
-                                    center={fullscreenMapViewConfig.center}
-                                    scale={fullscreenMapViewConfig.scale}
-                                    focusedState={fullscreenMapViewConfig.focusedState}
-                                    onStateHover={handleStateHover} onStateLeave={handleMapMouseLeave}
-                                    onLocalityHover={handleMapLocalityHover} onLocalityLeave={handleMapMouseLeave}
-                                    isMovable={false}
-                                    pannable={false}
-                                />
-                            </div>
-
-                            {isLocalityView && (
-                                <div className="w-1/3 flex flex-col border border-gray-200 rounded-lg">
-                                    <h4 className="text-lg font-semibold p-3 border-b bg-gray-50">PHCs with IMNCI ({facilityLocationMarkers.length})</h4>
-                                    <div className="overflow-y-auto flex-grow min-h-0">
-                                        <ul className="divide-y divide-gray-200">
-                                            {facilityLocationMarkers.map(facility => (
-                                                <li key={facility.key} className="p-3 text-sm">
-                                                    {facility.name}
-                                                </li>
-
-                                            ))}
-                                        </ul>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-                {tooltipData && ( <div style={{ position: 'fixed', left: hoverPosition.x - 40, top: hoverPosition.y, pointerEvents: 'none', zIndex: 50 }}> <MapTooltip title={tooltipData.title} dataRows={tooltipData.dataRows} equipmentSummary={tooltipData.equipmentSummary} /> </div> )}
+                {tooltipData && ( <div style={{ position: 'fixed', left: hoverPosition.x - 40, top: hoverPosition.y, pointerEvents: 'none', zIndex: 50 }}> <MapTooltip title={tooltipData.title} dataRows={tooltipData.dataRows} /> </div> )}
             </>
             )}
         </div>
     );
 };
 
+
 // --- COMPACT KPI CARD ---
-const CompactKPICard = ({ percentage, title, numeratorLabel, numeratorValue, denominatorLabel, denominatorValue, colorClass = "bg-sky-600" }) => (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+const CompactKPICard = ({ percentage, title, numeratorLabel, numeratorValue, denominatorLabel, denominatorValue, colorClass = "bg-sky-600", className = "" }) => (
+    <div className={`bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow ${className}`}>
         <div className={`px-3 py-2.5 text-white flex justify-between items-center ${colorClass}`}>
             <h3 className="text-xs md:text-sm font-bold leading-tight w-2/3 text-right" dir="rtl">{title}</h3>
             <span className="text-xl md:text-2xl font-extrabold">% {percentage}</span>
         </div>
-        <div className="px-3 py-2 bg-gray-50 text-[11px] md:text-xs text-gray-700 space-y-1.5" dir="rtl">
+        <div className="px-3 py-2 bg-gray-50 text-[11px] md:text-xs text-gray-700 space-y-1.5 flex flex-col justify-center flex-grow" dir="rtl">
             <div className="flex justify-between border-b border-gray-200 pb-1.5">
                 <span className="text-gray-500">{numeratorLabel}:</span>
                 <span className="font-bold text-gray-900">{numeratorValue}</span>
@@ -2076,9 +1551,7 @@ export const CombinedServiceDashboard = () => {
                 ignoreElements: (el) => el.classList.contains('ignore-for-export') 
             });
 
-            // Wrap toBlob in a Promise to properly await it
             const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 0.95));
-            
             if (blob) { 
                 await navigator.clipboard.write([ new ClipboardItem({ 'image/png': blob }) ]); 
                 setCombinedCopyStatus('Copied!'); 
@@ -2111,12 +1584,11 @@ export const CombinedServiceDashboard = () => {
     const currentMapViewLevel = stateFilter ? 'locality' : 'state';
 
     return (
-        <div className="mt-6 flex flex-col gap-6" onMouseMove={handleMouseMove}>
-            <PageHeader title="Child Health Services Overview" subtitle="Unified coverage metrics across all programs."/>
+        <div className="flex flex-col gap-6" onMouseMove={handleMouseMove}>
             
-            {/* Filters */}
-            <Card className="ignore-for-export p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
+            {/* Filters Row */}
+            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm ignore-for-export mb-6 mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
                     <FormGroup label="Filter by State">
                         <Select value={stateFilter} onChange={(e) => {setStateFilter(e.target.value); setLocalityFilter('');}}>
                             <option value="">All States</option>
@@ -2130,34 +1602,23 @@ export const CombinedServiceDashboard = () => {
                         </Select>
                     </FormGroup>
                 </div>
-            </Card>
+            </div>
 
             {loading ? <div className="flex justify-center items-center h-64"><Spinner/></div> : (
                 <div ref={combinedExportRef}>
-                    <Card className="p-0 flex flex-col shadow-md">
-                        {/* Unified Header for Map & KPIs */}
-                        <div className="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-lg">
-                            <div>
+                    <Card className="p-0 flex flex-col shadow-sm border border-gray-200 rounded-xl">
+                        <div className="p-4 md:p-5 border-b flex flex-col sm:flex-row sm:justify-between sm:items-center bg-slate-50/50 rounded-t-xl gap-4 sm:gap-0">
+                            <div className="flex items-center gap-3">
                                 <h3 className="text-lg font-bold text-gray-800">Geographic Coverage & Service Performance</h3>
-                                <p className="text-xs text-gray-500">Average score combining IMNCI, ETAT, EENC, and SCNU with detailed breakdown.</p>
+                                <button onClick={handleCopyCombined} title="Copy Dashboard Image" className="text-gray-400 hover:text-sky-600 transition-colors p-1" disabled={!!combinedCopyStatus && combinedCopyStatus !== 'Failed'}>
+                                    {combinedCopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{combinedCopyStatus}</span> : <CopyIcon />}
+                                </button>
                             </div>
-                            <button
-                                onClick={handleCopyCombined}
-                                className="px-3 py-1.5 text-xs font-semibold text-sky-700 bg-sky-100 rounded hover:bg-sky-200 transition-colors ignore-for-export shadow-sm border border-sky-200"
-                            >
-                                {combinedCopyStatus || 'Copy Dashboard View'}
-                            </button>
                         </div>
 
-                        <div className="flex flex-col lg:flex-row items-stretch bg-white rounded-b-lg">
+                        <div className="flex flex-col lg:flex-row items-stretch bg-white rounded-b-xl">
                             {/* LEFT COLUMN: FULL MAP (2/3 width) */}
-                            <div className="lg:w-2/3 flex flex-col border-b lg:border-b-0 lg:border-r border-gray-200">
-                                <div className="flex justify-center items-center gap-4 p-2 text-xs text-gray-700 border-b bg-gray-50/50">
-                                    <span className="font-bold">Legend (Average Coverage):</span>
-                                    <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded shadow-sm bg-[#6B6B6B]"></div><span className='font-medium'>0-39%</span></div>
-                                    <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded shadow-sm bg-[#6266B1]"></div><span className='font-medium'>40-74%</span></div>
-                                    <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded shadow-sm bg-[#313695]"></div><span className='font-medium'>&ge;75%</span></div>
-                                </div>
+                            <div className="lg:w-2/3 flex flex-col border-b lg:border-b-0 lg:border-r border-gray-200 relative">
                                 <div className="flex-grow min-h-[550px] relative p-2">
                                     <SudanMap
                                         data={currentMapViewLevel === 'state' ? stateMapData : []}
@@ -2175,11 +1636,19 @@ export const CombinedServiceDashboard = () => {
                                         onLocalityLeave={() => setHoverData(null)}
                                     />
                                 </div>
+                                <div className="bg-slate-50 border-t border-gray-200 py-3 px-4 flex justify-center items-center rounded-bl-xl">
+                                    <div className="flex justify-center items-center flex-wrap gap-4 text-sm text-gray-700">
+                                        <span className="font-bold">Legend (Avg Coverage):</span>
+                                        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full shadow-sm bg-[#6B6B6B]"></div><span className='text-xs font-medium'>0-39%</span></div>
+                                        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full shadow-sm bg-[#6266B1]"></div><span className='text-xs font-medium'>40-74%</span></div>
+                                        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full shadow-sm bg-[#313695]"></div><span className='text-xs font-medium'>&ge;75%</span></div>
+                                    </div>
+                                </div>
                             </div>
 
                             {/* RIGHT COLUMN: KPI CARDS (1/3 width) */}
-                            <div className="lg:w-1/3 flex flex-col p-4 bg-gray-50/30">
-                                <div className="flex flex-col gap-3 overflow-y-auto h-full justify-center">
+                            <div className="lg:w-1/3 flex flex-col p-5 bg-slate-50/50">
+                                <div className="flex flex-col gap-4 overflow-y-auto h-full justify-between">
                                     <CompactKPICard 
                                         percentage={kpiData.imnci.perc}
                                         title="العلاج المتكامل للاطفال قل من 5 سنوات (IMNCI)"
@@ -2188,6 +1657,7 @@ export const CombinedServiceDashboard = () => {
                                         denominatorLabel="المراكز الكلية المستهدفة"
                                         denominatorValue={kpiData.imnci.den}
                                         colorClass="bg-sky-600"
+                                        className="flex-1"
                                     />
                                     <CompactKPICard 
                                         percentage={kpiData.etat.perc}
@@ -2197,6 +1667,7 @@ export const CombinedServiceDashboard = () => {
                                         denominatorLabel="المستشفيات المستهدفة (أطفال/عامة)"
                                         denominatorValue={kpiData.etat.den}
                                         colorClass="bg-teal-600"
+                                        className="flex-1"
                                     />
                                     <CompactKPICard 
                                         percentage={kpiData.eenc.perc}
@@ -2206,6 +1677,7 @@ export const CombinedServiceDashboard = () => {
                                         denominatorLabel="مستشفيات طوارئ الحمل والولادة"
                                         denominatorValue={kpiData.eenc.den}
                                         colorClass="bg-indigo-600"
+                                        className="flex-1"
                                     />
                                     <CompactKPICard 
                                         percentage={kpiData.scnu.perc}
@@ -2215,6 +1687,7 @@ export const CombinedServiceDashboard = () => {
                                         denominatorLabel="المستشفيات المستهدفة"
                                         denominatorValue={kpiData.scnu.den}
                                         colorClass="bg-purple-600"
+                                        className="flex-1"
                                     />
                                 </div>
                             </div>

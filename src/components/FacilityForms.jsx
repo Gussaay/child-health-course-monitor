@@ -138,44 +138,47 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "اختر م
         <div className="relative" ref={dropdownRef}>
             <button
                 type="button"
-                className="w-full text-right bg-white border border-gray-300 rounded-md shadow-sm pl-3 pr-10 py-2 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                className="w-full text-right bg-white border border-gray-300 rounded-md shadow-sm pl-3 pr-10 py-3 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors"
                 onClick={() => setIsOpen(!isOpen)}
                 disabled={disabled}
             >
-                <span className="block truncate">
-                    {selectedOption ? selectedOption.label : <span className="text-gray-500">{placeholder}</span>}
+                <span className="block truncate font-medium">
+                    {selectedOption ? selectedOption.label : <span className="text-gray-400">{placeholder}</span>}
                 </span>
-                <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                     <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                         <path fillRule="evenodd" d="M10 3a1 1 0 01.707.293l3 3a1 1 0 01-1.414 1.414L10 5.414 7.707 7.707a1 1 0 01-1.414-1.414l3-3A1 1 0 0110 3zm-3.707 9.293a1 1 0 011.414 0L10 14.586l2.293-2.293a1 1 0 011.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
                     </svg>
                 </span>
             </button>
             {isOpen && (
-                <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
-                    <div className="p-2 sticky top-0 bg-white z-10">
-                        <Input
-                            type="search"
-                            placeholder="ابحث..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full"
-                            autoFocus
-                        />
+                <div className="absolute z-10 mt-1 w-full bg-white shadow-xl max-h-72 rounded-md text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                    <div className="p-3 sticky top-0 bg-gray-50 border-b border-gray-200 z-10">
+                        <div className="relative">
+                            <Input
+                                type="search"
+                                placeholder="ابحث باسم المنشأة..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2 border-gray-300 rounded-md focus:ring-sky-500 focus:border-sky-500 shadow-sm"
+                                autoFocus
+                            />
+                            <svg className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        </div>
                     </div>
-                    <ul role="listbox">
+                    <ul role="listbox" className="py-1">
                         {Object.entries(groupedOptions).map(([groupName, opts]) => (
                             <React.Fragment key={groupName}>
                                 {groupName !== 'ungrouped' && opts.length > 0 && (
-                                    <li className="text-gray-500 cursor-default select-none relative py-2 px-3 font-bold">{groupName}</li>
+                                    <li className="text-sky-800 bg-sky-50/50 cursor-default select-none relative py-2 px-4 font-bold border-y border-sky-100 text-xs uppercase tracking-wider">{groupName}</li>
                                 )}
                                 {opts.map(option => (
                                     <li
                                         key={option.value}
-                                        className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-sky-100 ${option.className || ''}`}
+                                        className={`cursor-pointer select-none relative py-3 pl-3 pr-4 hover:bg-sky-100 border-b border-gray-50 last:border-0 transition-colors ${option.className || ''}`}
                                         onClick={() => handleSelect(option.value)}
                                     >
-                                        <span className={`block truncate ${value === option.value ? 'font-semibold' : 'font-normal'}`}>
+                                        <span className={`block truncate ${value === option.value ? 'font-bold text-sky-700' : 'font-medium text-gray-700'}`}>
                                             {option.label}
                                         </span>
                                     </li>
@@ -183,7 +186,7 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "اختر م
                             </React.Fragment>
                         ))}
                          {filteredOptions.length === 0 && searchTerm && (
-                            <li className="text-gray-500 cursor-default select-none relative py-2 px-3">لا توجد نتائج</li>
+                            <li className="text-gray-500 cursor-default select-none relative py-4 px-4 text-center">لا توجد منشأة مطابقة لهذا البحث.</li>
                         )}
                     </ul>
                 </div>
@@ -194,7 +197,11 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "اختر م
 
 export function NewFacilityEntryForm({ setToast, serviceType }) {
     const [searchParams] = useState(new URLSearchParams(window.location.search));
-    const formTypeKey = serviceType?.toLowerCase() || 'imnci';
+    
+    // Extracted URL parameters to control form behavior remotely
+    const formTypeKey = searchParams.get('service')?.toLowerCase() || serviceType?.toLowerCase() || 'imnci';
+    const hideAddNew = searchParams.get('hideAddNew') === 'true';
+    const showBack = searchParams.get('showBack') === 'true';
 
     const TABS = { IMNCI: 'IMNCI Services', EENC: 'EENC Services', NEONATAL: 'Neonatal Care Unit', CRITICAL: 'Emergency & Critical Care' };
     const ARABIC_TITLES = { [TABS.IMNCI]: "خدمات العلاج المتكامل لأمراض الطفولة", [TABS.EENC]: "خدمات الرعاية الطارئة لحديثي الولادة", [TABS.NEONATAL]: "وحدة رعاية حديثي الولادة", [TABS.CRITICAL]: "الطوارئ والرعاية الحرجة" };
@@ -258,6 +265,12 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
 
                     setFacilitiesWithService(withService);
                     setFacilitiesWithoutService(withoutService);
+
+                    // AUTO-EXPAND logic: If initial list is zero, automatically show the other facilities
+                    if (withService.length === 0 && withoutService.length > 0) {
+                        setShowOtherFacilities(true);
+                    }
+
                 } catch (error) {
                     setToast({ show: true, message: 'Could not fetch the list of existing facilities.', type: 'error' });
                 } finally {
@@ -274,11 +287,12 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
     const facilityOptions = useMemo(() => {
         const options = [];
         
-        if (showOtherFacilities || facilitiesWithoutService.length === 0) {
+        // Respect the hideAddNew URL parameter before showing the Add New option
+        if (!hideAddNew && (showOtherFacilities || facilitiesWithoutService.length === 0)) {
             options.push({
                 value: 'addNew',
                 label: '--- إضافة منشأة جديدة ---',
-                className: 'font-bold text-sky-600 bg-sky-50'
+                className: 'font-bold text-sky-700 bg-sky-100 py-3 text-center rounded-md my-1'
             });
         }
     
@@ -286,7 +300,7 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
             facilitiesWithService.forEach(f => options.push({
                 value: f.id,
                 label: f['اسم_المؤسسة'],
-                group: `منشآت تقدم الخدمة (${serviceTitle})`
+                group: `منشآت تقدم الخدمة حالياً`
             }));
         }
     
@@ -294,12 +308,12 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
             facilitiesWithoutService.forEach(f => options.push({
                 value: f.id,
                 label: f['اسم_المؤسسة'],
-                group: 'منشآت أخرى في هذه المحلية'
+                group: facilitiesWithService.length > 0 ? 'منشآت أخرى في هذه المحلية' : 'جميع المنشآت المسجلة في المحلية'
             }));
         }
         
         return options;
-    }, [showOtherFacilities, facilitiesWithService, facilitiesWithoutService, serviceTitle]);
+    }, [hideAddNew, showOtherFacilities, facilitiesWithService, facilitiesWithoutService]);
 
     const handleSelectionChange = (e) => {
         const { name, value } = e.target;
@@ -361,51 +375,78 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
 
     const renderSelectionScreen = () => {
         return (
-            <div dir="rtl">
-                <Card>
-                    <div className="text-center">
-                        <PageHeader
-                            title={`إدخال بيانات: ${serviceTitle}`}
-                            subtitle="الرجاء اختيار الولاية والمحلية للمتابعة"
-                        />
+            <div dir="rtl" className="animate-fade-in w-full max-w-3xl mx-auto">
+                {showBack && (
+                    <div className="mb-4 flex justify-start">
+                        <Button variant="secondary" onClick={() => window.history.back()} className="flex items-center gap-2 hover:bg-gray-200 shadow-sm border border-gray-300">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                            <span className="font-bold">العودة للوحة السابقة</span>
+                        </Button>
                     </div>
-                    <div className="p-6 space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormGroup label="الولاية">
-                                <Select name="state" value={selectionData.state} onChange={handleStateChange} required>
-                                    <option value="">اختر الولاية</option>
+                )}
+
+                <Card className="shadow-xl border-t-4 border-t-sky-500 overflow-hidden">
+                    <div className="bg-gradient-to-r from-sky-50 to-white px-6 py-8 border-b border-sky-100 text-center">
+                        <h2 className="text-2xl sm:text-3xl font-extrabold text-sky-900 leading-tight">
+                            {hideAddNew ? `تحديث بيانات: ${serviceTitle}` : `إدخال بيانات: ${serviceTitle}`}
+                        </h2>
+                        <p className="text-sky-700 mt-3 font-medium text-sm sm:text-base">
+                            الرجاء تحديد الولاية والمحلية لعرض المنشآت الصحية المتاحة للتحديث
+                        </p>
+                    </div>
+
+                    <div className="p-6 sm:p-8 space-y-8 bg-white">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-gray-50 border border-gray-200 rounded-xl shadow-sm">
+                            <FormGroup label="الولاية (State)">
+                                <Select name="state" value={selectionData.state} onChange={handleStateChange} required className="border-gray-300 focus:ring-sky-500 focus:border-sky-500 shadow-sm">
+                                    <option value="">-- اختر الولاية --</option>
                                     {Object.keys(STATE_LOCALITIES).map(sKey => <option key={sKey} value={sKey}>{STATE_LOCALITIES[sKey].ar}</option>)}
                                 </Select>
                             </FormGroup>
-                            <FormGroup label="المحلية">
-                                <Select name="locality" value={selectionData.locality} onChange={handleSelectionChange} required disabled={!selectionData.state}>
-                                    <option value="">اختر المحلية</option>
+                            <FormGroup label="المحلية (Locality)">
+                                <Select name="locality" value={selectionData.locality} onChange={handleSelectionChange} required disabled={!selectionData.state} className="border-gray-300 focus:ring-sky-500 focus:border-sky-500 shadow-sm">
+                                    <option value="">-- اختر المحلية --</option>
                                     {selectionData.state && STATE_LOCALITIES[selectionData.state]?.localities.map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
                                 </Select>
                             </FormGroup>
                         </div>
 
-                        {isLoading && <div className="flex justify-center p-4"><Spinner /></div>}
+                        {isLoading && (
+                            <div className="flex flex-col items-center justify-center p-8 space-y-4">
+                                <Spinner size="lg" />
+                                <span className="text-sky-700 font-bold tracking-wide">جاري تحميل قائمة المنشآت...</span>
+                            </div>
+                        )}
 
                         {!isLoading && selectionData.locality && (
-                            <div className="p-4 border rounded-md bg-gray-50 space-y-3 mt-4 animate-fade-in">
-                                <FormGroup label="اختر منشأة لتحديثها أو أضف واحدة جديدة">
+                            <div className="p-6 sm:p-8 border border-sky-200 rounded-xl bg-sky-50/60 space-y-6 mt-6 animate-fade-in shadow-inner">
+                                <FormGroup label={hideAddNew ? "اختر المنشأة المراد تحديث بياناتها:" : "اختر منشأة لتحديثها أو أضف واحدة جديدة:"}>
                                    <SearchableSelect
                                         value={selectionData.facilityId}
                                         onChange={handleSelectionChange}
                                         options={facilityOptions}
+                                        placeholder="ابحث واختر منشأة من القائمة..."
                                    />
                                 </FormGroup>
 
                                 {!showOtherFacilities && facilitiesWithoutService.length > 0 && (
-                                    <button type="button" onClick={() => setShowOtherFacilities(true)} className="text-sm text-sky-600 hover:text-sky-800 hover:underline focus:outline-none">
-                                        لم تجد المنشأة؟ عرض المنشآت الأخرى ({facilitiesWithoutService.length})
-                                    </button>
+                                    <div className="flex justify-start">
+                                        <button type="button" onClick={() => setShowOtherFacilities(true)} className="text-sm font-bold text-sky-600 hover:text-sky-800 hover:underline focus:outline-none flex items-center gap-1.5 transition-colors bg-sky-100/50 px-3 py-1.5 rounded-lg border border-sky-200">
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                            عرض جميع المنشآت الأخرى المسجلة في المحلية ({facilitiesWithoutService.length})
+                                        </button>
+                                    </div>
                                 )}
                                 
-                                <Button onClick={handleProceed} disabled={!selectionData.facilityId}>
-                                    متابعة
-                                </Button>
+                                <div className="pt-4 flex justify-end">
+                                    <Button 
+                                        onClick={handleProceed} 
+                                        disabled={!selectionData.facilityId} 
+                                        className="px-10 py-3 font-bold text-lg shadow-md transition-transform active:scale-95 disabled:opacity-50"
+                                    >
+                                        متابعة إلى الاستمارة &larr;
+                                    </Button>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -437,25 +478,33 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
         }
 
         return (
-            <GenericFacilityForm
-                initialData={formInitialData}
-                onSave={handleSave}
-                onCancel={handleCancelForm}
-                setToast={setToast}
-                title={serviceTitle}
-                subtitle={subtitle}
-                isPublicForm={true}
-            >
-                {(props) => <FormComponent {...props} />}
-            </GenericFacilityForm>
+            <div className="animate-fade-in w-full max-w-4xl mx-auto">
+                 {showBack && (
+                    <div className="mb-4 flex justify-start" dir="rtl">
+                        <Button variant="secondary" onClick={() => setStep('selection')} className="flex items-center gap-2 hover:bg-gray-200 shadow-sm border border-gray-300">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                            <span className="font-bold">العودة لقائمة المنشآت</span>
+                        </Button>
+                    </div>
+                )}
+                <GenericFacilityForm
+                    initialData={formInitialData}
+                    onSave={handleSave}
+                    onCancel={handleCancelForm}
+                    setToast={setToast}
+                    title={serviceTitle}
+                    subtitle={subtitle}
+                    isPublicForm={true}
+                >
+                    {(props) => <FormComponent {...props} />}
+                </GenericFacilityForm>
+            </div>
         );
     };
 
     return (
-        <div className="min-h-screen bg-sky-50 p-4 sm:p-6 lg:p-8 flex justify-center">
-            <div className="w-full max-w-4xl">
-                {step === 'selection' ? renderSelectionScreen() : renderFormScreen()}
-            </div>
+        <div className="min-h-screen bg-gray-50/50 p-4 sm:p-6 lg:p-8 flex justify-center">
+            {step === 'selection' ? renderSelectionScreen() : renderFormScreen()}
         </div>
     );
 }
@@ -737,8 +786,12 @@ export const GenericFacilityForm = React.forwardRef(({
 
     return (
         <div dir="rtl">
-            <Card>
-                <PageHeader title={isEditing ? `تعديل: ${title}` : `إضافة: ${title}`} subtitle={subtitle || (isEditing ? (formData['اسم_المؤسسة'] || "Update details for this facility") : "أدخل تفاصيل المنشأة الجديدة.")} />
+            <Card className="shadow-xl border-t-4 border-t-sky-500 overflow-hidden">
+                <div className="bg-gradient-to-r from-sky-50 to-white px-6 py-5 border-b border-gray-100">
+                    <h2 className="text-2xl font-extrabold text-sky-900">{isEditing ? `تعديل: ${title}` : `إضافة: ${title}`}</h2>
+                    <p className="text-sky-700 mt-1 font-medium">{subtitle || (isEditing ? (formData['اسم_المؤسسة'] || "Update details for this facility") : "أدخل تفاصيل المنشأة الجديدة.")}</p>
+                </div>
+                
                 <div className="p-6">
                     <form onSubmit={handleSubmit} ref={ref}>
                         <SharedFacilityFields 
@@ -796,12 +849,12 @@ export const GenericFacilityForm = React.forwardRef(({
                             </div>
                         )}
 
-                        <div className="flex gap-2 mt-8">
-                            <Button type="submit" variant={saveButtonVariant} disabled={isSubmitting}>
-                                {isSubmitting ? 'جاري الحفظ...' : saveButtonText}
-                            </Button>
-                            <Button type="button" variant="secondary" onClick={onCancel} disabled={isSubmitting}>
+                        <div className="flex gap-3 mt-8 pt-6 border-t justify-end">
+                            <Button type="button" variant="secondary" onClick={onCancel} disabled={isSubmitting} className="px-6">
                                 {cancelButtonText}
+                            </Button>
+                            <Button type="submit" variant={saveButtonVariant} disabled={isSubmitting} className="px-8 font-bold">
+                                {isSubmitting ? 'جاري الحفظ...' : saveButtonText}
                             </Button>
                         </div>
                     </form>
@@ -1012,49 +1065,288 @@ export const NeonatalFormFields = ({ formData, handleChange, handleCheckboxGroup
     );
 };
 
+const ETAT_ASSESSMENT_QUESTIONS = [
+    { key: 'separate_pediatric_emergency', label: 'هل توجد حوادث أطفال منفصلة' },
+    { key: 'operation_24_hours', label: 'هل تعمل الحوادث على مدار 24 ساعة' },
+    { key: 'triage_system', label: 'هل يوجد نظام الفرز والتقييم والمعالجة للحالات الحرجة' },
+    { key: 'cold_cases_clinic', label: 'هل توجد عيادة حالات باردة للأطفال' },
+    { key: 'specialist_clinics', label: 'هل توجد عيادات اختصاصيين محولة' },
+    { key: 'short_stay_ward', label: 'هل يوجد عنبر للإقامة القصير بالحوادث' },
+    { key: 'emergency_pharmacy', label: 'هل توجد صيدلية طوارئ بقسم الأطفال' },
+    { key: 'free_medicines', label: 'هل تتوفر الأدوية المجانية صيدلية الطوارئ' },
+    { key: 'central_oxygen', label: 'هل يوجد أكسجين مركزي في الحوادث' },
+    { key: 'pediatric_lab', label: 'هل يوجد معمل بقسم الاطفال' },
+];
+
+const CRITICAL_CARE_STAFF_CATEGORIES = [
+    { key: 'pediatric_specialist', label: 'اختصاصي أطفال' },
+    { key: 'pediatric_registrar', label: 'نائب اختصاصي أطفال' },
+    { key: 'general_practitioner', label: 'طبيب عمومي' },
+    { key: 'house_officer', label: 'طبيب إمتياز' },
+    { key: 'nurse_bsc', label: 'ممرض (بكلاريوس)' },
+    { key: 'nurse_diploma', label: 'ممرض (دبلوم)' },
+];
+
 export const CriticalCareFormFields = ({ formData, handleChange, isReadOnly = false }) => (
     <div className="border border-sky-200 rounded-lg overflow-hidden bg-white shadow-sm">
         {/* Main Section Header with Blue Background */}
         <div className="bg-sky-100 px-4 py-3 border-b border-sky-200">
             <h3 className="text-lg font-semibold text-sky-800">Emergency & Critical Care (الطوارئ والرعاية الحرجة)</h3>
         </div>
-        <div className="p-5 space-y-4">
+        <div className="p-5 space-y-6">
+            
             {/* ETAT Section */}
             <div className={`p-4 border rounded-md transition-colors ${formData.etat_has_service === 'Yes' ? 'bg-sky-50 border-sky-300' : 'bg-gray-50 border-gray-200 hover:bg-white'}`}>
-                <div className="flex items-center justify-between">
-                    <span className="font-medium text-gray-800">المنشأة تقدم خدمة الفرز والتقييم والعلاج لطوارئ الأطفال (ETAT)</span>
-                    <Checkbox name="etat_has_service" label="" checked={formData.etat_has_service === 'Yes'} onChange={handleChange} disabled={isReadOnly} />
-                </div>
+                <FormGroup label="هل المؤسسة تقدم خدمة الفرز والتقييم والعلاج لطوارئ الأطفال (ETAT) ؟">
+                    <Select name="etat_has_service" value={formData.etat_has_service || ''} onChange={handleChange} disabled={isReadOnly}>
+                        <option value="">اختر...</option>
+                        <option value="Yes">نعم</option>
+                        <option value="No">لا</option>
+                    </Select>
+                </FormGroup>
+                
                 {formData.etat_has_service === 'Yes' && (
-                    <div className="mt-4 pt-4 border-t border-sky-200 animate-fade-in">
-                        <FormGroup label="عدد الكوادر المدربة على ETAT">
-                            <Input type="number" name="etat_trained_workers" value={formData.etat_trained_workers ?? ''} onChange={handleChange} disabled={isReadOnly} />
-                        </FormGroup>
+                    <div className="mt-4 pt-4 border-t border-sky-200 animate-fade-in space-y-6">
+                        
+                        {/* ETAT HR Table */}
+                        <div>
+                            <h4 className="text-md font-semibold mb-3 text-sky-800">الكوادر الطبية العاملة بقسم الطوارئ</h4>
+                            <div className="overflow-x-auto bg-white border border-gray-200 rounded">
+                                <table className="min-w-full border-collapse text-sm text-center">
+                                    <thead className="bg-sky-100">
+                                        <tr>
+                                            <th className="border p-2 text-right text-sky-800 w-1/2">الوصف الوظيفي</th>
+                                            <th className="border p-2 text-sky-800 w-1/4">العدد الموجود</th>
+                                            <th className="border p-2 text-sky-800 w-1/4">العدد المدرب على ETAT</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {CRITICAL_CARE_STAFF_CATEGORIES.map((staff) => (
+                                            <tr key={staff.key} className="hover:bg-gray-50">
+                                                <td className="border p-2 font-medium text-gray-700 text-right">{staff.label}</td>
+                                                <td className="border p-2">
+                                                    <Input
+                                                        type="number"
+                                                        name={`etat_staff_${staff.key}_total`}
+                                                        value={formData[`etat_staff_${staff.key}_total`] ?? ''}
+                                                        onChange={handleChange}
+                                                        disabled={isReadOnly}
+                                                        min="0"
+                                                    />
+                                                </td>
+                                                <td className="border p-2">
+                                                    <Input
+                                                        type="number"
+                                                        name={`etat_staff_${staff.key}_trained`}
+                                                        value={formData[`etat_staff_${staff.key}_trained`] ?? ''}
+                                                        onChange={handleChange}
+                                                        disabled={isReadOnly}
+                                                        min="0"
+                                                    />
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <hr className="border-sky-200 my-4" />
+
+                        {/* ETAT Assessment Table */}
+                        <div>
+                            <h4 className="text-md font-semibold mb-3 text-sky-800">استمارة تقييم خدمات الطوارئ</h4>
+                            <div className="overflow-x-auto bg-white border border-gray-200 rounded">
+                                <table className="min-w-full border-collapse text-sm">
+                                    <thead className="bg-sky-100">
+                                        <tr>
+                                            <th className="border p-2 text-right w-1/2 text-sky-800">البند</th>
+                                            <th className="border p-2 text-center text-sky-800 w-1/4">الحالة</th>
+                                            <th className="border p-2 text-right text-sky-800 w-1/4">تعليقات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {ETAT_ASSESSMENT_QUESTIONS.map((q, index) => (
+                                            <tr key={index} className="hover:bg-gray-50">
+                                                <td className="border p-2 font-medium text-gray-700">{q.label}</td>
+                                                <td className="border p-2 text-center">
+                                                    <Select
+                                                        name={`etat_${q.key}`}
+                                                        value={formData[`etat_${q.key}`] || ''}
+                                                        onChange={handleChange}
+                                                        disabled={isReadOnly}
+                                                    >
+                                                        <option value="">اختر...</option>
+                                                        <option value="Yes">موجود</option>
+                                                        <option value="No">غير موجود</option>
+                                                    </Select>
+                                                </td>
+                                                <td className="border p-2">
+                                                    <Input
+                                                        type="text"
+                                                        name={`etat_${q.key}_notes`}
+                                                        value={formData[`etat_${q.key}_notes`] || ''}
+                                                        onChange={handleChange}
+                                                        disabled={isReadOnly}
+                                                        placeholder="إضافة تعليق..."
+                                                    />
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <hr className="border-sky-200 my-4" />
+
+                        {/* ETAT Equipment Quantities Section */}
+                        <div>
+                            <h4 className="text-md font-semibold mb-4 text-sky-800">الأجهزة والمعدات المتاحة (العدد)</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                <FormGroup label="أمبوباق">
+                                    <Input type="number" name="etat_ambu_bag" value={formData.etat_ambu_bag ?? ''} onChange={handleChange} disabled={isReadOnly} />
+                                </FormGroup>
+                                <FormGroup label="قناع أكسجين">
+                                    <Input type="number" name="etat_oxygen_mask" value={formData.etat_oxygen_mask ?? ''} onChange={handleChange} disabled={isReadOnly} />
+                                </FormGroup>
+                                <FormGroup label="جهاز قياس السكر">
+                                    <Input type="number" name="etat_glucometer" value={formData.etat_glucometer ?? ''} onChange={handleChange} disabled={isReadOnly} />
+                                </FormGroup>
+                                <FormGroup label="جهاز مضخة السوائل">
+                                    <Input type="number" name="etat_fluid_pump" value={formData.etat_fluid_pump ?? ''} onChange={handleChange} disabled={isReadOnly} />
+                                </FormGroup>
+                                <FormGroup label="جهاز شفط">
+                                    <Input type="number" name="etat_suction_machine" value={formData.etat_suction_machine ?? ''} onChange={handleChange} disabled={isReadOnly} />
+                                </FormGroup>
+                                <FormGroup label="جهاز تنفس صناعي CPAP">
+                                    <Input type="number" name="etat_cpap" value={formData.etat_cpap ?? ''} onChange={handleChange} disabled={isReadOnly} />
+                                </FormGroup>
+                            </div>
+                        </div>
+
                     </div>
                 )}
             </div>
 
             {/* HDU Section */}
             <div className={`p-4 border rounded-md transition-colors ${formData.hdu_has_service === 'Yes' ? 'bg-sky-50 border-sky-300' : 'bg-gray-50 border-gray-200 hover:bg-white'}`}>
-                <div className="flex items-center justify-between">
-                    <span className="font-medium text-gray-800">المنشأة تقدم خدمة وحدة العناية الوسيطة (HDU)</span>
-                    <Checkbox name="hdu_has_service" label="" checked={formData.hdu_has_service === 'Yes'} onChange={handleChange} disabled={isReadOnly} />
-                </div>
+                <FormGroup label="هل المؤسسة تقدم خدمة العناية الوسيطة HDU ؟">
+                    <Select name="hdu_has_service" value={formData.hdu_has_service || ''} onChange={handleChange} disabled={isReadOnly}>
+                        <option value="">اختر...</option>
+                        <option value="Yes">نعم</option>
+                        <option value="No">لا</option>
+                    </Select>
+                </FormGroup>
+
                 {formData.hdu_has_service === 'Yes' && (
-                    <div className="mt-4 pt-4 border-t border-sky-200 animate-fade-in">
-                        <FormGroup label="سعة أسرة HDU">
-                            <Input type="number" name="hdu_bed_capacity" value={formData.hdu_bed_capacity ?? ''} onChange={handleChange} disabled={isReadOnly} />
-                        </FormGroup>
+                    <div className="mt-4 pt-4 border-t border-sky-200 animate-fade-in space-y-6">
+                        
+                        {/* Bed Capacity Moved Immediately After Main Question */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <FormGroup label="عدد الاسرة في العناية الوسيطة">
+                                <Input
+                                    type="number"
+                                    name="hdu_bed_capacity"
+                                    value={formData.hdu_bed_capacity ?? ''}
+                                    onChange={handleChange}
+                                    disabled={isReadOnly}
+                                    placeholder="أدخل العدد"
+                                    min="0"
+                                />
+                            </FormGroup>
+                            <FormGroup label="تعليقات (عدد الأسرة)">
+                                <Input
+                                    type="text"
+                                    name="hdu_bed_capacity_notes"
+                                    value={formData.hdu_bed_capacity_notes || ''}
+                                    onChange={handleChange}
+                                    disabled={isReadOnly}
+                                    placeholder="إضافة تعليق..."
+                                />
+                            </FormGroup>
+                        </div>
+
+                        <hr className="border-sky-200 my-4" />
+
+                        {/* HDU HR Table */}
+                        <div>
+                            <h4 className="text-md font-semibold mb-3 text-sky-800">الكوادر الطبية العاملة بقسم العناية الوسيطة</h4>
+                            <div className="overflow-x-auto bg-white border border-gray-200 rounded">
+                                <table className="min-w-full border-collapse text-sm text-center">
+                                    <thead className="bg-sky-100">
+                                        <tr>
+                                            <th className="border p-2 text-right text-sky-800 w-1/2">الوصف الوظيفي</th>
+                                            <th className="border p-2 text-sky-800 w-1/4">العدد الموجود</th>
+                                            <th className="border p-2 text-sky-800 w-1/4">العدد المدرب على التقييم الأساسي والمعالجة للحالات الحرجة للأطفال BASIC</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {CRITICAL_CARE_STAFF_CATEGORIES.map((staff) => (
+                                            <tr key={staff.key} className="hover:bg-gray-50">
+                                                <td className="border p-2 font-medium text-gray-700 text-right">{staff.label}</td>
+                                                <td className="border p-2">
+                                                    <Input
+                                                        type="number"
+                                                        name={`hdu_staff_${staff.key}_total`}
+                                                        value={formData[`hdu_staff_${staff.key}_total`] ?? ''}
+                                                        onChange={handleChange}
+                                                        disabled={isReadOnly}
+                                                        min="0"
+                                                    />
+                                                </td>
+                                                <td className="border p-2">
+                                                    <Input
+                                                        type="number"
+                                                        name={`hdu_staff_${staff.key}_trained`}
+                                                        value={formData[`hdu_staff_${staff.key}_trained`] ?? ''}
+                                                        onChange={handleChange}
+                                                        disabled={isReadOnly}
+                                                        min="0"
+                                                    />
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <hr className="border-sky-200 my-4" />
+
+                        {/* HDU Equipment Quantities Section */}
+                        <div>
+                            <h4 className="text-md font-semibold mb-4 text-sky-800">الأجهزة والمعدات المتاحة (العدد)</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                                <FormGroup label="جهاز قياس السكر">
+                                    <Input type="number" name="hdu_glucometer" value={formData.hdu_glucometer ?? ''} onChange={handleChange} disabled={isReadOnly} />
+                                </FormGroup>
+                                <FormGroup label="جهاز مضخة السوائل">
+                                    <Input type="number" name="hdu_fluid_pump" value={formData.hdu_fluid_pump ?? ''} onChange={handleChange} disabled={isReadOnly} />
+                                </FormGroup>
+                                <FormGroup label="جهاز شفط">
+                                    <Input type="number" name="hdu_suction_machine" value={formData.hdu_suction_machine ?? ''} onChange={handleChange} disabled={isReadOnly} />
+                                </FormGroup>
+                                <FormGroup label="جهاز تنفس صناعي CPAP">
+                                    <Input type="number" name="hdu_cpap" value={formData.hdu_cpap ?? ''} onChange={handleChange} disabled={isReadOnly} />
+                                </FormGroup>
+                            </div>
+                        </div>
+
                     </div>
                 )}
             </div>
 
             {/* PICU Section */}
             <div className={`p-4 border rounded-md transition-colors ${formData.picu_has_service === 'Yes' ? 'bg-sky-50 border-sky-300' : 'bg-gray-50 border-gray-200 hover:bg-white'}`}>
-                <div className="flex items-center justify-between">
-                    <span className="font-medium text-gray-800">المنشأة تقدم خدمة وحدة العناية المركزة للأطفال (PICU)</span>
-                    <Checkbox name="picu_has_service" label="" checked={formData.picu_has_service === 'Yes'} onChange={handleChange} disabled={isReadOnly} />
-                </div>
+                <FormGroup label="هل المؤسسة تقدم خدمة وحدة العناية المركزة للأطفال (PICU) ؟">
+                    <Select name="picu_has_service" value={formData.picu_has_service || ''} onChange={handleChange} disabled={isReadOnly}>
+                        <option value="">اختر...</option>
+                        <option value="Yes">نعم</option>
+                        <option value="No">لا</option>
+                    </Select>
+                </FormGroup>
+
                 {formData.picu_has_service === 'Yes' && (
                     <div className="mt-4 pt-4 border-t border-sky-200 animate-fade-in">
                         <FormGroup label="سعة أسرة PICU">

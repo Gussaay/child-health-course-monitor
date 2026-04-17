@@ -8,7 +8,7 @@ import {
     Plus, Edit, Trash2, CheckCircle, Clock, PlayCircle, FolderKanban, 
     Calendar, Baby, Stethoscope, Users, Activity, Package, HeartPulse, ChevronLeft,
     BarChart2, AlertCircle, Target, ListTodo, AlertTriangle, ArrowRight, UserCheck, Layers,
-    Video, MapPin, FileText, CheckSquare, Eye, Share2, Link as LinkIcon, Search, UserPlus
+    Video, MapPin, FileText, CheckSquare, Eye, Share2, Link as LinkIcon, Search, UserPlus, Save
 } from 'lucide-react';
 
 const PROGRAM_UNITS_DATA = [
@@ -227,9 +227,10 @@ export default function ProjectTrackerView({ permissions }) {
     const [currentSubtask, setCurrentSubtask] = useState(null);
     const [currentMeeting, setCurrentMeeting] = useState(null);
 
-    // --- Guest State ---
+    // --- Guest & Action Points State ---
     const [newGuestName, setNewGuestName] = useState('');
     const [newGuestPosition, setNewGuestPosition] = useState('');
+    const [localActionPoints, setLocalActionPoints] = useState([]);
 
     // --- Data Aggregation ---
     const allTeamMembers = useMemo(() => {
@@ -544,6 +545,14 @@ export default function ProjectTrackerView({ permissions }) {
             setCurrentMeeting({ ...currentMeeting, invitees: newInvitees, inviteeNamesMap: map });
         } else {
             handleUpdateActiveMeeting({ ...activeMeeting, invitees: newInvitees, inviteeNamesMap: map });
+        }
+    };
+
+    const handleDateSelect = (e) => {
+        const newDate = e.target.value;
+        setActiveMeetingDate(newDate);
+        if (activeMeeting) {
+            setLocalActionPoints(activeMeeting.reports?.[newDate]?.actionPoints || []);
         }
     };
 
@@ -934,6 +943,15 @@ export default function ProjectTrackerView({ permissions }) {
                                                                     <Button size="sm" variant="secondary" className="flex items-center gap-1" onClick={() => { setActiveMeetingId(m.id); setMeetingSubTab('reports'); setViewMode('meeting'); }}>
                                                                         <FileText className="w-3.5 h-3.5" /> Report
                                                                     </Button>
+                                                                    <Button size="sm" variant="secondary" className="flex items-center gap-1" onClick={() => { 
+                                                                        setActiveMeetingId(m.id); 
+                                                                        setMeetingSubTab('actions'); 
+                                                                        const latestDate = activeMeetingDate || m.sessionDates?.[m.sessionDates?.length - 1];
+                                                                        setLocalActionPoints(m.reports?.[latestDate]?.actionPoints || []);
+                                                                        setViewMode('meeting'); 
+                                                                    }}>
+                                                                        <CheckSquare className="w-3.5 h-3.5" /> Actions
+                                                                    </Button>
                                                                     <Button size="sm" variant="secondary" className="flex items-center gap-1" onClick={() => { setCurrentMeeting(m); setViewMode('meeting-form'); }}>
                                                                         <Edit className="w-3.5 h-3.5" /> Edit
                                                                     </Button>
@@ -1136,7 +1154,11 @@ export default function ProjectTrackerView({ permissions }) {
                                 <div className="flex gap-4 border-b">
                                     <button onClick={() => setMeetingSubTab('overview')} className={`pb-2 px-4 font-semibold text-sm transition-colors border-b-2 ${meetingSubTab === 'overview' ? 'border-indigo-500 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>Overview</button>
                                     <button onClick={() => setMeetingSubTab('attendance')} className={`pb-2 px-4 font-semibold text-sm transition-colors border-b-2 ${meetingSubTab === 'attendance' ? 'border-indigo-500 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>Attendance Tracker</button>
-                                    <button onClick={() => setMeetingSubTab('reports')} className={`pb-2 px-4 font-semibold text-sm transition-colors border-b-2 ${meetingSubTab === 'reports' ? 'border-indigo-500 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>Meeting Minutes & Actions</button>
+                                    <button onClick={() => setMeetingSubTab('reports')} className={`pb-2 px-4 font-semibold text-sm transition-colors border-b-2 ${meetingSubTab === 'reports' ? 'border-indigo-500 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>Meeting Minutes</button>
+                                    <button onClick={() => { 
+                                        setMeetingSubTab('actions'); 
+                                        setLocalActionPoints(activeMeeting?.reports?.[activeMeetingDate]?.actionPoints || []);
+                                    }} className={`pb-2 px-4 font-semibold text-sm transition-colors border-b-2 ${meetingSubTab === 'actions' ? 'border-indigo-500 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>Action Points</button>
                                 </div>
                             </div>
 
@@ -1275,7 +1297,7 @@ export default function ProjectTrackerView({ permissions }) {
                                 </Card>
                             )}
 
-                            {/* Meeting Sub-Tab: REPORTS & ACTIONS */}
+                            {/* Meeting Sub-Tab: MEETING MINUTES (No Auto-save Actions here anymore) */}
                             {meetingSubTab === 'reports' && (
                                 <div className="space-y-6">
                                     {!activeMeeting.sessionDates || activeMeeting.sessionDates.length === 0 ? (
@@ -1284,131 +1306,156 @@ export default function ProjectTrackerView({ permissions }) {
                                         <>
                                             <div className="flex items-center gap-4 bg-gray-50 p-4 border rounded-lg">
                                                 <span className="font-semibold text-gray-700">Select Session Date:</span>
-                                                <Select value={activeMeetingDate} onChange={(e) => setActiveMeetingDate(e.target.value)} className="w-48 bg-white">
+                                                <Select value={activeMeetingDate} onChange={handleDateSelect} className="w-48 bg-white">
                                                     {activeMeeting.sessionDates.map(d => <option key={d} value={d}>{d}</option>)}
                                                 </Select>
                                             </div>
 
                                             {activeMeetingDate && (
-                                                <div className="grid grid-cols-1 gap-6">
-                                                    <Card>
-                                                        <CardBody className="p-4">
-                                                            <h4 className="font-bold border-b pb-2 text-gray-800 mb-3 flex items-center gap-2"><FileText className="w-5 h-5"/> Meeting Minutes & Discussion ({activeMeetingDate})</h4>
-                                                            <textarea 
-                                                                className="w-full h-40 p-3 border rounded focus:ring-indigo-500 focus:border-indigo-500" 
-                                                                placeholder="Document main discussion points from this specific meeting..."
-                                                                value={activeMeeting.reports?.[activeMeetingDate]?.discussionPoints || ''}
-                                                                onChange={(e) => {
-                                                                    const dateReport = activeMeeting.reports?.[activeMeetingDate] || { discussionPoints: '', actionPoints: [] };
-                                                                    const updated = { 
-                                                                        ...activeMeeting, 
-                                                                        reports: { ...activeMeeting.reports, [activeMeetingDate]: { ...dateReport, discussionPoints: e.target.value } }
-                                                                    };
-                                                                    handleUpdateActiveMeeting(updated);
-                                                                }}
-                                                            />
-                                                        </CardBody>
-                                                    </Card>
-
-                                                    <Card>
-                                                        <CardBody className="p-4">
-                                                            <div className="flex justify-between items-center border-b pb-2 mb-3">
-                                                                <h4 className="font-bold text-gray-800 flex items-center gap-2"><CheckSquare className="w-5 h-5"/> Action Points Matrix ({activeMeetingDate})</h4>
-                                                                <Button size="sm" onClick={() => {
-                                                                    const dateReport = activeMeeting.reports?.[activeMeetingDate] || { discussionPoints: '', actionPoints: [] };
-                                                                    const newAction = { id: Date.now().toString(), what: '', who: '', when: '', indicator: '', status: 'Pending' };
-                                                                    const updatedActions = [...(dateReport.actionPoints || []), newAction];
-                                                                    handleUpdateActiveMeeting({ 
-                                                                        ...activeMeeting, 
-                                                                        reports: { ...activeMeeting.reports, [activeMeetingDate]: { ...dateReport, actionPoints: updatedActions } }
-                                                                    });
-                                                                }}>
-                                                                    <Plus className="w-4 h-4 mr-1"/> Add Action
-                                                                </Button>
-                                                            </div>
-                                                            
-                                                            <div className="overflow-x-auto">
-                                                                <table className="w-full text-left text-sm">
-                                                                    <thead className="bg-gray-100 text-gray-600">
-                                                                        <tr>
-                                                                            <th className="p-2">What (Action)</th>
-                                                                            <th className="p-2 w-40">Who</th>
-                                                                            <th className="p-2 w-36">When</th>
-                                                                            <th className="p-2">Indicator</th>
-                                                                            <th className="p-2 w-36">Status</th>
-                                                                            <th className="p-2 w-12"></th>
-                                                                        </tr>
-                                                                    </thead>
-                                                                    <tbody>
-                                                                        {(activeMeeting.reports?.[activeMeetingDate]?.actionPoints || []).map((action, idx) => (
-                                                                            <tr key={action.id} className="border-b">
-                                                                                <td className="p-1">
-                                                                                    <Input bsSize="sm" value={action.what} onChange={e => { 
-                                                                                        const dateReport = activeMeeting.reports[activeMeetingDate];
-                                                                                        const copy = [...dateReport.actionPoints]; 
-                                                                                        copy[idx].what = e.target.value; 
-                                                                                        handleUpdateActiveMeeting({...activeMeeting, reports: {...activeMeeting.reports, [activeMeetingDate]: {...dateReport, actionPoints: copy}}}); 
-                                                                                    }}/>
-                                                                                </td>
-                                                                                <td className="p-1">
-                                                                                    <Select bsSize="sm" value={action.who} onChange={e => { 
-                                                                                        const dateReport = activeMeeting.reports[activeMeetingDate];
-                                                                                        const copy = [...dateReport.actionPoints]; 
-                                                                                        copy[idx].who = e.target.value; 
-                                                                                        handleUpdateActiveMeeting({...activeMeeting, reports: {...activeMeeting.reports, [activeMeetingDate]: {...dateReport, actionPoints: copy}}}); 
-                                                                                    }}>
-                                                                                        <option value="">- Select -</option>
-                                                                                        {actionPointAssignees.map(opt=><option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                                                                    </Select>
-                                                                                </td>
-                                                                                <td className="p-1">
-                                                                                    <Input type="date" bsSize="sm" value={action.when} onChange={e => { 
-                                                                                        const dateReport = activeMeeting.reports[activeMeetingDate];
-                                                                                        const copy = [...dateReport.actionPoints]; 
-                                                                                        copy[idx].when = e.target.value; 
-                                                                                        handleUpdateActiveMeeting({...activeMeeting, reports: {...activeMeeting.reports, [activeMeetingDate]: {...dateReport, actionPoints: copy}}}); 
-                                                                                    }}/>
-                                                                                </td>
-                                                                                <td className="p-1">
-                                                                                    <Input bsSize="sm" value={action.indicator} onChange={e => { 
-                                                                                        const dateReport = activeMeeting.reports[activeMeetingDate];
-                                                                                        const copy = [...dateReport.actionPoints]; 
-                                                                                        copy[idx].indicator = e.target.value; 
-                                                                                        handleUpdateActiveMeeting({...activeMeeting, reports: {...activeMeeting.reports, [activeMeetingDate]: {...dateReport, actionPoints: copy}}}); 
-                                                                                    }}/>
-                                                                                </td>
-                                                                                <td className="p-1">
-                                                                                    <Select bsSize="sm" value={action.status} onChange={e => { 
-                                                                                        const dateReport = activeMeeting.reports[activeMeetingDate];
-                                                                                        const copy = [...dateReport.actionPoints]; 
-                                                                                        copy[idx].status = e.target.value; 
-                                                                                        handleUpdateActiveMeeting({...activeMeeting, reports: {...activeMeeting.reports, [activeMeetingDate]: {...dateReport, actionPoints: copy}}}); 
-                                                                                    }}>
-                                                                                        {STATUS_OPTIONS.map(opt=><option key={opt} value={opt}>{opt}</option>)}
-                                                                                    </Select>
-                                                                                </td>
-                                                                                <td className="p-1 text-right">
-                                                                                    <Button size="sm" variant="danger" onClick={() => { 
-                                                                                        const dateReport = activeMeeting.reports[activeMeetingDate];
-                                                                                        const copy = dateReport.actionPoints.filter(a => a.id !== action.id); 
-                                                                                        handleUpdateActiveMeeting({...activeMeeting, reports: {...activeMeeting.reports, [activeMeetingDate]: {...dateReport, actionPoints: copy}}}); 
-                                                                                    }}>
-                                                                                        <Trash2 className="w-3 h-3"/>
-                                                                                    </Button>
-                                                                                </td>
-                                                                            </tr>
-                                                                        ))}
-                                                                    </tbody>
-                                                                </table>
-                                                            </div>
-                                                        </CardBody>
-                                                    </Card>
-                                                </div>
+                                                <Card>
+                                                    <CardBody className="p-4">
+                                                        <h4 className="font-bold border-b pb-2 text-gray-800 mb-3 flex items-center gap-2"><FileText className="w-5 h-5"/> Meeting Minutes & Discussion ({activeMeetingDate})</h4>
+                                                        <textarea 
+                                                            className="w-full h-64 p-3 border rounded focus:ring-indigo-500 focus:border-indigo-500" 
+                                                            placeholder="Document main discussion points from this specific meeting..."
+                                                            value={activeMeeting.reports?.[activeMeetingDate]?.discussionPoints || ''}
+                                                            onChange={(e) => {
+                                                                const dateReport = activeMeeting.reports?.[activeMeetingDate] || { discussionPoints: '', actionPoints: [] };
+                                                                const updated = { 
+                                                                    ...activeMeeting, 
+                                                                    reports: { ...activeMeeting.reports, [activeMeetingDate]: { ...dateReport, discussionPoints: e.target.value } }
+                                                                };
+                                                                handleUpdateActiveMeeting(updated);
+                                                            }}
+                                                        />
+                                                    </CardBody>
+                                                </Card>
                                             )}
                                         </>
                                     )}
                                 </div>
                             )}
+
+                            {/* Meeting Sub-Tab: ACTION POINTS (Manual Save) */}
+                            {meetingSubTab === 'actions' && (
+                                <div className="space-y-6">
+                                    {!activeMeeting.sessionDates || activeMeeting.sessionDates.length === 0 ? (
+                                        <EmptyState message="No sessions available to add actions to. Go to the Attendance Tracker to add a session date first." />
+                                    ) : (
+                                        <>
+                                            <div className="flex items-center gap-4 bg-gray-50 p-4 border rounded-lg">
+                                                <span className="font-semibold text-gray-700">Select Session Date:</span>
+                                                <Select value={activeMeetingDate} onChange={handleDateSelect} className="w-48 bg-white">
+                                                    {activeMeeting.sessionDates.map(d => <option key={d} value={d}>{d}</option>)}
+                                                </Select>
+                                            </div>
+
+                                            {activeMeetingDate && (
+                                                <Card>
+                                                    <CardBody className="p-4">
+                                                        <div className="flex justify-between items-center border-b pb-2 mb-3">
+                                                            <h4 className="font-bold text-gray-800 flex items-center gap-2"><CheckSquare className="w-5 h-5"/> Action Points Matrix ({activeMeetingDate})</h4>
+                                                            <div className="flex gap-2">
+                                                                <Button size="sm" variant="secondary" onClick={() => {
+                                                                    const newAction = { id: Date.now().toString(), what: '', who: '', when: '', indicator: '', status: 'Pending' };
+                                                                    setLocalActionPoints([...localActionPoints, newAction]);
+                                                                }}>
+                                                                    <Plus className="w-4 h-4 mr-1"/> Add Action
+                                                                </Button>
+                                                                <Button size="sm" className="bg-green-600 hover:bg-green-700 border-green-600" onClick={() => {
+                                                                    const dateReport = activeMeeting.reports?.[activeMeetingDate] || { discussionPoints: '', actionPoints: [] };
+                                                                    handleUpdateActiveMeeting({ 
+                                                                        ...activeMeeting, 
+                                                                        reports: { ...activeMeeting.reports, [activeMeetingDate]: { ...dateReport, actionPoints: localActionPoints } }
+                                                                    });
+                                                                    alert('Action points saved successfully!');
+                                                                }}>
+                                                                    <Save className="w-4 h-4 mr-1"/> Save Changes
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div className="overflow-x-auto">
+                                                            <table className="w-full text-left text-sm">
+                                                                <thead className="bg-gray-100 text-gray-600">
+                                                                    <tr>
+                                                                        <th className="p-2">What (Action)</th>
+                                                                        <th className="p-2 w-40">Who</th>
+                                                                        <th className="p-2 w-36">When</th>
+                                                                        <th className="p-2">Indicator</th>
+                                                                        <th className="p-2 w-36">Status</th>
+                                                                        <th className="p-2 w-12"></th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {localActionPoints.map((action, idx) => (
+                                                                        <tr key={action.id} className="border-b">
+                                                                            <td className="p-1">
+                                                                                <Input bsSize="sm" value={action.what} onChange={e => { 
+                                                                                    const copy = [...localActionPoints]; 
+                                                                                    copy[idx].what = e.target.value; 
+                                                                                    setLocalActionPoints(copy);
+                                                                                }}/>
+                                                                            </td>
+                                                                            <td className="p-1">
+                                                                                <Select bsSize="sm" value={action.who} onChange={e => { 
+                                                                                    const copy = [...localActionPoints]; 
+                                                                                    copy[idx].who = e.target.value; 
+                                                                                    setLocalActionPoints(copy);
+                                                                                }}>
+                                                                                    <option value="">- Select -</option>
+                                                                                    {actionPointAssignees.map(opt=><option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                                                                </Select>
+                                                                            </td>
+                                                                            <td className="p-1">
+                                                                                <Input type="date" bsSize="sm" value={action.when} onChange={e => { 
+                                                                                    const copy = [...localActionPoints]; 
+                                                                                    copy[idx].when = e.target.value; 
+                                                                                    setLocalActionPoints(copy);
+                                                                                }}/>
+                                                                            </td>
+                                                                            <td className="p-1">
+                                                                                <Input bsSize="sm" value={action.indicator} onChange={e => { 
+                                                                                    const copy = [...localActionPoints]; 
+                                                                                    copy[idx].indicator = e.target.value; 
+                                                                                    setLocalActionPoints(copy);
+                                                                                }}/>
+                                                                            </td>
+                                                                            <td className="p-1">
+                                                                                <Select bsSize="sm" value={action.status} onChange={e => { 
+                                                                                    const copy = [...localActionPoints]; 
+                                                                                    copy[idx].status = e.target.value; 
+                                                                                    setLocalActionPoints(copy);
+                                                                                }}>
+                                                                                    {STATUS_OPTIONS.map(opt=><option key={opt} value={opt}>{opt}</option>)}
+                                                                                </Select>
+                                                                            </td>
+                                                                            <td className="p-1 text-right">
+                                                                                <Button size="sm" variant="danger" onClick={() => { 
+                                                                                    const copy = localActionPoints.filter(a => a.id !== action.id); 
+                                                                                    setLocalActionPoints(copy);
+                                                                                }}>
+                                                                                    <Trash2 className="w-3 h-3"/>
+                                                                               </Button>
+                                                                            </td>
+                                                                        </tr>
+                                                                    ))}
+                                                                    {localActionPoints.length === 0 && (
+                                                                        <tr>
+                                                                            <td colSpan="6" className="text-center p-4 text-gray-500 italic">No action points drafted. Click "Add Action" to begin.</td>
+                                                                        </tr>
+                                                                    )}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </CardBody>
+                                                </Card>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            )}
+
                         </div>
                     )}
                 </div>
