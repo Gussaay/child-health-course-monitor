@@ -18,7 +18,8 @@ import {
     TrendingUp, 
     X,
     WifiOff,
-    RefreshCw
+    RefreshCw,
+    Activity // Added Activity icon for IMCI
 } from 'lucide-react';
 
 // --- PRE-FLIGHT LANGUAGE CHECK ---
@@ -59,6 +60,9 @@ const TeamMemberApplicationForm = lazy(() => import('./components/ProgramTeamVie
 const ParticipantsView = lazy(() => import('./components/Participants').then(module => ({ default: module.ParticipantsView })));
 const ParticipantForm = lazy(() => import('./components/Participants').then(module => ({ default: module.ParticipantForm })));
 const ParticipantMigrationMappingView = lazy(() => import('./components/Participants').then(module => ({ default: module.ParticipantMigrationMappingView })));
+
+// --- New IMNCI View Lazy Load ---
+const IMNCIRecordingForm = lazy(() => import('./components/IMNCIRecordingForm'));
 
 // --- Import Certificate, Attendance & Registration Views ---
 const CertificateVerificationView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.CertificateVerificationView })));
@@ -355,6 +359,7 @@ function Landing({ navigate, permissions }) {
         { label: 'Human Resources', view: 'humanResources', icon: Users, permission: permissions.canViewHumanResource },
         { label: 'Child Health Services', view: 'childHealthServices', icon: Hospital, permission: permissions.canViewFacilities },
         { label: 'Skills Mentorship', view: 'skillsMentorship', icon: ClipboardCheck, permission: permissions.canViewSkillsMentorship },
+        { label: 'IMCI Assessment', view: 'imciForm', icon: Activity, permission: permissions.canViewCourse },
         { label: 'Project Tracker', view: 'projects', icon: FolderKanban, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: 'Master Plan', view: 'planning', icon: TrendingUp, permission: permissions.canUseFederalManagerAdvancedFeatures }, 
         { label: 'Admin', view: 'admin', icon: User, permission: permissions.canViewAdmin },
@@ -405,7 +410,7 @@ const BottomNav = React.memo(function BottomNav({ navItems, navigate }) {
     return (
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-800 border-t border-slate-700 flex justify-around items-center z-20">
             {navItems.map(item => {
-                const Icon = icons[item.label];
+                const Icon = icons[item.label] || Activity;
                 return (
                     <button key={item.label} onClick={() => navigate(item.view)} className={`flex flex-col items-center justify-center p-2 w-full h-16 text-xs font-medium transition-colors ${item.active ? 'text-sky-400' : 'text-slate-400 hover:text-white'}`}>
                         {Icon && <Icon className="w-6 h-6 mb-1" />}
@@ -1178,6 +1183,7 @@ export default function App() {
             'landing': true,
             'dashboard': true,
             'admin': permissions.canViewAdmin,
+            'imciForm': permissions.canViewCourse,
             'humanResources': permissions.canViewHumanResource,
             'courses': permissions.canViewCourse,
             'courseDetails': permissions.canViewCourse,
@@ -1619,6 +1625,15 @@ export default function App() {
         switch (viewToRender) {
             case 'landing': return <Landing navigate={navigate} permissions={permissions} />;
 
+            case 'admin': return <AdminDashboard />;
+
+            case 'imciForm': 
+                return permissions.canViewCourse ? (
+                    <Suspense fallback={<Card><div className="flex justify-center p-8"><Spinner /></div></Card>}>
+                        <IMNCIRecordingForm />
+                    </Suspense>
+                ) : null;
+
             case 'humanResources': return <HumanResourcesPage
                 activeTab={activeHRTab}
                 setActiveTab={setActiveHRTab}
@@ -1820,8 +1835,6 @@ export default function App() {
                 onBack={() => navigate(previousView)}
             />) : null;
 
-            case 'admin': return <AdminDashboard />;
-
             case 'dashboard': return <DashboardView onOpenCourseReport={handleOpenCourseReport} onOpenParticipantReport={(pId, cId) => navigate('participantReport', { openParticipantReport: pId, openCourseReport: cId })} onOpenFacilitatorReport={(id) => { setSelectedFacilitatorId(id); navigate('facilitatorReport'); }} permissions={permissions} userStates={userStates} STATE_LOCALITIES={STATE_LOCALITIES} />;
 
             case 'finalReport':
@@ -1854,7 +1867,7 @@ export default function App() {
     const navItems = useMemo(() => [
         { label: 'Home', view: 'landing', active: view === 'landing', disabled: false },
         { label: 'Dashboard', view: 'dashboard', active: view === 'dashboard', disabled: false },
-        { label: 'Courses', view: 'courses', active: ['courses', 'courseForm', 'courseReport', 'participants', 'participantForm', 'participantReport', 'observe', 'monitoring', 'reports', 'finalReport', 'participantMigration', 'courseDetails', 'test-dashboard', 'enter-test-scores', 'attendanceManager'].includes(view), disabled: !permissions.canViewCourse }, 
+        { label: 'Courses', view: 'courses', active: ['courses', 'courseForm', 'courseReport', 'participants', 'participantForm', 'participantReport', 'observe', 'monitoring', 'reports', 'finalReport', 'participantMigration', 'courseDetails', 'test-dashboard', 'enter-test-scores', 'attendanceManager', 'imciForm'].includes(view), disabled: !permissions.canViewCourse }, 
         { label: 'Human Resources', view: 'humanResources', active: ['humanResources', 'facilitatorForm', 'facilitatorReport'].includes(view), disabled: !permissions.canViewHumanResource },
         { label: 'Child Health Services', view: 'childHealthServices', active: view === 'childHealthServices', disabled: !permissions.canViewFacilities },
         { label: 'Skills Mentorship', view: 'skillsMentorship', active: view === 'skillsMentorship', disabled: !permissions.canViewSkillsMentorship },

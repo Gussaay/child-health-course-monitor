@@ -52,7 +52,7 @@ const PLAN_TYPES = {
 const CURRENT_YEAR = new Date().getFullYear();
 const YEAR_OPTIONS = Array.from({ length: 10 }, (_, i) => CURRENT_YEAR - 2 + i);
 
-// نموذج التدخل الافتراضي للخطط التشغيلية
+// نموذج التدخل الافتراضي للخطط التشغيلية 
 const DEFAULT_OP_ACTIVITY = () => ({
     id: `act_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
     isUnplanned: false,
@@ -64,7 +64,8 @@ const DEFAULT_OP_ACTIVITY = () => ({
     govSource: '', govValue: 0,
     extSource1: '', extValue1: 0,
     extSource2: '', extValue2: 0,
-    extSource3: '', extValue3: 0
+    extSource3: '', extValue3: 0,
+    targetFacilities: [] 
 });
 
 // نموذج التدخل الافتراضي (Matrix Row)
@@ -132,6 +133,7 @@ export default function PlanningView({ permissions, userStates }) {
     const { 
         masterPlans: rawPlans, fetchMasterPlans, 
         operationalPlans: rawOpPlans, fetchOperationalPlans, 
+        healthFacilities, fetchHealthFacilities,
         isLoading 
     } = useDataCache();
     
@@ -152,7 +154,7 @@ export default function PlanningView({ permissions, userStates }) {
         state: isFederalManager ? '' : (userStates?.[0] || '')
     });
 
-    // Evaluation Granular Filters (فقط الفلاتر التفصيلية، السنة والمستوى يأتيان من الموجه الأساسي)
+    // Evaluation Granular Filters
     const [evalFilters, setEvalFilters] = useState({
         quarter: '',
         month: '',
@@ -167,16 +169,17 @@ export default function PlanningView({ permissions, userStates }) {
     useEffect(() => {
         fetchMasterPlans();
         fetchOperationalPlans();
-    }, [fetchMasterPlans, fetchOperationalPlans]);
+        if (fetchHealthFacilities) fetchHealthFacilities(); 
+    }, [fetchMasterPlans, fetchOperationalPlans, fetchHealthFacilities]);
 
     // ==========================================
-    // 2. FILTERED DATA MEMOS (تصفية البيانات مسبقاً بناءً على الموجه الأساسي)
+    // 2. FILTERED DATA MEMOS
     // ==========================================
     const filteredPlans = useMemo(() => {
         return (rawPlans || [])
             .filter(p => !p.isDeleted)
-            .filter(p => (p.year || CURRENT_YEAR) === globalFilter.year) // Fallback for legacy data
-            .filter(p => (p.level || 'federal') === globalFilter.level) // Fallback for legacy data
+            .filter(p => (p.year || CURRENT_YEAR) === globalFilter.year) 
+            .filter(p => (p.level || 'federal') === globalFilter.level) 
             .filter(p => globalFilter.level === 'federal' || !globalFilter.state || (p.state || '') === globalFilter.state)
             .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
     }, [rawPlans, globalFilter]);
@@ -190,6 +193,22 @@ export default function PlanningView({ permissions, userStates }) {
             .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
     }, [rawOpPlans, globalFilter]);
 
+    // قائمة المؤسسات الديناميكية الذكية للتخطيط
+    const dynamicFacilityOptions = useMemo(() => {
+        if (!healthFacilities) return [];
+        
+        let validFacilities = healthFacilities.filter(f => 
+            f.isDeleted !== true && f.isDeleted !== "true" && f['اسم_المؤسسة']
+        );
+        
+        if (currentOpPlan && currentOpPlan.level === 'state' && currentOpPlan.state) {
+            validFacilities = validFacilities.filter(f => f['الولاية'] === currentOpPlan.state);
+        }
+        
+        const names = [...new Set(validFacilities.map(f => f['اسم_المؤسسة']))];
+        return names.sort();
+    }, [healthFacilities, currentOpPlan?.level, currentOpPlan?.state]);
+
 
     const calculateGap = (inv) => {
         const total = Number(inv.totalCost) || 0;
@@ -198,72 +217,27 @@ export default function PlanningView({ permissions, userStates }) {
     };
 
     const getAvailableInterventions = (actRow) => {
-        if (!currentOpPlan) return [];
-        // Use the globally filtered plans to ensure perfect sync
-        let available = [];
-        if (currentOpPlan.planType === PLAN_TYPES.QUARTERLY) {
-            const mp = filteredPlans.find(p => p.id === actRow.masterPlanId);
-            if (mp) {
-                const qKey = currentOpPlan.periodQuarter === 'الربع الاول' ? 'q1' : 
-                             currentOpPlan.periodQuarter === 'الربع الثاني' ? 'q2' :
-                             currentOpPlan.periodQuarter === 'الربع الثالث' ? 'q3' : 'q4';
-                available = mp.interventions.filter(i => i[qKey]);
-            }
-        } else if (currentOpPlan.planType === PLAN_TYPES.MONTHLY) {
-            const targetQuarter = Object.keys(QUARTERS_MAP).find(q => QUARTERS_MAP[q].includes(currentOpPlan.periodMonth));
-            const qPlan = filteredOpPlans.find(op => op.planType === PLAN_TYPES.QUARTERLY && op.periodQuarter === targetQuarter);
-            const mp = filteredPlans.find(p => p.id === actRow.masterPlanId);
-            if (qPlan && mp) {
-                const validInvIds = qPlan.activities.map(a => a.interventionId);
-                available = mp.interventions.filter(i => validInvIds.includes(i.id));
-            }
-        } else if (currentOpPlan.planType === PLAN_TYPES.WEEKLY) {
-            const mp = filteredPlans.find(p => p.id === actRow.masterPlanId);
-            if (mp) {
-                if (actRow.isOutsideMonthly) {
-                    available = mp.interventions; 
-                } else {
-                    const mPlan = filteredOpPlans.find(op => op.planType === PLAN_TYPES.MONTHLY && op.periodMonth === currentOpPlan.periodMonth);
-                    if (mPlan) {
-                        const validInvIds = mPlan.activities.map(a => a.interventionId);
-                        available = mp.interventions.filter(i => validInvIds.includes(i.id));
-                    }
-                }
-            }
-        }
-        return available;
+        if (!currentOpPlan || !actRow.masterPlanId) return [];
+        const mp = filteredPlans.find(p => p.id === actRow.masterPlanId);
+        if (!mp) return [];
+        return mp.interventions;
     };
 
     const getAvailableMasterPlans = (actRow) => {
-        if (!currentOpPlan) return [];
-        if (currentOpPlan.planType === PLAN_TYPES.QUARTERLY) return filteredPlans; 
-        
-        if (currentOpPlan.planType === PLAN_TYPES.MONTHLY) {
-            const targetQuarter = Object.keys(QUARTERS_MAP).find(q => QUARTERS_MAP[q].includes(currentOpPlan.periodMonth));
-            const qPlan = filteredOpPlans.find(op => op.planType === PLAN_TYPES.QUARTERLY && op.periodQuarter === targetQuarter);
-            if (!qPlan) return [];
-            const validMasterIds = qPlan.activities.map(a => a.masterPlanId);
-            return filteredPlans.filter(p => validMasterIds.includes(p.id));
-        }
-        if (currentOpPlan.planType === PLAN_TYPES.WEEKLY) {
-            if (actRow.isOutsideMonthly) return filteredPlans;
-            const mPlan = filteredOpPlans.find(op => op.planType === PLAN_TYPES.MONTHLY && op.periodMonth === currentOpPlan.periodMonth);
-            if (!mPlan) return [];
-            const validMasterIds = mPlan.activities.map(a => a.masterPlanId);
-            return filteredPlans.filter(p => validMasterIds.includes(p.id));
-        }
-        return [];
+        return filteredPlans;
     };
 
+    // تم التحديث للسماح بتعديل الخطط الشهرية مباشرة في شاشة التتبع
     const getAggregatedData = (targetPlan) => {
-        if (targetPlan.planType === PLAN_TYPES.WEEKLY) return targetPlan.activities || [];
+        if (targetPlan.planType === PLAN_TYPES.WEEKLY || targetPlan.planType === PLAN_TYPES.MONTHLY) {
+            return targetPlan.activities || [];
+        }
+        
         const aggregatedActivities = JSON.parse(JSON.stringify(targetPlan.activities || []));
 
         return aggregatedActivities.map(act => {
             let relatedWeeks = [];
-            if (targetPlan.planType === PLAN_TYPES.MONTHLY) {
-                relatedWeeks = filteredOpPlans.filter(op => op.planType === PLAN_TYPES.WEEKLY && op.periodMonth === targetPlan.periodMonth);
-            } else if (targetPlan.planType === PLAN_TYPES.QUARTERLY) { 
+            if (targetPlan.planType === PLAN_TYPES.QUARTERLY) { 
                 const monthsInQ = QUARTERS_MAP[targetPlan.periodQuarter] || [];
                 relatedWeeks = filteredOpPlans.filter(op => op.planType === PLAN_TYPES.WEEKLY && monthsInQ.includes(op.periodMonth));
             }
@@ -282,6 +256,7 @@ export default function PlanningView({ permissions, userStates }) {
         });
     };
 
+    // تم التحديث لجمع الـ baselines من الخطط الأسبوعية والشهرية السابقة
     const getDynamicBaseline = (masterPlanId, interventionId, currentOpId) => {
         let base = 0;
         if (masterPlanId) {
@@ -291,7 +266,7 @@ export default function PlanningView({ permissions, userStates }) {
         }
 
         filteredOpPlans.forEach(op => {
-            if (op.planType === PLAN_TYPES.WEEKLY && op.id !== currentOpId) {
+            if ((op.planType === PLAN_TYPES.WEEKLY || op.planType === PLAN_TYPES.MONTHLY) && op.id !== currentOpId) {
                 const act = op.activities?.find(a => a.interventionId === interventionId);
                 base += parseFloat(act?.achieved || 0);
             }
@@ -383,7 +358,51 @@ export default function PlanningView({ permissions, userStates }) {
         setIsEditingOpPlan(true);
     };
 
-    // Dashboard Data Aggregation - Simply mapping filtered data
+    // دالة الرفع التلقائي للأنشطة
+    const handleEditOpPlan = (op) => {
+        const enrichedOp = { ...op };
+        const existingInvIds = new Set(enrichedOp.activities?.map(a => a.interventionId) || []);
+        const newActivities = [];
+
+        if (op.planType === PLAN_TYPES.QUARTERLY) {
+            const months = QUARTERS_MAP[op.periodQuarter] || [];
+            const childPlans = filteredOpPlans.filter(p => 
+                (p.planType === PLAN_TYPES.MONTHLY || p.planType === PLAN_TYPES.WEEKLY) && 
+                months.includes(p.periodMonth) && 
+                p.year === op.year && p.level === op.level && p.state === op.state
+            );
+            
+            childPlans.forEach(cp => {
+                cp.activities?.forEach(act => {
+                    if (!existingInvIds.has(act.interventionId)) {
+                        newActivities.push({ ...act, id: `act_${Date.now()}_${Math.floor(Math.random() * 10000)}` });
+                        existingInvIds.add(act.interventionId);
+                    }
+                });
+            });
+        } else if (op.planType === PLAN_TYPES.MONTHLY) {
+            const childPlans = filteredOpPlans.filter(p => 
+                p.planType === PLAN_TYPES.WEEKLY && 
+                p.periodMonth === op.periodMonth && 
+                p.year === op.year && p.level === op.level && p.state === op.state
+            );
+            
+            childPlans.forEach(cp => {
+                cp.activities?.forEach(act => {
+                    if (!existingInvIds.has(act.interventionId)) {
+                        newActivities.push({ ...act, id: `act_${Date.now()}_${Math.floor(Math.random() * 10000)}` });
+                        existingInvIds.add(act.interventionId);
+                    }
+                });
+            });
+        }
+
+        enrichedOp.activities = [...(enrichedOp.activities || []), ...newActivities];
+        setCurrentOpPlan(enrichedOp);
+        setIsEditingOpPlan(true);
+    };
+
+    // Dashboard Data Aggregation - Updated to support Monthly Tracking
     const getFullPlanEvaluation = () => {
         let totalBudget = 0;
         let totalGap = 0;
@@ -445,14 +464,16 @@ export default function PlanningView({ permissions, userStates }) {
                 let achievedAnnual = 0;
                 let actualCost = 0;
                 
-                filteredOpPlans.filter(op => op.planType === PLAN_TYPES.WEEKLY).forEach(opWeek => {
-                    if (week && opWeek.periodWeek !== week) return; 
+                // تجميع بيانات التنفيذ من الخطط الأسبوعية والشهرية معاً
+                filteredOpPlans.filter(op => op.planType === PLAN_TYPES.WEEKLY || op.planType === PLAN_TYPES.MONTHLY).forEach(opExec => {
+                    if (week && opExec.planType === PLAN_TYPES.WEEKLY && opExec.periodWeek !== week) return; 
+                    if (week && opExec.planType === PLAN_TYPES.MONTHLY) return; // تخطي الخطط الشهرية إذا كان البحث عن أسبوع محدد
 
-                    const isCurrentMonth = opWeek.periodMonth === targetMonth;
-                    const isCurrentQuarter = quarterMonths.includes(opWeek.periodMonth);
-                    const isCurrentHalf = targetHalfMonths.includes(opWeek.periodMonth);
+                    const isCurrentMonth = opExec.periodMonth === targetMonth;
+                    const isCurrentQuarter = quarterMonths.includes(opExec.periodMonth);
+                    const isCurrentHalf = targetHalfMonths.includes(opExec.periodMonth);
 
-                    opWeek.activities?.filter(a => a.interventionId === inv.id).forEach(a => {
+                    opExec.activities?.filter(a => a.interventionId === inv.id).forEach(a => {
                         const val = Number(a.achieved || 0);
                         achievedAnnual += val;
                         if (isCurrentMonth) achievedMonthly += val;
@@ -519,8 +540,10 @@ export default function PlanningView({ permissions, userStates }) {
                     }
                 }
                 
-                if (op.planType === PLAN_TYPES.WEEKLY) {
-                    if (week && op.periodWeek !== week) return;
+                // جمع التنفيذ للأنشطة غير المخططة من المستويين الشهري والأسبوعي
+                if (op.planType === PLAN_TYPES.WEEKLY || op.planType === PLAN_TYPES.MONTHLY) {
+                    if (week && op.planType === PLAN_TYPES.WEEKLY && op.periodWeek !== week) return;
+                    if (week && op.planType === PLAN_TYPES.MONTHLY) return;
 
                     const isCurrentMonth = op.periodMonth === targetMonth;
                     const isCurrentQuarter = quarterMonths.includes(op.periodMonth);
@@ -535,7 +558,8 @@ export default function PlanningView({ permissions, userStates }) {
                     unplannedMap[a.interventionId].actualCost += Number(a.actualCost || 0);
                     totalActualCost += Number(a.actualCost || 0);
                     
-                    if (unplannedMap[a.interventionId].target === 0) {
+                    // إذا كان أسبوعي ولم يتم تسجيل الهدف من الخطة الشهرية، نقوم بإضافته
+                    if (op.planType === PLAN_TYPES.WEEKLY && unplannedMap[a.interventionId].target === 0) {
                         unplannedMap[a.interventionId].target += Number(a.target || 0);
                         unplannedMap[a.interventionId].budget += Number(a.totalCost || 0);
                         totalBudget += Number(a.totalCost || 0);
@@ -722,33 +746,33 @@ export default function PlanningView({ permissions, userStates }) {
     if (isEditingMatrix && currentPlan) {
         return (
             <div className="fixed inset-0 z-50 bg-gray-100 flex flex-col" dir="rtl">
-                <div className="bg-white shadow px-6 py-3 flex justify-between items-center shrink-0 border-b">
+                <div className="bg-white shadow px-4 sm:px-6 py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center shrink-0 border-b gap-3">
                     <div>
-                        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2"><Briefcase className="text-sky-600"/> إدخال مصفوفة الخطة السنوية الاستراتيجية</h2>
-                        <p className="text-sm text-gray-500 mt-1">يتم تحديث العجز (Gap) تلقائياً بناءً على إجمالي التكلفة والدعم المدخل.</p>
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2"><Briefcase className="text-sky-600"/> إدخال مصفوفة الخطة السنوية الاستراتيجية</h2>
+                        <p className="text-xs sm:text-sm text-gray-500 mt-1">يتم تحديث العجز (Gap) تلقائياً بناءً على إجمالي التكلفة والدعم المدخل.</p>
                     </div>
-                    <div className="flex gap-3">
-                        <Button variant="secondary" onClick={() => setIsEditingMatrix(false)}><X size={16} className="ml-1"/> إغلاق</Button>
-                        <Button onClick={handleSaveMasterPlan}><Save size={16} className="ml-1"/> حفظ المصفوفة</Button>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                        <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => setIsEditingMatrix(false)}><X size={16} className="ml-1"/> إغلاق</Button>
+                        <Button className="flex-1 sm:flex-none" onClick={handleSaveMasterPlan}><Save size={16} className="ml-1"/> حفظ المصفوفة</Button>
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4">
-                    <div className="bg-white rounded-lg shadow-sm border mb-4 p-4 flex gap-6 items-center flex-wrap">
-                        <FormGroup label="السنة" className="w-48">
-                            <Select value={currentPlan.year} onChange={(e) => setCurrentPlan({...currentPlan, year: Number(e.target.value)})} className="font-bold border-sky-300">
+                <div className="flex-1 overflow-y-auto p-2 sm:p-4">
+                    <div className="bg-white rounded-lg shadow-sm border mb-4 p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 w-full">
+                        <FormGroup label="السنة">
+                            <Select value={currentPlan.year} onChange={(e) => setCurrentPlan({...currentPlan, year: Number(e.target.value)})} className="font-bold border-sky-300 w-full">
                                 {YEAR_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                             </Select>
                         </FormGroup>
-                        <FormGroup label="المستوى" className="w-48">
-                            <Select value={currentPlan.level} onChange={(e) => setCurrentPlan({...currentPlan, level: e.target.value, state: e.target.value === 'federal' ? '' : currentPlan.state})} disabled={!isFederalManager}>
+                        <FormGroup label="المستوى">
+                            <Select value={currentPlan.level} onChange={(e) => setCurrentPlan({...currentPlan, level: e.target.value, state: e.target.value === 'federal' ? '' : currentPlan.state})} disabled={!isFederalManager} className="w-full">
                                 <option value="federal">اتحادي (قومي)</option>
                                 <option value="state">ولائي</option>
                             </Select>
                         </FormGroup>
                         {currentPlan.level === 'state' && (
-                            <FormGroup label="الولاية" className="w-48">
-                                <Select value={currentPlan.state} onChange={(e) => setCurrentPlan({...currentPlan, state: e.target.value})} disabled={!isFederalManager && userStates.length === 1}>
+                            <FormGroup label="الولاية">
+                                <Select value={currentPlan.state} onChange={(e) => setCurrentPlan({...currentPlan, state: e.target.value})} disabled={!isFederalManager && userStates.length === 1} className="w-full">
                                     <option value="">-- اختر --</option>
                                     {isFederalManager ? 
                                         Object.keys(STATE_LOCALITIES).map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar || s}</option>) :
@@ -757,14 +781,14 @@ export default function PlanningView({ permissions, userStates }) {
                                 </Select>
                             </FormGroup>
                         )}
-                        <FormGroup label="النتيجة المتوقعة (الأساس)" className="flex-1 min-w-[300px]">
-                            <Select value={currentPlan.expectedOutcome} onChange={(e) => setCurrentPlan({...currentPlan, expectedOutcome: e.target.value})} className="font-bold border-sky-300">
+                        <FormGroup label="النتيجة المتوقعة (الأساس)" className="md:col-span-2">
+                            <Select value={currentPlan.expectedOutcome} onChange={(e) => setCurrentPlan({...currentPlan, expectedOutcome: e.target.value})} className="font-bold border-sky-300 w-full">
                                 {OUTCOME_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                             </Select>
                         </FormGroup>
                     </div>
 
-                    <div className="bg-white border shadow-sm w-full relative overflow-x-auto">
+                    <div className="bg-white border shadow-sm w-full relative overflow-x-auto rounded-t-lg">
                         <table className="w-full table-fixed border-collapse text-[10px] sm:text-xs text-right whitespace-normal min-w-[1200px]">
                             <thead className="bg-slate-800 text-white font-bold">
                                 <tr>
@@ -828,7 +852,7 @@ export default function PlanningView({ permissions, userStates }) {
                             </tbody>
                         </table>
                     </div>
-                    <div className="p-2 border border-t-0 border-slate-300 bg-slate-50 flex justify-center">
+                    <div className="p-2 border border-t-0 border-slate-300 bg-slate-50 flex justify-center rounded-b-lg">
                         <Button type="button" size="sm" variant="secondary" onClick={() => setCurrentPlan({...currentPlan, interventions: [...(currentPlan.interventions||[]), DEFAULT_INTERVENTION()]})}><Plus size={16} className="ml-1"/> إضافة نشاط جديد</Button>
                     </div>
                 </div>
@@ -839,19 +863,19 @@ export default function PlanningView({ permissions, userStates }) {
     if (isEditingOpPlan && currentOpPlan) {
         return (
             <div className="fixed inset-0 z-50 bg-gray-100 flex flex-col" dir="rtl">
-                <div className="bg-white shadow px-6 py-3 flex justify-between items-center shrink-0 border-b">
+                <div className="bg-white shadow px-4 sm:px-6 py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center shrink-0 border-b gap-3">
                     <div>
-                        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2"><Calendar className="text-sky-600"/> إعداد خطة العمل التشغيلية - {currentOpPlan.planType}</h2>
-                        <p className="text-sm text-gray-500 mt-1">يتم سحب الأنشطة بناءً على السنة ومستوى الخطة المحددين.</p>
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2"><Calendar className="text-sky-600"/> إعداد خطة العمل التشغيلية - {currentOpPlan.planType}</h2>
+                        <p className="text-xs sm:text-sm text-gray-500 mt-1">يتم سحب الأنشطة بناءً على السنة ومستوى الخطة المحددين.</p>
                     </div>
-                    <div className="flex gap-3">
-                        <Button variant="secondary" onClick={() => setIsEditingOpPlan(false)}><X size={16} className="ml-1"/> إغلاق</Button>
-                        <Button onClick={handleSaveOpPlan}><Save size={16} className="ml-1"/> حفظ الخطة</Button>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                        <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => setIsEditingOpPlan(false)}><X size={16} className="ml-1"/> إغلاق</Button>
+                        <Button className="flex-1 sm:flex-none" onClick={handleSaveOpPlan}><Save size={16} className="ml-1"/> حفظ الخطة</Button>
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 space-y-6">
-                    <div className="bg-white p-4 rounded-lg border shadow-sm grid md:grid-cols-5 gap-4">
+                <div className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-4 sm:space-y-6">
+                    <div className="bg-white p-4 rounded-lg border shadow-sm grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                         <FormGroup label="نوع الخطة">
                             <div className="font-bold text-indigo-800 p-2 bg-indigo-100 rounded text-center border border-indigo-200">{currentOpPlan.planType}</div>
                         </FormGroup>
@@ -909,9 +933,9 @@ export default function PlanningView({ permissions, userStates }) {
                     </div>
 
                     <div className="bg-white rounded-lg border shadow-sm w-full relative">
-                        <div className="flex justify-between items-center p-3 border-b bg-gray-50">
-                            <h4 className="font-bold text-gray-700">تحديد الأنشطة، المستهدفات، والميزانية للفترة المحددة</h4>
-                            <Button type="button" size="sm" onClick={() => setCurrentOpPlan({...currentOpPlan, activities: [...(currentOpPlan.activities||[]), DEFAULT_OP_ACTIVITY()]})}>
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 border-b bg-gray-50 gap-2">
+                            <h4 className="font-bold text-gray-700 text-sm sm:text-base">تحديد الأنشطة والميزانية للفترة المحددة</h4>
+                            <Button type="button" size="sm" className="w-full sm:w-auto" onClick={() => setCurrentOpPlan({...currentOpPlan, activities: [...(currentOpPlan.activities||[]), DEFAULT_OP_ACTIVITY()]})}>
                                 <Plus size={16} className="ml-1"/> إضافة نشاط
                             </Button>
                         </div>
@@ -922,7 +946,8 @@ export default function PlanningView({ permissions, userStates }) {
                                     <tr>
                                         <th className="w-[4%] p-1.5 border border-slate-600 text-center">النوع</th>
                                         <th className="w-[12%] p-1.5 border border-slate-600 text-center">الخطة / المحور</th>
-                                        <th className="w-[15%] p-1.5 border border-slate-600 text-center">النشاط</th>
+                                        <th className="w-[12%] p-1.5 border border-slate-600 text-center">النشاط</th>
+                                        <th className="w-[10%] p-1.5 border border-slate-600 text-center text-[10px]">المؤسسات المستهدفة</th>
                                         <th className="w-[8%] p-1.5 border border-slate-600 text-center">المؤشر</th>
                                         <th className="w-[5%] p-1.5 border border-slate-600 text-center">الهدف</th>
                                         <th className="w-[6%] p-1.5 border border-slate-600 text-center">التكلفة</th>
@@ -1006,6 +1031,40 @@ export default function PlanningView({ permissions, userStates }) {
                                                         </select>
                                                     )}
                                                 </td>
+                                                
+                                                <td className={cellClass}>
+                                                    <div className="flex flex-col h-full bg-gray-50 overflow-y-auto max-h-[40px] p-1 gap-1">
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {(act.targetFacilities || []).map(facility => (
+                                                                <span key={facility} className="text-[8px] bg-indigo-100 text-indigo-800 px-1 py-0.5 rounded flex items-center gap-1 border border-indigo-200">
+                                                                    {facility}
+                                                                    <button 
+                                                                        type="button" 
+                                                                        onClick={() => update('targetFacilities', act.targetFacilities.filter(f => f !== facility))} 
+                                                                        className="text-red-500 font-bold hover:text-red-700"
+                                                                    >
+                                                                        ×
+                                                                    </button>
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                        <select 
+                                                            className="w-full text-[9px] bg-white border border-gray-200 mt-auto outline-none cursor-pointer rounded" 
+                                                            value=""
+                                                            onChange={(e) => {
+                                                                const val = e.target.value;
+                                                                if (val && !(act.targetFacilities || []).includes(val)) {
+                                                                    update('targetFacilities', [...(act.targetFacilities || []), val]);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <option value="">+ اختيار مؤسسة</option>
+                                                            {dynamicFacilityOptions.filter(f => !(act.targetFacilities || []).includes(f)).map(f => (
+                                                                <option key={f} value={f}>{f}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </td>
 
                                                 <td className={cellClass}>
                                                     {act.isUnplanned ? (
@@ -1058,20 +1117,20 @@ export default function PlanningView({ permissions, userStates }) {
     if (isEditingTracking && currentOpPlan) {
         return (
             <div className="fixed inset-0 z-50 bg-gray-100 flex flex-col" dir="rtl">
-                <div className="bg-white shadow px-6 py-3 flex justify-between items-center shrink-0 border-b border-green-200">
+                <div className="bg-white shadow px-4 sm:px-6 py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center shrink-0 border-b border-green-200 gap-3">
                     <div>
-                        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2"><CheckCircle2 className="text-green-600"/> تحديث إنجاز المتابعة الأسبوعية</h2>
-                        <p className="text-sm text-gray-500 mt-1">{currentOpPlan.periodName} - عام {currentOpPlan.year} ({(currentOpPlan.level || 'federal') === 'federal' ? 'اتحادي' : `ولائي - ${STATE_LOCALITIES[currentOpPlan.state]?.ar || currentOpPlan.state}`})</p>
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2"><CheckCircle2 className="text-green-600"/> تحديث إنجاز الخطة ({currentOpPlan.planType === PLAN_TYPES.MONTHLY ? 'الشهرية' : 'الأسبوعية'})</h2>
+                        <p className="text-xs sm:text-sm text-gray-500 mt-1">{currentOpPlan.periodName} - عام {currentOpPlan.year} ({(currentOpPlan.level || 'federal') === 'federal' ? 'اتحادي' : `ولائي - ${STATE_LOCALITIES[currentOpPlan.state]?.ar || currentOpPlan.state}`})</p>
                     </div>
-                    <div className="flex gap-3">
-                        <Button variant="secondary" onClick={() => setIsEditingTracking(false)}><X size={16} className="ml-1"/> إغلاق</Button>
-                        <Button variant="success" onClick={handleSaveTracking}><Save size={16} className="ml-1"/> حفظ الإنجازات</Button>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                        <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => setIsEditingTracking(false)}><X size={16} className="ml-1"/> إغلاق</Button>
+                        <Button variant="success" className="flex-1 sm:flex-none" onClick={handleSaveTracking}><Save size={16} className="ml-1"/> حفظ الإنجازات</Button>
                     </div>
                 </div>
                 
-                <div className="flex-1 overflow-y-auto p-4">
-                    <div className="bg-white border rounded-lg shadow-sm">
-                        <Table headers={["النشاط", "النوع", "المستهدف الأسبوعي", "الأساس المحدث", "المنفذ الفعلي", "التكلفة الفعلية", "نسبة الإنجاز"]}>
+                <div className="flex-1 overflow-y-auto p-2 sm:p-4">
+                    <div className="bg-white border rounded-lg shadow-sm overflow-x-auto">
+                        <Table headers={["النشاط", "النوع", "المستهدف", "الأساس المحدث", "المنفذ الفعلي", "التكلفة الفعلية", "نسبة الإنجاز"]}>
                             {getAggregatedData(currentOpPlan).map(a => {
                                 const base = getDynamicBaseline(a.masterPlanId, a.interventionId, currentOpPlan.id);
                                 const perc = a.target > 0 ? Math.round((a.achieved / a.target) * 100) : 0;
@@ -1086,19 +1145,19 @@ export default function PlanningView({ permissions, userStates }) {
 
                                 return (
                                     <tr key={a.id} className={a.isUnplanned ? 'bg-amber-50/20' : ''}>
-                                        <td className="p-3 text-sm font-bold w-1/4 break-words whitespace-normal">{interventionName}</td>
-                                        <td className="p-3 text-center text-xs">
+                                        <td className="p-3 text-sm font-bold w-1/4 break-words whitespace-normal min-w-[200px]">{interventionName}</td>
+                                        <td className="p-3 text-center text-xs min-w-[80px]">
                                             {a.isUnplanned ? <span className="bg-amber-100 text-amber-800 px-2 py-1 rounded font-bold">غير مخطط</span> : <span className="text-gray-500">مخطط</span>}
                                         </td>
-                                        <td className="p-3 text-center font-bold text-indigo-600">{a.target}</td>
-                                        <td className="p-3 text-center bg-gray-100/50 text-xs font-medium">{base}</td>
-                                        <td className="p-3 w-32">
-                                            <Input type="number" value={a.achieved || 0} onChange={(e) => handleUpdateWeeklyTracking(a.id, 'achieved', e.target.value)} className="text-center font-bold text-green-700 border-green-200" />
+                                        <td className="p-3 text-center font-bold text-indigo-600 min-w-[120px]">{a.target}</td>
+                                        <td className="p-3 text-center bg-gray-100/50 text-xs font-medium min-w-[120px]">{base}</td>
+                                        <td className="p-3 w-32 min-w-[120px]">
+                                            <Input type="number" value={a.achieved || 0} onChange={(e) => handleUpdateWeeklyTracking(a.id, 'achieved', e.target.value)} className="text-center font-bold text-green-700 border-green-200 w-full" />
                                         </td>
-                                        <td className="p-3 w-32">
-                                            <Input type="number" value={a.actualCost || 0} onChange={(e) => handleUpdateWeeklyTracking(a.id, 'actualCost', e.target.value)} className="text-center" />
+                                        <td className="p-3 w-32 min-w-[120px]">
+                                            <Input type="number" value={a.actualCost || 0} onChange={(e) => handleUpdateWeeklyTracking(a.id, 'actualCost', e.target.value)} className="text-center w-full" />
                                         </td>
-                                        <td className="p-3">
+                                        <td className="p-3 min-w-[120px]">
                                             <div className="flex items-center gap-2">
                                                 <div className="w-full bg-gray-200 rounded-full h-2">
                                                     <div className={`h-2 rounded-full ${perc >= 100 ? 'bg-green-500' : 'bg-orange-500'}`} style={{ width: `${Math.min(perc, 100)}%` }}></div>
@@ -1116,7 +1175,7 @@ export default function PlanningView({ permissions, userStates }) {
         );
     }
 
-    if (isLoading.masterPlans || isLoading.operationalPlans) return <Spinner />;
+    if (isLoading.masterPlans || isLoading.operationalPlans || isLoading.healthFacilities) return <Spinner />;
 
     const evalData = getFullPlanEvaluation();
 
@@ -1130,8 +1189,8 @@ export default function PlanningView({ permissions, userStates }) {
             {/* ==========================================
                 GLOBAL FILTER BAR (الموجه الأساسي للنظام)
             ========================================== */}
-            <div className="bg-slate-800 p-4 rounded-lg shadow-md mb-6 flex flex-wrap gap-4 items-end text-white">
-                <div className="flex-1 min-w-[200px]">
+            <div className="bg-slate-800 p-4 rounded-lg shadow-md mb-6 flex flex-col md:flex-row flex-wrap gap-4 items-start md:items-end text-white">
+                <div className="w-full md:flex-1 md:min-w-[200px]">
                     <label className="block text-xs font-bold text-slate-300 mb-1">سنة الخطة (Year)</label>
                     <select className="w-full bg-slate-700 border-slate-600 font-bold text-white rounded p-2 focus:ring-sky-500 outline-none"
                         value={globalFilter.year}
@@ -1140,7 +1199,7 @@ export default function PlanningView({ permissions, userStates }) {
                         {YEAR_OPTIONS.map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
                 </div>
-                <div className="flex-1 min-w-[200px]">
+                <div className="w-full md:flex-1 md:min-w-[200px]">
                     <label className="block text-xs font-bold text-slate-300 mb-1">مستوى التخطيط (Level)</label>
                     <select className="w-full bg-slate-700 border-slate-600 font-bold text-white rounded p-2 focus:ring-sky-500 outline-none"
                         value={globalFilter.level}
@@ -1152,7 +1211,7 @@ export default function PlanningView({ permissions, userStates }) {
                     </select>
                 </div>
                 {globalFilter.level === 'state' && (
-                    <div className="flex-1 min-w-[200px]">
+                    <div className="w-full md:flex-1 md:min-w-[200px]">
                         <label className="block text-xs font-bold text-slate-300 mb-1">الولاية (State)</label>
                         <select className="w-full bg-slate-700 border-slate-600 font-bold text-white rounded p-2 focus:ring-sky-500 outline-none"
                             value={globalFilter.state}
@@ -1170,13 +1229,13 @@ export default function PlanningView({ permissions, userStates }) {
             </div>
 
             <div className="border-b border-gray-200">
-                <nav className="-mb-px flex gap-4 sm:gap-8 overflow-x-auto whitespace-nowrap">
+                <nav className="-mb-px flex gap-4 sm:gap-8 overflow-x-auto whitespace-nowrap scrollbar-hide">
                     {[
-                        { id: 'master', label: 'الخطة السنوية (Master)', icon: TrendingUp },
+                        { id: 'master', label: 'الخطة السنوية', icon: TrendingUp },
                         { id: 'quarterly', label: 'الخطط الربعية', icon: Calendar },
                         { id: 'monthly', label: 'الخطط الشهرية', icon: Calendar },
-                        { id: 'weekly', label: 'التشغيلية (الأسبوعية)', icon: FileSpreadsheet },
-                        { id: 'tracking', label: 'المتابعة الاسبوعية', icon: CheckCircle2 },
+                        { id: 'weekly', label: 'التشغيلية الأسبوعية', icon: FileSpreadsheet },
+                        { id: 'tracking', label: 'المتابعة والتنفيذ', icon: CheckCircle2 },
                         { id: 'evaluation', label: 'التقييم', icon: Activity }
                     ].map(tab => (
                         <button
@@ -1195,15 +1254,15 @@ export default function PlanningView({ permissions, userStates }) {
             {/* --- Master Plan Tab --- */}
             {activeTab === 'master' && (
                 <div className="space-y-4 animate-in fade-in">
-                    <div className="flex justify-between items-center bg-white p-4 rounded-lg border shadow-sm flex-wrap gap-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-lg border shadow-sm gap-4">
                         <h3 className="text-lg font-bold flex items-center gap-2">
                             <Target className="text-sky-600"/> 
                             الخطة السنوية لعام {globalFilter.year}
                             {globalFilter.level === 'state' && globalFilter.state && ` (${STATE_LOCALITIES[globalFilter.state]?.ar})`}
                         </h3>
                         
-                        <div className="flex gap-2">
-                            <Button onClick={openCreateMasterPlan}>
+                        <div className="flex gap-2 w-full sm:w-auto">
+                            <Button onClick={openCreateMasterPlan} className="w-full sm:w-auto justify-center">
                                 <Plus size={18} className="ml-2"/> إضافة خطة نتيجة
                             </Button>
                         </div>
@@ -1216,16 +1275,16 @@ export default function PlanningView({ permissions, userStates }) {
                             {filteredPlans.map(plan => (
                                 <div key={plan.id} className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
                                     <div 
-                                        className="p-4 bg-sky-50 flex justify-between items-center cursor-pointer hover:bg-sky-100 border-b"
+                                        className="p-4 bg-sky-50 flex flex-col sm:flex-row justify-between items-start sm:items-center cursor-pointer hover:bg-sky-100 border-b gap-3"
                                         onClick={() => setExpandedPlanId(expandedPlanId === plan.id ? null : plan.id)}
                                     >
                                         <div className="flex items-center gap-3">
                                             <span className={`px-2 py-1 rounded text-xs font-bold ${(plan.level || 'federal') === 'federal' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>
                                                 {(plan.level || 'federal') === 'federal' ? 'اتحادي' : `ولائي - ${STATE_LOCALITIES[plan.state]?.ar || plan.state || 'غير محدد'}`}
                                             </span>
-                                            <span className="font-bold text-lg text-gray-800">{plan.expectedOutcome}</span>
+                                            <span className="font-bold text-base sm:text-lg text-gray-800">{plan.expectedOutcome}</span>
                                         </div>
-                                        <div className="flex items-center gap-3 shrink-0">
+                                        <div className="flex items-center gap-2 sm:gap-3 shrink-0 self-end sm:self-auto w-full sm:w-auto justify-end">
                                             <Button size="sm" variant="secondary" onClick={(e) => { e.stopPropagation(); setCurrentPlan(plan); setIsEditingMatrix(true); }}><Edit size={14}/></Button>
                                             <Button size="sm" variant="danger" onClick={(e) => { e.stopPropagation(); if(confirm("حذف؟")) deleteMasterPlan(plan.id).then(()=>fetchMasterPlans(true)); }}><Trash2 size={14}/></Button>
                                             {expandedPlanId === plan.id ? <ChevronUp size={20} className="text-gray-500"/> : <ChevronDown size={20} className="text-gray-500"/>}
@@ -1233,8 +1292,8 @@ export default function PlanningView({ permissions, userStates }) {
                                     </div>
                                     
                                     {expandedPlanId === plan.id && (
-                                        <div className="overflow-x-auto p-4">
-                                            <table className="w-full text-xs text-right table-fixed border-collapse">
+                                        <div className="overflow-x-auto p-2 sm:p-4">
+                                            <table className="w-full text-xs text-right table-fixed border-collapse min-w-[1000px]">
                                                 <thead className="bg-slate-100 text-slate-700 font-bold border-b">
                                                     <tr>
                                                         <th className="w-[10%] p-2 border-l border-slate-200">المحور</th>
@@ -1290,14 +1349,14 @@ export default function PlanningView({ permissions, userStates }) {
             {/* --- Operational Plans Tabs --- */}
             {['quarterly', 'monthly', 'weekly'].includes(activeTab) && (
                 <div className="space-y-4 animate-in fade-in">
-                    <div className="flex justify-between items-center bg-white p-4 rounded-lg border shadow-sm">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-lg border shadow-sm gap-4">
                         <h3 className="text-lg font-bold flex items-center gap-2">
                             <Calendar className="text-indigo-600"/> 
                             {activeTab === 'quarterly' ? 'الخطط الربعية' : activeTab === 'monthly' ? 'الخطط الشهرية' : 'الخطط الأسبوعية التشغيلية'}
                             {` (${globalFilter.year})`}
                         </h3>
-                        <div className="flex gap-2">
-                            <Button onClick={() => openCreateOpPlan(PLAN_TYPES[activeTab.toUpperCase()])}>
+                        <div className="flex gap-2 w-full sm:w-auto">
+                            <Button onClick={() => openCreateOpPlan(PLAN_TYPES[activeTab.toUpperCase()])} className="w-full sm:w-auto justify-center">
                                 <Plus size={18} className="ml-2"/> {`إنشاء خطة ${activeTab === 'quarterly' ? 'ربعية' : activeTab === 'monthly' ? 'شهرية' : 'أسبوعية'}`}
                             </Button>
                         </div>
@@ -1306,18 +1365,18 @@ export default function PlanningView({ permissions, userStates }) {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {filteredOpPlans.filter(op => op.planType === PLAN_TYPES[activeTab.toUpperCase()]).map(op => (
                             <Card key={op.id} className="border-r-4 border-r-indigo-500">
-                                <CardBody className="flex justify-between items-center">
+                                <CardBody className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                                     <div>
                                         <div className="flex gap-2 mb-1">
                                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${(op.level || 'federal') === 'federal' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>
                                                 {(op.level || 'federal') === 'federal' ? 'اتحادي' : `ولائي - ${STATE_LOCALITIES[op.state]?.ar || op.state || 'غير محدد'}`}
                                             </span>
                                         </div>
-                                        <h4 className="text-lg font-bold text-gray-800">{op.periodName}</h4>
+                                        <h4 className="text-base sm:text-lg font-bold text-gray-800">{op.periodName}</h4>
                                         <p className="text-xs text-gray-500 mt-1">الأنشطة المجدولة: {op.activities?.length || 0}</p>
                                     </div>
-                                    <div className="flex gap-2 shrink-0">
-                                        <Button variant="secondary" size="sm" onClick={() => { setCurrentOpPlan(op); setIsEditingOpPlan(true); }}><Edit size={16}/></Button>
+                                    <div className="flex gap-2 shrink-0 self-end sm:self-auto w-full sm:w-auto justify-end">
+                                        <Button variant="secondary" size="sm" onClick={() => handleEditOpPlan(op)}><Edit size={16}/></Button>
                                         <Button variant="danger" size="sm" onClick={() => { if(confirm("حذف؟")) deleteOperationalPlan(op.id).then(()=>fetchOperationalPlans(true)); }}><Trash2 size={16}/></Button>
                                     </div>
                                 </CardBody>
@@ -1330,39 +1389,43 @@ export default function PlanningView({ permissions, userStates }) {
                 </div>
             )}
 
-            {/* --- Tracking (Weekly) --- */}
+            {/* --- Tracking (Monthly/Weekly) --- */}
             {activeTab === 'tracking' && (
                 <div className="space-y-4 animate-in fade-in">
                     <div className="bg-green-50 p-4 rounded-lg border border-green-200 flex items-start gap-3">
                         <CheckCircle2 className="text-green-600 shrink-0 mt-1" />
-                        <p className="text-sm text-green-800 font-medium leading-relaxed">
-                            <strong>شاشة المتابعة الأسبوعية:</strong> تتيح هذه الشاشة تحديث إنجازات الأنشطة التشغيلية (المخططة وغير المخططة) للأسابيع المفعلة فقط بناءً على الفلتر المختار أعلاه.
+                        <p className="text-xs sm:text-sm text-green-800 font-medium leading-relaxed">
+                            <strong>شاشة المتابعة والتنفيذ:</strong> تتيح تحديث إنجازات الأنشطة (المخططة وغير المخططة) للخطط <strong>الشهرية</strong> و<strong>الأسبوعية</strong> المفعلة بناءً على الفلتر المختار أعلاه.
                         </p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {filteredOpPlans.filter(op => op.planType === PLAN_TYPES.WEEKLY).map(op => {
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {filteredOpPlans.filter(op => op.planType === PLAN_TYPES.WEEKLY || op.planType === PLAN_TYPES.MONTHLY).map(op => {
+                            const isMonthly = op.planType === PLAN_TYPES.MONTHLY;
                             return (
                                 <div key={op.id} onClick={() => { setCurrentOpPlan(op); setIsEditingTracking(true); }} className="cursor-pointer">
-                                    <Card className="hover:shadow-md transition-all border-r-4 border-r-green-500 bg-green-50/10">
-                                        <CardBody className="flex justify-between items-center">
+                                    <Card className={`hover:shadow-md transition-all border-r-4 ${isMonthly ? 'border-r-blue-500 bg-blue-50/10' : 'border-r-green-500 bg-green-50/10'}`}>
+                                        <CardBody className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                                             <div>
-                                                <div className="text-[10px] font-bold mb-1 flex gap-1">
+                                                <div className="text-[10px] font-bold mb-1 flex gap-2">
                                                     <span className={(op.level || 'federal') === 'federal' ? 'text-purple-600' : 'text-teal-600'}>
                                                         {(op.level || 'federal') === 'federal' ? 'اتحادي' : `ولائي`}
                                                     </span>
+                                                    <span className={isMonthly ? 'text-blue-600 bg-blue-100 px-1.5 rounded' : 'text-green-600 bg-green-100 px-1.5 rounded'}>
+                                                        {isMonthly ? 'خطة شهرية' : 'خطة أسبوعية'}
+                                                    </span>
                                                 </div>
-                                                <h4 className="font-bold text-gray-800">{op.periodName}</h4>
+                                                <h4 className="font-bold text-gray-800 text-sm sm:text-base">{op.periodName}</h4>
                                             </div>
-                                            <Button size="sm" variant="success"><Edit size={14} className="ml-1"/> تحديث التنفيذ</Button>
+                                            <Button size="sm" variant={isMonthly ? 'primary' : 'success'} className="self-end sm:self-auto"><Edit size={14} className="ml-1"/> إدخال التنفيذ</Button>
                                         </CardBody>
                                     </Card>
                                 </div>
                             );
                         })}
                     </div>
-                    {filteredOpPlans.filter(op => op.planType === PLAN_TYPES.WEEKLY).length === 0 && (
-                        <EmptyState message="لا توجد خطط أسبوعية متاحة للتحديث." />
+                    {filteredOpPlans.filter(op => op.planType === PLAN_TYPES.WEEKLY || op.planType === PLAN_TYPES.MONTHLY).length === 0 && (
+                        <EmptyState message="لا توجد خطط (شهرية أو أسبوعية) متاحة لإدخال التنفيذ." />
                     )}
                 </div>
             )}
@@ -1372,10 +1435,10 @@ export default function PlanningView({ permissions, userStates }) {
                 <div className="space-y-6 animate-in fade-in">
                     
                     <div className="bg-white p-4 rounded-lg border shadow-sm mb-6">
-                        <div className="flex items-center gap-2 mb-4 text-indigo-800 font-bold border-b pb-2">
+                        <div className="flex items-center gap-2 mb-4 text-indigo-800 font-bold border-b pb-2 text-sm sm:text-base">
                             <ListFilter size={18}/> عوامل التصفية (للفترات والأهداف فقط)
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                             <FormGroup label="النتيجة المتوقعة">
                                 <Select value={evalFilters.outcome} onChange={(e) => setEvalFilters({...evalFilters, outcome: e.target.value})}>
                                     <option value="">-- الكل --</option>
@@ -1414,76 +1477,76 @@ export default function PlanningView({ permissions, userStates }) {
                             <CardBody className="text-center p-4">
                                 <BarChart2 className="w-6 h-6 text-sky-500 mx-auto mb-2" />
                                 <div className="text-xs text-gray-500 font-bold mb-1">إجمالي الميزانية المرصودة</div>
-                                <div className="text-xl font-bold text-gray-800">{evalData.totalBudget.toLocaleString()}</div>
+                                <div className="text-xl sm:text-2xl font-bold text-gray-800">{evalData.totalBudget.toLocaleString()}</div>
                             </CardBody>
                         </Card>
                         <Card className="bg-white border-t-4 border-t-green-500">
                             <CardBody className="text-center p-4">
                                 <PieChart className="w-6 h-6 text-green-500 mx-auto mb-2" />
                                 <div className="text-xs text-gray-500 font-bold mb-1">المنصرف الفعلي (تراكمي)</div>
-                                <div className="text-xl font-bold text-gray-800">{evalData.totalActualCost.toLocaleString()}</div>
+                                <div className="text-xl sm:text-2xl font-bold text-gray-800">{evalData.totalActualCost.toLocaleString()}</div>
                             </CardBody>
                         </Card>
                         <Card className="bg-white border-t-4 border-t-red-500">
                             <CardBody className="text-center p-4">
                                 <AlertTriangle className="w-6 h-6 text-red-500 mx-auto mb-2" />
                                 <div className="text-xs text-gray-500 font-bold mb-1">الفجوة التمويلية (العجز)</div>
-                                <div className="text-xl font-bold text-gray-800">{evalData.totalGap.toLocaleString()}</div>
+                                <div className="text-xl sm:text-2xl font-bold text-gray-800">{evalData.totalGap.toLocaleString()}</div>
                             </CardBody>
                         </Card>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-                        <Card className="bg-indigo-50 border border-indigo-100">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-6">
+                        <Card className="bg-indigo-50 border border-indigo-100 col-span-2 sm:col-span-1">
                             <CardBody className="text-center p-3">
                                 <div className="text-[10px] text-indigo-600 font-bold mb-1">إجمالي الأنشطة المشمولة</div>
-                                <div className="text-xl font-bold text-indigo-900">{evalData.totalActivities}</div>
+                                <div className="text-lg sm:text-xl font-bold text-indigo-900">{evalData.totalActivities}</div>
                             </CardBody>
                         </Card>
                         <Card className="bg-sky-50 border border-sky-100">
                             <CardBody className="text-center p-3">
                                 <div className="text-[10px] text-sky-600 font-bold mb-1">متوسط الأنشطة / شهر</div>
-                                <div className="text-xl font-bold text-sky-900">{evalData.meanPerMonth}</div>
+                                <div className="text-lg sm:text-xl font-bold text-sky-900">{evalData.meanPerMonth}</div>
                             </CardBody>
                         </Card>
                         <Card className="bg-green-50 border border-green-100">
                             <CardBody className="text-center p-3">
                                 <div className="text-[10px] text-green-600 font-bold mb-1">مكتملة كلياً</div>
-                                <div className="text-xl font-bold text-green-700">{evalData.fullyCompleted}</div>
+                                <div className="text-lg sm:text-xl font-bold text-green-700">{evalData.fullyCompleted}</div>
                             </CardBody>
                         </Card>
                         <Card className="bg-orange-50 border border-orange-100">
                             <CardBody className="text-center p-3">
                                 <div className="text-[10px] text-orange-600 font-bold mb-1">مكتملة جزئياً</div>
-                                <div className="text-xl font-bold text-orange-700">{evalData.partiallyCompleted}</div>
+                                <div className="text-lg sm:text-xl font-bold text-orange-700">{evalData.partiallyCompleted}</div>
                             </CardBody>
                         </Card>
                         <Card className="bg-red-50 border border-red-100">
                             <CardBody className="text-center p-3">
                                 <div className="text-[10px] text-red-600 font-bold mb-1">لم تنفذ</div>
-                                <div className="text-xl font-bold text-red-700">{evalData.notImplemented}</div>
+                                <div className="text-lg sm:text-xl font-bold text-red-700">{evalData.notImplemented}</div>
                             </CardBody>
                         </Card>
                     </div>
 
                     <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
-                        <div className="p-4 border-b bg-gray-50 flex justify-between items-center flex-wrap gap-4">
+                        <div className="p-4 border-b bg-gray-50 flex flex-col sm:flex-row justify-between items-start sm:items-center flex-wrap gap-4">
                             <div className="flex items-center gap-2">
                                 <Layers className="text-indigo-600"/> 
-                                <h4 className="font-bold text-gray-800">جدول تقييم الخطة الشامل</h4>
+                                <h4 className="font-bold text-gray-800 text-sm sm:text-base">جدول تقييم الخطة الشامل</h4>
                             </div>
-                            <div className="flex gap-2">
-                                <Button size="sm" variant="secondary" onClick={() => exportEvaluationExcel(evalData)}>
+                            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                                <Button size="sm" variant="secondary" onClick={() => exportEvaluationExcel(evalData)} className="w-full sm:w-auto justify-center">
                                     <Download size={14} className="ml-1" /> تصدير Excel
                                 </Button>
-                                <Button size="sm" variant="secondary" onClick={() => exportEvaluationPDF(evalData)}>
+                                <Button size="sm" variant="secondary" onClick={() => exportEvaluationPDF(evalData)} className="w-full sm:w-auto justify-center">
                                     <FileText size={14} className="ml-1" /> تصدير PDF
                                 </Button>
                             </div>
                         </div>
 
                         <div className="overflow-x-auto w-full pb-4">
-                            <table className="w-full text-sm text-right border-collapse min-w-[1200px]">
+                            <table className="w-full text-xs sm:text-sm text-right border-collapse min-w-[1200px]">
                                 <thead className="bg-slate-800 text-white">
                                     <tr>
                                         <th className="p-3 border-l border-slate-700 w-[20%]">النشاط</th>
@@ -1504,7 +1567,7 @@ export default function PlanningView({ permissions, userStates }) {
                                         <React.Fragment key={gIdx}>
                                             <tr className="bg-sky-50 border-b-2 border-sky-100">
                                                 <td colSpan="11" className="p-3 font-bold text-sky-900">
-                                                    النتيجة المتوقعة: {group.outcomeName} <span className="text-xs text-sky-600 bg-sky-100 px-2 py-1 rounded mr-2">{group.levelInfo}</span>
+                                                    النتيجة المتوقعة: {group.outcomeName} <span className="text-[10px] sm:text-xs text-sky-600 bg-sky-100 px-2 py-1 rounded mr-2">{group.levelInfo}</span>
                                                 </td>
                                             </tr>
                                             {group.rows.map((row, idx) => {
@@ -1512,14 +1575,14 @@ export default function PlanningView({ permissions, userStates }) {
                                                 return (
                                                     <tr key={`${row.id}_${idx}`} className={`hover:bg-slate-50 transition-colors ${row.type === 'غير مخطط' ? 'bg-amber-50/20' : 'bg-white'}`}>
                                                         <td className="p-3 border-l border-slate-200 font-bold text-gray-800 break-words whitespace-normal">{row.name}</td>
-                                                        <td className="p-3 border-l border-slate-200 text-gray-600 text-xs text-center">{row.axis}</td>
+                                                        <td className="p-3 border-l border-slate-200 text-gray-600 text-[10px] sm:text-xs text-center">{row.axis}</td>
                                                         <td className="p-3 border-l border-slate-200 text-center">
                                                             {row.type === 'غير مخطط' 
-                                                                ? <span className="bg-amber-100 text-amber-800 px-2 py-1 rounded text-[10px] font-bold whitespace-nowrap">غير مخطط</span>
-                                                                : <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-[10px] font-bold whitespace-nowrap">مخطط</span>
+                                                                ? <span className="bg-amber-100 text-amber-800 px-2 py-1 rounded text-[9px] sm:text-[10px] font-bold whitespace-nowrap">غير مخطط</span>
+                                                                : <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-[9px] sm:text-[10px] font-bold whitespace-nowrap">مخطط</span>
                                                             }
                                                         </td>
-                                                        <td className="p-3 border-l border-slate-200 text-center font-bold text-indigo-600 text-lg">{row.target}</td>
+                                                        <td className="p-3 border-l border-slate-200 text-center font-bold text-indigo-600 text-base sm:text-lg">{row.target}</td>
                                                         
                                                         <td className="p-2 border-l border-slate-200 bg-teal-50/30">
                                                             <FormattedAchieved achieved={row.achievedMonthly} target={row.target} />
@@ -1536,8 +1599,8 @@ export default function PlanningView({ permissions, userStates }) {
                                                         
                                                         <td className="p-3 border-l border-slate-200 text-center">
                                                             <div className="flex flex-col items-center justify-center gap-1">
-                                                                <span className={`text-xs font-bold ${perc >= 100 ? 'text-green-600' : perc > 0 ? 'text-orange-500' : 'text-gray-400'}`}>{perc}%</span>
-                                                                <div className="w-16 bg-gray-200 rounded-full h-1.5">
+                                                                <span className={`text-[10px] sm:text-xs font-bold ${perc >= 100 ? 'text-green-600' : perc > 0 ? 'text-orange-500' : 'text-gray-400'}`}>{perc}%</span>
+                                                                <div className="w-12 sm:w-16 bg-gray-200 rounded-full h-1.5">
                                                                     <div className={`h-1.5 rounded-full ${perc >= 100 ? 'bg-green-500' : 'bg-orange-500'}`} style={{ width: `${Math.min(perc, 100)}%` }}></div>
                                                                 </div>
                                                             </div>
@@ -1551,10 +1614,10 @@ export default function PlanningView({ permissions, userStates }) {
                                     ))}
                                     {evalData.groupedData.length === 0 && (
                                         <tr>
-                                            <td colSpan="11" className="text-center p-12 text-gray-500 bg-white">
+                                            <td colSpan="11" className="text-center p-8 sm:p-12 text-gray-500 bg-white">
                                                 <div className="flex flex-col items-center justify-center">
-                                                    <AlertTriangle className="text-amber-500 w-10 h-10 mb-2"/>
-                                                    <span>لا توجد بيانات متاحة لعرض التقييم بناءً على الفلاتر المحددة.</span>
+                                                    <AlertTriangle className="text-amber-500 w-8 h-8 sm:w-10 sm:h-10 mb-2"/>
+                                                    <span className="text-xs sm:text-sm">لا توجد بيانات متاحة لعرض التقييم بناءً على الفلاتر المحددة.</span>
                                                 </div>
                                             </td>
                                         </tr>
