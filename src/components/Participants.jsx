@@ -866,7 +866,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
         { key: 'email', label: 'Email' },
         { key: 'state', label: 'State', required: true },
         { key: 'locality', label: 'Locality', required: true },
-        { key: 'center_name', label: course.course_type === 'ICCM' ? 'Village Name' : 'Health Facility Name', required: true },
+        { key: 'center_name', label: course.course_type === 'ICCM' ? 'Village Name' : (course.course_type === 'Program Management' ? 'Department' : 'Health Facility Name'), required: true },
         { key: 'job_title', label: 'Job Title', required: true },
         { key: 'phone', label: 'Phone Number' },
         { key: 'pre_test_score', label: 'Pre-Test Score' },
@@ -1019,7 +1019,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
                 }
             });
 
-            const centerNameLabel = course.course_type === 'ICCM' ? 'Village Name' : 'Health Facility Name';
+            const centerNameLabel = course.course_type === 'ICCM' ? 'Village Name' : (course.course_type === 'Program Management' ? 'Department' : 'Health Facility Name');
             if (!participant.name || !participant.state || !participant.locality || !participant.center_name) {
                 const missing = [];
                 if (!participant.name) missing.push("Name");
@@ -1034,10 +1034,15 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
             if (course.course_type === 'ICCM') {
                  participant.imci_sub_type = 'ICCM Community Module';
             }
+            
+            if (course.course_type === 'Program Management') {
+                 participant.department = participant.center_name;
+                 participant.center_name = 'N/A';
+            }
 
             participantsToImport.push(participant);
 
-            if (course.course_type === 'ICCM') {
+            if (course.course_type === 'ICCM' || course.course_type === 'Program Management') {
                 return;
             }
 
@@ -1481,7 +1486,7 @@ export function ParticipantsView({
         }
     };
     
-    const centerNameLabel = course.course_type === 'ICCM' ? 'Village Name' : 'Facility Name';
+    const centerNameLabel = course.course_type === 'ICCM' ? 'Village Name' : (course.course_type === 'Program Management' ? 'Department' : 'Facility Name');
 
     const handleBulkCertificateDownload = async () => {
         if (filtered.length === 0) {
@@ -1829,7 +1834,7 @@ export function ParticipantsView({
                                 <td className="p-4 border border-gray-200 font-medium text-gray-800">{p.name}</td>
                                 <td className="p-4 border border-gray-200">{p.group}</td>
                                 <td className="p-4 border border-gray-200">{p.job_title}</td>
-                                <td className="p-4 border border-gray-200">{p.center_name}</td>
+                                <td className="p-4 border border-gray-200">{course.course_type === 'Program Management' ? (p.department || 'N/A') : p.center_name}</td>
                                 <td className="p-4 border border-gray-200">{p.locality}</td>
                                 <td className="p-4 border border-gray-200 text-right">
                                     <div className="flex gap-2 flex-wrap justify-end">
@@ -1920,7 +1925,7 @@ export function ParticipantsView({
                                 <div>
                                     <h3 className="font-bold text-lg text-gray-800">{p.name}</h3>
                                     <p className="text-gray-600">{p.job_title}</p>
-                                    <p className="text-gray-600 text-sm">{p.center_name}
+                                    <p className="text-gray-600 text-sm">{course.course_type === 'Program Management' ? (p.department || 'N/A') : p.center_name}
                                         {p.locality && <span className="text-gray-500"> ({p.locality})</span>}
                                     </p>
                                     <p className="text-sm text-gray-500 mt-1">Group: <span className="font-medium text-gray-700">{p.group}</span></p>
@@ -2013,9 +2018,10 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
     const isEtat = course.course_type === 'ETAT';
     const isEenc = course.course_type === 'EENC';
     const isSsnc = course.course_type === 'SSNC' || course.course_type === 'Small & Sick Newborn';
+    const isProgramManagement = course.course_type === 'Program Management';
 
     const excludedImnciSubtypes = ["Standard 7 days course for Medical Doctors", "Standard 7 days course for Medical Assistance", "Refreshment IMNCI Course"];
-    const showTestScores = !(isImnci || isIccm || isEenc || isSsnc) || ((isImnci || isIccm) && !excludedImnciSubtypes.includes(initialData?.imci_sub_type));
+    const showTestScores = !(isImnci || isIccm || isEenc || isSsnc || isProgramManagement) || ((isImnci || isIccm) && !excludedImnciSubtypes.includes(initialData?.imci_sub_type));
 
     const jobTitleOptions = useMemo(() => {
         if (isEtat) return JOB_TITLES_ETAT;
@@ -2029,6 +2035,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
     const [state, setState] = useState(initialData?.state || course?.state || ''); 
     const [locality, setLocality] = useState(initialData?.locality || course?.locality || ''); 
     const [center, setCenter] = useState(String(initialData?.center_name || '')); 
+    const [department, setDepartment] = useState(String(initialData?.department || ''));
     const [phone, setPhone] = useState(String(initialData?.phone || ''));
     const [group, setGroup] = useState(initialData?.group || 'Group A');
     const [error, setError] = useState('');
@@ -2098,7 +2105,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
     useEffect(() => {
         const fetchFacilities = async () => {
             setError('');
-            if (state && locality && !isIccm) {
+            if (state && locality && !isIccm && !isProgramManagement) {
                 setIsLoadingFacilities(true);
                 try {
                     const facilities = await fetchHealthFacilities({ state, locality }, false);
@@ -2136,7 +2143,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                  isInitialLoad.current = false; 
             }
         };
-        if (state && locality && !isIccm) {
+        if (state && locality && !isIccm && !isProgramManagement) {
              fetchFacilities();
         } else {
              setFacilitiesInLocality([]); 
@@ -2144,7 +2151,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
              isInitialLoad.current = false;
         }
 
-    }, [state, locality, initialData?.facilityId, initialData?.center_name, isIccm, fetchHealthFacilities]); 
+    }, [state, locality, initialData?.facilityId, initialData?.center_name, isIccm, isProgramManagement, fetchHealthFacilities]); 
 
 
     // Handle Facility Selection
@@ -2253,16 +2260,20 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
         if (!name.trim()) { setError('Participant Name is required.'); return; }
         if (!state) { setError('State is required.'); return; }
         if (!locality) { setError('Locality is required.'); return; }
-        if (!center.trim()) { setError(isIccm ? 'Village Name is required.' : 'Health Facility Name is required.'); return; }
+        
+        if (!isProgramManagement && !center.trim()) { setError(isIccm ? 'Village Name is required.' : 'Health Facility Name is required.'); return; }
+        if (isProgramManagement && !department.trim()) { setError('Department (الادارة) is required.'); return; }
+
         if (!finalJobTitle) { setError('Job Title is required.'); return; }
         if (!phone.trim()) { setError('Phone Number is required.'); return; }
 
         let p = {
             ...(initialData || {}), 
             name: name.trim(), group, state, locality,
-            center_name: center.trim(),
-            facilityId: (isIccm || selectedFacility?.id.startsWith('pending_')) ? null : selectedFacility?.id || null, 
-            job_title: finalJobTitle, phone: phone.trim(), email: email ? email.trim() : null
+            center_name: isProgramManagement ? 'N/A' : center.trim(),
+            facilityId: (isIccm || isProgramManagement || selectedFacility?.id.startsWith('pending_')) ? null : selectedFacility?.id || null, 
+            job_title: finalJobTitle, phone: phone.trim(), email: email ? email.trim() : null,
+            department: isProgramManagement ? department.trim() : null
         };
 
         if (showTestScores) {
@@ -2448,40 +2459,54 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                             </Select>
                         </FormGroup>
                         
-                        {isIccm ? (
-                            <FormGroup label="Village Name">
+                        {/* Conditionally render Facility or Department */}
+                        {isProgramManagement && (
+                            <FormGroup label="Department (الادارة)">
                                 <Input
-                                    value={center}
-                                    onChange={(e) => setCenter(e.target.value)}
-                                    placeholder="Enter village name"
+                                    value={department}
+                                    onChange={(e) => setDepartment(e.target.value)}
+                                    placeholder="Enter department name"
                                     disabled={!locality}
                                 />
                             </FormGroup>
-                        ) : (
-                            <FormGroup label={isEtat ? "Hospital Name" : "Health Facility Name"}>
-                                <div 
-                                    onClick={() => {
-                                        if (!isLoadingFacilities && locality) {
-                                            setIsFacilitySearchOpen(true);
-                                        }
-                                    }}
-                                    className={`relative ${!locality ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
-                                >
-                                    <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                                        <Search className="w-5 h-5 text-gray-400" />
-                                    </div>
+                        )}
+
+                        {!isProgramManagement && (
+                            isIccm ? (
+                                <FormGroup label="Village Name">
                                     <Input
-                                        value={selectedFacility ? selectedFacility['اسم_المؤسسة'] : center}
-                                        readOnly
-                                        placeholder={isLoadingFacilities ? "Loading..." : (!locality ? "Select Locality first" : "Click to search facility...")}
-                                        className="cursor-pointer bg-white pr-10" 
-                                        disabled={isLoadingFacilities || !locality}
+                                        value={center}
+                                        onChange={(e) => setCenter(e.target.value)}
+                                        placeholder="Enter village name"
+                                        disabled={!locality}
                                     />
-                                </div>
-                            </FormGroup>
+                                </FormGroup>
+                            ) : (
+                                <FormGroup label={isEtat ? "Hospital Name" : "Health Facility Name"}>
+                                    <div 
+                                        onClick={() => {
+                                            if (!isLoadingFacilities && locality) {
+                                                setIsFacilitySearchOpen(true);
+                                            }
+                                        }}
+                                        className={`relative ${!locality ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+                                    >
+                                        <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                                            <Search className="w-5 h-5 text-gray-400" />
+                                        </div>
+                                        <Input
+                                            value={selectedFacility ? selectedFacility['اسم_المؤسسة'] : center}
+                                            readOnly
+                                            placeholder={isLoadingFacilities ? "Loading..." : (!locality ? "Select Locality first" : "Click to search facility...")}
+                                            className="cursor-pointer bg-white pr-10" 
+                                            disabled={isLoadingFacilities || !locality}
+                                        />
+                                    </div>
+                                </FormGroup>
+                            )
                         )}
                         
-                        {isIccm ? (
+                        {(isIccm || isProgramManagement) ? (
                              <FormGroup label="Participant Name">
                                 <Input
                                     value={name}

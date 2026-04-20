@@ -158,6 +158,21 @@ export const ETAT_TEST_QUESTIONS = [
     }
 ];
 
+export const PROGRAM_MANAGEMENT_TEST_QUESTIONS = [
+    { id: 'q1', text: '1. ما هو الفرق الرئيسي بين المقاربات التقليدية (نهج الحالات المنفردة) واستراتيجية العلاج المتكامل لأمراض الطفولة؟', type: 'mc', options: [{ id: 'a', text: 'التركيز فقط على العرض الذي تشتكي منه الأم.' }, { id: 'b', text: 'التعامل مع الطفل ككيان عضوي واحد من خلال فحص شامل للعلامات السريرية للأمراض الأكثر فتكاً.' }, { id: 'c', text: 'الاعتماد على تدريب دورات متعددة ومشتتة.' }, { id: 'd', text: 'التركيز فقط على الجانب الوقائي وتجاهل العلاج.' }], correctAnswer: 'b' },
+    { id: 'q2', text: '2. ما هي الفئة العمرية المستهدفة لخفض معدلات المرض والوفيات ضمن استراتيجية العلاج المتكامل؟', type: 'mc', options: [{ id: 'a', text: 'الأطفال تحت سن سنتين.' }, { id: 'b', text: 'الأطفال من 5 إلى 10 سنوات.' }, { id: 'c', text: 'الأطفال حديثي الولادة فقط.' }, { id: 'd', text: 'الأطفال تحت سن الخامسة.' }], correctAnswer: 'd' },
+    { id: 'q3', text: '3. يغطي البروتوكول الوطني لمعالجة الأطفال في مؤسسات الرعاية الصحية الأساسية في السودان الأمراض الخمسة الأكثر شيوعاً. أي من الآتي ليس من ضمنها؟', type: 'mc', options: [{ id: 'a', text: 'الالتهاب الرئوي.' }, { id: 'b', text: 'الإسهال.' }, { id: 'c', text: 'الملاريا.' }, { id: 'd', text: 'التهاب الكبد الوبائي.' }], correctAnswer: 'd' },
+    { id: 'q4', text: '4. ما هي المدة الزمنية المقررة لدورة "التدريب القياسي" (Standard Training Course) للكوادر المعالجة (أطباء، مساعدون طبيون، وممرضون معالجون)؟', type: 'mc', options: [{ id: 'a', text: '3 أيام.' }, { id: 'b', text: '4 أيام.' }, { id: 'c', text: '7 أيام.' }, { id: 'd', text: '11 يوماً.' }], correctAnswer: 'c' },
+    { id: 'q5', text: '5. لضمان جودة التدريب في دورة المعالجة القياسية، ما هي النسبة المئوية الدنيا التي يجب تخصيصها للتدريب السريري العملي من إجمالي وقت الدورة؟', type: 'mc', options: [{ id: 'a', text: '10%.' }, { id: 'b', text: '20%.' }, { id: 'c', text: '30%.' }, { id: 'd', text: '50%.' }], correctAnswer: 'c' },
+    { id: 'q6', text: '6. تم تصميم "التدريب في الأوضاع الإنسانية وحالات الطوارئ" لمدة 4 أيام، من هي الفئة المستهدفة حصرياً بهذا التدريب؟', type: 'mc', options: [{ id: 'a', text: 'المساعدون الطبيون.' }, { id: 'b', text: 'الممرضون.' }, { id: 'c', text: 'العاملون الصحيون المجتمعيون.' }, { id: 'd', text: 'الأطباء فقط.' }], correctAnswer: 'd' },
+    { id: 'q7', text: '7. عند استلام الإمداد الدوائي في المرفق الصحي، ما هو الحد الأدنى لتاريخ الصلاحية المسموح به لقبول الدواء؟', type: 'mc', options: [{ id: 'a', text: '3 أشهر.' }, { id: 'b', text: '6 أشهر.' }, { id: 'c', text: '12 شهراً.' }, { id: 'd', text: '24 شهراً.' }], correctAnswer: 'b' },
+    { id: 'q8', text: '8. كم عدد الزيارات الإشرافية التي يجب أن يتلقاها المرفق الصحي المستهدف ضمن برنامج الإرشاد السريري التدريبي الداعم (Clinical IMNCI Mentorship) شهرياً؟', type: 'mc', options: [{ id: 'a', text: 'زيارة واحدة شهرياً.' }, { id: 'b', text: 'زيارتان شهرياً.' }, { id: 'c', text: '4 زيارات شهرية (بمعدل زيارة أسبوعياً).' }, { id: 'd', text: 'زيارة واحدة كل 3 أشهر.' }], correctAnswer: 'c' },
+    { id: 'q9', text: '9. من هي الفئة الوظيفية المسؤولة بشكل مباشر عن أخذ القياسات الجسمانية (الوزن، الطول، وحساب Z-scores) وتصنيف سوء التغذية داخل المرفق الصحي المتكامل؟', type: 'mc', options: [{ id: 'a', text: 'المُسجل (مسجل العيادة).' }, { id: 'b', text: 'فني التغذية.' }, { id: 'c', text: 'فني التحصين.' }, { id: 'd', text: 'كاتب البيانات (HMIS).' }], correctAnswer: 'b' },
+    { id: 'q10', text: '10. عند الاعتماد على "نظام الاستهلاك الفعلي" في طلب الأدوية، ما هي النسبة المئوية التي تُضاف للكمية المستهلكة لتمثل توقع الاستهلاك الإضافي (مخزون الأمان)؟', type: 'mc', options: [{ id: 'a', text: '5%.' }, { id: 'b', text: '10%.' }, { id: 'c', text: '20%.' }, { id: 'd', text: '30%.' }], correctAnswer: 'd' },
+    { id: 'q11', text: '11. ما هو الهدف العالمي الذي تسعى استراتيجية العلاج المتكامل لأمراض الطفولة (IMNCI) للمساهمة في تحقيقه بحلول عام 2030 فيما يخص وفيات الأطفال دون سن الخامسة؟', type: 'mc', options: [{ id: 'a', text: 'خفض معدل الوفيات إلى 50 حالة وفاة لكل 1000 ولادة حية.' }, { id: 'b', text: 'خفض معدل الوفيات إلى 25 حالة وفاة (أو أقل) لكل 1000 ولادة حية.' }, { id: 'c', text: 'خفض معدل الوفيات إلى 10 حالات وفاة لكل 1000 ولادة حية.' }, { id: 'd', text: 'الوصول بمعدل وفيات الأطفال إلى الصفر مطلقاً في جميع الدول.' }], correctAnswer: 'b' },
+    { id: 'q12', text: '12. ما هو الدور الأساسي لمنسق صحة الطفل على مستوى المحلية في إنجاح برنامج الإرشاد السريري التدريبي الداعم (Clinical Mentorship)؟', type: 'mc', options: [{ id: 'a', text: 'وضع السياسات والمعايير الوطنية واعتماد قائمة المشرفين وتدريبهم مركزياً.' }, { id: 'b', text: 'التنسيق اللوجستي وجدولة زيارات المشرفين (4 زيارات للمركز)، وتوفير وسائل الحركة، وتذليل العقبات والاستجابة للتوصيات (مثل توفير الاستمارات وتنظيم تدفق المرضى).' }, { id: 'c', text: 'الإشراف الفني الشامل ومراقبة الأداء الميداني لجميع المحليات على مستوى الولاية.' }, { id: 'd', text: 'التفرغ التام للتعلم المباشر من المشرف وتنفيذ خطة العمل السريرية المتفق عليها داخل العيادة.' }], correctAnswer: 'b' }
+];
+
 const initializeAnswers = (questions) => {
     const initialAnswers = {};
     questions.forEach(q => {
@@ -635,10 +650,14 @@ export function CourseTestForm({
     // --- MAIN STATE: Controls View Mode (Dashboard vs Entry Form) ---
     // If it's a public view, default to 'entry'. If admin view, default to 'dashboard'
     const [viewMode, setViewMode] = useState(isPublicView ? 'entry' : 'dashboard'); 
+    
+    // Check if course is Program Management
+    const isProgramManagement = course.course_type === 'Program Management';
 
     const { testQuestions, testTitle, isRtl, jobTitleOptions, isIccm } = useMemo(() => {
         let titles = [];
         let isIccm = false;
+        
         if (course.course_type === 'ETAT') {
              titles = JOB_TITLES_ETAT;
              return { 
@@ -648,6 +667,17 @@ export function CourseTestForm({
                  jobTitleOptions: titles, 
                  isIccm: false 
              };
+        }
+        
+        if (course.course_type === 'Program Management') {
+            titles = ["مدير", "منسق", "طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
+            return { 
+                testQuestions: PROGRAM_MANAGEMENT_TEST_QUESTIONS, 
+                testTitle: 'Program Management (Operational Guide) Test', 
+                isRtl: true, 
+                jobTitleOptions: titles, 
+                isIccm: false 
+            };
         }
 
         if (course.course_type === 'ICCM') {
@@ -727,6 +757,7 @@ export function CourseTestForm({
     const [newParticipantState, setNewParticipantState] = useState(course.state || '');
     const [newParticipantLocality, setNewParticipantLocality] = useState(course.locality || '');
     const [newParticipantCenter, setNewParticipantCenter] = useState('');
+    const [newParticipantDepartment, setNewParticipantDepartment] = useState('');
     const [selectedFacilityId, setSelectedFacilityId] = useState(null);
     const [facilitiesInLocality, setFacilitiesInLocality] = useState([]);
     const [isLoadingFacilities, setIsLoadingFacilities] = useState(false);
@@ -817,13 +848,23 @@ export function CourseTestForm({
     useEffect(() => {
         setIsParticipantInfoSaved(false); 
         setParticipantNameForDisplay(''); 
-        setNewParticipantName(''); setNewParticipantPhone(''); setNewParticipantState(course.state || ''); setNewParticipantLocality(course.locality || ''); setNewParticipantCenter(''); setSelectedFacilityId(null); setFacilitiesInLocality([]); setNewParticipantGroup('Group A'); setNewParticipantJob(''); setNewParticipantJobOther('');
+        setNewParticipantName(''); 
+        setNewParticipantPhone(''); 
+        setNewParticipantState(course.state || ''); 
+        setNewParticipantLocality(course.locality || ''); 
+        setNewParticipantCenter(''); 
+        setNewParticipantDepartment('');
+        setSelectedFacilityId(null); 
+        setFacilitiesInLocality([]); 
+        setNewParticipantGroup('Group A'); 
+        setNewParticipantJob(''); 
+        setNewParticipantJobOther('');
     }, [testType, isPublicView, course.state, course.locality]); 
 
     useEffect(() => {
         const fetchFacilities = async () => {
             setError('');
-            if (newParticipantState && newParticipantLocality && !isIccm) {
+            if (newParticipantState && newParticipantLocality && !isIccm && !isProgramManagement) {
                 setIsLoadingFacilities(true);
                 try {
                     const facilities = await listHealthFacilities({ state: newParticipantState, locality: newParticipantLocality }, 'server');
@@ -832,7 +873,7 @@ export function CourseTestForm({
             } else { setFacilitiesInLocality([]); setIsLoadingFacilities(false); }
         };
         if (isNewParticipantModalOpen) fetchFacilities();
-    }, [newParticipantState, newParticipantLocality, isIccm, isNewParticipantModalOpen]);
+    }, [newParticipantState, newParticipantLocality, isIccm, isProgramManagement, isNewParticipantModalOpen]);
 
     useEffect(() => {
         if (selectedParticipantId && selectedParticipantId !== 'addNew') {
@@ -886,34 +927,38 @@ export function CourseTestForm({
     
     // UPDATED: Removed "Add New" from options list
     const facilityOptionsForSelect = useMemo(() => {
-        if (isIccm) return [];
+        if (isIccm || isProgramManagement) return [];
         const options = (facilitiesInLocality || []).map(f => ({ id: f.id, name: f['اسم_المؤسسة'] }));
         return options;
-    }, [facilitiesInLocality, isIccm]);
+    }, [facilitiesInLocality, isIccm, isProgramManagement]);
 
     const handleSaveParticipantInfo = async () => {
         if (!onSaveParticipant) { setError("Participant saving function is not provided."); return; }
         setError(''); setIsSaving(true);
         try {
             const finalJobTitle = newParticipantJob === 'Other' ? newParticipantJobOther : newParticipantJob;
-            const centerNameLabel = isIccm ? 'Village Name' : 'Facility Name';
-            if (!newParticipantState) throw new Error('State is required.');
-            if (!newParticipantLocality) throw new Error('Locality is required.');
-            if (!newParticipantCenter.trim()) throw new Error(`${centerNameLabel} is required.`);
-            if (!newParticipantName.trim()) throw new Error('New Participant Name is required.');
-            if (!finalJobTitle) throw new Error('New Participant Job Title is required.');
-            if (!newParticipantPhone.trim()) throw new Error('New Participant Phone Number is required.');
+            const centerNameLabel = isIccm ? 'Village Name' : (isProgramManagement ? 'Department' : 'Facility Name');
+            
+            if (!isProgramManagement && !newParticipantState) throw new Error('State is required.');
+            if (!isProgramManagement && !newParticipantLocality) throw new Error('Locality is required.');
+            if (!isProgramManagement && !newParticipantCenter.trim()) throw new Error(`${centerNameLabel} is required.`);
+            if (isProgramManagement && !newParticipantDepartment.trim()) throw new Error('Department (الادارة) is required.');
+            
+            if (!newParticipantName.trim()) throw new Error('Participant Name is required.');
+            if (!finalJobTitle) throw new Error('Job Title is required.');
+            if (!newParticipantPhone.trim()) throw new Error('Phone Number is required.');
             
             const participantPayload = {
                 name: newParticipantName.trim(),
                 phone: newParticipantPhone.trim(),
                 job_title: finalJobTitle,
                 group: newParticipantGroup,
-                state: newParticipantState, 
-                locality: newParticipantLocality, 
-                center_name: newParticipantCenter.trim(),
+                state: isProgramManagement ? course.state : newParticipantState, 
+                locality: isProgramManagement ? course.locality : newParticipantLocality, 
+                center_name: isProgramManagement ? 'N/A' : newParticipantCenter.trim(),
+                department: isProgramManagement ? newParticipantDepartment.trim() : null,
                 courseId: course.id,
-                facilityId: (isIccm || (selectedFacilityId && selectedFacilityId.startsWith('pending_'))) ? null : selectedFacilityId,
+                facilityId: (isIccm || isProgramManagement || (selectedFacilityId && selectedFacilityId.startsWith('pending_'))) ? null : selectedFacilityId,
                 ...(isIccm && { trained_before: false, last_imci_training: null, nearest_health_facility: null, hours_to_facility: null })
             };
             
@@ -1183,21 +1228,31 @@ export function CourseTestForm({
                  </div>
                  <CardBody className="p-6 max-h-[70vh] overflow-y-auto">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" style={{ direction: isRtl ? 'rtl' : 'ltr', textAlign: isRtl ? 'right' : 'left' }}>
-                            <FormGroup label="State">
-                                <Select value={newParticipantState} onChange={(e) => {
-                                    setNewParticipantState(e.target.value); setNewParticipantLocality(''); setNewParticipantCenter(''); setSelectedFacilityId(null); setFacilitiesInLocality([]); 
-                                }}><option value="">— Select State —</option>{Object.keys(STATE_LOCALITIES).sort((a,b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar)).map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar}</option>)}</Select>
-                            </FormGroup>
-                            <FormGroup label="Locality">
-                                <Select value={newParticipantLocality} onChange={(e) => { setNewParticipantLocality(e.target.value); setNewParticipantCenter(''); setSelectedFacilityId(null); }} disabled={!newParticipantState}>
-                                    <option value="">— Select Locality —</option>{(STATE_LOCALITIES[newParticipantState]?.localities || []).sort((a,b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}</Select>
-                            </FormGroup>
-                             <FormGroup label="Group">
-                                <Select value={newParticipantGroup} onChange={(e) => setNewParticipantGroup(e.target.value)}><option>Group A</option><option>Group B</option><option>Group C</option><option>Group D</option></Select>
-                            </FormGroup>
                             
-                            {/* FACILITY SELECTION UI */}
-                            {isIccm ? (
+                            {/* Hide State, Locality, Group for Program Management */}
+                            {!isProgramManagement && (
+                                <>
+                                    <FormGroup label="State">
+                                        <Select value={newParticipantState} onChange={(e) => {
+                                            setNewParticipantState(e.target.value); setNewParticipantLocality(''); setNewParticipantCenter(''); setSelectedFacilityId(null); setFacilitiesInLocality([]); 
+                                        }}><option value="">— Select State —</option>{Object.keys(STATE_LOCALITIES).sort((a,b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar)).map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar}</option>)}</Select>
+                                    </FormGroup>
+                                    <FormGroup label="Locality">
+                                        <Select value={newParticipantLocality} onChange={(e) => { setNewParticipantLocality(e.target.value); setNewParticipantCenter(''); setSelectedFacilityId(null); }} disabled={!newParticipantState}>
+                                            <option value="">— Select Locality —</option>{(STATE_LOCALITIES[newParticipantState]?.localities || []).sort((a,b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}</Select>
+                                    </FormGroup>
+                                    <FormGroup label="Group">
+                                        <Select value={newParticipantGroup} onChange={(e) => setNewParticipantGroup(e.target.value)}><option>Group A</option><option>Group B</option><option>Group C</option><option>Group D</option></Select>
+                                    </FormGroup>
+                                </>
+                            )}
+                            
+                            {/* FACILITY OR DEPARTMENT SELECTION UI */}
+                            {isProgramManagement ? (
+                                <FormGroup label="Department (الادارة)">
+                                    <Input value={newParticipantDepartment} onChange={(e) => setNewParticipantDepartment(e.target.value)} placeholder="Enter department name" />
+                                </FormGroup>
+                            ) : isIccm ? (
                                 <FormGroup label={centerNameLabel}>
                                     <Input value={newParticipantCenter} onChange={(e) => setNewParticipantCenter(e.target.value)} placeholder={`Enter ${centerNameLabel}`} disabled={!newParticipantLocality} />
                                 </FormGroup>
@@ -1225,13 +1280,12 @@ export function CourseTestForm({
                                         </span>
                                         <span className="text-gray-400 ml-2">🔍</span>
                                     </div>
-                                    {/* Hidden input to ensure logic relying on selectedFacilityId still works if needed, though state is managed directly */}
                                 </FormGroup>
                             )}
 
-                            <FormGroup label="Participant Name"><Input value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} placeholder="Enter name" /></FormGroup>
-                            <FormGroup label="Phone Number"><Input type="tel" value={newParticipantPhone} onChange={(e) => setNewParticipantPhone(e.target.value)} /></FormGroup>
-                            <FormGroup label="Job Title"><Select value={newParticipantJob} onChange={(e) => setNewParticipantJob(e.target.value)}><option value="">— Select Job —</option>{jobTitleOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}<option value="Other">Other</option></Select></FormGroup>
+                            <FormGroup label="Participant Name (الاسم)"><Input value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} placeholder="Enter name" disabled={!isProgramManagement && !newParticipantLocality} /></FormGroup>
+                            <FormGroup label="Phone Number (رقم الهاتف)"><Input type="tel" value={newParticipantPhone} onChange={(e) => setNewParticipantPhone(e.target.value)} placeholder="0xxxxxxxxx" /></FormGroup>
+                            <FormGroup label="Job Title (الوصف الوظيفي)"><Select value={newParticipantJob} onChange={(e) => setNewParticipantJob(e.target.value)}><option value="">— Select Job —</option>{jobTitleOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}<option value="Other">Other</option></Select></FormGroup>
                             {newParticipantJob === 'Other' && (<FormGroup label="Specify Job Title"><Input value={newParticipantJobOther} onChange={(e) => setNewParticipantJobOther(e.target.value)} placeholder="Please specify" /></FormGroup>)}
                         </div>
                  </CardBody>

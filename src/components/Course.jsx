@@ -316,6 +316,7 @@ const Landing = React.memo(function Landing({ active, onPick }) {
         { key: 'EENC', title: 'Early Essential Newborn Care (EENC)', enabled: true },
         { key: 'IPC', title: 'Infection Prevention & Control (Neonatal Unit)', enabled: true },
         { key: 'Small & Sick Newborn', title: 'Small & Sick Newborn Case Management', enabled: true },
+        { key: 'Program Management', title: 'Program Management', enabled: true },
     ];
 
     return (
@@ -328,6 +329,7 @@ const Landing = React.memo(function Landing({ active, onPick }) {
                             {it.key === 'ICCM' ? <IccmIcon className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
                              it.key === 'IPC' ? <IpcIcon className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
                              it.key === 'Small & Sick Newborn' ? <NewbornIcon className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
+                             it.key === 'Program Management' ? <ClipboardList className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
                                 <CourseIcon course={it.key} />
                              }
                             <div>
@@ -549,7 +551,7 @@ export function CoursesTable({
                                         </div>
                                     </div>
                                     
-                                    {(['ICCM', 'EENC', 'Small & Sick Newborn', 'IMNCI', 'ETAT'].includes(shareModalCourse.course_type)) && (
+                                    {(['ICCM', 'EENC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management'].includes(shareModalCourse.course_type)) && (
                                         <div className="bg-gray-50 p-3 rounded border">
                                             <span className="text-sm font-semibold block mb-2">Testing</span>
                                             <div className="grid grid-cols-2 gap-2">
@@ -597,7 +599,7 @@ export function CoursesTable({
                                 </div>
                             </Button>
 
-                            {(['ICCM', 'EENC', 'Small & Sick Newborn', 'IMNCI', 'ETAT'].includes(reportModalCourse.course_type)) && (
+                            {(['ICCM', 'EENC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management'].includes(reportModalCourse.course_type)) && (
                                 <Button variant="secondary" className="flex items-center gap-3 p-4 justify-start" onClick={() => { onOpenTestForm(reportModalCourse.id); setReportModalCourse(null); }}>
                                     <div className="bg-orange-100 p-2 rounded-full"><CheckCircle className="text-orange-600" size={20} /></div>
                                     <div className="text-left">
@@ -1071,7 +1073,7 @@ export function CourseManagementView({
                         <Button variant="tab" isActive={activeCoursesTab === 'participants'} onClick={() => { setActiveCoursesTab('participants'); onSetSelectedParticipantId(null); }}>Participants</Button>
                         <Button variant="tab" isActive={activeCoursesTab === 'monitoring'} onClick={() => setActiveCoursesTab('monitoring')} disabled={!currentParticipant}>Monitoring</Button>
                         <Button variant="tab" isActive={activeCoursesTab === 'reports'} onClick={() => setActiveCoursesTab('reports')}>Reports</Button>
-                        {(['ICCM', 'EENC', 'Small & Sick Newborn', 'IMNCI', 'ETAT'].includes(selectedCourse.course_type)) && (
+                        {(['ICCM', 'EENC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management'].includes(selectedCourse.course_type)) && (
                             <Button variant="tab" isActive={activeCoursesTab === 'enter-test-scores'} onClick={() => { setActiveCoursesTab('enter-test-scores'); }}>Test Scores</Button>
                         )}
                     </>
@@ -1312,6 +1314,11 @@ export function CourseForm({
         'ETAT Mentorship'
     ];
 
+    const PROGRAM_MANAGEMENT_SUBCOURSE_TYPES = [
+        'IMNCI implementation operational Guide (الدليل التشغيلي لتطبيق العلاج المتكامل)',
+        'planning, Monitoring and evaluation (التخطيط والمتابعة والتقييم)'
+    ];
+
     const COURSE_GROUPS = ['Group A', 'Group B', 'Group C', 'Group D'];
 
     const isImnci = courseType === 'IMNCI';
@@ -1320,6 +1327,7 @@ export function CourseForm({
     const isSmallAndSick = courseType === 'Small & Sick Newborn';
     const isEenc = courseType === 'EENC';
     const isEtat = courseType === 'ETAT';
+    const isProgramManagement = courseType === 'Program Management';
 
     const [groups, setGroups] = useState(initialData?.facilitatorAssignments ? [...new Set(initialData.facilitatorAssignments.map(a => a.group))] : ['Group A']);
 
@@ -1374,10 +1382,14 @@ export function CourseForm({
                     return fCourses.includes('IPC');
                 }
                 
+                if (isProgramManagement) {
+                    return fCourses.includes('Program Management') || fCourses.includes('IMNCI');
+                }
+                
                 return fCourses.includes(courseType);
             })
             .sort((a, b) => a.name.localeCompare(b.name));
-    }, [facilitatorsList, courseType, isInfectionControl, isIccm]);
+    }, [facilitatorsList, courseType, isInfectionControl, isIccm, isProgramManagement]);
 
     const federalCoordinatorOptions = useMemo(() => {
         return federalCoordinatorsList.map(c => ({ id: c.id, name: c.name }));
@@ -1667,6 +1679,7 @@ export function CourseForm({
                                                           isSmallAndSick ? SMALL_AND_SICK_SUBCOURSE_TYPES :
                                                           isEenc ? EENC_SUBCOURSE_TYPES :
                                                           isEtat ? ETAT_SUBCOURSE_TYPES :
+                                                          isProgramManagement ? PROGRAM_MANAGEMENT_SUBCOURSE_TYPES :
                                                           []
                                                         ).map(type => (
                                                             <option key={type} value={type}>{type}</option>

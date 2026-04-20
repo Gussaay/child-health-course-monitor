@@ -807,8 +807,9 @@ export default function App() {
                             courseData.course_type !== 'EENC' && 
                             courseData.course_type !== 'Small & Sick Newborn' && 
                             courseData.course_type !== 'IMNCI' && 
-                            courseData.course_type !== 'ETAT') {
-                            throw new Error('Test forms are only available for ICCM, EENC, Small & Sick Newborn, IMNCI, and ETAT courses.');
+                            courseData.course_type !== 'ETAT' &&
+                            courseData.course_type !== 'Program Management') {
+                            throw new Error('Test forms are only available for ICCM, EENC, Small & Sick Newborn, IMNCI, ETAT, and Program Management courses.');
                         }
                         
                         // APPLY SOFT DELETE FILTER
