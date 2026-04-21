@@ -347,7 +347,7 @@ const Landing = React.memo(function Landing({ active, onPick }) {
 
 export function CoursesTable({ 
     courses, onOpen, onEdit, onDelete, onOpenReport, onOpenTestForm, 
-    canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates, onAddFinalReport, canManageFinalReport,
+    canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates, userLocalities, onAddFinalReport, canManageFinalReport,
     onOpenAttendanceManager 
 }) {
     const [shareModalCourse, setShareModalCourse] = useState(null);
@@ -381,11 +381,15 @@ export function CoursesTable({
     };
 
     const filteredCourses = useMemo(() => {
-        if (!userStates || userStates.length === 0) {
-            return courses;
+        let filtered = courses;
+        if (userStates && userStates.length > 0) {
+            filtered = filtered.filter(c => userStates.includes(c.state));
         }
-        return courses.filter(c => userStates.includes(c.state));
-    }, [courses, userStates]);
+        if (userLocalities && userLocalities.length > 0) {
+            filtered = filtered.filter(c => userLocalities.includes(c.locality));
+        }
+        return filtered;
+    }, [courses, userStates, userLocalities]);
 
     const sortedCourses = useMemo(() => {
         return [...filteredCourses].sort((a, b) => {
@@ -425,7 +429,7 @@ export function CoursesTable({
                         return (
                             <tr key={c.id} className={`hover:bg-gray-50 ${isPendingDeletion ? 'bg-red-50' : ''}`}>
                                 <td className="p-4 border">
-                                    {c.state}
+                                    {c.state} - {c.locality}
                                     {isPendingDeletion && <span className="block text-xs text-red-600 font-bold mt-1">(Deletion Pending)</span>}
                                 </td>
                                 <td className="p-4 border">{subcourses}</td>
@@ -824,7 +828,7 @@ function CourseAdministrationView({ courses, onApproveDelete, onRejectDelete }) 
 export function CourseManagementView({
     allCourses, onOpen, onDelete, onOpenReport,
     onOpenTestForm,
-    canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates,
+    canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates, userLocalities,
     activeCoursesTab, setActiveCoursesTab, selectedCourse,
     participants,
     participantTests,
@@ -891,19 +895,26 @@ export function CourseManagementView({
     const [filterProject, setFilterProject] = useState('All');
 
     const filterStateOptions = useMemo(() => {
-        const states = new Set(coursesForActiveType.map(c => c.state));
+        const states = new Set();
+        coursesForActiveType.forEach(c => {
+             if (!userStates || userStates.length === 0 || userStates.includes(c.state)) {
+                 states.add(c.state);
+             }
+        });
         return ['All', ...Array.from(states).sort()];
-    }, [coursesForActiveType]);
+    }, [coursesForActiveType, userStates]);
 
     const filterLocalityOptions = useMemo(() => {
         const localities = new Set();
         coursesForActiveType.forEach(c => {
             if (filterState === 'All' || c.state === filterState) {
-                localities.add(c.locality);
+                if (!userLocalities || userLocalities.length === 0 || userLocalities.includes(c.locality)) {
+                    localities.add(c.locality);
+                }
             }
         });
         return ['All', ...Array.from(localities).sort()];
-    }, [coursesForActiveType, filterState]);
+    }, [coursesForActiveType, filterState, userLocalities]);
 
     const filterSubCourseOptions = useMemo(() => {
         const subCourses = new Set();
@@ -939,6 +950,12 @@ export function CourseManagementView({
     const courses = useMemo(() => {
         return coursesForActiveType.filter(c => {
             if (c.inRecycleBin) return false;
+            
+            // Permissions checks
+            if (userStates && userStates.length > 0 && !userStates.includes(c.state)) return false;
+            if (userLocalities && userLocalities.length > 0 && !userLocalities.includes(c.locality)) return false;
+
+            // Form filter checks
             const stateMatch = filterState === 'All' || c.state === filterState;
             const localityMatch = filterLocality === 'All' || c.locality === filterLocality;
             const subCourseMatch = filterSubCourse === 'All' || 
@@ -947,15 +964,25 @@ export function CourseManagementView({
 
             return stateMatch && localityMatch && subCourseMatch && projectMatch;
         });
-    }, [coursesForActiveType, filterState, filterLocality, filterSubCourse, filterProject]);
+    }, [coursesForActiveType, filterState, filterLocality, filterSubCourse, filterProject, userStates, userLocalities]);
 
     const dashboardCourses = useMemo(() => {
-        return (allCourses || []).filter(c => !c.inRecycleBin && c.isDeleted !== true && c.isDeleted !== "true");
-    }, [allCourses]);
+        return (allCourses || []).filter(c => {
+            if (c.inRecycleBin || c.isDeleted === true || c.isDeleted === "true") return false;
+            if (userStates && userStates.length > 0 && !userStates.includes(c.state)) return false;
+            if (userLocalities && userLocalities.length > 0 && !userLocalities.includes(c.locality)) return false;
+            return true;
+        });
+    }, [allCourses, userStates, userLocalities]);
 
     const dashboardParticipants = useMemo(() => {
-        return (globalParticipants || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
-    }, [globalParticipants]);
+        return (globalParticipants || []).filter(p => {
+            if (p.isDeleted === true || p.isDeleted === "true") return false;
+            if (userStates && userStates.length > 0 && !userStates.includes(p.state)) return false;
+            if (userLocalities && userLocalities.length > 0 && !userLocalities.includes(p.locality)) return false;
+            return true;
+        });
+    }, [globalParticipants, userStates, userLocalities]);
 
     const courseKPIs = useMemo(() => {
         return { 
@@ -1182,7 +1209,7 @@ export function CourseManagementView({
                                     courses={courses} onOpen={handleOpenCourse} onEdit={handleOpenEditForm} onDelete={handleCourseDeleteAction} 
                                     onOpenReport={onOpenReport} onOpenTestForm={handleOpenTestForm} onOpenAttendanceManager={onOpenAttendanceManager} 
                                     canEditDeleteActiveCourse={canEditDeleteActiveCourse} canEditDeleteInactiveCourse={canEditDeleteInactiveCourse}
-                                    userStates={userStates} onAddFinalReport={onAddFinalReport} canManageFinalReport={canUseFederalManagerAdvancedFeatures}
+                                    userStates={userStates} userLocalities={userLocalities} onAddFinalReport={onAddFinalReport} canManageFinalReport={canUseFederalManagerAdvancedFeatures}
                                 />
                             </div>
                         )}
@@ -1245,7 +1272,7 @@ export function CourseManagementView({
                 {activeCoursesTab === 'recycle-bin' && <RecycleBinView courses={allCourses.filter(c => c.inRecycleBin)} onRestore={handleRestoreCourse} onPermanentDelete={handlePermanentDelete} />}
                 
                 {(activeCoursesTab === 'add-course' || activeCoursesTab === 'edit-course') && (
-                    <CourseForm courseType={activeCourseType} initialData={courseToEdit} onCancel={handleCancelCourseForm} onSave={handleSaveCourseAndReturn} facilitatorsList={facilitatorsList} fundersList={funders || []} federalCoordinatorsList={federalCoordinators || []} stateCoordinatorsList={stateCoordinators || []} localityCoordinatorsList={localityCoordinators || []} userStates={userStates} />
+                    <CourseForm courseType={activeCourseType} initialData={courseToEdit} onCancel={handleCancelCourseForm} onSave={handleSaveCourseAndReturn} facilitatorsList={facilitatorsList} fundersList={funders || []} federalCoordinatorsList={federalCoordinators || []} stateCoordinatorsList={stateCoordinators || []} localityCoordinatorsList={localityCoordinators || []} userStates={userStates} userLocalities={userLocalities} />
                 )}
                 
                 {loadingDetails && (!globalTabs.includes(activeCoursesTab)) ? <div className="flex justify-center p-8"><Spinner /></div> : (
@@ -1366,7 +1393,7 @@ const SearchableSelect = ({ label, options, value, onChange, onOpenNewForm, plac
 export function CourseForm({ 
     courseType, initialData, facilitatorsList, fundersList, onCancel, onSave, 
     federalCoordinatorsList = [], stateCoordinatorsList = [], localityCoordinatorsList = [],
-    userStates // Access to the user's allowed states array
+    userStates, userLocalities // Access to the user's allowed states and localities
 }) {
     // Determine allowed states based on userStates prop
     const availableStates = useMemo(() => {
@@ -1381,7 +1408,22 @@ export function CourseForm({
     // If initialData exists, use it. Otherwise, if the user only has exactly 1 state, auto-select it.
     const [state, setState] = useState(initialData?.state || (userStates && userStates.length === 1 ? userStates[0] : ''));
     
-    const [locality, setLocality] = useState(initialData?.locality || '');
+    // Determine allowed localities based on the selected state AND the userLocalities prop
+    const availableLocalities = useMemo(() => {
+        if (!state) return [];
+        const allLocalitiesForState = (STATE_LOCALITIES[state]?.localities || []).sort((a,b) => a.ar.localeCompare(b.ar));
+        
+        if (!userLocalities || userLocalities.length === 0) {
+            return allLocalitiesForState;
+        }
+        
+        // Filter the state's localities by what the user is allowed to access
+        return allLocalitiesForState.filter(l => userLocalities.includes(l.en) || userLocalities.includes(l.ar));
+    }, [state, userLocalities]);
+
+    // Set initial locality. If availableLocalities is exactly 1, auto select it.
+    const [locality, setLocality] = useState(initialData?.locality || (userLocalities && userLocalities.length === 1 ? userLocalities[0] : ''));
+    
     const [hall, setHall] = useState(initialData?.hall || '');
     const [startDate, setStartDate] = useState(initialData?.start_date || '');
     const [courseDuration, setCourseDuration] = useState(initialData?.course_duration || 7);
@@ -1659,7 +1701,12 @@ export function CourseForm({
                                 {availableStates.map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar}</option>)}
                             </Select>
                         </FormGroup>
-                        <FormGroup label="المحلية"><Select value={locality} onChange={(e) => setLocality(e.target.value)} disabled={!state}><option value="">— اختر المحلية —</option>{(STATE_LOCALITIES[state]?.localities || []).sort((a,b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}</Select></FormGroup>
+                        <FormGroup label="المحلية">
+                            <Select value={locality} onChange={(e) => setLocality(e.target.value)} disabled={!state}>
+                                <option value="">— اختر المحلية —</option>
+                                {availableLocalities.map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
+                            </Select>
+                        </FormGroup>
                         <FormGroup label="قاعة الدورة"><Input value={hall} onChange={(e) => setHall(e.target.value)} /></FormGroup>
                         <FormGroup label="تاريخ بداية الدورة"><Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></FormGroup>
                         <FormGroup label="مدة الدورة بالأيام"><Input type="number" value={courseDuration} onChange={(e) => setCourseDuration(Number(e.target.value))} /></FormGroup>
