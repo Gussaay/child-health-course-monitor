@@ -42,15 +42,9 @@ export default defineConfig({
                 maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
               },
             },
-          },
-          {
-            // Stale-While-Revalidate for JS and CSS bundles
-            urlPattern: /\.(?:js|css)$/,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'app-shell-code',
-            },
           }
+          // The broad JS/CSS StaleWhileRevalidate block has been REMOVED.
+          // VitePWA handles the core app JS/CSS precaching automatically.
         ]
       }
     })
