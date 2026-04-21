@@ -365,6 +365,9 @@ export function CoursesTable({
     }, [courses, itemsPerPage]);
 
     const isCourseActive = (course) => {
+        if (course.approvalStatus === 'pending') {
+            return false; 
+        }
         if (!course.start_date || !course.course_duration || course.course_duration <= 0) {
             return false;
         }
@@ -427,7 +430,11 @@ export function CoursesTable({
                                 </td>
                                 <td className="p-4 border">{subcourses}</td>
                                 <td className="p-4 border">
-                                    {active ? (
+                                    {c.approvalStatus === 'pending' ? (
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                                            Not Approved
+                                        </span>
+                                    ) : active ? (
                                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                             Active
                                         </span>
@@ -723,61 +730,93 @@ function RecycleBinView({ courses, onRestore, onPermanentDelete }) {
     );
 }
 
-// --- Course Administration View ---
-function CourseAdministrationView({ courses, onApproveDelete, onRejectDelete }) {
-    // Only show pending deletion requests that are NOT already in recycle bin
-    const pendingCourses = useMemo(() => courses.filter(c => c.deletionRequested === true && !c.inRecycleBin), [courses]);
+// --- Federal Approvals View ---
+function CourseApprovalsView({ courses, onApproveCourse }) {
+    const pendingApprovalCourses = useMemo(() => courses.filter(c => c.approvalStatus === 'pending' && !c.deletionRequested && !c.inRecycleBin), [courses]);
 
-    if (pendingCourses.length === 0) {
-        return <EmptyState message="No pending administrative tasks (e.g., deletion requests) at this time." />;
+    if (pendingApprovalCourses.length === 0) {
+        return <EmptyState message="No courses are currently pending federal approval." />;
     }
 
     return (
-        <div>
+        <div className="space-y-8">
+            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <CheckCircle className="text-green-600" /> Course Approvals
+            </h3>
+
+            <div>
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+                    <p className="text-sm text-yellow-700">
+                        These courses have been created but require federal approval before they can become actively tracked and monitored.
+                    </p>
+                </div>
+                <Table headers={["Course Type", "Location", "Start Date", "Coordinator", "Actions"]}>
+                    {pendingApprovalCourses.map(c => (
+                        <tr key={c.id} className="bg-white hover:bg-gray-50">
+                            <td className="p-4 border font-medium">{c.course_type}</td>
+                            <td className="p-4 border">{c.state} - {c.locality}</td>
+                            <td className="p-4 border">{c.start_date}</td>
+                            <td className="p-4 border">{c.coordinator || 'N/A'}</td>
+                            <td className="p-4 border text-right">
+                                <Button 
+                                    variant="primary" 
+                                    className="flex items-center gap-1 ml-auto"
+                                    onClick={() => onApproveCourse(c.id)}
+                                >
+                                    <Check size={14} /> Approve Course
+                                </Button>
+                            </td>
+                        </tr>
+                    ))}
+                </Table>
+            </div>
+        </div>
+    );
+}
+
+
+// --- Course Administration View (Deletions Only Now) ---
+function CourseAdministrationView({ courses, onApproveDelete, onRejectDelete }) {
+    const pendingDeletionCourses = useMemo(() => courses.filter(c => c.deletionRequested === true && !c.inRecycleBin), [courses]);
+
+    if (pendingDeletionCourses.length === 0) {
+        return <EmptyState message="No pending administrative deletion requests at this time." />;
+    }
+
+    return (
+        <div className="space-y-8">
             <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
                 <Shield className="text-sky-600" /> Course Administration
             </h3>
-            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
-                <div className="flex">
-                    <div className="flex-shrink-0">
-                        <AlertTriangle className="h-5 w-5 text-yellow-400" />
-                    </div>
-                    <div className="ml-3">
-                        <p className="text-sm text-yellow-700">
-                            The following courses have been requested for deletion. Approving will move them to the <strong>Recycle Bin</strong>.
-                        </p>
-                    </div>
-                </div>
-            </div>
 
-            <Table headers={["Course Type", "Location", "Start Date", "Coordinator", "Actions"]}>
-                {pendingCourses.map(c => (
-                    <tr key={c.id} className="bg-white hover:bg-gray-50">
-                        <td className="p-4 border font-medium">{c.course_type}</td>
-                        <td className="p-4 border">{c.state} - {c.locality}</td>
-                        <td className="p-4 border">{c.start_date}</td>
-                        <td className="p-4 border">{c.coordinator || 'N/A'}</td>
-                        <td className="p-4 border text-right">
-                            <div className="flex justify-end gap-2">
-                                <Button 
-                                    variant="secondary" 
-                                    className="text-green-700 border-green-200 hover:bg-green-50 flex items-center gap-1"
-                                    onClick={() => onRejectDelete(c)}
-                                >
-                                    <X size={14} /> Reject
-                                </Button>
-                                <Button 
-                                    variant="danger" 
-                                    className="flex items-center gap-1"
-                                    onClick={() => onApproveDelete(c.id)}
-                                >
-                                    <Check size={14} /> Approve (Move to Bin)
-                                </Button>
-                            </div>
-                        </td>
-                    </tr>
-                ))}
-            </Table>
+            <div>
+                <h4 className="text-lg font-semibold text-gray-800 mb-3 border-b pb-2">Pending Deletion Requests</h4>
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+                    <p className="text-sm text-yellow-700">
+                        The following courses have been requested for deletion. Approving will move them to the <strong>Recycle Bin</strong>.
+                    </p>
+                </div>
+                <Table headers={["Course Type", "Location", "Start Date", "Coordinator", "Actions"]}>
+                    {pendingDeletionCourses.map(c => (
+                        <tr key={c.id} className="bg-white hover:bg-gray-50">
+                            <td className="p-4 border font-medium">{c.course_type}</td>
+                            <td className="p-4 border">{c.state} - {c.locality}</td>
+                            <td className="p-4 border">{c.start_date}</td>
+                            <td className="p-4 border">{c.coordinator || 'N/A'}</td>
+                            <td className="p-4 border text-right">
+                                <div className="flex justify-end gap-2">
+                                    <Button variant="secondary" className="text-green-700 border-green-200 hover:bg-green-50 flex items-center gap-1" onClick={() => onRejectDelete(c)}>
+                                        <X size={14} /> Reject
+                                    </Button>
+                                    <Button variant="danger" className="flex items-center gap-1" onClick={() => onApproveDelete(c.id)}>
+                                        <Check size={14} /> Approve (Move to Bin)
+                                    </Button>
+                                </div>
+                            </td>
+                        </tr>
+                    ))}
+                </Table>
+            </div>
         </div>
     );
 }
@@ -811,10 +850,12 @@ export function CourseManagementView({
         funders, fetchFunders,
         fetchCourses,
         participants: globalParticipants, 
-        fetchParticipants 
+        fetchParticipants
     } = useDataCache();
 
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [allHealthFacilities, setAllHealthFacilities] = useState([]);
+    const [loadingFacilities, setLoadingFacilities] = useState(false);
 
     useEffect(() => {
         fetchFederalCoordinators();
@@ -823,6 +864,17 @@ export function CourseManagementView({
         fetchFunders();
         fetchParticipants(true); 
     }, []); 
+
+    // Fetch all health facilities only when the compiled reports tab is opened and not already loaded
+    useEffect(() => {
+        if (activeCoursesTab === 'compiled-reports' && allHealthFacilities.length === 0) {
+            setLoadingFacilities(true);
+            listHealthFacilities({}, 'server')
+                .then(data => setAllHealthFacilities(data || []))
+                .catch(err => console.error("Failed to load all health facilities:", err))
+                .finally(() => setLoadingFacilities(false));
+        }
+    }, [activeCoursesTab, allHealthFacilities.length]);
 
     const currentParticipant = participants.find(p => p.id === selectedParticipantId);
     const [courseToEdit, setCourseToEdit] = useState(null);
@@ -962,6 +1014,7 @@ export function CourseManagementView({
     }, [dashboardCourses]);
 
     const isCourseActive = useMemo(() => {
+        if (selectedCourse?.approvalStatus === 'pending') return false; 
         if (!selectedCourse?.start_date || !selectedCourse?.course_duration || selectedCourse.course_duration <= 0) return false;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -1019,12 +1072,19 @@ export function CourseManagementView({
         }
     };
 
+    const handleApproveCourse = async (courseId) => {
+        const courseToUpdate = allCourses.find(c => c.id === courseId);
+        if (courseToUpdate) {
+            await onSaveCourse({ ...courseToUpdate, approvalStatus: 'approved' });
+        }
+    };
+
     const handleRejectDelete = async (course) => await onSaveCourse({ ...course, deletionRequested: false });
     const handleRestoreCourse = async (course) => { if (window.confirm(`Are you sure you want to restore the course: ${course.course_type}?`)) await onSaveCourse({ ...course, inRecycleBin: false }); };
     const handlePermanentDelete = async (courseId) => { if (window.confirm("Are you sure? This will permanently delete the course and cannot be undone.")) await onDelete(courseId); };
 
     // Group tabs logically to handle display visibility
-    const globalTabs = ['courses', 'add-course', 'edit-course', 'dashboard', 'compiled-reports', 'administration', 'recycle-bin'];
+    const globalTabs = ['courses', 'add-course', 'edit-course', 'dashboard', 'compiled-reports', 'administration', 'approvals', 'recycle-bin'];
     const isGlobalView = globalTabs.includes(activeCoursesTab);
 
     return (
@@ -1051,7 +1111,20 @@ export function CourseManagementView({
                             <Button variant="tab" isActive={activeCoursesTab === 'administration'} onClick={() => { setActiveCoursesTab('administration'); onSetSelectedParticipantId(null); }}>
                                 Administration
                                  {allCourses.filter(c => c.deletionRequested && !c.inRecycleBin).length > 0 && (
-                                     <span className="ml-2 bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded-full">{allCourses.filter(c => c.deletionRequested && !c.inRecycleBin).length}</span>
+                                     <span className="ml-2 bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded-full">
+                                         {allCourses.filter(c => c.deletionRequested && !c.inRecycleBin).length}
+                                     </span>
+                                 )}
+                            </Button>
+                        )}
+
+                        {canUseFederalManagerAdvancedFeatures && (
+                            <Button variant="tab" isActive={activeCoursesTab === 'approvals'} onClick={() => { setActiveCoursesTab('approvals'); onSetSelectedParticipantId(null); }}>
+                                Approvals
+                                 {allCourses.filter(c => c.approvalStatus === 'pending' && !c.inRecycleBin).length > 0 && (
+                                     <span className="ml-2 bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full">
+                                         {allCourses.filter(c => c.approvalStatus === 'pending' && !c.inRecycleBin).length}
+                                     </span>
                                  )}
                             </Button>
                         )}
@@ -1143,14 +1216,36 @@ export function CourseManagementView({
                 )}
 
                 {activeCoursesTab === 'compiled-reports' && (
-                    <CompiledReportView allCourses={dashboardCourses} allParticipants={dashboardParticipants} />
+                    loadingFacilities ? (
+                        <div className="flex justify-center p-8"><Spinner /></div>
+                    ) : (
+                        <CompiledReportView 
+                            allCourses={dashboardCourses} 
+                            allParticipants={dashboardParticipants} 
+                            allHealthFacilities={allHealthFacilities} 
+                        />
+                    )
                 )}
 
-                {activeCoursesTab === 'administration' && <CourseAdministrationView courses={allCourses} onApproveDelete={(id) => handleCourseDeleteAction(id, false)} onRejectDelete={handleRejectDelete} />}
+                {activeCoursesTab === 'administration' && (
+                    <CourseAdministrationView 
+                        courses={allCourses} 
+                        onApproveDelete={(id) => handleCourseDeleteAction(id, false)} 
+                        onRejectDelete={handleRejectDelete} 
+                    />
+                )}
+
+                {activeCoursesTab === 'approvals' && (
+                    <CourseApprovalsView 
+                        courses={allCourses} 
+                        onApproveCourse={handleApproveCourse}
+                    />
+                )}
+
                 {activeCoursesTab === 'recycle-bin' && <RecycleBinView courses={allCourses.filter(c => c.inRecycleBin)} onRestore={handleRestoreCourse} onPermanentDelete={handlePermanentDelete} />}
                 
                 {(activeCoursesTab === 'add-course' || activeCoursesTab === 'edit-course') && (
-                    <CourseForm courseType={activeCourseType} initialData={courseToEdit} onCancel={handleCancelCourseForm} onSave={handleSaveCourseAndReturn} facilitatorsList={facilitatorsList} fundersList={funders || []} federalCoordinatorsList={federalCoordinators || []} stateCoordinatorsList={stateCoordinators || []} localityCoordinatorsList={localityCoordinators || []} />
+                    <CourseForm courseType={activeCourseType} initialData={courseToEdit} onCancel={handleCancelCourseForm} onSave={handleSaveCourseAndReturn} facilitatorsList={facilitatorsList} fundersList={funders || []} federalCoordinatorsList={federalCoordinators || []} stateCoordinatorsList={stateCoordinators || []} localityCoordinatorsList={localityCoordinators || []} userStates={userStates} />
                 )}
                 
                 {loadingDetails && (!globalTabs.includes(activeCoursesTab)) ? <div className="flex justify-center p-8"><Spinner /></div> : (
@@ -1270,9 +1365,22 @@ const SearchableSelect = ({ label, options, value, onChange, onOpenNewForm, plac
 
 export function CourseForm({ 
     courseType, initialData, facilitatorsList, fundersList, onCancel, onSave, 
-    federalCoordinatorsList = [], stateCoordinatorsList = [], localityCoordinatorsList = []
+    federalCoordinatorsList = [], stateCoordinatorsList = [], localityCoordinatorsList = [],
+    userStates // Access to the user's allowed states array
 }) {
-    const [state, setState] = useState(initialData?.state || '');
+    // Determine allowed states based on userStates prop
+    const availableStates = useMemo(() => {
+        const allStates = Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(b.ar));
+        // If userStates is null or empty, assume they have access to all (like a super user)
+        if (!userStates || userStates.length === 0) {
+            return allStates;
+        }
+        return allStates.filter(s => userStates.includes(s));
+    }, [userStates]);
+
+    // If initialData exists, use it. Otherwise, if the user only has exactly 1 state, auto-select it.
+    const [state, setState] = useState(initialData?.state || (userStates && userStates.length === 1 ? userStates[0] : ''));
+    
     const [locality, setLocality] = useState(initialData?.locality || '');
     const [hall, setHall] = useState(initialData?.hall || '');
     const [startDate, setStartDate] = useState(initialData?.start_date || '');
@@ -1329,8 +1437,10 @@ export function CourseForm({
     const isEtat = courseType === 'ETAT';
     const isProgramManagement = courseType === 'Program Management';
 
-    const [groups, setGroups] = useState(initialData?.facilitatorAssignments ? [...new Set(initialData.facilitatorAssignments.map(a => a.group))] : ['Group A']);
+    // DEFAULT TO TWO GROUPS
+    const [groups, setGroups] = useState(initialData?.facilitatorAssignments?.length > 0 ? [...new Set(initialData.facilitatorAssignments.map(a => a.group))] : ['Group A', 'Group B']);
 
+    // DEFAULT TO TWO FACILITATORS PER GROUP
     const [facilitatorGroups, setFacilitatorGroups] = useState(() => {
         const defaultSubcourse = isIccm ? ICCM_SUBCOURSE_TYPES[0] : '';
         if (initialData?.facilitatorAssignments?.length > 0) {
@@ -1352,7 +1462,10 @@ export function CourseForm({
             });
             return groups;
         }
-        return { 'Group A': [{ imci_sub_type: defaultSubcourse, name: '' }] };
+        return {
+            'Group A': [{ imci_sub_type: defaultSubcourse, name: '' }, { imci_sub_type: defaultSubcourse, name: '' }],
+            'Group B': [{ imci_sub_type: defaultSubcourse, name: '' }, { imci_sub_type: defaultSubcourse, name: '' }]
+        };
     });
 
     const [error, setError] = useState('');
@@ -1369,22 +1482,14 @@ export function CourseForm({
             .sort((a, b) => a.name.localeCompare(b.name));
     }, [facilitatorsList]);
 
-  const facilitatorOptions = useMemo(() => {
+    const facilitatorOptions = useMemo(() => {
         return facilitatorsList
             .filter(f => {
                 const fCourses = Array.isArray(f.courses) ? f.courses : [];
                 
-                if (isIccm) {
-                    return fCourses.includes('ICCM') || fCourses.includes('IMNCI');
-                }
-
-                if (isInfectionControl) {
-                    return fCourses.includes('IPC');
-                }
-                
-                if (isProgramManagement) {
-                    return fCourses.includes('Program Management') || fCourses.includes('IMNCI');
-                }
+                if (isIccm) return fCourses.includes('ICCM') || fCourses.includes('IMNCI');
+                if (isInfectionControl) return fCourses.includes('IPC');
+                if (isProgramManagement) return fCourses.includes('Program Management') || fCourses.includes('IMNCI');
                 
                 return fCourses.includes(courseType);
             })
@@ -1493,22 +1598,22 @@ export function CourseForm({
         }, []);
 
         if (!state || !locality || !hall || !coordinator || !participantsCount || !supporter || !startDate || !implementedBy) {
-            setError('Please complete all required fields.');
+            setError('الرجاء إكمال جميع الحقول المطلوبة.');
             return;
         }
         
         if (!courseType) {
-            setError('Could not determine course type. Please go back to the courses page and select a package before adding a new course.');
+            setError('تعذر تحديد نوع الدورة. الرجاء العودة لصفحة الدورات واختيار حزمة قبل إضافة دورة جديدة.');
             return;
         }
 
         if (!isInfectionControl && !director) {
-            setError('Please select a Course Director. This is a mandatory field for this course type.');
+            setError('الرجاء اختيار مدير الدورة. هذا الحقل إلزامي لهذا النوع من الدورات.');
             return;
         }
 
         if (!isInfectionControl && !isSmallAndSick && allFacilitatorAssignments.length === 0) {
-             setError('Please assign at least one facilitator to a subcourse.');
+             setError('الرجاء تعيين ميسر واحد على الأقل.');
              return;
         }
 
@@ -1526,6 +1631,7 @@ export function CourseForm({
             facilitators: allFacilitatorAssignments.map(f => f.name),
             facilitatorAssignments: allFacilitatorAssignments,
             course_type: courseType, 
+            approvalStatus: initialData?.approvalStatus || 'pending', 
         };
 
         if (isImnci || isIccm) {
@@ -1539,184 +1645,204 @@ export function CourseForm({
 
     return (
         <Card>
-            <div className="p-6">
-                <PageHeader title={`${initialData ? 'Edit' : 'Add New'} Course`} subtitle={`Package: ${courseType || 'N/A'}`} className="mb-6" />
+            <div className="p-6" dir="rtl" style={{ textAlign: 'right' }}>
+                <PageHeader title={initialData ? 'تعديل دورة' : 'إضافة دورة'} subtitle={`الحزمة: ${courseType || 'غير محدد'}`} className="mb-6" />
                 {error && <div className="p-3 mb-6 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <FormGroup label="State"><Select value={state} onChange={(e) => { setState(e.target.value); setLocality(''); }}><option value="">— Select State —</option>{Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(b.ar)).map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar}</option>)}</Select></FormGroup>
-                    <FormGroup label="Locality"><Select value={locality} onChange={(e) => setLocality(e.target.value)} disabled={!state}><option value="">— Select Locality —</option>{(STATE_LOCALITIES[state]?.localities || []).sort((a,b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}</Select></FormGroup>
-                    <FormGroup label="Course Hall"><Input value={hall} onChange={(e) => setHall(e.target.value)} /></FormGroup>
-                    <FormGroup label="Start Date of Course"><Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></FormGroup>
-                    <FormGroup label="Course Duration (days)"><Input type="number" value={courseDuration} onChange={(e) => setCourseDuration(Number(e.target.value))} /></FormGroup>
-                    <FormGroup label="# of Participants"><Input type="number" value={participantsCount} onChange={(e) => setParticipantsCount(Number(e.target.value))} /></FormGroup>
+                
+                {/* Section 1: Course Information */}
+                <div className="mb-8">
+                    <h3 className="text-lg font-bold bg-sky-100 text-sky-800 p-3 rounded-md mb-4 border-r-4 border-sky-500">معلومات الدورة الأساسية</h3>
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <FormGroup label="الولاية">
+                            <Select value={state} onChange={(e) => { setState(e.target.value); setLocality(''); }}>
+                                <option value="">— اختر الولاية —</option>
+                                {availableStates.map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar}</option>)}
+                            </Select>
+                        </FormGroup>
+                        <FormGroup label="المحلية"><Select value={locality} onChange={(e) => setLocality(e.target.value)} disabled={!state}><option value="">— اختر المحلية —</option>{(STATE_LOCALITIES[state]?.localities || []).sort((a,b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}</Select></FormGroup>
+                        <FormGroup label="قاعة الدورة"><Input value={hall} onChange={(e) => setHall(e.target.value)} /></FormGroup>
+                        <FormGroup label="تاريخ بداية الدورة"><Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></FormGroup>
+                        <FormGroup label="مدة الدورة بالأيام"><Input type="number" value={courseDuration} onChange={(e) => setCourseDuration(Number(e.target.value))} /></FormGroup>
+                        <FormGroup label="عدد المشاركين"><Input type="number" value={participantsCount} onChange={(e) => setParticipantsCount(Number(e.target.value))} /></FormGroup>
+                        <FormGroup label="ميزانية الدورة بالدولار الأمريكي"><Input type="number" value={courseBudget} onChange={(e) => setCourseBudget(Number(e.target.value))} /></FormGroup>
+                    </div>
+                </div>
 
-                    <FormGroup label="Federal Course Coordinator">
-                        <SearchableSelect
-                            value={coordinator}
-                            onChange={setCoordinator}
-                            options={federalCoordinatorOptions}
-                            placeholder="Type to search..."
-                            label="Federal Course Coordinator"
-                        />
-                    </FormGroup>
-                    <FormGroup label="State Course Coordinator">
-                        <SearchableSelect
-                            value={stateCoordinator}
-                            onChange={setStateCoordinator}
-                            options={stateCoordinatorOptions}
-                            placeholder="Type to search..."
-                            label="State Course Coordinator"
-                        />
-                    </FormGroup>
-                    <FormGroup label="Locality Course Coordinator">
-                        <SearchableSelect
-                            value={localityCoordinator}
-                            onChange={setLocalityCoordinator}
-                            options={localityCoordinatorOptions}
-                            placeholder="Type to search..."
-                            label="Locality Course Coordinator"
-                        />
-                    </FormGroup>
-                    
-                    <FormGroup label="Funded by:">
-                        <SearchableSelect
-                            value={supporter}
-                            onChange={setSupporter}
-                            options={funderOptions}
-                            placeholder="Type to search..."
-                            label="Funded by"
-                        />
-                    </FormGroup>
-                    <FormGroup label="Implemented by:">
-                        <SearchableSelect
-                            value={implementedBy}
-                            onChange={setImplementedBy}
-                            options={funderOptions}
-                            placeholder="Type to search..."
-                            label="Implemented by"
-                        />
-                    </FormGroup>
-                    <FormGroup label="Course Project">
-                         <SearchableSelect
-                            value={courseProject}
-                            onChange={setCourseProject}
-                            options={projectOptions}
-                            placeholder="Type to search for a project"
-                            label="Course Project"
-                        />
-                    </FormGroup>
+                {/* Section 2: Coordination & Funding */}
+                <div className="mb-8">
+                    <h3 className="text-lg font-bold bg-green-100 text-green-800 p-3 rounded-md mb-4 border-r-4 border-green-500">التنسيق والتمويل</h3>
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <FormGroup label="المنسق الاتحادي للدورة">
+                            <SearchableSelect
+                                value={coordinator}
+                                onChange={setCoordinator}
+                                options={federalCoordinatorOptions}
+                                placeholder="اكتب للبحث..."
+                                label="المنسق الاتحادي للدورة"
+                            />
+                        </FormGroup>
+                        <FormGroup label="المنسق الولائي للدورة">
+                            <SearchableSelect
+                                value={stateCoordinator}
+                                onChange={setStateCoordinator}
+                                options={stateCoordinatorOptions}
+                                placeholder="اكتب للبحث..."
+                                label="المنسق الولائي للدورة"
+                            />
+                        </FormGroup>
+                        <FormGroup label="منسق الدورة بالمحلية">
+                            <SearchableSelect
+                                value={localityCoordinator}
+                                onChange={setLocalityCoordinator}
+                                options={localityCoordinatorOptions}
+                                placeholder="اكتب للبحث..."
+                                label="منسق الدورة بالمحلية"
+                            />
+                        </FormGroup>
+                        <FormGroup label="بتمويل من">
+                            <SearchableSelect
+                                value={supporter}
+                                onChange={setSupporter}
+                                options={funderOptions}
+                                placeholder="اكتب للبحث..."
+                                label="بتمويل من"
+                            />
+                        </FormGroup>
+                        <FormGroup label="تنفيذ">
+                            <SearchableSelect
+                                value={implementedBy}
+                                onChange={setImplementedBy}
+                                options={funderOptions}
+                                placeholder="اكتب للبحث..."
+                                label="تنفيذ"
+                            />
+                        </FormGroup>
+                        <FormGroup label="مشروع الدورة">
+                             <SearchableSelect
+                                value={courseProject}
+                                onChange={setCourseProject}
+                                options={projectOptions}
+                                placeholder="اكتب للبحث..."
+                                label="مشروع الدورة"
+                            />
+                        </FormGroup>
+                    </div>
+                </div>
 
-                    <FormGroup label="Course Budget (USD)"><Input type="number" value={courseBudget} onChange={(e) => setCourseBudget(Number(e.target.value))} /></FormGroup>
+                {/* Section 3: Leadership Assignments */}
+                {!isInfectionControl && (
+                    <div className="mb-8">
+                        <h3 className="text-lg font-bold bg-amber-100 text-amber-800 p-3 rounded-md mb-4 border-r-4 border-amber-500">مهام القيادة</h3>
+                        <div className="flex flex-col space-y-4 p-5 border border-gray-200 shadow-sm rounded-lg bg-white">
+                            {/* Director Row */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-end">
+                                <FormGroup label="مدير الدورة">
+                                    <SearchableSelect
+                                        value={director}
+                                        onChange={setDirector}
+                                        options={directorOptions}
+                                        placeholder="اكتب للبحث..."
+                                        label="مدير الدورة"
+                                    />
+                                </FormGroup>
+                                {isImnci && (
+                                    <FormGroup label="اسم الورشة الفرعية">
+                                        <Select value={directorImciSubType} onChange={(e) => setDirectorImciSubType(e.target.value)} className="w-full">
+                                            {IMNCI_SUBCOURSE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
+                                        </Select>
+                                    </FormGroup>
+                                )}
+                            </div>
 
-                    <div className="lg:col-span-3" /> 
-
-                    {!isInfectionControl && (
-                        <div className="md:col-span-2 lg:col-span-3">
-                            <h3 className="text-lg font-bold mb-2">Leadership Assignments</h3>
-                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 p-4 border rounded-md bg-gray-50">
-                                <div className="space-y-2">
-                                    <FormGroup label="Course Director">
+                            {/* Clinical Instructor Row */}
+                            {(isImnci || isIccm) && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-end pt-5 border-t border-gray-100">
+                                    <FormGroup label="المدرب السريري - اختياري">
                                         <SearchableSelect
-                                            value={director}
-                                            onChange={setDirector}
-                                            options={directorOptions}
-                                            placeholder="Select Director"
-                                            label="Course Director"
+                                            value={clinical}
+                                            onChange={setClinical}
+                                            options={clinicalInstructorOptions}
+                                            placeholder="اكتب للبحث..."
+                                            label="المدرب السريري - اختياري"
                                         />
                                     </FormGroup>
                                     {isImnci && (
-                                        <FormGroup label="IMNCI Subcourse for Director">
-                                            <Select value={directorImciSubType} onChange={(e) => setDirectorImciSubType(e.target.value)} className="w-full">
+                                        <FormGroup label="اسم الورشة الفرعية">
+                                            <Select value={clinicalImciSubType} onChange={(e) => setClinicalImciSubType(e.target.value)} className="w-full">
                                                 {IMNCI_SUBCOURSE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
                                             </Select>
                                         </FormGroup>
                                     )}
                                 </div>
+                            )}
+                        </div>
+                    </div>
+                )}
 
-                                {(isImnci || isIccm) && (
-                                    <div className="space-y-2">
-                                        <FormGroup label="Clinical Instructor (Optional)">
+                {/* Section 4: Facilitators */}
+                <div className="mb-8">
+                    <h3 className="text-lg font-bold bg-purple-100 text-purple-800 p-3 rounded-md mb-4 border-r-4 border-purple-500">مهام الميسرين / المدربين</h3>
+                    <div className="space-y-6">
+                        {groups.map(groupName => (
+                            <div key={groupName} className="p-6 border-2 border-indigo-50 shadow-md rounded-xl bg-white relative">
+                                <h4 className="text-md font-bold mb-5 text-indigo-700 bg-indigo-50 inline-block px-4 py-1.5 rounded-lg border border-indigo-200">{groupName}</h4>
+                                {facilitatorGroups[groupName]?.map((assignment, index) => (
+                                    <div key={index} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-4 items-end pb-4 border-b border-gray-50 last:border-0">
+                                        {/* NAME FIRST */}
+                                        <FormGroup label="اسم الميسر" className={isIccm ? "lg:col-span-2" : ""}>
                                             <SearchableSelect
-                                                value={clinical}
-                                                onChange={setClinical}
-                                                options={clinicalInstructorOptions}
-                                                placeholder="Select Instructor"
-                                                label="Clinical Instructor"
+                                                value={assignment.name}
+                                                onChange={(value) => updateFacilitatorAssignment(groupName, index, 'name', value)}
+                                                options={facilitatorOptions}
+                                                placeholder="اكتب للبحث..."
+                                                label="اسم الميسر"
                                             />
                                         </FormGroup>
-                                        {isImnci && (
-                                            <FormGroup label="IMNCI Subcourse for Clinical Instructor (Optional)">
-                                                <Select value={clinicalImciSubType} onChange={(e) => setClinicalImciSubType(e.target.value)} className="w-full">
-                                                    {IMNCI_SUBCOURSE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
+                                        {/* SUBCOURSE SECOND */}
+                                        {!isIccm && (
+                                            <FormGroup label="اسم الورشة الفرعية">
+                                                <Select
+                                                    value={assignment.imci_sub_type || ''}
+                                                    onChange={(e) => updateFacilitatorAssignment(groupName, index, 'imci_sub_type', e.target.value)}
+                                                    className="w-full"
+                                                >
+                                                    <option value="">— اختر الورشة الفرعية —</option>
+                                                    {(isImnci ? IMNCI_SUBCOURSE_TYPES : 
+                                                      isIccm ? ICCM_SUBCOURSE_TYPES : 
+                                                      isInfectionControl ? INFECTION_CONTROL_SUBCOURSE_TYPES : 
+                                                      isSmallAndSick ? SMALL_AND_SICK_SUBCOURSE_TYPES :
+                                                      isEenc ? EENC_SUBCOURSE_TYPES :
+                                                      isEtat ? ETAT_SUBCOURSE_TYPES :
+                                                      isProgramManagement ? PROGRAM_MANAGEMENT_SUBCOURSE_TYPES :
+                                                      []
+                                                    ).map(type => (
+                                                        <option key={type} value={type}>{type}</option>
+                                                    ))}
                                                 </Select>
                                             </FormGroup>
                                         )}
+                                        {/* ACTION BUTTON */}
+                                        <div className="flex items-end pb-1">
+                                            <Button type="button" variant="danger" onClick={() => removeFacilitatorFromGroup(groupName, index)} disabled={facilitatorGroups[groupName]?.length <= 1}>إزالة</Button>
+                                        </div>
                                     </div>
-                                )}
+                                ))}
+                                <div className="flex justify-end mt-2 pt-4">
+                                    <Button type="button" variant="secondary" onClick={() => addFacilitatorToGroup(groupName)} className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200">إضافة ميسر آخر لهذه المجموعة</Button>
+                                </div>
                             </div>
+                        ))}
+                    </div>
+                    {groups.length < COURSE_GROUPS.length && (
+                        <div className="flex justify-start mt-4">
+                            <Button type="button" variant="secondary" onClick={addGroup} className="font-bold border-dashed border-2">إضافة مجموعة أخرى</Button>
                         </div>
                     )}
-
-                    <div className="md:col-span-2 lg:col-span-3 mt-4">
-                        <h3 className="text-lg font-bold mb-2">Facilitator Assignments</h3>
-                        <div className="space-y-6">
-                            {groups.map(groupName => (
-                                <div key={groupName} className="p-4 border rounded-md bg-gray-50">
-                                    <h4 className="text-md font-semibold mb-2">{groupName}</h4>
-                                    {facilitatorGroups[groupName]?.map((assignment, index) => (
-                                        <div key={index} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                                            {!isIccm && (
-                                                <FormGroup label="Subcourse Type">
-                                                    <Select
-                                                        value={assignment.imci_sub_type || ''}
-                                                        onChange={(e) => updateFacilitatorAssignment(groupName, index, 'imci_sub_type', e.target.value)}
-                                                        className="w-full"
-                                                    >
-                                                        <option value="">— Select Subcourse —</option>
-                                                        {(isImnci ? IMNCI_SUBCOURSE_TYPES : 
-                                                          isIccm ? ICCM_SUBCOURSE_TYPES : 
-                                                          isInfectionControl ? INFECTION_CONTROL_SUBCOURSE_TYPES : 
-                                                          isSmallAndSick ? SMALL_AND_SICK_SUBCOURSE_TYPES :
-                                                          isEenc ? EENC_SUBCOURSE_TYPES :
-                                                          isEtat ? ETAT_SUBCOURSE_TYPES :
-                                                          isProgramManagement ? PROGRAM_MANAGEMENT_SUBCOURSE_TYPES :
-                                                          []
-                                                        ).map(type => (
-                                                            <option key={type} value={type}>{type}</option>
-                                                        ))}
-                                                    </Select>
-                                                </FormGroup>
-                                            )}
-                                            <FormGroup label="Facilitator Name" className={isIccm ? "lg:col-span-2" : ""}>
-                                                <SearchableSelect
-                                                    value={assignment.name}
-                                                    onChange={(value) => updateFacilitatorAssignment(groupName, index, 'name', value)}
-                                                    options={facilitatorOptions}
-                                                    placeholder="Select Facilitator"
-                                                    label="Facilitator"
-                                                />
-                                            </FormGroup>
-                                            <div className="flex items-end">
-                                                <Button type="button" variant="danger" onClick={() => removeFacilitatorFromGroup(groupName, index)} disabled={facilitatorGroups[groupName]?.length <= 1}>Remove</Button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                    <div className="flex justify-end mt-2">
-                                        <Button type="button" variant="secondary" onClick={() => addFacilitatorToGroup(groupName)}>+ Add another facilitator to {groupName}</Button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        {groups.length < COURSE_GROUPS.length && (
-                            <div className="flex justify-start mt-4">
-                                <Button type="button" variant="secondary" onClick={addGroup}>+ Add another group</Button>
-                            </div>
-                        )}
-                    </div>
                 </div>
+
                 <div className="flex gap-2 justify-end mt-8 border-t pt-6">
-                    <Button variant="secondary" onClick={onCancel}>Cancel</Button>
-                    <Button onClick={submit}>Save Course</Button>
+                    <Button variant="secondary" onClick={onCancel}>إلغاء</Button>
+                    <Button onClick={submit}>حفظ الدورة</Button>
                 </div>
             </div>
         </Card>

@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useRef } from 'react';
-import { Bar, Line } from 'react-chartjs-2';
+import React, { useState, useMemo } from 'react';
+import { Bar } from 'react-chartjs-2';
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import html2canvas from 'html2canvas';
@@ -31,11 +31,12 @@ const getScoreColorClass = (value, type = 'percentage') => {
     return 'bg-red-200 text-red-800';
 };
 
-const fmtPct = (value) => (isNaN(value) || value === null ? 'N/A' : `${value.toFixed(1)}%`);
+const fmtPct = (value) => (isNaN(value) || value === null ? 'N/A' : `+${value.toFixed(2)}%`);
+const fmtCurrency = (value) => (isNaN(value) || value === null ? '$0' : `$${Number(value).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`);
 
-export default function CompiledReportView({ allCourses, allParticipants }) {
+export default function CompiledReportView({ allCourses, allParticipants, allHealthFacilities = [] }) {
     // --- State ---
-    const [filterType, setFilterType] = useState('IMNCI'); // Default to IMNCI as per request
+    const [filterType, setFilterType] = useState('IMNCI'); 
     const [filterSubType, setFilterSubType] = useState('All');
     const [filterState, setFilterState] = useState('All');
     const [yearFilter, setYearFilter] = useState('All');
@@ -67,9 +68,8 @@ export default function CompiledReportView({ allCourses, allParticipants }) {
         return allParticipants.filter(p => courseIds.has(p.courseId));
     }, [allParticipants, filteredCourses]);
 
-    // --- Aggregation Logic (The "Course Report" Simulation) ---
+    // --- Aggregation Logic ---
     const reportData = useMemo(() => {
-        // 1. Overall KPIs
         const totalCourses = filteredCourses.length;
         const totalParticipants = filteredParticipants.length;
         
@@ -80,7 +80,20 @@ export default function CompiledReportView({ allCourses, allParticipants }) {
         const avgPost = validPostScores.length ? (validPostScores.reduce((a,b)=>a+b,0)/validPostScores.length) : 0;
         const improvement = avgPre > 0 ? ((avgPost - avgPre) / avgPre) * 100 : 0;
 
-        // 2. Aggregation by State (to replace "Group Performance")
+        // KPIs: Budget, Coverage & Investment Metrics
+        const totalBudget = filteredCourses.reduce((sum, c) => sum + (Number(c.course_budget) || 0), 0);
+        
+        const uniqueNewFacilities = new Set(
+            filteredParticipants
+                .filter(p => p.introduced_imci_to_facility === true || p.introduced_imci_to_facility === "true")
+                .map(p => `${p.state}-${p.locality}-${p.center_name}`)
+        );
+        const totalNewFacilities = uniqueNewFacilities.size;
+
+        const costPerParticipant = totalParticipants > 0 ? totalBudget / totalParticipants : 0;
+        const costPerNewFacility = totalNewFacilities > 0 ? totalBudget / totalNewFacilities : 0;
+
+        // Aggregation by State 
         const statePerformance = {};
         filteredCourses.forEach(c => {
             if (!statePerformance[c.state]) {
@@ -99,7 +112,7 @@ export default function CompiledReportView({ allCourses, allParticipants }) {
             });
         });
 
-        // 3. Course List Data (to replace "Participant List")
+        // Course List Data with Coverage Percentages
         const courseList = filteredCourses.map(c => {
             const coursePax = allParticipants.filter(p => p.courseId === c.id);
             const cPre = coursePax.map(p => Number(p.pre_test_score)).filter(s=>s>0);
@@ -108,21 +121,46 @@ export default function CompiledReportView({ allCourses, allParticipants }) {
             const cAvgPost = cPost.length ? cPost.reduce((a,b)=>a+b,0)/cPost.length : 0;
             const cImp = cAvgPre > 0 ? ((cAvgPost - cAvgPre)/cAvgPre)*100 : 0;
 
+            const cNewFacs = new Set(
+                coursePax
+                    .filter(p => p.introduced_imci_to_facility === true || p.introduced_imci_to_facility === "true")
+                    .map(p => p.center_name || p.health_facility)
+            ).size;
+
+            // Coverage Percentage Calculations
+            const totalFacsNational = allHealthFacilities.length;
+            const totalFacsInState = allHealthFacilities.filter(f => f['الولاية'] === c.state).length;
+            const totalFacsInLocality = allHealthFacilities.filter(f => f['الولاية'] === c.state && f['المحلية'] === c.locality).length;
+
+            const locCovInc = totalFacsInLocality > 0 ? (cNewFacs / totalFacsInLocality) * 100 : null;
+            const stateCovInc = totalFacsInState > 0 ? (cNewFacs / totalFacsInState) * 100 : null;
+            const natCovInc = totalFacsNational > 0 ? (cNewFacs / totalFacsNational) * 100 : null;
+
             return {
                 id: c.id,
                 type: c.course_type,
                 state: c.state,
                 locality: c.locality,
                 date: c.start_date,
+                partner: c.funded_by || 'N/A',
+                budget: Number(c.course_budget) || 0,
+                coverageAdded: cNewFacs,
+                locCovInc,
+                stateCovInc,
+                natCovInc,
                 pax: coursePax.length,
                 avgPre: cAvgPre,
                 avgPost: cAvgPost,
                 improvement: cImp
             };
-        });
+        }).sort((a, b) => b.coverageAdded - a.coverageAdded); // Sort by coverage descending
 
-        return { totalCourses, totalParticipants, avgPre, avgPost, improvement, statePerformance, courseList };
-    }, [filteredCourses, filteredParticipants, allParticipants]);
+        return { 
+            totalCourses, totalParticipants, totalBudget, totalNewFacilities, 
+            costPerParticipant, costPerNewFacility,
+            avgPre, avgPost, improvement, statePerformance, courseList 
+        };
+    }, [filteredCourses, filteredParticipants, allParticipants, allHealthFacilities]);
 
     // --- Chart Data ---
     const stateLabels = Object.keys(reportData.statePerformance).sort();
@@ -168,10 +206,10 @@ export default function CompiledReportView({ allCourses, allParticipants }) {
         scales: { y: { beginAtZero: true, max: 100 } }
     };
 
-    // --- PDF Export (Mirroring CourseReport style) ---
+    // --- PDF Export ---
     const handlePdfExport = async () => {
         setIsGeneratingPdf(true);
-        const doc = new jsPDF('portrait', 'mm', 'a4');
+        const doc = new jsPDF('landscape', 'mm', 'a4'); 
         doc.addFileToVFS('Amiri-Regular.ttf', amiriFontBase64);
         doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
         doc.setFont('Amiri');
@@ -188,17 +226,20 @@ export default function CompiledReportView({ allCourses, allParticipants }) {
         doc.text(`Filters: ${filterState} | ${filterSubType} | Year: ${yearFilter}`, margin, y);
         y += 15;
 
-        // KPIs (Manual drawing or screenshot)
-        // We will use AutoTable for the KPI summary to ensure it looks clean
+        // KPIs
         autoTable(doc, {
             startY: y,
-            head: [['Total Courses', 'Total Participants', 'Avg Pre-Test', 'Avg Post-Test', 'Improvement']],
+            head: [['Total Courses', 'Total Pax', 'Total Budget', 'New Coverage', 'Cost/Pax', 'Cost/New Center', 'Avg Pre', 'Avg Post', 'Imp.']],
             body: [[
                 reportData.totalCourses,
                 reportData.totalParticipants,
-                fmtPct(reportData.avgPre),
-                fmtPct(reportData.avgPost),
-                fmtPct(reportData.improvement)
+                fmtCurrency(reportData.totalBudget),
+                reportData.totalNewFacilities,
+                fmtCurrency(reportData.costPerParticipant),
+                fmtCurrency(reportData.costPerNewFacility),
+                `${reportData.avgPre.toFixed(1)}%`,
+                `${reportData.avgPost.toFixed(1)}%`,
+                `${reportData.improvement.toFixed(1)}%`
             ]],
             theme: 'grid',
             headStyles: { fillColor: [8, 145, 178], halign: 'center' },
@@ -215,29 +256,38 @@ export default function CompiledReportView({ allCourses, allParticipants }) {
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
             doc.addImage(imgData, 'PNG', margin, y, imgWidth, imgHeight);
             y += imgHeight + 15;
+            
+            if (y > doc.internal.pageSize.getHeight() - 20) {
+                doc.addPage();
+                y = 15;
+            }
         }
 
         // Course List Table
-        doc.text("Course Performance List", margin, y);
+        doc.text("Course Performance & Investment List", margin, y);
         y += 5;
         
         autoTable(doc, {
             startY: y,
-            head: [['State', 'Locality', 'Date', 'Pax', 'Pre-Test', 'Post-Test', 'Imp.']],
+            head: [['State', 'Locality', 'Partner', 'Budget', 'New Facs', '+Loc Cov%', '+State Cov%', '+Nat Cov%', 'Pax', 'Pre', 'Post', 'Imp.']],
             body: reportData.courseList.map(c => [
                 c.state,
                 c.locality,
-                c.date,
+                c.partner,
+                fmtCurrency(c.budget),
+                c.coverageAdded,
+                fmtPct(c.locCovInc),
+                fmtPct(c.stateCovInc),
+                fmtPct(c.natCovInc),
                 c.pax,
-                fmtPct(c.avgPre),
-                fmtPct(c.avgPost),
-                fmtPct(c.improvement)
+                `${c.avgPre.toFixed(1)}%`,
+                `${c.avgPost.toFixed(1)}%`,
+                `${c.improvement.toFixed(1)}%`
             ]),
-            styles: { font: 'Amiri', fontSize: 9 },
+            styles: { font: 'Amiri', fontSize: 8 },
             headStyles: { fillColor: [41, 128, 185] },
             didParseCell: (data) => {
-                if (data.section === 'body' && data.column.index === 6) {
-                     // Color coding improvement
+                if (data.section === 'body' && data.column.index === 11) { 
                      const val = parseFloat(data.cell.raw);
                      if (val > 30) data.cell.styles.textColor = [22, 101, 52];
                      else if (val < 0) data.cell.styles.textColor = [153, 27, 27];
@@ -295,10 +345,11 @@ export default function CompiledReportView({ allCourses, allParticipants }) {
                 <EmptyState message="No data matches the selected filters." />
             ) : (
                 <>
-                    {/* KPI Section - Mimicking Course Report Style */}
+                    {/* Expanded KPI Section */}
                     <Card>
-                        <h3 className="text-xl font-bold mb-4">Performance Overview</h3>
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
+                        <h3 className="text-xl font-bold mb-4">Performance & Investment Overview</h3>
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center mb-4">
                              <div className="p-4 bg-gray-100 rounded-lg">
                                 <div className="text-sm font-semibold text-gray-600">Total Courses</div>
                                 <div className="text-2xl font-bold text-sky-700">{reportData.totalCourses}</div>
@@ -307,17 +358,36 @@ export default function CompiledReportView({ allCourses, allParticipants }) {
                                 <div className="text-sm font-semibold text-gray-600">Total Participants</div>
                                 <div className="text-2xl font-bold text-sky-700">{reportData.totalParticipants}</div>
                             </div>
+                            <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                                <div className="text-sm font-semibold text-blue-700">Total Investment</div>
+                                <div className="text-2xl font-bold text-blue-800">{fmtCurrency(reportData.totalBudget)}</div>
+                            </div>
+                            <div className="p-4 bg-green-50 rounded-lg border border-green-100">
+                                <div className="text-sm font-semibold text-green-700">New Facilities Reached</div>
+                                <div className="text-2xl font-bold text-green-800">{reportData.totalNewFacilities}</div>
+                            </div>
+                            <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-100">
+                                <div className="text-sm font-semibold text-yellow-700">Cost / Participant</div>
+                                <div className="text-2xl font-bold text-yellow-800">{fmtCurrency(reportData.costPerParticipant)}</div>
+                            </div>
+                            <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
+                                <div className="text-sm font-semibold text-purple-700">Cost / New Center</div>
+                                <div className="text-2xl font-bold text-purple-800">{fmtCurrency(reportData.costPerNewFacility)}</div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-4 text-center border-t border-gray-200 pt-4">
                             <div className="p-4 bg-gray-100 rounded-lg">
                                 <div className="text-sm font-semibold text-gray-600">Avg Pre-Test</div>
-                                <div className="text-2xl font-bold">{fmtPct(reportData.avgPre)}</div>
+                                <div className="text-2xl font-bold">{`${reportData.avgPre.toFixed(1)}%`}</div>
                             </div>
                              <div className="p-4 bg-gray-100 rounded-lg">
                                 <div className="text-sm font-semibold text-gray-600">Avg Post-Test</div>
-                                <div className="text-2xl font-bold">{fmtPct(reportData.avgPost)}</div>
+                                <div className="text-2xl font-bold">{`${reportData.avgPost.toFixed(1)}%`}</div>
                             </div>
                              <div className={`p-4 rounded-lg ${getScoreColorClass(reportData.improvement, 'improvement')}`}>
                                 <div className="text-sm font-semibold">Avg Improvement</div>
-                                <div className="text-2xl font-bold">{fmtPct(reportData.improvement)}</div>
+                                <div className="text-2xl font-bold">{`${reportData.improvement.toFixed(1)}%`}</div>
                             </div>
                         </div>
                     </Card>
@@ -336,23 +406,30 @@ export default function CompiledReportView({ allCourses, allParticipants }) {
 
                     {/* Detailed Course List Table */}
                     <Card>
-                        <h3 className="text-xl font-bold mb-4">Course Performance List</h3>
-                        <Table headers={['Type', 'State', 'Locality', 'Date', '# Pax', 'Pre-Test', 'Post-Test', 'Improvement']}>
-                            {reportData.courseList.map((c) => (
-                                <tr key={c.id} className="hover:bg-gray-50 transition-colors">
-                                    <td className="p-3 border-b text-sm font-semibold">{c.type}</td>
-                                    <td className="p-3 border-b text-sm">{c.state}</td>
-                                    <td className="p-3 border-b text-sm">{c.locality}</td>
-                                    <td className="p-3 border-b text-sm whitespace-nowrap">{c.date}</td>
-                                    <td className="p-3 border-b text-sm text-center">{c.pax}</td>
-                                    <td className="p-3 border-b text-center">{fmtPct(c.avgPre)}</td>
-                                    <td className="p-3 border-b text-center">{fmtPct(c.avgPost)}</td>
-                                    <td className={`p-3 border-b text-center font-bold ${getScoreColorClass(c.improvement, 'improvement')}`}>
-                                        {fmtPct(c.improvement)}
-                                    </td>
-                                </tr>
-                            ))}
-                        </Table>
+                        <h3 className="text-xl font-bold mb-4">Course Performance & Investment List</h3>
+                        <div className="overflow-x-auto">
+                            <Table headers={['Type', 'State', 'Locality', 'Partner', 'Budget', 'New Facs', '+ Loc Cov.', '+ State Cov.', '+ Nat Cov.', '# Pax', 'Pre', 'Post', 'Imp.']}>
+                                {reportData.courseList.map((c) => (
+                                    <tr key={c.id} className="hover:bg-gray-50 transition-colors">
+                                        <td className="p-3 border-b text-sm font-semibold">{c.type}</td>
+                                        <td className="p-3 border-b text-sm">{c.state}</td>
+                                        <td className="p-3 border-b text-sm">{c.locality}</td>
+                                        <td className="p-3 border-b text-sm text-gray-700">{c.partner}</td>
+                                        <td className="p-3 border-b text-sm font-medium text-gray-900">{fmtCurrency(c.budget)}</td>
+                                        <td className="p-3 border-b text-sm text-center font-bold text-green-700">{c.coverageAdded}</td>
+                                        <td className="p-3 border-b text-sm text-center font-medium text-green-600">{fmtPct(c.locCovInc)}</td>
+                                        <td className="p-3 border-b text-sm text-center font-medium text-green-600">{fmtPct(c.stateCovInc)}</td>
+                                        <td className="p-3 border-b text-sm text-center font-medium text-green-600">{fmtPct(c.natCovInc)}</td>
+                                        <td className="p-3 border-b text-sm text-center">{c.pax}</td>
+                                        <td className="p-3 border-b text-center">{`${c.avgPre.toFixed(1)}%`}</td>
+                                        <td className="p-3 border-b text-center">{`${c.avgPost.toFixed(1)}%`}</td>
+                                        <td className={`p-3 border-b text-center font-bold ${getScoreColorClass(c.improvement, 'improvement')}`}>
+                                            {`${c.improvement.toFixed(1)}%`}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </Table>
+                        </div>
                     </Card>
                 </>
             )}

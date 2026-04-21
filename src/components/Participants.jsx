@@ -2055,16 +2055,15 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
     const [job, setJob] = useState(isInitialJobOther ? 'Other' : initialJobTitle);
     const [otherJobTitle, setOtherJobTitle] = useState(isInitialJobOther ? initialJobTitle : '');
 
-    const [imciSubType, setImciSubType] = useState(initialData?.imci_sub_type || (isIccm ? 'ICCM Community Module' : 'Standard 7 days course')); 
-    const [facilityType, setFacilityType] = useState(initialData?.facility_type || '');
     const [trainedIMNCI, setTrainedIMNCI] = useState(getBoolState(initialData?.trained_before));
     const [lastTrainIMNCI, setLastTrainIMNCI] = useState(initialData?.last_imci_training || '');
     
-    // Numbers updated to allow empty instead of defaulting to 1 or 0
-    const [numProv, setNumProv] = useState(initialData?.num_other_providers ?? '');
-    const [numProvIMNCI, setNumProvIMNCI] = useState(initialData?.num_other_providers_imci ?? '');
+    // Updated IMNCI Staff Stats Table States
+    const [imnciDoctorsTotal, setImnciDoctorsTotal] = useState(initialData?.imnci_doctors_total ?? '');
+    const [imnciDoctorsTrained, setImnciDoctorsTrained] = useState(initialData?.imnci_doctors_trained ?? '');
+    const [imnciMedicalAssistantsTotal, setImnciMedicalAssistantsTotal] = useState(initialData?.imnci_medical_assistants_total ?? '');
+    const [imnciMedicalAssistantsTrained, setImnciMedicalAssistantsTrained] = useState(initialData?.imnci_medical_assistants_trained ?? '');
     
-    // Booleans updated to allow empty state
     const [hasNutri, setHasNutri] = useState(getBoolState(initialData?.has_nutrition_service));
     const [nearestNutri, setNearestNutri] = useState(initialData?.nearest_nutrition_center || '');
     const [hasImm, setHasImm] = useState(getBoolState(initialData?.has_immunization_service));
@@ -2101,7 +2100,6 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
 
     const isInitialLoad = useRef(true);
 
-    // Effect to fetch facilities cache-first
     useEffect(() => {
         const fetchFacilities = async () => {
             setError('');
@@ -2132,7 +2130,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
 
                 } catch (err) {
                     console.error("Facility fetch error:", err);
-                    setError("Failed to load health facilities for this location. Check console for details.");
+                    setError("فشل في تحميل المؤسسات الصحية لهذا الموقع.");
                     setFacilitiesInLocality([]);
                 } finally {
                     setIsLoadingFacilities(false);
@@ -2153,16 +2151,11 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
 
     }, [state, locality, initialData?.facilityId, initialData?.center_name, isIccm, isProgramManagement, fetchHealthFacilities]); 
 
-
-    // Handle Facility Selection
     const handleFacilitySelect = (facilityId) => {
         setError('');
-
         const facility = facilitiesInLocality.find(f => f.id === facilityId);
         setSelectedFacility(facility || null);
-        
         setCenter(facility ? String(facility['اسم_المؤسسة'] || '') : '');
-
         setIsEditingExistingWorker(false);
         
         if (!initialData) {
@@ -2175,14 +2168,18 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
 
         if (isImnci) {
             if (facility) {
-                 setFacilityType(facility['نوع_المؤسسةالصحية'] || '');
                  setHasNutri(getStrState(facility.nutrition_center_exists));
                  setNearestNutri(facility.nearest_nutrition_center || '');
                  setHasImm(getStrState(facility.immunization_office_exists));
                  setNearestImm(facility.nearest_immunization_center || '');
                  setHasORS(getStrState(facility['غرفة_إرواء']));
-                 setNumProv(facility['العدد_الكلي_لكوادر_طبية_العاملة_أطباء_ومساعدين'] ?? ''); 
-                 setNumProvIMNCI(facility['العدد_Kلي_للكودار_ المدربة_على_العلاج_المتكامل'] ?? ''); 
+                 
+                 // Pre-fill Table Data from Facility Profile
+                 setImnciDoctorsTotal(facility.imnci_doctors_total ?? '');
+                 setImnciDoctorsTrained(facility.imnci_doctors_trained ?? '');
+                 setImnciMedicalAssistantsTotal(facility.imnci_medical_assistants_total ?? '');
+                 setImnciMedicalAssistantsTrained(facility.imnci_medical_assistants_trained ?? '');
+                 
                  setHasWeightScale(getStrState(facility['ميزان_وزن']));
                  setHasHeightScale(getStrState(facility['ميزان_طول']));
                  setHasThermometer(getStrState(facility['ميزان_حرارة']));
@@ -2193,11 +2190,10 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                  setTrainedIMNCI('');
                  setLastTrainIMNCI('');
             } else {
-                 setFacilityType('');
                  setHasNutri(''); setNearestNutri('');
                  setHasImm(''); setNearestImm('');
                  setHasORS('');
-                 setNumProv(''); setNumProvIMNCI('');
+                 setImnciDoctorsTotal(''); setImnciDoctorsTrained(''); setImnciMedicalAssistantsTotal(''); setImnciMedicalAssistantsTrained('');
                  setHasWeightScale(''); setHasHeightScale(''); setHasThermometer(''); setHasTimer(''); setHasGrowthMonitoring('');
                  setHasImnciRegister(''); setHasChartBooklet('');
                  setTrainedIMNCI(''); setLastTrainIMNCI('');
@@ -2215,7 +2211,6 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
             setShowNewParticipantForm(true); 
         } else {
             setIsEditingExistingWorker(true);
-            
             setName(String(worker.name || ''));
             const staffJob = worker.job_title || '';
             if (jobTitleOptions.includes(staffJob)) {
@@ -2246,26 +2241,39 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
 
     const professionalCategory = useMemo(() => {
         const lowerCaseJob = (job === 'Other' ? otherJobTitle : job).toLowerCase();
-        if (lowerCaseJob.includes('doctor') || lowerCaseJob.includes('طبيب')) return 'doctor';
-        if (lowerCaseJob.includes('nurse') || lowerCaseJob.includes('ممرض')) return 'nurse';
-        if (lowerCaseJob.includes('midwife') || lowerCaseJob.includes('قابلة')) return 'midwife';
-        if (lowerCaseJob.includes('assistant') || lowerCaseJob.includes('مساعد')) return 'assistant';
-        return 'provider';
+        if (lowerCaseJob.includes('doctor') || lowerCaseJob.includes('طبيب')) return 'أطباء';
+        if (lowerCaseJob.includes('nurse') || lowerCaseJob.includes('ممرض')) return 'ممرضين';
+        if (lowerCaseJob.includes('midwife') || lowerCaseJob.includes('قابلة')) return 'قابلات';
+        if (lowerCaseJob.includes('assistant') || lowerCaseJob.includes('مساعد')) return 'مساعدين';
+        return 'كوادر';
      }, [job, otherJobTitle]);
 
     const submit = async () => { 
         setError('');
         const finalJobTitle = job === 'Other' ? otherJobTitle : job;
 
-        if (!name.trim()) { setError('Participant Name is required.'); return; }
-        if (!state) { setError('State is required.'); return; }
-        if (!locality) { setError('Locality is required.'); return; }
+        if (!name.trim()) { setError('اسم المشارك مطلوب.'); return; }
+        if (!state) { setError('الولاية مطلوبة.'); return; }
+        if (!locality) { setError('المحلية مطلوبة.'); return; }
         
-        if (!isProgramManagement && !center.trim()) { setError(isIccm ? 'Village Name is required.' : 'Health Facility Name is required.'); return; }
-        if (isProgramManagement && !department.trim()) { setError('Department (الادارة) is required.'); return; }
+        if (!isProgramManagement && !center.trim()) { setError(isIccm ? 'اسم القرية مطلوب.' : 'اسم المؤسسة الصحية مطلوب.'); return; }
+        if (isProgramManagement && !department.trim()) { setError('اسم الإدارة مطلوب.'); return; }
 
-        if (!finalJobTitle) { setError('Job Title is required.'); return; }
-        if (!phone.trim()) { setError('Phone Number is required.'); return; }
+        if (!finalJobTitle) { setError('المسمى الوظيفي مطلوب.'); return; }
+        if (!phone.trim()) { setError('رقم الهاتف مطلوب.'); return; }
+
+        // Background calculations for hidden fields
+        let finalImciSubType = initialData?.imci_sub_type || 'Standard 7 days course'; 
+        if (isImnci && course?.facilitatorAssignments) {
+            const assignment = course.facilitatorAssignments.find(a => a.group === group);
+            if (assignment?.imci_sub_type) {
+                finalImciSubType = assignment.imci_sub_type;
+            }
+        } else if (isIccm) {
+            finalImciSubType = 'ICCM Community Module';
+        }
+
+        const currentFacilityType = selectedFacility?.['نوع_المؤسسةالصحية'] || initialData?.facility_type || 'no data';
 
         let p = {
             ...(initialData || {}), 
@@ -2284,15 +2292,23 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
              p = { ...p, trained_before: parseBool(trainedIMNCI), last_imci_training: trainedIMNCI === 'yes' ? (lastTrainIMNCI || null) : null };
             
             if (isImnci) {
-                if (!imciSubType) { setError('IMCI Course Sub-type is required.'); return; }
-                const currentFacilityType = facilityType || selectedFacility?.['نوع_المؤسسةالصحية'];
-                if (!currentFacilityType) { setError('Facility Type is required.'); return; }
-                if (numProv !== '' && numProv < 1) { setError('Number of providers must be 1 or more.'); return; }
-                if (numProvIMNCI !== '' && numProvIMNCI < 0) { setError('Number of trained providers cannot be negative.'); return; }
+                // Compute totals for backwards compatibility
+                const computedTotalProv = (Number(imnciDoctorsTotal) || 0) + (Number(imnciMedicalAssistantsTotal) || 0);
+                const computedTrainedProv = (Number(imnciDoctorsTrained) || 0) + (Number(imnciMedicalAssistantsTrained) || 0);
+
                 p = { 
-                    ...p, imci_sub_type: imciSubType, facility_type: currentFacilityType, 
-                    num_other_providers: numProv !== '' ? Number(numProv) : null, 
-                    num_other_providers_imci: numProvIMNCI !== '' ? Number(numProvIMNCI) : null, 
+                    ...p, 
+                    imci_sub_type: finalImciSubType, 
+                    facility_type: currentFacilityType, 
+                    
+                    imnci_doctors_total: imnciDoctorsTotal !== '' ? Number(imnciDoctorsTotal) : null,
+                    imnci_doctors_trained: imnciDoctorsTrained !== '' ? Number(imnciDoctorsTrained) : null,
+                    imnci_medical_assistants_total: imnciMedicalAssistantsTotal !== '' ? Number(imnciMedicalAssistantsTotal) : null,
+                    imnci_medical_assistants_trained: imnciMedicalAssistantsTrained !== '' ? Number(imnciMedicalAssistantsTrained) : null,
+                    
+                    num_other_providers: computedTotalProv > 0 ? computedTotalProv : null, 
+                    num_other_providers_imci: computedTrainedProv > 0 ? computedTrainedProv : null, 
+                    
                     has_nutrition_service: parseBool(hasNutri), 
                     has_immunization_service: parseBool(hasImm), 
                     has_ors_room: parseBool(hasORS), 
@@ -2301,10 +2317,10 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                     has_growth_monitoring: parseBool(hasGrowthMonitoring) 
                 };
             } else if (isIccm) {
-                p = { ...p, imci_sub_type: imciSubType, nearest_health_facility: nearestHealthFacility || null, hours_to_facility: hoursToFacility !== '' ? Number(hoursToFacility) : null }; 
+                p = { ...p, imci_sub_type: finalImciSubType, nearest_health_facility: nearestHealthFacility || null, hours_to_facility: hoursToFacility !== '' ? Number(hoursToFacility) : null }; 
             }
         } else if (isEtat) {
-            if (!hospitalTypeEtat) { setError('Hospital Type is required for ETAT.'); return; }
+            if (!hospitalTypeEtat) { setError('نوع المستشفى مطلوب لـ ETAT.'); return; }
             p = { 
                 ...p, hospital_type: hospitalTypeEtat, 
                 trained_etat_before: parseBool(trainedEtat), 
@@ -2316,8 +2332,8 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                 num_staff_trained_in_etat: numStaffTrainedInEtat !== '' ? Number(numStaffTrainedInEtat) : null 
             };
         } else if (isEenc || isSsnc) {
-            if (!hospitalTypeEenc) { setError(`Hospital Type is required for ${isEenc ? 'EENC' : 'SSNC'}.`); return; }
-            if (hospitalTypeEenc === 'other' && !otherHospitalTypeEenc) { setError(`Please specify the Hospital Type for ${isEenc ? 'EENC' : 'SSNC'}.`); return; }
+            if (!hospitalTypeEenc) { setError(`نوع المستشفى مطلوب لـ ${isEenc ? 'EENC' : 'SSNC'}.`); return; }
+            if (hospitalTypeEenc === 'other' && !otherHospitalTypeEenc) { setError(`الرجاء تحديد نوع المستشفى لـ ${isEenc ? 'EENC' : 'SSNC'}.`); return; }
             p = { 
                 ...p, hospital_type: hospitalTypeEenc === 'other' ? otherHospitalTypeEenc : hospitalTypeEenc, 
                 trained_eenc_before: parseBool(trainedEENC), 
@@ -2354,15 +2370,19 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                 const baseFacilityPayload = {
                     'هل_المؤسسة_تعمل': 'Yes', 
                     'وجود_العلاج_المتكامل_لامراض_الطفولة': 'Yes', 
-                    'نوع_المؤسسةالصحية': facilityType || selectedFacility['نوع_المؤسسةالصحية'] || 'no data',
+                    'نوع_المؤسسةالصحية': currentFacilityType,
+                    
+                    'imnci_doctors_total': imnciDoctorsTotal !== '' ? Number(imnciDoctorsTotal) : (selectedFacility['imnci_doctors_total'] ?? null),
+                    'imnci_doctors_trained': imnciDoctorsTrained !== '' ? Number(imnciDoctorsTrained) : (selectedFacility['imnci_doctors_trained'] ?? null),
+                    'imnci_medical_assistants_total': imnciMedicalAssistantsTotal !== '' ? Number(imnciMedicalAssistantsTotal) : (selectedFacility['imnci_medical_assistants_total'] ?? null),
+                    'imnci_medical_assistants_trained': imnciMedicalAssistantsTrained !== '' ? Number(imnciMedicalAssistantsTrained) : (selectedFacility['imnci_medical_assistants_trained'] ?? null),
+                    
                     'nutrition_center_exists': parseStr(hasNutri), 
                     'nearest_nutrition_center': hasNutri === 'no' ? (nearestNutri || selectedFacility.nearest_nutrition_center || '') : '',
                     'immunization_office_exists': parseStr(hasImm), 
                     'nearest_immunization_center': hasImm === 'no' ? (nearestImm || selectedFacility.nearest_immunization_center || '') : '',
                     'غرفة_إرواء': parseStr(hasORS), 
                     'growth_monitoring_service_exists': parseStr(hasGrowthMonitoring),
-                    'العدد_الكلي_لكوادر_طبية_العاملة_أطباء_ومساعدين': numProv !== '' ? Number(numProv) : (selectedFacility['العدد_الكلي_لكوادر_طبية_العاملة_أطباء_ومساعدين'] ?? updatedStaffList.length), 
-                    'العدد_Kلي_للكودار_ المدربة_على_العلاج_المتكامل': numProvIMNCI !== '' ? Number(numProvIMNCI) : (selectedFacility['العدد_Kلي_للكودار_ المدربة_على_العلاج_المتكامل'] ?? updatedStaffList.filter(s => s.is_trained === 'Yes').length), 
                     'ميزان_وزن': parseStr(hasWeightScale), 
                     'ميزان_طول': parseStr(hasHeightScale), 
                     'ميزان_حرارة': parseStr(hasThermometer), 
@@ -2403,7 +2423,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
     };
 
     return (
-        <>
+        <div dir="rtl">
             <FacilitySearchModal 
                 isOpen={isFacilitySearchOpen}
                 onClose={() => setIsFacilitySearchOpen(false)}
@@ -2422,337 +2442,383 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
 
             <Card>
                 <div className="p-6">
-                    <PageHeader title={initialData ? 'Edit Participant' : 'Add New Participant'} />
-                    {error && <div className="p-3 my-4 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
-
-                        {/* Group */}
-                        <FormGroup label="Group">
-                            <Select value={group} onChange={(e) => setGroup(e.target.value)}>
-                                <option>Group A</option><option>Group B</option><option>Group C</option><option>Group D</option>
-                            </Select>
-                        </FormGroup>
-
-                        {/* State */}
-                        <FormGroup label="State">
-                             <Select value={state} onChange={(e) => {
-                                setState(e.target.value);
-                                setLocality(''); 
-                                setCenter(''); 
-                                setSelectedFacility(null); 
-                                setFacilitiesInLocality([]); 
-                             }}>
-                                <option value="">— Select State —</option>
-                                {Object.keys(STATE_LOCALITIES).sort((a,b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar)).map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar}</option>)}
-                            </Select>
-                        </FormGroup>
-
-                        {/* Locality */}
-                        <FormGroup label="Locality">
-                            <Select value={locality} onChange={(e) => {
-                                setLocality(e.target.value);
-                                setCenter(''); 
-                                setSelectedFacility(null); 
-                            }} disabled={!state}>
-                                <option value="">— Select Locality —</option>
-                                {(STATE_LOCALITIES[state]?.localities || []).sort((a,b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
-                            </Select>
-                        </FormGroup>
-                        
-                        {/* Conditionally render Facility or Department */}
-                        {isProgramManagement && (
-                            <FormGroup label="Department (الادارة)">
-                                <Input
-                                    value={department}
-                                    onChange={(e) => setDepartment(e.target.value)}
-                                    placeholder="Enter department name"
-                                    disabled={!locality}
-                                />
+                    <PageHeader title={initialData ? 'تعديل بيانات المشارك' : 'إضافة مشارك جديد'} />
+                    {error && <div className="p-3 my-4 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm font-medium">{error}</div>}
+                    
+                    {/* --- القسم 1: البيانات الأساسية --- */}
+                    <div className="mt-6 mb-6">
+                        <h3 className="text-lg font-bold mb-4 text-blue-700 border-b pb-2">البيانات الأساسية</h3>
+                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <FormGroup label="المجموعة (Group)">
+                                <Select value={group} onChange={(e) => setGroup(e.target.value)}>
+                                    <option value="Group A">المجموعة أ (Group A)</option>
+                                    <option value="Group B">المجموعة ب (Group B)</option>
+                                    <option value="Group C">المجموعة ج (Group C)</option>
+                                    <option value="Group D">المجموعة د (Group D)</option>
+                                </Select>
                             </FormGroup>
-                        )}
 
-                        {!isProgramManagement && (
-                            isIccm ? (
-                                <FormGroup label="Village Name">
+                            <FormGroup label="الولاية">
+                                 <Select value={state} onChange={(e) => {
+                                    setState(e.target.value);
+                                    setLocality(''); 
+                                    setCenter(''); 
+                                    setSelectedFacility(null); 
+                                    setFacilitiesInLocality([]); 
+                                 }}>
+                                    <option value="">— اختر الولاية —</option>
+                                    {Object.keys(STATE_LOCALITIES).sort((a,b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar)).map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar}</option>)}
+                                </Select>
+                            </FormGroup>
+
+                            <FormGroup label="المحلية">
+                                <Select value={locality} onChange={(e) => {
+                                    setLocality(e.target.value);
+                                    setCenter(''); 
+                                    setSelectedFacility(null); 
+                                }} disabled={!state}>
+                                    <option value="">— اختر المحلية —</option>
+                                    {(STATE_LOCALITIES[state]?.localities || []).sort((a,b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
+                                </Select>
+                            </FormGroup>
+                            
+                            {isProgramManagement && (
+                                <FormGroup label="الإدارة (Department)">
                                     <Input
-                                        value={center}
-                                        onChange={(e) => setCenter(e.target.value)}
-                                        placeholder="Enter village name"
+                                        value={department}
+                                        onChange={(e) => setDepartment(e.target.value)}
+                                        placeholder="أدخل اسم الإدارة"
+                                        disabled={!locality}
+                                    />
+                                </FormGroup>
+                            )}
+
+                            {!isProgramManagement && (
+                                isIccm ? (
+                                    <FormGroup label="اسم القرية">
+                                        <Input
+                                            value={center}
+                                            onChange={(e) => setCenter(e.target.value)}
+                                            placeholder="أدخل اسم القرية"
+                                            disabled={!locality}
+                                        />
+                                    </FormGroup>
+                                ) : (
+                                    <FormGroup label={isEtat ? "اسم المستشفى" : "اسم المؤسسة الصحية"}>
+                                        <div 
+                                            onClick={() => {
+                                                if (!isLoadingFacilities && locality) {
+                                                    setIsFacilitySearchOpen(true);
+                                                }
+                                            }}
+                                            className={`relative ${!locality ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+                                        >
+                                            <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                                                <Search className="w-5 h-5 text-gray-400 mr-2" />
+                                            </div>
+                                            <Input
+                                                value={selectedFacility ? selectedFacility['اسم_المؤسسة'] : center}
+                                                readOnly
+                                                placeholder={isLoadingFacilities ? "جاري التحميل..." : (!locality ? "اختر المحلية أولاً" : "اضغط للبحث عن المؤسسة...")}
+                                                className="cursor-pointer bg-white pr-10" 
+                                                disabled={isLoadingFacilities || !locality}
+                                            />
+                                        </div>
+                                    </FormGroup>
+                                )
+                            )}
+                            
+                            {(isIccm || isProgramManagement) ? (
+                                 <FormGroup label="اسم المشارك">
+                                    <Input
+                                        value={name}
+                                        onChange={(e) => setName(e.target.value)}
+                                        placeholder="أدخل الاسم الرباعي للمشارك"
                                         disabled={!locality}
                                     />
                                 </FormGroup>
                             ) : (
-                                <FormGroup label={isEtat ? "Hospital Name" : "Health Facility Name"}>
-                                    <div 
-                                        onClick={() => {
-                                            if (!isLoadingFacilities && locality) {
-                                                setIsFacilitySearchOpen(true);
-                                            }
-                                        }}
-                                        className={`relative ${!locality ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
-                                    >
-                                        <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                                            <Search className="w-5 h-5 text-gray-400" />
-                                        </div>
-                                        <Input
-                                            value={selectedFacility ? selectedFacility['اسم_المؤسسة'] : center}
-                                            readOnly
-                                            placeholder={isLoadingFacilities ? "Loading..." : (!locality ? "Select Locality first" : "Click to search facility...")}
-                                            className="cursor-pointer bg-white pr-10" 
-                                            disabled={isLoadingFacilities || !locality}
-                                        />
-                                    </div>
+                                <FormGroup label="اسم المشارك">
+                                    <CreatableNameInput
+                                        value={name}
+                                        onChange={setName}
+                                        onSelect={handleHealthWorkerSelect}
+                                        options={useMemo(() => {
+                                             if (!selectedFacility?.imnci_staff) return [];
+                                             try {
+                                                 let staff = typeof selectedFacility.imnci_staff === 'string'
+                                                     ? JSON.parse(selectedFacility.imnci_staff)
+                                                     : selectedFacility.imnci_staff;
+                                                return Array.isArray(staff) ? staff : [];
+                                             } catch (e) { return []; }
+                                         }, [selectedFacility?.imnci_staff])}
+                                        disabled={!selectedFacility || selectedFacility.id.startsWith('pending_')} 
+                                    />
+                                     {isEditingExistingWorker && <p className="text-sm text-blue-600 mt-1">تعديل بيانات الموظف الحالي.</p>}
+                                     {!selectedFacility && !isLoadingFacilities && locality && <p className="text-sm text-orange-600 mt-1">اختر مؤسسة للبحث عن الكوادر الحالية.</p>}
                                 </FormGroup>
-                            )
-                        )}
-                        
-                        {(isIccm || isProgramManagement) ? (
-                             <FormGroup label="Participant Name">
-                                <Input
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    placeholder="Enter participant's full name"
-                                    disabled={!locality}
-                                />
-                            </FormGroup>
-                        ) : (
-                            <FormGroup label="Participant Name">
-                                <CreatableNameInput
-                                    value={name}
-                                    onChange={setName}
-                                    onSelect={handleHealthWorkerSelect}
-                                    options={useMemo(() => {
-                                         if (!selectedFacility?.imnci_staff) return [];
-                                         try {
-                                             let staff = typeof selectedFacility.imnci_staff === 'string'
-                                                 ? JSON.parse(selectedFacility.imnci_staff)
-                                                 : selectedFacility.imnci_staff;
-                                            return Array.isArray(staff) ? staff : [];
-                                         } catch (e) { return []; }
-                                     }, [selectedFacility?.imnci_staff])}
-                                    disabled={!selectedFacility || selectedFacility.id.startsWith('pending_')} 
-                                />
-                                 {isEditingExistingWorker && <p className="text-sm text-blue-600 mt-1">Editing staff member info.</p>}
-                                 {!selectedFacility && !isLoadingFacilities && locality && <p className="text-sm text-orange-600 mt-1">Select or add a facility to search existing staff.</p>}
-                            </FormGroup>
-                        )}
-
-                        {/* Job Title */}
-                        <FormGroup label="Job Title">
-                             <Select value={job} onChange={(e) => setJob(e.target.value)} disabled={isEditingExistingWorker}>
-                                <option value="">— Select Job —</option>
-                                {jobTitleOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                <option value="Other">Other</option>
-                            </Select>
-                        </FormGroup>
-                        {job === 'Other' && (
-                            <FormGroup label="Specify Job Title">
-                                <Input value={otherJobTitle} onChange={(e) => setOtherJobTitle(e.target.value)} placeholder="Please specify" disabled={isEditingExistingWorker} />
-                            </FormGroup>
-                        )}
-
-                        {/* Phone & Email */}
-                        <FormGroup label="Phone Number"><Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} /></FormGroup>
-                        <FormGroup label="Email (Optional)"><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></FormGroup>
-
-                        {/* Scores */}
-                        {showTestScores && (
-                            <>
-                                <FormGroup label="Pre-Test Score (%)"><Input type="number" min="0" max="100" value={preTestScore} onChange={(e) => setPreTestScore(e.target.value)} /></FormGroup>
-                                <FormGroup label="Post-Test Score (%)"><Input type="number" min="0" max="100" value={postTestScore} onChange={(e) => setPostTestScore(e.target.value)} /></FormGroup>
-                            </>
-                        )}
-
-                        {(isImnci || isIccm) && (<>
-                            {isImnci && (
-                                <>
-                                    <FormGroup label="IMCI Course Sub-type">
-                                        <Select value={imciSubType} onChange={(e) => setImciSubType(e.target.value)}>
-                                            {IMNCI_SUBCOURSE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
-                                        </Select>
-                                    </FormGroup>
-                                    <FormGroup label="Facility Type">
-                                        <Select value={facilityType} onChange={(e) => setFacilityType(e.target.value)} disabled={!!selectedFacility}>
-                                             <option value="">— Select Type —</option>
-                                             <option value="مركز صحة الاسرة">م. صحة اسرة</option>
-                                             <option value="مستشفى ريفي">مستشفى ريفي</option>
-                                             <option value="وحدة صحة الاسرة">و. صحة اسرة</option>
-                                             <option value="مستشفى">مستشفى</option>
-                                        </Select>
-                                    </FormGroup>
-                                </>
                             )}
-                            
-                            <FormGroup label={`Previously trained in ${isIccm ? 'IMNCI/ICCM' : 'IMNCI'}?`}>
-                                <Select value={trainedIMNCI} onChange={(e) => setTrainedIMNCI(e.target.value)} disabled={isEditingExistingWorker}>
-                                    <option value="">— Select —</option>
-                                    <option value="no">No</option>
-                                    <option value="yes">Yes</option>
+
+                            <FormGroup label="المسمى الوظيفي">
+                                 <Select value={job} onChange={(e) => setJob(e.target.value)} disabled={isEditingExistingWorker}>
+                                    <option value="">— اختر المسمى الوظيفي —</option>
+                                    {jobTitleOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                    <option value="Other">أخرى</option>
                                 </Select>
                             </FormGroup>
-                            {trainedIMNCI === 'yes' && <FormGroup label="Date of last training"><Input type="date" value={lastTrainIMNCI} onChange={(e) => setLastTrainIMNCI(e.target.value)} disabled={isEditingExistingWorker}/></FormGroup>}
-                            
-                            {isImnci && (
-                                <>
-                                    <FormGroup label="Total Providers at Facility (incl. this participant)">
-                                        <Input type="number" min="1" value={numProv} onChange={(e) => setNumProv(e.target.value)} />
-                                    </FormGroup>
-                                    <FormGroup label="IMCI Trained Providers at Facility (excl. current course)">
-                                        <Input type="number" min="0" value={numProvIMNCI} onChange={(e) => setNumProvIMNCI(e.target.value)} />
-                                    </FormGroup>
-                                </>
-                            )}
-                            
-                            {isIccm && (
-                                <>
-                                     <FormGroup label="ICCM Course Sub-type"> 
-                                        <Select value={imciSubType} onChange={(e) => setImciSubType(e.target.value)}>
-                                            <option value="ICCM Community Module">ICCM Community Module</option>
-                                        </Select>
-                                    </FormGroup>
-                                    <FormGroup label="Nearest Health Facility">
-                                        <Input value={nearestHealthFacility} onChange={(e) => setNearestHealthFacility(e.target.value)} placeholder="Name of nearest facility" />
-                                    </FormGroup>
-                                    <FormGroup label="Hours to Facility (on foot)">
-                                        <Input type="number" min="0" value={hoursToFacility} onChange={(e) => setHoursToFacility(e.target.value)} placeholder="e.g., 2.5" />
-                                    </FormGroup>
-                                </>
+                            {job === 'Other' && (
+                                <FormGroup label="حدد المسمى الوظيفي">
+                                    <Input value={otherJobTitle} onChange={(e) => setOtherJobTitle(e.target.value)} placeholder="الرجاء التحديد" disabled={isEditingExistingWorker} />
+                                </FormGroup>
                             )}
 
-                            {isImnci && (
-                                <div className="md:col-span-2 lg:col-span-3 my-4 p-4 border rounded-md bg-gray-50">
-                                    <h3 className="text-lg font-semibold mb-3 border-b pb-2">Facility Services & Equipment (IMNCI Related)</h3>
+                            <FormGroup label="رقم الهاتف"><Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} dir="ltr" className="text-left" /></FormGroup>
+                            <FormGroup label="البريد الإلكتروني (اختياري)"><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" className="text-left" /></FormGroup>
+                        </div>
+                    </div>
+
+                    {/* --- القسم 2: التقييم والاختبارات --- */}
+                    {showTestScores && (
+                        <div className="mb-6 p-4 border rounded-md bg-gray-50/50">
+                            <h3 className="text-lg font-bold mb-4 text-blue-700 border-b pb-2">التقييم والاختبارات</h3>
+                            <div className="grid md:grid-cols-2 gap-6">
+                                <FormGroup label="درجة الاختبار القبلي (%)"><Input type="number" min="0" max="100" value={preTestScore} onChange={(e) => setPreTestScore(e.target.value)} /></FormGroup>
+                                <FormGroup label="درجة الاختبار البعدي (%)"><Input type="number" min="0" max="100" value={postTestScore} onChange={(e) => setPostTestScore(e.target.value)} /></FormGroup>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* --- القسم 3: بيانات التدريب والمؤسسة --- */}
+                    {(isImnci || isIccm || isEtat || isEenc || isSsnc) && (
+                        <div className="mb-6">
+                            <h3 className="text-lg font-bold mb-4 text-blue-700 border-b pb-2">بيانات التدريب وإحصائيات الكوادر</h3>
+                            <div className="grid md:grid-cols-1 gap-6">
+                                
+                                {(isImnci || isIccm) && (
                                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        <FormGroup label="Has therapeutic nutrition service?">
+                                        <FormGroup label={`هل تم التدريب مسبقاً في ${isIccm ? 'IMNCI/ICCM' : 'العلاج المتكامل (IMNCI)'}؟`}>
+                                            <Select value={trainedIMNCI} onChange={(e) => setTrainedIMNCI(e.target.value)} disabled={isEditingExistingWorker}>
+                                                <option value="">— اختر —</option>
+                                                <option value="no">لا</option>
+                                                <option value="yes">نعم</option>
+                                            </Select>
+                                        </FormGroup>
+                                        {trainedIMNCI === 'yes' && <FormGroup label="تاريخ آخر تدريب"><Input type="date" value={lastTrainIMNCI} onChange={(e) => setLastTrainIMNCI(e.target.value)} disabled={isEditingExistingWorker}/></FormGroup>}
+                                    </div>
+                                )}
+                                
+                                {isImnci && (
+                                    <div>
+                                        <h4 className="text-lg font-semibold mb-4 text-sky-800 bg-sky-50 px-4 py-2 border border-sky-100 rounded-md">إحصائية الكوادر الطبية بالمؤسسة</h4>
+                                        <div className="overflow-x-auto bg-white border border-gray-200 rounded shadow-sm mb-6">
+                                            <table className="min-w-full border-collapse text-sm text-center">
+                                                <thead className="bg-sky-100/50">
+                                                    <tr>
+                                                        <th className="border p-2 text-right text-sky-800 w-1/3">الوصف الوظيفي</th>
+                                                        <th className="border p-2 text-sky-800 w-1/3">العدد الكلي الموجود</th>
+                                                        <th className="border p-2 text-sky-800 w-1/3">المدربين على العلاج المتكامل</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr className="hover:bg-gray-50">
+                                                        <td className="border p-3 font-medium text-gray-700 text-right">طبيب</td>
+                                                        <td className="border p-2">
+                                                            <Input type="number" value={imnciDoctorsTotal} onChange={(e) => setImnciDoctorsTotal(e.target.value)} min="0" />
+                                                        </td>
+                                                        <td className="border p-2">
+                                                            <Input type="number" value={imnciDoctorsTrained} onChange={(e) => setImnciDoctorsTrained(e.target.value)} min="0" />
+                                                        </td>
+                                                    </tr>
+                                                    <tr className="hover:bg-gray-50">
+                                                        <td className="border p-3 font-medium text-gray-700 text-right">مساعد طبي</td>
+                                                        <td className="border p-2">
+                                                            <Input type="number" value={imnciMedicalAssistantsTotal} onChange={(e) => setImnciMedicalAssistantsTotal(e.target.value)} min="0" />
+                                                        </td>
+                                                        <td className="border p-2">
+                                                            <Input type="number" value={imnciMedicalAssistantsTrained} onChange={(e) => setImnciMedicalAssistantsTrained(e.target.value)} min="0" />
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {isIccm && (
+                                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        <FormGroup label="أقرب مؤسسة صحية">
+                                            <Input value={nearestHealthFacility} onChange={(e) => setNearestHealthFacility(e.target.value)} placeholder="اسم أقرب مؤسسة" />
+                                        </FormGroup>
+                                        <FormGroup label="الساعات للوصول للمؤسسة (سيراً على الأقدام)">
+                                            <Input type="number" min="0" value={hoursToFacility} onChange={(e) => setHoursToFacility(e.target.value)} placeholder="مثال: 2.5" />
+                                        </FormGroup>
+                                    </div>
+                                )}
+
+                                {isEtat && (
+                                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        <FormGroup label="نوع المستشفى">
+                                            <Select value={hospitalTypeEtat} onChange={e => setHospitalTypeEtat(e.target.value)}>
+                                                <option value="">— اختر النوع —</option>
+                                                <option value="Pediatric Hospital">مستشفى أطفال</option>
+                                                <option value="Pediatric Department in General Hospital">قسم أطفال في مستشفى عام</option>
+                                                <option value="Rural Hospital">مستشفى ريفي</option>
+                                                <option value="other">أخرى</option>
+                                           </Select>
+                                        </FormGroup>
+                                        <FormGroup label="هل تم التدريب مسبقاً على ETAT؟">
+                                            <Select value={trainedEtat} onChange={e => setTrainedEtat(e.target.value)}>
+                                                <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
+                                            </Select>
+                                        </FormGroup>
+                                        {trainedEtat === 'yes' && <FormGroup label="تاريخ آخر تدريب (ETAT)"><Input type="date" value={lastTrainEtat} onChange={(e) => setLastTrainEtat(e.target.value)} /></FormGroup>}
+                                        <FormGroup label="هل يوجد نظام فرز (Triage)؟">
+                                            <Select value={hasTriageSystem} onChange={e => setHasTriageSystem(e.target.value)}>
+                                                <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
+                                            </Select>
+                                        </FormGroup>
+                                        <FormGroup label="هل يوجد مركز استقرار سوء التغذية؟">
+                                            <Select value={hasStabilizationCenter} onChange={e => setHasStabilizationCenter(e.target.value)}>
+                                                <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
+                                            </Select>
+                                        </FormGroup>
+                                        <FormGroup label="هل توجد وحدة العناية المتوسطة (HDU)؟">
+                                            <Select value={hasHdu} onChange={e => setHasHdu(e.target.value)}>
+                                                <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
+                                            </Select>
+                                        </FormGroup>
+                                        <FormGroup label={`عدد الـ (${professionalCategory}) في الطوارئ`}><Input type="number" min="0" value={numStaffInEr} onChange={e => setNumStaffInEr(e.target.value)} /></FormGroup>
+                                        <FormGroup label={`عدد الـ (${professionalCategory}) المدربين على ETAT`}><Input type="number" min="0" value={numStaffTrainedInEtat} onChange={e => setNumStaffTrainedInEtat(e.target.value)} /></FormGroup>
+                                    </div>
+                                )}
+
+                                {(isEenc || isSsnc) && (
+                                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        <FormGroup label="نوع المستشفى">
+                                            <Select value={hospitalTypeEenc} onChange={e => setHospitalTypeEenc(e.target.value)}>
+                                                <option value="">— اختر النوع —</option>
+                                                <option value="Comprehensive EmONC">طوارئ توليد شاملة (Comprehensive EmONC)</option>
+                                                <option value="Basic EmONC">طوارئ توليد أساسية (Basic EmONC)</option>
+                                                <option value="other">أخرى (حدد)</option>
+                                            </Select>
+                                        </FormGroup>
+                                        {hospitalTypeEenc === 'other' && <FormGroup label="حدد نوع المستشفى"><Input value={otherHospitalTypeEenc} onChange={e => setOtherHospitalTypeEenc(e.target.value)} /></FormGroup>}
+                                        <FormGroup label={`هل تم التدريب مسبقاً على ${isEenc ? 'EENC' : 'SSNC'}؟`}>
+                                            <Select value={trainedEENC} onChange={e => setTrainedEENC(e.target.value)}>
+                                                <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
+                                            </Select>
+                                        </FormGroup>
+                                        {trainedEENC === 'yes' && <FormGroup label={`تاريخ آخر تدريب (${isEenc ? 'EENC' : 'SSNC'})`}><Input type="date" value={lastTrainEENC} onChange={(e) => setLastTrainEENC(e.target.value)} /></FormGroup>}
+                                        <FormGroup label="هل توجد وحدة رعاية حديثي الولادة الخاصة (SNCU)؟">
+                                            <Select value={hasSncu} onChange={e => setHasSncu(e.target.value)}>
+                                                <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
+                                            </Select>
+                                        </FormGroup>
+                                        <FormGroup label="هل يوجد مركز تغذية الرضع (IYCF)؟">
+                                            <Select value={hasIycfCenter} onChange={e => setHasIycfCenter(e.target.value)}>
+                                                <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
+                                            </Select>
+                                        </FormGroup>
+                                        <FormGroup label="هل توجد غرفة رعاية الكنغر؟">
+                                            <Select value={hasKangaroo} onChange={e => setHasKangaroo(e.target.value)}>
+                                                <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
+                                            </Select>
+                                        </FormGroup>
+
+                                        <FormGroup label={`عدد الـ (${professionalCategory}) في غرفة الولادة`}><Input type="number" min="0" value={numStaffInDelivery} onChange={e => setNumStaffInDelivery(e.target.value)} /></FormGroup>
+                                        <FormGroup label={`عدد الـ (${professionalCategory}) المدربين على ${isEenc ? 'EENC' : 'SSNC'}`}><Input type="number" min="0" value={numStaffTrainedInEenc} onChange={e => setNumStaffTrainedInEenc(e.target.value)} /></FormGroup>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* --- القسم 4: معدات وخدمات المؤسسة (مخصص لـ IMNCI) --- */}
+                    {isImnci && (
+                        <div className="mb-6 space-y-6">
+                            
+                            {/* 1. المعدات وأدوات العمل */}
+                            <div className="p-4 border rounded-md bg-gray-50">
+                                <h3 className="text-lg font-bold mb-4 text-blue-700 border-b pb-2">المعدات وأدوات العمل</h3>
+                                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    <FormGroup label="ميزان وزن">
+                                        <Select value={hasWeightScale} onChange={e => setHasWeightScale(e.target.value)}>
+                                            <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
+                                        </Select>
+                                    </FormGroup>
+                                    <FormGroup label="ميزان طول">
+                                        <Select value={hasHeightScale} onChange={e => setHasHeightScale(e.target.value)}>
+                                            <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
+                                        </Select>
+                                    </FormGroup>
+                                    <FormGroup label="ميزان حرارة">
+                                        <Select value={hasThermometer} onChange={e => setHasThermometer(e.target.value)}>
+                                            <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
+                                        </Select>
+                                    </FormGroup>
+                                    <FormGroup label="ساعة مؤقتة (Timer)">
+                                        <Select value={hasTimer} onChange={e => setHasTimer(e.target.value)}>
+                                            <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
+                                        </Select>
+                                    </FormGroup>
+                                    <FormGroup label="هل يوجد سجل العلاج المتكامل (IMNCI)؟">
+                                        <Select value={hasImnciRegister} onChange={e => setHasImnciRegister(e.target.value)}>
+                                            <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
+                                        </Select>
+                                    </FormGroup>
+                                    <FormGroup label="هل يوجد كتيب اللوحات؟">
+                                        <Select value={hasChartBooklet} onChange={e => setHasChartBooklet(e.target.value)}>
+                                            <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
+                                        </Select>
+                                    </FormGroup>
+                                </div>
+                            </div>
+
+                            {/* 2. الخدمات */}
+                            <div className="p-4 border rounded-md bg-gray-50">
+                                <h3 className="text-lg font-bold mb-4 text-blue-700 border-b pb-2">الخدمات</h3>
+                                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    <FormGroup label="هل يوجد ركن إرواء (ORS)؟">
+                                        <Select value={hasORS} onChange={e => setHasORS(e.target.value)}>
+                                            <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
+                                        </Select>
+                                    </FormGroup>
+                                    <FormGroup label="خدمة مراقبة النمو">
+                                        <Select value={hasGrowthMonitoring} onChange={e => setHasGrowthMonitoring(e.target.value)}>
+                                            <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
+                                        </Select>
+                                    </FormGroup>
+                                    
+                                    <div>
+                                        <FormGroup label="هل توجد خدمة التغذية العلاجية؟">
                                             <Select value={hasNutri} onChange={e => setHasNutri(e.target.value)}>
-                                                <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
+                                                <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
                                             </Select>
                                         </FormGroup>
-                                        {hasNutri === 'no' && <FormGroup label="Nearest therapeutic nutrition center?"><Input value={nearestNutri} onChange={e => setNearestNutri(e.target.value)} /></FormGroup>}
-                                        
-                                        <FormGroup label="Has immunization service?">
+                                        {hasNutri === 'no' && <div className="mt-2"><FormGroup label="أقرب مركز تغذية علاجية؟"><Input value={nearestNutri} onChange={e => setNearestNutri(e.target.value)} /></FormGroup></div>}
+                                    </div>
+
+                                    <div>
+                                        <FormGroup label="هل توجد خدمة التحصين؟">
                                             <Select value={hasImm} onChange={e => setHasImm(e.target.value)}>
-                                                <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
+                                                <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
                                             </Select>
                                         </FormGroup>
-                                        {hasImm === 'no' && <FormGroup label="Nearest immunization center?"><Input value={nearestImm} onChange={e => setNearestImm(e.target.value)} /></FormGroup>}
-                                        
-                                        <FormGroup label="Has ORS corner service?">
-                                            <Select value={hasORS} onChange={e => setHasORS(e.target.value)}>
-                                                <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
-                                            </Select>
-                                        </FormGroup>
-                                        <FormGroup label="Growth Monitoring Service">
-                                            <Select value={hasGrowthMonitoring} onChange={e => setHasGrowthMonitoring(e.target.value)}>
-                                                <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
-                                            </Select>
-                                        </FormGroup>
-                                        <FormGroup label="Has IMNCI Register?">
-                                            <Select value={hasImnciRegister} onChange={e => setHasImnciRegister(e.target.value)}>
-                                                <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
-                                            </Select>
-                                        </FormGroup>
-                                        <FormGroup label="Has Chart Booklet?">
-                                            <Select value={hasChartBooklet} onChange={e => setHasChartBooklet(e.target.value)}>
-                                                <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
-                                            </Select>
-                                        </FormGroup>
-                                        <FormGroup label="Weighting scale">
-                                            <Select value={hasWeightScale} onChange={e => setHasWeightScale(e.target.value)}>
-                                                <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
-                                            </Select>
-                                        </FormGroup>
-                                        <FormGroup label="Height scale">
-                                            <Select value={hasHeightScale} onChange={e => setHasHeightScale(e.target.value)}>
-                                                <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
-                                            </Select>
-                                        </FormGroup>
-                                        <FormGroup label="Thermometer">
-                                            <Select value={hasThermometer} onChange={e => setHasThermometer(e.target.value)}>
-                                                <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
-                                            </Select>
-                                        </FormGroup>
-                                        <FormGroup label="Timer">
-                                            <Select value={hasTimer} onChange={e => setHasTimer(e.target.value)}>
-                                                <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
-                                            </Select>
-                                        </FormGroup>
+                                        {hasImm === 'no' && <div className="mt-2"><FormGroup label="أقرب مركز تحصين؟"><Input value={nearestImm} onChange={e => setNearestImm(e.target.value)} /></FormGroup></div>}
                                     </div>
                                 </div>
-                            )}
-                        </>)}
+                            </div>
 
-                         {isEtat && (<>
-                             <FormGroup label="Hospital Type">
-                                 <Select value={hospitalTypeEtat} onChange={e => setHospitalTypeEtat(e.target.value)}>
-                                     <option value="">— Select Type —</option><option>Pediatric Hospital</option><option>Pediatric Department in General Hospital</option><option>Rural Hospital</option><option>other</option>
-                                </Select>
-                             </FormGroup>
-                             <FormGroup label="Previously trained on ETAT?">
-                                 <Select value={trainedEtat} onChange={e => setTrainedEtat(e.target.value)}>
-                                     <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
-                                 </Select>
-                             </FormGroup>
-                             {trainedEtat === 'yes' && <FormGroup label="Date of last ETAT training"><Input type="date" value={lastTrainEtat} onChange={(e) => setLastTrainEtat(e.target.value)} /></FormGroup>}
-                             <FormGroup label="Has Triage System?">
-                                 <Select value={hasTriageSystem} onChange={e => setHasTriageSystem(e.target.value)}>
-                                     <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
-                                 </Select>
-                             </FormGroup>
-                             <FormGroup label="Has Malnutrition Stabilization Center?">
-                                 <Select value={hasStabilizationCenter} onChange={e => setHasStabilizationCenter(e.target.value)}>
-                                     <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
-                                 </Select>
-                             </FormGroup>
-                             <FormGroup label="Has High Dependency Unit (HDU)?">
-                                 <Select value={hasHdu} onChange={e => setHasHdu(e.target.value)}>
-                                     <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
-                                 </Select>
-                             </FormGroup>
-                             <FormGroup label={`# ${professionalCategory}s in ER`}><Input type="number" min="0" value={numStaffInEr} onChange={e => setNumStaffInEr(e.target.value)} /></FormGroup>
-                             <FormGroup label={`# ${professionalCategory}s trained in ETAT`}><Input type="number" min="0" value={numStaffTrainedInEtat} onChange={e => setNumStaffTrainedInEtat(e.target.value)} /></FormGroup>
-                        </>)}
+                        </div>
+                    )}
 
-                         {(isEenc || isSsnc) && (<>
-                            <FormGroup label="Hospital Type">
-                                <Select value={hospitalTypeEenc} onChange={e => setHospitalTypeEenc(e.target.value)}>
-                                    <option value="">— Select Type —</option><option>Comprehensive EmONC</option><option>Basic EmONC</option><option value="other">Other (specify)</option>
-                                </Select>
-                            </FormGroup>
-                            {hospitalTypeEenc === 'other' && <FormGroup label="Specify Hospital Type"><Input value={otherHospitalTypeEenc} onChange={e => setOtherHospitalTypeEenc(e.target.value)} /></FormGroup>}
-                            <FormGroup label={`Previously trained on ${isEenc ? 'EENC' : 'SSNC'}?`}>
-                                <Select value={trainedEENC} onChange={e => setTrainedEENC(e.target.value)}>
-                                    <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
-                                </Select>
-                            </FormGroup>
-                            {trainedEENC === 'yes' && <FormGroup label={`Date of last ${isEenc ? 'EENC' : 'SSNC'} training`}><Input type="date" value={lastTrainEENC} onChange={(e) => setLastTrainEENC(e.target.value)} /></FormGroup>}
-                            <FormGroup label="Has Special Newborn Care Unit (SNCU)?">
-                                <Select value={hasSncu} onChange={e => setHasSncu(e.target.value)}>
-                                    <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
-                                </Select>
-                            </FormGroup>
-                            <FormGroup label="Has IYCF Center?">
-                                <Select value={hasIycfCenter} onChange={e => setHasIycfCenter(e.target.value)}>
-                                    <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
-                                </Select>
-                            </FormGroup>
-                            <FormGroup label="Has Kangaroo Care Room?">
-                                <Select value={hasKangaroo} onChange={e => setHasKangaroo(e.target.value)}>
-                                    <option value="">— Select —</option><option value="no">No</option><option value="yes">Yes</option>
-                                </Select>
-                            </FormGroup>
-
-                            <FormGroup label={`# ${professionalCategory}s in Delivery Room`}><Input type="number" min="0" value={numStaffInDelivery} onChange={e => setNumStaffInDelivery(e.target.value)} /></FormGroup>
-                            <FormGroup label={`# ${professionalCategory}s trained in ${isEenc ? 'EENC' : 'SSNC'}`}><Input type="number" min="0" value={numStaffTrainedInEenc} onChange={e => setNumStaffTrainedInEenc(e.target.value)} /></FormGroup>
-                        </>)}
-                    </div>
                     {/* Submit Buttons */}
                     <div className="flex gap-2 justify-end mt-6 border-t pt-6">
-                        <Button variant="secondary" onClick={onCancel}>Cancel</Button>
-                        <Button onClick={submit}>Save Participant</Button>
+                        <Button variant="secondary" onClick={onCancel}>إلغاء</Button>
+                        <Button onClick={submit}>حفظ المشارك</Button>
                     </div>
                 </div>
             </Card>
-        </>
+        </div>
     );
 }
