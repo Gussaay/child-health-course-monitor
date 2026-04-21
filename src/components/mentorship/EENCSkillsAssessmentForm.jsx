@@ -12,9 +12,6 @@ import { submitFacilityDataForApproval } from '../../data';
 
 // --- مكونات خاصة بهذا النموذج --- 
 
-// --- 1. هيكل النموذج ---
-
-// --- MODIFICATION: Added export ---
 export const PREPARATION_ITEMS = [
     { key: 'prep_temp', label: 'التأكد من درجة حرارة الغرفة مناسبة، اغلق تيارات الهواء' }, 
     { key: 'prep_notify_mother', label: 'إخبار الام (أوالشخص الداعم لها) عن مجريات سير الولادة وابدى تعاطفا معها وطمئنها' }, 
@@ -27,7 +24,6 @@ export const PREPARATION_ITEMS = [
     { key: 'prep_tools', label: 'وضع المشابك والملقط وكل ادوات الولادة معقمة في منطقة يسهل استخدامها بعد الولادة' }, 
 ];
 
-// --- MODIFICATION: Added export ---
 export const DRYING_STIMULATION_ITEMS = [
     { key: 'dry_time_record', label: 'تسجيل زمن الولادة (الساعة ___ دقائق ____ ثواني___)' }, 
     { key: 'dry_start_5sec', label: 'بداية التجفيف خلال 5 ثواني من الولادة' }, 
@@ -39,7 +35,6 @@ export const DRYING_STIMULATION_ITEMS = [
     { key: 'dry_cover_baby', label: 'تغطية الطفل بقطعة جافة وتغطية الراس بطاقية' }, 
 ];
 
-// --- MODIFICATION: Added export ---
 export const NORMAL_BREATHING_ITEMS = [
     { key: 'normal_check_second_baby', label: 'التأكد من عدم وجود طفل اخر' }, 
     { key: 'normal_oxytocin', label: 'اعطاء حقنة الطلق (اوكسيتوسين) خلال واحد دقيقة بعد الولادة' }, 
@@ -50,7 +45,6 @@ export const NORMAL_BREATHING_ITEMS = [
     { key: 'normal_breastfeeding_guidance', label: 'ارشد الام علي علامات استعداد الوليد للرضاعة الطبيعية' }, 
 ];
 
-// --- MODIFICATION: Added export ---
 export const RESUSCITATION_ITEMS = [
     { key: 'resus_ask_help', label: 'طلب المساعدة' }, 
     { key: 'resus_remove_outer_glove', label: 'نزع القفاز الخارجي والابقاء على الداخلي' }, 
@@ -67,7 +61,6 @@ export const RESUSCITATION_ITEMS = [
     { key: 'resus_followup_no_breathing_10min_no_pulse', label: 'فى حالة لم يتنفس الطفل طبيعيا بعد 10 دقائق من التنفس الفعال + عدم وجود نبضات قلب (هل تم التأكد من وفاة الطفل ,وايقاف عملية التنفس ,وتقديم الدعم العاطفي للام)' }, 
 ];
 
-// دمج كل المفاتيح لإنشاء الحالة الأولية
 const allItems = [
     ...PREPARATION_ITEMS,
     ...DRYING_STIMULATION_ITEMS,
@@ -75,7 +68,6 @@ const allItems = [
     ...RESUSCITATION_ITEMS
 ];
 
-// --- 2. دالة الحالة الأولية --- 
 const getInitialFormData = () => {
     const skills = {};
     allItems.forEach(item => {
@@ -90,7 +82,6 @@ const getInitialFormData = () => {
     };
 };
 
-// --- 3. دالة إعادة ملء المسودة ---
 const rehydrateDraftData = (draftData) => {
     const initial = getInitialFormData();
     if (!draftData) return initial;
@@ -106,13 +97,11 @@ const rehydrateDraftData = (draftData) => {
     };
 };
 
-// --- 4. دالة حساب الدرجات (UPDATED for Section Scores) --- 
 const calculateScores = (formData) => {
     const { eenc_breathing_status, skills } = formData;
     let overallScore = 0;
     let overallMax = 0;
     
-    // Initialize section scores
     const sectionScores = {
         preparation: { score: 0, maxScore: 0 },
         drying: { score: 0, maxScore: 0 },
@@ -134,16 +123,13 @@ const calculateScores = (formData) => {
                     sectionScores[sectionKey].score += 1;
                     overallScore += 1;
                 }
-                // 'no' adds 0
             }
         });
     };
 
-    // Always calculate common sections
     calculateSection(PREPARATION_ITEMS, 'preparation');
     calculateSection(DRYING_STIMULATION_ITEMS, 'drying');
 
-    // Conditional sections
     if (eenc_breathing_status === 'yes') {
         calculateSection(NORMAL_BREATHING_ITEMS, 'normal_breathing');
     } else if (eenc_breathing_status === 'no') {
@@ -156,7 +142,6 @@ const calculateScores = (formData) => {
     };
 };
 
-// --- 5. دالة التحقق من الاكتمال ---
 const checkFormCompletion = (formData) => {
     const { eenc_breathing_status, skills } = formData;
     if (eenc_breathing_status === 'na') return false; 
@@ -177,15 +162,8 @@ const checkFormCompletion = (formData) => {
     return true;
 };
 
-
-// --- مكونات الواجهة ---
-
-// --- NEW: Score Circle Component (Percentage) ---
 const ScoreCircle = ({ score, maxScore }) => {
-    // If maxScore is 0 or undefined, don't show the circle
     if (score === undefined || maxScore === undefined || maxScore === 0) return null;
-    
-    // Calculate Percentage
     const percentage = Math.round((score / maxScore) * 100);
     
     let colorClasses = 'bg-red-100 text-red-700 border-red-200';
@@ -198,7 +176,7 @@ const ScoreCircle = ({ score, maxScore }) => {
     return (
         <div 
             className={`flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full border-2 text-xs font-bold ml-3 shadow-sm ${colorClasses}`}
-            title={`${score}/${maxScore}`} // Tooltip showing exact score
+            title={`${score}/${maxScore}`}
         >
             {percentage}%
         </div>
@@ -235,19 +213,13 @@ const SkillChecklistItem = ({ label, itemKey, value, onChange }) => {
     };
 
     return (
-        // dir="rtl": Label on Right, Buttons on Left
         <div 
             className="p-3 border rounded-lg bg-white flex flex-col md:flex-row justify-between items-center gap-4"
             dir="rtl" 
         >
-            {/* 1. Label (Right side) */}
             <span className="font-medium text-gray-700 text-right w-full md:flex-1">
                 {label}
             </span>
-            
-            {/* 2. Options (Left side) */}
-            {/* dir="ltr" maintains the horizontal layout of buttons. */}
-            {/* The order inside is flipped: No -> Partial -> Yes */}
             <div className="flex gap-4 flex-shrink-0" dir="ltr">
                 <label className="flex items-center gap-1 cursor-pointer">
                     <input
@@ -287,13 +259,10 @@ const SkillChecklistItem = ({ label, itemKey, value, onChange }) => {
     );
 };
 
-// --- UPDATED: SectionRenderer with Percentage Circle ---
 const SectionRenderer = ({ title, items, formData, handleSkillChange, score, maxScore }) => {
     return (
         <div className="mt-6 animate-fade-in">
-             {/* Flex container with items-center */}
             <h3 className="text-xl font-semibold mb-4 p-3 bg-sky-100 text-sky-800 rounded-md sticky top-0 z-10 text-right flex items-center" dir="rtl">
-                {/* ScoreCircle comes first in RTL DOM, appearing on the Right (Before the title) */}
                 <ScoreCircle score={score} maxScore={maxScore} />
                 <span>{title}</span>
             </h3>
@@ -312,7 +281,6 @@ const SectionRenderer = ({ title, items, formData, handleSkillChange, score, max
     );
 };
 
-// --- المكون الأساسي للنموذج ---
 const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
     const {
         facility,
@@ -325,7 +293,7 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
         setToast,
         existingSessionData = null,
         visitNumber = 1,
-        canEditVisitNumber = false, // <--- NEW PROP
+        canEditVisitNumber = false,
         lastSessionDate = null,
         onDraftCreated,
         setIsMothersFormModalOpen,
@@ -334,7 +302,6 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
         draftCount
     } = props;
 
-    // --- State Management ---
     const [formData, setFormData] = useState(() => 
         existingSessionData ? rehydrateDraftData(existingSessionData) : getInitialFormData()
     );
@@ -346,50 +313,46 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
     const user = auth.currentUser;
     const [isFormComplete, setIsFormComplete] = useState(false);
 
-    // --- NEW: Visit Number State ---
     const [currentVisitNumber, setCurrentVisitNumber] = useState(visitNumber);
 
-    // Keep local state in sync if the parent prop changes (e.g., switching facility)
     useEffect(() => {
         setCurrentVisitNumber(visitNumber);
     }, [visitNumber]);
-    // -------------------------------
 
-    // --- Refs for Autosave ---
     const formDataRef = useRef(formData);
     useEffect(() => {
         formDataRef.current = formData;
     }, [formData]);
 
     const allPropsRef = useRef({
-        facility, healthWorkerName, user, visitNumber, existingSessionData,
+        facility, healthWorkerName, user, existingSessionData,
         isSaving, isSavingDraft, setToast, healthWorkerJobTitle,
-        onDraftCreated,
-        healthWorkerTrainingDate, healthWorkerPhone, onExit, onSaveComplete,
-        visitNumber, lastSessionDate, setIsMothersFormModalOpen,
-        setIsDashboardModalOpen, setIsVisitReportModalOpen, draftCount
+        onDraftCreated, healthWorkerTrainingDate, healthWorkerPhone, 
+        onExit, onSaveComplete, visitNumber, lastSessionDate, 
+        setIsMothersFormModalOpen, setIsDashboardModalOpen, 
+        setIsVisitReportModalOpen, draftCount
     });
+    
     useEffect(() => {
         allPropsRef.current = {
-            facility, healthWorkerName, user, visitNumber, existingSessionData,
+            facility, healthWorkerName, user, existingSessionData,
             isSaving, isSavingDraft, setToast, healthWorkerJobTitle,
-            onDraftCreated,
-            healthWorkerTrainingDate, healthWorkerPhone, onExit, onSaveComplete,
-            visitNumber, lastSessionDate, setIsMothersFormModalOpen,
-            setIsDashboardModalOpen, setIsVisitReportModalOpen, draftCount
+            onDraftCreated, healthWorkerTrainingDate, healthWorkerPhone, 
+            onExit, onSaveComplete, visitNumber, lastSessionDate, 
+            setIsMothersFormModalOpen, setIsDashboardModalOpen, 
+            setIsVisitReportModalOpen, draftCount
         };
     }, [
-        facility, healthWorkerName, user, visitNumber, existingSessionData,
+        facility, healthWorkerName, user, existingSessionData,
         isSaving, isSavingDraft, setToast, healthWorkerJobTitle,
-        onDraftCreated,
-        healthWorkerTrainingDate, healthWorkerPhone, onExit, onSaveComplete,
-        visitNumber, lastSessionDate, setIsMothersFormModalOpen,
-        setIsDashboardModalOpen, setIsVisitReportModalOpen, draftCount
+        onDraftCreated, healthWorkerTrainingDate, healthWorkerPhone, 
+        onExit, onSaveComplete, visitNumber, lastSessionDate, 
+        setIsMothersFormModalOpen, setIsDashboardModalOpen, 
+        setIsVisitReportModalOpen, draftCount
     ]);
     
     const editingIdRef = useRef(null);
 
-    // --- Effect for loading/rehydrating data ---
     useEffect(() => {
         const newId = existingSessionData ? existingSessionData.id : null;
         const oldId = editingIdRef.current;
@@ -402,7 +365,6 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
     }, [existingSessionData]);
 
 
-    // --- Main effect for cleanup, scoring, and relevance ---
     useEffect(() => {
         let needsUpdate = false;
         const newFormData = JSON.parse(JSON.stringify(formData));
@@ -423,7 +385,6 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
 
         updateRelevance(PREPARATION_ITEMS, true);
         updateRelevance(DRYING_STIMULATION_ITEMS, true);
-
         updateRelevance(NORMAL_BREATHING_ITEMS, eenc_breathing_status === 'yes');
         updateRelevance(RESUSCITATION_ITEMS, eenc_breathing_status === 'no');
 
@@ -437,12 +398,10 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
     }, [formData]);
 
 
-    // --- Autosave Logic ---
     const silentSaveDraft = useCallback(async () => {
         const {
-            facility, healthWorkerName, user, visitNumber, existingSessionData,
-            isSaving, isSavingDraft, setToast, healthWorkerJobTitle,
-            onDraftCreated
+            facility, healthWorkerName, user, isSaving, isSavingDraft, 
+            healthWorkerJobTitle, onDraftCreated
         } = allPropsRef.current;
         
         const currentFormData = formDataRef.current;
@@ -475,7 +434,7 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                 scores: scoresPayload,
                 notes: currentFormData.notes,
                 status: 'draft',
-                visitNumber: Number(currentVisitNumber), // <--- USE LOCAL STATE
+                visitNumber: Number(currentVisitNumber),
                 eenc_breathing_status: currentFormData.eenc_breathing_status,
                 skills: currentFormData.skills,
             };
@@ -500,9 +459,8 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
         } catch (error) {
             console.error("Autosave failed:", error);
         }
-    }, [currentVisitNumber]); // Added dependency
+    }, [currentVisitNumber]);
 
-    // --- useImperativeHandle ---
     useImperativeHandle(ref, () => ({
         saveDraft: async () => {
             const { isSaving, isSavingDraft } = allPropsRef.current;
@@ -515,7 +473,6 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
     }));
 
 
-    // --- Handlers ---
     const handleFormChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
@@ -534,31 +491,26 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
     const handleSaveFacilityData = async (formData) => {
         try {
             await submitFacilityDataForApproval(formData);
-            setToast({ show: true, message: "Update submitted successfully! Your changes are pending approval.", type: 'success' });
+            setToast({ show: true, message: "Update submitted successfully!", type: 'success' });
             setIsFacilityModalOpen(false);
         } catch (error) {
             setToast({ show: true, message: `Submission failed: ${error.message}`, type: 'error' });
         }
     };
 
-    // --- Final Submit Handler ---
     const handleSubmit = async (e, status = 'complete') => {
         if (e) e.preventDefault();
         
         const currentFormComplete = checkFormCompletion(formData);
 
         if (status === 'complete' && !currentFormComplete) {
-             const errorMessage = `لا يمكن الحفظ. الرجاء اختيار حالة الطفل (يتنفس / لا يتنفس) والتأكد من ملء جميع العناصر ذات الصلة.`;
-             setToast({ show: true, message: errorMessage, type: 'error', duration: 10000 });
+             setToast({ show: true, message: "Please complete all fields before saving.", type: 'error', duration: 10000 });
              return;
         }
 
         const savingDraft = status === 'draft';
-        if (savingDraft) {
-            setIsSavingDraft(true);
-        } else {
-            setIsSaving(true);
-        }
+        if (savingDraft) setIsSavingDraft(true);
+        else setIsSaving(true);
 
         try {
             const calculatedScores = calculateScores(formData);
@@ -587,7 +539,7 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                 scores: scoresPayload,
                 notes: formData.notes,
                 status: status,
-                visitNumber: Number(currentVisitNumber), // <--- USE LOCAL STATE
+                visitNumber: Number(currentVisitNumber),
                 eenc_breathing_status: formData.eenc_breathing_status,
                 skills: formData.skills,
             };
@@ -610,19 +562,17 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                 editingIdRef.current = savedSession.id;
             }
 
-            setToast({ show: true, message: `تم حفظ ${savingDraft ? 'المسودة' : 'الجلسة'} بنجاح!`, type: 'success' });
+            setToast({ show: true, message: `Saved ${status} successfully!`, type: 'success' });
             if (onSaveComplete) onSaveComplete(status, payload);
 
         } catch (error) {
-            console.error("Error saving EENC session:", error);
-            setToast({ show: true, message: `فشل الحفظ: ${error.message}`, type: 'error' });
+            setToast({ show: true, message: `Error: ${error.message}`, type: 'error' });
         } finally {
             setIsSaving(false);
             setIsSavingDraft(false);
         }
     };
 
-    // --- Render function ---
     return (
         <Card dir="rtl">
             <StickyOverallScore
@@ -631,246 +581,84 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
             />
             <form onSubmit={(e) => handleSubmit(e, 'complete')}>
                 <div className="p-6">
-                    {/* --- Centered Title --- */}
                     <div className="text-center mb-4">
                         <h2 className="text-2xl font-bold text-sky-800">
                             متابعة مهارات الرعاية الضرورية المبكرة (EENC)
                         </h2>
                     </div>
 
-                    {/* --- Info Cards Wrapper --- */}
                     <div className="space-y-2 mb-4">
-                        {/* Facility Info */}
                         <div className="p-2 border rounded-lg bg-gray-50 text-right space-y-0.5">
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-0.5" dir="rtl">
                                 <div><span className="text-sm font-medium text-gray-500">الولاية:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility?.['الولاية'] || 'غير محدد'}</span></div>
                                 <div><span className="text-sm font-medium text-gray-500">المحلية:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility?.['المحلية'] || 'غير محدد'}</span></div>
                                 <div><span className="text-sm font-medium text-gray-500">اسم المؤسسة:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility?.['اسم_المؤسسة'] || 'غير محدد'}</span></div>
-                                <div><span className="text-sm font-medium text-gray-500">نوع المؤسسة:</span><span className="text-sm font-semibold text-gray-900 mr-2">{facility?.['نوع_المؤسسةالصحية'] || 'غير محدد'}</span></div>
                             </div>
                         </div>
-                        {/* Health Worker Info */}
-                        <div className="p-2 border rounded-lg bg-gray-50 text-right space-y-0.5">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-3 gap-y-0.5" dir="rtl">
-                                <div><span className="text-sm font-medium text-gray-500">اسم العامل الصحي:</span><span className="text-sm font-semibold text-gray-900 mr-2">{healthWorkerName || 'غير محدد'}</span></div>
-                                <div><span className="text-sm font-medium text-gray-500">الوصف الوظيفي:</span><span className="text-sm font-semibold text-gray-900 mr-2">{healthWorkerJobTitle || 'غير محدد'}</span></div>
-                                <div className="whitespace-nowrap overflow-hidden text-ellipsis"><span className="text-sm font-medium text-gray-500">تاريخ اخر تدريب:</span><span className="text-sm font-semibold text-gray-900 mr-2">{healthWorkerTrainingDate || 'غير محدد'}</span></div>
-                                <div><span className="text-sm font-medium text-gray-500">رقم الهاتف:</span><span className="text-sm font-semibold text-gray-900 mr-2">{healthWorkerPhone || 'غير محدد'}</span></div>
-                            </div>
-                        </div>
-                        {/* Mentor/Session Info */}
                         <div className="p-2 border rounded-lg bg-gray-50 text-right">
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-3 gap-y-0.5 items-end" dir="rtl">
-                                <div className="text-sm"><span className="font-medium text-gray-500">اسم المشرف:</span><span className="font-semibold text-gray-900 mr-2">{user?.displayName || user?.email || '...'}</span></div>                                <div className="text-sm"><span className="font-medium text-gray-500">تاريخ الجلسة:</span>
-                                    <Input 
-                                        type="date" 
-                                        name="session_date" 
-                                        value={formData.session_date} 
-                                        onChange={handleFormChange} 
-                                        required 
-                                        className="p-1 text-sm mr-2 w-auto"
-                                    />
-                                </div>
                                 <div className="text-sm">
-                                    <span className="font-medium text-gray-500">تاريخ الجلسة السابقة:</span>
-                                    <span className="font-semibold text-gray-900 mr-2">{lastSessionDate || '---'}</span> 
+                                    <span className="font-medium text-gray-500">تاريخ الجلسة:</span>
+                                    <Input type="date" name="session_date" value={formData.session_date} onChange={handleFormChange} required className="p-1 text-sm mr-2 w-auto"/>
                                 </div>
-                                {/* --- REPLACE THE VISIT NUMBER RENDER LOGIC HERE --- */}
                                 <div className="text-sm flex items-center">
                                     <span className="font-medium text-gray-700 ml-2">رقم الجلسة:</span>
                                     {canEditVisitNumber ? (
-                                        <Input 
-                                            type="number" 
-                                            min="1"
-                                            value={currentVisitNumber}
-                                            onChange={(e) => setCurrentVisitNumber(e.target.value)}
-                                            className="w-20 p-1 text-center font-bold text-sky-700 border-sky-300 focus:ring-sky-500"
-                                        />
+                                        <Input type="number" min="1" value={currentVisitNumber} onChange={(e) => setCurrentVisitNumber(e.target.value)} className="w-20 p-1 text-center font-bold text-sky-700 border-sky-300 focus:ring-sky-500"/>
                                     ) : (
                                         <span className="text-lg font-bold text-sky-700 mr-2">{currentVisitNumber}</span>
                                     )}
                                 </div>
-                                {/* -------------------------------------------------- */}
                             </div>
                         </div>
                     </div>
 
-                    {/* --- EENC Form Content --- */}
                     <div className="mt-6 p-4 border rounded-lg bg-gray-50">
                         <h3 className="text-lg font-semibold mb-3 text-right">1. تحديد حالة الوليد</h3>
                         <FormGroup label="الرجاء تحديد حالة الوليد لبدء التقييم:" className="text-right">
                             <div className="flex gap-4 justify-start" dir="rtl">
                                 <label className="flex items-center gap-2 p-2 border rounded-md bg-white cursor-pointer">
-                                    <input
-                                        type="radio"
-                                        name="eenc_breathing_status"
-                                        value="yes"
-                                        checked={formData.eenc_breathing_status === 'yes'}
-                                        onChange={handleFormChange}
-                                        className="form-radio text-green-600"
-                                    />
+                                    <input type="radio" name="eenc_breathing_status" value="yes" checked={formData.eenc_breathing_status === 'yes'} onChange={handleFormChange} className="form-radio text-green-600"/>
                                     <span className="font-semibold">طفل يتنفس طبيعياً</span>
                                 </label>
                                 <label className="flex items-center gap-2 p-2 border rounded-md bg-white cursor-pointer">
-                                    <input
-                                        type="radio"
-                                        name="eenc_breathing_status"
-                                        value="no"
-                                        checked={formData.eenc_breathing_status === 'no'}
-                                        onChange={handleFormChange}
-                                        className="form-radio text-red-600"
-                                    />
+                                    <input type="radio" name="eenc_breathing_status" value="no" checked={formData.eenc_breathing_status === 'no'} onChange={handleFormChange} className="form-radio text-red-600"/>
                                     <span className="font-semibold">طفل لا يتنفس طبيعياً (يحتاج إنعاش)</span>
                                 </label>
                             </div>
                         </FormGroup>
                     </div>
 
-                    {/* --- Render Sections Based on Selection --- */}
                     {formData.eenc_breathing_status !== 'na' && (
                         <>
-                            <SectionRenderer 
-                                title="2. تحضيرات ما قبل الولادة" 
-                                items={PREPARATION_ITEMS} 
-                                formData={formData} 
-                                handleSkillChange={handleSkillChange}
-                                score={scores.preparation?.score}
-                                maxScore={scores.preparation?.maxScore}
-                            />
-                            <SectionRenderer 
-                                title="3. التجفيف، التحفيز، التدفئة والشفط" 
-                                items={DRYING_STIMULATION_ITEMS} 
-                                formData={formData} 
-                                handleSkillChange={handleSkillChange} 
-                                score={scores.drying?.score}
-                                maxScore={scores.drying?.maxScore}
-                            />
+                            <SectionRenderer title="2. تحضيرات ما قبل الولادة" items={PREPARATION_ITEMS} formData={formData} handleSkillChange={handleSkillChange} score={scores.preparation?.score} maxScore={scores.preparation?.maxScore}/>
+                            <SectionRenderer title="3. التجفيف، التحفيز، التدفئة والشفط" items={DRYING_STIMULATION_ITEMS} formData={formData} handleSkillChange={handleSkillChange} score={scores.drying?.score} maxScore={scores.drying?.maxScore}/>
                         </>
                     )}
 
                     {formData.eenc_breathing_status === 'yes' && (
-                        <SectionRenderer 
-                            title="4. متابعة طفل يتنفس طبيعياً" 
-                            items={NORMAL_BREATHING_ITEMS} 
-                            formData={formData} 
-                            handleSkillChange={handleSkillChange} 
-                            score={scores.normal_breathing?.score}
-                            maxScore={scores.normal_breathing?.maxScore}
-                        />
+                        <SectionRenderer title="4. متابعة طفل يتنفس طبيعياً" items={NORMAL_BREATHING_ITEMS} formData={formData} handleSkillChange={handleSkillChange} score={scores.normal_breathing?.score} maxScore={scores.normal_breathing?.maxScore}/>
                     )}
 
                     {formData.eenc_breathing_status === 'no' && (
-                        <SectionRenderer 
-                            title="4. إنعاش الوليد (الدقيقة الذهبية)" 
-                            items={RESUSCITATION_ITEMS} 
-                            formData={formData} 
-                            handleSkillChange={handleSkillChange} 
-                            score={scores.resuscitation?.score}
-                            maxScore={scores.resuscitation?.maxScore}
-                        />
+                        <SectionRenderer title="4. إنعاش الوليد (الدقيقة الذهبية)" items={RESUSCITATION_ITEMS} formData={formData} handleSkillChange={handleSkillChange} score={scores.resuscitation?.score} maxScore={scores.resuscitation?.maxScore}/>
                     )}
                     
-
-                    {/* --- Notes Section --- */}
-                    {(formData.eenc_breathing_status !== 'na') && (
-                        <>
-                           <FormGroup label="ملاحظات عامة" className="text-right mt-6">
-                                <Textarea name="notes" value={formData.notes} onChange={handleFormChange} rows={4} placeholder="أضف أي ملاحظات إضافية حول الجلسة..." className="text-right placeholder:text-right"/>
-                           </FormGroup>
-                        </>
+                    {formData.eenc_breathing_status !== 'na' && (
+                        <FormGroup label="ملاحظات عامة" className="text-right mt-6">
+                            <Textarea name="notes" value={formData.notes} onChange={handleFormChange} rows={4} placeholder="أضف أي ملاحظات إضافية..." className="text-right placeholder:text-right"/>
+                        </FormGroup>
                     )}
                 </div>
 
-                 {/* --- Button Bar --- */}
                  <div className="hidden sm:flex flex-col gap-2 items-end p-4 border-t bg-gray-50 sticky bottom-0 z-10">
-                     {/* Row 1: Action Buttons */}
                      <div className="flex gap-2 flex-wrap justify-end">
                         <Button type="button" variant="secondary" onClick={onExit} disabled={isSaving || isSavingDraft}> إلغاء </Button>
-                        <Button type="button" variant="outline" onClick={(e) => handleSubmit(e, 'draft')} disabled={isSaving || isSavingDraft || formData.eenc_breathing_status === 'na'}> {isSavingDraft ? 'جاري حفظ المسودة...' : 'حفظ كمسودة'} </Button>
-                        <Button 
-                            type="submit" 
-                            disabled={isSaving || isSavingDraft || !isFormComplete} 
-                            title={!isFormComplete ? "يجب إكمال جميع الخطوات أولاً لحفظ الجلسة" : "حفظ وإنهاء الجلسة"}
-                        > 
-                            {isSaving ? 'جاري الحفظ...' : 'حفظ وإكمال الجلسة'} 
-                        </Button>
-                     </div>
-                     {/* Row 2: Navigation Buttons */}
-                     <div className="flex gap-2 flex-wrap justify-end">
-                        <Button 
-                            type="button" 
-                            variant="info"
-                            onClick={() => setIsFacilityModalOpen(true)} 
-                            disabled={isSaving || isSavingDraft || !facility}
-                            title={facility ? "Open EENC Facility Data Form" : "No facility selected"}
-                        >
-                            بيانات المنشأة (EENC)
-                        </Button>
-                        <Button 
-                            type="button" 
-                            variant="info"
-                            onClick={() => setIsMothersFormModalOpen(true)} 
-                            disabled={isSaving || isSavingDraft || !facility}
-                            title={facility ? "Open Mother's Survey" : "No facility selected"}
-                        >
-                            استبيان الأم
-                        </Button>
-                        <Button 
-                            type="button" 
-                            variant="info"
-                            onClick={() => setIsDashboardModalOpen(true)} 
-                            disabled={isSaving || isSavingDraft}
-                            title="Open Dashboard"
-                        >
-                            لوحة المتابعة
-                        </Button>
+                        <Button type="button" variant="outline" onClick={(e) => handleSubmit(e, 'draft')} disabled={isSaving || isSavingDraft || formData.eenc_breathing_status === 'na'}> {isSavingDraft ? 'جاري الحفظ...' : 'حفظ كمسودة'} </Button>
+                        <Button type="submit" disabled={isSaving || isSavingDraft || !isFormComplete}> {isSaving ? 'جاري الحفظ...' : 'حفظ وإكمال الجلسة'} </Button>
                      </div>
                  </div>
-
-                {/* --- Mobile Bar --- */}
-                <div className="flex sm:hidden fixed bottom-16 left-0 right-0 z-20 h-16 justify-around items-center bg-gray-900 text-white border-t border-gray-700 shadow-lg" dir="rtl">
-                    <Button type="button" variant="secondary" onClick={onExit} disabled={isSaving || isSavingDraft} size="sm">
-                        إلغاء
-                    </Button>
-                    <Button type="button" variant="outline" onClick={(e) => handleSubmit(e, 'draft')} disabled={isSaving || isSavingDraft || formData.eenc_breathing_status === 'na'} size="sm">
-                        {isSavingDraft ? 'جاري...' : 'حفظ مسودة'}
-                    </Button>
-                    <Button 
-                        type="submit" 
-                        disabled={isSaving || isSavingDraft || !isFormComplete} 
-                        title={!isFormComplete ? "يجب إكمال جميع الخطوات أولاً لحفظ الجلسة" : "حفظ وإنهاء الجلسة"}
-                        size="sm"
-                    > 
-                        {isSaving ? 'جاري...' : 'حفظ وإكمال'} 
-                    </Button>
-                </div>
             </form>
-
-            {/* --- Facility Modal --- */}
-            {isFacilityModalOpen && facility && (
-                <Modal 
-                    isOpen={isFacilityModalOpen} 
-                    onClose={() => setIsFacilityModalOpen(false)} 
-                    title={`بيانات منشأة: ${facility['اسم_المؤسسة'] || ''}`}
-                    size="full"
-                >
-                    <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
-                        <GenericFacilityForm
-                            initialData={facility}
-                            onSave={handleSaveFacilityData}
-                            onCancel={() => setIsFacilityModalOpen(false)}
-                            setToast={setToast}
-                            title="بيانات خدمة EENC"
-                            subtitle={`تحديث البيانات للمنشأة: ${facility['اسم_المؤسسة'] || '...'}`}
-                            isPublicForm={false}
-                            saveButtonText="Submit for Approval"
-                            cancelButtonText="Close"
-                        >
-                            {(props) => <EENCFormFields {...props} />}
-                        </GenericFacilityForm>
-                    </div>
-                </Modal>
-            )}
         </Card>
     );
 });

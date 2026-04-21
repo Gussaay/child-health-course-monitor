@@ -20,7 +20,7 @@
       }
     },
     "Updater": {
-      "url": "https://imnci-courses-monitor.web.app/update/update.json"
+      "url": "https://imnci-courses-monitor.web.app/latest/update.json"
     }
   }
 }

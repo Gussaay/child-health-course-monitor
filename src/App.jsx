@@ -22,6 +22,10 @@ import {
     Activity // Added Activity icon for IMCI
 } from 'lucide-react';
 
+// --- CAPACITOR UPDATER IMPORTS ---
+import { CapacitorUpdater } from '@capgo/capacitor-updater';
+import { Capacitor } from '@capacitor/core';
+
 // --- PRE-FLIGHT LANGUAGE CHECK ---
 // Ensures language is set synchronously before any Context initializes
 if (typeof window !== 'undefined') {
@@ -438,6 +442,10 @@ function SplashScreen() {
 // Root App Component
 // =============================================================================
 export default function App() {
+    // --- FORCE UPDATE STATE ---
+    const [isUpdateReady, setIsUpdateReady] = useState(false);
+    const [updateBundle, setUpdateBundle] = useState(null);
+
     // --- OFFLINE & SYNC STATE ---
     const [isOffline, setIsOffline] = useState(!navigator.onLine);
     const [isSyncing, setIsSyncing] = useState(false);
@@ -576,6 +584,30 @@ export default function App() {
     const historyInitialized = useRef(false);
     const isPopStateNavigation = useRef(false);
     const initialViewIsSet = useRef(false);
+
+    // --- EFFECT: CAPACITOR UPDATER DOWNLOAD LISTENER ---
+    useEffect(() => {
+        if (Capacitor.isNativePlatform()) {
+            let listener;
+            const setupUpdaterListener = async () => {
+                // Fired when a new bundle download has completed successfully
+                listener = await CapacitorUpdater.addListener('downloadComplete', (event) => {
+                    // event.bundle contains information about the downloaded update
+                    setUpdateBundle(event.bundle); 
+                    setIsUpdateReady(true);
+                });
+            };
+            
+            setupUpdaterListener();
+    
+            // Cleanup the listener when the component unmounts
+            return () => {
+                if (listener) {
+                    listener.remove(); 
+                }
+            };
+        }
+    }, []);
 
     useEffect(() => {
         if (!authLoading && user) {
@@ -2295,6 +2327,34 @@ export default function App() {
                     onReset={handleResetMonitor}
                     onDismiss={handleDismissMonitor}
                 />
+            )}
+
+            {/* --- FORCE UPDATE MODAL --- */}
+            {isUpdateReady && updateBundle && (
+                <div className="fixed inset-0 bg-slate-900 bg-opacity-80 flex flex-col items-center justify-center z-[100000] p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full text-center space-y-4">
+                        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-sky-100">
+                            <RefreshCw className="h-6 w-6 text-sky-600 animate-spin" />
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-800">Update Ready!</h3>
+                        <p className="text-sm text-slate-500">
+                            A new version of the app has been downloaded in the background. You must restart the app to apply the update and continue.
+                        </p>
+                        <button 
+                            onClick={async () => {
+                                try {
+                                    // This applies the bundle and immediately reloads the app
+                                    await CapacitorUpdater.set({ id: updateBundle.id }); 
+                                } catch (e) {
+                                    console.error("Failed to apply update", e);
+                                }
+                            }}
+                            className="w-full inline-flex justify-center rounded-md border border-transparent bg-sky-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 sm:text-sm"
+                        >
+                            Restart & Update Now
+                        </button>
+                    </div>
+                </div>
             )}
         </div>
     );

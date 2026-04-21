@@ -197,9 +197,8 @@ const translations = {
         "Overall EENC Adherence by": "Overall EENC Adherence by",
         "Detailed EENC Skill Performance": "Detailed EENC Skill Performance",
 
-        // --- Detailed Provider Skills Group Names & Values (EN Mapping) ---
+        // --- Detailed Provider Skills Group Names & Values ---
         "Assessment & Classification Skills": "Assessment & Classification Skills",
-        "Final Decision": "Final Decision",
         "Treatment & Counseling Skills": "Treatment & Counseling Skills",
         "Recording Skills": "Recording Skills",
         "Physical & Vital Measurements": "Physical & Vital Measurements",
@@ -321,7 +320,7 @@ const translations = {
         "Corrective Steps": "Corrective Steps",
 
         // --- Chart Legend Short Titles ---
-        "Meds": "Meds", "Tx": "Tx", "Return": "Return", "ORS": "ORS", "Fluids": "Fluids", "Rules": "Rules", "Time": "Time", "Comm": "Comm", "Learned": "Learned",
+        "Meds": "Meds", "Tx": "Tx", "Return": "Return", "Fluids": "Fluids", "Rules": "Rules", "Time": "Time", "Comm": "Comm", "Learned": "Learned",
         "Imm. S2S": "Imm. S2S", "90min S2S": "90min S2S", "1st Hr": "1st Hr", "Subs": "Subs", "Bottle": "Bottle", "Vit K": "Vit K", "Eye": "Eye", "Cord Sub": "Cord Sub", "Oiling": "Oiling", "Bath <6h": "Bath <6h", "Polio": "Polio", "BCG": "BCG", "Weight": "Weight", "Temp": "Temp", "Civil Reg": "Civil Reg", "Card": "Card",
         "Overall": "Overall", "Assessment": "Assessment", "Decision": "Decision", "Treatment": "Treatment", "Danger Signs Score": "Danger Signs Score", "Measurement Skills Average": "Measurement Skills Average", "Resp. Rate": "Resp. Rate", "Dehydration": "Dehydration", "Malnutrition Assessment": "Malnutrition Assessment", "Immunization": "Immunization", "Vitamin Assessment": "Vitamin Assessment", "Coartem (ACT)": "Coartem (ACT)", "Return Immediately": "Return Immediately", "Return Followup": "Return Followup", "Signs": "Signs", "Classifications": "Classifications", "Treatments": "Treatments", "Preparation": "Preparation", "Breathing Mgmt": "Breathing Mgmt", "Hand Wash 1": "Hand Wash 1", "Hand Wash 2": "Hand Wash 2", "Gloves": "Gloves", "Towels": "Towels", "Equip Ready": "Equip Ready", "Ambu Check": "Ambu Check", "Drying < 5s": "Drying < 5s", "Towel/Hat": "Towel/Hat", "Hygienic Check": "Hygienic Check", "Delayed Clamp": "Delayed Clamp", "Correct Clamp": "Correct Clamp", "BF Advice": "BF Advice", "Head Pos": "Head Pos", "Mask Seal": "Mask Seal", "Chest Rise": "Chest Rise", "Rate": "Rate",
 
@@ -603,7 +602,7 @@ const translations = {
         "Adherence Over Time (Danger Signs)": "الالتزام بمرور الوقت (علامات الخطورة)",
         "Adherence Over Time (Measurement Skills)": "الالتزام بمرور الوقت (مهارات القياس)",
         "Adherence Over Time (Malnutrition Signs)": "الالتزام بمرور الوقت (علامات سوء التغذية)",
-        "Recording Form Use Over Time": "استخدام الاستمارة بمرور الوقت",
+        "Recording Form Use Time": "استخدام الاستمارة بمرور الوقت",
         "Overall IMNCI Adherence by": "الالتزام الكلي (IMNCI) حسب",
         
         "Total Completed EENC Visits": "إجمالي زيارات EENC المكتملة",
@@ -648,7 +647,6 @@ const translations = {
 
         // --- Detailed Provider Skills Group Names & Values ---
         "Assessment & Classification Skills": "تقييم مهارات التقييم والتصنيف",
-        "Final Decision": "القرار النهائي",
         "Treatment & Counseling Skills": "تقييم مهارات العلاج والنصح",
         "Recording Skills": "استخدام الاستمارة",
         "Physical & Vital Measurements": "القياسات الجسمانية والحيوية",
@@ -880,8 +878,6 @@ const translations = {
         "Facility Drug Availability (Percentage of facilities reporting drugs always available)": "توفر الأدوية بالمؤسسة (نسبة المؤسسات التي تبلغ عن توفر الأدوية دائماً)",
         "Amoxicillin": "أموكسيسيلين",
         "Zinc": "زنك",
-        "ORS": "أملاح التروية",
-        "Coartem": "كورتيم",
         "Availability": "توفر",
         "of": "من",
         "facilities": "مؤسسات",
@@ -915,8 +911,6 @@ export const LanguageProvider = ({ children }) => {
     const toggleLanguage = () => {
         setLanguage((prevLang) => (prevLang === 'en' ? 'ar' : 'en'));
     };
-
-    // Note: Deliberately removed global modification to prevent layout shifts.
 
     return (
         <LanguageContext.Provider value={{ language, toggleLanguage, t }}>

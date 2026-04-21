@@ -12,6 +12,10 @@ import './index.css';
 // --- SERVICE WORKER REGISTRATION ---
 import { registerSW } from 'virtual:pwa-register';
 
+// --- UPDATER IMPORTS ---
+import { CapacitorUpdater } from '@capgo/capacitor-updater';
+import { Capacitor } from '@capacitor/core';
+
 // Automatically updates the service worker when new content is available
 registerSW({ immediate: true });
 // ------------------------------------
@@ -41,3 +45,13 @@ root.render(
     </DataProvider>
   </React.StrictMode>
 );
+
+// --- NOTIFY APP READY FOR CAPGO UPDATER ---
+// This prevents the native app from rolling back to a previous version after updating
+if (Capacitor.isNativePlatform()) {
+  CapacitorUpdater.notifyAppReady().then(() => {
+    console.log("Capacitor Updater: App is ready and update is confirmed.");
+  }).catch((err) => {
+    console.error("Capacitor Updater: Failed to notify app ready.", err);
+  });
+}
