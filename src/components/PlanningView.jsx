@@ -101,11 +101,11 @@ const SelectWithOther = ({ options, value, onChange, placeholder, otherLabel = '
         }
     };
 
-    const baseClass = "w-full h-full min-h-[32px] px-1 py-1 outline-none text-right text-xs cursor-pointer rounded";
-    const selectClass = invalidMode ? `${baseClass} bg-red-50 border border-red-400 text-red-800 focus:ring-red-500` : `${baseClass} bg-transparent border-0`;
+    const baseClass = "w-full h-full min-h-[32px] px-1 py-1 outline-none text-right text-xs cursor-pointer rounded border border-gray-300 focus:border-sky-500 focus:ring-1 focus:ring-sky-500";
+    const selectClass = invalidMode ? `${baseClass} bg-red-50 border-red-400 text-red-800` : `${baseClass} bg-white`;
 
     return (
-        <div className="w-full h-full flex flex-col justify-center relative">
+        <div className="w-full flex flex-col justify-center relative">
             {!showInput ? (
                 <select className={selectClass} value={value} onChange={handleSelectChange}>
                     <option value="">{placeholder}</option>
@@ -113,16 +113,16 @@ const SelectWithOther = ({ options, value, onChange, placeholder, otherLabel = '
                     <option value={otherLabel} className="font-bold text-sky-600">{otherLabel}</option>
                 </select>
             ) : (
-                <div className="flex items-center w-full h-full bg-white ring-1 ring-sky-500 z-10 relative rounded">
+                <div className="flex items-center w-full bg-white ring-1 ring-sky-500 z-10 relative rounded">
                     <input 
                         type="text" 
-                        className="w-full h-full min-h-[32px] px-1 py-1 bg-transparent border-0 outline-none text-right text-[10px]" 
+                        className="w-full min-h-[32px] px-2 py-1 bg-transparent border-0 outline-none text-right text-xs" 
                         value={value} 
                         onChange={(e) => onChange(e.target.value)} 
                         placeholder="حدد..." 
                         autoFocus
                     />
-                    <button type="button" className="text-red-500 px-1 font-bold hover:bg-red-50 h-full" onClick={() => { setShowInput(false); onChange(''); }}>×</button>
+                    <button type="button" className="text-red-500 px-2 font-bold hover:bg-red-50 h-full rounded-l" onClick={() => { setShowInput(false); onChange(''); }}>×</button>
                 </div>
             )}
         </div>
@@ -142,6 +142,11 @@ export default function PlanningView({ permissions, userStates }) {
     const [isEditingMatrix, setIsEditingMatrix] = useState(false); 
     const [isEditingOpPlan, setIsEditingOpPlan] = useState(false); 
     const [isEditingTracking, setIsEditingTracking] = useState(false);
+
+    // Pop-up states for Matrix and Operational Plan enhancement
+    const [scheduleModalIdx, setScheduleModalIdx] = useState(null);
+    const [supportModalIdx, setSupportModalIdx] = useState(null);
+    const [opSupportModalIdx, setOpSupportModalIdx] = useState(null);
 
     const isFederalManager = permissions?.canUseFederalManagerAdvancedFeatures || permissions?.manageScope === 'federal';
 
@@ -227,7 +232,6 @@ export default function PlanningView({ permissions, userStates }) {
         return filteredPlans;
     };
 
-    // تم التحديث للسماح بتعديل الخطط الشهرية مباشرة في شاشة التتبع
     const getAggregatedData = (targetPlan) => {
         if (targetPlan.planType === PLAN_TYPES.WEEKLY || targetPlan.planType === PLAN_TYPES.MONTHLY) {
             return targetPlan.activities || [];
@@ -256,7 +260,6 @@ export default function PlanningView({ permissions, userStates }) {
         });
     };
 
-    // تم التحديث لجمع الـ baselines من الخطط الأسبوعية والشهرية السابقة
     const getDynamicBaseline = (masterPlanId, interventionId, currentOpId) => {
         let base = 0;
         if (masterPlanId) {
@@ -284,6 +287,19 @@ export default function PlanningView({ permissions, userStates }) {
         }
     };
 
+    // Updating Handlers for Modals
+    const updateMasterPlanIntervention = (idx, field, val) => {
+        const newInvs = [...currentPlan.interventions];
+        newInvs[idx][field] = val;
+        setCurrentPlan({...currentPlan, interventions: newInvs});
+    };
+
+    const updateOpPlanActivity = (idx, field, val) => {
+        const newActs = [...currentOpPlan.activities];
+        newActs[idx][field] = val;
+        setCurrentOpPlan({...currentOpPlan, activities: newActs});
+    };
+
     const handleSaveMasterPlan = async (e) => {
         if (e) e.preventDefault();
         
@@ -299,6 +315,8 @@ export default function PlanningView({ permissions, userStates }) {
         await upsertMasterPlan(currentPlan);
         fetchMasterPlans(true);
         setIsEditingMatrix(false);
+        setScheduleModalIdx(null);
+        setSupportModalIdx(null);
     };
 
     const handleSaveOpPlan = async (e) => {
@@ -320,6 +338,7 @@ export default function PlanningView({ permissions, userStates }) {
         await upsertOperationalPlan({ ...currentOpPlan, periodName: name });
         fetchOperationalPlans(true);
         setIsEditingOpPlan(false);
+        setOpSupportModalIdx(null);
     };
 
     const handleSaveTracking = async (e) => {
@@ -358,7 +377,6 @@ export default function PlanningView({ permissions, userStates }) {
         setIsEditingOpPlan(true);
     };
 
-    // دالة الرفع التلقائي للأنشطة
     const handleEditOpPlan = (op) => {
         const enrichedOp = { ...op };
         const existingInvIds = new Set(enrichedOp.activities?.map(a => a.interventionId) || []);
@@ -402,7 +420,6 @@ export default function PlanningView({ permissions, userStates }) {
         setIsEditingOpPlan(true);
     };
 
-    // Dashboard Data Aggregation - Updated to support Monthly Tracking
     const getFullPlanEvaluation = () => {
         let totalBudget = 0;
         let totalGap = 0;
@@ -464,10 +481,9 @@ export default function PlanningView({ permissions, userStates }) {
                 let achievedAnnual = 0;
                 let actualCost = 0;
                 
-                // تجميع بيانات التنفيذ من الخطط الأسبوعية والشهرية معاً
                 filteredOpPlans.filter(op => op.planType === PLAN_TYPES.WEEKLY || op.planType === PLAN_TYPES.MONTHLY).forEach(opExec => {
                     if (week && opExec.planType === PLAN_TYPES.WEEKLY && opExec.periodWeek !== week) return; 
-                    if (week && opExec.planType === PLAN_TYPES.MONTHLY) return; // تخطي الخطط الشهرية إذا كان البحث عن أسبوع محدد
+                    if (week && opExec.planType === PLAN_TYPES.MONTHLY) return; 
 
                     const isCurrentMonth = opExec.periodMonth === targetMonth;
                     const isCurrentQuarter = quarterMonths.includes(opExec.periodMonth);
@@ -540,7 +556,6 @@ export default function PlanningView({ permissions, userStates }) {
                     }
                 }
                 
-                // جمع التنفيذ للأنشطة غير المخططة من المستويين الشهري والأسبوعي
                 if (op.planType === PLAN_TYPES.WEEKLY || op.planType === PLAN_TYPES.MONTHLY) {
                     if (week && op.planType === PLAN_TYPES.WEEKLY && op.periodWeek !== week) return;
                     if (week && op.planType === PLAN_TYPES.MONTHLY) return;
@@ -558,7 +573,6 @@ export default function PlanningView({ permissions, userStates }) {
                     unplannedMap[a.interventionId].actualCost += Number(a.actualCost || 0);
                     totalActualCost += Number(a.actualCost || 0);
                     
-                    // إذا كان أسبوعي ولم يتم تسجيل الهدف من الخطة الشهرية، نقوم بإضافته
                     if (op.planType === PLAN_TYPES.WEEKLY && unplannedMap[a.interventionId].target === 0) {
                         unplannedMap[a.interventionId].target += Number(a.target || 0);
                         unplannedMap[a.interventionId].budget += Number(a.totalCost || 0);
@@ -618,9 +632,6 @@ export default function PlanningView({ permissions, userStates }) {
         );
     };
 
-    // ==========================================
-    // Export Functions PDF & Excel
-    // ==========================================
     const exportEvaluationPDF = (evalData) => {
         const doc = new jsPDF('landscape', 'mm', 'a4');
         doc.addFileToVFS('Amiri-Regular.ttf', amiriFontBase64);
@@ -745,11 +756,11 @@ export default function PlanningView({ permissions, userStates }) {
     // ==========================================
     if (isEditingMatrix && currentPlan) {
         return (
-            <div className="fixed inset-0 z-50 bg-gray-100 flex flex-col" dir="rtl">
+            <div className="fixed inset-0 z-40 bg-gray-100 flex flex-col" dir="rtl">
                 <div className="bg-white shadow px-4 sm:px-6 py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center shrink-0 border-b gap-3">
                     <div>
                         <h2 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2"><Briefcase className="text-sky-600"/> إدخال مصفوفة الخطة السنوية الاستراتيجية</h2>
-                        <p className="text-xs sm:text-sm text-gray-500 mt-1">يتم تحديث العجز (Gap) تلقائياً بناءً على إجمالي التكلفة والدعم المدخل.</p>
+                        <p className="text-xs sm:text-sm text-gray-500 mt-1">يتم إدخال الجدولة وتفاصيل الدعم بالضغط على الخلايا المخصصة لفتح نوافذ الإدخال.</p>
                     </div>
                     <div className="flex gap-2 w-full sm:w-auto">
                         <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => setIsEditingMatrix(false)}><X size={16} className="ml-1"/> إغلاق</Button>
@@ -757,7 +768,7 @@ export default function PlanningView({ permissions, userStates }) {
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-2 sm:p-4">
+                <div className="flex-1 overflow-y-auto p-2 sm:p-4 relative">
                     <div className="bg-white rounded-lg shadow-sm border mb-4 p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 w-full">
                         <FormGroup label="السنة">
                             <Select value={currentPlan.year} onChange={(e) => setCurrentPlan({...currentPlan, year: Number(e.target.value)})} className="font-bold border-sky-300 w-full">
@@ -789,39 +800,27 @@ export default function PlanningView({ permissions, userStates }) {
                     </div>
 
                     <div className="bg-white border shadow-sm w-full relative overflow-x-auto rounded-t-lg">
-                        <table className="w-full table-fixed border-collapse text-[10px] sm:text-xs text-right whitespace-normal min-w-[1200px]">
+                        <table className="w-full table-fixed border-collapse text-[10px] sm:text-xs text-right whitespace-normal min-w-[800px]">
                             <thead className="bg-slate-800 text-white font-bold">
                                 <tr>
-                                    <th className="w-[8%] p-1.5 border border-slate-600">المحور</th>
-                                    <th className="w-[15%] p-1.5 border border-slate-600">النشاط</th>
-                                    <th className="w-[10%] p-1.5 border border-slate-600">المؤشر</th>
-                                    <th className="w-[4%] p-1.5 border border-slate-600 text-center">الأساس</th>
-                                    <th className="w-[4%] p-1.5 border border-slate-600 text-center">الهدف</th>
-                                    <th className="w-[2%] p-1.5 border border-slate-600 text-center">ر1</th>
-                                    <th className="w-[2%] p-1.5 border border-slate-600 text-center">ر2</th>
-                                    <th className="w-[2%] p-1.5 border border-slate-600 text-center">ر3</th>
-                                    <th className="w-[2%] p-1.5 border border-slate-600 text-center">ر4</th>
-                                    <th className="w-[6%] p-1.5 border border-slate-600 text-center">التكلفة</th>
-                                    <th className="w-[6%] p-1.5 border border-slate-600 text-center bg-blue-900">مشروع حكومي</th>
-                                    <th className="w-[5%] p-1.5 border border-slate-600 text-center bg-blue-900">القيمة</th>
-                                    <th className="w-[6%] p-1.5 border border-slate-600 text-center bg-orange-900">دعم شريك 1</th>
-                                    <th className="w-[5%] p-1.5 border border-slate-600 text-center bg-orange-900">القيمة</th>
-                                    <th className="w-[5%] p-1.5 border border-slate-600 text-center bg-orange-900">دعم شريك 2</th>
-                                    <th className="w-[5%] p-1.5 border border-slate-600 text-center bg-orange-900">القيمة</th>
-                                    <th className="w-[5%] p-1.5 border border-slate-600 text-center bg-orange-900">دعم شريك 3</th>
-                                    <th className="w-[5%] p-1.5 border border-slate-600 text-center bg-orange-900">القيمة</th>
-                                    <th className="w-[5%] p-1.5 border border-slate-600 text-center bg-red-900">العجز (Gap)</th>
-                                    <th className="w-[2%] p-1.5 border border-slate-600 text-center">🗑️</th>
+                                    <th className="w-[12%] p-1.5 border border-slate-600">المحور</th>
+                                    <th className="w-[20%] p-1.5 border border-slate-600">النشاط</th>
+                                    <th className="w-[15%] p-1.5 border border-slate-600">المؤشر</th>
+                                    <th className="w-[6%] p-1.5 border border-slate-600 text-center">الأساس</th>
+                                    <th className="w-[6%] p-1.5 border border-slate-600 text-center">الهدف</th>
+                                    <th className="w-[8%] p-1.5 border border-slate-600 text-center bg-green-900">الجدولة</th>
+                                    <th className="w-[10%] p-1.5 border border-slate-600 text-center">التكلفة الإجمالية</th>
+                                    <th className="w-[10%] p-1.5 border border-slate-600 text-center bg-indigo-900">مصادر التمويل</th>
+                                    <th className="w-[8%] p-1.5 border border-slate-600 text-center bg-red-900">العجز (Gap)</th>
+                                    <th className="w-[5%] p-1.5 border border-slate-600 text-center">حذف</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {currentPlan.interventions?.map((inv, idx) => {
                                     const gap = calculateGap(inv);
-                                    const update = (field, val) => {
-                                        const newInvs = [...currentPlan.interventions];
-                                        newInvs[idx][field] = val;
-                                        setCurrentPlan({...currentPlan, interventions: newInvs});
-                                    };
+                                    const totalSupport = (Number(inv.govValue)||0) + (Number(inv.extValue1)||0) + (Number(inv.extValue2)||0) + (Number(inv.extValue3)||0);
+                                    const update = (field, val) => updateMasterPlanIntervention(idx, field, val);
+                                    
                                     const cellClass = "p-0 border border-slate-300 relative focus-within:ring-1 focus-within:ring-sky-500 focus-within:z-10 align-top";
                                     const inputClass = "w-full h-full min-h-[32px] px-1 py-1 bg-transparent border-0 outline-none text-right whitespace-normal break-words resize-none overflow-hidden";
                                     
@@ -832,21 +831,31 @@ export default function PlanningView({ permissions, userStates }) {
                                         <td className={cellClass}><SelectWithOther options={INDICATOR_OPTIONS} value={inv.indicator} onChange={(val) => update('indicator', val)} placeholder="- اختر مؤشر -" otherLabel="اخرى حدد" /></td>
                                         <td className={cellClass}><input type="number" className={`${inputClass} text-center`} value={inv.baseline} onChange={(e) => update('baseline', e.target.value)} /></td>
                                         <td className={cellClass}><input type="number" className={`${inputClass} text-center font-bold`} value={inv.target} onChange={(e) => update('target', e.target.value)} /></td>
-                                        <td className={`${cellClass} text-center align-middle bg-green-50/50`}><input type="checkbox" className="w-3.5 h-3.5 mt-1 cursor-pointer" checked={inv.q1} onChange={(e) => update('q1', e.target.checked)} /></td>
-                                        <td className={`${cellClass} text-center align-middle bg-green-50/50`}><input type="checkbox" className="w-3.5 h-3.5 mt-1 cursor-pointer" checked={inv.q2} onChange={(e) => update('q2', e.target.checked)} /></td>
-                                        <td className={`${cellClass} text-center align-middle bg-green-50/50`}><input type="checkbox" className="w-3.5 h-3.5 mt-1 cursor-pointer" checked={inv.q3} onChange={(e) => update('q3', e.target.checked)} /></td>
-                                        <td className={`${cellClass} text-center align-middle bg-green-50/50`}><input type="checkbox" className="w-3.5 h-3.5 mt-1 cursor-pointer" checked={inv.q4} onChange={(e) => update('q4', e.target.checked)} /></td>
+                                        
+                                        <td className={`${cellClass} text-center align-middle bg-green-50/50 p-1`}>
+                                            <button type="button" onClick={() => setScheduleModalIdx(idx)} className="w-full min-h-[30px] rounded text-[10px] font-bold text-green-700 bg-white border border-green-300 hover:bg-green-100 transition-colors shadow-sm cursor-pointer">
+                                                {inv.q1 || inv.q2 || inv.q3 || inv.q4 ? 
+                                                    [inv.q1&&'ر1', inv.q2&&'ر2', inv.q3&&'ر3', inv.q4&&'ر4'].filter(Boolean).join('، ') 
+                                                    : '+ الجدولة'}
+                                            </button>
+                                        </td>
+                                        
                                         <td className={cellClass}><input type="number" className={`${inputClass} text-center font-bold bg-gray-50`} value={inv.totalCost} onChange={(e) => update('totalCost', e.target.value)} /></td>
-                                        <td className={`${cellClass} bg-blue-50/30`}><SelectWithOther options={GOV_PROJECT_OPTIONS} value={inv.govSource} onChange={(val) => update('govSource', val)} placeholder="- مشروع حكومي -" /></td>
-                                        <td className={`${cellClass} bg-blue-50/30`}><input type="number" className={`${inputClass} text-center text-blue-800 font-bold`} value={inv.govValue} onChange={(e) => update('govValue', e.target.value)} /></td>
-                                        <td className={`${cellClass} bg-orange-50/30`}><SelectWithOther options={PARTNER_SUPPORT_OPTIONS} value={inv.extSource1} onChange={(val) => update('extSource1', val)} placeholder="- شريك 1 -" /></td>
-                                        <td className={`${cellClass} bg-orange-50/30`}><input type="number" className={`${inputClass} text-center text-orange-700 font-bold`} value={inv.extValue1} onChange={(e) => update('extValue1', e.target.value)} /></td>
-                                        <td className={`${cellClass} bg-orange-50/30`}><SelectWithOther options={PARTNER_SUPPORT_OPTIONS} value={inv.extSource2} onChange={(val) => update('extSource2', val)} placeholder="- شريك 2 -" /></td>
-                                        <td className={`${cellClass} bg-orange-50/30`}><input type="number" className={`${inputClass} text-center text-orange-700 font-bold`} value={inv.extValue2} onChange={(e) => update('extValue2', e.target.value)} /></td>
-                                        <td className={`${cellClass} bg-orange-50/30`}><SelectWithOther options={PARTNER_SUPPORT_OPTIONS} value={inv.extSource3} onChange={(val) => update('extSource3', val)} placeholder="- شريك 3 -" /></td>
-                                        <td className={`${cellClass} bg-orange-50/30`}><input type="number" className={`${inputClass} text-center text-orange-700 font-bold`} value={inv.extValue3} onChange={(e) => update('extValue3', e.target.value)} /></td>
-                                        <td className={`p-1 border border-slate-300 text-center font-bold align-middle ${gap > 0 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>{gap.toLocaleString()}</td>
-                                        <td className="p-1 border border-slate-300 text-center align-middle"><button type="button" onClick={() => setCurrentPlan({...currentPlan, interventions: currentPlan.interventions.filter(i => i.id !== inv.id)})} className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition"><Trash2 size={14}/></button></td>
+                                        
+                                        <td className={`${cellClass} text-center align-middle bg-indigo-50/30 p-1`}>
+                                            <button type="button" onClick={() => setSupportModalIdx(idx)} className="w-full min-h-[30px] rounded text-[10px] font-bold text-indigo-700 bg-white border border-indigo-300 hover:bg-indigo-100 transition-colors shadow-sm cursor-pointer">
+                                                {totalSupport > 0 ? `دعم (${totalSupport.toLocaleString()})` : '+ إضافة تمويل'}
+                                            </button>
+                                        </td>
+
+                                        <td className={`p-1 border border-slate-300 text-center font-bold align-middle ${gap > 0 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+                                            {gap.toLocaleString()}
+                                        </td>
+                                        <td className="p-1 border border-slate-300 text-center align-middle">
+                                            <button type="button" onClick={() => setCurrentPlan({...currentPlan, interventions: currentPlan.interventions.filter(i => i.id !== inv.id)})} className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded transition shadow-sm border border-transparent hover:border-red-200">
+                                                <Trash2 size={16}/>
+                                            </button>
+                                        </td>
                                     </tr>
                                 )})}
                             </tbody>
@@ -855,6 +864,91 @@ export default function PlanningView({ permissions, userStates }) {
                     <div className="p-2 border border-t-0 border-slate-300 bg-slate-50 flex justify-center rounded-b-lg">
                         <Button type="button" size="sm" variant="secondary" onClick={() => setCurrentPlan({...currentPlan, interventions: [...(currentPlan.interventions||[]), DEFAULT_INTERVENTION()]})}><Plus size={16} className="ml-1"/> إضافة نشاط جديد</Button>
                     </div>
+
+                    {/* --- Matrix Pop-ups --- */}
+                    
+                    {/* Schedule Modal */}
+                    {scheduleModalIdx !== null && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in zoom-in-95">
+                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col border border-slate-200">
+                                <div className="bg-slate-800 p-3.5 flex justify-between items-center text-white border-b border-slate-700">
+                                    <h3 className="font-bold flex items-center gap-2"><Calendar size={18} className="text-green-400"/> جدولة النشاط (الأرباع)</h3>
+                                    <button type="button" onClick={() => setScheduleModalIdx(null)} className="text-slate-300 hover:text-white bg-slate-700/50 hover:bg-slate-700 p-1 rounded-full transition-colors"><X size={18}/></button>
+                                </div>
+                                <div className="p-6">
+                                    <p className="text-xs text-gray-500 mb-4 text-center">حدد الفترات الزمنية لتنفيذ هذا النشاط:</p>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {['q1', 'q2', 'q3', 'q4'].map((q, i) => (
+                                            <label key={q} className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${currentPlan.interventions[scheduleModalIdx][q] ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-green-300'}`}>
+                                                <input type="checkbox" className="w-5 h-5 accent-green-600 rounded" 
+                                                    checked={currentPlan.interventions[scheduleModalIdx][q]}
+                                                    onChange={(e) => updateMasterPlanIntervention(scheduleModalIdx, q, e.target.checked)}
+                                                />
+                                                <span className={`font-bold ${currentPlan.interventions[scheduleModalIdx][q] ? 'text-green-800' : 'text-gray-700'}`}>الربع {i+1}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="bg-slate-50 p-3 border-t border-slate-200 flex justify-end">
+                                    <Button type="button" onClick={() => setScheduleModalIdx(null)} className="px-6">تأكيد الجدولة</Button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Support & Funding Modal */}
+                    {supportModalIdx !== null && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in zoom-in-95">
+                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-slate-200">
+                                <div className="bg-indigo-900 p-3.5 flex justify-between items-center text-white border-b border-indigo-800">
+                                    <h3 className="font-bold flex items-center gap-2"><Briefcase size={18} className="text-indigo-300"/> مصادر الدعم والتمويل</h3>
+                                    <button type="button" onClick={() => setSupportModalIdx(null)} className="text-indigo-200 hover:text-white bg-indigo-800/50 hover:bg-indigo-800 p-1 rounded-full transition-colors"><X size={18}/></button>
+                                </div>
+                                <div className="p-5 space-y-4 max-h-[65vh] overflow-y-auto bg-slate-50/50">
+                                    {/* Government Support */}
+                                    <div className="bg-blue-50/50 p-4 rounded-lg border border-blue-200 shadow-sm">
+                                        <h4 className="font-bold text-blue-800 mb-3 text-sm flex items-center gap-2">الدعم الحكومي (مشاريع الدولة)</h4>
+                                        <div className="grid grid-cols-5 gap-3">
+                                            <div className="col-span-3">
+                                                <label className="text-[10px] text-gray-500 font-bold mb-1 block">اسم المشروع</label>
+                                                <SelectWithOther options={GOV_PROJECT_OPTIONS} value={currentPlan.interventions[supportModalIdx].govSource} onChange={(val) => updateMasterPlanIntervention(supportModalIdx, 'govSource', val)} placeholder="- اختر أو اكتب -" />
+                                            </div>
+                                            <div className="col-span-2">
+                                                <label className="text-[10px] text-gray-500 font-bold mb-1 block">القيمة (المبلغ)</label>
+                                                <input type="number" className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-bold text-blue-700 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none text-left" dir="ltr" value={currentPlan.interventions[supportModalIdx].govValue} onChange={(e) => updateMasterPlanIntervention(supportModalIdx, 'govValue', e.target.value)} placeholder="0" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* External Partners Support */}
+                                    <div className="space-y-3">
+                                        <h4 className="font-bold text-orange-800 text-sm mb-1 px-1">دعم الشركاء والمنظمات</h4>
+                                        {[1, 2, 3].map(num => (
+                                            <div key={num} className="bg-orange-50/50 p-3.5 rounded-lg border border-orange-200 shadow-sm flex flex-col sm:flex-row gap-3 items-end">
+                                                <div className="flex-1 w-full">
+                                                    <label className="text-[10px] text-gray-500 font-bold mb-1 block">الشريك {num}</label>
+                                                    <SelectWithOther options={PARTNER_SUPPORT_OPTIONS} value={currentPlan.interventions[supportModalIdx][`extSource${num}`]} onChange={(val) => updateMasterPlanIntervention(supportModalIdx, `extSource${num}`, val)} placeholder="- اختر الشريك -" />
+                                                </div>
+                                                <div className="w-full sm:w-1/3">
+                                                    <label className="text-[10px] text-gray-500 font-bold mb-1 block">قيمة الدعم</label>
+                                                    <input type="number" className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-bold text-orange-700 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none text-left" dir="ltr" value={currentPlan.interventions[supportModalIdx][`extValue${num}`]} onChange={(e) => updateMasterPlanIntervention(supportModalIdx, `extValue${num}`, e.target.value)} placeholder="0" />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="bg-white p-4 border-t border-slate-200 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10 relative">
+                                     <div className="flex flex-col">
+                                        <span className="text-[10px] text-gray-500 font-bold">العجز المتبقي (Gap)</span>
+                                        <span className={`font-bold text-lg ${calculateGap(currentPlan.interventions[supportModalIdx]) > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                            {calculateGap(currentPlan.interventions[supportModalIdx]).toLocaleString()}
+                                        </span>
+                                     </div>
+                                    <Button type="button" onClick={() => setSupportModalIdx(null)} className="px-6">حفظ ومتابعة</Button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         );
@@ -862,11 +956,11 @@ export default function PlanningView({ permissions, userStates }) {
 
     if (isEditingOpPlan && currentOpPlan) {
         return (
-            <div className="fixed inset-0 z-50 bg-gray-100 flex flex-col" dir="rtl">
+            <div className="fixed inset-0 z-40 bg-gray-100 flex flex-col" dir="rtl">
                 <div className="bg-white shadow px-4 sm:px-6 py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center shrink-0 border-b gap-3">
                     <div>
                         <h2 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2"><Calendar className="text-sky-600"/> إعداد خطة العمل التشغيلية - {currentOpPlan.planType}</h2>
-                        <p className="text-xs sm:text-sm text-gray-500 mt-1">يتم سحب الأنشطة بناءً على السنة ومستوى الخطة المحددين.</p>
+                        <p className="text-xs sm:text-sm text-gray-500 mt-1">يتم إدخال مصادر التمويل والدعم لكل نشاط عبر النوافذ المنبثقة.</p>
                     </div>
                     <div className="flex gap-2 w-full sm:w-auto">
                         <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => setIsEditingOpPlan(false)}><X size={16} className="ml-1"/> إغلاق</Button>
@@ -874,7 +968,7 @@ export default function PlanningView({ permissions, userStates }) {
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-4 sm:space-y-6">
+                <div className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-4 sm:space-y-6 relative">
                     <div className="bg-white p-4 rounded-lg border shadow-sm grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                         <FormGroup label="نوع الخطة">
                             <div className="font-bold text-indigo-800 p-2 bg-indigo-100 rounded text-center border border-indigo-200">{currentOpPlan.planType}</div>
@@ -884,14 +978,12 @@ export default function PlanningView({ permissions, userStates }) {
                                 {YEAR_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                             </Select>
                         </FormGroup>
-                        
                         <FormGroup label="المستوى">
                             <Select value={currentOpPlan.level} onChange={(e) => setCurrentOpPlan({...currentOpPlan, level: e.target.value, state: e.target.value === 'federal' ? '' : currentOpPlan.state})} disabled={!isFederalManager}>
                                 <option value="federal">اتحادي</option>
                                 <option value="state">ولائي</option>
                             </Select>
                         </FormGroup>
-                        
                         {currentOpPlan.level === 'state' && (
                             <FormGroup label="الولاية">
                                 <Select value={currentOpPlan.state} onChange={(e) => setCurrentOpPlan({...currentOpPlan, state: e.target.value})} disabled={!isFederalManager && userStates.length === 1}>
@@ -912,7 +1004,6 @@ export default function PlanningView({ permissions, userStates }) {
                                 </Select>
                             </FormGroup>
                         )}
-                        
                         {(currentOpPlan.planType === PLAN_TYPES.MONTHLY || currentOpPlan.planType === PLAN_TYPES.WEEKLY) && (
                             <FormGroup label="الشهر">
                                 <Select value={currentOpPlan.periodMonth} onChange={(e) => setCurrentOpPlan({...currentOpPlan, periodMonth: e.target.value})}>
@@ -921,7 +1012,6 @@ export default function PlanningView({ permissions, userStates }) {
                                 </Select>
                             </FormGroup>
                         )}
-
                         {currentOpPlan.planType === PLAN_TYPES.WEEKLY && (
                             <FormGroup label="الأسبوع">
                                 <Select value={currentOpPlan.periodWeek} onChange={(e) => setCurrentOpPlan({...currentOpPlan, periodWeek: e.target.value})}>
@@ -941,34 +1031,27 @@ export default function PlanningView({ permissions, userStates }) {
                         </div>
                         
                         <div className="overflow-x-auto w-full pb-16">
-                            <table className="w-full table-fixed border-collapse text-[10px] sm:text-xs text-right whitespace-normal min-w-[1200px]">
+                            <table className="w-full table-fixed border-collapse text-[10px] sm:text-xs text-right whitespace-normal min-w-[900px]">
                                 <thead className="bg-slate-800 text-white font-bold">
                                     <tr>
-                                        <th className="w-[4%] p-1.5 border border-slate-600 text-center">النوع</th>
-                                        <th className="w-[12%] p-1.5 border border-slate-600 text-center">الخطة / المحور</th>
-                                        <th className="w-[12%] p-1.5 border border-slate-600 text-center">النشاط</th>
-                                        <th className="w-[10%] p-1.5 border border-slate-600 text-center text-[10px]">المؤسسات المستهدفة</th>
-                                        <th className="w-[8%] p-1.5 border border-slate-600 text-center">المؤشر</th>
-                                        <th className="w-[5%] p-1.5 border border-slate-600 text-center">الهدف</th>
-                                        <th className="w-[6%] p-1.5 border border-slate-600 text-center">التكلفة</th>
-                                        <th className="w-[6%] p-1.5 border border-slate-600 text-center bg-blue-900">مشروع حكومي</th>
-                                        <th className="w-[5%] p-1.5 border border-slate-600 text-center bg-blue-900">القيمة</th>
-                                        <th className="w-[6%] p-1.5 border border-slate-600 text-center bg-orange-900">دعم شريك 1</th>
-                                        <th className="w-[5%] p-1.5 border border-slate-600 text-center bg-orange-900">القيمة</th>
-                                        <th className="w-[6%] p-1.5 border border-slate-600 text-center bg-orange-900">دعم شريك 2</th>
-                                        <th className="w-[5%] p-1.5 border border-slate-600 text-center bg-orange-900">القيمة</th>
-                                        <th className="w-[5%] p-1.5 border border-slate-600 text-center bg-red-900">العجز</th>
-                                        <th className="w-[2%] p-1.5 border border-slate-600 text-center">🗑️</th>
+                                        <th className="w-[6%] p-1.5 border border-slate-600 text-center">النوع</th>
+                                        <th className="w-[18%] p-1.5 border border-slate-600 text-center">الخطة / المحور</th>
+                                        <th className="w-[20%] p-1.5 border border-slate-600 text-center">النشاط</th>
+                                        <th className="w-[12%] p-1.5 border border-slate-600 text-center text-[10px]">المؤسسات المستهدفة</th>
+                                        <th className="w-[10%] p-1.5 border border-slate-600 text-center">المؤشر</th>
+                                        <th className="w-[6%] p-1.5 border border-slate-600 text-center">الهدف</th>
+                                        <th className="w-[8%] p-1.5 border border-slate-600 text-center">التكلفة الإجمالية</th>
+                                        <th className="w-[10%] p-1.5 border border-slate-600 text-center bg-indigo-900">مصادر التمويل</th>
+                                        <th className="w-[8%] p-1.5 border border-slate-600 text-center bg-red-900">العجز</th>
+                                        <th className="w-[5%] p-1.5 border border-slate-600 text-center">حذف</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {currentOpPlan.activities?.map((act, idx) => {
                                         const gap = calculateGap(act);
-                                        const update = (field, val) => {
-                                            const newActs = [...currentOpPlan.activities];
-                                            newActs[idx][field] = val;
-                                            setCurrentOpPlan({...currentOpPlan, activities: newActs});
-                                        };
+                                        const totalSupport = (Number(act.govValue)||0) + (Number(act.extValue1)||0) + (Number(act.extValue2)||0) + (Number(act.extValue3)||0);
+                                        const update = (field, val) => updateOpPlanActivity(idx, field, val);
+                                        
                                         const cellClass = "p-0 border border-slate-300 relative focus-within:ring-1 focus-within:ring-sky-500 focus-within:z-10 align-top";
                                         const inputClass = "w-full h-full min-h-[32px] px-1 py-1 bg-transparent border-0 outline-none text-right whitespace-normal break-words resize-none overflow-hidden";
                                         
@@ -1033,15 +1116,15 @@ export default function PlanningView({ permissions, userStates }) {
                                                 </td>
                                                 
                                                 <td className={cellClass}>
-                                                    <div className="flex flex-col h-full bg-gray-50 overflow-y-auto max-h-[40px] p-1 gap-1">
+                                                    <div className="flex flex-col h-full bg-gray-50 overflow-y-auto max-h-[50px] p-1 gap-1 min-h-[40px]">
                                                         <div className="flex flex-wrap gap-1">
                                                             {(act.targetFacilities || []).map(facility => (
-                                                                <span key={facility} className="text-[8px] bg-indigo-100 text-indigo-800 px-1 py-0.5 rounded flex items-center gap-1 border border-indigo-200">
+                                                                <span key={facility} className="text-[8px] bg-indigo-100 text-indigo-800 px-1 py-0.5 rounded flex items-center gap-1 border border-indigo-200 shadow-sm">
                                                                     {facility}
                                                                     <button 
                                                                         type="button" 
                                                                         onClick={() => update('targetFacilities', act.targetFacilities.filter(f => f !== facility))} 
-                                                                        className="text-red-500 font-bold hover:text-red-700"
+                                                                        className="text-red-500 font-bold hover:text-red-700 hover:bg-red-50 px-0.5 rounded"
                                                                     >
                                                                         ×
                                                                     </button>
@@ -1049,7 +1132,7 @@ export default function PlanningView({ permissions, userStates }) {
                                                             ))}
                                                         </div>
                                                         <select 
-                                                            className="w-full text-[9px] bg-white border border-gray-200 mt-auto outline-none cursor-pointer rounded" 
+                                                            className="w-full text-[9px] bg-white border border-gray-300 mt-auto outline-none cursor-pointer rounded p-0.5" 
                                                             value=""
                                                             onChange={(e) => {
                                                                 const val = e.target.value;
@@ -1070,7 +1153,7 @@ export default function PlanningView({ permissions, userStates }) {
                                                     {act.isUnplanned ? (
                                                         <SelectWithOther options={INDICATOR_OPTIONS} value={act.indicator} onChange={(val) => update('indicator', val)} placeholder="- مؤشر -" />
                                                     ) : (
-                                                        <div className="w-full h-full min-h-[32px] px-1 py-1 text-gray-600 bg-gray-50 flex items-center">
+                                                        <div className="w-full h-full min-h-[32px] px-1 py-1 text-gray-600 bg-gray-50 flex items-center text-[10px]">
                                                             {act.indicator || '-'}
                                                         </div>
                                                     )}
@@ -1079,21 +1162,18 @@ export default function PlanningView({ permissions, userStates }) {
                                                 <td className={cellClass}><input type="number" className={`${inputClass} text-center font-bold`} value={act.target} onChange={(e) => update('target', e.target.value)} placeholder="0" /></td>
                                                 <td className={cellClass}><input type="number" className={`${inputClass} text-center font-bold bg-gray-50`} value={act.totalCost} onChange={(e) => update('totalCost', e.target.value)} placeholder="0" /></td>
                                                 
-                                                <td className={`${cellClass} bg-blue-50/30`}><SelectWithOther options={GOV_PROJECT_OPTIONS} value={act.govSource} onChange={(val) => update('govSource', val)} placeholder="- مشروع -" /></td>
-                                                <td className={`${cellClass} bg-blue-50/30`}><input type="number" className={`${inputClass} text-center text-blue-800 font-bold`} value={act.govValue} onChange={(e) => update('govValue', e.target.value)} /></td>
-                                                
-                                                <td className={`${cellClass} bg-orange-50/30`}><SelectWithOther options={PARTNER_SUPPORT_OPTIONS} value={act.extSource1} onChange={(val) => update('extSource1', val)} placeholder="- شريك 1 -" /></td>
-                                                <td className={`${cellClass} bg-orange-50/30`}><input type="number" className={`${inputClass} text-center text-orange-700 font-bold`} value={act.extValue1} onChange={(e) => update('extValue1', e.target.value)} /></td>
-                                                
-                                                <td className={`${cellClass} bg-orange-50/30`}><SelectWithOther options={PARTNER_SUPPORT_OPTIONS} value={act.extSource2} onChange={(val) => update('extSource2', val)} placeholder="- شريك 2 -" /></td>
-                                                <td className={`${cellClass} bg-orange-50/30`}><input type="number" className={`${inputClass} text-center text-orange-700 font-bold`} value={act.extValue2} onChange={(e) => update('extValue2', e.target.value)} /></td>
-                                                
+                                                <td className={`${cellClass} text-center align-middle bg-indigo-50/30 p-1`}>
+                                                    <button type="button" onClick={() => setOpSupportModalIdx(idx)} className="w-full min-h-[30px] rounded text-[10px] font-bold text-indigo-700 bg-white border border-indigo-300 hover:bg-indigo-100 transition-colors shadow-sm cursor-pointer">
+                                                        {totalSupport > 0 ? `دعم (${totalSupport.toLocaleString()})` : '+ إضافة تمويل'}
+                                                    </button>
+                                                </td>
+
                                                 <td className={`p-1 border border-slate-300 text-center font-bold align-middle ${gap > 0 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
                                                     {gap.toLocaleString()}
                                                 </td>
 
                                                 <td className="p-1 border border-slate-300 text-center align-middle">
-                                                    <button type="button" onClick={() => setCurrentOpPlan({...currentOpPlan, activities: currentOpPlan.activities.filter(item => item.id !== act.id)})} className="text-red-500 hover:bg-red-100 p-1 rounded transition-colors" title="حذف النشاط">
+                                                    <button type="button" onClick={() => setCurrentOpPlan({...currentOpPlan, activities: currentOpPlan.activities.filter(item => item.id !== act.id)})} className="text-red-500 hover:bg-red-100 p-1.5 rounded transition-colors border border-transparent hover:border-red-200 shadow-sm" title="حذف النشاط">
                                                         <Trash2 size={16}/>
                                                     </button>
                                                 </td>
@@ -1109,6 +1189,60 @@ export default function PlanningView({ permissions, userStates }) {
                             )}
                         </div>
                     </div>
+
+                    {/* --- Operational Plan Funding Pop-up --- */}
+                    {opSupportModalIdx !== null && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in zoom-in-95">
+                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-slate-200">
+                                <div className="bg-indigo-900 p-3.5 flex justify-between items-center text-white border-b border-indigo-800">
+                                    <h3 className="font-bold flex items-center gap-2"><Briefcase size={18} className="text-indigo-300"/> مصادر الدعم (للنشاط التشغيلي)</h3>
+                                    <button type="button" onClick={() => setOpSupportModalIdx(null)} className="text-indigo-200 hover:text-white bg-indigo-800/50 hover:bg-indigo-800 p-1 rounded-full transition-colors"><X size={18}/></button>
+                                </div>
+                                <div className="p-5 space-y-4 max-h-[65vh] overflow-y-auto bg-slate-50/50">
+                                    
+                                    <div className="bg-blue-50/50 p-4 rounded-lg border border-blue-200 shadow-sm">
+                                        <h4 className="font-bold text-blue-800 mb-3 text-sm flex items-center gap-2">الدعم الحكومي</h4>
+                                        <div className="grid grid-cols-5 gap-3">
+                                            <div className="col-span-3">
+                                                <label className="text-[10px] text-gray-500 font-bold mb-1 block">المشروع</label>
+                                                <SelectWithOther options={GOV_PROJECT_OPTIONS} value={currentOpPlan.activities[opSupportModalIdx].govSource} onChange={(val) => updateOpPlanActivity(opSupportModalIdx, 'govSource', val)} placeholder="- اختر -" />
+                                            </div>
+                                            <div className="col-span-2">
+                                                <label className="text-[10px] text-gray-500 font-bold mb-1 block">القيمة</label>
+                                                <input type="number" className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-bold text-blue-700 focus:border-sky-500 outline-none text-left" dir="ltr" value={currentOpPlan.activities[opSupportModalIdx].govValue} onChange={(e) => updateOpPlanActivity(opSupportModalIdx, 'govValue', e.target.value)} placeholder="0" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="space-y-3">
+                                        <h4 className="font-bold text-orange-800 text-sm mb-1 px-1">دعم الشركاء</h4>
+                                        {[1, 2, 3].map(num => (
+                                            <div key={num} className="bg-orange-50/50 p-3.5 rounded-lg border border-orange-200 shadow-sm flex flex-col sm:flex-row gap-3 items-end">
+                                                <div className="flex-1 w-full">
+                                                    <label className="text-[10px] text-gray-500 font-bold mb-1 block">الشريك {num}</label>
+                                                    <SelectWithOther options={PARTNER_SUPPORT_OPTIONS} value={currentOpPlan.activities[opSupportModalIdx][`extSource${num}`]} onChange={(val) => updateOpPlanActivity(opSupportModalIdx, `extSource${num}`, val)} placeholder="- اختر -" />
+                                                </div>
+                                                <div className="w-full sm:w-1/3">
+                                                    <label className="text-[10px] text-gray-500 font-bold mb-1 block">القيمة</label>
+                                                    <input type="number" className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-bold text-orange-700 focus:border-sky-500 outline-none text-left" dir="ltr" value={currentOpPlan.activities[opSupportModalIdx][`extValue${num}`]} onChange={(e) => updateOpPlanActivity(opSupportModalIdx, `extValue${num}`, e.target.value)} placeholder="0" />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="bg-white p-4 border-t border-slate-200 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10 relative">
+                                     <div className="flex flex-col">
+                                        <span className="text-[10px] text-gray-500 font-bold">العجز المتبقي (Gap)</span>
+                                        <span className={`font-bold text-lg ${calculateGap(currentOpPlan.activities[opSupportModalIdx]) > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                            {calculateGap(currentOpPlan.activities[opSupportModalIdx]).toLocaleString()}
+                                        </span>
+                                     </div>
+                                    <Button type="button" onClick={() => setOpSupportModalIdx(null)} className="px-6">تأكيد</Button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                 </div>
             </div>
         );
