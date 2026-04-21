@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
 
+// --- NATIVE PLUGIN IMPORTS ---
+import { Capacitor } from '@capacitor/core';
+import { SocialLogin } from '@capgo/capacitor-social-login';
+
 import { 
   GoogleAuthProvider, 
   signInWithPopup,
+  signInWithCredential, // <-- ADDED for native token login
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
@@ -13,6 +18,20 @@ import {
 } from 'firebase/auth';
 
 import { auth } from './firebase.js';
+
+// --- NATIVE PLUGIN INITIALIZATION ---
+let socialLoginInitialized = false;
+async function ensureSocialLoginInit() {
+  if (socialLoginInitialized) return;
+  await SocialLogin.initialize({
+    google: { 
+      // ⚠️ REPLACE THIS WITH YOUR ACTUAL WEB CLIENT ID FROM GOOGLE CLOUD CONSOLE ⚠️
+      webClientId: "928082473485-bu2fbkb8p12qcjijmb9lg4j7asj8emje.apps.googleusercontent.com" 
+    },
+  });
+  socialLoginInitialized = true;
+}
+
 
 // --- Sign-In and Sign-Up Component ---
 export function SignInBox() {
@@ -37,9 +56,7 @@ export function SignInBox() {
     const timer = setTimeout(() => {
         const user = auth.currentUser;
         if (user) {
-            // User is already logged in when this component loaded.
-            // Check if their name is missing.
-            checkAndPromptForName(user, true); // Pass 'true' to skip success message
+            checkAndPromptForName(user, true); 
         }
     }, 100); 
     
@@ -49,27 +66,24 @@ export function SignInBox() {
 
   // --- Helper to check and prompt for name ---
   const checkAndPromptForName = (user, skipSuccessMessage = false) => {
-    // Check if displayName is missing, null, or only whitespace.
     const isNameMissing = !user || !user.displayName || user.displayName.trim().length === 0;
 
     if (isNameMissing) {
       setMessage("Welcome! Please enter your full name to complete your profile.");
       setIsMissingName(true);
-      return true; // Name is missing
+      return true; 
     }
     
-    // If name is present, set a "redirecting" message and ensure we STAY loading.
-    // App.jsx is about to unmount this component.
     if (!skipSuccessMessage) {
-        setMessage("Sign in successful. Redirecting..."); // <-- NEW
-        setIsLoading(true); // Ensure we stay in a loading state
+        setMessage("Sign in successful. Redirecting..."); 
+        setIsLoading(true); 
     }
     
     setIsMissingName(false);
-    return false; // Name is present
+    return false; 
   };
 
-  // --- *** MODIFIED HANDLER (THE FIX IS HERE) *** ---
+  // --- Profile Update Handler ---
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     const user = auth.currentUser;
@@ -81,28 +95,18 @@ export function SignInBox() {
     }
 
     setIsLoading(true);
-    setMessage("Updating profile..."); // Give immediate feedback
+    setMessage("Updating profile..."); 
 
     try {
         await updateProfile(user, { displayName: fullName });
-        // After successful profile update, auth.currentUser is updated.
-        // App.jsx's 'user' state from useAuth is now stale.
-        // We must force a reload of the app.
-        
         setMessage("Profile updated! Redirecting...");
-        
-        // --- THE FIX ---
-        // This forces App.jsx to re-mount. On re-mount, useAuth
-        // will get the new auth.currentUser, isProfileIncomplete
-        // will be false, and the main app will render.
         window.location.reload();
         
     } catch (err) {
         setError(err.message);
         console.error("Profile Update Error:", err);
-        setIsLoading(false); // Stop loading ONLY on error.
+        setIsLoading(false); 
     } 
-    // --- 'finally' block removed ---
   };
 
 
@@ -119,19 +123,16 @@ export function SignInBox() {
       return;
     }
     
-    setIsLoading(true); // START loading
+    setIsLoading(true); 
 
     try {
-      // 1. Create the user
       await createUserWithEmailAndPassword(auth, email, password);
-      const user = auth.currentUser; // Use auth.currentUser after creation
+      const user = auth.currentUser; 
 
-      // 2. Update their profile with the full name
       await updateProfile(user, {
         displayName: fullName
       });
 
-      // This will set the "Redirecting" message and keep loading
       checkAndPromptForName(user);
 
     } catch (err) {
@@ -142,128 +143,108 @@ export function SignInBox() {
         setError(err.message);
       }
       console.error("Sign-up Error:", err);
-      setIsLoading(false); // Stop loading on error
+      setIsLoading(false); 
     } 
   };
 
 
-  // --- handleSignIn function ---
+  // --- Email/Password Sign-In Handler ---
   const handleSignIn = async (e) => {
     e.preventDefault();
     setError('');
     setMessage('');
-    setIsMissingName(false); // Reset name prompt state
+    setIsMissingName(false); 
     
     if (!email) {
       setError("Please enter an email address.");
       return;
     }
     
-    // --- Step 1: Automatic Google Sign-In for blank password ---
     if (!password) {
         console.log(`[DEBUG] No password entered. Attempting immediate Google sign-in...`);
         setMessage("Checking account type and signing you in...");
-        signInWithGoogle(); // Call with no arguments (no linking)
+        signInWithGoogle(); 
         return;
     }
     
-    setIsLoading(true); // START loading (for non-Google sign-in path)
+    setIsLoading(true); 
 
-    // --- Step 2: Check for sign-in methods ---
     let methods;
     try {
-        console.log(`[DEBUG] Fetching methods for: ${email}`);
         methods = await fetchSignInMethodsForEmail(auth, email);
-        console.log(`[DEBUG] Sign-in methods found:`, methods);
     } catch (err) {
         setError(err.message);
         console.error("Fetch Methods Error:", err);
-        setIsLoading(false); // END loading on error
+        setIsLoading(false); 
         return;
     }
     
-    // --- CORE FIX: If NO methods exist, it must be a Sign Up ---
     if (methods.length === 0) { 
         setError("Account not found. Please Sign Up to create a new account.");
         setPassword(''); 
         setIsSignUpMode(true);
-        setIsLoading(false); // END loading when switching mode
+        setIsLoading(false); 
         return;
     }
 
-    // --- Step 3: Attempt Email/Password sign-in FIRST (Crucial for linking) ---
     if (methods.includes('password')) {
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             setPassword(''); 
 
-            // Check for missing full name and prompt/Welcome with name
             if (checkAndPromptForName(userCredential.user)) {
-                // Name is missing. checkAndPromptForName set the state.
-                // We need to stop loading so they can type their name.
                 setIsLoading(false);
                 return; 
             }
             
-            // If we get here, name is PRESENT.
-            // checkAndPromptForName set the "Redirecting" message.
-            // We must NOT stop loading.
-            return; // Keep loading, wait for unmount.
+            return; 
 
         } catch (err) {
-            
-            // 1. AUTOMATIC GOOGLE SIGN-IN & LINKING TRIGGER (on WRONG PASSWORD + Google method available)
             if (err.code === 'auth/wrong-password' && methods.includes('google.com')) {
                 setMessage("Sign-in failed with password. Retrying with Google to complete sign-in and link your password...");
-                const passwordToAttemptLink = password; // Capture password
+                const passwordToAttemptLink = password; 
                 setPassword(''); 
-                signInWithGoogle(passwordToAttemptLink); // Pass password as argument
+                signInWithGoogle(passwordToAttemptLink); 
                 return;
             } 
             
-            // 2. Original LINKING LOGIC (on different credential error)
             if (err.code === 'auth/account-exists-with-different-credential' && methods.includes('google.com')) {
                 setMessage("This account is registered with Google. Retrying with Google to link this password...");
-                const passwordToAttemptLink = password; // Capture password
+                const passwordToAttemptLink = password; 
                 setPassword(''); 
-                signInWithGoogle(passwordToAttemptLink); // Pass password as argument
+                signInWithGoogle(passwordToAttemptLink); 
                 return;
             } 
             
-            // 3. Handle wrong password failure (for pure email/password accounts)
             if (err.code === 'auth/wrong-password') {
                 setError("Invalid credentials. Please try again or use 'Forgot Password?'.");
             } else {
                 setError(err.message);
             }
             console.error("Password Sign In Error:", err);
-            setIsLoading(false); // END loading on error
+            setIsLoading(false); 
             return;
         }
     }
     
-    // --- Step 4 (NEW): Handle Google-only account if password sign-in method was NOT present ---
     if (methods.includes('google.com')) {
-        
         if (password) {
-            console.log("[DEBUG] Google-only account. User provided password. Setting up for linking...");
             setMessage("This email is registered with Google. Please sign in with Google to link this new password to your account.");
-            const passwordToAttemptLink = password; // Capture password
-            setPassword(''); // Clear the input field
-            signInWithGoogle(passwordToAttemptLink); // Pass password as argument
+            const passwordToAttemptLink = password; 
+            setPassword(''); 
+            signInWithGoogle(passwordToAttemptLink); 
             return;
 
         } else {
             setPassword('');
             setMessage("This email is registered with Google. Signing you in with Google...");
-            signInWithGoogle(); // Call with no arguments
+            signInWithGoogle(); 
             return;
         }
     }
 
-    // Case 5: Other provider (e.g., Facebook, etc.)
     setError(`This email is registered with ${methods.join(', ')}. Please use that method to sign in.`);
-    setIsLoading(false); // END loading on error/final message
+    setIsLoading(false); 
   };
 
 
@@ -277,7 +258,7 @@ export function SignInBox() {
       return;
     }
     
-    setIsLoading(true); // START loading
+    setIsLoading(true); 
 
     try {
       await sendPasswordResetEmail(auth, email);
@@ -286,75 +267,79 @@ export function SignInBox() {
       setError(err.message);
       console.error("Password Reset Error:", err);
     } finally {
-        setIsLoading(false); // END loading
+        setIsLoading(false); 
     }
   };
 
   
-  // --- signInWithGoogle function ---
-  const signInWithGoogle = (passwordToAttemptLink = null) => {
+  // --- REWRITTEN GOOGLE SIGN IN (SUPPORTS PWA AND NATIVE APK) ---
+  const signInWithGoogle = async (passwordToAttemptLink = null) => {
     if (!passwordToAttemptLink) {
       setError('');
       setMessage('');
     }
     
-    setIsLoading(true); // START loading (Google sign-in)
-    setIsMissingName(false); // Reset name prompt state
+    setIsLoading(true); 
+    setIsMissingName(false); 
 
-    const provider = new GoogleAuthProvider();
-    
-    signInWithPopup(auth, provider)
-      .then(async (result) => {
-        
-        let user = result.user;
+    try {
+      let user;
+      const isNative = Capacitor.isNativePlatform();
 
-        // --- Linking logic (must happen first) ---
-        if (passwordToAttemptLink && user.email === email) {
-          try {
-            console.log("[DEBUG] Google sign-in successful. Attempting to link password...");
-            const credential = EmailAuthProvider.credential(user.email, passwordToAttemptLink);
-            await linkWithCredential(user, credential);
-            setMessage("Password successfully linked! Redirecting..."); // <-- MODIFIED Message
-            setError(''); 
-            user = auth.currentUser; // Get the latest user object after linking
-            console.log("[DEBUG] Password linking successful.");
-          } catch (linkError) {
-            if (linkError.code === 'auth/credential-already-in-use') {
-              setError("This account is already linked to a password.");
-            } else {
-              setError(linkError.message);
-            }
-            console.error("Linking Error:", linkError);
-            setIsLoading(false); // Stop loading on LINK error
-          } finally {
-            setPassword(''); 
+      // --- BRANCH 1: NATIVE APK / iOS ---
+      if (isNative) {
+        await ensureSocialLoginInit();
+        const result = await SocialLogin.login({ provider: "google" });
+        
+        const idToken = result?.result?.idToken || result?.authentication?.idToken;
+        if (!idToken) throw new Error("Native Google login failed.");
+        
+        const cred = GoogleAuthProvider.credential(idToken);
+        const userCredential = await signInWithCredential(auth, cred);
+        user = userCredential.user;
+      } 
+      // --- BRANCH 2: PWA / BROWSER ---
+      else {
+        const provider = new GoogleAuthProvider();
+        const result = await signInWithPopup(auth, provider); // Only use Popup on the Web
+        user = result.user;
+      }
+
+      // --- Common Linking Logic ---
+      if (passwordToAttemptLink && user.email === email) {
+        try {
+          console.log("[DEBUG] Google sign-in successful. Attempting to link password...");
+          const credential = EmailAuthProvider.credential(user.email, passwordToAttemptLink);
+          await linkWithCredential(user, credential);
+          setMessage("Password successfully linked! Redirecting..."); 
+          setError(''); 
+          user = auth.currentUser; 
+        } catch (linkError) {
+          if (linkError.code === 'auth/credential-already-in-use') {
+            setError("This account is already linked to a password.");
+          } else {
+            setError(linkError.message);
           }
+          console.error("Linking Error:", linkError);
+          setIsLoading(false); 
+          setPassword('');
+          return; 
         }
-        
-        // --- Check for missing full name and prompt/Welcome with name ---
-        if (checkAndPromptForName(user)) {
-            // Name is missing, so we must stop loading
-            setIsLoading(false);
-            return; // Wait for profile update
-        }
-        
-        // If we reach here, linking is done/not needed AND name is present.
-        // checkAndPromptForName has set the "Redirecting" message
-        // and isLoading is still true. We just wait for unmount.
-        
-      })
-      .catch((err) => {
-        setError(err.message);
-        console.error("Google Auth Error:", err);
-        setIsMissingName(false); // Ensure error resets the name prompt
-        setIsLoading(false); // Stop loading on auth error
-      })
-      .finally(() => {
-          // Only stop loading IF we are being prompted to enter a name.
-          if (isMissingName) {
-              setIsLoading(false);
-          }
-      });
+        setPassword(''); 
+      }
+      
+      // --- Profile Check ---
+      if (checkAndPromptForName(user)) {
+          setIsLoading(false);
+          return; 
+      }
+
+    } catch (err) {
+      setError(err.message);
+      console.error("Google Auth Error:", err);
+      setIsMissingName(false); 
+      setIsLoading(false); 
+    }
   };
 
   const toggleMode = () => {
@@ -362,8 +347,8 @@ export function SignInBox() {
     setError('');
     setMessage('');
     setIsLoading(false);
-    setIsMissingName(false); // Reset
-    setFullName(''); // Reset
+    setIsMissingName(false); 
+    setFullName(''); 
   };
 
   // --- RENDER LOGIC: Profile Update Prompt (Priority 1) ---
@@ -412,7 +397,6 @@ export function SignInBox() {
         </div>
 
         <form className="space-y-4">
-          {/* --- Input Fields (Disabled while loading) --- */}
           {isSignUpMode && (
             <input 
               type="text" 
@@ -439,13 +423,12 @@ export function SignInBox() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password ()"
+              placeholder="Password"
               className="w-full px-4 py-2 text-gray-700 bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               required={isSignUpMode}
               disabled={isLoading}
             />
             
-            {/* --- Forgot Password (Disabled while loading) --- */}
             {!isSignUpMode && (
               <div className="text-right mt-2">
                 <button 
@@ -464,7 +447,6 @@ export function SignInBox() {
           {error && <p className="text-sm text-red-600">{error}</p>}
           {message && <p className="text-sm text-green-600">{message}</p>}
           
-          {/* --- Sign-In / Sign-Up Buttons with Loading State --- */}
           <div className="flex">
             {isSignUpMode ? (
               <button 
@@ -486,7 +468,6 @@ export function SignInBox() {
           </div>
         </form>
 
-        {/* --- Toggle Button (Disabled while loading) --- */}
         <div className="text-sm text-center">
           <button
             type="button"
@@ -501,17 +482,14 @@ export function SignInBox() {
         </div>
 
 
-        {/* --- THIS IS THE FIX --- */}
         <div className="flex items-center justify-center">
           <div className="flex-grow border-t border-gray-300"></div>
           <span className="mx-4 text-xs font-bold text-gray-500">OR</span>
           <div className="flex-grow border-t border-gray-300"></div>
         </div> 
-        {/* --- END OF FIX --- */}
         
-        {/* --- Google Sign-In Button (Disabled while loading) --- */}
         <button 
-          onClick={() => signInWithGoogle()} // Explicitly call with no args
+          onClick={() => signInWithGoogle()} 
           className="flex items-center justify-center w-full gap-3 bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-300 shadow-md disabled:bg-gray-400"
           disabled={isLoading} 
         >

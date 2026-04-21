@@ -1124,7 +1124,7 @@ export default function App() {
         }
     }, [selectedCourseId, courseDetailsCache, courseDetailsLoading]); 
 
-    // ... [Data calculations and handlers remain unchanged] ...
+    // --- UPDATED: Fix Localities Filter logic for filteredCourses and filteredFacilitators ---
     const canSeeAllData = useMemo(() => {
         return permissions.canUseSuperUserAdvancedFeatures || permissions.canUseFederalManagerAdvancedFeatures;
     }, [permissions]);
@@ -1137,8 +1137,15 @@ export default function App() {
             return allCourses;
         }
         const userStateSet = new Set(userStates);
-        return allCourses.filter(c => userStateSet.has(c.state));
-    }, [allCourses, userStates, canSeeAllData]);
+        let filtered = allCourses.filter(c => userStateSet.has(c.state));
+        
+        // Filter by user localities if assigned
+        if (userLocalities && userLocalities.length > 0) {
+            filtered = filtered.filter(c => userLocalities.includes(c.locality));
+        }
+        
+        return filtered;
+    }, [allCourses, userStates, userLocalities, canSeeAllData]);
 
     const filteredFacilitators = useMemo(() => {
         if (!allFacilitators) {
@@ -1148,8 +1155,16 @@ export default function App() {
             return allFacilitators;
         }
         const userStateSet = new Set(userStates);
-        return allFacilitators.filter(f => userStateSet.has(f.currentState));
-    }, [allFacilitators, userStates, canSeeAllData]);
+        let filtered = allFacilitators.filter(f => userStateSet.has(f.currentState));
+        
+        // Filter by user localities if assigned
+        if (userLocalities && userLocalities.length > 0) {
+            filtered = filtered.filter(f => userLocalities.includes(f.currentLocality));
+        }
+        
+        return filtered;
+    }, [allFacilitators, userStates, userLocalities, canSeeAllData]);
+    // ------------------------------------------------------------------------------------------
 
     const fetchPendingSubmissions = useCallback(async () => {
         if (!permissions.canApproveSubmissions) return;
@@ -1644,6 +1659,7 @@ export default function App() {
                 onOpenFacilitatorReport={(fid) => navigate('facilitatorReport', { openFacilitatorReport: fid })}
                 onImportFacilitators={async (data) => { await importParticipants(data); await fetchFacilitators(navigator.onLine); }}
                 userStates={userStates}
+                userLocalities={userLocalities}
                 onApproveSubmission={handleApproveSubmission}
                 onRejectSubmission={handleRejectSubmission}
                 permissions={permissions}
@@ -1664,6 +1680,7 @@ export default function App() {
                     navigate('attendanceManager', { courseId });
                 }}
                 userStates={userStates}
+                userLocalities={userLocalities}
                 activeCoursesTab={activeCoursesTab}
                 setActiveCoursesTab={setActiveCoursesTab}
                 selectedCourse={selectedCourse}
