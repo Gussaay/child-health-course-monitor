@@ -7,8 +7,6 @@ import { SocialLogin } from '@capgo/capacitor-social-login';
 import { 
   GoogleAuthProvider, 
   signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
   signInWithCredential, 
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -61,46 +59,6 @@ export function SignInBox() {
     }, 100); 
     
     return () => clearTimeout(timer);
-  }, []);
-
-  // --- CATCH GOOGLE REDIRECT RESULT (FOR PWA/MOBILE WEB) ---
-  useEffect(() => {
-    const checkRedirectResult = async () => {
-      try {
-        const result = await getRedirectResult(auth);
-        if (result && result.user) {
-          setIsLoading(true);
-          setMessage("Google sign-in successful! Loading...");
-
-          let currentUser = result.user;
-          const pendingPassword = sessionStorage.getItem('pendingAuthPassword');
-
-          // If we were trying to link a password before the redirect, do it now
-          if (pendingPassword) {
-            try {
-              const credential = EmailAuthProvider.credential(currentUser.email, pendingPassword);
-              await linkWithCredential(currentUser, credential);
-              setMessage("Password successfully linked! Redirecting...");
-            } catch (linkError) {
-              console.error("Linking Error after redirect:", linkError);
-              setError("Failed to link password. Please try again.");
-            } finally {
-              sessionStorage.removeItem('pendingAuthPassword');
-            }
-          }
-
-          checkAndPromptForName(currentUser);
-        }
-      } catch (err) {
-        console.error("Redirect Auth Error:", err);
-        setError(err.message);
-      }
-    };
-
-    // Only run this on Web/PWA
-    if (!Capacitor.isNativePlatform()) {
-      checkRedirectResult();
-    }
   }, []);
 
   // --- Helper to check and prompt for name ---
@@ -337,27 +295,19 @@ export function SignInBox() {
       else {
         const provider = new GoogleAuthProvider();
         
-        // Detect if app is running as an installed PWA or on Mobile Web
-        const isStandalonePWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-        if (isStandalonePWA || isMobile) {
-          // Redirect is MANDATORY here. Save password state locally before page unloads.
-          if (passwordToAttemptLink) {
-            sessionStorage.setItem('pendingAuthPassword', passwordToAttemptLink);
-          }
-          setMessage("Redirecting to Google...");
-          await signInWithRedirect(auth, provider);
-          return; // Halt execution. The app will reload and catch it in the useEffect.
-        } else {
-          // Standard Desktop Web can safely use Popup
-          const result = await signInWithPopup(auth, provider); 
-          user = result.user;
+        // FORCING POPUP EVERYWHERE TO BYPASS REDIRECT/ITP ISSUES
+        try {
+            console.log("[DEBUG] Attempting signInWithPopup...");
+            const result = await signInWithPopup(auth, provider); 
+            user = result.user;
+            console.log("[DEBUG] Popup successful!", user);
+        } catch (popupError) {
+            console.error("[DEBUG] Popup failed:", popupError);
+            throw popupError; 
         }
       }
 
       // --- Common Linking Logic (Native + Desktop Web ONLY) ---
-      // (PWA handles this inside the useEffect)
       if (passwordToAttemptLink && user?.email === email) {
         try {
           console.log("[DEBUG] Google sign-in successful. Attempting to link password...");

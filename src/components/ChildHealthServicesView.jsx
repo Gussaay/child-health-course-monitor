@@ -138,17 +138,17 @@ const getLocalityName = (stateKey, localityKey) => { if (!stateKey || !localityK
 
 const ActionMenu = ({ onAction }) => {
     const items = [
-        { id: 'show_list', label: 'Show Facilities List', icon: List, color: 'text-blue-600', bg: 'bg-blue-100', border: 'hover:border-blue-400', shadow: 'hover:shadow-blue-100' },
-        { id: 'share_imnci', label: 'Update IMNCI Facilities', icon: FileText, color: 'text-emerald-600', bg: 'bg-emerald-100', border: 'hover:border-emerald-400', shadow: 'hover:shadow-emerald-100' },
-        { id: 'share_eenc', label: 'Update EENC Facilities', icon: Users, color: 'text-teal-600', bg: 'bg-teal-100', border: 'hover:border-teal-400', shadow: 'hover:shadow-teal-100' },
-        { id: 'share_neonatal', label: 'Update Neonatal Unit Facilities', icon: Building, color: 'text-indigo-600', bg: 'bg-indigo-100', border: 'hover:border-indigo-400', shadow: 'hover:shadow-indigo-100' },
-        { id: 'share_etat', label: 'Update ETAT Facilities', icon: PlusCircle, color: 'text-red-600', bg: 'bg-red-100', border: 'hover:border-red-400', shadow: 'hover:shadow-red-100' },
+        { id: 'show_list', label: 'عرض قائمة المنشآت', icon: List, color: 'text-blue-600', bg: 'bg-blue-100', border: 'hover:border-blue-400', shadow: 'hover:shadow-blue-100' },
+        { id: 'share_imnci', label: 'تحديث معلومات العلاج المتكامل', icon: FileText, color: 'text-emerald-600', bg: 'bg-emerald-100', border: 'hover:border-emerald-400', shadow: 'hover:shadow-emerald-100' },
+        { id: 'share_eenc', label: 'تحديث معلومات الرعاية الضرورية (غرفة الولادة)', icon: Users, color: 'text-teal-600', bg: 'bg-teal-100', border: 'hover:border-teal-400', shadow: 'hover:shadow-teal-100' },
+        { id: 'share_neonatal', label: 'تحديث معلومات الرعاية الخاصة (الحضانة)', icon: Building, color: 'text-indigo-600', bg: 'bg-indigo-100', border: 'hover:border-indigo-400', shadow: 'hover:shadow-indigo-100' },
+        { id: 'share_etat', label: 'تحديث معلومات الرعاية الحرجة (الحوادث والعناية المكثفة)', icon: PlusCircle, color: 'text-red-600', bg: 'bg-red-100', border: 'hover:border-red-400', shadow: 'hover:shadow-red-100' },
     ];
 
     return (
-        <div className="max-w-7xl mx-auto mt-8 p-4 space-y-12" dir="ltr">
+        <div className="max-w-7xl mx-auto mt-8 p-4 space-y-12" dir="rtl">
             <section>
-                <h3 className="text-xl font-bold text-gray-800 mb-6 border-b border-gray-200 pb-2">Child Health Services Navigation</h3>
+                <h3 className="text-xl font-bold text-gray-800 mb-6 border-b border-gray-200 pb-2">خدمات صحة الطفل</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
                     {items.map(item => {
                         const Icon = item.icon;

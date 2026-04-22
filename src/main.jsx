@@ -24,7 +24,7 @@ registerSW({ immediate: true });
 // =========================================================================
 // ⚠️ IMPORTANT: Change this version string whenever you deploy a new update
 // and want to force all users' devices to clear their cache.
-const APP_VERSION = '1.0.1'; 
+const APP_VERSION = '1.0.2'; 
 
 const localVersion = localStorage.getItem('app_version');
 
