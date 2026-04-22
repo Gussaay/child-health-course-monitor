@@ -19,8 +19,8 @@
         "path": "public/splash.png"
       }
     },
-    "Updater": {
-      "url": "https://imnci-courses-monitor.web.app/latest/update.json"
+    "CapacitorUpdater": {
+      "autoUpdate": false
     }
   }
 }

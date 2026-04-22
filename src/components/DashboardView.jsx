@@ -20,7 +20,6 @@ const Spinner = ({ size = 'md' }) => (
 );
 
 function DashboardView() {
-    // FIX: Extracted healthFacilities from useDataCache
     const { fetchCourses, fetchParticipants, fetchHealthFacilities, isLoading, healthFacilities } = useDataCache();
 
     const [viewType, setViewType] = useState('combinedCoverage'); 
@@ -41,11 +40,11 @@ function DashboardView() {
         }
     };
 
-    // FIX: Combined loading logic to check if data is strictly null
     const isDashboardLoading = isLoading.healthFacilities || healthFacilities === null;
 
     return (
         <div className="flex flex-col w-full bg-slate-50/20 min-h-screen">
+            {/* Unified Header & Tabs sitting flush at the top */}
             <div className="bg-sky-50/60 border-b border-sky-100 px-4 md:px-8 pt-5 pb-0 flex flex-col gap-4">
                 <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
                     <div>
@@ -75,7 +74,6 @@ function DashboardView() {
                 </nav>
             </div>
 
-            {/* FIX: Use the new combined loading variable here */}
             {isDashboardLoading ? (
                 <div className="text-center py-20 flex flex-col items-center justify-center">
                     <Spinner />
@@ -83,6 +81,7 @@ function DashboardView() {
                 </div>
             ) : (
                 <div className="px-4 md:px-8 pt-6 pb-12 w-full max-w-screen-2xl mx-auto">
+                    {/* Render Coverage Dashboards */}
                     {viewType === 'combinedCoverage' && <CombinedServiceDashboard />}
                     {viewType === 'neonatalCoverage' && <NeonatalCoverageDashboard />}
                     {viewType === 'eencCoverage' && <EENCCoverageDashboard />}

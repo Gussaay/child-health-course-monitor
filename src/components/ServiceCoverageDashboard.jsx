@@ -138,7 +138,7 @@ const NEONATAL_EQUIPMENT_KEYS = Object.keys(NEONATAL_EQUIPMENT_SPEC);
 
 export const NeonatalCoverageDashboard = () => {
     const { healthFacilities: allFacilities, isLoading, fetchHealthFacilities } = useDataCache();
-    const loading = isLoading.healthFacilities;
+    const loading = isLoading.healthFacilities || allFacilities === null;
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
     const [stateFilter, setStateFilter] = useState(''); 
@@ -501,7 +501,7 @@ const EENC_EQUIPMENT_KEYS = Object.keys(EENC_EQUIPMENT_SPEC);
 
 export const EENCCoverageDashboard = () => {
     const { healthFacilities: allFacilities, isLoading, fetchHealthFacilities } = useDataCache();
-    const loading = isLoading.healthFacilities;
+    const loading = isLoading.healthFacilities || allFacilities === null;
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
     const [stateFilter, setStateFilter] = useState(''); 
@@ -776,7 +776,7 @@ const IMNCI_TOOLS_KEYS = Object.keys(IMNCI_TOOLS_SPEC);
 
 export const IMNCICoverageDashboard = () => {
     const { healthFacilities: allFacilities, isLoading, fetchHealthFacilities } = useDataCache();
-    const loading = isLoading.healthFacilities;
+    const loading = isLoading.healthFacilities || allFacilities === null;
     
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
@@ -1079,7 +1079,6 @@ export const IMNCICoverageDashboard = () => {
     );
 };
 
-
 // --- CRITICAL CARE DASHBOARD ---
 const CRITICAL_EQUIPMENT_SPEC = { 
     'etat_cpap': 'ETAT CPAP', 
@@ -1092,7 +1091,7 @@ const CRITICAL_EQUIPMENT_KEYS = Object.keys(CRITICAL_EQUIPMENT_SPEC);
 
 export const CriticalCareCoverageDashboard = () => {
     const { healthFacilities: allFacilities, isLoading } = useDataCache();
-    const loading = isLoading.healthFacilities;
+    const loading = isLoading.healthFacilities || allFacilities === null;
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
     const [stateFilter, setStateFilter] = useState(''); 
@@ -1404,7 +1403,7 @@ const CombinedMapTooltip = ({ data }) => {
 // --- COMBINED SERVICES DASHBOARD ---
 export const CombinedServiceDashboard = () => {
     const { healthFacilities: allFacilities, isLoading } = useDataCache();
-    const loading = isLoading?.healthFacilities;
+    const loading = isLoading?.healthFacilities || allFacilities === null;
     
     // --- APPLY SOFT DELETE FILTER ---
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);

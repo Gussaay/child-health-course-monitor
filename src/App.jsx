@@ -585,27 +585,40 @@ export default function App() {
     const isPopStateNavigation = useRef(false);
     const initialViewIsSet = useRef(false);
 
-    // --- EFFECT: CAPACITOR UPDATER DOWNLOAD LISTENER ---
+    // --- EFFECT: CAPACITOR UPDATER ACTIVE CHECKER ---
     useEffect(() => {
         if (Capacitor.isNativePlatform()) {
-            let listener;
-            const setupUpdaterListener = async () => {
-                // Fired when a new bundle download has completed successfully
-                listener = await CapacitorUpdater.addListener('downloadComplete', (event) => {
-                    // event.bundle contains information about the downloaded update
-                    setUpdateBundle(event.bundle); 
-                    setIsUpdateReady(true);
-                });
-            };
-            
-            setupUpdaterListener();
-    
-            // Cleanup the listener when the component unmounts
-            return () => {
-                if (listener) {
-                    listener.remove(); 
+            const checkAndDownloadUpdate = async () => {
+                try {
+                    // 1. Fetch your custom update manifest from Firebase
+                    // Adding a timestamp query param prevents the browser/device from caching an old version
+                    const res = await fetch('https://imnci-courses-monitor.web.app/latest/update.json?t=' + Date.now());
+                    const latestUpdate = await res.json();
+
+                    // 2. Get the currently running bundle version
+                    const currentState = await CapacitorUpdater.current();
+                    const currentVersion = currentState.bundle?.version || "builtin";
+
+                    // 3. Compare versions. If there is a new version, trigger the download!
+                    if (currentVersion !== latestUpdate.version) {
+                        console.log("New update found, downloading...");
+                        
+                        // Download the zip bundle directly into Capgo
+                        const downloadedBundle = await CapacitorUpdater.download({
+                            url: latestUpdate.url,
+                            version: latestUpdate.version
+                        });
+
+                        // 4. Trigger your custom Restart/Update UI Modal
+                        setUpdateBundle(downloadedBundle); 
+                        setIsUpdateReady(true);
+                    }
+                } catch (error) {
+                    console.error("Self-hosted update check failed:", error);
                 }
             };
+
+            checkAndDownloadUpdate();
         }
     }, []);
 
