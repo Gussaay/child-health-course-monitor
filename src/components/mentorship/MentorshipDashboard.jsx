@@ -120,8 +120,20 @@ const MentorshipDashboard = ({
     const visitReportStats = useMemo(() => {
         if (!visitReports) return null;
         let filtered = visitReports.filter(r => r.service === activeService);
-        if (activeState) filtered = filtered.filter(r => r.state === activeState);
-        if (activeLocality) filtered = filtered.filter(r => r.locality === activeLocality);
+        
+        // Flexible matching for states and localities to prevent 0 data drops
+        if (activeState) {
+            const arState = STATE_LOCALITIES?.[activeState]?.ar;
+            filtered = filtered.filter(r => r.state === activeState || r.state === arState);
+        }
+        if (activeLocality) {
+            filtered = filtered.filter(r => {
+                const stateObj = STATE_LOCALITIES?.[activeState] || STATE_LOCALITIES?.[r.state] || Object.values(STATE_LOCALITIES || {}).find(s => s.ar === r.state);
+                const arLocality = stateObj?.localities?.find(l => l.en === activeLocality)?.ar;
+                return r.locality === activeLocality || r.locality === arLocality;
+            });
+        }
+
         if (activeFacilityId) filtered = filtered.filter(r => r.facilityId === activeFacilityId);
         if (activeProject) filtered = filtered.filter(r => r.project === activeProject);
         filtered = filtered.filter(r => checkDateFilter(r.visitDate || r.date || r.visit_date, dateFilter));
@@ -141,7 +153,7 @@ const MentorshipDashboard = ({
             else {
                 const stateObj = STATE_LOCALITIES?.[activeState];
                 if (stateObj && stateObj.localities) {
-                    const locObj = stateObj.localities.find(l => l.en === k);
+                    const locObj = stateObj.localities.find(l => l.en === k || l.ar === k);
                     if (locObj) locName = locObj[language === 'ar' ? 'ar' : 'en'] || locObj.en;
                 }
             }
@@ -376,7 +388,7 @@ const MentorshipDashboard = ({
                 push(d.skin_to_skin_immediate, scores.skin_imm, 'skin_to_skin_immediate'); push(d.skin_to_skin_90min, scores.skin_90min, 'skin_to_skin_90min');
                 push(d.breastfed_first_hour, scores.bf_1hr, 'breastfed_first_hour'); push(d.given_other_fluids, scores.bf_substitute, 'given_other_fluids'); push(d.given_other_fluids_bottle, scores.bf_bottle, 'given_other_fluids_bottle');
                 push(d.given_vitamin_k, scores.vit_k, 'given_vitamin_k'); push(d.given_tetracycline, scores.eye_oint, 'given_tetracycline'); push(d.anything_on_cord, scores.cord_subs, 'anything_on_cord');
-                push(d.rubbed_with_oil, scores.skin_oil, 'rubbed_with_oil'); push(d.baby_bathed, scores.bath_6hr, 'baby_bathed');
+                push(d.rubbed_with_oil, scores.skin_oil, 'rubbed_with_oil'); push(d.baby_bathed, scores.bath_6hr, 'bath_6hr');
                 push(d.polio_zero_dose, scores.polio, 'polio_zero_dose'); push(d.bcg_dose, scores.bcg, 'bcg_dose');
                 push(d.baby_weighed, scores.weight, 'baby_weighed'); push(d.baby_temp_measured, scores.temp, 'baby_temp_measured');
                 push(d.baby_registered, scores.civ_reg, 'civ_reg'); push(d.given_discharge_card, scores.dis_card, 'given_discharge_card');
@@ -462,15 +474,26 @@ const MentorshipDashboard = ({
     }, [serviceCompletedSubmissions, activeState, activeLocality, activeFacilityId, activeProject]);
 
     // Active Data
-    const filteredSubmissions = useMemo(() => serviceCompletedSubmissions.filter(sub => 
-        (!activeState || sub.state === activeState) && 
-        (!activeLocality || sub.locality === activeLocality) && 
-        (!activeFacilityId || sub.facilityId === activeFacilityId) && 
-        (!activeWorkerName || sub.staff === activeWorkerName) &&
-        (!activeProject || sub.project === activeProject) &&
-        (!activeWorkerType || sub.workerType === activeWorkerType) &&
-        checkDateFilter(sub.date || sub.sessionDate || sub.visitDate, dateFilter)
-    ), [serviceCompletedSubmissions, activeState, activeLocality, activeFacilityId, activeWorkerName, activeProject, activeWorkerType, dateFilter, checkDateFilter]);
+    const filteredSubmissions = useMemo(() => serviceCompletedSubmissions.filter(sub => {
+        // Robust state match preventing Arabic mismatch drop
+        const stateMatch = !activeState || sub.state === activeState || sub.state === STATE_LOCALITIES[activeState]?.ar;
+        
+        // Robust locality match preventing Arabic mismatch drop
+        let localityMatch = !activeLocality;
+        if (activeLocality) {
+            const stateObj = STATE_LOCALITIES[activeState] || STATE_LOCALITIES[sub.state] || Object.values(STATE_LOCALITIES || {}).find(s => s.ar === sub.state);
+            const arLocality = stateObj?.localities?.find(l => l.en === activeLocality)?.ar;
+            localityMatch = sub.locality === activeLocality || sub.locality === arLocality;
+        }
+
+        const facilityMatch = !activeFacilityId || sub.facilityId === activeFacilityId;
+        const workerMatch = !activeWorkerName || sub.staff === activeWorkerName;
+        const projectMatch = !activeProject || sub.project === activeProject;
+        const typeMatch = !activeWorkerType || sub.workerType === activeWorkerType;
+        const dateMatch = checkDateFilter(sub.date || sub.sessionDate || sub.visitDate, dateFilter);
+        
+        return stateMatch && localityMatch && facilityMatch && workerMatch && projectMatch && typeMatch && dateMatch;
+    }), [serviceCompletedSubmissions, activeState, activeLocality, activeFacilityId, activeWorkerName, activeProject, activeWorkerType, dateFilter, checkDateFilter]);
 
     const overallKpis = useMemo(() => {
         if (activeService === 'IMNCI') return imnciKpiHelper(filteredSubmissions.filter(s => s.service === 'IMNCI'));
@@ -620,7 +643,7 @@ const MentorshipDashboard = ({
             else {
                 const stateObj = STATE_LOCALITIES?.[activeState];
                 if (stateObj && stateObj.localities) {
-                    const locObj = stateObj.localities.find(l => l.en === locKey);
+                    const locObj = stateObj.localities.find(l => l.en === locKey || l.ar === locKey);
                     if (locObj) locName = locObj[language === 'ar' ? 'ar' : 'en'] || locObj.en;
                 }
             }
@@ -645,7 +668,7 @@ const MentorshipDashboard = ({
             else {
                 const stateObj = STATE_LOCALITIES?.[activeState];
                 if (stateObj && stateObj.localities) {
-                    const locObj = stateObj.localities.find(l => l.en === locKey);
+                    const locObj = stateObj.localities.find(l => l.en === locKey || l.ar === locKey);
                     if (locObj) locName = locObj[language === 'ar' ? 'ar' : 'en'] || locObj.en;
                 }
             }
@@ -718,7 +741,7 @@ const MentorshipDashboard = ({
     const activeFiltersList = [];
     if (activeState) activeFiltersList.push(`${t('filter.state')}: ${STATE_LOCALITIES?.[activeState]?.[language === 'ar' ? 'ar' : 'en'] || activeState}`);
     if (activeLocality) {
-        const locObj = STATE_LOCALITIES?.[activeState]?.localities?.find(l => l.en === activeLocality);
+        const locObj = STATE_LOCALITIES?.[activeState]?.localities?.find(l => l.en === activeLocality || l.ar === activeLocality);
         const locName = locObj ? (locObj[language === 'ar' ? 'ar' : 'en'] || locObj.en) : activeLocality;
         activeFiltersList.push(`${t('filter.locality')}: ${locName}`);
     }

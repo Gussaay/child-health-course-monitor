@@ -6,28 +6,13 @@ import { Bar, Pie, Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, LineElement, PointElement } from 'chart.js';
 
 import {
-    Home,
-    Book,
-    Users,
-    User,
-    Hospital,
-    Database,
-    ClipboardCheck,
-    ClipboardList,
-    FolderKanban,
-    TrendingUp, 
-    X,
-    WifiOff,
-    RefreshCw,
-    Activity // Added Activity icon for IMCI
+    Home, Book, Users, User, Hospital, Database, ClipboardCheck, ClipboardList, FolderKanban, TrendingUp, X, WifiOff, RefreshCw, Activity
 } from 'lucide-react';
 
-// --- CAPACITOR UPDATER IMPORTS ---
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import { Capacitor } from '@capacitor/core';
 
 // --- PRE-FLIGHT LANGUAGE CHECK ---
-// Ensures language is set synchronously before any Context initializes
 if (typeof window !== 'undefined') {
     const params = new URLSearchParams(window.location.search);
     const lang = params.get('lang');
@@ -36,7 +21,6 @@ if (typeof window !== 'undefined') {
         localStorage.setItem('app_language', lang);
     }
 }
-// ---------------------------------
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, LineElement, PointElement);
 
@@ -65,10 +49,8 @@ const ParticipantsView = lazy(() => import('./components/Participants').then(mod
 const ParticipantForm = lazy(() => import('./components/Participants').then(module => ({ default: module.ParticipantForm })));
 const ParticipantMigrationMappingView = lazy(() => import('./components/Participants').then(module => ({ default: module.ParticipantMigrationMappingView })));
 
-// --- New IMNCI View Lazy Load ---
 const IMNCIRecordingForm = lazy(() => import('./components/IMNCIRecordingForm'));
 
-// --- Import Certificate, Attendance & Registration Views ---
 const CertificateVerificationView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.CertificateVerificationView })));
 const PublicCertificateDownloadView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicCertificateDownloadView })));
 const PublicCourseCertificatesView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicCourseCertificatesView }))); 
@@ -82,12 +64,10 @@ const PublicFacilityUpdateForm = lazy(() => import('./components/FacilityForms.j
 const NewFacilityEntryForm = lazy(() => import('./components/FacilityForms.jsx').then(module => ({ default: module.NewFacilityEntryForm })));
 const SkillsMentorshipView = lazy(() => import('./components/mentorship/SkillsMentorshipView.jsx'));
 
-// --- New Features Lazy Loads ---
 const ProjectTrackerView = lazy(() => import('./components/ProjectTrackerView'));
 const PublicMeetingAttendanceView = lazy(() => import('./components/ProjectTrackerView').then(module => ({ default: module.PublicMeetingAttendanceView })));
 const PlanningView = lazy(() => import('./components/PlanningView'));
 
-// --- Data & Component Imports ---
 import {
     upsertCourse, deleteCourse, listParticipants, deleteParticipant, listObservationsForParticipant,
     listCasesForParticipant, listAllDataForCourse, upsertFacilitator, deleteFacilitator, importParticipants,
@@ -117,7 +97,6 @@ import { useDataCache } from './DataContext';
 import { useAuth } from './hooks/useAuth';
 import { SignInBox } from './auth-ui.jsx';
 
-// --- SHARE MODAL COMPONENT (Integrated) ---
 const ShareIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.368a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" /></svg>;
 const LinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>;
 
@@ -272,7 +251,6 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
     );
 }
 
-// --- Permissions Defined Locally ---
 const ALL_PERMISSIONS = {
     canViewDashboard: true,
     canViewCourse: true,
@@ -315,7 +293,6 @@ const applyDerivedPermissions = (basePermissions) => {
     return basePermissions;
 };
 
-// --- Resource Monitor Component ---
 const ResourceMonitor = ({ counts, onReset, onDismiss }) => {
     return (
         <div className="fixed top-4 right-4 md:bottom-4 md:top-auto bg-gray-900 text-white p-2 rounded-lg shadow-lg z-50 opacity-90 w-56">
@@ -355,7 +332,6 @@ const ResourceMonitor = ({ counts, onReset, onDismiss }) => {
     );
 };
 
-// --- Landing Page Component ---
 function Landing({ navigate, permissions }) {
     const navButtons = [
         { label: 'Dashboard', view: 'dashboard', icon: Home, permission: true },
@@ -437,16 +413,10 @@ function SplashScreen() {
     );
 }
 
-
-// =============================================================================
-// Root App Component
-// =============================================================================
 export default function App() {
-    // --- FORCE UPDATE STATE ---
     const [isUpdateReady, setIsUpdateReady] = useState(false);
     const [updateBundle, setUpdateBundle] = useState(null);
 
-    // --- OFFLINE & SYNC STATE ---
     const [isOffline, setIsOffline] = useState(!navigator.onLine);
     const [isSyncing, setIsSyncing] = useState(false);
 
@@ -455,7 +425,6 @@ export default function App() {
             setIsOffline(false);
             setIsSyncing(true);
             try {
-                // Wait for writes to hit backend, but timeout after 5s so UI doesn't spin forever
                 await Promise.race([
                     waitForPendingWrites(db),
                     new Promise(resolve => setTimeout(resolve, 5000))
@@ -490,7 +459,6 @@ export default function App() {
         fetchParticipantTests
     } = useDataCache();
 
-    // --- APPLY SOFT DELETE FILTER TO CACHED RAW LISTS ---
     const allCourses = useMemo(() => (rawCourses || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true"), [rawCourses]);
     const allFacilitators = useMemo(() => (rawFacilitators || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [rawFacilitators]);
 
@@ -522,9 +490,7 @@ export default function App() {
     const [activeCoursesTab, setActiveCoursesTab] = useState('courses');
     const [activeHRTab, setActiveHRTab] = useState('facilitators');
 
-    // --- Single state for cache object ---
     const [courseDetailsCache, setCourseDetailsCache] = useState({});
-    // Dynamically grab details for the currently selected course
     const courseDetails = courseDetailsCache[selectedCourseId] || { participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null };
     
     const [courseDetailsLoading, setCourseDetailsLoading] = useState(false);
@@ -537,7 +503,6 @@ export default function App() {
     const [isNewFacilityView, setIsNewFacilityView] = useState(false);
     const [isPublicFacilityUpdateView, setIsPublicFacilityUpdateView] = useState(false);
     
-    // --- NEW: Shared Mentorship Dashboard States ---
     const [isPublicMentorshipDashboardView, setIsPublicMentorshipDashboardView] = useState(false);
     const [publicMentorshipDashboardParams, setPublicMentorshipDashboardParams] = useState(null);
 
@@ -573,7 +538,6 @@ export default function App() {
     const [isBulkUpdateView, setIsBulkUpdateView] = useState(false);
     const [publicBulkUpdateParams, setPublicBulkUpdateParams] = useState({});
 
-    // --- NEW: Public Meeting Attendance ---
     const [isPublicMeetingView, setIsPublicMeetingView] = useState(false);
     const [publicMeetingId, setPublicMeetingId] = useState(null);
     const [publicMeetingData, setPublicMeetingData] = useState(null);
@@ -585,36 +549,28 @@ export default function App() {
     const isPopStateNavigation = useRef(false);
     const initialViewIsSet = useRef(false);
 
-    // --- EFFECT: CAPACITOR UPDATER ACTIVE CHECKER ---
     useEffect(() => {
         if (Capacitor.isNativePlatform()) {
             const checkAndDownloadUpdate = async () => {
                 try {
-                    // 1. Fetch your custom update manifest from Firebase
-                    // Adding a timestamp query param prevents the browser/device from caching an old version
                     const res = await fetch('https://imnci-courses-monitor.web.app/latest/update.json?t=' + Date.now());
                     const latestUpdate = await res.json();
 
-                    // 2. Get the currently running bundle version
                     const currentState = await CapacitorUpdater.current();
                     const currentVersion = currentState.bundle?.version || "builtin";
 
-                    // 3. Compare versions. If there is a new version, trigger the download!
                     if (currentVersion !== latestUpdate.version) {
-                        console.log("New update found, downloading...");
-                        
-                        // Download the zip bundle directly into Capgo
                         const downloadedBundle = await CapacitorUpdater.download({
                             url: latestUpdate.url,
                             version: latestUpdate.version
                         });
 
-                        // 4. Trigger your custom Restart/Update UI Modal
                         setUpdateBundle(downloadedBundle); 
                         setIsUpdateReady(true);
                     }
                 } catch (error) {
                     console.error("Self-hosted update check failed:", error);
+                    alert("Update Check Failed: " + error.message);
                 }
             };
 
@@ -627,7 +583,6 @@ export default function App() {
             initializeUsageTracking();
         }
     }, [authLoading, user]);
-
 
     useEffect(() => {
       const handleOperation = (event) => {
@@ -675,20 +630,16 @@ export default function App() {
             setPublicTestData({ course: null, participants: [], tests: [] });
             setPublicTestType(null); 
 
-            // --- Reset Registration View ---
             setIsPublicRegistrationView(false);
             setPublicRegistrationCourseId(null);
 
-            // --- Reset Bulk Update View ---
             setIsBulkUpdateView(false);
             setPublicBulkUpdateParams({});
 
-            // --- Reset Public Meeting View ---
             setIsPublicMeetingView(false);
             setPublicMeetingId(null);
             setPublicMeetingData(null);
 
-            // --- NEW: Public Meeting Attendance Route ---
             const publicMeetingMatch = path.match(/^\/public\/meeting\/([a-zA-Z0-9_-]+)\/?$/);
             if (publicMeetingMatch && publicMeetingMatch[1]) {
                 setIsPublicMeetingView(true);
@@ -705,17 +656,15 @@ export default function App() {
                 return;
             }
 
-            // --- NEW: Public Mentorship Dashboard Route ---
             const publicMentorshipDashboardMatch = path.match(/^\/public\/mentorship\/dashboard\/([a-zA-Z0-9_]+)\/?$/);
             if (publicMentorshipDashboardMatch && publicMentorshipDashboardMatch[1]) {
                 setIsPublicMentorshipDashboardView(true);
                 const searchParams = new URLSearchParams(window.location.search);
                 
-                // Identify and apply language from URL
                 const langParam = searchParams.get('lang');
                 if (langParam) {
                     localStorage.setItem('language', langParam);
-                    localStorage.setItem('app_language', langParam); // Common fallback
+                    localStorage.setItem('app_language', langParam);
                 }
 
                 setPublicMentorshipDashboardParams({
@@ -767,7 +716,6 @@ export default function App() {
                         if (!courseData) throw new Error('Course not found.');
                         if (!participantData) throw new Error('Participants not found.'); 
                         
-                        // APPLY SOFT DELETE FILTER TO PUBLIC DATA
                         const activeParticipants = (participantData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
                         
                         setPublicMonitorData({ course: courseData, participants: activeParticipants });
@@ -782,7 +730,6 @@ export default function App() {
                 return; 
             }
             
-            // --- NEW: Public Bulk Update Route (Query Parameters) ---
             const bulkUpdateMatch = path.match(/^\/public\/bulk-update\/?$/);
             if (bulkUpdateMatch) {
                 setIsBulkUpdateView(true);
@@ -818,14 +765,12 @@ export default function App() {
                 return;
             }
             
-            // --- NEW: Public Registration Route ---
             const publicRegistrationMatch = path.match(/^\/public\/register\/course\/([a-zA-Z0-9_-]+)\/?$/);
             if (publicRegistrationMatch && publicRegistrationMatch[1]) {
                 setIsPublicRegistrationView(true);
                 setPublicRegistrationCourseId(publicRegistrationMatch[1]);
                 return;
             }
-            // -------------------------------------
 
             const publicTestMatch = path.match(/^\/public\/test\/course\/([a-zA-Z0-9_-]+)\/?$/);
             if (publicTestMatch && publicTestMatch[1]) {
@@ -857,7 +802,6 @@ export default function App() {
                             throw new Error('Test forms are only available for ICCM, EENC, Small & Sick Newborn, IMNCI, ETAT, and Program Management courses.');
                         }
                         
-                        // APPLY SOFT DELETE FILTER
                         const activeParticipants = (participantData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
                         const activeTests = (testData || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true");
 
@@ -977,22 +921,20 @@ export default function App() {
         handlePathChange();
     }, []); 
 
+    // --- IMPORTANT: Inject `role: userRole` into the generated permissions object ---
     const permissions = useMemo(() => {
         let derivedPermissions = { ...userPermissions };
         if (userRole?.toLowerCase() === 'super_user') {
-            return ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: true }), {});
+            return ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: true }), { role: userRole });
         }
-        
-        // --- STRICT OVERRIDE FOR STANDARD USERS ---
-        // Forcefully deny Mentorship access to standard users, ignoring stale Firestore data
+
         if (userRole?.toLowerCase() === 'user') {
             derivedPermissions.canViewSkillsMentorship = false;
             derivedPermissions.canManageSkillsMentorship = false;
         }
-        // ------------------------------------------
-        
+
         const ALL_PERMISSIONS_MINIMAL = ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
-        return { ...ALL_PERMISSIONS_MINIMAL, ...derivedPermissions };
+        return { ...ALL_PERMISSIONS_MINIMAL, ...derivedPermissions, role: userRole };
     }, [userRole, userPermissions]);
 
     useEffect(() => {
@@ -1011,7 +953,6 @@ export default function App() {
         }
     }, [user, permissionsLoading]);
 
-    // ... [Authentication and Permissions effects remain unchanged] ...
     useEffect(() => {
         const checkUserRoleAndPermissions = async () => {
             setPermissionsLoading(true);
@@ -1074,7 +1015,6 @@ export default function App() {
         await fetchLocalityCoordinators(force);
     }, [fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators]);
 
-
     useEffect(() => {
         if (isSharedView || isPublicMentorshipDashboardView || (!user && !isPublicMentorshipDashboardView)) return;
 
@@ -1110,14 +1050,12 @@ export default function App() {
         }
     }, [view, isSharedView, user, fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchCoordinators, fetchHealthFacilities, fetchSkillMentorshipSubmissions, isPublicMentorshipDashboardView]);
 
-    // --- NEW: Cache-First Delta Sync for Course Details ---
     useEffect(() => {
         if (selectedCourseId && !courseDetailsCache[selectedCourseId]?.allObs && !courseDetailsLoading) {
             
             const fetchFullCourseDetails = async () => {
                 setCourseDetailsLoading(true);
                 try {
-                    // 1. Try Cache First for instant UI rendering
                     let participantsData = await listAllParticipantsForCourse(selectedCourseId, { source: 'cache' }).catch(()=>[]);
                     let allCourseData = await listAllDataForCourse(selectedCourseId, { source: 'cache' }).catch(()=>({allObs:[], allCases:[]}));
                     let finalReport = await getFinalReportByCourseId(selectedCourseId, { source: 'cache' }).catch(()=>null);
@@ -1148,7 +1086,6 @@ export default function App() {
                         processAndSet(participantsData, allCourseData, finalReport, testData);
                     }
 
-                    // 2. Fetch from Server if Cache is empty
                     if (!hasData) {
                         participantsData = await listAllParticipantsForCourse(selectedCourseId, { source: 'server' }).catch(()=>[]);
                         allCourseData = await listAllDataForCourse(selectedCourseId, { source: 'server' }).catch(()=>({allObs:[], allCases:[]}));
@@ -1169,7 +1106,6 @@ export default function App() {
         }
     }, [selectedCourseId, courseDetailsCache, courseDetailsLoading]); 
 
-    // --- UPDATED: Fix Localities Filter logic for filteredCourses and filteredFacilitators ---
     const canSeeAllData = useMemo(() => {
         return permissions.canUseSuperUserAdvancedFeatures || permissions.canUseFederalManagerAdvancedFeatures;
     }, [permissions]);
@@ -1184,7 +1120,6 @@ export default function App() {
         const userStateSet = new Set(userStates);
         let filtered = allCourses.filter(c => userStateSet.has(c.state));
         
-        // Filter by user localities if assigned
         if (userLocalities && userLocalities.length > 0) {
             filtered = filtered.filter(c => userLocalities.includes(c.locality));
         }
@@ -1202,14 +1137,12 @@ export default function App() {
         const userStateSet = new Set(userStates);
         let filtered = allFacilitators.filter(f => userStateSet.has(f.currentState));
         
-        // Filter by user localities if assigned
         if (userLocalities && userLocalities.length > 0) {
             filtered = filtered.filter(f => userLocalities.includes(f.currentLocality));
         }
         
         return filtered;
     }, [allFacilitators, userStates, userLocalities, canSeeAllData]);
-    // ------------------------------------------------------------------------------------------
 
     const fetchPendingSubmissions = useCallback(async () => {
         if (!permissions.canApproveSubmissions) return;
@@ -1343,7 +1276,6 @@ export default function App() {
                 listParticipantTestsForCourse(courseId, { source: 'server' }) 
             ]);
             
-            // APPLY SOFT DELETE FILTER
             const activeParticipants = (participantsData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
             const activeTests = (testData || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true");
             const activeObs = (allCourseData.allObs || []).filter(o => o.isDeleted !== true && o.isDeleted !== "true");
@@ -1376,7 +1308,6 @@ export default function App() {
                 listParticipantTestsForCourse(courseId, { source: 'server' }) 
             ]);
             
-            // APPLY SOFT DELETE FILTER
             const activeParticipants = (participantsData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
             const activeTests = (testData || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true");
             
@@ -1484,16 +1415,14 @@ export default function App() {
         }
     }, [permissions, selectedCourseId, selectedParticipantId, navigate]);
 
-    // --- NEW: Added handleDeleteFacilitator callback ---
     const handleDeleteFacilitator = useCallback(async (facilitatorId) => {
         if (!permissions.canManageHumanResource) return;
         if (window.confirm('Are you sure you want to delete this facilitator?')) {
             setLoading(true);
             try {
                 await deleteFacilitator(facilitatorId);
-                await fetchFacilitators(navigator.onLine); // Refetch the updated list safely
+                await fetchFacilitators(navigator.onLine); 
                 
-                // Clear selection if the deleted facilitator was currently selected
                 if (selectedFacilitatorId === facilitatorId) {
                     setSelectedFacilitatorId(null);
                     navigate('humanResources');
@@ -1589,7 +1518,6 @@ export default function App() {
                 getFinalReportByCourseId(courseId, { source: 'server' })
             ]);
             
-            // APPLY SOFT DELETE FILTER
             const activeParticipants = (participantsData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
             const activeFinalReport = (existingReport && existingReport.isDeleted !== true && existingReport.isDeleted !== "true") ? existingReport : null;
             
@@ -1641,7 +1569,6 @@ export default function App() {
         try {
             const [participantsData, existingReport] = await Promise.all([ listAllParticipantsForCourse(courseId, { source: 'server' }), getFinalReportByCourseId(courseId, { source: 'server' }) ]);
             
-            // APPLY SOFT DELETE FILTER
             const activeParticipants = (participantsData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
             const activeFinalReport = (existingReport && existingReport.isDeleted !== true && existingReport.isDeleted !== "true") ? existingReport : null;
             
@@ -1898,7 +1825,7 @@ export default function App() {
                 onBack={() => navigate(previousView)}
             />) : null;
 
-            case 'dashboard': return <DashboardView onOpenCourseReport={handleOpenCourseReport} onOpenParticipantReport={(pId, cId) => navigate('participantReport', { openParticipantReport: pId, openCourseReport: cId })} onOpenFacilitatorReport={(id) => { setSelectedFacilitatorId(id); navigate('facilitatorReport'); }} permissions={permissions} userStates={userStates} STATE_LOCALITIES={STATE_LOCALITIES} />;
+            case 'dashboard': return <DashboardView onOpenCourseReport={handleOpenCourseReport} onOpenParticipantReport={(pId, cId) => navigate('participantReport', { openParticipantReport: pId, openCourseReport: cId })} onOpenFacilitatorReport={(id) => { setSelectedFacilitatorId(id); navigate('facilitatorReport'); }} permissions={permissions} userStates={userStates} userLocalities={userLocalities} STATE_LOCALITIES={STATE_LOCALITIES} />;
 
             case 'finalReport':
                 return (
@@ -1957,14 +1884,12 @@ export default function App() {
     if ((authLoading || permissionsLoading) && !isMinimalUILayout) {
         mainContent = <SplashScreen />;
     }
-    
-    // --- NEW: Public Mentorship Dashboard View ---
     else if (isPublicMentorshipDashboardView) {
         mainContent = (
              <Suspense fallback={<Card><div className="flex justify-center p-8"><Spinner /></div></Card>}>
                  <SkillsMentorshipView
                      setToast={setToast}
-                     permissions={{ canViewSkillsMentorship: true, manageScope: 'none' }} // Read-only basic permissions
+                     permissions={{ canViewSkillsMentorship: true, manageScope: 'none' }}
                      userStates={[]} 
                      userLocalities={[]} 
                      publicDashboardMode={true} 
@@ -1992,7 +1917,6 @@ export default function App() {
             mainContent = <NewFacilityEntryForm setToast={setToast} serviceType={publicServiceType} />;
         }
     }
-    // --- RESTORED: Public Submission View Handling ---
     else if (isPublicSubmissionView) {
         if (authLoading) {
             mainContent = <Card><Spinner /></Card>;
@@ -2004,8 +1928,6 @@ export default function App() {
             else mainContent = <div className="p-8 text-center">Invalid form link.</div>;
         }
     }
-
-    // --- REPLACED: Bulk Update View Handling ---
     else if (isBulkUpdateView) {
         mainContent = (
             <Suspense fallback={<Card><Spinner /></Card>}>
@@ -2018,8 +1940,6 @@ export default function App() {
             </Suspense>
         );
     }
-    
-    // --- NEW: Public Participant Registration View ---
     else if (isPublicRegistrationView) {
         if (publicRegistrationCourseId) {
             mainContent = (
@@ -2033,8 +1953,6 @@ export default function App() {
             mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">Invalid Registration Link.</div></Card>;
         }
     }
-
-    // --- NEW: Public Meeting Attendance View ---
     else if (isPublicMeetingView) {
         if (publicViewLoading) {
             mainContent = <Card><div className="flex justify-center p-8"><Spinner /></div></Card>;
@@ -2153,7 +2071,6 @@ export default function App() {
         }
     }
     
-    // --- RESTORED: Public Monitoring View Handling ---
     else if (isPublicMonitoringView) {
         if (authLoading) {
              mainContent = <Card><Spinner /></Card>;
@@ -2175,7 +2092,6 @@ export default function App() {
         }
     }
 
-    // --- RESTORED: Public Mentorship View Handling ---
     else if (isMentorshipPublicView && !isPublicMentorshipDashboardView) {
         if (authLoading) {
             mainContent = <Card><Spinner /></Card>;
@@ -2196,7 +2112,6 @@ export default function App() {
         }
     }
 
-    // --- RESTORED: Public Test View Handling ---
     else if (isPublicTestView) {
         if (authLoading) {
             mainContent = <Card><Spinner /></Card>;
@@ -2212,9 +2127,7 @@ export default function App() {
                         participants={publicTestData.participants}
                         participantTests={publicTestData.tests}
                         onSaveTest={upsertParticipantTest} 
-                        
                         onSaveParticipant={handleSaveParticipantFromTestForm}
-                        
                         onCancel={() => {}} 
                         onSave={(savedTest) => { 
                             setToast({ show: true, message: 'Test saved successfully!', type: 'success' });
@@ -2225,11 +2138,8 @@ export default function App() {
                                         listParticipantTestsForCourse(publicTestData.course.id, 'server'),
                                         listAllParticipantsForCourse(publicTestData.course.id, 'server')
                                     ]);
-                                    
-                                    // APPLY SOFT DELETE FILTER TO TEST UPDATES
                                     const activeParticipants = (participantData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
                                     const activeTests = (testData || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true");
-
                                     setPublicTestData(prev => ({ ...prev, tests: activeTests, participants: activeParticipants }));
                                 } catch (err) {
                                     setToast({ show: true, message: 'Failed to refresh test data.', type: 'error' });
@@ -2241,12 +2151,8 @@ export default function App() {
                         }}
                         initialParticipantId={''} 
                         isPublicView={true} 
-
                         canManageTests={permissions.canUseFederalManagerAdvancedFeatures}
-                        
-                        // --- NEW: Pass the test type to ensure correct test opens ---
                         testType={publicTestType}
-                        // ------------------------------------------------------------
                     />
                 </Suspense>
             );
@@ -2254,7 +2160,6 @@ export default function App() {
              mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">Could not load test session.</div></Card>;
         }
     }
-
 
     else if (!user && !authLoading) {
         mainContent = <SignInBox />;
@@ -2269,8 +2174,6 @@ export default function App() {
 
     return (
         <div className="min-h-screen bg-sky-50 flex flex-col pt-0 relative">
-            
-            {/* --- OFFLINE & SYNC BANNERS (Fixed to absolutely top) --- */}
             <div className="fixed top-0 left-0 w-full z-[100] flex flex-col">
                 {isOffline && (
                     <div className="bg-amber-500 text-white text-center py-2 px-4 text-sm font-bold flex justify-center items-center gap-2 shadow-md">
@@ -2284,7 +2187,6 @@ export default function App() {
                 )}
             </div>
 
-            {/* Header uses mt-10 if offline banner is showing so it doesn't overlap */}
             <header className={`bg-slate-800 shadow-lg sticky z-40 transition-all ${isOffline || isSyncing ? 'top-10' : 'top-0'}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
                     <div className="flex items-center justify-between">
@@ -2342,7 +2244,6 @@ export default function App() {
                 />
             )}
 
-            {/* --- FORCE UPDATE MODAL --- */}
             {isUpdateReady && updateBundle && (
                 <div className="fixed inset-0 bg-slate-900 bg-opacity-80 flex flex-col items-center justify-center z-[100000] p-4 backdrop-blur-sm">
                     <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full text-center space-y-4">
@@ -2356,7 +2257,6 @@ export default function App() {
                         <button 
                             onClick={async () => {
                                 try {
-                                    // This applies the bundle and immediately reloads the app
                                     await CapacitorUpdater.set({ id: updateBundle.id }); 
                                 } catch (e) {
                                     console.error("Failed to apply update", e);

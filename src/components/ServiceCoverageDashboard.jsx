@@ -136,13 +136,13 @@ const OWNERSHIP_OPTIONS = ['حكومي', 'خاص', 'منظمات', 'اهلي'];
 const NEONATAL_EQUIPMENT_SPEC = { 'neonatal_total_beds': 'Total Beds', 'neonatal_total_incubators': 'Incubators', 'neonatal_total_cots': 'Cots', 'neonatal_phototherapy': 'Phototherapy Units', 'neonatal_oxygen_machine': 'Oxygen Machines', 'neonatal_oxygen_cylinder': 'Oxygen Cylinders', 'neonatal_respiration_monitor': 'Respiration Monitors', 'neonatal_cpap': 'CPAP Machines', 'neonatal_mechanical_ventilator': 'Mechanical Ventilators', 'neonatal_warmer': 'Neonatal Warmers', 'neonatal_infusion_pump': 'Infusion Pumps', 'neonatal_syringe_pump': 'Syringe Pumps', 'neonatal_sucker': 'Suction Devices', 'neonatal_ambu_bag': 'Resuscitation Bags', 'neonatal_portable_incubator': 'Portable Incubators' };
 const NEONATAL_EQUIPMENT_KEYS = Object.keys(NEONATAL_EQUIPMENT_SPEC);
 
-export const NeonatalCoverageDashboard = () => {
+export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
     const { healthFacilities: allFacilities, isLoading, fetchHealthFacilities } = useDataCache();
     const loading = isLoading.healthFacilities || allFacilities === null;
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
-    const [stateFilter, setStateFilter] = useState(''); 
-    const [localityFilter, setLocalityFilter] = useState(''); 
+    const [stateFilter, setStateFilter] = useState(userStates?.length === 1 ? userStates[0] : ''); 
+    const [localityFilter, setLocalityFilter] = useState(userLocalities?.length === 1 ? userLocalities[0] : ''); 
     const [ownershipFilter, setOwnershipFilter] = useState('');
     const [projectFilter, setProjectFilter] = useState('');
     const [equipmentFilter, setEquipmentFilter] = useState('');
@@ -499,13 +499,13 @@ export const NeonatalCoverageDashboard = () => {
 const EENC_EQUIPMENT_SPEC = { 'eenc_delivery_beds': 'Delivery Beds', 'eenc_resuscitation_stations': 'Resuscitation Stations', 'eenc_warmers': 'Warmers', 'eenc_ambu_bags': 'Ambu Bags', 'eenc_manual_suction': 'Manual Suction', 'eenc_wall_clock': 'Wall Clock', 'eenc_steam_sterilizer': 'Steam Sterilizer' };
 const EENC_EQUIPMENT_KEYS = Object.keys(EENC_EQUIPMENT_SPEC);
 
-export const EENCCoverageDashboard = () => {
+export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
     const { healthFacilities: allFacilities, isLoading, fetchHealthFacilities } = useDataCache();
     const loading = isLoading.healthFacilities || allFacilities === null;
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
-    const [stateFilter, setStateFilter] = useState(''); 
-    const [localityFilter, setLocalityFilter] = useState(''); 
+    const [stateFilter, setStateFilter] = useState(userStates?.length === 1 ? userStates[0] : ''); 
+    const [localityFilter, setLocalityFilter] = useState(userLocalities?.length === 1 ? userLocalities[0] : ''); 
     const [ownershipFilter, setOwnershipFilter] = useState(''); 
     const [projectFilter, setProjectFilter] = useState('');
     const [equipmentFilter, setEquipmentFilter] = useState('');
@@ -774,14 +774,14 @@ const IMNCI_FILTER_SPEC = { 'وجود_سجل_علاج_متكامل': 'IMNCI Regi
 const IMNCI_TOOLS_SPEC = { 'countWithRegister': 'IMNCI Register', 'countWithChartbooklet': 'Chart Booklet', 'countWithWeightScale': 'Weight Scale', 'countWithOrtCorner': 'ORT Corner' };
 const IMNCI_TOOLS_KEYS = Object.keys(IMNCI_TOOLS_SPEC);
 
-export const IMNCICoverageDashboard = () => {
+export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
     const { healthFacilities: allFacilities, isLoading, fetchHealthFacilities } = useDataCache();
     const loading = isLoading.healthFacilities || allFacilities === null;
     
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
-    const [stateFilter, setStateFilter] = useState('');
-    const [localityFilter, setLocalityFilter] = useState('');
+    const [stateFilter, setStateFilter] = useState(userStates?.length === 1 ? userStates[0] : '');
+    const [localityFilter, setLocalityFilter] = useState(userLocalities?.length === 1 ? userLocalities[0] : '');
     const [ownershipFilter, setOwnershipFilter] = useState(''); 
     const [projectFilter, setProjectFilter] = useState('');
     const [equipmentFilter, setEquipmentFilter] = useState('');
@@ -1089,13 +1089,13 @@ const CRITICAL_EQUIPMENT_SPEC = {
 };
 const CRITICAL_EQUIPMENT_KEYS = Object.keys(CRITICAL_EQUIPMENT_SPEC);
 
-export const CriticalCareCoverageDashboard = () => {
+export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) => {
     const { healthFacilities: allFacilities, isLoading } = useDataCache();
     const loading = isLoading.healthFacilities || allFacilities === null;
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
-    const [stateFilter, setStateFilter] = useState(''); 
-    const [localityFilter, setLocalityFilter] = useState(''); 
+    const [stateFilter, setStateFilter] = useState(userStates?.length === 1 ? userStates[0] : ''); 
+    const [localityFilter, setLocalityFilter] = useState(userLocalities?.length === 1 ? userLocalities[0] : ''); 
     const [ownershipFilter, setOwnershipFilter] = useState(''); 
     const [projectFilter, setProjectFilter] = useState('');
     const [mapViewLevel, setMapViewLevel] = useState('state');
@@ -1401,15 +1401,15 @@ const CombinedMapTooltip = ({ data }) => {
 };
 
 // --- COMBINED SERVICES DASHBOARD ---
-export const CombinedServiceDashboard = () => {
+export const CombinedServiceDashboard = ({ userStates, userLocalities }) => {
     const { healthFacilities: allFacilities, isLoading } = useDataCache();
     const loading = isLoading?.healthFacilities || allFacilities === null;
     
     // --- APPLY SOFT DELETE FILTER ---
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
-    const [stateFilter, setStateFilter] = useState(''); 
-    const [localityFilter, setLocalityFilter] = useState(''); 
+    const [stateFilter, setStateFilter] = useState(userStates?.length === 1 ? userStates[0] : ''); 
+    const [localityFilter, setLocalityFilter] = useState(userLocalities?.length === 1 ? userLocalities[0] : ''); 
     
     const combinedExportRef = useRef(null);
     const [combinedCopyStatus, setCombinedCopyStatus] = useState('');

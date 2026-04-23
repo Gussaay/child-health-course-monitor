@@ -58,6 +58,33 @@ import {
 } from '../FacilityForms.jsx';
 import { onAuthStateChanged } from "firebase/auth";
 
+// --- Bilingual Normalization Helpers ---
+const normalizeState = (stateVal) => {
+    if (!stateVal || stateVal === 'N/A') return 'N/A';
+    for (const [enKey, data] of Object.entries(STATE_LOCALITIES)) {
+        if (enKey === stateVal || data.ar === stateVal) return enKey;
+    }
+    return stateVal;
+};
+
+const normalizeLocality = (stateEnKey, localityVal) => {
+    if (!localityVal || localityVal === 'N/A') return 'N/A';
+    
+    // Trim and normalize spacing for comparison
+    const cleanVal = localityVal.trim();
+    
+    if (stateEnKey && stateEnKey !== 'N/A' && STATE_LOCALITIES[stateEnKey]) {
+        const locObj = STATE_LOCALITIES[stateEnKey].localities.find(l => l.en === cleanVal || l.ar === cleanVal || l.ar.trim() === cleanVal);
+        if (locObj) return locObj.en;
+    }
+    // Fallback: search all states if state is missing
+    for (const data of Object.values(STATE_LOCALITIES)) {
+        const locObj = data.localities.find(l => l.en === cleanVal || l.ar === cleanVal || l.ar.trim() === cleanVal);
+        if (locObj) return locObj.en;
+    }
+    return cleanVal;
+};
+
 // --- Date Range Filter Helper ---
 const isDateInRange = (dateString, filterType) => {
     if (!filterType) return true;
@@ -108,6 +135,7 @@ const normalizeJobTitle = (title) => {
     if (t === 'طبيب' || t === 'طبيب عمومي') return 'Medical Officer';
     if (t === 'مساعد طبي') return 'Medical Assistance';
     if (t === 'ممرض') return 'Treating Nurse';
+    if (t === 'قابلة') return 'Midwife';
     return t;
 };
 
@@ -159,12 +187,12 @@ const EENC_ORIENTATIONS_LABELS = {
 // --- Action Menu Component (Enhanced Visualization) ---
 const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, permissions, canManage }) => {
     
-    // STRICT ROLE CHECK: Only Super Users and Federal Managers can view main submissions
+    // Allow any user with Skills Mentorship view permissions (including State & Locality Managers)
     const canViewSubmissions = 
+        permissions?.canViewSkillsMentorship ||
         permissions?.canUseFederalManagerAdvancedFeatures ||
         permissions?.canUseSuperUserAdvancedFeatures ||
-        permissions?.role === 'super_user' || 
-        permissions?.role === 'federal_manager';
+        ['super_user', 'federal_manager', 'states_manager', 'locality_manager'].includes(permissions?.role);
 
     // Section 1: Adding Forms
     const addItems = [
@@ -582,7 +610,7 @@ const AddHealthWorkerModal = ({ isOpen, onClose, onSave, facilityName }) => {
                     </FormGroup>
                 </div>
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
-                    <Button variant="secondary" onClick={handleClose}>إلغاء</Button>
+                    <Button variant="secondary" onClick={handleClose}>إغلاق</Button>
                     <Button onClick={handleSave}>حفظ وإضافة</Button>
                 </div>
             </div>
@@ -1558,7 +1586,6 @@ const SkillsMentorshipView = ({
     publicDashboardMode = false, 
     publicDashboardParams = null 
 }) => {
-// Add or update this logic to identify language from URL parameters
     useEffect(() => {
         if (publicDashboardMode) {
             const params = new URLSearchParams(window.location.search);
@@ -1571,6 +1598,7 @@ const SkillsMentorshipView = ({
             }
         }
     }, [publicDashboardMode]);
+
     const defaultService = publicDashboardMode ? publicDashboardParams?.serviceType : (publicSubmissionMode ? publicServiceType : null);
 
     const [currentView, setCurrentView] = useState(() => {
@@ -1648,9 +1676,33 @@ const SkillsMentorshipView = ({
         publicDashboardMode
     ]);
 
+    // Determine if user can see all data
+    const canSeeAllMentorshipData = useMemo(() => {
+        if (publicDashboardMode || publicSubmissionMode) return true;
+        if (permissions?.canUseSuperUserAdvancedFeatures || permissions?.canUseFederalManagerAdvancedFeatures) return true;
+        
+        // Explicitly grant access to facilitators and federal-level roles
+        if (['facilitator', 'super_user', 'federal_manager'].includes(permissions?.role)) return true;
+        if (permissions?.manageLocation === 'federal_level') return true;
+
+        return false;
+    }, [permissions, publicDashboardMode, publicSubmissionMode]);
+
+    const isLocalityManager = permissions?.manageScope === 'locality' || permissions?.role === 'locality_manager';
+
     // Initialize Dashboard Filters with parameters if available
-    const [activeDashboardState, setActiveDashboardState] = useState(publicDashboardMode ? publicDashboardParams?.state || '' : '');
-    const [activeDashboardLocality, setActiveDashboardLocality] = useState(publicDashboardMode ? publicDashboardParams?.locality || '' : '');
+    const [activeDashboardState, setActiveDashboardState] = useState(() => {
+        if (publicDashboardMode) return publicDashboardParams?.state || '';
+        if (!canSeeAllMentorshipData && userStates?.length === 1) return userStates[0];
+        return '';
+    });
+    
+    const [activeDashboardLocality, setActiveDashboardLocality] = useState(() => {
+        if (publicDashboardMode) return publicDashboardParams?.locality || '';
+        if (!canSeeAllMentorshipData && isLocalityManager && userLocalities?.length === 1) return userLocalities[0];
+        return '';
+    });
+
     const [activeDashboardFacilityId, setActiveDashboardFacilityId] = useState(publicDashboardMode ? publicDashboardParams?.facilityId || '' : '');
     const [activeDashboardWorkerName, setActiveDashboardWorkerName] = useState(publicDashboardMode ? publicDashboardParams?.workerName || '' : '');
     const [activeDashboardProject, setActiveDashboardProject] = useState(publicDashboardMode ? publicDashboardParams?.project || '' : '');
@@ -1847,6 +1899,24 @@ const SkillsMentorshipView = ({
     }, [permissions, publicSubmissionMode, publicDashboardMode]);
     // -------------------------------------------------------------
 
+    // --- Restrict Dropdowns for Dashboard ---
+    const dashboardStateLocalities = useMemo(() => {
+        if (canSeeAllMentorshipData || !userStates || userStates.length === 0) return STATE_LOCALITIES;
+        const filtered = {};
+        userStates.forEach(stateKey => {
+            if (STATE_LOCALITIES[stateKey]) {
+                filtered[stateKey] = { ...STATE_LOCALITIES[stateKey] };
+                // Further restrict localities if the user is a locality manager
+                if (isLocalityManager && userLocalities && userLocalities.length > 0) {
+                     filtered[stateKey].localities = filtered[stateKey].localities.filter(l => 
+                         userLocalities.includes(l.en) || userLocalities.includes(l.ar)
+                     );
+                }
+            }
+        });
+        return filtered;
+    }, [canSeeAllMentorshipData, userStates, userLocalities, isLocalityManager]);
+
     // O(1) Facility Lookup Map to prevent extreme slowdowns
     const facilityMap = useMemo(() => {
         const map = new Map();
@@ -1858,29 +1928,34 @@ const SkillsMentorshipView = ({
         return map;
     }, [localHealthFacilities]);
 
-    // UPDATED to map correctly between authenticated and unauthenticated sets AND extract project
-    // OPTIMISTIC UPDATE APPLIED: Filters out deletedSubmissionIds and Soft Deletes
+    // UPDATED: Filter out records not belonging to the user's assigned area with English Key Normalization
     const processedSubmissions = useMemo(() => {
         const sourceData = publicDashboardMode ? publicData.submissions : skillMentorshipSubmissions;
         if (!sourceData) return [];
         
-        return sourceData
-            .filter(sub => !deletedSubmissionIds.has(sub.id) && sub.isDeleted !== true && sub.isDeleted !== "true") // SOFT DELETE FILTER
-            .map(sub => {
-            // Find facility object to extract project/partner info dynamically via fast Map lookup
+        let filteredData = sourceData.filter(sub => 
+            !deletedSubmissionIds.has(sub.id) && sub.isDeleted !== true && sub.isDeleted !== "true"
+        );
+
+        // Map and Normalize FIRST
+        let mappedData = filteredData.map(sub => {
             const fac = facilityMap.get(sub.facilityId);
-            
-            // PRIORITIZE THE STANDARD 'project_name' KEY
             const projectInfo = fac?.project_name || fac?.['المشروع'] || fac?.project || fac?.['الشركاء_الداعمين'] || fac?.['المنظمة_الداعمة'] || sub.project || 'N/A';
             
+            const rawState = sub.state || fac?.['الولاية'] || 'N/A';
+            const rawLocality = sub.locality || fac?.['المحلية'] || 'N/A';
+            
+            const normState = normalizeState(rawState);
+            const normLocality = normalizeLocality(normState, rawLocality);
+
             return {
                 id: sub.id,
                 service: sub.serviceType,
                 date: sub.effectiveDate ? new Date(sub.effectiveDate.seconds * 1000).toISOString().split('T')[0] : (sub.sessionDate || 'N/A'),
                 effectiveDateTimestamp: sub.effectiveDate,
-                state: sub.state || 'N/A',
-                locality: sub.locality || 'N/A',
-                facility: sub.facilityName || 'N/A',
+                state: normState,
+                locality: normLocality,
+                facility: sub.facilityName || fac?.['اسم_المؤسسة'] || 'N/A',
                 staff: sub.healthWorkerName || 'N/A',
                 supervisorEmail: sub.mentorEmail || null,
                 supervisorName: sub.mentorName || null,
@@ -1888,16 +1963,30 @@ const SkillsMentorshipView = ({
                 facilityId: sub.facilityId || null,
                 scores: sub.scores || null,
                 status: sub.status || 'complete',
-                facilityType: sub.facilityType || null,
+                facilityType: sub.facilityType || fac?.['نوع_المؤسسةالصحية'] || null,
                 workerType: normalizeJobTitle(sub.workerType) || null,
                 motherName: sub.motherName || null,
                 visitNumber: sub.visitNumber || null,
                 sessionDate: sub.sessionDate || (sub.effectiveDate ? new Date(sub.effectiveDate.seconds * 1000).toISOString().split('T')[0] : null),
-                project: projectInfo, // Uses standard key
+                project: projectInfo, 
                 fullData: sub 
             };
         });
-    }, [skillMentorshipSubmissions, publicDashboardMode, publicData.submissions, facilityMap, deletedSubmissionIds]);
+
+        // Apply Role-Based Filtering AFTER Normalization
+        if (!canSeeAllMentorshipData) {
+            if (userStates && userStates.length > 0) {
+                const stateSet = new Set(userStates);
+                mappedData = mappedData.filter(sub => stateSet.has(sub.state));
+            }
+            if (isLocalityManager && userLocalities && userLocalities.length > 0) {
+                const localitySet = new Set(userLocalities);
+                mappedData = mappedData.filter(sub => localitySet.has(sub.locality));
+            }
+        }
+
+        return mappedData;
+    }, [skillMentorshipSubmissions, publicDashboardMode, publicData.submissions, facilityMap, deletedSubmissionIds, canSeeAllMentorshipData, userStates, userLocalities, isLocalityManager]);
 
     // Extract unique visit numbers for the filter dropdown
     const uniqueVisitNumbers = useMemo(() => {
@@ -1980,45 +2069,63 @@ const SkillsMentorshipView = ({
         ).sort((a, b) => new Date(b.date) - new Date(a.date));
     }, [processedSubmissions, user, activeService]);
 
-    // UPDATED to map correctly between authenticated and unauthenticated sets AND extract project!
-    // OPTIMISTIC UPDATE APPLIED: Filters out deletedReportIds and Soft Deletes
+    // UPDATED: Filter visit reports based on role assignment with English Key Normalization
     const processedVisitReports = useMemo(() => {
         const rawImnci = publicDashboardMode ? publicData.imnci : imnciVisitReports;
         const rawEenc = publicDashboardMode ? publicData.eenc : eencVisitReports;
         
         const mapReport = (rep, serviceType) => {
-            const fac = facilityMap.get(rep.facilityId);
-            const projectInfo = rep.project || fac?.project_name || fac?.['المشروع'] || fac?.project || fac?.['الشركاء_الداعمين'] || fac?.['المنظمة_الداعمة'] || 'N/A';
+            const fac = facilityMap.get(rep.facilityId || rep.fullData?.facilityId);
+            const projectInfo = rep.project || rep.fullData?.project || fac?.project_name || fac?.['المشروع'] || fac?.project || fac?.['الشركاء_الداعمين'] || fac?.['المنظمة_الداعمة'] || 'N/A';
             
+            const rawState = rep.state || rep.fullData?.state || fac?.['الولاية'] || 'N/A';
+            const rawLocality = rep.locality || rep.fullData?.locality || fac?.['المحلية'] || 'N/A';
+            
+            const normState = normalizeState(rawState);
+            const normLocality = normalizeLocality(normState, rawLocality);
+
             return {
                 id: rep.id,
                 service: serviceType,
-                facilityId: rep.facilityId || null,
-                facilityName: rep.facilityName || 'N/A',
-                state: rep.state || 'N/A',
-                locality: rep.locality || 'N/A',
-                visitDate: rep.visitDate || rep.visit_date || rep.date || 'N/A',
-                visitNumber: rep.visitNumber || null, 
-                mentorEmail: rep.mentorEmail || null,
-                mentorName: rep.mentorName || null,
-                mentorDisplay: rep.mentorName || rep.mentorEmail || 'N/A',
+                facilityId: rep.facilityId || rep.fullData?.facilityId || null,
+                facilityName: rep.facilityName || rep.fullData?.facilityName || fac?.['اسم_المؤسسة'] || 'N/A',
+                state: normState,
+                locality: normLocality,
+                visitDate: rep.visitDate || rep.fullData?.visitDate || rep.visit_date || rep.date || 'N/A',
+                visitNumber: rep.visitNumber || rep.fullData?.visitNumber || null, 
+                mentorEmail: rep.mentorEmail || rep.fullData?.mentorEmail || null,
+                mentorName: rep.mentorName || rep.fullData?.mentorName || null,
+                mentorDisplay: rep.mentorName || rep.fullData?.mentorName || rep.mentorEmail || rep.fullData?.mentorEmail || 'N/A',
                 project: projectInfo, 
-                fullData: rep
+                fullData: rep.fullData || rep
             };
         };
         
         const imnci = (rawImnci || []).map(rep => mapReport(rep, 'IMNCI'));
         const eenc = (rawEenc || []).map(rep => mapReport(rep, 'EENC'));
 
-        const allReports = [...imnci, ...eenc];
-        return allReports.filter(rep => 
+        let allReports = [...imnci, ...eenc];
+        allReports = allReports.filter(rep => 
             rep.service === activeService && 
             !deletedReportIds.has(rep.id) && 
             rep.fullData?.isDeleted !== true && 
-            rep.fullData?.isDeleted !== "true" // SOFT DELETE FILTER
+            rep.fullData?.isDeleted !== "true"
         );
 
-    }, [imnciVisitReports, eencVisitReports, activeService, publicDashboardMode, publicData, deletedReportIds, facilityMap]);
+        // Apply Role-Based Filtering AFTER Normalization
+        if (!canSeeAllMentorshipData) {
+            if (userStates && userStates.length > 0) {
+                const stateSet = new Set(userStates);
+                allReports = allReports.filter(rep => stateSet.has(rep.state));
+            }
+            if (isLocalityManager && userLocalities && userLocalities.length > 0) {
+                const localitySet = new Set(userLocalities);
+                allReports = allReports.filter(rep => localitySet.has(rep.locality));
+            }
+        }
+
+        return allReports;
+    }, [imnciVisitReports, eencVisitReports, activeService, publicDashboardMode, publicData, deletedReportIds, facilityMap, canSeeAllMentorshipData, userStates, userLocalities, isLocalityManager]);
 
     // NEW: Fetch user's own visit reports
     const currentUserVisitReports = useMemo(() => {
@@ -2219,16 +2326,16 @@ const SkillsMentorshipView = ({
     }, [activeTab, publicDashboardMode]);
 
 
-     const availableStates = useMemo(() => {
+    const availableStates = useMemo(() => {
         const allStates = Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar));
         const userAllowedStates = allStates.filter(sKey =>
-             publicSubmissionMode || publicDashboardMode || !userStates || userStates.length === 0 || userStates.includes(sKey)
+             canSeeAllMentorshipData || !userStates || userStates.length === 0 || userStates.includes(sKey)
         );
         return [
             { key: "", label: "-- اختر الولاية --" },
             ...userAllowedStates.map(sKey => ({ key: sKey, label: STATE_LOCALITIES[sKey].ar }))
         ];
-    }, [userStates, publicSubmissionMode, publicDashboardMode]);
+    }, [userStates, canSeeAllMentorshipData]);
 
     const uniqueSupervisors = useMemo(() => {
         const supervisorMap = new Map();
@@ -2250,11 +2357,17 @@ const SkillsMentorshipView = ({
 
     const availableLocalities = useMemo(() => {
         if (!stateFilter || !STATE_LOCALITIES[stateFilter]) return [];
+        
+        let locs = STATE_LOCALITIES[stateFilter].localities;
+        if (!canSeeAllMentorshipData && isLocalityManager && userLocalities && userLocalities.length > 0) {
+             locs = locs.filter(l => userLocalities.includes(l.en) || userLocalities.includes(l.ar));
+        }
+
         return [
             { key: "", label: "Select Locality" },
-            ...STATE_LOCALITIES[stateFilter].localities.sort((a, b) => a.ar.localeCompare(b.ar)).map(l => ({ key: l.en, label: l.ar }))
+            ...locs.sort((a, b) => a.ar.localeCompare(b.ar)).map(l => ({ key: l.en, label: l.ar }))
         ];
-    }, [stateFilter]);
+    }, [stateFilter, canSeeAllMentorshipData, isLocalityManager, userLocalities]);
 
 
      useEffect(() => {
@@ -2264,15 +2377,15 @@ const SkillsMentorshipView = ({
     }, [userStates, publicSubmissionMode, publicDashboardMode]);
 
     useEffect(() => {
-       if (!publicSubmissionMode && !publicDashboardMode && permissions?.manageScope === 'locality' && userLocalities && userLocalities.length === 1) {
+       if (!publicSubmissionMode && !publicDashboardMode && isLocalityManager && userLocalities && userLocalities.length === 1) {
             setSelectedLocality(userLocalities[0]);
         }
-    }, [userLocalities, permissions?.manageScope, publicSubmissionMode, publicDashboardMode]);
+    }, [userLocalities, isLocalityManager, publicSubmissionMode, publicDashboardMode]);
 
 
     const handleStateChange = (e) => {
         setSelectedState(e.target.value);
-        if ((permissions?.manageScope !== 'locality') || publicSubmissionMode) {
+        if (!isLocalityManager || publicSubmissionMode) {
              setSelectedLocality('');
         }
         setSelectedFacilityId('');
@@ -2515,7 +2628,7 @@ const SkillsMentorshipView = ({
         if (publicSubmissionMode || !(userStates && userStates.length === 1)) {
             setSelectedState('');
         }
-        if (publicSubmissionMode || !(permissions?.manageScope === 'locality' && userLocalities && userLocalities.length === 1)) {
+        if (publicSubmissionMode || !(isLocalityManager && userLocalities && userLocalities.length === 1)) {
             setSelectedLocality('');
         }
         setSelectedFacilityId('');
@@ -3400,7 +3513,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     <MentorshipDashboard
                                         allSubmissions={processedSubmissions}
                                         visitReports={processedVisitReports}
-                                        STATE_LOCALITIES={STATE_LOCALITIES}
+                                        STATE_LOCALITIES={dashboardStateLocalities}
                                         activeService={activeService}
                                         isLoading={!publicDashboardMode && (isDataCacheLoading.skillMentorshipSubmissions && skillMentorshipSubmissions === null)}
                                         canEditStatus={permissions?.manageScope === 'federal' || permissions?.canUseFederalManagerAdvancedFeatures}
@@ -3630,7 +3743,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                 <MentorshipDashboard
                                     allSubmissions={processedSubmissions}
                                     visitReports={processedVisitReports}
-                                    STATE_LOCALITIES={STATE_LOCALITIES}
+                                    STATE_LOCALITIES={dashboardStateLocalities}
                                     activeService={activeService}
                                     isLoading={isDataCacheLoading.skillMentorshipSubmissions && skillMentorshipSubmissions === null}
                                     canEditStatus={permissions?.manageScope === 'federal' || permissions?.canUseFederalManagerAdvancedFeatures}
@@ -3803,7 +3916,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
     }
 
     const isStateFilterDisabled = !publicSubmissionMode && !publicDashboardMode && userStates && userStates.length === 1;
-    const isLocalityFilterDisabled = (publicSubmissionMode || publicDashboardMode) ? !selectedState : (permissions?.manageScope === 'locality' || !selectedState);
+    const isLocalityFilterDisabled = (publicSubmissionMode || publicDashboardMode) ? !selectedState : (isLocalityManager || !selectedState);
 
     if (currentView === 'form_setup') {
         const serviceTitleArabic = activeService === 'EENC' 
@@ -3851,7 +3964,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                 
                                 <FormGroup label="المحلية" className="text-right">
                                     <Select value={selectedLocality} onChange={(e) => { setSelectedLocality(e.target.value); setSelectedFacilityId(''); setSelectedHealthWorkerName(''); setSelectedWorkerOriginalData(null); setWorkerJobTitle(''); setWorkerTrainingDate(''); setWorkerPhone(''); setIsWorkerInfoChanged(false); setIsReadyToStart(false); }} disabled={isLocalityFilterDisabled || !!editingSubmission}>
-                                         {(!publicSubmissionMode && !publicDashboardMode && permissions?.manageScope === 'locality') ? (
+                                         {(!publicSubmissionMode && !publicDashboardMode && isLocalityManager) ? (
                                             userLocalities && userLocalities.length > 0 ? (
                                                 userLocalities.map(locEn => {
                                                     const locAr = selectedState && STATE_LOCALITIES[selectedState]?.localities.find(l => l.en === locEn)?.ar || locEn;
@@ -4223,7 +4336,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                             <MentorshipDashboard
                                 allSubmissions={processedSubmissions}
                                 visitReports={processedVisitReports}
-                                STATE_LOCALITIES={STATE_LOCALITIES}
+                                STATE_LOCALITIES={dashboardStateLocalities}
                                 activeService={activeService}
                                 isLoading={isDataCacheLoading.skillMentorshipSubmissions && skillMentorshipSubmissions === null}
                                 canEditStatus={permissions?.manageScope === 'federal' || permissions?.canUseFederalManagerAdvancedFeatures}
@@ -4260,7 +4373,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     setActiveDashboardWorkerType("");
                                 }}
 
-                                 activ eWorkerName={activeDashboardWorkerName}
+                                 activeWorkerName={activeDashboardWorkerName}
                                 onWorkerNameChange={(value) => {
                                     setActiveDashboardWorkerName(value);
                                 }}
@@ -4288,7 +4401,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
 
     return null;
 };
-// Wrap the main view to provide Language Translation Context safely
+
 export default function SkillsMentorshipViewWrapper(props) {
     return (
         <LanguageProvider>

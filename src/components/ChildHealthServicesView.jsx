@@ -832,8 +832,7 @@ const ChildHealthServicesView = ({
     userLocalities,
     canBulkUploadFacilities,
     canCleanFacilityData,
-    canFindFacilityDuplicates,
-    canCheckFacilityLocations
+    canFindFacilityDuplicates
 }) => {
     
     const [view, setView] = useState('action_menu');
@@ -846,14 +845,17 @@ const ChildHealthServicesView = ({
     const handleActionMenuClick = (action) => {
         if (action === 'show_list') {
             setView('list');
-        } else if (action === 'share_imnci') {
-            setUpdateSelectionService('IMNCI');
-        } else if (action === 'share_eenc') {
-            setUpdateSelectionService('EENC');
-        } else if (action === 'share_neonatal') {
-            setUpdateSelectionService('Neonatal');
-        } else if (action === 'share_etat') {
-            setUpdateSelectionService('Critical Care'); 
+        } else {
+            if (action === 'share_imnci') setUpdateSelectionService('IMNCI');
+            else if (action === 'share_eenc') setUpdateSelectionService('EENC');
+            else if (action === 'share_neonatal') setUpdateSelectionService('Neonatal');
+            else if (action === 'share_etat') setUpdateSelectionService('Critical Care'); 
+
+            setUpdateSelectionData({
+                state: userStates?.length === 1 ? userStates[0] : '',
+                locality: userLocalities?.length === 1 ? userLocalities[0] : '',
+                facilityId: ''
+            });
         }
     };
 
@@ -883,12 +885,14 @@ const ChildHealthServicesView = ({
     const { 
         healthFacilities, 
         fetchHealthFacilities, 
-        isFacilitiesLoading,
+        isLoading,
         fetchPendingFacilitatorSubmissions,
         fetchPendingFederalSubmissions,
         fetchPendingStateSubmissions,
         fetchPendingLocalitySubmissions
     } = useDataCache();
+
+    const isFacilitiesLoading = isLoading?.healthFacilities || healthFacilities === null;
 
     // --- APPLY SOFT DELETE FILTER TO ALL CACHED DATA ---
     const activeHealthFacilities = useMemo(() => {
@@ -901,8 +905,8 @@ const ChildHealthServicesView = ({
     const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
     const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
     const [isCleanupModalOpen, setIsCleanupModalOpen] = useState(false);
-    const [stateFilter, setStateFilter] = useState('');
-    const [localityFilter, setLocalityFilter] = useState('');
+    const [stateFilter, setStateFilter] = useState(userStates?.length === 1 ? userStates[0] : '');
+    const [localityFilter, setLocalityFilter] = useState(userLocalities?.length === 1 ? userLocalities[0] : '');
     const [facilityTypeFilter, setFacilityTypeFilter] = useState('');
     const [functioningFilter, setFunctioningFilter] = useState('');
     const [projectFilter, setProjectFilter] = useState('');
@@ -919,12 +923,10 @@ const ChildHealthServicesView = ({
     const hasFetchedPendingRef = useRef(false); 
     const [isMapModalOpen, setIsMapModalOpen] = useState(false);
     const [facilityForMap, setFacilityForMap] = useState(null);
-    const [localityBoundaries, setLocalityBoundaries] = useState(null);
     const [isMismatchModalOpen, setIsMismatchModalOpen] = useState(false);
     const [mismatchedFacilities, setMismatchedFacilities] = useState([]);
-    const [isCheckingLocations, setIsCheckingLocations] = useState(false);
     const auth = getAuth();
-    const [hasManuallySelected, setHasManuallySelected] = useState(false);
+    const [hasManuallySelected, setHasManuallySelected] = useState(!!(userStates?.length === 1 || userLocalities?.length === 1));
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(25);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -970,21 +972,6 @@ const ChildHealthServicesView = ({
         return [ { key: "", label: "-- Select State --" }, ...allStates .filter(sKey => userStates.includes(sKey)) .map(sKey => ({ key: sKey, label: STATE_LOCALITIES[sKey].ar })) ];
     }, [userStates]);
 
-    useEffect(() => {
-        const fetchBoundaries = async () => {
-            try {
-                const response = await fetch('./sudan_localities.json');
-                if (!response.ok) throw new Error('Network response was not ok');
-                const data = await response.json();
-                setLocalityBoundaries(data);
-            } catch (error) {
-                console.error("Failed to load locality boundaries:", error);
-                setToast({ show: true, message: 'Could not load map boundaries for location checking.', type: 'error' });
-            }
-        };
-        fetchBoundaries();
-    }, [setToast]);
-
     const getCurrentFilters = useCallback(() => {
         return {};
     }, []);
@@ -1007,30 +994,6 @@ const ChildHealthServicesView = ({
             setToast({ show: true, message: `Failed to update location: ${error.message}`, type: 'error' });
         }
     };
-
-   const handleCheckLocations = useCallback(() => {
-        if (!localityBoundaries || !activeHealthFacilities) { setToast({ show: true, message: 'Boundary data or facility list is not yet loaded.', type: 'info' }); return; }
-        setIsCheckingLocations(true);
-        const stateKeyToEnName = Object.entries(STATE_LOCALITIES).reduce((acc, [key, value]) => { acc[key] = value.en; return acc; }, {});
-        const mismatches = activeHealthFacilities.filter(facility => {
-            const lat = parseFloat(facility._الإحداثيات_latitude);
-            const lng = parseFloat(facility._الإحداثيات_longitude);
-            const stateKey = facility['الولاية'];
-            const localityKey = facility['المحلية'];
-            if (isNaN(lat) || isNaN(lng) || !stateKey || !localityKey || stateKey === 'NOT_ASSIGNED') { return false; }
-            const facilityPoint = point([lng, lat]);
-            const stateEn = stateKeyToEnName[stateKey];
-            if (!stateEn) return false;
-            const preciseBoundaryFeature = localityBoundaries.features.find(f => f.properties.state_en?.toLowerCase() === stateEn.toLowerCase() && f.properties.locality_e?.toLowerCase() === String(localityKey || '').toLowerCase() );
-            if (preciseBoundaryFeature) { return !booleanPointInPolygon(facilityPoint, preciseBoundaryFeature.geometry); }
-            const stateBoundaryFeatures = localityBoundaries.features.filter(f => f.properties.state_en?.toLowerCase() === stateEn.toLowerCase() );
-            if (stateBoundaryFeatures.length > 0) { const isWithinState = stateBoundaryFeatures.some(f => booleanPointInPolygon(facilityPoint, f.geometry) ); if (!isWithinState) { return true; } } else { console.warn(`No boundary features found for state: ${stateEn}`); }
-            return false;
-        });
-        setMismatchedFacilities(mismatches);
-        setIsMismatchModalOpen(true);
-        setIsCheckingLocations(false);
-    }, [localityBoundaries, activeHealthFacilities, setToast]);
 
     const handleFixMismatch = (facility) => { setIsMismatchModalOpen(false); handleOpenMapModal(facility); };
 
@@ -1529,7 +1492,6 @@ const ChildHealthServicesView = ({
                         <div className="flex flex-wrap gap-2">
                              {canFindFacilityDuplicates && ( <Button variant="secondary" onClick={() => setIsDuplicateModalOpen(true)}>Find Duplicates</Button> )}
                              {canCleanFacilityData && ( <Button variant="secondary" onClick={() => setIsCleanupModalOpen(true)}>Clean Data</Button> )}
-                             {canCheckFacilityLocations && ( <Button variant="secondary" onClick={handleCheckLocations} disabled={isCheckingLocations || !localityBoundaries}>{isCheckingLocations ? 'Checking...' : 'Check Locations'}</Button> )}
                         </div>
                     </div>
 
@@ -1663,29 +1625,50 @@ const ChildHealthServicesView = ({
                 <div className="p-6 space-y-4" dir="rtl">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormGroup label="الولاية">
-                             <Select value={updateSelectionData.state} onChange={(e) => setUpdateSelectionData({ state: e.target.value, locality: '', facilityId: '' })}>
+                             <Select 
+                                value={updateSelectionData.state} 
+                                onChange={(e) => setUpdateSelectionData({ state: e.target.value, locality: '', facilityId: '' })}
+                                disabled={userStates && userStates.length === 1}
+                             >
                                   <option value="">اختر الولاية</option>
-                                  {Object.keys(STATE_LOCALITIES).map(k => <option key={k} value={k}>{STATE_LOCALITIES[k].ar}</option>)}
+                                  {Object.keys(STATE_LOCALITIES)
+                                    .filter(s => !userStates || userStates.length === 0 || userStates.includes(s))
+                                    .map(k => <option key={k} value={k}>{STATE_LOCALITIES[k].ar}</option>)}
                              </Select>
                         </FormGroup>
                         <FormGroup label="المحلية">
-                             <Select value={updateSelectionData.locality} onChange={(e) => setUpdateSelectionData({ ...updateSelectionData, locality: e.target.value, facilityId: '' })} disabled={!updateSelectionData.state}>
+                             <Select 
+                                value={updateSelectionData.locality} 
+                                onChange={(e) => setUpdateSelectionData({ ...updateSelectionData, locality: e.target.value, facilityId: '' })} 
+                                disabled={!updateSelectionData.state || (userLocalities && userLocalities.length === 1)}
+                             >
                                   <option value="">اختر المحلية</option>
-                                  {updateSelectionData.state && STATE_LOCALITIES[updateSelectionData.state]?.localities.map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
+                                  {updateSelectionData.state && STATE_LOCALITIES[updateSelectionData.state]?.localities
+                                    .filter(l => !userLocalities || userLocalities.length === 0 || userLocalities.includes(l.en))
+                                    .map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
                              </Select>
                         </FormGroup>
                     </div>
                     
                     {updateSelectionData.locality && (
                         <div className="mt-4 animate-fade-in">
-                             <FormGroup label="المنشأة الصحية">
-                                 <Select value={updateSelectionData.facilityId} onChange={(e) => setUpdateSelectionData({ ...updateSelectionData, facilityId: e.target.value })}>
-                                      <option value="">اختر المنشأة...</option>
-                                      {facilitiesToDisplay.map(f => <option key={f.id} value={f.id}>{f['اسم_المؤسسة']}</option>)}
-                                 </Select>
-                             </FormGroup>
-                             {isShowingAll && <p className="text-amber-600 font-medium text-xs mt-2 bg-amber-50 p-2 rounded border border-amber-100">لا توجد منشآت مسجلة بهذه الخدمة. يتم عرض جميع المنشآت في المحلية.</p>}
-                             {facilitiesInLocality.length === 0 && <p className="text-red-600 font-bold text-sm mt-2 bg-red-50 p-2 rounded border border-red-100">لا توجد مؤسسات مطابقة للبحث. (No facilities match these filters)</p>}
+                             {isFacilitiesLoading ? (
+                                 <div className="flex flex-col items-center justify-center p-4">
+                                     <Spinner size="sm" />
+                                     <p className="text-sm font-semibold text-gray-600 mt-2">جاري التحميل... (Loading...)</p>
+                                 </div>
+                             ) : (
+                                 <>
+                                     <FormGroup label="المنشأة الصحية">
+                                         <Select value={updateSelectionData.facilityId} onChange={(e) => setUpdateSelectionData({ ...updateSelectionData, facilityId: e.target.value })}>
+                                              <option value="">اختر المنشأة...</option>
+                                              {facilitiesToDisplay.map(f => <option key={f.id} value={f.id}>{f['اسم_المؤسسة']}</option>)}
+                                         </Select>
+                                     </FormGroup>
+                                     {isShowingAll && <p className="text-amber-600 font-medium text-xs mt-2 bg-amber-50 p-2 rounded border border-amber-100">لا توجد منشآت مسجلة بهذه الخدمة. يتم عرض جميع المنشآت في المحلية.</p>}
+                                     {facilitiesInLocality.length === 0 && <p className="text-red-600 font-bold text-sm mt-2 bg-red-50 p-2 rounded border border-red-100">لا توجد مؤسسات مطابقة للبحث. (No facilities match these filters)</p>}
+                                 </>
+                             )}
                         </div>
                     )}
                     
@@ -1699,7 +1682,7 @@ const ChildHealthServicesView = ({
                                     setIsFormModalOpen(true);
                                 }
                             }} 
-                            disabled={!updateSelectionData.facilityId}
+                            disabled={!updateSelectionData.facilityId || isFacilitiesLoading}
                         >
                             متابعة لتحديث البيانات
                         </Button>

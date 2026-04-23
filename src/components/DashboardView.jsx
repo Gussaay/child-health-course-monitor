@@ -19,7 +19,7 @@ const Spinner = ({ size = 'md' }) => (
     <div className={`animate-spin rounded-full border-sky-600 border-t-transparent ${size === 'sm' ? 'h-4 w-4 border-2' : 'h-8 w-8 border-2'} mx-auto`}></div>
 );
 
-function DashboardView() {
+function DashboardView({ userStates, userLocalities }) {
     const { fetchCourses, fetchParticipants, fetchHealthFacilities, isLoading, healthFacilities } = useDataCache();
 
     const [viewType, setViewType] = useState('combinedCoverage'); 
@@ -82,11 +82,11 @@ function DashboardView() {
             ) : (
                 <div className="px-4 md:px-8 pt-6 pb-12 w-full max-w-screen-2xl mx-auto">
                     {/* Render Coverage Dashboards */}
-                    {viewType === 'combinedCoverage' && <CombinedServiceDashboard />}
-                    {viewType === 'neonatalCoverage' && <NeonatalCoverageDashboard />}
-                    {viewType === 'eencCoverage' && <EENCCoverageDashboard />}
-                    {viewType === 'imnciCoverage' && <IMNCICoverageDashboard />}
-                    {viewType === 'criticalCoverage' && <CriticalCareCoverageDashboard />}
+                    {viewType === 'combinedCoverage' && <CombinedServiceDashboard userStates={userStates} userLocalities={userLocalities} />}
+                    {viewType === 'neonatalCoverage' && <NeonatalCoverageDashboard userStates={userStates} userLocalities={userLocalities} />}
+                    {viewType === 'eencCoverage' && <EENCCoverageDashboard userStates={userStates} userLocalities={userLocalities} />}
+                    {viewType === 'imnciCoverage' && <IMNCICoverageDashboard userStates={userStates} userLocalities={userLocalities} />}
+                    {viewType === 'criticalCoverage' && <CriticalCareCoverageDashboard userStates={userStates} userLocalities={userLocalities} />}
                 </div>
             )}
         </div>

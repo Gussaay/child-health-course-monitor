@@ -123,6 +123,9 @@ export const DataProvider = ({ children }) => {
 
                 if (fetchingRef.current[filterKey]) return cacheRef.current.healthFacilities; 
                 fetchingRef.current[filterKey] = true;
+                
+                // Always set loading to true when starting a fresh/forced fetch
+                setIsLoading(prev => ({ ...prev, healthFacilities: true }));
 
                 // 2. ALWAYS Try fetching from Firebase IndexedDB Cache first as our "Base" to merge into
                 let localData = [];
@@ -138,10 +141,10 @@ export const DataProvider = ({ children }) => {
                                 setCache(prev => ({ ...prev, healthFacilities: localData }));
                                 currentFacilitiesFilterKeyRef.current = filterKey;
                             }
-                            setIsLoading(prev => prev.healthFacilities === false ? prev : { ...prev, healthFacilities: false });
                             
                             // Stop if we aren't forcing server
                             if (!shouldForceServer) {
+                                setIsLoading(prev => ({ ...prev, healthFacilities: false }));
                                 fetchingRef.current[filterKey] = false;
                                 return localData; 
                             }
@@ -151,10 +154,6 @@ export const DataProvider = ({ children }) => {
                     }
                 } else {
                     localData = internalCache[filterKey];
-                }
-
-                if (!localData || localData.length === 0) {
-                    setIsLoading(prev => prev.healthFacilities === true ? prev : { ...prev, healthFacilities: true });
                 }
 
                 // 3. Fetch ONLY Deltas from Server
@@ -201,7 +200,7 @@ export const DataProvider = ({ children }) => {
                     }
                     return localData || defaultEmpty;
                 } finally {
-                    setIsLoading(prev => prev.healthFacilities === false ? prev : { ...prev, healthFacilities: false });
+                    setIsLoading(prev => ({ ...prev, healthFacilities: false }));
                     fetchingRef.current[filterKey] = false;
                 }
             };
@@ -218,11 +217,16 @@ export const DataProvider = ({ children }) => {
             const shouldForceServer = force || isStale;
 
             if (hasData && !shouldForceServer && !isDefaultSettings) {
+                // Ensure loading is false if returning cached
+                setIsLoading(prev => prev[key] === false ? prev : { ...prev, [key]: false });
                 return currentCache;
             }
 
             if (fetchingRef.current[key]) return currentCache;
             fetchingRef.current[key] = true;
+            
+            // Always set loading to true when starting a fresh/forced fetch
+            setIsLoading(prev => ({ ...prev, [key]: true }));
             
             // 2. ALWAYS Try Firebase Cache first to establish our "Base"
             let localData = hasData ? currentCache : [];
@@ -233,9 +237,9 @@ export const DataProvider = ({ children }) => {
                         localData = cachedData;
                         
                         setCache(prev => ({ ...prev, [key]: localData }));
-                        setIsLoading(prev => prev[key] === false ? prev : { ...prev, [key]: false });
                         
                         if (!shouldForceServer) {
+                            setIsLoading(prev => ({ ...prev, [key]: false }));
                             fetchingRef.current[key] = false;
                             return localData;
                         }
@@ -243,10 +247,6 @@ export const DataProvider = ({ children }) => {
                 } catch (e) {
                     // Silent catch, fallback
                 }
-            }
-
-            if (!localData || (Array.isArray(localData) && localData.length === 0)) {
-                setIsLoading(prev => prev[key] === true ? prev : { ...prev, [key]: true });
             }
             
             // 3. Fetch ONLY Deltas from Server
@@ -282,7 +282,7 @@ export const DataProvider = ({ children }) => {
                 console.error(`Failed to fetch ${key}:`, error);
                 return localData || (key.includes('Settings') ? { isActive: false, openCount: 0 } : []);
             } finally {
-                setIsLoading(prev => prev[key] === false ? prev : { ...prev, [key]: false });
+                setIsLoading(prev => ({ ...prev, [key]: false }));
                 fetchingRef.current[key] = false;
             }
         };
@@ -318,16 +318,14 @@ export const DataProvider = ({ children }) => {
     }), [createFetcher]);
 
     useEffect(() => {
-        // --- THIS IS THE FIX ---
-        // If the user is null (like on a public link), we empty the cache but we 
-        // strictly force all loading flags to FALSE so the public dashboard doesn't hang.
+        // If the user is null (like on a public link), we don't necessarily want to nuke the 
+        // local cache if they are just viewing public data. However, we MUST ensure 
+        // the default initial loading flags don't stay stuck if no component triggers a fetch.
         if (!user) {
-            setCache({
-                courses: null, participants: null, facilitators: null, funders: null, federalCoordinators: null, stateCoordinators: null, localityCoordinators: null, healthFacilities: null, skillMentorshipSubmissions: null, imnciVisitReports: null, eencVisitReports: null, participantTests: null, pendingFacilitatorSubmissions: null, facilitatorApplicationSettings: { isActive: false, openCount: 0 }, pendingFederalSubmissions: null, pendingStateSubmissions: null, pendingLocalitySubmissions: null, coordinatorApplicationSettings: { isActive: false, openCount: 0 }, projects: null, masterPlans: null, operationalPlans: null, unitMeetings: null,
-            });
-            setIsLoading({
-                courses: false, participants: false, facilitators: false, healthFacilities: false, skillMentorshipSubmissions: false, imnciVisitReports: false, eencVisitReports: false, participantTests: false, pendingFacilitatorSubmissions: false, facilitatorApplicationSettings: false, pendingFederalSubmissions: false, pendingStateSubmissions: false, pendingLocalitySubmissions: false, coordinatorApplicationSettings: false, projects: false, masterPlans: false, operationalPlans: false, unitMeetings: false,
-            });
+            // We do NOT clear the cache here anymore, so public links can still read indexedDB.
+            // But we do need to make sure we don't indefinitely lock the UI in a loading state
+            // if a fetch isn't explicitly called by the public component.
+            // The fetchers themselves will handle toggling the loading state properly now.
             setLastFacilitiesFetchTime({});
             facilitiesFilterCacheRef.current = {};
             currentFacilitiesFilterKeyRef.current = 'all';
