@@ -1,9 +1,9 @@
 // src/components/LocalityPlanView.jsx
 import React, { useState, useMemo, useEffect } from 'react';
-import { Card, CardBody, Button, FormGroup, Select, EmptyState, PageHeader, Spinner } from './CommonComponents';
+import { Card, CardBody, Button, FormGroup, Select, PageHeader, Spinner } from './CommonComponents';
 import { upsertMasterPlan } from '../data';
 import { useDataCache } from '../DataContext';
-import { Save, Plus, Edit, Trash2, X, ChevronDown, ChevronUp, Layers, BarChart2, PieChart, Users, Calendar } from 'lucide-react';
+import { Save, Plus, Edit, Trash2, X, ChevronDown, ChevronUp, Layers, BarChart2, PieChart, Users, Calendar, AlertCircle } from 'lucide-react';
 import { STATE_LOCALITIES } from './constants';
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -31,7 +31,6 @@ const LOCALITY_TEMPLATE = [
     { axis: 'المعلومات', name: 'تنفيذ اجتماع شهري مع الكوادر المطبقة' }
 ];
 
-// تهيئة الحقول بقيم فارغة (Empty Strings) لتسهيل الكتابة ومنع فخ الصفر
 const generateTemplateInterventions = () => {
     return LOCALITY_TEMPLATE.map((item, idx) => ({
         id: `loc_inv_${Date.now()}_${idx}`,
@@ -49,7 +48,6 @@ const generateTemplateInterventions = () => {
 export default function LocalityPlanView({ permissions, userStates, userLocalities }) {
     const { masterPlans, fetchMasterPlans, isLoading } = useDataCache();
     
-    // تحديد الصلاحيات بدقة
     const isLocalityManager = permissions?.role === 'locality_manager' || permissions?.manageScope === 'locality';
     const isSuperUser = permissions?.canUseSuperUserAdvancedFeatures;
     const canEditPlan = isLocalityManager || isSuperUser;
@@ -57,12 +55,11 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
 
     const [globalFilter, setGlobalFilter] = useState({
         year: CURRENT_YEAR,
-        quarter: '', // خيار جديد لفلترة الخطط حسب الربع
+        quarter: '', 
         state: isFederalManager ? '' : (userStates?.[0] || ''),
         locality: isLocalityManager ? (userLocalities?.[0] || '') : ''
     });
 
-    // تحديث فلتر المحلية تلقائياً إذا تأخر تحميل بيانات المستخدم
     useEffect(() => {
         if (isLocalityManager && userLocalities && userLocalities.length > 0) {
             setGlobalFilter(prev => {
@@ -75,6 +72,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
     }, [isLocalityManager, userLocalities]);
 
     const [isEditing, setIsEditing] = useState(false);
+    const [isSaving, setIsSaving] = useState(false); 
     const [currentPlan, setCurrentPlan] = useState(null);
     const [expandedPlanId, setExpandedPlanId] = useState(null);
 
@@ -82,18 +80,16 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
         fetchMasterPlans();
     }, [fetchMasterPlans]);
 
-    // فلترة الخطط القاعدية (الربعية)
     const localityPlans = useMemo(() => {
         return (masterPlans || [])
             .filter(p => !p.isDeleted && p.level === 'locality')
             .filter(p => (p.year || CURRENT_YEAR) === globalFilter.year)
             .filter(p => isFederalManager || !globalFilter.state || p.state === globalFilter.state)
             .filter(p => !globalFilter.locality || p.locality === globalFilter.locality)
-            .filter(p => !globalFilter.quarter || p.quarter === globalFilter.quarter) // الفلترة بالربع
+            .filter(p => !globalFilter.quarter || p.quarter === globalFilter.quarter) 
             .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
     }, [masterPlans, globalFilter, isFederalManager]);
 
-    // الداشبورد: يجمع تلقائياً ميزانيات ومستهدفات الأرباع المعروضة
     const dashboardStats = useMemo(() => {
         let totalBudget = 0; let totalTarget = 0; let activeLocalities = new Set();
         localityPlans.forEach(plan => {
@@ -110,14 +106,14 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
         const assignedLocality = isLocalityManager ? (userLocalities?.[0] || '') : globalFilter.locality;
         
         if (!assignedLocality) {
-            alert("الرجاء تحديد المحلية من الفلاتر أولاً قبل إضافة الخطة.");
+            alert("الرجاء تحديد المحلية من الفلاتر أولاً للتمكن من إضافة خطة ربعية جديدة.");
             return;
         }
 
         setCurrentPlan({
             level: 'locality',
             year: globalFilter.year,
-            quarter: globalFilter.quarter || QUARTERS_LIST[0], // افتراضياً الربع الأول
+            quarter: globalFilter.quarter || QUARTERS_LIST[0], 
             state: globalFilter.state || (isFederalManager ? Object.keys(STATE_LOCALITIES)[0] : userStates[0]),
             locality: assignedLocality,
             expectedOutcome: 'خطة قاعدية (ربعية)',
@@ -128,29 +124,54 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
 
     const handleSaveMaster = async (e) => {
         if (e) e.preventDefault();
-        if (!currentPlan.state || !currentPlan.locality || !currentPlan.quarter) return alert("الرجاء التأكد من استكمال البيانات (الولاية، المحلية، الربع).");
-        await upsertMasterPlan(currentPlan);
-        fetchMasterPlans(true);
-        setIsEditing(false);
+        
+        if (!currentPlan.state) return alert("الرجاء تحديد الولاية.");
+        if (!currentPlan.locality) return alert("الرجاء تحديد المحلية.");
+        if (!currentPlan.quarter) return alert("الرجاء تحديد الربع.");
+
+        setIsSaving(true);
+        
+        try {
+            const payloadToSave = {
+                ...currentPlan,
+                interventions: currentPlan.interventions.map(inv => ({
+                    id: inv.id || `loc_inv_${Date.now()}_${Math.random()}`,
+                    axis: inv.axis || '',
+                    name: inv.name || '',
+                    indicator: inv.indicator || 'عدد',
+                    planned: Number(inv.planned) || 0,
+                    baseline: Number(inv.baseline) || 0,
+                    target: Number(inv.target) || 0,
+                    totalCost: Number(inv.totalCost) || 0,
+                    notes: inv.notes || ''
+                }))
+            };
+
+            await upsertMasterPlan(payloadToSave);
+            await fetchMasterPlans(true);
+            setIsEditing(false);
+        } catch (error) {
+            console.error("Firebase Save Error:", error);
+            alert("حدث خطأ أثناء الحفظ. تأكد من تعديل الصلاحيات في Firebase.\nالتفاصيل: " + error.message);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const updateIntervention = (idx, field, value) => {
         const updated = [...currentPlan.interventions];
         
-        // تنظيف القيمة إذا كانت للحقول الرقمية لتجنب إدخال نصوص بالخطأ
-        let cleanValue = value;
+        let cleanValue = value ? String(value) : '';
         if (['planned', 'baseline', 'target', 'totalCost'].includes(field)) {
-            // إزالة أي أحرف غير رقمية للحفاظ على نظافة الإدخال في الموبايل
-            cleanValue = value === '' ? '' : value.replace(/[^0-9]/g, '');
+            cleanValue = cleanValue.replace(/[^0-9]/g, '');
         }
 
         updated[idx][field] = cleanValue;
         
-        // المستهدف = المُخطط + الوضع الابتدائي (فقط إذا تم تعديل أحدهما)
         if (field === 'planned' || field === 'baseline') {
             const pVal = Number(updated[idx].planned) || 0;
             const bVal = Number(updated[idx].baseline) || 0;
-            updated[idx].target = (pVal + bVal).toString(); // نحتفظ بها كنص لتناسق الحقول
+            updated[idx].target = (pVal + bVal).toString(); 
         }
         
         setCurrentPlan({ ...currentPlan, interventions: updated });
@@ -158,14 +179,9 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
 
     if (isLoading.masterPlans) return <Spinner />;
 
-    // فئات CSS للتصميم المناسب للموبايل (ارتفاع الحقول 48px لتكون مساحة اللمس ممتازة)
     const inputClass = "w-full h-full min-h-[48px] px-2 py-2 outline-none text-right text-xs sm:text-sm bg-transparent focus:bg-white focus:ring-2 focus:ring-teal-500 rounded transition-all";
-    // استخدام type="text" مع inputMode="numeric" هو الحل السحري لتطبيقات الموبايل
     const numInputClass = "w-full h-full min-h-[48px] px-1 py-2 outline-none text-center font-bold text-sm sm:text-base bg-transparent focus:bg-white focus:ring-2 focus:ring-teal-500 rounded transition-all";
 
-    // =====================================
-    // Modal: إدخال الخطة القاعدية الربعية
-    // =====================================
     if (isEditing && currentPlan) {
         return (
             <div className="fixed inset-0 z-50 bg-gray-100 flex flex-col animate-in fade-in" dir="rtl">
@@ -175,20 +191,25 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                         <p className="text-xs sm:text-sm text-gray-500 mt-1">تعبئة مستهدفات وميزانيات الأنشطة للربع المختار.</p>
                     </div>
                     <div className="flex gap-2 w-full sm:w-auto">
-                        <Button variant="secondary" onClick={() => setIsEditing(false)} className="flex-1 sm:flex-none justify-center h-12"><X size={18} className="ml-1"/> إغلاق</Button>
-                        <Button variant="primary" onClick={handleSaveMaster} className="flex-1 sm:flex-none justify-center h-12"><Save size={18} className="ml-1"/> حفظ الخطة</Button>
+                        <Button variant="secondary" onClick={() => setIsEditing(false)} disabled={isSaving} className="flex-1 sm:flex-none justify-center h-12">
+                            <X size={18} className="ml-1"/> إغلاق
+                        </Button>
+                        <Button variant="primary" onClick={handleSaveMaster} disabled={isSaving} className="flex-1 sm:flex-none justify-center h-12">
+                            {isSaving ? <Spinner size="sm" className="ml-2" /> : <Save size={18} className="ml-1"/>}
+                            {isSaving ? 'جاري الحفظ...' : 'حفظ الخطة'}
+                        </Button>
                     </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-2 sm:p-4 relative">
                     <div className="bg-white rounded-lg shadow-sm border mb-4 p-4 grid grid-cols-1 sm:grid-cols-4 gap-4">
                         <FormGroup label="السنة">
-                            <Select value={currentPlan.year} onChange={(e) => setCurrentPlan({...currentPlan, year: Number(e.target.value)})} disabled className="h-12">
+                            <Select value={currentPlan.year} onChange={(e) => setCurrentPlan({...currentPlan, year: Number(e.target.value)})} disabled className="h-12 border-gray-300 bg-gray-50 text-gray-500">
                                 {YEAR_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                             </Select>
                         </FormGroup>
-                        <FormGroup label="الربع">
-                            <Select value={currentPlan.quarter} onChange={(e) => setCurrentPlan({...currentPlan, quarter: e.target.value})} className="h-12 border-teal-300 focus:ring-teal-500">
+                        <FormGroup label="الربع المستهدف (الفترة)">
+                            <Select value={currentPlan.quarter} onChange={(e) => setCurrentPlan({...currentPlan, quarter: e.target.value})} className="h-12 border-teal-300 focus:ring-teal-500 font-bold text-teal-800">
                                 {QUARTERS_LIST.map(q => <option key={q} value={q}>{q}</option>)}
                             </Select>
                         </FormGroup>
@@ -199,7 +220,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                             {isLocalityManager ? (
                                 <div className="p-3 h-12 border rounded bg-gray-50 font-bold text-gray-600 border-gray-200 flex items-center">{currentPlan.locality}</div>
                             ) : (
-                                <Select value={currentPlan.locality} onChange={(e) => setCurrentPlan({...currentPlan, locality: e.target.value})} className="h-12">
+                                <Select value={currentPlan.locality} onChange={(e) => setCurrentPlan({...currentPlan, locality: e.target.value})} className="h-12 border-teal-300">
                                     <option value="">-- اختر المحلية --</option>
                                     {(STATE_LOCALITIES[currentPlan.state]?.localities || []).map((loc, i) => {
                                         const locLabel = loc?.ar || loc?.en || loc;
@@ -265,20 +286,8 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                                             />
                                         </td>
                                         
-                                        <td className="p-0 border border-gray-200">
-                                            <input 
-                                                type="text" 
-                                                inputMode="numeric" 
-                                                pattern="[0-9]*" 
-                                                className={`${numInputClass} bg-gray-50`} 
-                                                value={inv.totalCost} 
-                                                onChange={(e) => updateIntervention(idx, 'totalCost', e.target.value)} 
-                                                placeholder="0" 
-                                            />
-                                        </td>
-                                        <td className="p-0 border border-gray-200">
-                                            <textarea className={`${inputClass} resize-none`} rows={1} value={inv.notes || ''} onChange={(e) => updateIntervention(idx, 'notes', e.target.value)} placeholder="ملاحظات..." />
-                                        </td>
+                                        <td className="p-0 border border-gray-200"><input type="text" inputMode="numeric" pattern="[0-9]*" className={`${numInputClass} bg-gray-50`} value={inv.totalCost} onChange={(e) => updateIntervention(idx, 'totalCost', e.target.value)} placeholder="0" /></td>
+                                        <td className="p-0 border border-gray-200"><textarea className={`${inputClass} resize-none`} rows={1} value={inv.notes || ''} onChange={(e) => updateIntervention(idx, 'notes', e.target.value)} placeholder="ملاحظات..." /></td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -348,12 +357,15 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                     <h3 className="text-lg font-bold flex items-center gap-2"><Calendar className="text-teal-600"/> قائمة الخطط المرفوعة ({globalFilter.quarter ? globalFilter.quarter : 'كل أرباع العام'})</h3>
                     {!canEditPlan && <p className="text-xs text-orange-600 font-bold mt-1">صلاحيات العرض فقط (المستوى الاتحادي/الولائي لا يملك حق التعديل المباشر).</p>}
                 </div>
-                {canEditPlan && <Button onClick={handleCreateNewMaster} className="w-full sm:w-auto justify-center bg-teal-600 hover:bg-teal-700 text-white border-0 h-12 sm:h-auto"><Plus size={18} className="ml-2"/> إدخال خطة ربعية جديدة</Button>}
+                {canEditPlan && <Button onClick={handleCreateNewMaster} className="w-full sm:w-auto justify-center bg-teal-600 hover:bg-teal-700 text-white border-0 py-3 sm:py-2 h-12 sm:h-auto"><Plus size={18} className="ml-2"/> إدخال خطة ربعية جديدة</Button>}
             </div>
 
             {/* --- PLANS LIST --- */}
             {localityPlans.length === 0 ? (
-                <EmptyState message="لا توجد خطط قاعدية مسجلة لهذه الفلاتر." />
+                <div className="bg-white border border-gray-200 rounded-lg p-8 flex flex-col items-center justify-center text-center">
+                    <AlertCircle className="w-12 h-12 text-gray-300 mb-3" />
+                    <p className="text-gray-500 font-medium">لا توجد خطط قاعدية ربعية مسجلة لهذه الفلاتر حتى الآن.</p>
+                </div>
             ) : (
                 <div className="space-y-4">
                     {localityPlans.map(plan => (
@@ -367,7 +379,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                                     <div className="flex gap-2">
                                         {canEditPlan && (
                                             <><Button size="sm" variant="secondary" onClick={(e) => { e.stopPropagation(); setCurrentPlan(plan); setIsEditing(true); }} className="px-4 py-2"><Edit size={16}/></Button>
-                                            <Button size="sm" variant="danger" onClick={(e) => { e.stopPropagation(); if(confirm("حذف الخطة؟")) deleteMasterPlan(plan.id).then(()=>fetchMasterPlans(true)); }} className="px-4 py-2"><Trash2 size={16}/></Button></>
+                                            <Button size="sm" variant="danger" onClick={(e) => { e.stopPropagation(); if(window.confirm("هل أنت متأكد من حذف هذه الخطة بالكامل؟")) deleteMasterPlan(plan.id).then(()=>fetchMasterPlans(true)); }} className="px-4 py-2"><Trash2 size={16}/></Button></>
                                         )}
                                     </div>
                                     {expandedPlanId === plan.id ? <ChevronUp size={24} className="text-gray-500"/> : <ChevronDown size={24} className="text-gray-500"/>}
@@ -404,7 +416,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                                         </tbody>
                                     </table>
                                     {plan.interventions?.filter(inv => Number(inv.target) > 0 || Number(inv.baseline) > 0 || Number(inv.planned) > 0).length === 0 && (
-                                        <div className="p-6 text-center text-sm text-gray-500 bg-gray-50 border border-t-0 rounded-b-lg">لم يتم رصد أرقام لأي نشاط في هذه الخطة حتى الآن.</div>
+                                        <div className="p-6 text-center text-sm text-gray-500 bg-gray-50 border border-t-0 rounded-b-lg">لم يتم رصد أرقام لأي نشاط في هذه الخطة. اضغط تعديل لإدخال الأرقام.</div>
                                     )}
                                 </div>
                             )}
