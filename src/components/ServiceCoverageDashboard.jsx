@@ -1,5 +1,6 @@
 // src/components/ServiceCoverageDashboard.jsx
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import html2canvas from 'html2canvas';
 import { Card, Spinner, FormGroup, Select } from './CommonComponents';
 import { useDataCache } from '../DataContext';
@@ -36,14 +37,14 @@ const CopyIcon = () => (
 );
 
 // --- KPI Card Components ---
-const KPIWrapper = ({ children, borderClass = 'border-l-slate-400', decorationColor = 'bg-slate-500', className = '', percentage, colorTheme = 'slate' }) => {
+const KPIWrapper = ({ children, borderClass = 'border-s-slate-400', decorationColor = 'bg-slate-500', className = '', percentage, colorTheme = 'slate' }) => {
     const bgLight = `bg-${colorTheme}-100`;
     const textDark = `text-${colorTheme}-700`;
     return (
-        <div className={`bg-white rounded-xl shadow-sm border border-gray-200 p-5 border-l-4 ${borderClass} hover:shadow-md transition-all duration-200 flex flex-col items-center justify-center relative overflow-hidden text-center min-h-[140px] ${className}`}>
-            <div className={`absolute -left-8 -bottom-8 w-28 h-28 rounded-full opacity-10 ${decorationColor} pointer-events-none`}></div>
+        <div className={`bg-white rounded-xl shadow-sm border border-gray-200 p-5 border-s-4 ${borderClass} hover:shadow-md transition-all duration-200 flex flex-col items-center justify-center relative overflow-hidden text-center min-h-[140px] ${className}`}>
+            <div className={`absolute -start-8 -bottom-8 w-28 h-28 rounded-full opacity-10 ${decorationColor} pointer-events-none`}></div>
             {percentage !== undefined && (
-                <div className={`absolute top-2 right-2 w-14 h-14 rounded-full flex items-center justify-center font-black text-[15px] ${bgLight} ${textDark} ring-4 ring-white shadow-md z-20`}>
+                <div className={`absolute top-2 end-2 w-14 h-14 rounded-full flex items-center justify-center font-black text-[15px] ${bgLight} ${textDark} ring-4 ring-white shadow-md z-20`}>
                     {percentage}%
                 </div>
             )}
@@ -54,17 +55,19 @@ const KPIWrapper = ({ children, borderClass = 'border-l-slate-400', decorationCo
     );
 };
 
-const ValueTotalPercentageCard = ({ title, value, total, percentage, borderClass = 'border-l-sky-500', valueClass = 'text-sky-600', decorationColor = 'bg-sky-500', colorTheme='sky', className = '' }) => (
+const ValueTotalPercentageCard = ({ title, value, total, percentage, borderClass = 'border-s-sky-500', valueClass = 'text-sky-600', decorationColor = 'bg-sky-500', colorTheme='sky', className = '' }) => {
+    const { t } = useTranslation();
+    return (
     <KPIWrapper borderClass={borderClass} decorationColor={decorationColor} percentage={percentage} colorTheme={colorTheme} className={className}>
         <h3 className="text-[12px] font-bold text-slate-500 uppercase tracking-wider leading-snug mb-1">{title}</h3>
         <div className="flex flex-col items-center justify-center">
             <span className={`text-4xl font-black ${valueClass}`}>{value}</span>
-            {total > 0 && <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wide mt-1">out of {total}</span>}
+            {total > 0 && <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wide mt-1">{t('dashboard.cards.out_of', 'out of')} {total}</span>}
         </div>
     </KPIWrapper>
-);
+)};
 
-const TotalCountCard = ({ title, count, borderClass = 'border-l-slate-500', valueClass = 'text-slate-700', decorationColor = 'bg-slate-500', className = '' }) => (
+const TotalCountCard = ({ title, count, borderClass = 'border-s-slate-500', valueClass = 'text-slate-700', decorationColor = 'bg-slate-500', className = '' }) => (
     <KPIWrapper borderClass={borderClass} decorationColor={decorationColor} className={className}>
         <h3 className="text-[12px] font-bold text-slate-500 uppercase tracking-wider leading-snug mb-1">{title}</h3>
         <div className="flex items-center justify-center">
@@ -92,17 +95,21 @@ const copyTableAsImage = async (tableRef, setStatusCallback) => {
     finally { setTimeout(() => setStatusCallback(''), 2000); }
 };
 
-const MapLegend = () => (
+const MapLegend = () => {
+    const { t } = useTranslation();
+    return (
     <div className="flex justify-center items-center flex-wrap gap-4 text-sm text-gray-700">
-        <span className="font-bold">Legend:</span>
-        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full shadow-sm bg-[#6B6B6B]"></div><span className='text-xs font-medium'>0-39% (or No Data)</span></div>
-        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full shadow-sm bg-[#6266B1]"></div><span className='text-xs font-medium'>40-74%</span></div>
-        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full shadow-sm bg-[#313695]"></div><span className='text-xs font-medium'>&ge;75%</span></div>
-        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full border-2 border-white shadow-sm ring-1 ring-[#313695] bg-[#313695]"></div><span className='text-xs font-medium'>Facility</span></div>
+        <span className="font-bold">{t('dashboard.map.legend', 'Legend:')}</span>
+        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full shadow-sm bg-[#6B6B6B]"></div><span className='text-xs font-medium'>{t('dashboard.map.no_data', '0-39% (or No Data)')}</span></div>
+        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full shadow-sm bg-[#6266B1]"></div><span className='text-xs font-medium'>{t('dashboard.map.range_mid', '40-74%')}</span></div>
+        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full shadow-sm bg-[#313695]"></div><span className='text-xs font-medium'>{t('dashboard.map.range_high', '≥75%')}</span></div>
+        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full border-2 border-white shadow-sm ring-1 ring-[#313695] bg-[#313695]"></div><span className='text-xs font-medium'>{t('dashboard.map.facility', 'Facility')}</span></div>
     </div>
-);
+)};
 
-const MapTooltip = ({ title, dataRows = [], equipmentSummary }) => (
+const MapTooltip = ({ title, dataRows = [], equipmentSummary }) => {
+    const { t } = useTranslation();
+    return (
     <div className="absolute z-50 p-4 bg-white border border-gray-300 shadow-xl rounded-lg w-80 pointer-events-none transform -translate-x-full -translate-y-1/2">
         <h4 className="text-lg font-bold text-gray-800 border-b pb-2 mb-2">{title}</h4>
         <div className="text-sm space-y-1">
@@ -112,23 +119,25 @@ const MapTooltip = ({ title, dataRows = [], equipmentSummary }) => (
                     <p className="pt-2 font-bold border-t mt-2">{equipmentSummary.title || "Equipment Summary"}:</p>
                     <p className="text-xs text-gray-600">Total Units Reporting: {equipmentSummary.totalUnits}</p>
                     <ul className="list-disc list-inside text-xs mt-1 space-y-0.5 max-h-40 overflow-y-auto">
-                        {Object.entries(equipmentSummary.summary).map(([key, count]) => ( <li key={key} className={count === 0 ? 'text-red-500' : 'text-gray-700'}> {key}: <span className="font-bold">{count}</span> </li> ))}
+                        {Object.entries(equipmentSummary.summary).map(([key, count]) => ( <li key={key} className={count === 0 ? 'text-red-500' : 'text-gray-700'}> {t(`dashboard.equip.${key}`, key)}: <span className="font-bold">{count}</span> </li> ))}
                     </ul>
                 </>
             )}
         </div>
     </div>
-);
+)};
 
-const FacilityTooltip = ({ data }) => (
+const FacilityTooltip = ({ data }) => {
+    const { t } = useTranslation();
+    return (
     <div className="absolute z-50 p-3 bg-white border border-gray-300 shadow-xl rounded-lg w-64 pointer-events-none transform -translate-x-1/2">
         <h4 className="text-md font-bold text-gray-800 border-b pb-1 mb-2">{data.name}</h4>
         <p className="text-xs font-semibold text-sky-700 mb-1">Equipment Summary:</p>
         <ul className="list-disc list-inside text-xs space-y-0.5 max-h-48 overflow-y-auto">
-            {Object.entries(data.summary).map(([key, count]) => ( <li key={key} className={count === 0 ? 'text-red-500' : 'text-gray-700'}> {key}: <span className="font-bold">{count}</span> </li> ))}
+            {Object.entries(data.summary).map(([key, count]) => ( <li key={key} className={count === 0 ? 'text-red-500' : 'text-gray-700'}> {t(`dashboard.equip.${key}`, key)}: <span className="font-bold">{count}</span> </li> ))}
         </ul>
     </div>
-);
+)};
 
 const OWNERSHIP_OPTIONS = ['حكومي', 'خاص', 'منظمات', 'اهلي'];
 
@@ -137,7 +146,8 @@ const NEONATAL_EQUIPMENT_SPEC = { 'neonatal_total_beds': 'Total Beds', 'neonatal
 const NEONATAL_EQUIPMENT_KEYS = Object.keys(NEONATAL_EQUIPMENT_SPEC);
 
 export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
-    const { healthFacilities: allFacilities, isLoading, fetchHealthFacilities } = useDataCache();
+    const { t } = useTranslation();
+    const { healthFacilities: allFacilities, isLoading } = useDataCache();
     const loading = isLoading.healthFacilities || allFacilities === null;
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
@@ -159,8 +169,6 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
     const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
     const [showFacilityMarkers, setShowFacilityMarkers] = useState(true);
     
-    const mapContainerRef = useRef(null);
-    const fullscreenMapContainerRef = useRef(null);
     const dashboardSectionRef = useRef(null);
     const fullscreenModalRef = useRef(null);
     const coverageTableRef = useRef(null); 
@@ -176,7 +184,7 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
             if (localityFilter && f['المحلية'] !== localityFilter) return false;
             if (ownershipFilter && f.facility_ownership !== ownershipFilter) return false;
             if (projectFilter && f.project_name !== projectFilter) return false;
-            if (equipmentFilter && (Number(f[equipmentFilter]) || 0) === 0) return false; // Global Tool Filter
+            if (equipmentFilter && (Number(f[equipmentFilter]) || 0) === 0) return false;
             return true;
         });
     }, [activeFacilities, stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter]); 
@@ -201,7 +209,7 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
     }, [locationFilteredFacilities, hasFunctioningSCNU, isFacilitySupposedToProvideCare]); 
 
     const isLocalityView = !!stateFilter;
-    const aggregationLevelName = isLocalityView ? 'Locality' : 'State';
+    const aggregationLevelName = isLocalityView ? t('dashboard.table.locality', 'Locality') : t('dashboard.table.state', 'State');
 
     const { stateData } = useMemo(() => {
         const sum = {};
@@ -219,7 +227,6 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
         return { stateData: sD };
     }, [locationFilteredFacilities, stateFilter, isLocalityView, hasFunctioningSCNU, isFacilitySupposedToProvideCare]); 
 
-    // Horizontal Inline Chart Array (Sorted High to Low)
     const sortedTableData = useMemo(() => [...stateData].sort((a,b) => b.coverage - a.coverage), [stateData]);
 
     const equipmentTableData = useMemo(() => {
@@ -282,19 +289,19 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
     }, []);
 
     const equipmentHeaders = [
-        !!stateFilter ? 'Hospital Name' : aggregationLevelName,
-        ...Object.values(NEONATAL_EQUIPMENT_SPEC)
+        !!stateFilter ? t('dashboard.table.hospital_name', 'Hospital Name') : aggregationLevelName,
+        ...Object.values(NEONATAL_EQUIPMENT_SPEC).map(h => t(`dashboard.equip.${h}`, h))
     ];
 
     return (
         <div onMouseMove={handleMouseMove}>
             <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm ignore-for-export mb-6">
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                    <FormGroup label="State"><Select value={stateFilter} onChange={handleStateChange}><option value="">All States</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{sKey}</option>)}</Select></FormGroup>
-                    <FormGroup label="Locality"><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">All Localities</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{l.en}</option>)}</Select></FormGroup>
-                    <FormGroup label="Ownership"><Select value={ownershipFilter} onChange={(e) => setOwnershipFilter(e.target.value)}><option value="">All Ownerships</option>{OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
-                    <FormGroup label="Project"><Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}><option value="">All Projects</option>{projectOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
-                    <FormGroup label="Has Equipment"><Select value={equipmentFilter} onChange={(e) => setEquipmentFilter(e.target.value)}><option value="">Any</option>{Object.entries(NEONATAL_EQUIPMENT_SPEC).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('dashboard.filters.state', 'State')}><Select value={stateFilter} onChange={handleStateChange}><option value="">{t('dashboard.filters.all_states', 'All States')}</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{sKey}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('dashboard.filters.locality', 'Locality')}><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">{t('dashboard.filters.all_localities', 'All Localities')}</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{l.en}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('dashboard.filters.ownership', 'Ownership')}><Select value={ownershipFilter} onChange={(e) => setOwnershipFilter(e.target.value)}><option value="">{t('dashboard.filters.all_ownerships', 'All Ownerships')}</option>{OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('dashboard.filters.project', 'Project')}><Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}><option value="">{t('dashboard.filters.all_projects', 'All Projects')}</option>{projectOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('dashboard.filters.has_equipment', 'Has Equipment')}><Select value={equipmentFilter} onChange={(e) => setEquipmentFilter(e.target.value)}><option value="">{t('dashboard.filters.any', 'Any')}</option>{Object.entries(NEONATAL_EQUIPMENT_SPEC).map(([key, label]) => <option key={key} value={key}>{t(`dashboard.equip.${label}`, label)}</option>)}</Select></FormGroup>
                 </div>
             </div>
 
@@ -302,9 +309,9 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
                 <div className="lg:col-span-1 flex flex-col gap-4 h-full">
                     {loading ? <Spinner/> : (
                         <>
-                            <TotalCountCard title="Total Pediatrics & EmONC" count={kpiData.totalSupposed} className="flex-1" borderClass="border-l-slate-400" valueClass="text-slate-700" decorationColor="bg-slate-500" colorTheme="slate" />
-                            <ValueTotalPercentageCard title="Functioning SCNU Facilities" value={kpiData.totalWithSCNU} total={kpiData.totalSupposed} percentage={kpiData.scnuCoveragePercentage} className="flex-1" borderClass="border-l-sky-500" valueClass="text-sky-600" decorationColor="bg-sky-500" colorTheme="sky" />
-                            <ValueTotalPercentageCard title="Facilities with CPAP" value={kpiData.totalWithCPAP} total={kpiData.totalWithSCNU} percentage={kpiData.cpapPercentage} className="flex-1" borderClass="border-l-teal-500" valueClass="text-teal-600" decorationColor="bg-teal-500" colorTheme="teal" />
+                            <TotalCountCard title={t('dashboard.cards.total_pediatrics_emonc', 'Total Pediatrics & EmONC')} count={kpiData.totalSupposed} className="flex-1" borderClass="border-s-slate-400" valueClass="text-slate-700" decorationColor="bg-slate-500" colorTheme="slate" />
+                            <ValueTotalPercentageCard title={t('dashboard.cards.functioning_scnu', 'Functioning SCNU Facilities')} value={kpiData.totalWithSCNU} total={kpiData.totalSupposed} percentage={kpiData.scnuCoveragePercentage} className="flex-1" borderClass="border-s-sky-500" valueClass="text-sky-600" decorationColor="bg-sky-500" colorTheme="sky" />
+                            <ValueTotalPercentageCard title={t('dashboard.cards.facilities_with_cpap', 'Facilities with CPAP')} value={kpiData.totalWithCPAP} total={kpiData.totalWithSCNU} percentage={kpiData.cpapPercentage} className="flex-1" borderClass="border-s-teal-500" valueClass="text-teal-600" decorationColor="bg-teal-500" colorTheme="teal" />
                         </>
                     )}
                 </div>
@@ -312,7 +319,7 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
                     <div className="lg:col-span-2 flex flex-col h-full">
                         <Card className="p-0 flex flex-col flex-grow shadow-sm border border-gray-200 rounded-xl h-full">
                             <div className="p-4 md:p-5 border-b bg-slate-50/50 rounded-t-xl flex justify-between items-start gap-4">
-                                <h3 className="text-lg font-bold text-gray-800 leading-tight">Geographical Map</h3>
+                                <h3 className="text-lg font-bold text-gray-800 leading-tight">{t('dashboard.headers.geographic_map', 'Geographical Map')}</h3>
                                 <button onClick={handleCopyImage} className="text-gray-400 hover:text-sky-600 transition-colors p-1 shrink-0" disabled={!!copyStatus && copyStatus !== 'Failed'}>{copyStatus ? <span className="text-[10px] font-semibold text-sky-600">{copyStatus}</span> : <CopyIcon />}</button>
                             </div>
                             <div className="flex-grow min-h-[400px] p-2 relative flex flex-col">
@@ -324,13 +331,13 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
                                 <MapLegend />
                                 <div className="flex flex-nowrap items-center gap-2 overflow-x-auto w-full xl:w-auto justify-end ignore-for-export">
                                     {!isLocalityView && (
-                                        <div className="flex rounded-md shadow-sm shrink-0 mr-1">
-                                            <button onClick={() => setMapViewLevel('state')} className={`px-3 py-1.5 text-xs font-semibold rounded-l-md ${mapViewLevel === 'state' ? 'bg-sky-700 text-white' : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'}`}>State</button>
-                                            <button onClick={() => setMapViewLevel('locality')} className={`px-3 py-1.5 text-xs font-semibold rounded-r-md ${mapViewLevel === 'locality' ? 'bg-sky-700 text-white border border-sky-700' : 'bg-white text-gray-700 hover:bg-gray-50 border border-l-0 border-gray-200'}`}>Locality</button>
+                                        <div className="flex rounded-md shadow-sm shrink-0 mx-1">
+                                            <button onClick={() => setMapViewLevel('state')} className={`px-3 py-1.5 text-xs font-semibold rounded-s-md ${mapViewLevel === 'state' ? 'bg-sky-700 text-white' : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'}`}>{t('dashboard.map.state', 'State')}</button>
+                                            <button onClick={() => setMapViewLevel('locality')} className={`px-3 py-1.5 text-xs font-semibold rounded-e-md ${mapViewLevel === 'locality' ? 'bg-sky-700 text-white border border-sky-700' : 'bg-white text-gray-700 hover:bg-gray-50 border border-s-0 border-gray-200'}`}>{t('dashboard.map.locality', 'Locality')}</button>
                                         </div>
                                     )}
-                                    <button onClick={() => setShowFacilityMarkers(!showFacilityMarkers)} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors shadow-sm shrink-0 ${showFacilityMarkers ? 'bg-slate-700 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>{showFacilityMarkers ? 'Hide Fac.' : 'Show Fac.'}</button>
-                                    <button onClick={() => setIsMapFullscreen(true)} className="px-3 py-1.5 text-xs font-semibold text-sky-700 bg-sky-100 rounded-md hover:bg-sky-200 transition-colors shadow-sm shrink-0">Full</button>
+                                    <button onClick={() => setShowFacilityMarkers(!showFacilityMarkers)} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors shadow-sm shrink-0 ${showFacilityMarkers ? 'bg-slate-700 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>{showFacilityMarkers ? t('dashboard.map.hide_fac', 'Hide Fac.') : t('dashboard.map.show_fac', 'Show Fac.')}</button>
+                                    <button onClick={() => setIsMapFullscreen(true)} className="px-3 py-1.5 text-xs font-semibold text-sky-700 bg-sky-100 rounded-md hover:bg-sky-200 transition-colors shadow-sm shrink-0">{t('dashboard.map.full', 'Full')}</button>
                                 </div>
                             </div>
                         </Card>
@@ -344,30 +351,30 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
                 <div className="mt-6 grid grid-cols-1 gap-6 items-stretch relative">
                     <Card className="p-0 flex flex-col overflow-hidden border border-gray-200 rounded-xl">
                         <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
-                            <h3 className="text-lg font-bold text-gray-800">SCNU Coverage by {aggregationLevelName}</h3>
+                            <h3 className="text-lg font-bold text-gray-800">{t('dashboard.headers.scnu_coverage', 'SCNU Coverage by')} {aggregationLevelName}</h3>
                             <button onClick={() => copyTableAsImage(coverageTableRef, setTable1CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table1CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table1CopyStatus}</span> : <CopyIcon />} </button>
                         </div>
                         <div className="flex-grow overflow-x-auto p-4">
                            <table ref={coverageTableRef} className='min-w-full text-xs border border-gray-200 rounded-lg overflow-hidden'>
                                 <thead>
                                     <tr>
-                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-left font-semibold text-gray-600 uppercase tracking-wider w-[25%]">{aggregationLevelName}</th>
-                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider w-[15%]">Total Supposed</th>
-                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider w-[15%]">With SCNU</th>
-                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-left font-semibold text-gray-600 uppercase tracking-wider w-[45%]">Coverage Chart</th>
+                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 uppercase tracking-wider w-[25%]">{aggregationLevelName}</th>
+                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider w-[15%]">{t('dashboard.table.total_supposed', 'Total Supposed')}</th>
+                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider w-[15%]">{t('dashboard.table.with_scnu', 'With SCNU')}</th>
+                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 uppercase tracking-wider w-[45%]">{t('dashboard.table.coverage_chart', 'Coverage Chart')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {sortedTableData.length === 0 ? <tr><td colSpan={4} className="p-4 text-center text-gray-500">No data matches the current filters.</td></tr> :
+                                    {sortedTableData.length === 0 ? <tr><td colSpan={4} className="p-4 text-center text-gray-500">{t('dashboard.table.no_data', 'No data matches the current filters.')}</td></tr> :
                                      sortedTableData.map(row => (
                                         <tr key={row.key} className='hover:bg-blue-50/50 transition-colors border-b border-gray-100'>
                                             <td className="p-3 whitespace-nowrap font-medium text-gray-700">{row.name}</td>
                                             <td className="p-3 text-center align-middle font-medium">{row.totalSupposed}</td>
-                                            <td className="p-3 text-center font-bold text-sky-700 align-middle">{row.totalWithSCNU} <span className="text-gray-400 font-normal ml-1">({row.coverage}%)</span></td>
+                                            <td className="p-3 text-center font-bold text-sky-700 align-middle">{row.totalWithSCNU} <span className="text-gray-400 font-normal ms-1">({row.coverage}%)</span></td>
                                             <td className="p-3 align-middle">
                                                 <div className="flex items-center w-full">
                                                     <div className="flex-grow bg-gray-200 rounded-sm h-3 overflow-hidden flex"><div className={`h-full transition-all shadow-sm ${row.coverage >= 75 ? 'bg-sky-700' : row.coverage >= 40 ? 'bg-sky-400' : 'bg-gray-600'}`} style={{ width: `${Math.max(row.coverage, 1)}%` }}></div></div>
-                                                    <span className="ml-3 text-[11px] font-bold text-gray-700 w-8 text-right">{row.coverage}%</span>
+                                                    <span className="ms-3 text-[11px] font-bold text-gray-700 w-8 text-end">{row.coverage}%</span>
                                                 </div>
                                             </td>
                                         </tr>
@@ -381,19 +388,19 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
                 <div className="mt-6">
                     <Card className="p-0 overflow-hidden border border-gray-200 rounded-xl">
                         <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
-                            <h3 className="text-lg font-bold text-gray-800">Neonatal Unit Equipment Availability</h3>
+                            <h3 className="text-lg font-bold text-gray-800">{t('dashboard.headers.neonatal_equipment', 'Neonatal Unit Equipment Availability')}</h3>
                             <button onClick={() => copyTableAsImage(equipmentTableRef, setTable2CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table2CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table2CopyStatus}</span> : <CopyIcon />} </button>
                         </div>
                         <div className="w-full overflow-x-auto p-4">
                             <table ref={equipmentTableRef} className="w-full table-fixed border-collapse text-[10px] border border-gray-200">
                                 <thead className="bg-slate-50 border-b border-gray-200">
-                                    <tr>{equipmentHeaders.map((header, index) => ( <th key={index} className={`p-2 text-left font-semibold tracking-wider text-gray-600 uppercase align-bottom leading-tight ${index === 0 ? 'w-[15%]' : ''}`}> <div className='font-bold break-words text-center'>{header}</div> </th> ))}</tr>
+                                    <tr>{equipmentHeaders.map((header, index) => ( <th key={index} className={`p-2 text-start font-semibold tracking-wider text-gray-600 uppercase align-bottom leading-tight ${index === 0 ? 'w-[15%]' : ''}`}> <div className='font-bold break-words text-center'>{header}</div> </th> ))}</tr>
                                 </thead>
                                 <tbody>
                                     {equipmentTableData.map(row => ( 
                                         <tr key={row.name} className="hover:bg-slate-50 transition-colors border-b border-gray-100">
-                                            <td className="font-medium text-gray-700 p-2 break-words leading-tight">{row.name}</td>
-                                            {NEONATAL_EQUIPMENT_KEYS.map(key => { const value = row[key]; const cellClass = value === 0 ? 'bg-red-50 text-red-600 font-bold' : 'text-gray-700 font-medium'; return ( <td key={key} className={`p-2 ${cellClass} text-center border-l border-gray-100`}> {value} </td> ); })}
+                                            <td className="font-medium text-gray-700 p-2 break-words leading-tight text-start">{row.name}</td>
+                                            {NEONATAL_EQUIPMENT_KEYS.map(key => { const value = row[key]; const cellClass = value === 0 ? 'bg-red-50 text-red-600 font-bold' : 'text-gray-700 font-medium'; return ( <td key={key} className={`p-2 ${cellClass} text-center border-s border-gray-100`}> {value} </td> ); })}
                                         </tr> 
                                     ))}
                                 </tbody>
@@ -402,31 +409,30 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
                     </Card>
                 </div>
 
-                {/* NEW SCNU FACILITY LIST TABLE */}
                 <div className="mt-6">
                     <Card className="p-0 overflow-hidden border border-gray-200 rounded-xl">
                         <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
-                            <h3 className="text-lg font-bold text-gray-800">Functioning Neonatal Units (SCNU) List</h3>
+                            <h3 className="text-lg font-bold text-gray-800">{t('dashboard.headers.functioning_neonatal_units', 'Functioning Neonatal Units (SCNU) List')}</h3>
                             <button onClick={() => copyTableAsImage(scnuListTableRef, setTable3CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table3CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table3CopyStatus}</span> : <CopyIcon />} </button>
                         </div>
                         <div className="overflow-x-auto w-full max-h-[500px] overflow-y-auto p-4">
                             <table ref={scnuListTableRef} className="min-w-full table-auto border-collapse text-sm border border-gray-200">
                                 <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm border-b border-gray-200">
                                     <tr>
-                                        <th className="p-3 text-left font-semibold text-gray-600 uppercase text-[11px] tracking-wider">State</th>
-                                        <th className="p-3 text-left font-semibold text-gray-600 uppercase text-[11px] tracking-wider">Locality</th>
-                                        <th className="p-3 text-left font-semibold text-gray-600 uppercase text-[11px] tracking-wider">Facility Name</th>
-                                        <th className="p-3 text-center font-semibold text-gray-600 uppercase text-[11px] tracking-wider">Incubators</th>
-                                        <th className="p-3 text-center font-semibold text-gray-600 uppercase text-[11px] tracking-wider">Cots</th>
-                                        <th className="p-3 text-center font-semibold text-gray-600 uppercase text-[11px] tracking-wider">Total Beds</th>
+                                        <th className="p-3 text-start font-semibold text-gray-600 uppercase text-[11px] tracking-wider">{t('dashboard.table.state', 'State')}</th>
+                                        <th className="p-3 text-start font-semibold text-gray-600 uppercase text-[11px] tracking-wider">{t('dashboard.table.locality', 'Locality')}</th>
+                                        <th className="p-3 text-start font-semibold text-gray-600 uppercase text-[11px] tracking-wider">{t('dashboard.table.hospital_name', 'Facility Name')}</th>
+                                        <th className="p-3 text-center font-semibold text-gray-600 uppercase text-[11px] tracking-wider">{t('dashboard.table.incubators', 'Incubators')}</th>
+                                        <th className="p-3 text-center font-semibold text-gray-600 uppercase text-[11px] tracking-wider">{t('dashboard.table.cots', 'Cots')}</th>
+                                        <th className="p-3 text-center font-semibold text-gray-600 uppercase text-[11px] tracking-wider">{t('dashboard.table.total_beds', 'Total Beds')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {facilitySCNUTableData.length === 0 ? <tr><td colSpan="6" className="p-4 text-center text-gray-500">No facilities found matching the current filters.</td></tr> : facilitySCNUTableData.map(row => (
+                                    {facilitySCNUTableData.length === 0 ? <tr><td colSpan="6" className="p-4 text-center text-gray-500">{t('dashboard.table.no_data', 'No facilities found matching the current filters.')}</td></tr> : facilitySCNUTableData.map(row => (
                                             <tr key={row.id} className="hover:bg-blue-50/50 transition-colors border-b border-gray-100">
-                                                <td className="p-3 font-medium text-gray-800">{row.state}</td>
-                                                <td className="p-3 text-gray-600">{row.locality}</td>
-                                                <td className="p-3 font-bold text-sky-700">{row.facilityName}</td>
+                                                <td className="p-3 font-medium text-gray-800 text-start">{row.state}</td>
+                                                <td className="p-3 text-gray-600 text-start">{row.locality}</td>
+                                                <td className="p-3 font-bold text-sky-700 text-start">{row.facilityName}</td>
                                                 <td className="p-3 text-center font-medium">{row.incubators}</td>
                                                 <td className="p-3 text-center font-medium">{row.cots}</td>
                                                 <td className="p-3 text-center font-black text-indigo-700 bg-indigo-50/30">{row.totalBeds}</td>
@@ -441,9 +447,9 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
                 {isMapFullscreen && (
                     <div ref={fullscreenModalRef} className="fixed inset-0 bg-white z-50 p-4 flex flex-col">
                         <div className="flex justify-between items-center mb-4 flex-shrink-0">
-                             <h3 className="text-xl font-bold text-gray-800">{mapTitle}</h3>
+                             <h3 className="text-xl font-bold text-gray-800">{t('dashboard.headers.geographic_map', 'Geographical Map')}</h3>
                              <div className='flex items-center gap-2 ignore-for-export'>
-                                <button onClick={() => setIsMapFullscreen(false)} className="px-4 py-2 text-sm font-bold text-white bg-slate-800 rounded-md hover:bg-slate-700 ml-2 shadow-sm">Close</button>
+                                <button onClick={() => setIsMapFullscreen(false)} className="px-4 py-2 text-sm font-bold text-white bg-slate-800 rounded-md hover:bg-slate-700 ms-2 shadow-sm">{t('dashboard.map.close', 'Close')}</button>
                              </div>
                         </div>
 
@@ -455,7 +461,7 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
                                         localityData={isLocalityView ? stateData : []}
                                         facilityMarkers={showFacilityMarkers ? facilityLocationMarkers : []}
                                         viewLevel={currentMapViewLevel}
-                                        {...fullscreenMapViewConfig}
+                                        {...mapViewConfig}
                                         onStateHover={handleStateHover} onStateLeave={handleMapMouseLeave}
                                         onFacilityHover={handleFacilityHover} onFacilityLeave={handleFacilityLeave}
                                         onLocalityHover={handleMapLocalityHover} onLocalityLeave={handleMapMouseLeave}
@@ -467,23 +473,6 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
                                     <MapLegend />
                                 </div>
                             </div>
-
-                            {isLocalityView && (
-                                <div className="w-1/3 flex flex-col border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden">
-                                    <div className="p-4 bg-slate-50 border-b">
-                                        <h4 className="text-lg font-bold text-slate-800">Facilities with SCNU</h4>
-                                    </div>
-                                    <div className="overflow-y-auto flex-grow min-h-0 p-2">
-                                        <ul className="divide-y divide-gray-100">
-                                            {facilityLocationMarkers.map(facility => (
-                                                <li key={facility.key} className="p-3 text-sm font-medium text-gray-700 hover:bg-slate-50 rounded-md transition-colors">
-                                                    {facility.name}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     </div>
                 )}
@@ -500,7 +489,8 @@ const EENC_EQUIPMENT_SPEC = { 'eenc_delivery_beds': 'Delivery Beds', 'eenc_resus
 const EENC_EQUIPMENT_KEYS = Object.keys(EENC_EQUIPMENT_SPEC);
 
 export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
-    const { healthFacilities: allFacilities, isLoading, fetchHealthFacilities } = useDataCache();
+    const { t } = useTranslation();
+    const { healthFacilities: allFacilities, isLoading } = useDataCache();
     const loading = isLoading.healthFacilities || allFacilities === null;
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
@@ -519,7 +509,6 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
     const dashboardSectionRef = useRef(null);
     const coverageTableRef = useRef(null);
     const equipmentTableRef = useRef(null);
-    const fullscreenModalRef = useRef(null);
     const [isMapFullscreen, setIsMapFullscreen] = useState(false);
     
     const isLocalityView = !!stateFilter; 
@@ -536,7 +525,7 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
             if (localityFilter && f['المحلية'] !== localityFilter) return false;
             if (ownershipFilter && f.facility_ownership !== ownershipFilter) return false;
             if (projectFilter && f.project_name !== projectFilter) return false;
-            if (equipmentFilter) { const val = f[equipmentFilter]; if (val !== 'Yes' && (Number(val) || 0) === 0) return false; } // Global Tool Filter
+            if (equipmentFilter) { const val = f[equipmentFilter]; if (val !== 'Yes' && (Number(val) || 0) === 0) return false; } 
             return true;
         });
     }, [activeFacilities, stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter]); 
@@ -563,7 +552,7 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
                 if (providesEENC(f)) s[key].eencProviders++;
             }
         });
-        const tD = Object.values(s).map(st => ({ ...st, eencCoverage: st.functionalEmONC > 0 ? Math.round((st.eencProviders / st.functionalEmONC) * 100) : 0 })).sort((a, b) => b.eencCoverage - a.eencCoverage); // Sort high to low
+        const tD = Object.values(s).map(st => ({ ...st, eencCoverage: st.functionalEmONC > 0 ? Math.round((st.eencProviders / st.functionalEmONC) * 100) : 0 })).sort((a, b) => b.eencCoverage - a.eencCoverage);
         const mD = tD.map(st => ({ state: st.key, percentage: st.eencCoverage, coordinates: mapCoordinates[st.key] ? [mapCoordinates[st.key].lng, mapCoordinates[st.key].lat] : [0, 0] }));
         return { tableData: tD, mapData: mD };
     }, [locationFilteredFacilities, stateFilter, isEmONCFunctional, providesEENC]); 
@@ -585,7 +574,7 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
     const mapViewConfig = useMemo(() => { const sC=stateFilter?mapCoordinates[stateFilter]:null; return sC ? {center:[sC.lng,sC.lat],scale:sC.scale,focusedState:stateFilter} : {center:[30,15.5],scale:2000,focusedState:null}; }, [stateFilter]);
     const handleStateChange = (e) => { setStateFilter(e.target.value); setLocalityFilter(''); };
     const currentMapViewLevel = stateFilter ? 'locality' : mapViewLevel;
-    const aggregationLevelName = stateFilter ? 'Locality' : 'State';
+    const aggregationLevelName = stateFilter ? t('dashboard.table.locality', 'Locality') : t('dashboard.table.state', 'State');
 
     const getEENCStateEquipmentSummary = useCallback((stateKey) => { 
         const rel = activeFacilities.filter(f => f['الولاية'] === stateKey && isEmONCFunctional(f) && providesEENC(f) && (!ownershipFilter || f.facility_ownership === ownershipFilter) && (!projectFilter || f.project_name === projectFilter));
@@ -613,7 +602,7 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
         return { totalUnits: rel.length, summary: sum }; 
     }, [activeFacilities, isEmONCFunctional, providesEENC, ownershipFilter, projectFilter]);
     
-    const handleStateHover = useCallback((stateKey, event)=>{ if(stateFilter||mapViewLevel==='locality')return; const rowData=tableData.find(d=>d.key===stateKey); if(!rowData) return; const eqSum=getEENCStateEquipmentSummary(stateKey);setTooltipData({title:`${rowData.name} (${rowData.key})`,dataRows:[{label:"EENC Coverage",value:`${rowData.eencCoverage}% (${rowData.eencProviders} / ${rowData.functionalEmONC})`}],equipmentSummary:{...eqSum,title:"EENC Equipment Summary"}});setHoverPosition({x:event.clientX,y:event.clientY}); }, [tableData, stateFilter, mapViewLevel, getEENCStateEquipmentSummary]);
+    const handleStateHover = useCallback((stateKey, event)=>{ if(stateFilter||mapViewLevel==='locality')return; const rowData=tableData.find(d=>d.key===stateKey); if(!rowData) return; const eqSum=getEENCStateEquipmentSummary(stateKey);setTooltipData({title:`${rowData.name} (${rowData.key})`,dataRows:[{label:t('dashboard.headers.eenc_coverage', "EENC Coverage"),value:`${rowData.eencCoverage}% (${rowData.eencProviders} / ${rowData.functionalEmONC})`}],equipmentSummary:{...eqSum,title:t('dashboard.headers.eenc_equipment', "EENC Equipment Summary")}});setHoverPosition({x:event.clientX,y:event.clientY}); }, [tableData, stateFilter, mapViewLevel, getEENCStateEquipmentSummary, t]);
     
     const handleMapLocalityHover = useCallback((geoProps, event)=>{ 
         const locKey=geoProps.admin_2;
@@ -624,11 +613,11 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
         const eqSum = getEENCLocalityEquipmentSummary(locKey,stateKey);
         setTooltipData({
             title: `${locData.name} (${locData.key})`,
-            dataRows: [{label: "EENC Coverage", value: `${locData.eencCoverage}% (${locData.eencProviders} / ${locData.functionalEmONC})`}],
-            equipmentSummary: {...eqSum, title: "EENC Equipment Summary"}
+            dataRows: [{label: t('dashboard.headers.eenc_coverage', "EENC Coverage"), value: `${locData.eencCoverage}% (${locData.eencProviders} / ${locData.functionalEmONC})`}],
+            equipmentSummary: {...eqSum, title: t('dashboard.headers.eenc_equipment', "EENC Equipment Summary")}
         });
         setHoverPosition({x:event.clientX,y:event.clientY}); 
-    }, [tableData, stateFilter, getEENCLocalityEquipmentSummary]);
+    }, [tableData, stateFilter, getEENCLocalityEquipmentSummary, t]);
 
     const handleMapMouseLeave = useCallback(()=>{ setTooltipData(null); }, []);
     const handleMouseMove = useCallback((event)=>{ if(tooltipData){setHoverPosition({x:event.clientX,y:event.clientY});} }, [tooltipData]);
@@ -648,11 +637,11 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
             
             <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm ignore-for-export mb-6 mt-4">
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                    <FormGroup label="State"><Select value={stateFilter} onChange={handleStateChange}><option value="">All States</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{sKey}</option>)}</Select></FormGroup>
-                    <FormGroup label="Locality"><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">All Localities</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{l.en}</option>)}</Select></FormGroup>
-                    <FormGroup label="Ownership"><Select value={ownershipFilter} onChange={(e) => setOwnershipFilter(e.target.value)}><option value="">All Ownerships</option>{OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
-                    <FormGroup label="Project"><Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}><option value="">All Projects</option>{projectOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
-                    <FormGroup label="Has Equipment"><Select value={equipmentFilter} onChange={(e) => setEquipmentFilter(e.target.value)}><option value="">Any</option>{Object.entries(EENC_EQUIPMENT_SPEC).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('dashboard.filters.state', 'State')}><Select value={stateFilter} onChange={handleStateChange}><option value="">{t('dashboard.filters.all_states', 'All States')}</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{sKey}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('dashboard.filters.locality', 'Locality')}><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">{t('dashboard.filters.all_localities', 'All Localities')}</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{l.en}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('dashboard.filters.ownership', 'Ownership')}><Select value={ownershipFilter} onChange={(e) => setOwnershipFilter(e.target.value)}><option value="">{t('dashboard.filters.all_ownerships', 'All Ownerships')}</option>{OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('dashboard.filters.project', 'Project')}><Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}><option value="">{t('dashboard.filters.all_projects', 'All Projects')}</option>{projectOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('dashboard.filters.has_equipment', 'Has Equipment')}><Select value={equipmentFilter} onChange={(e) => setEquipmentFilter(e.target.value)}><option value="">{t('dashboard.filters.any', 'Any')}</option>{Object.entries(EENC_EQUIPMENT_SPEC).map(([key, label]) => <option key={key} value={key}>{t(`dashboard.equip.${label}`, label)}</option>)}</Select></FormGroup>
                 </div>
             </div>
 
@@ -660,9 +649,9 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
                  <div className="lg:col-span-1 flex flex-col gap-4 h-full">
                     {loading ? <Spinner/> : (
                         <>
-                            <TotalCountCard title="Total EmONC Facilities" count={kpiData.totalEmONC} className="flex-1" borderClass="border-l-slate-400" valueClass="text-slate-700" decorationColor="bg-slate-500" />
-                            <TotalCountCard title="Functional EmONC Facilities" count={kpiData.totalFunctionalEmONC} className="flex-1" borderClass="border-l-indigo-400" valueClass="text-indigo-700" decorationColor="bg-indigo-500" />
-                            <ValueTotalPercentageCard title="EENC Coverage in Functional EmONC" value={kpiData.totalEENCProviders} total={kpiData.totalFunctionalEmONC} percentage={kpiData.eencCoveragePercentage} className="flex-1" borderClass="border-l-sky-500" valueClass="text-sky-600" decorationColor="bg-sky-500" colorTheme="sky" />
+                            <TotalCountCard title={t('dashboard.cards.total_emonc', 'Total EmONC Facilities')} count={kpiData.totalEmONC} className="flex-1" borderClass="border-s-slate-400" valueClass="text-slate-700" decorationColor="bg-slate-500" />
+                            <TotalCountCard title={t('dashboard.cards.functional_emonc', 'Functional EmONC Facilities')} count={kpiData.totalFunctionalEmONC} className="flex-1" borderClass="border-s-indigo-400" valueClass="text-indigo-700" decorationColor="bg-indigo-500" />
+                            <ValueTotalPercentageCard title={t('dashboard.cards.eenc_coverage_functional', 'EENC Coverage in Functional EmONC')} value={kpiData.totalEENCProviders} total={kpiData.totalFunctionalEmONC} percentage={kpiData.eencCoveragePercentage} className="flex-1" borderClass="border-s-sky-500" valueClass="text-sky-600" decorationColor="bg-sky-500" colorTheme="sky" />
                         </>
                     )}
                 </div>
@@ -671,7 +660,7 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
                     <div className="lg:col-span-2 flex flex-col h-full">
                         <Card className="p-0 flex flex-col flex-grow shadow-sm border border-gray-200 rounded-xl h-full">
                              <div className="p-4 md:p-5 border-b bg-slate-50/50 rounded-t-xl flex justify-between items-start gap-4">
-                                 <h3 className="text-lg font-bold text-gray-800 leading-tight">Geographical Map</h3>
+                                 <h3 className="text-lg font-bold text-gray-800 leading-tight">{t('dashboard.headers.geographic_map', 'Geographical Map')}</h3>
                                  <button onClick={handleCopyImage} className="text-gray-400 hover:text-sky-600 transition-colors p-1 mt-0.5 shrink-0" disabled={!!copyStatus && copyStatus !== 'Failed'}>{copyStatus ? <span className="text-[10px] font-semibold text-sky-600">{copyStatus}</span> : <CopyIcon />}</button>
                             </div>
                             <div className="flex-grow min-h-[400px] p-2 relative flex flex-col">
@@ -683,13 +672,13 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
                                 <MapLegend />
                                 <div className="flex flex-nowrap items-center gap-2 overflow-x-auto w-full xl:w-auto justify-end ignore-for-export">
                                     {!stateFilter && (
-                                        <div className="flex rounded-md shadow-sm shrink-0 mr-1">
-                                            <button onClick={() => setMapViewLevel('state')} className={`px-3 py-1.5 text-xs font-semibold rounded-l-md ${mapViewLevel === 'state' ? 'bg-sky-700 text-white' : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'}`} > State </button>
-                                            <button onClick={() => setMapViewLevel('locality')} className={`px-3 py-1.5 text-xs font-semibold rounded-r-md ${mapViewLevel === 'locality' ? 'bg-sky-700 text-white border border-sky-700' : 'bg-white text-gray-700 hover:bg-gray-50 border border-l-0 border-gray-200'}`} > Locality </button>
+                                        <div className="flex rounded-md shadow-sm shrink-0 mx-1">
+                                            <button onClick={() => setMapViewLevel('state')} className={`px-3 py-1.5 text-xs font-semibold rounded-s-md ${mapViewLevel === 'state' ? 'bg-sky-700 text-white' : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'}`} > {t('dashboard.map.state', 'State')} </button>
+                                            <button onClick={() => setMapViewLevel('locality')} className={`px-3 py-1.5 text-xs font-semibold rounded-e-md ${mapViewLevel === 'locality' ? 'bg-sky-700 text-white border border-sky-700' : 'bg-white text-gray-700 hover:bg-gray-50 border border-s-0 border-gray-200'}`} > {t('dashboard.map.locality', 'Locality')} </button>
                                         </div>
                                     )}
-                                    <button onClick={() => setShowFacilityMarkers(!showFacilityMarkers)} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors shadow-sm shrink-0 ${showFacilityMarkers ? 'bg-slate-700 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>{showFacilityMarkers ? 'Hide Fac.' : 'Show Fac.'}</button>
-                                    <button onClick={() => setIsMapFullscreen(true)} className="px-3 py-1.5 text-xs font-semibold text-sky-700 bg-sky-100 rounded-md hover:bg-sky-200 transition-colors shadow-sm shrink-0">Full</button>
+                                    <button onClick={() => setShowFacilityMarkers(!showFacilityMarkers)} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors shadow-sm shrink-0 ${showFacilityMarkers ? 'bg-slate-700 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>{showFacilityMarkers ? t('dashboard.map.hide_fac', 'Hide Fac.') : t('dashboard.map.show_fac', 'Show Fac.')}</button>
+                                    <button onClick={() => setIsMapFullscreen(true)} className="px-3 py-1.5 text-xs font-semibold text-sky-700 bg-sky-100 rounded-md hover:bg-sky-200 transition-colors shadow-sm shrink-0">{t('dashboard.map.full', 'Full')}</button>
                                 </div>
                             </div>
                         </Card>
@@ -703,30 +692,30 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
                 <div className="mt-6 grid grid-cols-1 gap-6 items-stretch relative">
                     <Card className="p-0 flex flex-col overflow-hidden border border-gray-200 rounded-xl">
                         <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
-                            <h3 className="text-lg font-bold text-gray-800">EENC Coverage by {aggregationLevelName}</h3>
+                            <h3 className="text-lg font-bold text-gray-800">{t('dashboard.headers.eenc_coverage', 'EENC Coverage by')} {aggregationLevelName}</h3>
                             <button onClick={() => copyTableAsImage(coverageTableRef, setTable1CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table1CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table1CopyStatus}</span> : <CopyIcon />} </button>
                         </div>
                         <div className="flex-grow overflow-x-auto p-4">
                             <table ref={coverageTableRef} className='min-w-full text-xs border border-gray-200 rounded-lg overflow-hidden'>
                                 <thead>
                                     <tr>
-                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-left font-semibold text-gray-600 uppercase tracking-wider w-[25%]'>{aggregationLevelName}</th>
-                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider w-[15%]'>Functional EmONC</th>
-                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider w-[15%]'>With EENC</th>
-                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-left font-semibold text-gray-600 uppercase tracking-wider w-[45%]'>Coverage Chart</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 uppercase tracking-wider w-[25%]'>{aggregationLevelName}</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider w-[15%]'>{t('dashboard.table.functional_emonc', 'Functional EmONC')}</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider w-[15%]'>{t('dashboard.table.with_eenc', 'With EENC')}</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 uppercase tracking-wider w-[45%]'>{t('dashboard.table.coverage_chart', 'Coverage Chart')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {tableData.length === 0 ? <tr><td colSpan={4} className="p-4 text-center text-gray-500">No data matches the current filters.</td></tr> :
+                                    {tableData.length === 0 ? <tr><td colSpan={4} className="p-4 text-center text-gray-500">{t('dashboard.table.no_data', 'No data matches the current filters.')}</td></tr> :
                                      tableData.map(row => ( 
                                         <tr key={row.key} className='hover:bg-blue-50/50 transition-colors border-b border-gray-100'>
-                                            <td className="p-3 font-medium text-gray-700">{row.name}</td>
+                                            <td className="p-3 font-medium text-gray-700 text-start">{row.name}</td>
                                             <td className="p-3 text-center align-middle font-medium">{row.functionalEmONC}</td>
-                                            <td className="p-3 text-center font-bold text-sky-700 align-middle">{row.eencProviders} <span className="text-gray-400 font-normal ml-1">({row.eencCoverage}%)</span></td>
-                                            <td className="p-3 align-middle">
+                                            <td className="p-3 text-center font-bold text-sky-700 align-middle">{row.eencProviders} <span className="text-gray-400 font-normal ms-1">({row.eencCoverage}%)</span></td>
+                                            <td className="p-3 align-middle text-start">
                                                 <div className="flex items-center w-full">
                                                     <div className="flex-grow bg-gray-200 rounded-sm h-3 overflow-hidden flex"><div className={`h-full transition-all shadow-sm ${row.eencCoverage >= 75 ? 'bg-sky-700' : row.eencCoverage >= 40 ? 'bg-sky-400' : 'bg-gray-600'}`} style={{ width: `${Math.max(row.eencCoverage, 1)}%` }}></div></div>
-                                                    <span className="ml-3 text-[11px] font-bold text-gray-700 w-8 text-right">{row.eencCoverage}%</span>
+                                                    <span className="ms-3 text-[11px] font-bold text-gray-700 w-8 text-end">{row.eencCoverage}%</span>
                                                 </div>
                                             </td>
                                         </tr> 
@@ -740,22 +729,22 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
                 <div className="mt-6">
                     <Card className="p-0 overflow-hidden border border-gray-200 rounded-xl">
                         <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
-                            <h3 className="text-lg font-bold text-gray-800">EENC Equipment Availability by Unit</h3>
+                            <h3 className="text-lg font-bold text-gray-800">{t('dashboard.headers.eenc_equipment', 'EENC Equipment Availability by Unit')}</h3>
                             <button onClick={() => copyTableAsImage(equipmentTableRef, setTable2CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table2CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table2CopyStatus}</span> : <CopyIcon />} </button>
                         </div>
                         <div className="overflow-x-auto p-4">
                             <table ref={equipmentTableRef} className="min-w-full table-auto border-collapse text-[10px] border border-gray-200">
                                 <thead className="bg-slate-50 border-b border-gray-200">
                                     <tr>
-                                        <th className={`p-2 text-left font-semibold tracking-wider text-gray-600 uppercase align-bottom w-40`}><div className='font-bold break-words text-center'>{stateFilter ? 'Hospital Name' : aggregationLevelName}</div></th>
-                                        {Object.values(EENC_EQUIPMENT_SPEC).map((header, index) => ( <th key={index} className={`p-2 text-left font-semibold tracking-wider text-gray-600 uppercase align-bottom w-20`}><div className='font-bold break-words text-center'>{header}</div></th> ))}
+                                        <th className={`p-2 text-start font-semibold tracking-wider text-gray-600 uppercase align-bottom w-40`}><div className='font-bold break-words text-center'>{stateFilter ? t('dashboard.table.hospital_name', 'Hospital Name') : aggregationLevelName}</div></th>
+                                        {Object.values(EENC_EQUIPMENT_SPEC).map((header, index) => ( <th key={index} className={`p-2 text-start font-semibold tracking-wider text-gray-600 uppercase align-bottom w-20`}><div className='font-bold break-words text-center'>{t(`dashboard.equip.${header}`, header)}</div></th> ))}
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {equipmentTableData.map(row => ( 
                                         <tr key={row.name} className="hover:bg-slate-50 transition-colors border-b border-gray-100">
-                                            <td className={`font-medium text-gray-700 p-2 break-words`}>{row.name}</td>
-                                            {EENC_EQUIPMENT_KEYS.map(key => { const value = row[key]; const cellClass = value === 0 ? 'bg-red-50 text-red-600 font-bold' : 'text-gray-700 font-medium'; return ( <td key={key} className={`p-2 ${cellClass} text-center border-l border-gray-100`}> {value} </td> ); })}
+                                            <td className={`font-medium text-gray-700 p-2 break-words text-start`}>{row.name}</td>
+                                            {EENC_EQUIPMENT_KEYS.map(key => { const value = row[key]; const cellClass = value === 0 ? 'bg-red-50 text-red-600 font-bold' : 'text-gray-700 font-medium'; return ( <td key={key} className={`p-2 ${cellClass} text-center border-s border-gray-100`}> {value} </td> ); })}
                                         </tr> 
                                     ))}
                                 </tbody>
@@ -775,6 +764,7 @@ const IMNCI_TOOLS_SPEC = { 'countWithRegister': 'IMNCI Register', 'countWithChar
 const IMNCI_TOOLS_KEYS = Object.keys(IMNCI_TOOLS_SPEC);
 
 export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
+    const { t } = useTranslation();
     const { healthFacilities: allFacilities, isLoading, fetchHealthFacilities } = useDataCache();
     const loading = isLoading.healthFacilities || allFacilities === null;
     
@@ -789,7 +779,6 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
     const [copyStatus, setCopyStatus] = useState('');
     const [tooltipData, setTooltipData] = useState(null);
     const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
-    // IMPORTANT: Default Hide Facilities for IMNCI to prevent map clutter
     const [showFacilityMarkers, setShowFacilityMarkers] = useState(false); 
 
     const [table1CopyStatus, setTable1CopyStatus] = useState('');
@@ -815,7 +804,7 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
             if (localityFilter && f['المحلية'] !== localityFilter) return false;
             if (ownershipFilter && f.facility_ownership !== ownershipFilter) return false;
             if (projectFilter && f.project_name !== projectFilter) return false;
-            if (equipmentFilter && f[equipmentFilter] !== 'Yes') return false; // Global Tool Filter
+            if (equipmentFilter && f[equipmentFilter] !== 'Yes') return false; 
             return true;
         });
     }, [activeFacilities, stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter]); 
@@ -826,7 +815,7 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
 
     const isLocalityView = !!stateFilter && !localityFilter;
     const isFacilityView = !!localityFilter;
-    const aggregationLevelName = isFacilityView ? 'Facility' : (isLocalityView ? 'Locality' : 'State');
+    const aggregationLevelName = isFacilityView ? t('dashboard.table.hospital_name', 'Facility') : (isLocalityView ? t('dashboard.table.locality', 'Locality') : t('dashboard.table.state', 'State'));
 
     const tableCoverageData = useMemo(() => {
         const s={};
@@ -925,11 +914,11 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
             
             <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm ignore-for-export mb-6 mt-4">
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                    <FormGroup label="State"><Select value={stateFilter} onChange={handleStateChange}><option value="">All States</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{sKey}</option>)}</Select></FormGroup>
-                    <FormGroup label="Locality"><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">All Localities</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{l.en}</option>)}</Select></FormGroup>
-                    <FormGroup label="Ownership"><Select value={ownershipFilter} onChange={(e) => setOwnershipFilter(e.target.value)}><option value="">All Ownerships</option>{OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
-                    <FormGroup label="Project"><Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}><option value="">All Projects</option>{projectOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
-                    <FormGroup label="Has Tool"><Select value={equipmentFilter} onChange={(e) => setEquipmentFilter(e.target.value)}><option value="">Any</option>{Object.entries(IMNCI_FILTER_SPEC).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('dashboard.filters.state', 'State')}><Select value={stateFilter} onChange={handleStateChange}><option value="">{t('dashboard.filters.all_states', 'All States')}</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{sKey}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('dashboard.filters.locality', 'Locality')}><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">{t('dashboard.filters.all_localities', 'All Localities')}</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{l.en}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('dashboard.filters.ownership', 'Ownership')}><Select value={ownershipFilter} onChange={(e) => setOwnershipFilter(e.target.value)}><option value="">{t('dashboard.filters.all_ownerships', 'All Ownerships')}</option>{OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('dashboard.filters.project', 'Project')}><Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}><option value="">{t('dashboard.filters.all_projects', 'All Projects')}</option>{projectOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('dashboard.filters.has_equipment', 'Has Tool')}><Select value={equipmentFilter} onChange={(e) => setEquipmentFilter(e.target.value)}><option value="">{t('dashboard.filters.any', 'Any')}</option>{Object.entries(IMNCI_FILTER_SPEC).map(([key, label]) => <option key={key} value={key}>{t(`dashboard.table.${label.replace(/ /g, '_').toLowerCase()}`, label)}</option>)}</Select></FormGroup>
                 </div>
             </div>
 
@@ -937,9 +926,9 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
                  <div className="lg:col-span-1 flex flex-col gap-4 h-full">
                     {loading ? <Spinner/> : (
                         <>
-                            <TotalCountCard title="Total Functioning PHC Facilities" count={functioningPhcs.length} className="flex-1" borderClass="border-l-slate-400" valueClass="text-slate-700" decorationColor="bg-slate-500" />
-                            <TotalCountCard title="Total PHC Facilities with IMNCI" count={imnciInPhcs.length} className="flex-1" borderClass="border-l-indigo-400" valueClass="text-indigo-700" decorationColor="bg-indigo-500" />
-                            <ValueTotalPercentageCard title="IMNCI Service Coverage in PHCs" value={imnciInPhcs.length} total={functioningPhcs.length} percentage={imnciCoveragePercentage} className="flex-1" borderClass="border-l-sky-500" valueClass="text-sky-600" decorationColor="bg-sky-500" colorTheme="sky" />
+                            <TotalCountCard title={t('dashboard.cards.total_functioning_phc', 'Total Functioning PHC Facilities')} count={functioningPhcs.length} className="flex-1" borderClass="border-s-slate-400" valueClass="text-slate-700" decorationColor="bg-slate-500" />
+                            <TotalCountCard title={t('dashboard.cards.total_phc_imnci', 'Total PHC Facilities with IMNCI')} count={imnciInPhcs.length} className="flex-1" borderClass="border-s-indigo-400" valueClass="text-indigo-700" decorationColor="bg-indigo-500" />
+                            <ValueTotalPercentageCard title={t('dashboard.cards.imnci_coverage_phc', 'IMNCI Service Coverage in PHCs')} value={imnciInPhcs.length} total={functioningPhcs.length} percentage={imnciCoveragePercentage} className="flex-1" borderClass="border-s-sky-500" valueClass="text-sky-600" decorationColor="bg-sky-500" colorTheme="sky" />
                         </>
                     )}
                 </div>
@@ -948,7 +937,7 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
                     <div className="lg:col-span-2 flex flex-col h-full">
                         <Card className="p-0 flex flex-col flex-grow shadow-sm border border-gray-200 rounded-xl h-full">
                              <div className="p-4 md:p-5 border-b bg-slate-50/50 rounded-t-xl flex justify-between items-start gap-4">
-                                 <h3 className="text-lg font-bold text-gray-800 leading-tight">Geographical Map</h3>
+                                 <h3 className="text-lg font-bold text-gray-800 leading-tight">{t('dashboard.headers.geographic_map', 'Geographical Map')}</h3>
                                  <button onClick={handleCopyImage} className="text-gray-400 hover:text-sky-600 transition-colors p-1 mt-0.5 shrink-0" disabled={!!copyStatus && copyStatus !== 'Failed'}>{copyStatus ? <span className="text-[10px] font-semibold text-sky-600">{copyStatus}</span> : <CopyIcon />}</button>
                             </div>
                             <div className="flex-grow min-h-[400px] p-2 relative flex flex-col">
@@ -960,12 +949,12 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
                                 <MapLegend />
                                 <div className="flex flex-nowrap items-center gap-2 overflow-x-auto w-full xl:w-auto justify-end ignore-for-export">
                                     {!stateFilter && (
-                                        <div className="flex rounded-md shadow-sm shrink-0 mr-1">
-                                            <button onClick={() => setMapViewLevel('state')} className={`px-3 py-1.5 text-xs font-semibold rounded-l-md ${mapViewLevel === 'state' ? 'bg-sky-700 text-white' : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'}`} > State </button>
-                                            <button onClick={() => setMapViewLevel('locality')} className={`px-3 py-1.5 text-xs font-semibold rounded-r-md ${mapViewLevel === 'locality' ? 'bg-sky-700 text-white border border-sky-700' : 'bg-white text-gray-700 hover:bg-gray-50 border border-l-0 border-gray-200'}`} > Locality </button>
+                                        <div className="flex rounded-md shadow-sm shrink-0 mx-1">
+                                            <button onClick={() => setMapViewLevel('state')} className={`px-3 py-1.5 text-xs font-semibold rounded-s-md ${mapViewLevel === 'state' ? 'bg-sky-700 text-white' : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'}`} > {t('dashboard.map.state', 'State')} </button>
+                                            <button onClick={() => setMapViewLevel('locality')} className={`px-3 py-1.5 text-xs font-semibold rounded-e-md ${mapViewLevel === 'locality' ? 'bg-sky-700 text-white border border-sky-700' : 'bg-white text-gray-700 hover:bg-gray-50 border border-s-0 border-gray-200'}`} > {t('dashboard.map.locality', 'Locality')} </button>
                                         </div>
                                     )}
-                                    <button onClick={() => setShowFacilityMarkers(!showFacilityMarkers)} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors shadow-sm shrink-0 ${showFacilityMarkers ? 'bg-slate-700 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>{showFacilityMarkers ? 'Hide Fac.' : 'Show Fac.'}</button>
+                                    <button onClick={() => setShowFacilityMarkers(!showFacilityMarkers)} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors shadow-sm shrink-0 ${showFacilityMarkers ? 'bg-slate-700 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>{showFacilityMarkers ? t('dashboard.map.hide_fac', 'Hide Fac.') : t('dashboard.map.show_fac', 'Show Fac.')}</button>
                                 </div>
                             </div>
                         </Card>
@@ -979,29 +968,29 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
                 <div className="mt-6 grid grid-cols-1 gap-6 items-stretch relative">
                     <Card className="p-0 flex flex-col overflow-hidden border border-gray-200 rounded-xl">
                         <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
-                            <h3 className="text-lg font-bold text-gray-800">IMNCI Coverage by {aggregationLevelName}</h3>
+                            <h3 className="text-lg font-bold text-gray-800">{t('dashboard.headers.imnci_coverage', 'IMNCI Coverage by')} {aggregationLevelName}</h3>
                             <button onClick={() => copyTableAsImage(coverageTableRef, setTable1CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table1CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table1CopyStatus}</span> : <CopyIcon />} </button>
                         </div>
                         <div className="flex-grow overflow-x-auto p-4">
                             <table ref={coverageTableRef} className="min-w-full text-xs border border-gray-200 rounded-lg overflow-hidden">
                                 <thead>
                                     <tr>
-                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-left font-semibold text-gray-600 uppercase text-[11px] tracking-wider w-[25%]">{aggregationLevelName}</th>
-                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase text-[11px] tracking-wider w-[15%]">Functioning PHCs</th>
-                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase text-[11px] tracking-wider w-[15%]">PHCs with IMNCI</th>
-                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-left font-semibold text-gray-600 uppercase text-[11px] tracking-wider w-[45%]">Coverage Chart</th>
+                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 uppercase text-[11px] tracking-wider w-[25%]">{aggregationLevelName}</th>
+                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase text-[11px] tracking-wider w-[15%]">{t('dashboard.table.functioning_phcs', 'Functioning PHCs')}</th>
+                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase text-[11px] tracking-wider w-[15%]">{t('dashboard.table.phcs_with_imnci', 'PHCs with IMNCI')}</th>
+                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 uppercase text-[11px] tracking-wider w-[45%]">{t('dashboard.table.coverage_chart', 'Coverage Chart')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                 {tableCoverageData.length === 0 ? <tr><td colSpan={4} className="p-4 text-center text-gray-500">No data matches the current filters.</td></tr> :
+                                 {tableCoverageData.length === 0 ? <tr><td colSpan={4} className="p-4 text-center text-gray-500">{t('dashboard.table.no_data', 'No data matches the current filters.')}</td></tr> :
                                  tableCoverageData.map(row => (
                                      <tr key={row.key} className="hover:bg-blue-50/50 transition-colors border-b border-gray-100">
-                                         <td className="p-3 font-medium text-gray-800 align-middle">{row.name}</td>
+                                         <td className="p-3 font-medium text-gray-800 align-middle text-start">{row.name}</td>
                                          <td className="p-3 text-center align-middle font-medium">{row.totalFunctioningPhc}</td>
                                          <td className="p-3 text-center font-bold text-sky-700 align-middle">
-                                             {row.totalPhcWithImnci} <span className="text-gray-400 font-normal ml-1">({row.coverage}%)</span>
+                                             {row.totalPhcWithImnci} <span className="text-gray-400 font-normal ms-1">({row.coverage}%)</span>
                                          </td>
-                                         <td className="p-3 align-middle">
+                                         <td className="p-3 align-middle text-start">
                                             <div className="flex items-center w-full">
                                                 <div className="flex-grow bg-gray-200 rounded-sm h-3 overflow-hidden flex">
                                                     <div 
@@ -1009,7 +998,7 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
                                                         style={{ width: `${Math.max(row.coverage, 1)}%` }}
                                                     ></div>
                                                 </div>
-                                                <span className="ml-3 text-[11px] font-bold text-gray-700 w-8 text-right">{row.coverage}%</span>
+                                                <span className="ms-3 text-[11px] font-bold text-gray-700 w-8 text-end">{row.coverage}%</span>
                                             </div>
                                          </td>
                                      </tr>
@@ -1026,12 +1015,12 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
                     <Card className="p-0 overflow-hidden border border-gray-200 rounded-xl">
                         <div className="p-4 border-b flex flex-col gap-2 bg-slate-50/50">
                             <div className="flex justify-between items-center">
-                                <h3 className="text-lg font-bold text-gray-800"> IMNCI Tools Availability by {aggregationLevelName} </h3>
+                                <h3 className="text-lg font-bold text-gray-800"> {t('dashboard.headers.imnci_tools', 'IMNCI Tools Availability by')} {aggregationLevelName} </h3>
                                 <button onClick={() => copyTableAsImage(toolsTableRef, setTable2CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table2CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table2CopyStatus}</span> : <CopyIcon />} </button>
                             </div>
                             <div className="flex items-center gap-3 text-xs mt-2">
-                                <span className="font-bold text-gray-600">Legend:</span>
-                                <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-green-50 border border-green-300 rounded-sm"></div> <span className="text-gray-600 font-medium">&ge; 75%</span></div>
+                                <span className="font-bold text-gray-600">{t('dashboard.map.legend', 'Legend:')}</span>
+                                <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-green-50 border border-green-300 rounded-sm"></div> <span className="text-gray-600 font-medium">≥ 75%</span></div>
                                 <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-yellow-50 border border-yellow-300 rounded-sm"></div> <span className="text-gray-600 font-medium">50% - 74%</span></div>
                                 <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-red-50 border border-red-300 rounded-sm"></div> <span className="text-gray-600 font-medium">&lt; 50%</span></div>
                             </div>
@@ -1040,31 +1029,38 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
                              <table ref={toolsTableRef} className="min-w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
                                 <thead>
                                     <tr>
-                                        {[aggregationLevelName, 'PHCs w/ IMNCI', 'IMNCI registers', 'IMNCI chartbooklet', 'weight scale', 'ORT corner'].map((h, i) => (
-                                            <th key={i} className="p-3 border-b border-gray-200 bg-slate-50 text-left font-semibold text-gray-600 uppercase text-[11px] tracking-wider">{h}</th>
+                                        {[
+                                            aggregationLevelName, 
+                                            t('dashboard.table.phcs_with_imnci', 'PHCs w/ IMNCI'), 
+                                            t('dashboard.table.imnci_registers', 'IMNCI registers'), 
+                                            t('dashboard.table.imnci_chartbooklet', 'IMNCI chartbooklet'), 
+                                            t('dashboard.table.weight_scale', 'weight scale'), 
+                                            t('dashboard.table.ort_corner', 'ORT corner')
+                                        ].map((h, i) => (
+                                            <th key={i} className="p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 uppercase text-[11px] tracking-wider">{h}</th>
                                         ))}
                                     </tr>
                                 </thead>
                                 <tbody>
                                  {toolsAverages && !isFacilityView && (
                                      <tr className="bg-slate-100/80 font-bold border-b-2 border-gray-300">
-                                         <td className="p-3 border-r border-gray-200 text-gray-800 uppercase text-[11px] tracking-wider">Overall Average</td>
-                                         <td className="p-3 border-r border-gray-200 text-center font-black text-slate-700">{toolsAverages.total}</td>
-                                         <td className={`p-3 border-r border-gray-200 text-center ${getPercentageColorClass(toolsAverages.pRegister)}`}>{toolsAverages.totalRegister} <span className="text-gray-500 font-normal ml-1">({toolsAverages.pRegister}%)</span></td>
-                                         <td className={`p-3 border-r border-gray-200 text-center ${getPercentageColorClass(toolsAverages.pChart)}`}>{toolsAverages.totalChart} <span className="text-gray-500 font-normal ml-1">({toolsAverages.pChart}%)</span></td>
-                                         <td className={`p-3 border-r border-gray-200 text-center ${getPercentageColorClass(toolsAverages.pScale)}`}>{toolsAverages.totalScale} <span className="text-gray-500 font-normal ml-1">({toolsAverages.pScale}%)</span></td>
-                                         <td className={`p-3 text-center ${getPercentageColorClass(toolsAverages.pOrt)}`}>{toolsAverages.totalOrt} <span className="text-gray-500 font-normal ml-1">({toolsAverages.pOrt}%)</span></td>
+                                         <td className="p-3 border-e border-gray-200 text-gray-800 uppercase text-[11px] tracking-wider text-start">{t('dashboard.table.overall_average', 'Overall Average')}</td>
+                                         <td className="p-3 border-e border-gray-200 text-center font-black text-slate-700">{toolsAverages.total}</td>
+                                         <td className={`p-3 border-e border-gray-200 text-center ${getPercentageColorClass(toolsAverages.pRegister)}`}>{toolsAverages.totalRegister} <span className="text-gray-500 font-normal ms-1">({toolsAverages.pRegister}%)</span></td>
+                                         <td className={`p-3 border-e border-gray-200 text-center ${getPercentageColorClass(toolsAverages.pChart)}`}>{toolsAverages.totalChart} <span className="text-gray-500 font-normal ms-1">({toolsAverages.pChart}%)</span></td>
+                                         <td className={`p-3 border-e border-gray-200 text-center ${getPercentageColorClass(toolsAverages.pScale)}`}>{toolsAverages.totalScale} <span className="text-gray-500 font-normal ms-1">({toolsAverages.pScale}%)</span></td>
+                                         <td className={`p-3 text-center ${getPercentageColorClass(toolsAverages.pOrt)}`}>{toolsAverages.totalOrt} <span className="text-gray-500 font-normal ms-1">({toolsAverages.pOrt}%)</span></td>
                                      </tr>
                                  )}
-                                 {tableToolsData.length === 0 ? <tr><td colSpan={6} className="p-4 text-center text-gray-500">No data matches the current filters.</td></tr> :
+                                 {tableToolsData.length === 0 ? <tr><td colSpan={6} className="p-4 text-center text-gray-500">{t('dashboard.table.no_data', 'No data matches the current filters.')}</td></tr> :
                                   tableToolsData.map(row => (
                                       <tr key={row.key} className="hover:bg-gray-50 border-b border-gray-100">
-                                          <td className="p-3 border-r border-gray-100 font-medium text-gray-800">{row.name}</td>
-                                          <td className="p-3 border-r border-gray-100 text-center font-medium text-slate-600">{row.totalImnciPhcs}</td>
-                                          <td className={`p-3 border-r border-gray-100 text-center ${getPercentageColorClass(row.percentageWithRegister)}`}>{row.countWithRegister} <span className="text-gray-400 font-normal ml-1">({row.percentageWithRegister}%)</span></td>
-                                          <td className={`p-3 border-r border-gray-100 text-center ${getPercentageColorClass(row.percentageWithChartbooklet)}`}>{row.countWithChartbooklet} <span className="text-gray-400 font-normal ml-1">({row.percentageWithChartbooklet}%)</span></td>
-                                          <td className={`p-3 border-r border-gray-100 text-center ${getPercentageColorClass(row.percentageWithWeightScale)}`}>{row.countWithWeightScale} <span className="text-gray-400 font-normal ml-1">({row.percentageWithWeightScale}%)</span></td>
-                                          <td className={`p-3 text-center ${getPercentageColorClass(row.percentageWithOrtCorner)}`}>{row.countWithOrtCorner} <span className="text-gray-400 font-normal ml-1">({row.percentageWithOrtCorner}%)</span></td>
+                                          <td className="p-3 border-e border-gray-100 font-medium text-gray-800 text-start">{row.name}</td>
+                                          <td className="p-3 border-e border-gray-100 text-center font-medium text-slate-600">{row.totalImnciPhcs}</td>
+                                          <td className={`p-3 border-e border-gray-100 text-center ${getPercentageColorClass(row.percentageWithRegister)}`}>{row.countWithRegister} <span className="text-gray-400 font-normal ms-1">({row.percentageWithRegister}%)</span></td>
+                                          <td className={`p-3 border-e border-gray-100 text-center ${getPercentageColorClass(row.percentageWithChartbooklet)}`}>{row.countWithChartbooklet} <span className="text-gray-400 font-normal ms-1">({row.percentageWithChartbooklet}%)</span></td>
+                                          <td className={`p-3 border-e border-gray-100 text-center ${getPercentageColorClass(row.percentageWithWeightScale)}`}>{row.countWithWeightScale} <span className="text-gray-400 font-normal ms-1">({row.percentageWithWeightScale}%)</span></td>
+                                          <td className={`p-3 text-center ${getPercentageColorClass(row.percentageWithOrtCorner)}`}>{row.countWithOrtCorner} <span className="text-gray-400 font-normal ms-1">({row.percentageWithOrtCorner}%)</span></td>
                                       </tr>
                                   ))
                                   }
@@ -1090,6 +1086,7 @@ const CRITICAL_EQUIPMENT_SPEC = {
 const CRITICAL_EQUIPMENT_KEYS = Object.keys(CRITICAL_EQUIPMENT_SPEC);
 
 export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) => {
+    const { t } = useTranslation();
     const { healthFacilities: allFacilities, isLoading } = useDataCache();
     const loading = isLoading.healthFacilities || allFacilities === null;
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
@@ -1180,7 +1177,7 @@ export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) =>
     
     const handleStateChange = (e) => { setStateFilter(e.target.value); setLocalityFilter(''); };
     const currentMapViewLevel = stateFilter ? 'locality' : mapViewLevel;
-    const aggregationLevelName = stateFilter ? 'Locality' : 'State';
+    const aggregationLevelName = stateFilter ? t('dashboard.table.locality', 'Locality') : t('dashboard.table.state', 'State');
 
     const handleMapLocalityHover = useCallback((geoProps, event)=>{ 
         const locKey=geoProps.admin_2;
@@ -1222,10 +1219,10 @@ export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) =>
         <div onMouseMove={handleMouseMove}>
             <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm ignore-for-export mb-6 mt-4">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <FormGroup label="State"><Select value={stateFilter} onChange={handleStateChange}><option value="">All States</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{sKey}</option>)}</Select></FormGroup>
-                    <FormGroup label="Locality"><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">All Localities</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{l.en}</option>)}</Select></FormGroup>
-                    <FormGroup label="Ownership"><Select value={ownershipFilter} onChange={(e) => setOwnershipFilter(e.target.value)}><option value="">All Ownerships</option>{OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
-                    <FormGroup label="Project"><Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}><option value="">All Projects</option>{projectOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('dashboard.filters.state', 'State')}><Select value={stateFilter} onChange={handleStateChange}><option value="">{t('dashboard.filters.all_states', 'All States')}</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{sKey}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('dashboard.filters.locality', 'Locality')}><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">{t('dashboard.filters.all_localities', 'All Localities')}</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{l.en}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('dashboard.filters.ownership', 'Ownership')}><Select value={ownershipFilter} onChange={(e) => setOwnershipFilter(e.target.value)}><option value="">{t('dashboard.filters.all_ownerships', 'All Ownerships')}</option>{OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('dashboard.filters.project', 'Project')}><Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}><option value="">{t('dashboard.filters.all_projects', 'All Projects')}</option>{projectOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
                 </div>
             </div>
 
@@ -1233,11 +1230,11 @@ export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) =>
                 <div className="lg:col-span-1 flex flex-col gap-4 h-full">
                     {loading ? <Spinner/> : (
                         <>
-                            <TotalCountCard title="Target Hospitals (ETAT)" count={kpiData.totalTarget} className="flex-1" borderClass="border-l-slate-400" valueClass="text-slate-700" decorationColor="bg-slate-500" />
-                            <ValueTotalPercentageCard title="Hospitals with ETAT" value={kpiData.totalETAT} total={kpiData.totalTarget} percentage={kpiData.etatCoveragePercentage} className="flex-1" borderClass="border-l-sky-500" valueClass="text-sky-600" decorationColor="bg-sky-500" colorTheme="sky" />
+                            <TotalCountCard title={t('dashboard.cards.target_hospitals_etat', 'Target Hospitals (ETAT)')} count={kpiData.totalTarget} className="flex-1" borderClass="border-s-slate-400" valueClass="text-slate-700" decorationColor="bg-slate-500" />
+                            <ValueTotalPercentageCard title={t('dashboard.cards.hospitals_etat', 'Hospitals with ETAT')} value={kpiData.totalETAT} total={kpiData.totalTarget} percentage={kpiData.etatCoveragePercentage} className="flex-1" borderClass="border-s-sky-500" valueClass="text-sky-600" decorationColor="bg-sky-500" colorTheme="sky" />
                             <div className="flex gap-4 flex-1">
-                                <TotalCountCard title="Facilities with HDU" count={kpiData.totalHDU} className="flex-1" borderClass="border-l-teal-500" valueClass="text-teal-700" decorationColor="bg-teal-500" />
-                                <TotalCountCard title="Facilities with PICU" count={kpiData.totalPICU} className="flex-1" borderClass="border-l-indigo-500" valueClass="text-indigo-700" decorationColor="bg-indigo-500" />
+                                <TotalCountCard title={t('dashboard.cards.facilities_hdu', 'Facilities with HDU')} count={kpiData.totalHDU} className="flex-1" borderClass="border-s-teal-500" valueClass="text-teal-700" decorationColor="bg-teal-500" />
+                                <TotalCountCard title={t('dashboard.cards.facilities_picu', 'Facilities with PICU')} count={kpiData.totalPICU} className="flex-1" borderClass="border-s-indigo-500" valueClass="text-indigo-700" decorationColor="bg-indigo-500" />
                             </div>
                         </>
                     )}
@@ -1247,7 +1244,7 @@ export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) =>
                     <div className="lg:col-span-2 flex flex-col h-full">
                         <Card className="p-0 flex flex-col flex-grow shadow-sm border border-gray-200 rounded-xl h-full">
                              <div className="p-4 md:p-5 border-b bg-slate-50/50 rounded-t-xl flex justify-between items-start gap-4">
-                                 <h3 className="text-lg font-bold text-gray-800 leading-tight">Geographical Map (ETAT Coverage)</h3>
+                                 <h3 className="text-lg font-bold text-gray-800 leading-tight">{t('dashboard.headers.geographic_map', 'Geographical Map')}</h3>
                                  <button onClick={handleCopyImage} className="text-gray-400 hover:text-sky-600 transition-colors p-1 mt-0.5 shrink-0" disabled={!!copyStatus && copyStatus !== 'Failed'}>{copyStatus ? <span className="text-[10px] font-semibold text-sky-600">{copyStatus}</span> : <CopyIcon />}</button>
                             </div>
                             <div className="flex-grow min-h-[400px] p-2 relative flex flex-col">
@@ -1259,12 +1256,12 @@ export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) =>
                                 <MapLegend />
                                 <div className="flex flex-nowrap items-center gap-2 overflow-x-auto w-full xl:w-auto justify-end ignore-for-export">
                                     {!stateFilter && (
-                                        <div className="flex rounded-md shadow-sm shrink-0 mr-1">
-                                            <button onClick={() => setMapViewLevel('state')} className={`px-3 py-1.5 text-xs font-semibold rounded-l-md ${mapViewLevel === 'state' ? 'bg-sky-700 text-white' : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'}`} > State </button>
-                                            <button onClick={() => setMapViewLevel('locality')} className={`px-3 py-1.5 text-xs font-semibold rounded-r-md ${mapViewLevel === 'locality' ? 'bg-sky-700 text-white border border-sky-700' : 'bg-white text-gray-700 hover:bg-gray-50 border border-l-0 border-gray-200'}`} > Locality </button>
+                                        <div className="flex rounded-md shadow-sm shrink-0 mx-1">
+                                            <button onClick={() => setMapViewLevel('state')} className={`px-3 py-1.5 text-xs font-semibold rounded-s-md ${mapViewLevel === 'state' ? 'bg-sky-700 text-white' : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'}`} > {t('dashboard.map.state', 'State')} </button>
+                                            <button onClick={() => setMapViewLevel('locality')} className={`px-3 py-1.5 text-xs font-semibold rounded-e-md ${mapViewLevel === 'locality' ? 'bg-sky-700 text-white border border-sky-700' : 'bg-white text-gray-700 hover:bg-gray-50 border border-s-0 border-gray-200'}`} > {t('dashboard.map.locality', 'Locality')} </button>
                                         </div>
                                     )}
-                                    <button onClick={() => setShowFacilityMarkers(!showFacilityMarkers)} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors shadow-sm shrink-0 ${showFacilityMarkers ? 'bg-slate-700 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>{showFacilityMarkers ? 'Hide Fac.' : 'Show Fac.'}</button>
+                                    <button onClick={() => setShowFacilityMarkers(!showFacilityMarkers)} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors shadow-sm shrink-0 ${showFacilityMarkers ? 'bg-slate-700 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>{showFacilityMarkers ? t('dashboard.map.hide_fac', 'Hide Fac.') : t('dashboard.map.show_fac', 'Show Fac.')}</button>
                                 </div>
                             </div>
                         </Card>
@@ -1277,34 +1274,34 @@ export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) =>
                 <div className="mt-6 grid grid-cols-1 gap-6 items-stretch relative">
                     <Card className="p-0 flex flex-col overflow-hidden border border-gray-200 rounded-xl">
                         <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
-                            <h3 className="text-lg font-bold text-gray-800">Critical Care Coverage by {aggregationLevelName}</h3>
+                            <h3 className="text-lg font-bold text-gray-800">{t('dashboard.headers.critical_care_coverage', 'Critical Care Coverage by')} {aggregationLevelName}</h3>
                             <button onClick={() => copyTableAsImage(coverageTableRef, setTable1CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table1CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table1CopyStatus}</span> : <CopyIcon />} </button>
                         </div>
                         <div className="flex-grow overflow-x-auto p-4">
                             <table ref={coverageTableRef} className='min-w-full text-xs border border-gray-200 rounded-lg overflow-hidden'>
                                 <thead>
                                     <tr>
-                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-left font-semibold text-gray-600 uppercase tracking-wider'>{aggregationLevelName}</th>
-                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider'>Target Hospitals</th>
-                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider'>With HDU</th>
-                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider'>With PICU</th>
-                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider'>With ETAT</th>
-                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-left font-semibold text-gray-600 uppercase tracking-wider w-[35%]'>ETAT Coverage Chart</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 uppercase tracking-wider'>{aggregationLevelName}</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider'>{t('dashboard.table.target_hospitals', 'Target Hospitals')}</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider'>{t('dashboard.table.with_hdu', 'With HDU')}</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider'>{t('dashboard.table.with_picu', 'With PICU')}</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider'>{t('dashboard.table.with_etat', 'With ETAT')}</th>
+                                        <th className='p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 uppercase tracking-wider w-[35%]'>{t('dashboard.table.coverage_chart', 'Coverage Chart')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {tableData.length === 0 ? <tr><td colSpan={6} className="p-4 text-center text-gray-500">No data matches the current filters.</td></tr> :
+                                    {tableData.length === 0 ? <tr><td colSpan={6} className="p-4 text-center text-gray-500">{t('dashboard.table.no_data', 'No data matches the current filters.')}</td></tr> :
                                      tableData.map(row => ( 
                                         <tr key={row.key} className='hover:bg-blue-50/50 transition-colors border-b border-gray-100'>
-                                            <td className="p-3 font-medium text-gray-700">{row.name}</td>
+                                            <td className="p-3 font-medium text-gray-700 text-start">{row.name}</td>
                                             <td className="p-3 text-center align-middle font-medium">{row.totalTarget}</td>
                                             <td className="p-3 text-center align-middle font-medium">{row.withHDU}</td>
                                             <td className="p-3 text-center align-middle font-medium">{row.withPICU}</td>
                                             <td className="p-3 text-center font-bold text-sky-700 align-middle">{row.withETAT}</td>
-                                            <td className="p-3 align-middle">
+                                            <td className="p-3 align-middle text-start">
                                                 <div className="flex items-center w-full">
                                                     <div className="flex-grow bg-gray-200 rounded-sm h-3 overflow-hidden flex"><div className={`h-full transition-all shadow-sm ${row.etatCoverage >= 75 ? 'bg-sky-700' : row.etatCoverage >= 40 ? 'bg-sky-400' : 'bg-gray-600'}`} style={{ width: `${Math.max(row.etatCoverage, 1)}%` }}></div></div>
-                                                    <span className="ml-3 text-[11px] font-bold text-gray-700 w-8 text-right">{row.etatCoverage}%</span>
+                                                    <span className="ms-3 text-[11px] font-bold text-gray-700 w-8 text-end">{row.etatCoverage}%</span>
                                                 </div>
                                             </td>
                                         </tr> 
@@ -1318,22 +1315,22 @@ export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) =>
                 <div className="mt-6">
                     <Card className="p-0 overflow-hidden border border-gray-200 rounded-xl">
                         <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
-                            <h3 className="text-lg font-bold text-gray-800">Critical Care Capacity & Equipment</h3>
+                            <h3 className="text-lg font-bold text-gray-800">{t('dashboard.headers.critical_care_capacity', 'Critical Care Capacity & Equipment')}</h3>
                             <button onClick={() => copyTableAsImage(equipmentTableRef, setTable2CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table2CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table2CopyStatus}</span> : <CopyIcon />} </button>
                         </div>
                         <div className="overflow-x-auto p-4">
                             <table ref={equipmentTableRef} className="min-w-full table-auto border-collapse text-[10px] border border-gray-200">
                                 <thead className="bg-slate-50 border-b border-gray-200">
                                     <tr>
-                                        <th className={`p-2 text-left font-semibold tracking-wider text-gray-600 uppercase align-bottom w-40`}><div className='font-bold break-words text-center'>{stateFilter ? 'Hospital Name' : aggregationLevelName}</div></th>
-                                        {Object.values(CRITICAL_EQUIPMENT_SPEC).map((header, index) => ( <th key={index} className={`p-2 text-left font-semibold tracking-wider text-gray-600 uppercase align-bottom w-20`}><div className='font-bold break-words text-center'>{header}</div></th> ))}
+                                        <th className={`p-2 text-start font-semibold tracking-wider text-gray-600 uppercase align-bottom w-40`}><div className='font-bold break-words text-center'>{stateFilter ? t('dashboard.table.hospital_name', 'Hospital Name') : aggregationLevelName}</div></th>
+                                        {Object.values(CRITICAL_EQUIPMENT_SPEC).map((header, index) => ( <th key={index} className={`p-2 text-start font-semibold tracking-wider text-gray-600 uppercase align-bottom w-20`}><div className='font-bold break-words text-center'>{t(`dashboard.equip.${header}`, header)}</div></th> ))}
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {equipmentTableData.map(row => ( 
                                         <tr key={row.name} className="hover:bg-slate-50 transition-colors border-b border-gray-100">
-                                            <td className={`font-medium text-gray-700 p-2 break-words`}>{row.name}</td>
-                                            {CRITICAL_EQUIPMENT_KEYS.map(key => { const value = row[key]; const cellClass = value === 0 ? 'bg-red-50 text-red-600 font-bold' : 'text-gray-700 font-medium'; return ( <td key={key} className={`p-2 ${cellClass} text-center border-l border-gray-100`}> {value} </td> ); })}
+                                            <td className={`font-medium text-gray-700 p-2 break-words text-start`}>{row.name}</td>
+                                            {CRITICAL_EQUIPMENT_KEYS.map(key => { const value = row[key]; const cellClass = value === 0 ? 'bg-red-50 text-red-600 font-bold' : 'text-gray-700 font-medium'; return ( <td key={key} className={`p-2 ${cellClass} text-center border-s border-gray-100`}> {value} </td> ); })}
                                         </tr> 
                                     ))}
                                 </tbody>
@@ -1353,7 +1350,7 @@ export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) =>
 const CompactKPICard = ({ percentage, title, numeratorLabel, numeratorValue, denominatorLabel, denominatorValue, colorClass = "bg-sky-600", className = "" }) => (
     <div className={`bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow ${className}`}>
         <div className={`px-3 py-2.5 text-white flex justify-between items-center ${colorClass}`}>
-            <h3 className="text-xs md:text-sm font-bold leading-tight w-2/3 text-right" dir="rtl">{title}</h3>
+            <h3 className="text-xs md:text-sm font-bold leading-tight w-2/3 text-end" dir="rtl">{title}</h3>
             <span className="text-xl md:text-2xl font-extrabold">% {percentage}</span>
         </div>
         <div className="px-3 py-2 bg-gray-50 text-[11px] md:text-xs text-gray-700 space-y-1.5 flex flex-col justify-center flex-grow" dir="rtl">
@@ -1371,14 +1368,15 @@ const CompactKPICard = ({ percentage, title, numeratorLabel, numeratorValue, den
 
 // --- CUSTOM COMBINED MAP TOOLTIP ---
 const CombinedMapTooltip = ({ data }) => {
+    const { t } = useTranslation();
     if (!data) return null;
     return (
         <div className="absolute z-50 p-4 bg-white border border-gray-300 shadow-2xl rounded-lg w-72 pointer-events-none transform -translate-x-full -translate-y-1/2">
-            <h4 className="text-lg font-bold text-gray-800 border-b pb-2 mb-2">{data.name}</h4>
-            <div className="text-sm font-bold text-sky-700 mb-3">
-                Overall Coverage: {data.percentage}%
+            <h4 className="text-lg font-bold text-gray-800 border-b pb-2 mb-2 text-start">{data.name}</h4>
+            <div className="text-sm font-bold text-sky-700 mb-3 text-start">
+                {t('dashboard.kpi.overall_coverage', 'Overall Coverage')}: {data.percentage}%
             </div>
-            <div className="space-y-2 text-xs" dir="rtl">
+            <div className="space-y-2 text-xs text-start" dir="rtl">
                 <div className="flex justify-between items-center bg-sky-50 p-1.5 rounded">
                     <span className="font-semibold text-gray-700">IMNCI:</span>
                     <span>{data.raw.imnci.perc}% <span className="text-gray-500 font-normal">({data.raw.imnci.n}/{data.raw.imnci.d})</span></span>
@@ -1402,6 +1400,7 @@ const CombinedMapTooltip = ({ data }) => {
 
 // --- COMBINED SERVICES DASHBOARD ---
 export const CombinedServiceDashboard = ({ userStates, userLocalities }) => {
+    const { t } = useTranslation();
     const { healthFacilities: allFacilities, isLoading } = useDataCache();
     const loading = isLoading?.healthFacilities || allFacilities === null;
     
@@ -1588,15 +1587,15 @@ export const CombinedServiceDashboard = ({ userStates, userLocalities }) => {
             {/* Filters Row */}
             <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm ignore-for-export mb-6 mt-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
-                    <FormGroup label="Filter by State">
+                    <FormGroup label={t('dashboard.filters.state', 'Filter by State')}>
                         <Select value={stateFilter} onChange={(e) => {setStateFilter(e.target.value); setLocalityFilter('');}}>
-                            <option value="">All States</option>
+                            <option value="">{t('dashboard.filters.all_states', 'All States')}</option>
                             {Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{sKey}</option>)}
                         </Select>
                     </FormGroup>
-                    <FormGroup label="Filter by Locality">
+                    <FormGroup label={t('dashboard.filters.locality', 'Filter by Locality')}>
                         <Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}>
-                            <option value="">All Localities</option>
+                            <option value="">{t('dashboard.filters.all_localities', 'All Localities')}</option>
                             {stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{l.en}</option>)}
                         </Select>
                     </FormGroup>
@@ -1608,7 +1607,7 @@ export const CombinedServiceDashboard = ({ userStates, userLocalities }) => {
                     <Card className="p-0 flex flex-col shadow-sm border border-gray-200 rounded-xl">
                         <div className="p-4 md:p-5 border-b flex flex-col sm:flex-row sm:justify-between sm:items-center bg-slate-50/50 rounded-t-xl gap-4 sm:gap-0">
                             <div className="flex items-center gap-3">
-                                <h3 className="text-lg font-bold text-gray-800">Geographic Coverage & Service Performance</h3>
+                                <h3 className="text-lg font-bold text-gray-800">{t('dashboard.headers.geographic_coverage', 'Geographic Coverage & Service Performance')}</h3>
                                 <button onClick={handleCopyCombined} title="Copy Dashboard Image" className="text-gray-400 hover:text-sky-600 transition-colors p-1" disabled={!!combinedCopyStatus && combinedCopyStatus !== 'Failed'}>
                                     {combinedCopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{combinedCopyStatus}</span> : <CopyIcon />}
                                 </button>
@@ -1617,7 +1616,7 @@ export const CombinedServiceDashboard = ({ userStates, userLocalities }) => {
 
                         <div className="flex flex-col lg:flex-row items-stretch bg-white rounded-b-xl">
                             {/* LEFT COLUMN: FULL MAP (2/3 width) */}
-                            <div className="lg:w-2/3 flex flex-col border-b lg:border-b-0 lg:border-r border-gray-200 relative">
+                            <div className="lg:w-2/3 flex flex-col border-b lg:border-b-0 lg:border-e border-gray-200 relative">
                                 <div className="flex-grow min-h-[550px] relative p-2">
                                     <SudanMap
                                         data={currentMapViewLevel === 'state' ? stateMapData : []}
@@ -1636,12 +1635,7 @@ export const CombinedServiceDashboard = ({ userStates, userLocalities }) => {
                                     />
                                 </div>
                                 <div className="bg-slate-50 border-t border-gray-200 py-3 px-4 flex justify-center items-center rounded-bl-xl">
-                                    <div className="flex justify-center items-center flex-wrap gap-4 text-sm text-gray-700">
-                                        <span className="font-bold">Legend (Avg Coverage):</span>
-                                        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full shadow-sm bg-[#6B6B6B]"></div><span className='text-xs font-medium'>0-39%</span></div>
-                                        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full shadow-sm bg-[#6266B1]"></div><span className='text-xs font-medium'>40-74%</span></div>
-                                        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full shadow-sm bg-[#313695]"></div><span className='text-xs font-medium'>&ge;75%</span></div>
-                                    </div>
+                                    <MapLegend />
                                 </div>
                             </div>
 
@@ -1650,40 +1644,40 @@ export const CombinedServiceDashboard = ({ userStates, userLocalities }) => {
                                 <div className="flex flex-col gap-4 overflow-y-auto h-full justify-between">
                                     <CompactKPICard 
                                         percentage={kpiData.imnci.perc}
-                                        title="العلاج المتكامل للاطفال قل من 5 سنوات (IMNCI)"
-                                        numeratorLabel="المراكز المطبقة"
+                                        title={t('dashboard.kpi.imnci.title', "العلاج المتكامل للاطفال قل من 5 سنوات (IMNCI)")}
+                                        numeratorLabel={t('dashboard.kpi.imnci.num', "المراكز المطبقة")}
                                         numeratorValue={kpiData.imnci.num}
-                                        denominatorLabel="المراكز الكلية المستهدفة"
+                                        denominatorLabel={t('dashboard.kpi.imnci.den', "المراكز الكلية المستهدفة")}
                                         denominatorValue={kpiData.imnci.den}
                                         colorClass="bg-sky-600"
                                         className="flex-1"
                                     />
                                     <CompactKPICard 
                                         percentage={kpiData.etat.perc}
-                                        title="الفرز والتقييم والمعالجة للاطفال في الطوارئ (ETAT)"
-                                        numeratorLabel="المستشفيات المطبقة"
+                                        title={t('dashboard.kpi.etat.title', "الفرز والتقييم والمعالجة للاطفال في الطوارئ (ETAT)")}
+                                        numeratorLabel={t('dashboard.kpi.etat.num', "المستشفيات المطبقة")}
                                         numeratorValue={kpiData.etat.num}
-                                        denominatorLabel="المستشفيات المستهدفة (أطفال/عامة)"
+                                        denominatorLabel={t('dashboard.kpi.etat.den', "المستشفيات المستهدفة (أطفال/عامة)")}
                                         denominatorValue={kpiData.etat.den}
                                         colorClass="bg-teal-600"
                                         className="flex-1"
                                     />
                                     <CompactKPICard 
                                         percentage={kpiData.eenc.perc}
-                                        title="الرعاية الضرورية المبكرة للاطفال حديثي الولادة (EENC)"
-                                        numeratorLabel="المستشفيات المطبقة"
+                                        title={t('dashboard.kpi.eenc.title', "الرعاية الضرورية المبكرة للاطفال حديثي الولادة (EENC)")}
+                                        numeratorLabel={t('dashboard.kpi.eenc.num', "المستشفيات المطبقة")}
                                         numeratorValue={kpiData.eenc.num}
-                                        denominatorLabel="مستشفيات طوارئ الحمل والولادة"
+                                        denominatorLabel={t('dashboard.kpi.eenc.den', "مستشفيات طوارئ الحمل والولادة")}
                                         denominatorValue={kpiData.eenc.den}
                                         colorClass="bg-indigo-600"
                                         className="flex-1"
                                     />
                                     <CompactKPICard 
                                         percentage={kpiData.scnu.perc}
-                                        title="الرعاية الخاصة للاطفال حديثي الولادة SCNU"
-                                        numeratorLabel="المستشفيات المطبقة"
+                                        title={t('dashboard.kpi.scnu.title', "الرعاية الخاصة للاطفال حديثي الولادة SCNU")}
+                                        numeratorLabel={t('dashboard.kpi.scnu.num', "المستشفيات المطبقة")}
                                         numeratorValue={kpiData.scnu.num}
-                                        denominatorLabel="المستشفيات المستهدفة"
+                                        denominatorLabel={t('dashboard.kpi.scnu.den', "المستشفيات المستهدفة")}
                                         denominatorValue={kpiData.scnu.den}
                                         colorClass="bg-purple-600"
                                         className="flex-1"

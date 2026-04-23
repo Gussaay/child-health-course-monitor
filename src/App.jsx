@@ -1,5 +1,7 @@
 // App.jsx
+import './i18n'; // <-- INITIALIZE i18next & RTL SUPPORT BEFORE APP MOUNTS
 import React, { useEffect, useMemo, useState, useRef, lazy, Suspense, useCallback } from "react";
+import { useTranslation } from 'react-i18next'; // <-- ADDED i18n HOOK
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Bar, Pie, Line } from 'react-chartjs-2';
@@ -295,7 +297,7 @@ const applyDerivedPermissions = (basePermissions) => {
 
 const ResourceMonitor = ({ counts, onReset, onDismiss }) => {
     return (
-        <div className="fixed top-4 right-4 md:bottom-4 md:top-auto bg-gray-900 text-white p-2 rounded-lg shadow-lg z-50 opacity-90 w-56">
+        <div className="fixed top-4 end-4 md:bottom-4 md:top-auto bg-gray-900 text-white p-2 rounded-lg shadow-lg z-50 opacity-90 w-56">
             <div className="flex justify-between items-center mb-1.5">
                 <div className="flex items-center gap-1.5">
                     <Database className="w-4 h-4 text-sky-400" />
@@ -333,23 +335,27 @@ const ResourceMonitor = ({ counts, onReset, onDismiss }) => {
 };
 
 function Landing({ navigate, permissions }) {
+    const { t } = useTranslation();
     const navButtons = [
-        { label: 'Dashboard', view: 'dashboard', icon: Home, permission: true },
-        { label: 'Courses', view: 'courses', icon: Book, permission: permissions.canViewCourse },
-        { label: 'Human Resources', view: 'humanResources', icon: Users, permission: permissions.canViewHumanResource },
-        { label: 'Child Health Services', view: 'childHealthServices', icon: Hospital, permission: permissions.canViewFacilities },
-        { label: 'Skills Mentorship', view: 'skillsMentorship', icon: ClipboardCheck, permission: permissions.canViewSkillsMentorship },
-        { label: 'IMCI Assessment', view: 'imciForm', icon: Activity, permission: permissions.canViewCourse },
-        { label: 'Project Tracker', view: 'projects', icon: FolderKanban, permission: permissions.canUseFederalManagerAdvancedFeatures },
-        { label: 'Master Plan', view: 'planning', icon: TrendingUp, permission: permissions.canUseFederalManagerAdvancedFeatures }, 
-        { label: 'Admin', view: 'admin', icon: User, permission: permissions.canViewAdmin },
+        { label: t('landing.modules.dashboard', 'Dashboard'), view: 'dashboard', icon: Home, permission: true },
+        { label: t('landing.modules.courses', 'Courses'), view: 'courses', icon: Book, permission: permissions.canViewCourse },
+        { label: t('landing.modules.human_resources', 'Human Resources'), view: 'humanResources', icon: Users, permission: permissions.canViewHumanResource },
+        { label: t('landing.modules.facilities', 'Child Health Services'), view: 'childHealthServices', icon: Hospital, permission: permissions.canViewFacilities },
+        { label: t('landing.modules.mentorship', 'Skills Mentorship'), view: 'skillsMentorship', icon: ClipboardCheck, permission: permissions.canViewSkillsMentorship },
+        { label: t('landing.modules.imci', 'IMCI Assessment'), view: 'imciForm', icon: Activity, permission: permissions.canViewCourse },
+        { label: t('landing.modules.projects', 'Project Tracker'), view: 'projects', icon: FolderKanban, permission: permissions.canUseFederalManagerAdvancedFeatures },
+        { label: t('landing.modules.planning', 'Master Plan'), view: 'planning', icon: TrendingUp, permission: permissions.canUseFederalManagerAdvancedFeatures }, 
+        { label: t('landing.modules.admin', 'Admin'), view: 'admin', icon: User, permission: permissions.canViewAdmin },
     ];
 
     const accessibleButtons = navButtons.filter(btn => btn.permission);
 
     return (
         <Card>
-            <PageHeader title="Welcome" subtitle="Select a module to get started" />
+            <PageHeader 
+                title={t('landing.welcome', 'Welcome')} 
+                subtitle={t('landing.subtitle', 'Select a module to get started')} 
+            />
             <div className="p-4">
                 {accessibleButtons.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -368,7 +374,7 @@ function Landing({ navigate, permissions }) {
                         })}
                     </div>
                 ) : (
-                    <EmptyState message="You do not have permissions to view any modules. Please contact an administrator." />
+                    <EmptyState message={t('landing.no_permissions', 'You do not have permissions to view any modules. Please contact an administrator.')} />
                 )}
             </div>
         </Card>
@@ -377,22 +383,22 @@ function Landing({ navigate, permissions }) {
 
 const BottomNav = React.memo(function BottomNav({ navItems, navigate }) {
     const icons = { 
-        Dashboard: Home, 
-        Home: Home, 
-        Courses: Book, 
-        'Human Resources': Users, 
-        'Child Health Services': Hospital, 
-        'Skills Mentorship': ClipboardCheck, 
-        'Project Tracker': FolderKanban,
-        'Master Plan': TrendingUp,
-        Admin: User 
+        'landing': Home, 
+        'dashboard': Home, 
+        'courses': Book, 
+        'humanResources': Users, 
+        'childHealthServices': Hospital, 
+        'skillsMentorship': ClipboardCheck, 
+        'projects': FolderKanban,
+        'planning': TrendingUp,
+        'admin': User 
     };
     return (
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-800 border-t border-slate-700 flex justify-around items-center z-20">
+        <nav className="md:hidden fixed bottom-0 inset-x-0 bg-slate-800 border-t border-slate-700 flex justify-around items-center z-20">
             {navItems.map(item => {
-                const Icon = icons[item.label] || Activity;
+                const Icon = icons[item.view] || Activity;
                 return (
-                    <button key={item.label} onClick={() => navigate(item.view)} className={`flex flex-col items-center justify-center p-2 w-full h-16 text-xs font-medium transition-colors ${item.active ? 'text-sky-400' : 'text-slate-400 hover:text-white'}`}>
+                    <button key={item.view} onClick={() => navigate(item.view)} className={`flex flex-col items-center justify-center p-2 w-full h-16 text-xs font-medium transition-colors ${item.active ? 'text-sky-400' : 'text-slate-400 hover:text-white'}`}>
                         {Icon && <Icon className="w-6 h-6 mb-1" />}
                         <span>{item.label}</span>
                     </button>
@@ -403,17 +409,22 @@ const BottomNav = React.memo(function BottomNav({ navItems, navigate }) {
 });
 
 function SplashScreen() {
+    const { t } = useTranslation();
     return (
         <div className="fixed inset-0 bg-sky-50 flex flex-col items-center justify-center gap-6 text-center p-4 z-[9999]">
             <div className="h-24 w-24 bg-white rounded-full flex items-center justify-center p-1 shadow-xl animate-pulse"><img src="/child.png" alt="NCHP Logo" className="h-20 w-20 object-contain" /></div>
-            <div><h1 className="text-3xl font-bold text-slate-800">National Child Health Program</h1><p className="text-lg text-slate-500 mt-1">Program & Course Monitoring System</p></div>
+            <div>
+                <h1 className="text-3xl font-bold text-slate-800">{t('app.title', 'National Child Health Program')}</h1>
+                <p className="text-lg text-slate-500 mt-1">{t('app.subtitle', 'Program & Course Monitoring System')}</p>
+            </div>
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600 mt-4"></div>
-            <p className="text-slate-600 mt-4">Loading application, please wait...</p>
+            <p className="text-slate-600 mt-4">{t('app.loading_system', 'Loading application, please wait...')}</p>
         </div>
     );
 }
 
 export default function App() {
+    const { t, i18n } = useTranslation(); // <-- EXTRACTED i18n HERE
     const [isUpdateReady, setIsUpdateReady] = useState(false);
     const [updateBundle, setUpdateBundle] = useState(null);
 
@@ -552,10 +563,26 @@ export default function App() {
     useEffect(() => {
         if (Capacitor.isNativePlatform()) {
             const checkAndDownloadUpdate = async () => {
-                try {
-                    const res = await fetch('https://imnci-courses-monitor.web.app/latest/update.json?t=' + Date.now());
-                    const latestUpdate = await res.json();
+                // Check if device is offline. If so, silently exit and do not block.
+                if (!navigator.onLine) {
+                    console.log("Device is offline. Skipping background update check.");
+                    return;
+                }
 
+                // Add an AbortController with a 5-second timeout to handle "Lie-Fi"
+                // (When the phone thinks it is online, but the network drops the connection)
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000); 
+
+                try {
+                    const res = await fetch('https://imnci-courses-monitor.web.app/latest/update.json?t=' + Date.now(), {
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId); // Clear the timeout if the fetch succeeds
+                    
+                    if (!res.ok) throw new Error("Network response was not ok");
+                    
+                    const latestUpdate = await res.json();
                     const currentState = await CapacitorUpdater.current();
                     const currentVersion = currentState.bundle?.version || "builtin";
 
@@ -569,8 +596,8 @@ export default function App() {
                         setIsUpdateReady(true);
                     }
                 } catch (error) {
-                    console.error("Self-hosted update check failed:", error);
-                    alert("Update Check Failed: " + error.message);
+                    // Fail silently in the background so the user is never interrupted
+                    console.warn("Self-hosted update check skipped or failed due to network conditions.");
                 }
             };
 
@@ -1855,15 +1882,15 @@ export default function App() {
     };
 
     const navItems = useMemo(() => [
-        { label: 'Home', view: 'landing', active: view === 'landing', disabled: false },
-        { label: 'Dashboard', view: 'dashboard', active: view === 'dashboard', disabled: false },
-        { label: 'Courses', view: 'courses', active: ['courses', 'courseForm', 'courseReport', 'participants', 'participantForm', 'participantReport', 'observe', 'monitoring', 'reports', 'finalReport', 'participantMigration', 'courseDetails', 'test-dashboard', 'enter-test-scores', 'attendanceManager', 'imciForm'].includes(view), disabled: !permissions.canViewCourse }, 
-        { label: 'Human Resources', view: 'humanResources', active: ['humanResources', 'facilitatorForm', 'facilitatorReport'].includes(view), disabled: !permissions.canViewHumanResource },
-        { label: 'Child Health Services', view: 'childHealthServices', active: view === 'childHealthServices', disabled: !permissions.canViewFacilities },
-        { label: 'Skills Mentorship', view: 'skillsMentorship', active: view === 'skillsMentorship', disabled: !permissions.canViewSkillsMentorship },
-        { label: 'Project Tracker', view: 'projects', active: view === 'projects', disabled: !permissions.canUseFederalManagerAdvancedFeatures },
-        { label: 'Master Plan', view: 'planning', active: view === 'planning', disabled: !permissions.canUseFederalManagerAdvancedFeatures },
-    ], [view, permissions]);
+        { label: t('landing.modules.home', 'Home'), view: 'landing', active: view === 'landing', disabled: false },
+        { label: t('landing.modules.dashboard', 'Dashboard'), view: 'dashboard', active: view === 'dashboard', disabled: false },
+        { label: t('landing.modules.courses', 'Courses'), view: 'courses', active: ['courses', 'courseForm', 'courseReport', 'participants', 'participantForm', 'participantReport', 'observe', 'monitoring', 'reports', 'finalReport', 'participantMigration', 'courseDetails', 'test-dashboard', 'enter-test-scores', 'attendanceManager', 'imciForm'].includes(view), disabled: !permissions.canViewCourse }, 
+        { label: t('landing.modules.human_resources', 'Human Resources'), view: 'humanResources', active: ['humanResources', 'facilitatorForm', 'facilitatorReport'].includes(view), disabled: !permissions.canViewHumanResource },
+        { label: t('landing.modules.facilities', 'Child Health Services'), view: 'childHealthServices', active: view === 'childHealthServices', disabled: !permissions.canViewFacilities },
+        { label: t('landing.modules.mentorship', 'Skills Mentorship'), view: 'skillsMentorship', active: view === 'skillsMentorship', disabled: !permissions.canViewSkillsMentorship },
+        { label: t('landing.modules.projects', 'Project Tracker'), view: 'projects', active: view === 'projects', disabled: !permissions.canUseFederalManagerAdvancedFeatures },
+        { label: t('landing.modules.planning', 'Master Plan'), view: 'planning', active: view === 'planning', disabled: !permissions.canUseFederalManagerAdvancedFeatures },
+    ], [view, permissions, t]);
 
     const visibleNavItems = useMemo(() => navItems.filter(item => !item.disabled), [navItems]);
 
@@ -2174,15 +2201,15 @@ export default function App() {
 
     return (
         <div className="min-h-screen bg-sky-50 flex flex-col pt-0 relative">
-            <div className="fixed top-0 left-0 w-full z-[100] flex flex-col">
+            <div className="fixed top-0 start-0 w-full z-[100] flex flex-col">
                 {isOffline && (
                     <div className="bg-amber-500 text-white text-center py-2 px-4 text-sm font-bold flex justify-center items-center gap-2 shadow-md">
-                        <WifiOff className="w-5 h-5" /> You are offline. Changes are saved locally and will sync when reconnected.
+                        <WifiOff className="w-5 h-5" /> {t('app.offline', 'You are offline. Changes are saved locally and will sync when reconnected.')}
                     </div>
                 )}
                 {isSyncing && !isOffline && (
                     <div className="bg-sky-500 text-white text-center py-2 px-4 text-sm font-bold flex justify-center items-center gap-2 shadow-md">
-                        <RefreshCw className="w-5 h-5 animate-spin" /> Syncing offline data to the cloud...
+                        <RefreshCw className="w-5 h-5 animate-spin" /> {t('app.syncing', 'Syncing offline data to the cloud...')}
                     </div>
                 )}
             </div>
@@ -2194,17 +2221,39 @@ export default function App() {
                             <div className="h-14 w-14 bg-white rounded-full flex items-center justify-center p-1 shadow-md">
                                 <img src="/child.png" alt="NCHP Logo" className="h-12 w-12 object-contain" />
                             </div>
-                            <div><h1 className="text-xl sm:text-2xl font-bold text-white">National Child Health Program</h1><p className="text-sm text-slate-300 hidden sm:block">Program & Course Monitoring System</p></div>
+                            <div>
+                                <h1 className="text-xl sm:text-2xl font-bold text-white">{t('app.title', 'National Child Health Program')}</h1>
+                                <p className="text-sm text-slate-300 hidden sm:block">{t('app.subtitle', 'Program & Course Monitoring System')}</p>
+                            </div>
                         </div>
-                        {!isMinimalUILayout && user && (
-                            <nav className="hidden md:flex items-center gap-1">
-                                {visibleNavItems.map(item => (
-                                    <button key={item.label} onClick={() => navigate(item.view)} className={`px-3 py-2 text-sm font-semibold rounded-md transition-colors ${item.active ? 'bg-sky-600 text-white' : 'text-slate-200 hover:bg-slate-700'}`}>
-                                        {item.label}
-                                    </button>
-                                ))} 
-                            </nav>
-                        )}
+                        
+                        {/* ========================================================= */}
+                        {/* WRAPPER FOR NAV AND LANGUAGE BUTTON */}
+                        {/* ========================================================= */}
+                        <div className="flex items-center gap-3">
+                            {!isMinimalUILayout && user && (
+                                <nav className="hidden md:flex items-center gap-1">
+                                    {visibleNavItems.map(item => (
+                                        <button key={item.view} onClick={() => navigate(item.view)} className={`px-3 py-2 text-sm font-semibold rounded-md transition-colors ${item.active ? 'bg-sky-600 text-white' : 'text-slate-200 hover:bg-slate-700'}`}>
+                                            {item.label}
+                                        </button>
+                                    ))} 
+                                </nav>
+                            )}
+
+                            {/* ALWAYS VISIBLE LANGUAGE TOGGLE BUTTON */}
+                            <button
+                                onClick={() => {
+                                    const newLang = i18n.language?.startsWith('en') ? 'ar' : 'en';
+                                    i18n.changeLanguage(newLang);
+                                }}
+                                className="px-3 py-1.5 text-sm font-bold text-sky-100 bg-slate-700 border border-slate-600 rounded hover:bg-slate-600 hover:text-white transition-colors"
+                                title={i18n.language?.startsWith('en') ? 'التبديل إلى العربية' : 'Switch to English'}
+                            >
+                                {i18n.language?.startsWith('en') ? 'العربية' : 'English'}
+                            </button>
+                        </div>
+
                     </div>
                 </div>
             </header>
@@ -2212,11 +2261,11 @@ export default function App() {
             {user && !isMinimalUILayout && (
                 <div className="bg-slate-700 text-slate-200 p-2 md:p-3 text-center flex items-center justify-center gap-4">
                     <div className="flex items-center gap-2">
-                        <span>Welcome, **{user.displayName || user.email}**</span>
+                        <span>{t('app.welcome', 'Welcome')}, **{user.displayName || user.email}**</span>
                         {userRole && <span className="bg-sky-600 text-xs px-2 py-1 rounded">{userRole}</span>}
                     </div>
-                    {permissions.canViewAdmin && (<Button onClick={() => navigate('admin')} variant="primary">Admin Dashboard</Button>)}
-                    <Button onClick={handleLogout} className="px-3 py-1 text-sm font-semibold text-white bg-red-600 rounded-md hover:bg-red-700">Logout</Button>
+                    {permissions.canViewAdmin && (<Button onClick={() => navigate('admin')} variant="primary">{t('landing.modules.admin', 'Admin Dashboard')}</Button>)}
+                    <Button onClick={handleLogout} className="px-3 py-1 text-sm font-semibold text-white bg-red-600 rounded-md hover:bg-red-700">{t('app.logout', 'Logout')}</Button>
                 </div>
             )}
             {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ show: false, message: '', type: '' })} />}

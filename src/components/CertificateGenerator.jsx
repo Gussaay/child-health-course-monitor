@@ -51,6 +51,7 @@ const getCertificateCourseTitle = (courseType, language = 'en') => {
             case 'EENC': return 'الرعاية الضرورية المبكرة لحديثي الولادة (EENC)';
             case 'IPC': return 'مكافحة العدوى (وحدة حديثي الولادة)';
             case 'Small & Sick Newborn': return 'رعاية الاطفال حديثي الولادة المرضى والصغار';
+            case 'Program Management': return 'إدارة برنامج صحة الطفل';
             default: return normalizedType;
         }
     }
@@ -61,6 +62,7 @@ const getCertificateCourseTitle = (courseType, language = 'en') => {
         case 'EENC': return 'Early Essential Newborn Care (EENC)';
         case 'IPC': return 'Infection Prevention & Control (Neonatal Unit)';
         case 'Small & Sick Newborn': return 'Small & Sick Newborn Case Management';
+        case 'Program Management': return 'Program Management';
         default: return normalizedType;
     }
 };
@@ -159,6 +161,12 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
                 displaySubCourse = "المعالجة القياسية للاطفال اقل من 5 سنوات";
             } else if (courseType === 'Small & Sick Newborn') {
                 displaySubCourse = getSmallAndSickSubCourseArabic(participantSubCourse);
+            } else if (courseType === 'Program Management') {
+                if (participantSubCourse.includes('IMNCI implementation operational Guide')) {
+                    displaySubCourse = "دورة تدريب المدريبين على الدليل التشغيلي لتطبيق العلاج المتكامل في مؤسسات الرعاية الصحية الأساسية";
+                } else if (participantSubCourse.includes('planning, Monitoring and evaluation')) {
+                    displaySubCourse = "التخطيط والمتابعة والتقييم";
+                }
             }
         }
     }

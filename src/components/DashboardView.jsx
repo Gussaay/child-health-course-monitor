@@ -1,5 +1,6 @@
 // src/components/DashboardView.jsx
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
     NeonatalCoverageDashboard, 
     IMNCICoverageDashboard, 
@@ -20,6 +21,7 @@ const Spinner = ({ size = 'md' }) => (
 );
 
 function DashboardView({ userStates, userLocalities }) {
+    const { t } = useTranslation();
     const { fetchCourses, fetchParticipants, fetchHealthFacilities, isLoading, healthFacilities } = useDataCache();
 
     const [viewType, setViewType] = useState('combinedCoverage'); 
@@ -48,20 +50,22 @@ function DashboardView({ userStates, userLocalities }) {
             <div className="bg-sky-50/60 border-b border-sky-100 px-4 md:px-8 pt-5 pb-0 flex flex-col gap-4">
                 <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Service Coverage Dashboard</h1>
+                        <h1 className="text-2xl font-bold text-slate-800 tracking-tight">
+                            {t('dashboard.service_coverage_title', 'Service Coverage Dashboard')}
+                        </h1>
                     </div>
                     <Button onClick={handleRefresh} disabled={isRefreshing} variant="secondary" className="whitespace-nowrap text-[13px] py-1.5 px-4 text-slate-700 shadow-sm hover:text-sky-700">
-                        {isRefreshing ? <Spinner size="sm" /> : '↻ Refresh Data Cache'}
+                        {isRefreshing ? <Spinner size="sm" /> : t('dashboard.refresh_data', '↻ Refresh Data Cache')}
                     </Button>
                 </div>
                 
                 <nav className="-mb-px flex flex-nowrap space-x-6 overflow-x-auto">
                     {[
-                        { id: 'combinedCoverage', label: 'Combined Coverage' },
-                        { id: 'neonatalCoverage', label: 'Neonatal Care Coverage' },
-                        { id: 'eencCoverage', label: 'EENC Coverage' },
-                        { id: 'imnciCoverage', label: 'IMNCI Coverage' },
-                        { id: 'criticalCoverage', label: 'Emergency & Critical Care' } 
+                        { id: 'combinedCoverage', label: t('dashboard.tabs.combined', 'Combined Coverage') },
+                        { id: 'neonatalCoverage', label: t('dashboard.tabs.neonatal', 'Neonatal Care Coverage') },
+                        { id: 'eencCoverage', label: t('dashboard.tabs.eenc', 'EENC Coverage') },
+                        { id: 'imnciCoverage', label: t('dashboard.tabs.imnci', 'IMNCI Coverage') },
+                        { id: 'criticalCoverage', label: t('dashboard.tabs.critical', 'Emergency & Critical Care') } 
                     ].map(tab => (
                         <button 
                             key={tab.id} 
@@ -77,7 +81,9 @@ function DashboardView({ userStates, userLocalities }) {
             {isDashboardLoading ? (
                 <div className="text-center py-20 flex flex-col items-center justify-center">
                     <Spinner />
-                    <p className="mt-4 text-sm font-semibold text-gray-500 tracking-wide uppercase">Syncing Dashboard Data...</p>
+                    <p className="mt-4 text-sm font-semibold text-gray-500 tracking-wide uppercase">
+                        {t('dashboard.syncing', 'Syncing Dashboard Data...')}
+                    </p>
                 </div>
             ) : (
                 <div className="px-4 md:px-8 pt-6 pb-12 w-full max-w-screen-2xl mx-auto">
