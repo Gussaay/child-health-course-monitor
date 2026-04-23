@@ -65,7 +65,8 @@ const DEFAULT_OP_ACTIVITY = () => ({
     extSource1: '', extValue1: 0,
     extSource2: '', extValue2: 0,
     extSource3: '', extValue3: 0,
-    targetFacilities: [] 
+    targetFacilities: [],
+    notes: '' 
 });
 
 // نموذج التدخل الافتراضي (Matrix Row)
@@ -78,7 +79,8 @@ const DEFAULT_INTERVENTION = () => ({
     govSource: '', govValue: 0,
     extSource1: '', extValue1: 0,
     extSource2: '', extValue2: 0,
-    extSource3: '', extValue3: 0
+    extSource3: '', extValue3: 0,
+    notes: '' 
 });
 
 // مكون مساعد للقوائم المنسدلة
@@ -156,7 +158,8 @@ export default function PlanningView({ permissions, userStates }) {
     const [globalFilter, setGlobalFilter] = useState({
         year: CURRENT_YEAR,
         level: isFederalManager ? 'federal' : 'state',
-        state: isFederalManager ? '' : (userStates?.[0] || '')
+        state: isFederalManager ? '' : (userStates?.[0] || ''),
+        locality: '' 
     });
 
     // Evaluation Granular Filters
@@ -186,6 +189,7 @@ export default function PlanningView({ permissions, userStates }) {
             .filter(p => (p.year || CURRENT_YEAR) === globalFilter.year) 
             .filter(p => (p.level || 'federal') === globalFilter.level) 
             .filter(p => globalFilter.level === 'federal' || !globalFilter.state || (p.state || '') === globalFilter.state)
+            .filter(p => globalFilter.level !== 'locality' || !globalFilter.locality || (p.locality || '') === globalFilter.locality)
             .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
     }, [rawPlans, globalFilter]);
 
@@ -195,6 +199,7 @@ export default function PlanningView({ permissions, userStates }) {
             .filter(p => (p.year || CURRENT_YEAR) === globalFilter.year)
             .filter(p => (p.level || 'federal') === globalFilter.level)
             .filter(p => globalFilter.level === 'federal' || !globalFilter.state || (p.state || '') === globalFilter.state)
+            .filter(p => globalFilter.level !== 'locality' || !globalFilter.locality || (p.locality || '') === globalFilter.locality)
             .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
     }, [rawOpPlans, globalFilter]);
 
@@ -206,13 +211,17 @@ export default function PlanningView({ permissions, userStates }) {
             f.isDeleted !== true && f.isDeleted !== "true" && f['اسم_المؤسسة']
         );
         
-        if (currentOpPlan && currentOpPlan.level === 'state' && currentOpPlan.state) {
+        if (currentOpPlan && (currentOpPlan.level === 'state' || currentOpPlan.level === 'locality') && currentOpPlan.state) {
             validFacilities = validFacilities.filter(f => f['الولاية'] === currentOpPlan.state);
+        }
+
+        if (currentOpPlan && currentOpPlan.level === 'locality' && currentOpPlan.locality) {
+            validFacilities = validFacilities.filter(f => f['المحلية'] === currentOpPlan.locality);
         }
         
         const names = [...new Set(validFacilities.map(f => f['اسم_المؤسسة']))];
         return names.sort();
-    }, [healthFacilities, currentOpPlan?.level, currentOpPlan?.state]);
+    }, [healthFacilities, currentOpPlan?.level, currentOpPlan?.state, currentOpPlan?.locality]);
 
 
     const calculateGap = (inv) => {
@@ -304,11 +313,15 @@ export default function PlanningView({ permissions, userStates }) {
         if (e) e.preventDefault();
         
         if (!currentPlan.level) {
-            alert("الرجاء تحديد نوع الخطة (اتحادية / ولائية).");
+            alert("الرجاء تحديد نوع الخطة.");
             return;
         }
-        if (currentPlan.level === 'state' && !currentPlan.state) {
+        if ((currentPlan.level === 'state' || currentPlan.level === 'locality') && !currentPlan.state) {
             alert("الرجاء تحديد الولاية.");
+            return;
+        }
+        if (currentPlan.level === 'locality' && !currentPlan.locality) {
+            alert("الرجاء تحديد المحلية.");
             return;
         }
         
@@ -326,8 +339,12 @@ export default function PlanningView({ permissions, userStates }) {
             alert("الرجاء تحديد مستوى الخطة.");
             return;
         }
-        if (currentOpPlan.level === 'state' && !currentOpPlan.state) {
+        if ((currentOpPlan.level === 'state' || currentOpPlan.level === 'locality') && !currentOpPlan.state) {
             alert("الرجاء تحديد الولاية.");
+            return;
+        }
+        if (currentOpPlan.level === 'locality' && !currentOpPlan.locality) {
+            alert("الرجاء تحديد المحلية.");
             return;
         }
 
@@ -353,7 +370,8 @@ export default function PlanningView({ permissions, userStates }) {
             year: globalFilter.year, 
             expectedOutcome: OUTCOME_OPTIONS[0], 
             level: globalFilter.level,
-            state: globalFilter.level === 'state' && !globalFilter.state && isFederalManager ? Object.keys(STATE_LOCALITIES)[0] : globalFilter.state,
+            state: (globalFilter.level === 'state' || globalFilter.level === 'locality') && !globalFilter.state && isFederalManager ? Object.keys(STATE_LOCALITIES)[0] : globalFilter.state,
+            locality: globalFilter.locality || '',
             interventions: [DEFAULT_INTERVENTION()] 
         }); 
         setIsEditingMatrix(true);
@@ -364,7 +382,8 @@ export default function PlanningView({ permissions, userStates }) {
             planType: type, 
             year: globalFilter.year, 
             level: globalFilter.level,
-            state: globalFilter.level === 'state' && !globalFilter.state && isFederalManager ? Object.keys(STATE_LOCALITIES)[0] : globalFilter.state,
+            state: (globalFilter.level === 'state' || globalFilter.level === 'locality') && !globalFilter.state && isFederalManager ? Object.keys(STATE_LOCALITIES)[0] : globalFilter.state,
+            locality: globalFilter.locality || '',
             activities: [] 
         };
         if (type === PLAN_TYPES.QUARTERLY) base.periodQuarter = QUARTERS_LIST[0];
@@ -387,7 +406,7 @@ export default function PlanningView({ permissions, userStates }) {
             const childPlans = filteredOpPlans.filter(p => 
                 (p.planType === PLAN_TYPES.MONTHLY || p.planType === PLAN_TYPES.WEEKLY) && 
                 months.includes(p.periodMonth) && 
-                p.year === op.year && p.level === op.level && p.state === op.state
+                p.year === op.year && p.level === op.level && p.state === op.state && p.locality === op.locality
             );
             
             childPlans.forEach(cp => {
@@ -402,7 +421,7 @@ export default function PlanningView({ permissions, userStates }) {
             const childPlans = filteredOpPlans.filter(p => 
                 p.planType === PLAN_TYPES.WEEKLY && 
                 p.periodMonth === op.periodMonth && 
-                p.year === op.year && p.level === op.level && p.state === op.state
+                p.year === op.year && p.level === op.level && p.state === op.state && p.locality === op.locality
             );
             
             childPlans.forEach(cp => {
@@ -455,9 +474,15 @@ export default function PlanningView({ permissions, userStates }) {
         filteredPlans.forEach(p => {
             if (outcome && p.expectedOutcome !== outcome) return;
 
+            let levelLabel = (p.level || 'federal') === 'federal' 
+                ? 'خطة اتحادية' 
+                : p.level === 'locality' 
+                    ? `خطة محلية - ${p.locality || 'غير محدد'}` 
+                    : `خطة ولائية - ${STATE_LOCALITIES[p.state]?.ar || p.state || 'غير محدد'}`;
+
             const outcomeGroup = {
                 outcomeName: p.expectedOutcome || 'نتيجة غير محددة',
-                levelInfo: (p.level || 'federal') === 'federal' ? 'خطة اتحادية' : `خطة ولائية - ${STATE_LOCALITIES[p.state]?.ar || p.state || 'غير محدد'}`,
+                levelInfo: levelLabel,
                 rows: []
             };
 
@@ -528,6 +553,12 @@ export default function PlanningView({ permissions, userStates }) {
                 if (axis && a.axis !== axis) return; 
                 
                 if (!unplannedMap[a.interventionId]) {
+                    let levelLabel = (op.level || 'federal') === 'federal' 
+                        ? 'خطة اتحادية' 
+                        : op.level === 'locality' 
+                            ? `خطة محلية - ${op.locality || 'غير محدد'}` 
+                            : `خطة ولائية - ${STATE_LOCALITIES[op.state]?.ar || op.state || 'غير محدد'}`;
+
                     unplannedMap[a.interventionId] = {
                         id: a.interventionId,
                         type: 'غير مخطط',
@@ -543,7 +574,7 @@ export default function PlanningView({ permissions, userStates }) {
                         actualCost: 0,
                         opQuarter: op.periodQuarter,
                         opMonth: op.periodMonth,
-                        levelInfo: (op.level || 'federal') === 'federal' ? 'خطة اتحادية' : `خطة ولائية - ${STATE_LOCALITIES[op.state]?.ar || op.state || 'غير محدد'}`,
+                        levelInfo: levelLabel,
                     };
                 }
                 
@@ -592,7 +623,7 @@ export default function PlanningView({ permissions, userStates }) {
         if (unplannedRows.length > 0) {
             groupedData.push({
                 outcomeName: 'أنشطة مستحدثة (خارج النتيجة / غير مخططة)',
-                levelInfo: 'مختلط (الاتحادي والولائي)',
+                levelInfo: 'مختلط (الاتحادي، الولائي، المحلي)',
                 rows: unplannedRows
             });
         }
@@ -641,7 +672,7 @@ export default function PlanningView({ permissions, userStates }) {
         const pageWidth = doc.internal.pageSize.getWidth();
         
         doc.setFontSize(18);
-        doc.text(`تقرير التقييم: ${globalFilter.year} - ${globalFilter.level === 'federal' ? 'القومي' : (STATE_LOCALITIES[globalFilter.state]?.ar || 'كل الولايات')}`, pageWidth - 14, 15, { align: 'right' });
+        doc.text(`تقرير التقييم: ${globalFilter.year} - ${globalFilter.level === 'federal' ? 'القومي' : globalFilter.level === 'locality' ? 'المحلي' : 'الولائي'}`, pageWidth - 14, 15, { align: 'right' });
         
         doc.setFontSize(10);
         doc.setTextColor(100);
@@ -769,26 +800,39 @@ export default function PlanningView({ permissions, userStates }) {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-2 sm:p-4 relative">
-                    <div className="bg-white rounded-lg shadow-sm border mb-4 p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 w-full">
+                    <div className="bg-white rounded-lg shadow-sm border mb-4 p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 w-full">
                         <FormGroup label="السنة">
                             <Select value={currentPlan.year} onChange={(e) => setCurrentPlan({...currentPlan, year: Number(e.target.value)})} className="font-bold border-sky-300 w-full">
                                 {YEAR_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                             </Select>
                         </FormGroup>
                         <FormGroup label="المستوى">
-                            <Select value={currentPlan.level} onChange={(e) => setCurrentPlan({...currentPlan, level: e.target.value, state: e.target.value === 'federal' ? '' : currentPlan.state})} disabled={!isFederalManager} className="w-full">
+                            <Select value={currentPlan.level} onChange={(e) => setCurrentPlan({...currentPlan, level: e.target.value, state: e.target.value === 'federal' ? '' : currentPlan.state, locality: ''})} disabled={!isFederalManager} className="w-full">
                                 <option value="federal">اتحادي (قومي)</option>
                                 <option value="state">ولائي</option>
+                                <option value="locality">محلي</option>
                             </Select>
                         </FormGroup>
-                        {currentPlan.level === 'state' && (
+                        {(currentPlan.level === 'state' || currentPlan.level === 'locality') && (
                             <FormGroup label="الولاية">
-                                <Select value={currentPlan.state} onChange={(e) => setCurrentPlan({...currentPlan, state: e.target.value})} disabled={!isFederalManager && userStates.length === 1} className="w-full">
+                                <Select value={currentPlan.state} onChange={(e) => setCurrentPlan({...currentPlan, state: e.target.value, locality: ''})} disabled={!isFederalManager && userStates.length === 1} className="w-full">
                                     <option value="">-- اختر --</option>
                                     {isFederalManager ? 
                                         Object.keys(STATE_LOCALITIES).map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar || s}</option>) :
                                         userStates.map(s => <option key={s} value={s}>{STATE_LOCALITIES[s]?.ar || s}</option>)
                                     }
+                                </Select>
+                            </FormGroup>
+                        )}
+                        {currentPlan.level === 'locality' && currentPlan.state && (
+                            <FormGroup label="المحلية">
+                                <Select value={currentPlan.locality} onChange={(e) => setCurrentPlan({...currentPlan, locality: e.target.value})} className="w-full">
+                                    <option value="">-- اختر المحلية --</option>
+                                    {(STATE_LOCALITIES[currentPlan.state]?.localities || []).map((loc, index) => {
+                                        const locLabel = loc?.ar || loc?.en || loc;
+                                        const locValue = loc?.en || loc?.ar || loc;
+                                        return <option key={`matrix-${index}`} value={locValue}>{locLabel}</option>;
+                                    })}
                                 </Select>
                             </FormGroup>
                         )}
@@ -800,18 +844,19 @@ export default function PlanningView({ permissions, userStates }) {
                     </div>
 
                     <div className="bg-white border shadow-sm w-full relative overflow-x-auto rounded-t-lg">
-                        <table className="w-full table-fixed border-collapse text-[10px] sm:text-xs text-right whitespace-normal min-w-[800px]">
+                        <table className="w-full table-fixed border-collapse text-[10px] sm:text-xs text-right whitespace-normal min-w-[900px]">
                             <thead className="bg-slate-800 text-white font-bold">
                                 <tr>
-                                    <th className="w-[12%] p-1.5 border border-slate-600">المحور</th>
-                                    <th className="w-[20%] p-1.5 border border-slate-600">النشاط</th>
-                                    <th className="w-[15%] p-1.5 border border-slate-600">المؤشر</th>
-                                    <th className="w-[6%] p-1.5 border border-slate-600 text-center">الأساس</th>
-                                    <th className="w-[6%] p-1.5 border border-slate-600 text-center">الهدف</th>
+                                    <th className="w-[8%] p-1.5 border border-slate-600">المحور</th>
+                                    <th className="w-[15%] p-1.5 border border-slate-600">النشاط</th>
+                                    <th className="w-[12%] p-1.5 border border-slate-600">المؤشر</th>
+                                    <th className="w-[5%] p-1.5 border border-slate-600 text-center">الأساس</th>
+                                    <th className="w-[5%] p-1.5 border border-slate-600 text-center">الهدف</th>
                                     <th className="w-[8%] p-1.5 border border-slate-600 text-center bg-green-900">الجدولة</th>
-                                    <th className="w-[10%] p-1.5 border border-slate-600 text-center">التكلفة الإجمالية</th>
+                                    <th className="w-[8%] p-1.5 border border-slate-600 text-center">التكلفة الإجمالية</th>
                                     <th className="w-[10%] p-1.5 border border-slate-600 text-center bg-indigo-900">مصادر التمويل</th>
                                     <th className="w-[8%] p-1.5 border border-slate-600 text-center bg-red-900">العجز (Gap)</th>
+                                    <th className="w-[16%] p-1.5 border border-slate-600 text-center">ملاحظات</th>
                                     <th className="w-[5%] p-1.5 border border-slate-600 text-center">حذف</th>
                                 </tr>
                             </thead>
@@ -826,7 +871,7 @@ export default function PlanningView({ permissions, userStates }) {
                                     
                                     return (
                                     <tr key={inv.id} className="hover:bg-sky-50 transition-colors bg-white">
-                                        <td className={cellClass}><select className={`${inputClass} text-xs`} value={inv.axis} onChange={(e) => update('axis', e.target.value)}>{AXIS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}</select></td>
+                                        <td className={cellClass}><select className={`${inputClass} text-[10px]`} value={inv.axis} onChange={(e) => update('axis', e.target.value)}>{AXIS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}</select></td>
                                         <td className={cellClass}><textarea className={`${inputClass} font-bold h-full`} rows={2} value={inv.name} onChange={(e) => update('name', e.target.value)} placeholder="نشاط..." required /></td>
                                         <td className={cellClass}><SelectWithOther options={INDICATOR_OPTIONS} value={inv.indicator} onChange={(val) => update('indicator', val)} placeholder="- اختر مؤشر -" otherLabel="اخرى حدد" /></td>
                                         <td className={cellClass}><input type="number" className={`${inputClass} text-center`} value={inv.baseline} onChange={(e) => update('baseline', e.target.value)} /></td>
@@ -851,6 +896,11 @@ export default function PlanningView({ permissions, userStates }) {
                                         <td className={`p-1 border border-slate-300 text-center font-bold align-middle ${gap > 0 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
                                             {gap.toLocaleString()}
                                         </td>
+
+                                        <td className={cellClass}>
+                                            <textarea className={`${inputClass} text-[10px] h-full`} rows={2} value={inv.notes || ''} onChange={(e) => update('notes', e.target.value)} placeholder="ملاحظات..." />
+                                        </td>
+
                                         <td className="p-1 border border-slate-300 text-center align-middle">
                                             <button type="button" onClick={() => setCurrentPlan({...currentPlan, interventions: currentPlan.interventions.filter(i => i.id !== inv.id)})} className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded transition shadow-sm border border-transparent hover:border-red-200">
                                                 <Trash2 size={16}/>
@@ -969,7 +1019,7 @@ export default function PlanningView({ permissions, userStates }) {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-4 sm:space-y-6 relative">
-                    <div className="bg-white p-4 rounded-lg border shadow-sm grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                    <div className="bg-white p-4 rounded-lg border shadow-sm grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                         <FormGroup label="نوع الخطة">
                             <div className="font-bold text-indigo-800 p-2 bg-indigo-100 rounded text-center border border-indigo-200">{currentOpPlan.planType}</div>
                         </FormGroup>
@@ -979,19 +1029,32 @@ export default function PlanningView({ permissions, userStates }) {
                             </Select>
                         </FormGroup>
                         <FormGroup label="المستوى">
-                            <Select value={currentOpPlan.level} onChange={(e) => setCurrentOpPlan({...currentOpPlan, level: e.target.value, state: e.target.value === 'federal' ? '' : currentOpPlan.state})} disabled={!isFederalManager}>
+                            <Select value={currentOpPlan.level} onChange={(e) => setCurrentOpPlan({...currentOpPlan, level: e.target.value, state: e.target.value === 'federal' ? '' : currentOpPlan.state, locality: ''})} disabled={!isFederalManager}>
                                 <option value="federal">اتحادي</option>
                                 <option value="state">ولائي</option>
+                                <option value="locality">محلي</option>
                             </Select>
                         </FormGroup>
-                        {currentOpPlan.level === 'state' && (
+                        {(currentOpPlan.level === 'state' || currentOpPlan.level === 'locality') && (
                             <FormGroup label="الولاية">
-                                <Select value={currentOpPlan.state} onChange={(e) => setCurrentOpPlan({...currentOpPlan, state: e.target.value})} disabled={!isFederalManager && userStates.length === 1}>
+                                <Select value={currentOpPlan.state} onChange={(e) => setCurrentOpPlan({...currentOpPlan, state: e.target.value, locality: ''})} disabled={!isFederalManager && userStates.length === 1}>
                                     <option value="">-- اختر --</option>
                                     {isFederalManager ? 
                                         Object.keys(STATE_LOCALITIES).map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar || s}</option>) :
                                         userStates.map(s => <option key={s} value={s}>{STATE_LOCALITIES[s]?.ar || s}</option>)
                                     }
+                                </Select>
+                            </FormGroup>
+                        )}
+                        {currentOpPlan.level === 'locality' && currentOpPlan.state && (
+                            <FormGroup label="المحلية">
+                                <Select value={currentOpPlan.locality} onChange={(e) => setCurrentOpPlan({...currentOpPlan, locality: e.target.value})} className="w-full">
+                                    <option value="">-- اختر المحلية --</option>
+                                    {(STATE_LOCALITIES[currentOpPlan.state]?.localities || []).map((loc, index) => {
+                                        const locLabel = loc?.ar || loc?.en || loc;
+                                        const locValue = loc?.en || loc?.ar || loc;
+                                        return <option key={`op-${index}`} value={locValue}>{locLabel}</option>;
+                                    })}
                                 </Select>
                             </FormGroup>
                         )}
@@ -1031,18 +1094,19 @@ export default function PlanningView({ permissions, userStates }) {
                         </div>
                         
                         <div className="overflow-x-auto w-full pb-16">
-                            <table className="w-full table-fixed border-collapse text-[10px] sm:text-xs text-right whitespace-normal min-w-[900px]">
+                            <table className="w-full table-fixed border-collapse text-[10px] sm:text-xs text-right whitespace-normal min-w-[1000px]">
                                 <thead className="bg-slate-800 text-white font-bold">
                                     <tr>
                                         <th className="w-[6%] p-1.5 border border-slate-600 text-center">النوع</th>
-                                        <th className="w-[18%] p-1.5 border border-slate-600 text-center">الخطة / المحور</th>
-                                        <th className="w-[20%] p-1.5 border border-slate-600 text-center">النشاط</th>
+                                        <th className="w-[14%] p-1.5 border border-slate-600 text-center">الخطة / المحور</th>
+                                        <th className="w-[18%] p-1.5 border border-slate-600 text-center">النشاط</th>
                                         <th className="w-[12%] p-1.5 border border-slate-600 text-center text-[10px]">المؤسسات المستهدفة</th>
                                         <th className="w-[10%] p-1.5 border border-slate-600 text-center">المؤشر</th>
                                         <th className="w-[6%] p-1.5 border border-slate-600 text-center">الهدف</th>
                                         <th className="w-[8%] p-1.5 border border-slate-600 text-center">التكلفة الإجمالية</th>
-                                        <th className="w-[10%] p-1.5 border border-slate-600 text-center bg-indigo-900">مصادر التمويل</th>
-                                        <th className="w-[8%] p-1.5 border border-slate-600 text-center bg-red-900">العجز</th>
+                                        <th className="w-[8%] p-1.5 border border-slate-600 text-center bg-indigo-900">مصادر التمويل</th>
+                                        <th className="w-[6%] p-1.5 border border-slate-600 text-center bg-red-900">العجز</th>
+                                        <th className="w-[12%] p-1.5 border border-slate-600 text-center">ملاحظات</th>
                                         <th className="w-[5%] p-1.5 border border-slate-600 text-center">حذف</th>
                                     </tr>
                                 </thead>
@@ -1079,7 +1143,7 @@ export default function PlanningView({ permissions, userStates }) {
 
                                                 <td className={cellClass}>
                                                     {act.isUnplanned ? (
-                                                        <select className={`${inputClass} text-xs`} value={act.axis} onChange={(e) => update('axis', e.target.value)}>
+                                                        <select className={`${inputClass} text-[10px]`} value={act.axis} onChange={(e) => update('axis', e.target.value)}>
                                                             <option value="">- المحور -</option>
                                                             {AXIS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                                                         </select>
@@ -1172,6 +1236,10 @@ export default function PlanningView({ permissions, userStates }) {
                                                     {gap.toLocaleString()}
                                                 </td>
 
+                                                <td className={cellClass}>
+                                                    <textarea className={`${inputClass} text-[10px] h-full`} rows={2} value={act.notes || ''} onChange={(e) => update('notes', e.target.value)} placeholder="ملاحظات..." />
+                                                </td>
+
                                                 <td className="p-1 border border-slate-300 text-center align-middle">
                                                     <button type="button" onClick={() => setCurrentOpPlan({...currentOpPlan, activities: currentOpPlan.activities.filter(item => item.id !== act.id)})} className="text-red-500 hover:bg-red-100 p-1.5 rounded transition-colors border border-transparent hover:border-red-200 shadow-sm" title="حذف النشاط">
                                                         <Trash2 size={16}/>
@@ -1254,7 +1322,7 @@ export default function PlanningView({ permissions, userStates }) {
                 <div className="bg-white shadow px-4 sm:px-6 py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center shrink-0 border-b border-green-200 gap-3">
                     <div>
                         <h2 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2"><CheckCircle2 className="text-green-600"/> تحديث إنجاز الخطة ({currentOpPlan.planType === PLAN_TYPES.MONTHLY ? 'الشهرية' : 'الأسبوعية'})</h2>
-                        <p className="text-xs sm:text-sm text-gray-500 mt-1">{currentOpPlan.periodName} - عام {currentOpPlan.year} ({(currentOpPlan.level || 'federal') === 'federal' ? 'اتحادي' : `ولائي - ${STATE_LOCALITIES[currentOpPlan.state]?.ar || currentOpPlan.state}`})</p>
+                        <p className="text-xs sm:text-sm text-gray-500 mt-1">{currentOpPlan.periodName} - عام {currentOpPlan.year} ({(currentOpPlan.level || 'federal') === 'federal' ? 'اتحادي' : currentOpPlan.level === 'locality' ? `محلي - ${currentOpPlan.locality}` : `ولائي - ${STATE_LOCALITIES[currentOpPlan.state]?.ar || currentOpPlan.state}`})</p>
                     </div>
                     <div className="flex gap-2 w-full sm:w-auto">
                         <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => setIsEditingTracking(false)}><X size={16} className="ml-1"/> إغلاق</Button>
@@ -1337,26 +1405,44 @@ export default function PlanningView({ permissions, userStates }) {
                     <label className="block text-xs font-bold text-slate-300 mb-1">مستوى التخطيط (Level)</label>
                     <select className="w-full bg-slate-700 border-slate-600 font-bold text-white rounded p-2 focus:ring-sky-500 outline-none"
                         value={globalFilter.level}
-                        onChange={e => setGlobalFilter({...globalFilter, level: e.target.value, state: e.target.value === 'federal' ? '' : globalFilter.state})}
+                        onChange={e => setGlobalFilter({...globalFilter, level: e.target.value, state: e.target.value === 'federal' ? '' : globalFilter.state, locality: ''})}
                         disabled={!isFederalManager}
                     >
                         <option value="federal">اتحادي (قومي)</option>
                         <option value="state">ولائي</option>
+                        <option value="locality">محلي (المحليات)</option>
                     </select>
                 </div>
-                {globalFilter.level === 'state' && (
+                {(globalFilter.level === 'state' || globalFilter.level === 'locality') && (
                     <div className="w-full md:flex-1 md:min-w-[200px]">
                         <label className="block text-xs font-bold text-slate-300 mb-1">الولاية (State)</label>
                         <select className="w-full bg-slate-700 border-slate-600 font-bold text-white rounded p-2 focus:ring-sky-500 outline-none"
                             value={globalFilter.state}
-                            onChange={e => setGlobalFilter({...globalFilter, state: e.target.value})}
+                            onChange={e => setGlobalFilter({...globalFilter, state: e.target.value, locality: ''})}
                             disabled={!isFederalManager && userStates.length <= 1}
                         >
-                            {isFederalManager && <option value="">-- عرض كل الولايات --</option>}
+                            <option value="">-- اختر الولاية --</option>
                             {isFederalManager ? 
                                 Object.keys(STATE_LOCALITIES).map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar || s}</option>) :
                                 userStates.map(s => <option key={s} value={s}>{STATE_LOCALITIES[s]?.ar || s}</option>)
                             }
+                        </select>
+                    </div>
+                )}
+                
+                {globalFilter.level === 'locality' && globalFilter.state && (
+                    <div className="w-full md:flex-1 md:min-w-[200px]">
+                        <label className="block text-xs font-bold text-slate-300 mb-1">المحلية (Locality)</label>
+                        <select className="w-full bg-slate-700 border-slate-600 font-bold text-white rounded p-2 focus:ring-sky-500 outline-none"
+                            value={globalFilter.locality}
+                            onChange={e => setGlobalFilter({...globalFilter, locality: e.target.value})}
+                        >
+                            <option value="">-- عرض كل المحليات --</option>
+                            {(STATE_LOCALITIES[globalFilter.state]?.localities || []).map((loc, index) => {
+                                const locLabel = loc?.ar || loc?.en || loc;
+                                const locValue = loc?.en || loc?.ar || loc;
+                                return <option key={`filter-${index}`} value={locValue}>{locLabel}</option>;
+                            })}
                         </select>
                     </div>
                 )}
@@ -1392,7 +1478,8 @@ export default function PlanningView({ permissions, userStates }) {
                         <h3 className="text-lg font-bold flex items-center gap-2">
                             <Target className="text-sky-600"/> 
                             الخطة السنوية لعام {globalFilter.year}
-                            {globalFilter.level === 'state' && globalFilter.state && ` (${STATE_LOCALITIES[globalFilter.state]?.ar})`}
+                            {(globalFilter.level === 'state' || globalFilter.level === 'locality') && globalFilter.state && ` (${STATE_LOCALITIES[globalFilter.state]?.ar})`}
+                            {globalFilter.level === 'locality' && globalFilter.locality && ` - محلية ${globalFilter.locality}`}
                         </h3>
                         
                         <div className="flex gap-2 w-full sm:w-auto">
@@ -1413,8 +1500,8 @@ export default function PlanningView({ permissions, userStates }) {
                                         onClick={() => setExpandedPlanId(expandedPlanId === plan.id ? null : plan.id)}
                                     >
                                         <div className="flex items-center gap-3">
-                                            <span className={`px-2 py-1 rounded text-xs font-bold ${(plan.level || 'federal') === 'federal' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>
-                                                {(plan.level || 'federal') === 'federal' ? 'اتحادي' : `ولائي - ${STATE_LOCALITIES[plan.state]?.ar || plan.state || 'غير محدد'}`}
+                                            <span className={`px-2 py-1 rounded text-xs font-bold ${(plan.level || 'federal') === 'federal' ? 'bg-purple-100 text-purple-800' : plan.level === 'locality' ? 'bg-teal-100 text-teal-800' : 'bg-green-100 text-green-800'}`}>
+                                                {(plan.level || 'federal') === 'federal' ? 'اتحادي' : plan.level === 'locality' ? `محلي - ${plan.locality || 'غير محدد'}` : `ولائي - ${STATE_LOCALITIES[plan.state]?.ar || plan.state || 'غير محدد'}`}
                                             </span>
                                             <span className="font-bold text-base sm:text-lg text-gray-800">{plan.expectedOutcome}</span>
                                         </div>
@@ -1431,8 +1518,8 @@ export default function PlanningView({ permissions, userStates }) {
                                                 <thead className="bg-slate-100 text-slate-700 font-bold border-b">
                                                     <tr>
                                                         <th className="w-[10%] p-2 border-l border-slate-200">المحور</th>
-                                                        <th className="w-[20%] p-2 border-l border-slate-200">النشاط</th>
-                                                        <th className="w-[12%] p-2 border-l border-slate-200">المؤشر</th>
+                                                        <th className="w-[15%] p-2 border-l border-slate-200">النشاط</th>
+                                                        <th className="w-[10%] p-2 border-l border-slate-200">المؤشر</th>
                                                         <th className="w-[5%] p-2 border-l border-slate-200 text-center">الهدف</th>
                                                         <th className="w-[8%] p-2 border-l border-slate-200 text-center bg-green-50">الجداول</th>
                                                         <th className="w-[8%] p-2 border-l border-slate-200 text-center">التكلفة</th>
@@ -1440,7 +1527,8 @@ export default function PlanningView({ permissions, userStates }) {
                                                         <th className="w-[7%] p-2 border-l border-slate-200 text-center">شريك 1</th>
                                                         <th className="w-[7%] p-2 border-l border-slate-200 text-center">شريك 2</th>
                                                         <th className="w-[7%] p-2 border-l border-slate-200 text-center">شريك 3</th>
-                                                        <th className="w-[8%] p-2 text-center">العجز / Gap</th>
+                                                        <th className="w-[7%] p-2 border-l border-slate-200 text-center">العجز / Gap</th>
+                                                        <th className="w-[8%] p-2 text-center">ملاحظات</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-100">
@@ -1465,7 +1553,8 @@ export default function PlanningView({ permissions, userStates }) {
                                                                 <td className="p-2 border-l border-slate-200 text-center text-orange-600"><div className="text-[10px]">{inv.extSource1}</div><div className="font-bold">{Number(inv.extValue1).toLocaleString()}</div></td>
                                                                 <td className="p-2 border-l border-slate-200 text-center text-orange-600"><div className="text-[10px]">{inv.extSource2}</div><div className="font-bold">{Number(inv.extValue2).toLocaleString()}</div></td>
                                                                 <td className="p-2 border-l border-slate-200 text-center text-orange-600"><div className="text-[10px]">{inv.extSource3}</div><div className="font-bold">{Number(inv.extValue3).toLocaleString()}</div></td>
-                                                                <td className={`p-2 text-center font-bold ${gap > 0 ? 'text-red-600 bg-red-50' : 'text-gray-500'}`}>{gap > 0 ? gap.toLocaleString() : '-'}</td>
+                                                                <td className={`p-2 border-l border-slate-200 text-center font-bold ${gap > 0 ? 'text-red-600 bg-red-50' : 'text-gray-500'}`}>{gap > 0 ? gap.toLocaleString() : '-'}</td>
+                                                                <td className="p-2 text-gray-500 text-[10px] whitespace-normal">{inv.notes}</td>
                                                             </tr>
                                                         );
                                                     })}
@@ -1502,8 +1591,8 @@ export default function PlanningView({ permissions, userStates }) {
                                 <CardBody className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                                     <div>
                                         <div className="flex gap-2 mb-1">
-                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${(op.level || 'federal') === 'federal' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>
-                                                {(op.level || 'federal') === 'federal' ? 'اتحادي' : `ولائي - ${STATE_LOCALITIES[op.state]?.ar || op.state || 'غير محدد'}`}
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${(op.level || 'federal') === 'federal' ? 'bg-purple-100 text-purple-800' : op.level === 'locality' ? 'bg-teal-100 text-teal-800' : 'bg-green-100 text-green-800'}`}>
+                                                {(op.level || 'federal') === 'federal' ? 'اتحادي' : op.level === 'locality' ? `محلي - ${op.locality || 'غير محدد'}` : `ولائي - ${STATE_LOCALITIES[op.state]?.ar || op.state || 'غير محدد'}`}
                                             </span>
                                         </div>
                                         <h4 className="text-base sm:text-lg font-bold text-gray-800">{op.periodName}</h4>
@@ -1542,8 +1631,8 @@ export default function PlanningView({ permissions, userStates }) {
                                         <CardBody className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                                             <div>
                                                 <div className="text-[10px] font-bold mb-1 flex gap-2">
-                                                    <span className={(op.level || 'federal') === 'federal' ? 'text-purple-600' : 'text-teal-600'}>
-                                                        {(op.level || 'federal') === 'federal' ? 'اتحادي' : `ولائي`}
+                                                    <span className={(op.level || 'federal') === 'federal' ? 'text-purple-600' : op.level === 'locality' ? 'text-teal-600' : 'text-green-600'}>
+                                                        {(op.level || 'federal') === 'federal' ? 'اتحادي' : op.level === 'locality' ? 'محلي' : `ولائي`}
                                                     </span>
                                                     <span className={isMonthly ? 'text-blue-600 bg-blue-100 px-1.5 rounded' : 'text-green-600 bg-green-100 px-1.5 rounded'}>
                                                         {isMonthly ? 'خطة شهرية' : 'خطة أسبوعية'}

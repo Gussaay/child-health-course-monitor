@@ -1,7 +1,7 @@
 // FacilityForms.jsx
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { ArrowLeft, Search, Building2, MapPin, X } from 'lucide-react';
+import { ArrowLeft, Search, Building2, MapPin, X, CheckCircle, WifiOff, XCircle } from 'lucide-react';
 
 import {
     Card, PageHeader, Button, FormGroup, Input, Select,
@@ -16,12 +16,43 @@ import {
     STATE_LOCALITIES
 } from "./constants.js";
 
-// --- PUBLIC-FACING FORMS ---
+// --- NEW STATUS MODAL ---
+export const SaveStatusModal = ({ statusData, onClose }) => {
+    if (!statusData) return null;
+    
+    const isSuccess = statusData.status === 'success';
+    const isQueued = statusData.status === 'queued';
+    const isError = statusData.status === 'error';
 
+    return (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4 animate-fade-in" dir="rtl">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center transform scale-100 transition-transform">
+                {isSuccess && <div className="text-green-500 mb-4 flex justify-center"><CheckCircle className="w-16 h-16" /></div>}
+                {isQueued && <div className="text-amber-500 mb-4 flex justify-center"><WifiOff className="w-16 h-16" /></div>}
+                {isError && <div className="text-red-500 mb-4 flex justify-center"><XCircle className="w-16 h-16" /></div>}
+                
+                <h3 className="text-xl font-extrabold mb-2 text-gray-800">
+                    {isSuccess && 'تم الحفظ بنجاح'}
+                    {isQueued && 'تم الحفظ محلياً'}
+                    {isError && 'فشل الحفظ'}
+                </h3>
+                <p className="text-gray-600 mb-6 text-sm font-medium">
+                    {isSuccess && 'تم حفظ بيانات المنشأة في النظام وتحديثها بنجاح.'}
+                    {isQueued && 'أنت غير متصل بالإنترنت حالياً. تم حفظ البيانات بأمان على جهازك وستتم المزامنة تلقائياً عند عودة الاتصال.'}
+                    {isError && `عذراً، حدث خطأ أثناء الحفظ: ${statusData.message}`}
+                </p>
+                <Button onClick={onClose} className="w-full font-bold py-3 text-lg rounded-xl">حسناً (OK)</Button>
+            </div>
+        </div>
+    );
+};
+
+// --- PUBLIC-FACING FORMS ---
 export function PublicFacilityUpdateForm({ setToast, serviceType }) {
     const [initialData, setInitialData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [statusData, setStatusData] = useState(null); // For Status Popup
 
     useEffect(() => {
         const path = window.location.pathname;
@@ -61,10 +92,19 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
 
     const handleSave = async (formData) => {
         try {
-            await submitFacilityDataForApproval(formData);
-            setToast({ show: true, message: "Update submitted successfully! Your changes are pending approval.", type: 'success' });
+            const resultId = await submitFacilityDataForApproval(formData);
+            // Since offlineSafeWrite resolves cleanly, we check navigator status for the popup
+            setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
         } catch (error) {
-            setToast({ show: true, message: `Submission failed: ${error.message}`, type: 'error' });
+            setStatusData({ status: 'error', message: error.message });
+        }
+    };
+
+    const handleCloseStatusModal = () => {
+        const wasSuccessOrQueued = statusData?.status !== 'error';
+        setStatusData(null);
+        if (wasSuccessOrQueued) {
+            window.history.back();
         }
     };
 
@@ -86,11 +126,13 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
                     {(props) => <FormComponent {...props} />}
                 </GenericFacilityForm>
             </div>
+            {/* Inject Status Popup */}
+            <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
         </div>
     );
 }
 
-// --- POP-UP Searchable Select Component ---
+// ... SearchableSelect ...
 const SearchableSelect = ({ options, value, onChange, placeholder = "اختر من القائمة...", disabled = false }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -234,6 +276,7 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
     const [facilitiesWithoutService, setFacilitiesWithoutService] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [showOtherFacilities, setShowOtherFacilities] = useState(false);
+    const [statusData, setStatusData] = useState(null); // For Status Popup
 
     useEffect(() => {
         const fetchAndPartitionFacilities = async () => {
@@ -305,10 +348,17 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
     const handleSave = async (formData) => {
         try {
             await submitFacilityDataForApproval(formData);
-            setToast({ show: true, message: "تم إرسال البيانات للمراجعة بنجاح", type: 'success' });
-            setStep('selection');
+            setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
         } catch (error) {
-            setToast({ show: true, message: `فشل الإرسال: ${error.message}`, type: 'error' });
+            setStatusData({ status: 'error', message: error.message });
+        }
+    };
+
+    const handleCloseStatusModal = () => {
+        const wasSuccessOrQueued = statusData?.status !== 'error';
+        setStatusData(null);
+        if (wasSuccessOrQueued) {
+            setStep('selection');
         }
     };
 
@@ -417,11 +467,13 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
                     {(props) => <FormComponent {...props} />}
                 </GenericFacilityForm>
             </div>
+            {/* Inject Status Popup */}
+            <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
         </div>
     );
 }
 
-// --- REUSABLE FORM SECTION FOR SHARED FIELDS ---
+// ... SharedFacilityFields ...
 export const SharedFacilityFields = ({ formData, handleChange, handleStateChange, isPublicForm = false, isReadOnly = false }) => {
     return (
         <div className="space-y-8">
@@ -562,8 +614,10 @@ export const GenericFacilityForm = React.forwardRef(({
     saveButtonText = "حفظ المنشأة",
     cancelButtonText = "إلغاء",
     saveButtonVariant = "primary",
-    isSubmitting = false
+    isSubmitting = false // Retained to support external disabling (e.g. from modals)
 }, ref) => {
+    const [isLocalSubmitting, setIsLocalSubmitting] = useState(false); // Manages button loading state
+
     const [formData, setFormData] = useState(() => {
         let processedData = initialData ? { ...initialData } : {};
         processedData.date_of_visit = new Date().toISOString().split('T')[0];
@@ -631,6 +685,7 @@ export const GenericFacilityForm = React.forwardRef(({
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setIsLocalSubmitting(true);
         const processedData = { ...formData };
         processedData.date_of_visit = new Date().toISOString().split('T')[0];
 
@@ -651,6 +706,8 @@ export const GenericFacilityForm = React.forwardRef(({
             await onSave({ ...processedData, 'اخر تحديث': new Date().toISOString(), 'updated_by': updaterIdentifier });
         } catch (error) {
             setToast({ show: true, message: `Failed to save facility: ${error.message}`, type: 'error' });
+        } finally {
+            setIsLocalSubmitting(false);
         }
     };
 
@@ -670,6 +727,8 @@ export const GenericFacilityForm = React.forwardRef(({
         event.preventDefault();
         setFormData(prev => ({ ...prev, [serviceKey]: formData[serviceKey].filter((_, i) => i !== index) }));
     };
+
+    const currentlySubmitting = isSubmitting || isLocalSubmitting;
 
     return (
         <div dir="rtl">
@@ -725,11 +784,11 @@ export const GenericFacilityForm = React.forwardRef(({
                         )}
 
                         <div className="flex gap-3 mt-8 pt-6 border-t justify-end">
-                            <Button type="button" variant="secondary" onClick={onCancel} disabled={isSubmitting} className="px-6">
+                            <Button type="button" variant="secondary" onClick={onCancel} disabled={currentlySubmitting} className="px-6">
                                 {cancelButtonText}
                             </Button>
-                            <Button type="submit" variant={saveButtonVariant} disabled={isSubmitting} className="px-8 font-bold">
-                                {isSubmitting ? 'جاري الحفظ...' : saveButtonText}
+                            <Button type="submit" variant={saveButtonVariant} disabled={currentlySubmitting} className="px-8 font-bold">
+                                {currentlySubmitting ? 'جاري الحفظ...' : saveButtonText}
                             </Button>
                         </div>
                     </form>
@@ -739,8 +798,7 @@ export const GenericFacilityForm = React.forwardRef(({
     );
 });
 
-// --- SERVICE-SPECIFIC FORMS & STAFF TABLE ---
-
+// ... remainder of FacilityForms.jsx (StaffTable, IMNCIFormFields, EENCFormFields, NeonatalFormFields, CriticalCareFormFields) remains exactly the same ...
 export const StaffTable = ({ serviceKey, formData, isReadOnly, handleStaffChange, handleAddStaffRow, handleRemoveStaffRow, jobTitles }) => {
     const staffList = formData[serviceKey] || [];
     return (

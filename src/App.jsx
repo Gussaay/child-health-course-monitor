@@ -8,7 +8,7 @@ import { Bar, Pie, Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, LineElement, PointElement } from 'chart.js';
 
 import {
-    Home, Book, Users, User, Hospital, Database, ClipboardCheck, ClipboardList, FolderKanban, TrendingUp, X, WifiOff, RefreshCw, Activity
+    Home, Book, Users, User, Hospital, Database, ClipboardCheck, ClipboardList, FolderKanban, TrendingUp, X, WifiOff, RefreshCw, Activity, Layers
 } from 'lucide-react';
 
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
@@ -71,6 +71,7 @@ const SkillsMentorshipView = lazy(() => import('./components/mentorship/SkillsMe
 const ProjectTrackerView = lazy(() => import('./components/ProjectTrackerView'));
 const PublicMeetingAttendanceView = lazy(() => import('./components/ProjectTrackerView').then(module => ({ default: module.PublicMeetingAttendanceView })));
 const PlanningView = lazy(() => import('./components/PlanningView'));
+const LocalityPlanView = lazy(() => import('./components/LocalityPlanView'));
 
 import {
     upsertCourse, deleteCourse, listParticipants, deleteParticipant, listObservationsForParticipant,
@@ -347,6 +348,7 @@ function Landing({ navigate, permissions }) {
         { label: t('landing.modules.imci', 'IMCI Assessment'), view: 'imciForm', icon: Activity, permission: permissions.canViewCourse },
         { label: t('landing.modules.projects', 'Project Tracker'), view: 'projects', icon: FolderKanban, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.planning', 'Master Plan'), view: 'planning', icon: TrendingUp, permission: permissions.canUseFederalManagerAdvancedFeatures }, 
+        { label: 'التخطيط القاعدي', view: 'localityPlan', icon: Layers, permission: permissions.canUseFederalManagerAdvancedFeatures || permissions.canManageCourse },
         { label: t('landing.modules.admin', 'Admin'), view: 'admin', icon: User, permission: permissions.canViewAdmin },
     ];
 
@@ -393,6 +395,7 @@ const BottomNav = React.memo(function BottomNav({ navItems, navigate }) {
         'skillsMentorship': ClipboardCheck, 
         'projects': FolderKanban,
         'planning': TrendingUp,
+        'localityPlan': Layers,
         'admin': User 
     };
     return (
@@ -959,7 +962,6 @@ export default function App() {
         handlePathChange();
     }, []); 
 
-    // --- IMPORTANT: Inject `role: userRole` into the generated permissions object ---
     const permissions = useMemo(() => {
         let derivedPermissions = { ...userPermissions };
         if (userRole?.toLowerCase() === 'super_user') {
@@ -1239,6 +1241,7 @@ export default function App() {
             'attendanceManager': permissions.canManageCourse,
             'projects': permissions.canUseFederalManagerAdvancedFeatures, 
             'planning': permissions.canUseFederalManagerAdvancedFeatures, 
+            'localityPlan': permissions.canUseFederalManagerAdvancedFeatures || permissions.canManageCourse,
         };
 
         if (user && !viewPermissions[newView]) {
@@ -1272,11 +1275,11 @@ export default function App() {
         if (state.openParticipantReport) { setSelectedParticipantId(state.openParticipantReport); setSelectedCourseId(state.openCourseReport); }
         if (state.caseToEdit) setEditingCaseFromReport(state.caseToEdit);
 
-        if (['courses', 'humanResources', 'dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning'].includes(newView)) {
+        if (['courses', 'humanResources', 'dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan'].includes(newView)) {
             setSelectedCourseId(null);
             setSelectedParticipantId(null);
             setFinalReportCourse(null);
-            if (['dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning'].includes(newView)) {
+            if (['dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan'].includes(newView)) {
                 setActiveCourseType(null);
             }
         }
@@ -1793,7 +1796,14 @@ export default function App() {
             case 'planning':
                 return permissions.canUseFederalManagerAdvancedFeatures ? (
                     <Suspense fallback={<Spinner />}>
-                        <PlanningView permissions={permissions} />
+                        <PlanningView permissions={permissions} userStates={userStates} />
+                    </Suspense>
+                ) : null;
+
+            case 'localityPlan':
+                return (permissions.canUseFederalManagerAdvancedFeatures || permissions.canManageCourse) ? (
+                    <Suspense fallback={<Spinner />}>
+                        <LocalityPlanView permissions={permissions} userStates={userStates} userLocalities={userLocalities} />
                     </Suspense>
                 ) : null;
 
@@ -1901,6 +1911,7 @@ export default function App() {
         { label: t('landing.modules.mentorship', 'Skills Mentorship'), view: 'skillsMentorship', active: view === 'skillsMentorship', disabled: !permissions.canViewSkillsMentorship },
         { label: t('landing.modules.projects', 'Project Tracker'), view: 'projects', active: view === 'projects', disabled: !permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.planning', 'Master Plan'), view: 'planning', active: view === 'planning', disabled: !permissions.canUseFederalManagerAdvancedFeatures },
+        { label: 'التخطيط القاعدي', view: 'localityPlan', active: view === 'localityPlan', disabled: !(permissions.canUseFederalManagerAdvancedFeatures || permissions.canManageCourse) },
     ], [view, permissions, t]);
 
     const visibleNavItems = useMemo(() => navItems.filter(item => !item.disabled), [navItems]);

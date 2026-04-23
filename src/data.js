@@ -232,6 +232,25 @@ async function getData(query, sourceOptions = {}) {
     }
 }
 
+// --- NEW: OFFLINE-SAFE WRITE HELPER ---
+// Resolves immediately if offline so the UI doesn't hang forever
+export const executeOfflineSafeWrite = async (writePromise) => {
+    if (!navigator.onLine) {
+        writePromise.catch(e => console.error("Offline write later failed:", e));
+        return { status: 'queued' };
+    }
+    let isTimeout = false;
+    const timeoutPromise = new Promise(resolve => setTimeout(() => { isTimeout = true; resolve(); }, 4000));
+    
+    try {
+        await Promise.race([writePromise, timeoutPromise]);
+        if (isTimeout) return { status: 'queued' }; // Treat Lie-Fi (very slow net) as queued
+        return { status: 'success' };
+    } catch (error) {
+        throw error; // Let actual security/validation rejections bubble up
+    }
+};
+
 // --- STORAGE HELPERS ---
 export async function uploadFile(file) {
     if (!file) return null;
@@ -291,7 +310,15 @@ export async function saveFacilitySnapshot(payload, externalBatch = null) {
             throw new Error("State (الولاية), Locality (المحلية), and Facility Name (اسم_المؤسسة) are required to check for duplicates or create a new facility.");
         }
         const q = query(collection(db, "healthFacilities"), where("الولاية", "==", state), where("المحلية", "==", locality), where("اسم_المؤسسة", "==", facilityName));
-        const querySnapshot = await getDocs(q);
+        
+        let querySnapshot;
+        try {
+            // Force cache if offline to prevent the UI from crashing on un-cached duplicate checks
+            querySnapshot = await getDocs(q, { source: navigator.onLine ? 'default' : 'cache' });
+        } catch(e) {
+            querySnapshot = { empty: true };
+        }
+
         if (!querySnapshot.empty) {
             const existingDoc = querySnapshot.docs[0];
             facilityId = existingDoc.id;
@@ -317,7 +344,10 @@ export async function saveFacilitySnapshot(payload, externalBatch = null) {
     delete mainFacilityData.submittedAt;
     batch.set(facilityRef, mainFacilityData, { merge: true });
 
-    if (!externalBatch) await batch.commit();
+    if (!externalBatch) {
+        // Prevent hanging offline
+        await executeOfflineSafeWrite(batch.commit());
+    }
     return facilityId;
 }
 
@@ -339,7 +369,7 @@ const isDataChanged = (newData, oldData) => {
          if (!(key in newData)) return true; 
     }
     return false;
-};
+}
 
 export async function importHealthFacilities(facilities, originalRows, onProgress) {
     const errors = [];
@@ -456,7 +486,7 @@ export async function submitLocalityBatchUpdate(updates, localityName) {
         batch.set(submissionRef, submissionData);
     }
     
-    await batch.commit(); 
+    await executeOfflineSafeWrite(batch.commit());
     return true;
 }
 
@@ -520,6 +550,7 @@ export async function deleteFacilitiesBatch(facilityIds) {
     }
     return deletedCount;
 }
+
 export async function submitFacilityDataForApproval(payload, submitterIdentifier = 'Unknown User') {
     const { id, ...dataToSubmit } = payload; 
     const submissionData = {
@@ -530,9 +561,12 @@ export async function submitFacilityDataForApproval(payload, submitterIdentifier
          updated_by: submitterIdentifier 
      };
      if (submissionData.id === undefined) delete submissionData.id;
-    const newSubmissionRef = await addDoc(collection(db, "facilitySubmissions"), submissionData);
+    const newSubmissionRef = doc(collection(db, "facilitySubmissions"));
+    const writePromise = setDoc(newSubmissionRef, submissionData);
+    await executeOfflineSafeWrite(writePromise);
     return newSubmissionRef.id;
 }
+
 export async function listPendingFacilitySubmissions() {
     const q = query(collection(db, "facilitySubmissions"), where("status", "==", "pending"));
     const snapshot = await getDocs(q);
@@ -676,11 +710,14 @@ export async function getFacilitatorByEmail(email) {
 export async function upsertFacilitator(payload) {
     if (payload.id) {
         const facRef = doc(db, "facilitators", payload.id);
-        await setDoc(facRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
+        const writePromise = setDoc(facRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
+        await executeOfflineSafeWrite(writePromise);
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
-        const newFacRef = await addDoc(collection(db, "facilitators"), { ...dataToSave, lastUpdatedAt: serverTimestamp() });
+        const newFacRef = doc(collection(db, "facilitators"));
+        const writePromise = setDoc(newFacRef, { ...dataToSave, lastUpdatedAt: serverTimestamp() });
+        await executeOfflineSafeWrite(writePromise);
         return newFacRef.id;
     }
 }
@@ -734,7 +771,8 @@ export async function getFacilitatorSubmissionByEmail(email) {
 
 export async function submitFacilitatorApplication(payload) {
     const dataToSave = { ...payload, submittedAt: serverTimestamp(), status: 'pending' };
-    const newSubmissionRef = await addDoc(collection(db, "facilitatorSubmissions"), dataToSave);
+    const newSubmissionRef = doc(collection(db, "facilitatorSubmissions"));
+    await executeOfflineSafeWrite(setDoc(newSubmissionRef, dataToSave));
     return newSubmissionRef.id;
 }
 export async function listPendingFacilitatorSubmissions(sourceOptions = {}) {
@@ -994,11 +1032,14 @@ export async function deleteFunder(funderId) {
 export async function upsertCourse(payload) {
     if (payload.id) {
         const courseRef = doc(db, "courses", payload.id);
-        await setDoc(courseRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
+        const writePromise = setDoc(courseRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
+        await executeOfflineSafeWrite(writePromise);
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
-        const newCourseRef = await addDoc(collection(db, "courses"), { ...dataToSave, lastUpdatedAt: serverTimestamp() });
+        const newCourseRef = doc(collection(db, "courses"));
+        const writePromise = setDoc(newCourseRef, { ...dataToSave, lastUpdatedAt: serverTimestamp() });
+        await executeOfflineSafeWrite(writePromise);
         return newCourseRef.id;
     }
 }
@@ -1112,21 +1153,36 @@ export async function upsertParticipant(payload) {
         const participantRef = doc(db, "participants", payload.id);
         if (payload.phone && payload.courseId) {
             const q = query(collection(db, "participants"), where("courseId", "==", payload.courseId), where("phone", "==", payload.phone), limit(1));
-            const snapshot = await getDocs(q); 
+            let snapshot;
+            try {
+                snapshot = await getDocs(q, { source: navigator.onLine ? 'default' : 'cache' }); 
+            } catch (e) {
+                snapshot = { empty: true };
+            }
             if (!snapshot.empty) {
                 const existingDoc = snapshot.docs[0];
                 if (existingDoc.id !== payload.id) throw new Error(`A participant with phone number '${payload.phone}' already exists in this course.`);
             }
         }
-        await setDoc(participantRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true }); 
+        const writePromise = setDoc(participantRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true }); 
+        await executeOfflineSafeWrite(writePromise);
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
         if (!dataToSave.phone || !dataToSave.courseId) throw new Error("Phone number and Course ID are required to check for duplicates.");
         const q = query(collection(db, "participants"), where("courseId", "==", dataToSave.courseId), where("phone", "==", dataToSave.phone), limit(1));
-        const snapshot = await getDocs(q); 
+        
+        let snapshot;
+        try {
+            snapshot = await getDocs(q, { source: navigator.onLine ? 'default' : 'cache' }); 
+        } catch (e) {
+            snapshot = { empty: true };
+        }
         if (!snapshot.empty) throw new Error(`A participant with phone number '${dataToSave.phone}' already exists in this course.`);
-        const newParticipantRef = await addDoc(collection(db, "participants"), { ...dataToSave, lastUpdatedAt: serverTimestamp() }); 
+        
+        const newParticipantRef = doc(collection(db, "participants"));
+        const writePromise = setDoc(newParticipantRef, { ...dataToSave, lastUpdatedAt: serverTimestamp() }); 
+        await executeOfflineSafeWrite(writePromise);
         return newParticipantRef.id;
     }
 }
@@ -1382,7 +1438,7 @@ export async function upsertCaseAndObservations(caseData, observations, editingC
         savedObservations.push(finalObs); 
     });
 
-    await batch.commit(); 
+    await executeOfflineSafeWrite(batch.commit()); 
     return { savedCase, savedObservations };
 }
 
@@ -1395,7 +1451,7 @@ export async function deleteCaseAndObservations(caseId) {
     const snapshot = await getDocs(q); 
     snapshot.forEach(d => batch.update(d.ref, { isDeleted: true, lastUpdatedAt: serverTimestamp() }));
     
-    await batch.commit(); 
+    await executeOfflineSafeWrite(batch.commit()); 
 }
 
 export async function listAllDataForCourse(courseId, sourceOptions = {}) {
@@ -1418,14 +1474,18 @@ export async function listAllDataForCourse(courseId, sourceOptions = {}) {
 
     return { allObs, allCases: allCasesWithCorrectness };
 }
+
 export async function upsertFinalReport(payload) {
     if (payload.id) {
         const finalReportRef = doc(db, "finalReports", payload.id);
-        await setDoc(finalReportRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
+        const writePromise = setDoc(finalReportRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
+        await executeOfflineSafeWrite(writePromise);
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
-        const newRef = await addDoc(collection(db, "finalReports"), { ...dataToSave, lastUpdatedAt: serverTimestamp() });
+        const newRef = doc(collection(db, "finalReports"));
+        const writePromise = setDoc(newRef, { ...dataToSave, lastUpdatedAt: serverTimestamp() });
+        await executeOfflineSafeWrite(writePromise);
         return newRef.id;
     }
 }
@@ -1473,7 +1533,8 @@ export async function saveMentorshipSession(payload, sessionId = null, externalB
             externalBatch.set(docRef, sessionData, { merge: !!sessionId }); 
             return docRef.id; 
         } else {
-            await setDoc(docRef, sessionData, { merge: !!sessionId });
+            const writePromise = setDoc(docRef, sessionData, { merge: !!sessionId });
+            await executeOfflineSafeWrite(writePromise);
             return docRef.id;
         }
     } catch (error) {
@@ -1561,7 +1622,8 @@ export async function saveIMNCIVisitReport(payload, reportId = null) {
             ...( !reportId ? { createdAt: serverTimestamp() } : {} ),
         };
         const docRef = reportId ? doc(db, "imnciVisitReports", reportId) : doc(collection(db, "imnciVisitReports")); 
-        await setDoc(docRef, sessionData, { merge: !!reportId });
+        const writePromise = setDoc(docRef, sessionData, { merge: !!reportId });
+        await executeOfflineSafeWrite(writePromise);
         return docRef.id;
     } catch (error) {
         console.error("Error saving IMNCI visit report:", error);
@@ -1598,7 +1660,8 @@ export async function saveEENCVisitReport(payload, reportId = null) {
             ...( !reportId ? { createdAt: serverTimestamp() } : {} ),
         };
         const docRef = reportId ? doc(db, "eencVisitReports", reportId) : doc(collection(db, "eencVisitReports")); 
-        await setDoc(docRef, sessionData, { merge: !!reportId });
+        const writePromise = setDoc(docRef, sessionData, { merge: !!reportId });
+        await executeOfflineSafeWrite(writePromise);
         return docRef.id;
     } catch (error) {
         console.error("Error saving EENC visit report:", error);
@@ -1694,7 +1757,7 @@ export async function upsertParticipantTest(payload) {
     const batch = writeBatch(db); 
     batch.update(participantRef, { [scoreFieldToUpdate]: percentage });
     batch.set(testRecordRef, { ...payload, lastUpdatedAt: serverTimestamp() });
-    await batch.commit();
+    await executeOfflineSafeWrite(batch.commit());
 }
 
 export async function listParticipantTestsForCourse(courseId, sourceOptions = {}) {
@@ -1718,7 +1781,7 @@ export async function deleteParticipantTest(courseId, participantId, testType) {
     const batch = writeBatch(db);
     batch.update(testRecordRef, { isDeleted: true, lastUpdatedAt: serverTimestamp() });
     batch.update(participantRef, { [scoreFieldToReset]: deleteField() });
-    await batch.commit();
+    await executeOfflineSafeWrite(batch.commit());
 }
 
 export const queueCertificateEmail = async (participant, link, language) => {
@@ -1743,13 +1806,15 @@ export const queueCertificateEmail = async (participant, link, language) => {
            <p>National Child Health Program</p>`;
 
     try {
-        await addDoc(collection(db, 'mail'), {
+        const newMailRef = doc(collection(db, 'mail'));
+        const writePromise = setDoc(newMailRef, {
             to: participant.email,
             message: {
                 subject: subject,
                 html: body
             }
         });
+        await executeOfflineSafeWrite(writePromise);
         return { success: true };
     } catch (error) {
         console.error("Error queuing email:", error);
@@ -1761,15 +1826,18 @@ export const queueCertificateEmail = async (participant, link, language) => {
 export async function upsertProject(payload) {
     if (payload.id) {
         const docRef = doc(db, "projects", payload.id);
-        await fbSetDoc(docRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
+        const writePromise = fbSetDoc(docRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
+        await executeOfflineSafeWrite(writePromise);
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
-        const newRef = await fbAddDoc(collection(db, "projects"), { 
+        const newRef = doc(collection(db, "projects"));
+        const writePromise = fbSetDoc(newRef, { 
             ...dataToSave, 
             createdAt: serverTimestamp(), 
             lastUpdatedAt: serverTimestamp() 
         });
+        await executeOfflineSafeWrite(writePromise);
         return newRef.id;
     }
 }
@@ -1797,15 +1865,18 @@ export async function deleteProject(projectId) {
 export async function upsertMasterPlan(payload) {
     if (payload.id) {
         const docRef = doc(db, "masterPlans", payload.id);
-        await fbSetDoc(docRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
+        const writePromise = fbSetDoc(docRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
+        await executeOfflineSafeWrite(writePromise);
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
-        const newRef = await fbAddDoc(collection(db, "masterPlans"), { 
+        const newRef = doc(collection(db, "masterPlans"));
+        const writePromise = fbSetDoc(newRef, { 
             ...dataToSave, 
             createdAt: serverTimestamp(), 
             lastUpdatedAt: serverTimestamp() 
         });
+        await executeOfflineSafeWrite(writePromise);
         return newRef.id;
     }
 }
@@ -1833,15 +1904,18 @@ export async function deleteMasterPlan(planId) {
 export async function upsertOperationalPlan(payload) {
     if (payload.id) {
         const docRef = doc(db, "operationalPlans", payload.id);
-        await fbUpdateDoc(docRef, { ...payload, lastUpdatedAt: serverTimestamp() });
+        const writePromise = fbUpdateDoc(docRef, { ...payload, lastUpdatedAt: serverTimestamp() });
+        await executeOfflineSafeWrite(writePromise);
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
-        const newRef = await fbAddDoc(collection(db, "operationalPlans"), { 
+        const newRef = doc(collection(db, "operationalPlans"));
+        const writePromise = fbSetDoc(newRef, { 
             ...dataToSave, 
             createdAt: serverTimestamp(), 
             lastUpdatedAt: serverTimestamp() 
         });
+        await executeOfflineSafeWrite(writePromise);
         return newRef.id;
     }
 }
@@ -1869,16 +1943,18 @@ export async function deleteOperationalPlan(planId) {
 export async function upsertUnitMeeting(payload) {
     if (payload.id) {
         const docRef = doc(db, "unitMeetings", payload.id);
-        // Using fbSetDoc with merge to safely update specific fields without overwriting
-        await fbSetDoc(docRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
+        const writePromise = fbSetDoc(docRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
+        await executeOfflineSafeWrite(writePromise);
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
-        const newRef = await fbAddDoc(collection(db, "unitMeetings"), { 
+        const newRef = doc(collection(db, "unitMeetings"));
+        const writePromise = fbSetDoc(newRef, { 
             ...dataToSave, 
             createdAt: serverTimestamp(), 
             lastUpdatedAt: serverTimestamp() 
         });
+        await executeOfflineSafeWrite(writePromise);
         return newRef.id;
     }
 }
@@ -1887,7 +1963,6 @@ export async function listUnitMeetings(sourceOptions = {}, lastSync = 0) {
     try {
         let q = collection(db, "unitMeetings");
         if (lastSync > 0) {
-            // Only fetch meetings modified since the last sync
             q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
         }
         const snapshot = await getData(q, sourceOptions);
@@ -1899,7 +1974,6 @@ export async function listUnitMeetings(sourceOptions = {}, lastSync = 0) {
 }
 
 export async function deleteUnitMeeting(meetingId) {
-    // Soft delete to maintain historical records
     await fbUpdateDoc(doc(db, "unitMeetings", meetingId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
     return true;
 }

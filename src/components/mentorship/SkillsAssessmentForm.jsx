@@ -9,7 +9,7 @@ import {
 } from '../CommonComponents';
 import { getAuth } from "firebase/auth";
 
-import { GenericFacilityForm, IMNCIFormFields } from '../FacilityForms.jsx';
+import { GenericFacilityForm, IMNCIFormFields, SaveStatusModal } from '../FacilityForms.jsx'; // <-- IMPORT SaveStatusModal
 import { submitFacilityDataForApproval } from '../../data';
 
 // --- Import all IMNCI-specific logic and the renderer ---
@@ -32,7 +32,7 @@ import {
     isImmunizationComplete,
     isOtherProblemsComplete,
     isDecisionComplete,
-    isRecordingComplete, // NEWLY ADDED IMPORT
+    isRecordingComplete,
     DIARRHEA_CLASSIFICATIONS,
     FEVER_CLASSIFICATIONS,
     COUGH_CLASSIFICATIONS,
@@ -79,14 +79,14 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
         setToast,
         existingSessionData = null,
         visitNumber = 1,
-        canEditVisitNumber = false, // Permission prop from parent
+        canEditVisitNumber = false, 
         lastSessionDate = null,
         onDraftCreated,
         setIsMothersFormModalOpen,
         setIsDashboardModalOpen,
         setIsVisitReportModalOpen,
         draftCount,
-        workerHistory = [] // NEW: Worker history for dynamic visit number calculation
+        workerHistory = [] 
     } = props;
 
     // --- State Management ---
@@ -98,49 +98,41 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
     const [isSavingDraft, setIsSavingDraft] = useState(false);
     const [isFacilityModalOpen, setIsFacilityModalOpen] = useState(false);
     const [scores, setScores] = useState({});
+    
+    // --- ADDED: State for Status Modal ---
+    const [statusData, setStatusData] = useState(null); 
+    const [statusAction, setStatusAction] = useState(null); // 'draft' or 'complete'
+    
     const auth = getAuth();
     const user = auth.currentUser;
     
     // --- Visit Number State Logic ---
-    // Initialize with existing data if present, otherwise use the calculated prop (default)
     const [currentVisitNumber, setCurrentVisitNumber] = useState(() => 
         existingSessionData?.visitNumber ? existingSessionData.visitNumber : visitNumber
     );
 
-    // --- NEW: Dynamic Visit Number Calculation ---
     useEffect(() => {
-        // If editing, respect the saved value unless manually changed. 
-        // We only auto-calculate for new sessions.
         if (existingSessionData) return;
-
         const currentSessionDate = formData.session_date;
         if (!currentSessionDate) return;
 
-        // Get all unique dates from history for this worker
         const uniqueDates = [...new Set(
             workerHistory.map(s => s.sessionDate || (s.effectiveDate ? new Date(s.effectiveDate.seconds * 1000).toISOString().split('T')[0] : ''))
         )].filter(d => d).sort();
 
-        // Check if current date exists in history
         if (uniqueDates.includes(currentSessionDate)) {
-            // If date exists, use its sequence number
             const index = uniqueDates.indexOf(currentSessionDate);
             setCurrentVisitNumber(index + 1); 
         } else {
-            // If new date, append to sequence
             setCurrentVisitNumber(uniqueDates.length + 1);
         }
-
     }, [formData.session_date, workerHistory, existingSessionData]);
-    // ---------------------------------------------
     
     const [isFormFullyComplete, setIsFormFullyComplete] = useState(false);
 
     // --- Refs for Autosave ---
     const formDataRef = useRef(formData);
-    useEffect(() => {
-        formDataRef.current = formData;
-    }, [formData]);
+    useEffect(() => { formDataRef.current = formData; }, [formData]);
 
     const allPropsRef = useRef({
         facility, healthWorkerName, user, visitNumber: currentVisitNumber, existingSessionData,
@@ -148,6 +140,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
         healthWorkerJobTitle,
         onDraftCreated
     });
+    
     useEffect(() => {
         allPropsRef.current = {
             facility, healthWorkerName, user, visitNumber: currentVisitNumber, existingSessionData,
@@ -155,12 +148,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
             healthWorkerJobTitle,
             onDraftCreated
         };
-    }, [
-        facility, healthWorkerName, user, currentVisitNumber, existingSessionData,
-        isSaving, isSavingDraft, setToast,
-        healthWorkerJobTitle,
-        onDraftCreated
-    ]);
+    }, [facility, healthWorkerName, user, currentVisitNumber, existingSessionData, isSaving, isSavingDraft, setToast, healthWorkerJobTitle, onDraftCreated]);
     
     const editingIdRef = useRef(null); 
 
@@ -187,17 +175,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                 const treatmentComplete = findIncompleteTreatmentSkills(rehydratedData).length === 0;
                 const recordingComplete = isRecordingComplete(rehydratedData);
 
-                const allComplete = vitalSignsComplete &&
-                                     dangerSignsComplete &&
-                                     mainSymptomsComplete &&
-                                     malnutritionComplete &&
-                                     anemiaComplete &&
-                                     immunizationComplete &&
-                                     otherProblemsComplete &&
-                                     decisionComplete &&
-                                     treatmentComplete &&
-                                     recordingComplete;
-
+                const allComplete = vitalSignsComplete && dangerSignsComplete && mainSymptomsComplete && malnutritionComplete && anemiaComplete && immunizationComplete && otherProblemsComplete && decisionComplete && treatmentComplete && recordingComplete;
                 setIsFormFullyComplete(allComplete);
             } else {
                 setFormData(getInitialFormData());
@@ -214,7 +192,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
         const newFormData = JSON.parse(JSON.stringify(formData));
         const { assessment_skills: newAssessmentSkills, treatment_skills: newTreatmentSkills } = newFormData;
 
-        // --- Step Visibility Logic ---
+        // Step Visibility Logic
         let maxStep = 1;
         if (isVitalSignsComplete(formData)) { maxStep = 2;
             if (isDangerSignsComplete(formData)) { maxStep = 3;
@@ -369,19 +347,8 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
         const treatmentComplete = findIncompleteTreatmentSkills(newFormData).length === 0;
         const recordingComplete = isRecordingComplete(newFormData);
 
-        const allStepsComplete = vitalSignsComplete &&
-                                 dangerSignsComplete &&
-                                 mainSymptomsComplete &&
-                                 malnutritionComplete &&
-                                 anemiaComplete &&
-                                 immunizationComplete &&
-                                 otherProblemsComplete &&
-                                 decisionComplete &&
-                                 treatmentComplete &&
-                                 recordingComplete;
-
+        const allStepsComplete = vitalSignsComplete && dangerSignsComplete && mainSymptomsComplete && malnutritionComplete && anemiaComplete && immunizationComplete && otherProblemsComplete && decisionComplete && treatmentComplete && recordingComplete;
         setIsFormFullyComplete(allStepsComplete);
-
         setScores(calculateScores(newFormData)); 
 
     }, [formData, visibleStep]);
@@ -439,7 +406,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                 scores: scoresPayload,
                 notes: currentFormData.notes,
                 status: 'draft',
-                visitNumber: Number(currentVisitNum) // Use local state
+                visitNumber: Number(currentVisitNum) 
             };
 
             if (sessionId) {
@@ -453,11 +420,11 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                 payload.mentorName = user?.displayName || 'Unknown Mentor';
             }
 
-            const savedDraft = await saveMentorshipSession(payload, sessionId);
+            const savedDraftId = await saveMentorshipSession(payload, sessionId);
             
-            if (!sessionId && savedDraft && onDraftCreated) {
-                onDraftCreated(savedDraft);
-                editingIdRef.current = savedDraft.id; 
+            if (!sessionId && savedDraftId && onDraftCreated) {
+                onDraftCreated({ ...payload, id: savedDraftId });
+                editingIdRef.current = savedDraftId; 
             }
         } catch (error) {
             console.error("Autosave failed:", error);
@@ -524,17 +491,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
         }));
     };
 
-    const handleSaveFacilityData = async (formData) => {
-        try {
-            await submitFacilityDataForApproval(formData);
-            setToast({ show: true, message: "Update submitted successfully! Your changes are pending approval.", type: 'success' });
-            setIsFacilityModalOpen(false);
-        } catch (error) {
-            setToast({ show: true, message: `Submission failed: ${error.message}`, type: 'error' });
-        }
-    };
-
-    // --- Final Submit Handler ---
+    // --- MODIFIED: Final Submit Handler ---
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -608,7 +565,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                 scores: scoresPayload,
                 notes: formData.notes,
                 status: 'complete',
-                visitNumber: Number(currentVisitNumber) // Use local state
+                visitNumber: Number(currentVisitNumber) 
             };
 
             if (sessionId) {
@@ -622,19 +579,22 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                 payload.mentorName = user?.displayName || 'Unknown Mentor';
             }
 
-            const savedSession = await saveMentorshipSession(payload, sessionId);
-
-            setToast({ show: true, message: 'تم حفظ الجلسة بنجاح!', type: 'success' });
-            if (onSaveComplete) onSaveComplete('complete', payload);
+            const savedSessionId = await saveMentorshipSession(payload, sessionId);
+            payload.id = savedSessionId;
+            
+            setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
+            setStatusAction('complete');
+            // Deferring the onSaveComplete until the modal closes
+            
         } catch (error) {
             console.error("Error saving mentorship session:", error);
-            setToast({ show: true, message: `فشل الحفظ: ${error.message}`, type: 'error' });
+            setStatusData({ status: 'error', message: error.message });
         } finally {
             setIsSaving(false);
         }
     };
 
-    // --- Draft Save Handler ---
+    // --- MODIFIED: Draft Save Handler ---
     const handleSaveDraft = async (e) => {
          e.preventDefault();
          setIsSavingDraft(true);
@@ -679,7 +639,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                  scores: scoresPayload,
                  notes: formData.notes,
                  status: 'draft',
-                 visitNumber: Number(currentVisitNumber) // Use local state
+                 visitNumber: Number(currentVisitNumber) 
              };
 
             if (sessionId) {
@@ -693,23 +653,34 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                 payload.mentorName = user?.displayName || 'Unknown Mentor';
             }
 
-             const savedDraft = await saveMentorshipSession(payload, sessionId);
+             const savedDraftId = await saveMentorshipSession(payload, sessionId);
 
-             if (!sessionId && savedDraft && onDraftCreated) {
-                 onDraftCreated(savedDraft);
-                 editingIdRef.current = savedDraft.id;
+             if (!sessionId && savedDraftId && onDraftCreated) {
+                 payload.id = savedDraftId;
+                 onDraftCreated(payload);
+                 editingIdRef.current = savedDraftId;
              }
 
-             setToast({ show: true, message: 'تم حفظ المسودة بنجاح!', type: 'success' });
-             if (onSaveComplete) onSaveComplete('draft', payload);
+             setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
+             setStatusAction('draft');
+             // Deferring the onSaveComplete until the modal closes
+             
          } catch (error) {
             console.error("Error saving draft session:", error);
-            setToast({ show: true, message: `فشل حفظ المسودة: ${error.message}` });
+            setStatusData({ status: 'error', message: error.message });
          } finally {
             setIsSavingDraft(false);
          }
     };
 
+    // --- ADDED: Close Status Modal Handler ---
+    const handleCloseStatusModal = () => {
+        const wasSuccessOrQueued = statusData?.status !== 'error';
+        setStatusData(null);
+        if (wasSuccessOrQueued && onSaveComplete) {
+             onSaveComplete(statusAction, formData); 
+        }
+    };
 
     // --- Render function ---
     return (
@@ -754,7 +725,6 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                         <div className="p-2 border rounded-lg bg-gray-50 text-right">
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-3 gap-y-0.5 items-end" dir="rtl">
                                 
-                                {/* --- UPDATED: Supervisor Info Display --- */}
                                 <div className="text-sm flex flex-col justify-end">
                                     <div>
                                         <span className="font-medium text-gray-500">اسم المشرف:</span>
@@ -764,14 +734,12 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                                                 : (user?.displayName || user?.email || '...')}
                                         </span>
                                     </div>
-                                    {/* Show "Edited by" if this is an existing session */}
                                     {existingSessionData && (
                                         <span className="text-xs text-orange-600 font-bold mt-1">
                                             (تعديل بواسطة: {user?.displayName || user?.email})
                                         </span>
                                     )}
                                 </div>
-                                {/* ---------------------------------------- */}
 
                                 <div className="text-sm">
                                     <span className="font-medium text-gray-500">تاريخ الجلسة:</span>
@@ -788,7 +756,6 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                                     <span className="font-medium text-gray-500">تاريخ الجلسة السابقة:</span>
                                     <span className="font-semibold text-gray-900 mr-2">{lastSessionDate || '---'}</span> 
                                 </div>
-                                {/* --- VISIT NUMBER RENDER LOGIC --- */}
                                 <div className="text-sm flex items-center">
                                     <span className="font-medium text-gray-700 ml-2">رقم الجلسة:</span>
                                     {canEditVisitNumber ? (
@@ -803,7 +770,6 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                                         <span className="text-lg font-bold text-sky-700 mr-2">{currentVisitNumber}</span>
                                     )}
                                 </div>
-                                {/* ---------------------------------- */}
                             </div>
                         </div>
                     </div>
@@ -904,18 +870,29 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                 </div>
             </form>
 
+            {/* --- INJECTED STATUS MODAL --- */}
+            <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
+
             {/* --- Facility Modal --- */}
             {isFacilityModalOpen && facility && (
                 <Modal 
                     isOpen={isFacilityModalOpen} 
                     onClose={() => setIsFacilityModalOpen(false)} 
-                    title={`بيانات منشأة: ${facility['اسم_Mؤسسة'] || ''}`}
+                    title={`بيانات منشأة: ${facility['اسم_المؤسسة'] || ''}`}
                     size="full"
                 >
                     <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
                         <GenericFacilityForm
                             initialData={facility}
-                            onSave={handleSaveFacilityData}
+                            onSave={async (formData) => {
+                                try {
+                                    await submitFacilityDataForApproval(formData);
+                                    setToast({ show: true, message: "تم تحديث المنشأة بنجاح", type: 'success' });
+                                    setIsFacilityModalOpen(false);
+                                } catch (error) {
+                                    setToast({ show: true, message: `فشل التحديث: ${error.message}`, type: 'error' });
+                                }
+                            }}
                             onCancel={() => setIsFacilityModalOpen(false)}
                             setToast={setToast}
                             title="بيانات خدمة IMNCI"

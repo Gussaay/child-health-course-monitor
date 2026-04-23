@@ -124,10 +124,9 @@ export const DataProvider = ({ children }) => {
                 if (fetchingRef.current[filterKey]) return cacheRef.current.healthFacilities; 
                 fetchingRef.current[filterKey] = true;
                 
-                // Always set loading to true when starting a fresh/forced fetch
                 setIsLoading(prev => ({ ...prev, healthFacilities: true }));
 
-                // 2. ALWAYS Try fetching from Firebase IndexedDB Cache first as our "Base" to merge into
+                // 2. ALWAYS Try fetching from Firebase IndexedDB Cache first
                 let localData = [];
                 if (!internalCache[filterKey]) {
                     try {
@@ -136,13 +135,11 @@ export const DataProvider = ({ children }) => {
                             localData = cachedData;
                             facilitiesFilterCacheRef.current[filterKey] = localData;
                             
-                            // INSTANT CACHE RENDERING
                             if (filterKey === currentFacilitiesFilterKeyRef.current || currentFacilitiesFilterKeyRef.current === 'all') {
                                 setCache(prev => ({ ...prev, healthFacilities: localData }));
                                 currentFacilitiesFilterKeyRef.current = filterKey;
                             }
                             
-                            // Stop if we aren't forcing server
                             if (!shouldForceServer) {
                                 setIsLoading(prev => ({ ...prev, healthFacilities: false }));
                                 fetchingRef.current[filterKey] = false;
@@ -155,6 +152,14 @@ export const DataProvider = ({ children }) => {
                 } else {
                     localData = internalCache[filterKey];
                 }
+
+                // --- OFFLINE GUARD: Return local cache instantly if offline ---
+                if (!navigator.onLine) {
+                    setIsLoading(prev => ({ ...prev, healthFacilities: false }));
+                    fetchingRef.current[filterKey] = false;
+                    return localData;
+                }
+                // --------------------------------------------------------------
 
                 // 3. Fetch ONLY Deltas from Server
                 try {
@@ -217,7 +222,6 @@ export const DataProvider = ({ children }) => {
             const shouldForceServer = force || isStale;
 
             if (hasData && !shouldForceServer && !isDefaultSettings) {
-                // Ensure loading is false if returning cached
                 setIsLoading(prev => prev[key] === false ? prev : { ...prev, [key]: false });
                 return currentCache;
             }
@@ -225,7 +229,6 @@ export const DataProvider = ({ children }) => {
             if (fetchingRef.current[key]) return currentCache;
             fetchingRef.current[key] = true;
             
-            // Always set loading to true when starting a fresh/forced fetch
             setIsLoading(prev => ({ ...prev, [key]: true }));
             
             // 2. ALWAYS Try Firebase Cache first to establish our "Base"
@@ -249,6 +252,14 @@ export const DataProvider = ({ children }) => {
                 }
             }
             
+            // --- OFFLINE GUARD: Return local cache instantly if offline ---
+            if (!navigator.onLine) {
+                setIsLoading(prev => ({ ...prev, [key]: false }));
+                fetchingRef.current[key] = false;
+                return localData;
+            }
+            // --------------------------------------------------------------
+
             // 3. Fetch ONLY Deltas from Server
             try {
                 let effectiveLastFetchTime = lastFetchTime;
@@ -318,14 +329,7 @@ export const DataProvider = ({ children }) => {
     }), [createFetcher]);
 
     useEffect(() => {
-        // If the user is null (like on a public link), we don't necessarily want to nuke the 
-        // local cache if they are just viewing public data. However, we MUST ensure 
-        // the default initial loading flags don't stay stuck if no component triggers a fetch.
         if (!user) {
-            // We do NOT clear the cache here anymore, so public links can still read indexedDB.
-            // But we do need to make sure we don't indefinitely lock the UI in a loading state
-            // if a fetch isn't explicitly called by the public component.
-            // The fetchers themselves will handle toggling the loading state properly now.
             setLastFacilitiesFetchTime({});
             facilitiesFilterCacheRef.current = {};
             currentFacilitiesFilterKeyRef.current = 'all';

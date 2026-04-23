@@ -39,6 +39,7 @@ import {
     EENCFormFields,
     NeonatalFormFields,
     CriticalCareFormFields,
+    SaveStatusModal // --- ADDED IMPORT ---
 } from './FacilityForms.jsx';
 import { STATE_LOCALITIES } from "./constants.js";
 
@@ -841,6 +842,9 @@ const ChildHealthServicesView = ({
     const [updateSelectionService, setUpdateSelectionService] = useState(null);
     const [updateSelectionData, setUpdateSelectionData] = useState({ state: '', locality: '', facilityId: '' });
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    
+    // --- ADDED: State for Status Modal ---
+    const [statusData, setStatusData] = useState(null);
 
     const handleActionMenuClick = (action) => {
         if (action === 'show_list') {
@@ -978,20 +982,21 @@ const ChildHealthServicesView = ({
 
     const handleOpenMapModal = (facility) => { setFacilityForMap(facility); setIsMapModalOpen(true); };
 
+    // --- MODIFIED: Handle Location Saving ---
     const handleSaveLocation = async (newLocation) => {
         if (!facilityForMap) return;
         const payload = { ...facilityForMap, _الإحداثيات_latitude: newLocation._الإحداثيات_latitude, _الإحداثيات_longitude: newLocation._الإحداثيات_longitude, date_of_visit: facilityForMap.date_of_visit || new Date().toISOString().split('T')[0], };
         try {
             if (permissions.canApproveSubmissions) {
                 await saveFacilitySnapshot(payload);
-                setToast({ show: true, message: "Facility location updated directly.", type: "success" });
+                setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
                 await fetchHealthFacilities({}, true);
             } else {
                  await submitFacilityDataForApproval(payload, auth.currentUser?.email || 'Unknown User');
-                 setToast({ show: true, message: "Facility location update submitted for approval.", type: "info" });
+                 setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
             }
         } catch (error) {
-            setToast({ show: true, message: `Failed to update location: ${error.message}`, type: 'error' });
+            setStatusData({ status: 'error', message: error.message });
         }
     };
 
@@ -1186,6 +1191,7 @@ const ChildHealthServicesView = ({
         }
     };
 
+    // --- MODIFIED: Handle saving of facilities with modal status ---
     const handleSaveFacility = async (payload) => {
         const user = auth.currentUser;
         if (!user) { setToast({ show: true, message: 'You must be logged in.', type: 'error' }); return; }
@@ -1194,16 +1200,25 @@ const ChildHealthServicesView = ({
         try {
             if (permissions.canApproveSubmissions) { 
                 await saveFacilitySnapshot(finalPayload); 
-                setToast({ show: true, message: 'Facility saved directly.', type: 'success' }); 
+                setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
                 await fetchHealthFacilities({}, true);
             } else { 
                 await submitFacilityDataForApproval(finalPayload, user.email || 'Unknown User'); 
-                setToast({ show: true, message: 'Facility update submitted for approval.', type: 'info' }); 
+                setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
             }
-            setEditingFacility(null);
-            setIsFormModalOpen(false);
         } catch (error) {
-             setToast({ show: true, message: `Failed to save/submit: ${error.message}`, type: 'error' });
+             setStatusData({ status: 'error', message: error.message });
+        }
+    };
+
+    // --- ADDED: Close the status modal and close the form if successful ---
+    const handleCloseStatusModal = () => {
+        const wasSuccessOrQueued = statusData?.status !== 'error';
+        setStatusData(null);
+        if (wasSuccessOrQueued) {
+            setEditingFacility(null);
+            setUpdateSelectionService(null);
+            setIsFormModalOpen(false);
         }
     };
 
@@ -1698,6 +1713,9 @@ const ChildHealthServicesView = ({
                      </div>
                 </Modal>
             )}
+
+            {/* --- INJECTED STATUS MODAL --- */}
+            <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
 
             <ApprovalComparisonModal
                 submission={submissionForReview}

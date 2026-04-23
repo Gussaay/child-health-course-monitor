@@ -3,7 +3,6 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-// CORRECTED LINE: Added persistentLocalCache and persistentMultipleTabManager
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 import { getAnalytics } from "firebase/analytics";
 import { getStorage } from "firebase/storage";
@@ -27,7 +26,9 @@ export const auth = getAuth(app);
 export const analytics = getAnalytics(app);
 export const storage = getStorage(app);
 
-// Initialize Firestore with offline persistence enabled
+// Initialize Firestore with offline persistence enabled for the Capacitor/PWA app
 export const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+  localCache: persistentLocalCache({ 
+    tabManager: persistentMultipleTabManager() 
+  })
 });
