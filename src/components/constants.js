@@ -384,3 +384,19 @@ export const fmtPct = v => (!isFinite(v) ? "—" : Math.round(v).toFixed(0) + " 
 export const pctBgClass = v => (!isFinite(v) ? "" : v < 50 ? "bg-red-100 text-red-800" : v <= 80 ? "bg-yellow-100 text-yellow-800" : "bg-green-100 text-green-800");
 export const formatAsPercentageAndCount = (correct, total) => `${correct}/${total} (${fmtPct(calcPct(correct, total))})`;
 export const formatAsPercentageAndScore = (score, maxScore) => maxScore === 0 ? "N/A" : `${score}/${maxScore} (${fmtPct(calcPct(score, maxScore))})`;
+
+// --- LOCALIZATION HELPERS ---
+export const getLocalizedStateName = (stateKey, language) => {
+    if (!STATE_LOCALITIES[stateKey]) return stateKey;
+    const lang = language?.startsWith('ar') ? 'ar' : 'en';
+    return STATE_LOCALITIES[stateKey][lang] || stateKey;
+};
+
+export const getLocalizedLocalityName = (stateKey, localityKey, language) => {
+    if (!STATE_LOCALITIES[stateKey]) return localityKey;
+    const lang = language?.startsWith('ar') ? 'ar' : 'en';
+    const locality = STATE_LOCALITIES[stateKey].localities.find(
+        (l) => l.en === localityKey || l.ar === localityKey
+    );
+    return locality ? (locality[lang] || localityKey) : localityKey;
+};

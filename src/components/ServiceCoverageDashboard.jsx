@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import html2canvas from 'html2canvas';
 import { Card, Spinner, FormGroup, Select } from './CommonComponents';
 import { useDataCache } from '../DataContext';
-import { STATE_LOCALITIES } from "./constants.js";
+import { STATE_LOCALITIES, getLocalizedStateName, getLocalizedLocalityName } from "./constants.js";
 import SudanMap from '../SudanMap';
 
 // --- HELPER COMPONENTS ---
@@ -146,7 +146,7 @@ const NEONATAL_EQUIPMENT_SPEC = { 'neonatal_total_beds': 'Total Beds', 'neonatal
 const NEONATAL_EQUIPMENT_KEYS = Object.keys(NEONATAL_EQUIPMENT_SPEC);
 
 export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { healthFacilities: allFacilities, isLoading } = useDataCache();
     const loading = isLoading.healthFacilities || allFacilities === null;
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
@@ -218,14 +218,17 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
         locationFilteredFacilities.forEach(f => {
             const key = f[aggF];
             if (!key || key === 'إتحادي') return;
-            if (!sum[key]) sum[key] = { name: isLocalityView ? (STATE_LOCALITIES[stateFilter]?.localities.find(l => l.en === key)?.en || key) : key, key, totalSupposed: 0, totalWithSCNU: 0 };
+            if (!sum[key]) sum[key] = { 
+                name: isLocalityView ? getLocalizedLocalityName(stateFilter, key, i18n.language) : getLocalizedStateName(key, i18n.language), 
+                key, totalSupposed: 0, totalWithSCNU: 0 
+            };
             if (isFacilitySupposedToProvideCare(f)) sum[key].totalSupposed++;
             if (hasFunctioningSCNU(f)) sum[key].totalWithSCNU++;
         });
 
         const sD = Object.values(sum).map(s => ({ ...s, coverage: s.totalSupposed > 0 ? Math.round((s.totalWithSCNU / s.totalSupposed) * 100) : 0 }));
         return { stateData: sD };
-    }, [locationFilteredFacilities, stateFilter, isLocalityView, hasFunctioningSCNU, isFacilitySupposedToProvideCare]); 
+    }, [locationFilteredFacilities, stateFilter, isLocalityView, hasFunctioningSCNU, isFacilitySupposedToProvideCare, i18n.language]); 
 
     const sortedTableData = useMemo(() => [...stateData].sort((a,b) => b.coverage - a.coverage), [stateData]);
 
@@ -235,7 +238,10 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
         hospitalsWithSCNU.forEach(f => {
             const key = f[aggK];
             if (!key || key === 'إتحادي') return;
-            if (!sum[key]) sum[key] = { name: !!stateFilter ? f['اسم_المؤسسة'] : key, key, hasData: false, ...Object.fromEntries(NEONATAL_EQUIPMENT_KEYS.map(k => [k, 0])) };
+            if (!sum[key]) sum[key] = { 
+                name: !!stateFilter ? f['اسم_المؤسسة'] : getLocalizedStateName(key, i18n.language), 
+                key, hasData: false, ...Object.fromEntries(NEONATAL_EQUIPMENT_KEYS.map(k => [k, 0])) 
+            };
             NEONATAL_EQUIPMENT_KEYS.forEach(eK => {
                 const fV = Number(f[eK]) || 0;
                 sum[key][eK] += fV;
@@ -243,16 +249,23 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
             });
         });
         return Object.values(sum).filter(s => s.key !== 'إتحادي' && s.hasData).sort((a, b) => (b.neonatal_total_beds || 0) - (a.neonatal_total_beds || 0)).slice(0, 30);
-    }, [hospitalsWithSCNU, stateFilter]);
+    }, [hospitalsWithSCNU, stateFilter, i18n.language]);
 
     const facilitySCNUTableData = useMemo(() => {
         return hospitalsWithSCNU.map(f => {
             let localityEn = f['المحلية'];
             const state = f['الولاية'];
-            if (STATE_LOCALITIES[state]) localityEn = STATE_LOCALITIES[state].localities.find(l => l.en === localityEn || l.ar === localityEn)?.en || localityEn;
-            return { id: f.id, state, locality: localityEn, facilityName: f['اسم_المؤسسة'], incubators: Number(f['neonatal_total_incubators']) || 0, cots: Number(f['neonatal_total_cots']) || 0, totalBeds: (Number(f['neonatal_total_incubators']) || 0) + (Number(f['neonatal_total_cots']) || 0) };
+            return { 
+                id: f.id, 
+                state: getLocalizedStateName(state, i18n.language), 
+                locality: getLocalizedLocalityName(state, localityEn, i18n.language), 
+                facilityName: f['اسم_المؤسسة'], 
+                incubators: Number(f['neonatal_total_incubators']) || 0, 
+                cots: Number(f['neonatal_total_cots']) || 0, 
+                totalBeds: (Number(f['neonatal_total_incubators']) || 0) + (Number(f['neonatal_total_cots']) || 0) 
+            };
         }).sort((a, b) => a.state.localeCompare(b.state) || a.locality.localeCompare(b.locality) || a.facilityName.localeCompare(b.facilityName));
-    }, [hospitalsWithSCNU]);
+    }, [hospitalsWithSCNU, i18n.language]);
 
     const facilityLocationMarkers = useMemo(() => hospitalsWithSCNU.filter(f=>f['_الإحداثيات_longitude']&&f['_الإحداثيات_latitude']).map(f=>({key:f.id,name:f['اسم_المؤسسة'],coordinates:[f['_الإحداثيات_longitude'],f['_الإحداثيات_latitude']]})), [hospitalsWithSCNU]);
     const mapViewConfig = useMemo(() => { const sC=stateFilter?mapCoordinates[stateFilter]:null; return sC ? {center:[sC.lng,sC.lat],scale:sC.scale,focusedState:stateFilter} : {center:[30,15.5],scale:2000,focusedState:null}; }, [stateFilter]);
@@ -297,8 +310,8 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
         <div onMouseMove={handleMouseMove}>
             <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm ignore-for-export mb-6">
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                    <FormGroup label={t('dashboard.filters.state', 'State')}><Select value={stateFilter} onChange={handleStateChange}><option value="">{t('dashboard.filters.all_states', 'All States')}</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{sKey}</option>)}</Select></FormGroup>
-                    <FormGroup label={t('dashboard.filters.locality', 'Locality')}><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">{t('dashboard.filters.all_localities', 'All Localities')}</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{l.en}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('dashboard.filters.state', 'State')}><Select value={stateFilter} onChange={handleStateChange}><option value="">{t('dashboard.filters.all_states', 'All States')}</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{getLocalizedStateName(sKey, i18n.language)}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('dashboard.filters.locality', 'Locality')}><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">{t('dashboard.filters.all_localities', 'All Localities')}</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{getLocalizedLocalityName(stateFilter, l.en, i18n.language)}</option>)}</Select></FormGroup>
                     <FormGroup label={t('dashboard.filters.ownership', 'Ownership')}><Select value={ownershipFilter} onChange={(e) => setOwnershipFilter(e.target.value)}><option value="">{t('dashboard.filters.all_ownerships', 'All Ownerships')}</option>{OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
                     <FormGroup label={t('dashboard.filters.project', 'Project')}><Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}><option value="">{t('dashboard.filters.all_projects', 'All Projects')}</option>{projectOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
                     <FormGroup label={t('dashboard.filters.has_equipment', 'Has Equipment')}><Select value={equipmentFilter} onChange={(e) => setEquipmentFilter(e.target.value)}><option value="">{t('dashboard.filters.any', 'Any')}</option>{Object.entries(NEONATAL_EQUIPMENT_SPEC).map(([key, label]) => <option key={key} value={key}>{t(`dashboard.equip.${label}`, label)}</option>)}</Select></FormGroup>
@@ -368,10 +381,10 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
                                     {sortedTableData.length === 0 ? <tr><td colSpan={4} className="p-4 text-center text-gray-500">{t('dashboard.table.no_data', 'No data matches the current filters.')}</td></tr> :
                                      sortedTableData.map(row => (
                                         <tr key={row.key} className='hover:bg-blue-50/50 transition-colors border-b border-gray-100'>
-                                            <td className="p-3 whitespace-nowrap font-medium text-gray-700">{row.name}</td>
+                                            <td className="p-3 whitespace-nowrap font-medium text-gray-700 text-start">{row.name}</td>
                                             <td className="p-3 text-center align-middle font-medium">{row.totalSupposed}</td>
                                             <td className="p-3 text-center font-bold text-sky-700 align-middle">{row.totalWithSCNU} <span className="text-gray-400 font-normal ms-1">({row.coverage}%)</span></td>
-                                            <td className="p-3 align-middle">
+                                            <td className="p-3 align-middle text-start">
                                                 <div className="flex items-center w-full">
                                                     <div className="flex-grow bg-gray-200 rounded-sm h-3 overflow-hidden flex"><div className={`h-full transition-all shadow-sm ${row.coverage >= 75 ? 'bg-sky-700' : row.coverage >= 40 ? 'bg-sky-400' : 'bg-gray-600'}`} style={{ width: `${Math.max(row.coverage, 1)}%` }}></div></div>
                                                     <span className="ms-3 text-[11px] font-bold text-gray-700 w-8 text-end">{row.coverage}%</span>
@@ -489,7 +502,7 @@ const EENC_EQUIPMENT_SPEC = { 'eenc_delivery_beds': 'Delivery Beds', 'eenc_resus
 const EENC_EQUIPMENT_KEYS = Object.keys(EENC_EQUIPMENT_SPEC);
 
 export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { healthFacilities: allFacilities, isLoading } = useDataCache();
     const loading = isLoading.healthFacilities || allFacilities === null;
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
@@ -546,7 +559,10 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
         locationFilteredFacilities.forEach(f => {
             const key = f[aggF];
             if (!key || key === 'إتحادي') return;
-            if (!s[key]) s[key] = { name: stateFilter ? (STATE_LOCALITIES[stateFilter]?.localities.find(l => l.en === key)?.en || key) : key, key, functionalEmONC: 0, eencProviders: 0 };
+            if (!s[key]) s[key] = { 
+                name: stateFilter ? getLocalizedLocalityName(stateFilter, key, i18n.language) : getLocalizedStateName(key, i18n.language), 
+                key, functionalEmONC: 0, eencProviders: 0 
+            };
             if (isEmONCFunctional(f)) {
                 s[key].functionalEmONC++;
                 if (providesEENC(f)) s[key].eencProviders++;
@@ -555,7 +571,7 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
         const tD = Object.values(s).map(st => ({ ...st, eencCoverage: st.functionalEmONC > 0 ? Math.round((st.eencProviders / st.functionalEmONC) * 100) : 0 })).sort((a, b) => b.eencCoverage - a.eencCoverage);
         const mD = tD.map(st => ({ state: st.key, percentage: st.eencCoverage, coordinates: mapCoordinates[st.key] ? [mapCoordinates[st.key].lng, mapCoordinates[st.key].lat] : [0, 0] }));
         return { tableData: tD, mapData: mD };
-    }, [locationFilteredFacilities, stateFilter, isEmONCFunctional, providesEENC]); 
+    }, [locationFilteredFacilities, stateFilter, isEmONCFunctional, providesEENC, i18n.language]); 
 
     const equipmentTableData = useMemo(() => {
         const aggK = stateFilter ? 'اسم_المؤسسة' : 'الولاية';
@@ -564,11 +580,14 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
         facP.forEach(f => {
             const key = f[aggK];
             if (!key || key === 'إتحادي') return;
-            if (!s[key]) s[key] = { name: stateFilter ? f['اسم_المؤسسة'] : key, key, ...Object.fromEntries(EENC_EQUIPMENT_KEYS.map(k => [k, 0])) };
+            if (!s[key]) s[key] = { 
+                name: stateFilter ? f['اسم_المؤسسة'] : getLocalizedStateName(key, i18n.language), 
+                key, ...Object.fromEntries(EENC_EQUIPMENT_KEYS.map(k => [k, 0])) 
+            };
             EENC_EQUIPMENT_KEYS.forEach(eK => { const val = f[eK]; s[key][eK] += (val === 'Yes') ? 1 : (Number(val) || 0); });
         });
         return Object.values(s).filter(st => st.key !== 'إتحادي').sort((a, b) => (b.eenc_delivery_beds || 0) - (a.eenc_delivery_beds || 0));
-    }, [locationFilteredFacilities, stateFilter, isEmONCFunctional, providesEENC]);
+    }, [locationFilteredFacilities, stateFilter, isEmONCFunctional, providesEENC, i18n.language]);
 
     const facilityLocationMarkers = useMemo(() => locationFilteredFacilities.filter(f=> isEmONCFunctional(f) && providesEENC(f) &&f['_الإحداثيات_longitude']).map(f=>({key:f.id,name:f['اسم_المؤسسة'],coordinates:[f['_الإحداثيات_longitude'],f['_الإحداثيات_latitude']]})), [locationFilteredFacilities, isEmONCFunctional, providesEENC]);
     const mapViewConfig = useMemo(() => { const sC=stateFilter?mapCoordinates[stateFilter]:null; return sC ? {center:[sC.lng,sC.lat],scale:sC.scale,focusedState:stateFilter} : {center:[30,15.5],scale:2000,focusedState:null}; }, [stateFilter]);
@@ -637,8 +656,8 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
             
             <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm ignore-for-export mb-6 mt-4">
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                    <FormGroup label={t('dashboard.filters.state', 'State')}><Select value={stateFilter} onChange={handleStateChange}><option value="">{t('dashboard.filters.all_states', 'All States')}</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{sKey}</option>)}</Select></FormGroup>
-                    <FormGroup label={t('dashboard.filters.locality', 'Locality')}><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">{t('dashboard.filters.all_localities', 'All Localities')}</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{l.en}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('dashboard.filters.state', 'State')}><Select value={stateFilter} onChange={handleStateChange}><option value="">{t('dashboard.filters.all_states', 'All States')}</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{getLocalizedStateName(sKey, i18n.language)}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('dashboard.filters.locality', 'Locality')}><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">{t('dashboard.filters.all_localities', 'All Localities')}</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{getLocalizedLocalityName(stateFilter, l.en, i18n.language)}</option>)}</Select></FormGroup>
                     <FormGroup label={t('dashboard.filters.ownership', 'Ownership')}><Select value={ownershipFilter} onChange={(e) => setOwnershipFilter(e.target.value)}><option value="">{t('dashboard.filters.all_ownerships', 'All Ownerships')}</option>{OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
                     <FormGroup label={t('dashboard.filters.project', 'Project')}><Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}><option value="">{t('dashboard.filters.all_projects', 'All Projects')}</option>{projectOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
                     <FormGroup label={t('dashboard.filters.has_equipment', 'Has Equipment')}><Select value={equipmentFilter} onChange={(e) => setEquipmentFilter(e.target.value)}><option value="">{t('dashboard.filters.any', 'Any')}</option>{Object.entries(EENC_EQUIPMENT_SPEC).map(([key, label]) => <option key={key} value={key}>{t(`dashboard.equip.${label}`, label)}</option>)}</Select></FormGroup>
@@ -759,12 +778,18 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
 };
 
 // --- IMNCI DASHBOARD ---
-const IMNCI_FILTER_SPEC = { 'وجود_سجل_علاج_متكامل': 'IMNCI Register', 'وجود_كتيب_لوحات': 'Chart Booklet', 'ميزان_وزن': 'Weight Scale', 'غرفة_إرواء': 'ORT Corner' };
-const IMNCI_TOOLS_SPEC = { 'countWithRegister': 'IMNCI Register', 'countWithChartbooklet': 'Chart Booklet', 'countWithWeightScale': 'Weight Scale', 'countWithOrtCorner': 'ORT Corner' };
-const IMNCI_TOOLS_KEYS = Object.keys(IMNCI_TOOLS_SPEC);
+// Updated to include all IMNCI tools and exactly match the FacilityForms keys
+const IMNCI_FILTER_SPEC = { 
+    'ميزان_وزن': 'Weight Scale', 
+    'ميزان_طول': 'Height Scale', 
+    'ميزان_حرارة': 'Thermometer', 
+    'ساعة_مؤقت': 'Timer',
+    'وجود_كتيب_لوحات': 'Chart Booklet', 
+    'وجود_سجل_علاج_متكامل': 'IMNCI Register'
+};
 
 export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { healthFacilities: allFacilities, isLoading, fetchHealthFacilities } = useDataCache();
     const loading = isLoading.healthFacilities || allFacilities === null;
     
@@ -829,48 +854,82 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
             if(!key || key === 'إتحادي')return;
             
             if(!s[key]){
-                s[key]={name: key, key, totalFunctioningPhc:0, totalPhcWithImnci:0};
+                s[key]={
+                    name: isFacilityView ? key : (isLocalityView ? getLocalizedLocalityName(stateFilter, key, i18n.language) : getLocalizedStateName(key, i18n.language)), 
+                    key, totalFunctioningPhc:0, totalPhcWithImnci:0
+                };
             }
             s[key].totalFunctioningPhc++;
             if(f['وجود_العلاج_المتكامل_لامراض_الطفولة']==='Yes') s[key].totalPhcWithImnci++;
         });
 
         return Object.values(s).map(st=>({...st,coverage:st.totalFunctioningPhc>0?Math.round((st.totalPhcWithImnci/st.totalFunctioningPhc)*100):0})).sort((a,b) => b.coverage - a.coverage);
-    }, [locationFilteredFacilities, stateFilter, isLocalityView, isFacilityView]); 
+    }, [locationFilteredFacilities, stateFilter, isLocalityView, isFacilityView, i18n.language]); 
 
+    // --- Tools calculation aligned with exact FacilityForms keys ---
     const tableToolsData = useMemo(() => {
         const s={};
         const aggKey = isFacilityView ? 'اسم_المؤسسة' : (isLocalityView ? 'المحلية' : 'الولاية');
         
-        imnciInPhcs.forEach(f=>{
+        functioningPhcs.forEach(f=>{
             const key=f[aggKey];
              if(!key || key === 'إتحادي')return;
             if(!s[key]){
-                s[key]={name:key, key, totalImnciPhcs:0, countWithRegister:0, countWithChartbooklet:0, countWithWeightScale:0, countWithOrtCorner:0};
+                s[key]={
+                    name: isFacilityView ? key : (isLocalityView ? getLocalizedLocalityName(stateFilter, key, i18n.language) : getLocalizedStateName(key, i18n.language)), 
+                    key, totalPhcs:0, countWithRegister:0, countWithChartbooklet:0, countWithWeightScale:0, countWithHeightScale:0, countWithThermometer:0, countWithTimer:0
+                };
             }
-            s[key].totalImnciPhcs++;
+            s[key].totalPhcs++;
             if(f['وجود_سجل_علاج_متكامل']==='Yes')s[key].countWithRegister++;
             if(f['وجود_كتيب_لوحات']==='Yes')s[key].countWithChartbooklet++;
             if(f['ميزان_وزن']==='Yes')s[key].countWithWeightScale++;
-            if(f['غرفة_إرواء']==='Yes')s[key].countWithOrtCorner++;
+            if(f['ميزان_طول']==='Yes')s[key].countWithHeightScale++;
+            if(f['ميزان_حرارة']==='Yes')s[key].countWithThermometer++;
+            if(f['ساعة_مؤقت']==='Yes')s[key].countWithTimer++;
         });
-        return Object.values(s).map(st=>{const total=st.totalImnciPhcs;return{...st,percentageWithRegister:total>0?Math.round((st.countWithRegister/total)*100):0,percentageWithChartbooklet:total>0?Math.round((st.countWithChartbooklet/total)*100):0,percentageWithWeightScale:total>0?Math.round((st.countWithWeightScale/total)*100):0,percentageWithOrtCorner:total>0?Math.round((st.countWithOrtCorner/total)*100):0};}).sort((a,b)=> a.name.localeCompare(b.name));
-    }, [imnciInPhcs, isLocalityView, isFacilityView]);
+        
+        return Object.values(s).map(st=>{
+            const total=st.totalPhcs;
+            return {
+                ...st,
+                percentageWithRegister: total>0 ? Math.round((st.countWithRegister/total)*100) : 0,
+                percentageWithChartbooklet: total>0 ? Math.round((st.countWithChartbooklet/total)*100) : 0,
+                percentageWithWeightScale: total>0 ? Math.round((st.countWithWeightScale/total)*100) : 0,
+                percentageWithHeightScale: total>0 ? Math.round((st.countWithHeightScale/total)*100) : 0,
+                percentageWithThermometer: total>0 ? Math.round((st.countWithThermometer/total)*100) : 0,
+                percentageWithTimer: total>0 ? Math.round((st.countWithTimer/total)*100) : 0
+            };
+        }).sort((a,b)=> a.name.localeCompare(b.name));
+    }, [functioningPhcs, isLocalityView, isFacilityView, i18n.language]);
 
     const toolsAverages = useMemo(() => {
-        if (imnciInPhcs.length === 0) return null;
-        let totalRegister = 0, totalChart = 0, totalScale = 0, totalOrt = 0;
-        imnciInPhcs.forEach(f => {
+        if (functioningPhcs.length === 0) return null;
+        let totalRegister = 0, totalChart = 0, totalScale = 0, totalHeight = 0, totalThermometer = 0, totalTimer = 0;
+        
+        functioningPhcs.forEach(f => {
             if(f['وجود_سجل_علاج_متكامل']==='Yes') totalRegister++;
             if(f['وجود_كتيب_لوحات']==='Yes') totalChart++;
             if(f['ميزان_وزن']==='Yes') totalScale++;
-            if(f['غرفة_إرواء']==='Yes') totalOrt++;
+            if(f['ميزان_طول']==='Yes') totalHeight++;
+            if(f['ميزان_حرارة']==='Yes') totalThermometer++;
+            if(f['ساعة_مؤقت']==='Yes') totalTimer++;
         });
-        const total = imnciInPhcs.length;
-        return { total, totalRegister, pRegister: total > 0 ? Math.round((totalRegister/total)*100) : 0, totalChart, pChart: total > 0 ? Math.round((totalChart/total)*100) : 0, totalScale, pScale: total > 0 ? Math.round((totalScale/total)*100) : 0, totalOrt, pOrt: total > 0 ? Math.round((totalOrt/total)*100) : 0 };
-    }, [imnciInPhcs]);
+        
+        const total = functioningPhcs.length;
+        return { 
+            total, 
+            totalRegister, pRegister: total > 0 ? Math.round((totalRegister/total)*100) : 0, 
+            totalChart, pChart: total > 0 ? Math.round((totalChart/total)*100) : 0, 
+            totalScale, pScale: total > 0 ? Math.round((totalScale/total)*100) : 0, 
+            totalHeight, pHeight: total > 0 ? Math.round((totalHeight/total)*100) : 0, 
+            totalThermometer, pThermometer: total > 0 ? Math.round((totalThermometer/total)*100) : 0, 
+            totalTimer, pTimer: total > 0 ? Math.round((totalTimer/total)*100) : 0 
+        };
+    }, [functioningPhcs]);
 
     const facilityLocationMarkers = useMemo(() => imnciInPhcs.filter(f => f['_الإحداثيات_longitude'] && f['_الإحداثيات_latitude']).map(f => ({key: f.id, name: f['اسم_المؤسسة'], coordinates: [f['_الإحداثيات_longitude'], f['_الإحداثيات_latitude']]})), [imnciInPhcs]);
+    
     const nationalMapData = useMemo(() => { 
         const s = {};
         locationFilteredFacilities.forEach(f => {
@@ -914,8 +973,8 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
             
             <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm ignore-for-export mb-6 mt-4">
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                    <FormGroup label={t('dashboard.filters.state', 'State')}><Select value={stateFilter} onChange={handleStateChange}><option value="">{t('dashboard.filters.all_states', 'All States')}</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{sKey}</option>)}</Select></FormGroup>
-                    <FormGroup label={t('dashboard.filters.locality', 'Locality')}><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">{t('dashboard.filters.all_localities', 'All Localities')}</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{l.en}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('dashboard.filters.state', 'State')}><Select value={stateFilter} onChange={handleStateChange}><option value="">{t('dashboard.filters.all_states', 'All States')}</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{getLocalizedStateName(sKey, i18n.language)}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('dashboard.filters.locality', 'Locality')}><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">{t('dashboard.filters.all_localities', 'All Localities')}</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{getLocalizedLocalityName(stateFilter, l.en, i18n.language)}</option>)}</Select></FormGroup>
                     <FormGroup label={t('dashboard.filters.ownership', 'Ownership')}><Select value={ownershipFilter} onChange={(e) => setOwnershipFilter(e.target.value)}><option value="">{t('dashboard.filters.all_ownerships', 'All Ownerships')}</option>{OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
                     <FormGroup label={t('dashboard.filters.project', 'Project')}><Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}><option value="">{t('dashboard.filters.all_projects', 'All Projects')}</option>{projectOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
                     <FormGroup label={t('dashboard.filters.has_equipment', 'Has Tool')}><Select value={equipmentFilter} onChange={(e) => setEquipmentFilter(e.target.value)}><option value="">{t('dashboard.filters.any', 'Any')}</option>{Object.entries(IMNCI_FILTER_SPEC).map(([key, label]) => <option key={key} value={key}>{t(`dashboard.table.${label.replace(/ /g, '_').toLowerCase()}`, label)}</option>)}</Select></FormGroup>
@@ -964,7 +1023,6 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
 
             {!loading && (
             <>
-                {/* HORIZONTAL INLINE Chart & Table */}
                 <div className="mt-6 grid grid-cols-1 gap-6 items-stretch relative">
                     <Card className="p-0 flex flex-col overflow-hidden border border-gray-200 rounded-xl">
                         <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
@@ -1010,7 +1068,7 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
                     </Card>
                 </div>
                 
-                {/* --- MODIFIED TABLE: Tools Availability --- */}
+                {/* --- MODIFIED TABLE: Tools Availability (Calculated out of Total PHCs) --- */}
                 <div className="mt-6">
                     <Card className="p-0 overflow-hidden border border-gray-200 rounded-xl">
                         <div className="p-4 border-b flex flex-col gap-2 bg-slate-50/50">
@@ -1031,11 +1089,13 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
                                     <tr>
                                         {[
                                             aggregationLevelName, 
-                                            t('dashboard.table.phcs_with_imnci', 'PHCs w/ IMNCI'), 
-                                            t('dashboard.table.imnci_registers', 'IMNCI registers'), 
-                                            t('dashboard.table.imnci_chartbooklet', 'IMNCI chartbooklet'), 
-                                            t('dashboard.table.weight_scale', 'weight scale'), 
-                                            t('dashboard.table.ort_corner', 'ORT corner')
+                                            t('dashboard.table.total_functioning_phcs', 'Total PHCs'), 
+                                            t('dashboard.table.weight_scale', 'Weight Scale'), 
+                                            t('dashboard.table.height_scale', 'Height Scale'),
+                                            t('dashboard.table.thermometer', 'Thermometer'),
+                                            t('dashboard.table.timer', 'Timer'),
+                                            t('dashboard.table.imnci_chartbooklet', 'Chart Booklet'), 
+                                            t('dashboard.table.imnci_registers', 'Register') 
                                         ].map((h, i) => (
                                             <th key={i} className="p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 uppercase text-[11px] tracking-wider">{h}</th>
                                         ))}
@@ -1046,21 +1106,25 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
                                      <tr className="bg-slate-100/80 font-bold border-b-2 border-gray-300">
                                          <td className="p-3 border-e border-gray-200 text-gray-800 uppercase text-[11px] tracking-wider text-start">{t('dashboard.table.overall_average', 'Overall Average')}</td>
                                          <td className="p-3 border-e border-gray-200 text-center font-black text-slate-700">{toolsAverages.total}</td>
-                                         <td className={`p-3 border-e border-gray-200 text-center ${getPercentageColorClass(toolsAverages.pRegister)}`}>{toolsAverages.totalRegister} <span className="text-gray-500 font-normal ms-1">({toolsAverages.pRegister}%)</span></td>
-                                         <td className={`p-3 border-e border-gray-200 text-center ${getPercentageColorClass(toolsAverages.pChart)}`}>{toolsAverages.totalChart} <span className="text-gray-500 font-normal ms-1">({toolsAverages.pChart}%)</span></td>
                                          <td className={`p-3 border-e border-gray-200 text-center ${getPercentageColorClass(toolsAverages.pScale)}`}>{toolsAverages.totalScale} <span className="text-gray-500 font-normal ms-1">({toolsAverages.pScale}%)</span></td>
-                                         <td className={`p-3 text-center ${getPercentageColorClass(toolsAverages.pOrt)}`}>{toolsAverages.totalOrt} <span className="text-gray-500 font-normal ms-1">({toolsAverages.pOrt}%)</span></td>
+                                         <td className={`p-3 border-e border-gray-200 text-center ${getPercentageColorClass(toolsAverages.pHeight)}`}>{toolsAverages.totalHeight} <span className="text-gray-500 font-normal ms-1">({toolsAverages.pHeight}%)</span></td>
+                                         <td className={`p-3 border-e border-gray-200 text-center ${getPercentageColorClass(toolsAverages.pThermometer)}`}>{toolsAverages.totalThermometer} <span className="text-gray-500 font-normal ms-1">({toolsAverages.pThermometer}%)</span></td>
+                                         <td className={`p-3 border-e border-gray-200 text-center ${getPercentageColorClass(toolsAverages.pTimer)}`}>{toolsAverages.totalTimer} <span className="text-gray-500 font-normal ms-1">({toolsAverages.pTimer}%)</span></td>
+                                         <td className={`p-3 border-e border-gray-200 text-center ${getPercentageColorClass(toolsAverages.pChart)}`}>{toolsAverages.totalChart} <span className="text-gray-500 font-normal ms-1">({toolsAverages.pChart}%)</span></td>
+                                         <td className={`p-3 text-center ${getPercentageColorClass(toolsAverages.pRegister)}`}>{toolsAverages.totalRegister} <span className="text-gray-500 font-normal ms-1">({toolsAverages.pRegister}%)</span></td>
                                      </tr>
                                  )}
-                                 {tableToolsData.length === 0 ? <tr><td colSpan={6} className="p-4 text-center text-gray-500">{t('dashboard.table.no_data', 'No data matches the current filters.')}</td></tr> :
+                                 {tableToolsData.length === 0 ? <tr><td colSpan={8} className="p-4 text-center text-gray-500">{t('dashboard.table.no_data', 'No data matches the current filters.')}</td></tr> :
                                   tableToolsData.map(row => (
                                       <tr key={row.key} className="hover:bg-gray-50 border-b border-gray-100">
                                           <td className="p-3 border-e border-gray-100 font-medium text-gray-800 text-start">{row.name}</td>
-                                          <td className="p-3 border-e border-gray-100 text-center font-medium text-slate-600">{row.totalImnciPhcs}</td>
-                                          <td className={`p-3 border-e border-gray-100 text-center ${getPercentageColorClass(row.percentageWithRegister)}`}>{row.countWithRegister} <span className="text-gray-400 font-normal ms-1">({row.percentageWithRegister}%)</span></td>
-                                          <td className={`p-3 border-e border-gray-100 text-center ${getPercentageColorClass(row.percentageWithChartbooklet)}`}>{row.countWithChartbooklet} <span className="text-gray-400 font-normal ms-1">({row.percentageWithChartbooklet}%)</span></td>
+                                          <td className="p-3 border-e border-gray-100 text-center font-medium text-slate-600">{row.totalPhcs}</td>
                                           <td className={`p-3 border-e border-gray-100 text-center ${getPercentageColorClass(row.percentageWithWeightScale)}`}>{row.countWithWeightScale} <span className="text-gray-400 font-normal ms-1">({row.percentageWithWeightScale}%)</span></td>
-                                          <td className={`p-3 text-center ${getPercentageColorClass(row.percentageWithOrtCorner)}`}>{row.countWithOrtCorner} <span className="text-gray-400 font-normal ms-1">({row.percentageWithOrtCorner}%)</span></td>
+                                          <td className={`p-3 border-e border-gray-100 text-center ${getPercentageColorClass(row.percentageWithHeightScale)}`}>{row.countWithHeightScale} <span className="text-gray-400 font-normal ms-1">({row.percentageWithHeightScale}%)</span></td>
+                                          <td className={`p-3 border-e border-gray-100 text-center ${getPercentageColorClass(row.percentageWithThermometer)}`}>{row.countWithThermometer} <span className="text-gray-400 font-normal ms-1">({row.percentageWithThermometer}%)</span></td>
+                                          <td className={`p-3 border-e border-gray-100 text-center ${getPercentageColorClass(row.percentageWithTimer)}`}>{row.countWithTimer} <span className="text-gray-400 font-normal ms-1">({row.percentageWithTimer}%)</span></td>
+                                          <td className={`p-3 border-e border-gray-100 text-center ${getPercentageColorClass(row.percentageWithChartbooklet)}`}>{row.countWithChartbooklet} <span className="text-gray-400 font-normal ms-1">({row.percentageWithChartbooklet}%)</span></td>
+                                          <td className={`p-3 text-center ${getPercentageColorClass(row.percentageWithRegister)}`}>{row.countWithRegister} <span className="text-gray-400 font-normal ms-1">({row.percentageWithRegister}%)</span></td>
                                       </tr>
                                   ))
                                   }
@@ -1086,7 +1150,7 @@ const CRITICAL_EQUIPMENT_SPEC = {
 const CRITICAL_EQUIPMENT_KEYS = Object.keys(CRITICAL_EQUIPMENT_SPEC);
 
 export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { healthFacilities: allFacilities, isLoading } = useDataCache();
     const loading = isLoading.healthFacilities || allFacilities === null;
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
@@ -1145,7 +1209,10 @@ export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) =>
         locationFilteredFacilities.forEach(f => {
             const key = f[aggF];
             if (!key || key === 'إتحادي') return;
-            if (!s[key]) s[key] = { name: stateFilter ? (STATE_LOCALITIES[stateFilter]?.localities.find(l => l.en === key)?.en || key) : key, key, totalTarget: 0, withETAT: 0, withHDU: 0, withPICU: 0 };
+            if (!s[key]) s[key] = { 
+                name: stateFilter ? getLocalizedLocalityName(stateFilter, key, i18n.language) : getLocalizedStateName(key, i18n.language), 
+                key, totalTarget: 0, withETAT: 0, withHDU: 0, withPICU: 0 
+            };
             
             if (isTargetFacility(f)) {
                 s[key].totalTarget++;
@@ -1157,7 +1224,7 @@ export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) =>
         const tD = Object.values(s).map(st => ({ ...st, etatCoverage: st.totalTarget > 0 ? Math.round((st.withETAT / st.totalTarget) * 100) : 0 })).sort((a, b) => b.etatCoverage - a.etatCoverage); 
         const mD = tD.map(st => ({ state: st.key, percentage: st.etatCoverage, coordinates: mapCoordinates[st.key] ? [mapCoordinates[st.key].lng, mapCoordinates[st.key].lat] : [0, 0] }));
         return { tableData: tD, mapData: mD };
-    }, [locationFilteredFacilities, stateFilter, isTargetFacility, hasETAT, hasHDU, hasPICU]); 
+    }, [locationFilteredFacilities, stateFilter, isTargetFacility, hasETAT, hasHDU, hasPICU, i18n.language]); 
 
     const equipmentTableData = useMemo(() => {
         const aggK = stateFilter ? 'اسم_المؤسسة' : 'الولاية';
@@ -1166,11 +1233,14 @@ export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) =>
         facP.forEach(f => {
             const key = f[aggK];
             if (!key || key === 'إتحادي') return;
-            if (!s[key]) s[key] = { name: stateFilter ? f['اسم_المؤسسة'] : key, key, ...Object.fromEntries(CRITICAL_EQUIPMENT_KEYS.map(k => [k, 0])) };
+            if (!s[key]) s[key] = { 
+                name: stateFilter ? f['اسم_المؤسسة'] : getLocalizedStateName(key, i18n.language), 
+                key, ...Object.fromEntries(CRITICAL_EQUIPMENT_KEYS.map(k => [k, 0])) 
+            };
             CRITICAL_EQUIPMENT_KEYS.forEach(eK => { const val = f[eK]; s[key][eK] += (Number(val) || 0); });
         });
         return Object.values(s).filter(st => st.key !== 'إتحادي').sort((a, b) => (b.hdu_bed_capacity || 0) - (a.hdu_bed_capacity || 0));
-    }, [locationFilteredFacilities, stateFilter, hasETAT, hasHDU, hasPICU]);
+    }, [locationFilteredFacilities, stateFilter, hasETAT, hasHDU, hasPICU, i18n.language]);
 
     const facilityLocationMarkers = useMemo(() => locationFilteredFacilities.filter(f => (hasETAT(f) || hasHDU(f) || hasPICU(f)) && f['_الإحداثيات_longitude']).map(f=>({key:f.id,name:f['اسم_المؤسسة'],coordinates:[f['_الإحداثيات_longitude'],f['_الإحداثيات_latitude']]})), [locationFilteredFacilities, hasETAT, hasHDU, hasPICU]);
     const mapViewConfig = useMemo(() => { const sC=stateFilter?mapCoordinates[stateFilter]:null; return sC ? {center:[sC.lng,sC.lat],scale:sC.scale,focusedState:stateFilter} : {center:[30,15.5],scale:2000,focusedState:null}; }, [stateFilter]);
@@ -1219,8 +1289,8 @@ export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) =>
         <div onMouseMove={handleMouseMove}>
             <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm ignore-for-export mb-6 mt-4">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <FormGroup label={t('dashboard.filters.state', 'State')}><Select value={stateFilter} onChange={handleStateChange}><option value="">{t('dashboard.filters.all_states', 'All States')}</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{sKey}</option>)}</Select></FormGroup>
-                    <FormGroup label={t('dashboard.filters.locality', 'Locality')}><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">{t('dashboard.filters.all_localities', 'All Localities')}</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{l.en}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('dashboard.filters.state', 'State')}><Select value={stateFilter} onChange={handleStateChange}><option value="">{t('dashboard.filters.all_states', 'All States')}</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{getLocalizedStateName(sKey, i18n.language)}</option>)}</Select></FormGroup>
+                    <FormGroup label={t('dashboard.filters.locality', 'Locality')}><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">{t('dashboard.filters.all_localities', 'All Localities')}</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{getLocalizedLocalityName(stateFilter, l.en, i18n.language)}</option>)}</Select></FormGroup>
                     <FormGroup label={t('dashboard.filters.ownership', 'Ownership')}><Select value={ownershipFilter} onChange={(e) => setOwnershipFilter(e.target.value)}><option value="">{t('dashboard.filters.all_ownerships', 'All Ownerships')}</option>{OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
                     <FormGroup label={t('dashboard.filters.project', 'Project')}><Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}><option value="">{t('dashboard.filters.all_projects', 'All Projects')}</option>{projectOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
                 </div>
@@ -1400,7 +1470,7 @@ const CombinedMapTooltip = ({ data }) => {
 
 // --- COMBINED SERVICES DASHBOARD ---
 export const CombinedServiceDashboard = ({ userStates, userLocalities }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { healthFacilities: allFacilities, isLoading } = useDataCache();
     const loading = isLoading?.healthFacilities || allFacilities === null;
     
@@ -1501,13 +1571,13 @@ export const CombinedServiceDashboard = ({ userStates, userLocalities }) => {
     const stateMapData = useMemo(() => {
         const stateAgg = aggregateCoverage(activeFacilities, 'الولاية');
         return Object.entries(stateAgg).map(([st, counts]) => ({
-            name: st,
+            name: getLocalizedStateName(st, i18n.language),
             state: st,
             percentage: counts.overallAvg,
             raw: counts,
             coordinates: typeof mapCoordinates !== 'undefined' && mapCoordinates[st] ? [mapCoordinates[st].lng, mapCoordinates[st].lat] : [0, 0]
         }));
-    }, [activeFacilities, aggregateCoverage]);
+    }, [activeFacilities, aggregateCoverage, i18n.language]);
 
     // Locality Map Data (Drilldown)
     const localityMapData = useMemo(() => {
@@ -1516,13 +1586,13 @@ export const CombinedServiceDashboard = ({ userStates, userLocalities }) => {
         const localityAgg = aggregateCoverage(filteredForState, 'المحلية');
         return Object.entries(localityAgg).map(([loc, counts]) => ({
             key: loc,
-            name: loc,
+            name: getLocalizedLocalityName(stateFilter, loc, i18n.language),
             state: stateFilter,
             coverage: counts.overallAvg, 
             percentage: counts.overallAvg,
             raw: counts
         }));
-    }, [activeFacilities, stateFilter, aggregateCoverage]);
+    }, [activeFacilities, stateFilter, aggregateCoverage, i18n.language]);
 
     // Dynamic Map Config (Zoom logic for container)
     const mapViewConfig = useMemo(() => { 
@@ -1590,13 +1660,13 @@ export const CombinedServiceDashboard = ({ userStates, userLocalities }) => {
                     <FormGroup label={t('dashboard.filters.state', 'Filter by State')}>
                         <Select value={stateFilter} onChange={(e) => {setStateFilter(e.target.value); setLocalityFilter('');}}>
                             <option value="">{t('dashboard.filters.all_states', 'All States')}</option>
-                            {Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{sKey}</option>)}
+                            {Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{getLocalizedStateName(sKey, i18n.language)}</option>)}
                         </Select>
                     </FormGroup>
                     <FormGroup label={t('dashboard.filters.locality', 'Filter by Locality')}>
                         <Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}>
                             <option value="">{t('dashboard.filters.all_localities', 'All Localities')}</option>
-                            {stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{l.en}</option>)}
+                            {stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{getLocalizedLocalityName(stateFilter, l.en, i18n.language)}</option>)}
                         </Select>
                     </FormGroup>
                 </div>

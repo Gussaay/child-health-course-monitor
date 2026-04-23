@@ -1,4 +1,3 @@
-// vite.config.js
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from 'vite-plugin-pwa';
@@ -8,13 +7,13 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'child.png'], // Assets in your public folder
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'child.png'], 
       manifest: {
         name: 'National Child Health Program',
         short_name: 'NCHP',
         description: 'Program & Course Monitoring System',
-        theme_color: '#0284c7', // Matches sky-600 used in your header
-        background_color: '#f0f9ff', // Matches sky-50 background
+        theme_color: '#0284c7', 
+        background_color: '#f0f9ff', 
         icons: [
           {
             src: 'child.png',
@@ -29,22 +28,19 @@ export default defineConfig({
         ]
       },
       workbox: {
-        // Defines how different file types are cached
+        navigateFallback: '/index.html', // <-- ADD THIS LINE
         runtimeCaching: [
           {
-            // Cache-First for static assets (images, fonts)
             urlPattern: /\.(?:png|jpg|jpeg|svg|gif|woff2?|ttf)$/,
             handler: 'CacheFirst',
             options: {
               cacheName: 'static-assets',
               expiration: {
                 maxEntries: 50,
-                maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
+                maxAgeSeconds: 30 * 24 * 60 * 60, 
               },
             },
           }
-          // The broad JS/CSS StaleWhileRevalidate block has been REMOVED.
-          // VitePWA handles the core app JS/CSS precaching automatically.
         ]
       }
     })

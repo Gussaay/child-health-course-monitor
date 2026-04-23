@@ -1,7 +1,7 @@
 // App.jsx
-import './i18n'; // <-- INITIALIZE i18next & RTL SUPPORT BEFORE APP MOUNTS
+import './i18n'; 
 import React, { useEffect, useMemo, useState, useRef, lazy, Suspense, useCallback } from "react";
-import { useTranslation } from 'react-i18next'; // <-- ADDED i18n HOOK
+import { useTranslation } from 'react-i18next'; 
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Bar, Pie, Line } from 'react-chartjs-2';
@@ -12,7 +12,9 @@ import {
 } from 'lucide-react';
 
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, CapacitorHttp } from '@capacitor/core';
+// --- ADDED: Capacitor Network plugin for reliable native detection ---
+import { Network } from '@capacitor/network';
 
 // --- PRE-FLIGHT LANGUAGE CHECK ---
 if (typeof window !== 'undefined') {
@@ -424,7 +426,7 @@ function SplashScreen() {
 }
 
 export default function App() {
-    const { t, i18n } = useTranslation(); // <-- EXTRACTED i18n HERE
+    const { t, i18n } = useTranslation();
     const [isUpdateReady, setIsUpdateReady] = useState(false);
     const [updateBundle, setUpdateBundle] = useState(null);
 
@@ -432,29 +434,38 @@ export default function App() {
     const [isSyncing, setIsSyncing] = useState(false);
 
     useEffect(() => {
-        const handleOnline = async () => {
-            setIsOffline(false);
-            setIsSyncing(true);
-            try {
-                await Promise.race([
-                    waitForPendingWrites(db),
-                    new Promise(resolve => setTimeout(resolve, 5000))
-                ]);
-            } catch (e) {
-                console.error("Error waiting for pending writes during sync:", e);
-            } finally {
-                setIsSyncing(false);
-            }
+        let networkListener;
+
+        const setupNetworkListener = async () => {
+            const status = await Network.getStatus();
+            setIsOffline(!status.connected);
+
+            networkListener = await Network.addListener('networkStatusChange', async (status) => {
+                const offline = !status.connected;
+                setIsOffline(offline);
+                
+                if (!offline) {
+                    setIsSyncing(true);
+                    try {
+                        await Promise.race([
+                            waitForPendingWrites(db),
+                            new Promise(resolve => setTimeout(resolve, 5000))
+                        ]);
+                    } catch (e) {
+                        console.error("Error waiting for pending writes during sync:", e);
+                    } finally {
+                        setIsSyncing(false);
+                    }
+                }
+            });
         };
 
-        const handleOffline = () => setIsOffline(true);
-
-        window.addEventListener('online', handleOnline);
-        window.addEventListener('offline', handleOffline);
+        setupNetworkListener();
 
         return () => {
-            window.removeEventListener('online', handleOnline);
-            window.removeEventListener('offline', handleOffline);
+            if (networkListener) {
+                networkListener.remove();
+            }
         };
     }, []);
 
@@ -563,26 +574,27 @@ export default function App() {
     useEffect(() => {
         if (Capacitor.isNativePlatform()) {
             const checkAndDownloadUpdate = async () => {
-                // Check if device is offline. If so, silently exit and do not block.
                 if (!navigator.onLine) {
                     console.log("Device is offline. Skipping background update check.");
                     return;
                 }
 
-                // Add an AbortController with a 5-second timeout to handle "Lie-Fi"
-                // (When the phone thinks it is online, but the network drops the connection)
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 5000); 
-
                 try {
-                    const res = await fetch('https://imnci-courses-monitor.web.app/latest/update.json?t=' + Date.now(), {
-                        signal: controller.signal
+                    // --- USE DIRECT NATIVE HTTP CALL ---
+                    // This bypasses CORS without requiring global CapacitorHttp to be enabled,
+                    // which ensures Firebase continues to work normally.
+                    const response = await CapacitorHttp.request({
+                        method: 'GET',
+                        url: 'https://imnci-courses-monitor.web.app/latest/update.json?t=' + Date.now(),
+                        connectTimeout: 5000, // Handle Lie-Fi gracefully
+                        readTimeout: 5000
                     });
-                    clearTimeout(timeoutId); // Clear the timeout if the fetch succeeds
+
+                    if (response.status !== 200) throw new Error("Network response was not ok");
                     
-                    if (!res.ok) throw new Error("Network response was not ok");
+                    // CapacitorHttp parses JSON automatically
+                    const latestUpdate = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
                     
-                    const latestUpdate = await res.json();
                     const currentState = await CapacitorUpdater.current();
                     const currentVersion = currentState.bundle?.version || "builtin";
 
@@ -596,7 +608,6 @@ export default function App() {
                         setIsUpdateReady(true);
                     }
                 } catch (error) {
-                    // Fail silently in the background so the user is never interrupted
                     console.warn("Self-hosted update check skipped or failed due to network conditions.");
                 }
             };
