@@ -76,7 +76,6 @@ const FEDERAL_COORDINATOR_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...F
 const FACILITATOR_PERMS = { ...FEDERAL_COORDINATOR_PERMS };
 const STATE_COORDINATOR_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_VIEW_ONLY, ...HR_MGMT_VIEW_ONLY, ...MENTORSHIP_MGMT_VIEW_ONLY, ...ADVANCED_PERMS_NONE, manageScope: 'course', manageLocation: 'user_state', manageTimePeriod: 'course_period_only' };
 const COURSE_COORDINATOR_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_VIEW_ONLY, ...HR_MGMT_NONE, ...MENTORSHIP_MGMT_VIEW_ONLY, ...ADVANCED_PERMS_NONE, manageScope: 'course', manageTimePeriod: 'course_period_only' };
-// UPDATED: canViewSkillsMentorship is now false for standard users
 const USER_PERMS = { ...BASE_PERMS, canViewCourse: true, canViewFacilities: true, canViewSkillsMentorship: false, canViewDashboard: true };
 
 export const DEFAULT_ROLE_PERMISSIONS = {
@@ -258,7 +257,6 @@ const PermissionsDropdown = ({ role, currentPermissions, allPermissions, onPermi
 };
 
 const formatDuration = (milliseconds) => {
-    // ... [Unchanged] ...
     if (!milliseconds || milliseconds < 60000) {
         return '0 minutes';
     }
@@ -272,7 +270,7 @@ const formatDuration = (milliseconds) => {
 };
 
 // -----------------------------------------------------------------------------
-// Certificate Approvals Tab (Updated with Sub Course Logic)
+// Certificate Approvals Tab
 // -----------------------------------------------------------------------------
 const CertificateApprovalsTab = ({ setToast }) => {
     const [courses, setCourses] = useState([]);
@@ -286,8 +284,6 @@ const CertificateApprovalsTab = ({ setToast }) => {
     
     // Inputs
     const [managerSignatureFile, setManagerSignatureFile] = useState(null);
-    
-    // New Fields
     const [directorName, setDirectorName] = useState('');
     const [directorSignatureFile, setDirectorSignatureFile] = useState(null);
     const [programStampFile, setProgramStampFile] = useState(null);
@@ -301,7 +297,6 @@ const CertificateApprovalsTab = ({ setToast }) => {
         setLoadingApprovals(true);
         try {
             const allCourses = await listAllCourses({ source: 'server' });
-            // Sort: Pending first, then Approved (descending by date)
             const sorted = allCourses.sort((a, b) => {
                 if (a.isCertificateApproved === b.isCertificateApproved) {
                     return new Date(b.start_date) - new Date(a.start_date);
@@ -327,19 +322,15 @@ const CertificateApprovalsTab = ({ setToast }) => {
         loadData();
     }, [setToast]);
 
-    // --- HANDLERS ---
-
     const handleOpenApprovalModal = (course) => {
         if (!managerName) {
             setToast({ show: true, message: "Program Manager Name is missing. Please check HR settings.", type: 'error' });
             return;
         }
         setSelectedCourse(course);
-        // Reset Inputs
         setManagerSignatureFile(null);
         setDirectorSignatureFile(null);
         setProgramStampFile(null);
-        // Pre-fill Director name from course data
         setDirectorName(course.director || '');
         setApprovalModalOpen(true);
     };
@@ -349,30 +340,26 @@ const CertificateApprovalsTab = ({ setToast }) => {
         
         setIsApproving(true);
         try {
-            // 1. Upload Manager Signature (Optional)
             let managerSigUrl = null;
             if (managerSignatureFile) {
                 managerSigUrl = await uploadFile(managerSignatureFile);
             }
 
-            // 2. Upload Director Signature (Optional)
             let directorSigUrl = null;
             if (directorSignatureFile) {
                 directorSigUrl = await uploadFile(directorSignatureFile);
             }
 
-            // 3. Upload Program Stamp (Optional)
             let stampUrl = null;
             if (programStampFile) {
                 stampUrl = await uploadFile(programStampFile);
             }
 
-            // 4. Update Course Document directly (replacing API call to handle new fields)
             const courseRef = doc(db, 'courses', selectedCourse.id);
             const approvalData = {
                 isCertificateApproved: true,
                 approvedByManagerName: managerName,
-                approvedByManagerSignatureUrl: managerSigUrl || selectedCourse.approvedByManagerSignatureUrl || null, // Keep existing if not replaced
+                approvedByManagerSignatureUrl: managerSigUrl || selectedCourse.approvedByManagerSignatureUrl || null,
                 approvedDirectorName: directorName,
                 approvedDirectorSignatureUrl: directorSigUrl || selectedCourse.approvedDirectorSignatureUrl || null,
                 approvedProgramStampUrl: stampUrl || selectedCourse.approvedProgramStampUrl || null,
@@ -384,7 +371,6 @@ const CertificateApprovalsTab = ({ setToast }) => {
             setToast({ show: true, message: "Certificates Approved Successfully.", type: 'success' });
             setApprovalModalOpen(false);
             
-            // --- SELECTIVE UPDATE: Update local state ---
             setCourses(prevCourses => prevCourses.map(c => {
                 if (c.id === selectedCourse.id) {
                     return {
@@ -474,18 +460,15 @@ const CertificateApprovalsTab = ({ setToast }) => {
                             const isApproved = c.isCertificateApproved === true;
                             const canModify = isApproved && c.approvedByManagerName === managerName;
 
-                            // --- CORRECTED SUBCOURSE LOGIC ---
                             const subCourses = c.facilitatorAssignments && c.facilitatorAssignments.length > 0
                                 ? [...new Set(c.facilitatorAssignments.map(a => a.imci_sub_type).filter(Boolean))].join(', ')
                                 : (c.director_imci_sub_type || '-');
-                            // ---------------------------------
 
                             return (
                                 <tr key={c.id} className={isApproved ? "bg-gray-50" : "bg-white"}>
                                     <td className="font-medium">{c.state}</td>
                                     <td>{c.locality}</td>
                                     <td>{c.course_type}</td>
-                                    {/* Displaying Calculated Sub Course */}
                                     <td className="text-sm text-gray-600 max-w-xs truncate" title={subCourses}>
                                         {subCourses}
                                     </td>
@@ -537,7 +520,6 @@ const CertificateApprovalsTab = ({ setToast }) => {
                 )}
             </Card>
 
-            {/* --- APPROVAL MODAL --- */}
             <Modal isOpen={approvalModalOpen} onClose={() => !isApproving && setApprovalModalOpen(false)} title="Confirm & Sign Certificates">
                 <CardBody>
                     <div className="space-y-6">
@@ -545,7 +527,6 @@ const CertificateApprovalsTab = ({ setToast }) => {
                             You are approving certificates for <strong>{selectedCourse?.course_type}</strong> in <strong>{selectedCourse?.locality}, {selectedCourse?.state}</strong>.
                         </p>
                         
-                        {/* 1. Manager Section */}
                         <div className="border border-gray-200 rounded p-4 bg-gray-50">
                             <h4 className="text-sm font-bold text-gray-800 uppercase mb-3 flex items-center">
                                 <FileSignature className="w-4 h-4 mr-2" /> Program Manager (You)
@@ -566,7 +547,6 @@ const CertificateApprovalsTab = ({ setToast }) => {
                             </div>
                         </div>
 
-                        {/* 2. Course Director Section */}
                         <div className="border border-gray-200 rounded p-4 bg-white">
                             <h4 className="text-sm font-bold text-gray-800 uppercase mb-3 flex items-center">
                                 <FileSignature className="w-4 h-4 mr-2" /> Course Director
@@ -587,7 +567,6 @@ const CertificateApprovalsTab = ({ setToast }) => {
                             </div>
                         </div>
 
-                        {/* 3. Program Stamp Section */}
                         <div className="border border-gray-200 rounded p-4 bg-white">
                             <h4 className="text-sm font-bold text-gray-800 uppercase mb-3 flex items-center">
                                 <Stamp className="w-4 h-4 mr-2" /> Program Stamp
@@ -622,7 +601,7 @@ const CertificateApprovalsTab = ({ setToast }) => {
 };
 
 // -----------------------------------------------------------------------------
-// Main AdminDashboard Component (Unchanged except imports)
+// Main AdminDashboard Component
 // -----------------------------------------------------------------------------
 export function AdminDashboard() {
     const [users, setUsers] = useState([]);
@@ -638,6 +617,9 @@ export function AdminDashboard() {
     const [filterState, setFilterState] = useState('');
     const [filterLocality, setFilterLocality] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
+
+    // --- STATE FOR USER INFO MODAL ---
+    const [viewingUser, setViewingUser] = useState(null);
 
     useEffect(() => {
         setLoading(true);
@@ -674,12 +656,16 @@ export function AdminDashboard() {
         try {
             const usersQuery = query(collection(db, "users"));
             const usersSnapshot = await getDocs(usersQuery);
-            const userList = usersSnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-                displayName: doc.data().displayName || doc.data().name || '', 
-                assignedLocality: doc.data().assignedLocality || '',
-            }));
+            const userList = usersSnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    // Fix: Fallback nicely to ensure a display name is always shown
+                    displayName: data.displayName || data.name || (data.email ? data.email.split('@')[0] : 'Unknown'), 
+                    assignedLocality: data.assignedLocality || '',
+                };
+            });
 
             const rolesDocRef = doc(db, "meta", "roles");
             const rolesDocSnap = await getDoc(rolesDocRef);
@@ -918,7 +904,13 @@ export function AdminDashboard() {
                         return (
                             <tr key={user.id}>
                                 <td>{index + 1}</td>
-                                <td>{user.displayName || 'N/A'}</td>
+                                <td 
+                                    className="font-medium text-sky-600 hover:text-sky-800 hover:underline cursor-pointer"
+                                    onClick={() => setViewingUser(user)}
+                                    title="Click to view full profile"
+                                >
+                                    {user.displayName}
+                                </td>
                                 <td>{user.email}</td>
                                 <td><span className="bg-slate-200 text-slate-800 text-xs font-medium px-2 py-1 rounded-full">{ROLES[user.role] || 'N/A'}</span></td>
                                 <td>
@@ -1051,6 +1043,62 @@ export function AdminDashboard() {
             {activeTab === 'usage' && currentUserRole === 'super_user' && renderUsageTab()}
             {activeTab === 'approvals' && <CertificateApprovalsTab setToast={setToast} />}
 
+            {/* USER PROFILE MODAL */}
+            <Modal isOpen={!!viewingUser} onClose={() => setViewingUser(null)} title="User Profile Information">
+                {viewingUser && (
+                    <div className="p-6 space-y-6">
+                        <div className="flex items-start space-x-4 border-b border-gray-200 pb-6">
+                            <div className="h-16 w-16 bg-sky-100 rounded-full flex items-center justify-center text-sky-600 text-3xl font-bold shadow-inner shrink-0">
+                                {(viewingUser.displayName || viewingUser.email || 'U')[0].toUpperCase()}
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="text-xl font-bold text-gray-800 mb-1">{viewingUser.displayName || 'No Name Set'}</h3>
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    {ROLES[viewingUser.role] || 'Standard User'}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="border border-gray-200 p-3 rounded-lg bg-white shadow-sm">
+                                <span className="block text-xs text-gray-500 uppercase font-bold mb-1">Email Address</span>
+                                <span className="text-gray-800 font-medium">{viewingUser.email}</span>
+                            </div>
+
+                            <div className="border border-gray-200 p-3 rounded-lg bg-white shadow-sm">
+                                <span className="block text-xs text-gray-500 uppercase font-bold mb-1">Last Login</span>
+                                <span className="text-gray-800 font-medium">
+                                    {viewingUser.lastLogin ? new Date(viewingUser.lastLogin.seconds * 1000).toLocaleDateString() : 'N/A'}
+                                </span>
+                            </div>
+
+                            <div className="border border-gray-200 p-3 rounded-lg bg-white shadow-sm md:col-span-2">
+                                <span className="block text-xs text-gray-500 uppercase font-bold mb-1">System Access Level</span>
+                                <span className="text-sky-700 font-semibold capitalize text-lg">
+                                    {ROLES[viewingUser.role] || 'Standard User'}
+                                </span>
+                            </div>
+                            
+                            <div className="border border-gray-200 p-3 rounded-lg bg-gray-50 shadow-sm">
+                                <span className="block text-xs text-gray-500 uppercase font-bold mb-1">Assigned State</span>
+                                <span className="text-gray-800 font-medium">
+                                    {viewingUser.assignedState || 'Global / None'}
+                                </span>
+                            </div>
+                            
+                            <div className="border border-gray-200 p-3 rounded-lg bg-gray-50 shadow-sm">
+                                <span className="block text-xs text-gray-500 uppercase font-bold mb-1">Assigned Locality</span>
+                                <span className="text-gray-800 font-medium">
+                                    {viewingUser.assignedLocality || 'All Localities / None'}
+                                </span>
+                            </div>
+                        </div>
+                        <div className="mt-6 flex justify-end">
+                            <Button onClick={() => setViewingUser(null)} variant="secondary">Close</Button>
+                        </div>
+                    </div>
+                )}
+            </Modal>
         </div>
     );
 }

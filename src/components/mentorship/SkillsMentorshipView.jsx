@@ -54,7 +54,8 @@ const EENCVisitReport = lazy(() =>
 import {
     GenericFacilityForm,
     SharedFacilityFields,
-    IMNCIFormFields
+    IMNCIFormFields,
+    SaveStatusModal // --- ADDED IMPORT FOR OFFLINE POPUPS ---
 } from '../FacilityForms.jsx';
 import { onAuthStateChanged } from "firebase/auth";
 
@@ -1634,6 +1635,10 @@ const SkillsMentorshipView = ({
     // Dashboard Last Updated Timestamp tracking
     const [lastSyncTime, setLastSyncTime] = useState(null);
 
+    // --- ADDED: State for Status Modal ---
+    const [statusData, setStatusData] = useState(null);
+    const [statusAction, setStatusAction] = useState(null);
+
     const updateLastSyncTime = useCallback(() => {
         let lastTimeMs = 0;
         
@@ -2710,6 +2715,7 @@ const SkillsMentorshipView = ({
         setCurrentView('action_menu');
     };
 
+    // --- MODIFIED: Ensure status popup resolves cleanly ---
     const handleSaveSuccess = async (status, savedData) => {
         let lastFacilityInfo = null;
         if (savedData) {
@@ -2734,9 +2740,7 @@ const SkillsMentorshipView = ({
             setIsTrainingPrioritiesModalOpen(true);
         } else {
             if (publicSubmissionMode) {
-                if (status === 'complete') {
-                    setToast({ show: true, message: 'Submission successful! Thank you.', type: 'success' });
-                }
+                // Remove the toast since the Modal will show instead
                 setCurrentView('action_menu');
             } else {
                 setCurrentView('action_menu');
@@ -2889,6 +2893,7 @@ const SkillsMentorshipView = ({
         }
     };
     
+    // --- MODIFIED: Handle New Worker Submission with Offline Popup ---
     const handleSaveNewHealthWorker = async (workerData) => {
         const user = auth.currentUser;
         
@@ -2913,21 +2918,23 @@ const SkillsMentorshipView = ({
             
             await submitFacilityDataForApproval(payload, user?.email || (publicSubmissionMode ? 'PublicMentorshipForm' : 'SkillsMentorshipForm'));
 
-            setToast({ show: true, message: 'تم إرسال طلب إضافة العامل الصحي للموافقة.', type: 'info' });
-
             setLocalHealthFacilities(prevFacilities => 
                 prevFacilities.map(f => f.id === payload.id ? payload : f)
             );
 
             setSelectedHealthWorkerName(workerData.name);
-            setIsAddWorkerModalOpen(false);
+            
+            // Trigger offline-safe popup
+            setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
+            setStatusAction('addWorker');
 
         } catch (error) {
             console.error("Error submitting new health worker for approval:", error);
-            setToast({ show: true, message: `فشل الحفظ: ${error.message}`, type: 'error' });
+            setStatusData({ status: 'error', message: error.message });
         }
     };
 
+    // --- MODIFIED: Handle Update Worker Submission with Offline Popup ---
     const handleUpdateHealthWorkerInfo = async () => {
         if (!selectedHealthWorkerName || !selectedFacility || !isWorkerInfoChanged) {
             return;
@@ -2959,8 +2966,6 @@ const SkillsMentorshipView = ({
             };
 
             await submitFacilityDataForApproval(payload, user?.email || (publicSubmissionMode ? 'PublicMentorshipForm' : 'SkillsMentorshipForm'));
-            
-            setToast({ show: true, message: 'تم إرسال طلب تحديث بيانات العامل للموافقة.', type: 'info' });
 
             setLocalHealthFacilities(prevFacilities => 
                 prevFacilities.map(f => f.id === payload.id ? payload : f)
@@ -2975,12 +2980,30 @@ const SkillsMentorshipView = ({
             setSelectedWorkerOriginalData(updatedOriginalData);
             setIsWorkerInfoChanged(false);
 
+            // Trigger offline-safe popup
+            setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
+            setStatusAction('updateWorker');
+
         } catch (error) {
              console.error("Error submitting health worker update for approval:", error);
-             setToast({ show: true, message: `فشل تحديث بيانات العامل: ${error.message}`, type: 'error' });
+             setStatusData({ status: 'error', message: error.message });
         } finally {
             setIsUpdatingWorker(false);
         }
+    };
+
+    // --- ADDED: Global Status Modal Close Handler ---
+    const handleCloseStatusModal = () => {
+        const wasSuccessOrQueued = statusData?.status !== 'error';
+        setStatusData(null);
+        if (wasSuccessOrQueued) {
+            if (statusAction === 'addWorker') {
+                setIsAddWorkerModalOpen(false);
+            } else if (statusAction === 'standaloneFacility') {
+                setIsStandaloneFacilityModalOpen(false);
+            }
+        }
+        setStatusAction(null);
     };
 
     const handleViewSubmission = (submissionId) => {
@@ -3807,6 +3830,9 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                             healthWorkerName={lastSavedFacilityInfo?.healthWorkerName || selectedHealthWorkerName}
                         />
                     )}
+                    
+                    {/* --- ADDED: INJECT STATUS MODAL --- */}
+                    <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
                 </>
             );
         }
@@ -3835,6 +3861,9 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                             healthWorkerName={lastSavedFacilityInfo?.healthWorkerName || selectedHealthWorkerName}
                         />
                     )}
+                    
+                    {/* --- ADDED: INJECT STATUS MODAL --- */}
+                    <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
                 </>
             );
         }
@@ -3858,6 +3887,9 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         draftCount={currentUserDrafts.length}
                         onNavClick={handleMobileNavClick}
                     />
+                    
+                    {/* --- ADDED: INJECT STATUS MODAL --- */}
+                    <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
                 </>
             );
         }
@@ -3872,6 +3904,9 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         setToast={setToast}
                         canEditVisitNumber={canEditVisitNumber}
                     />
+                    
+                    {/* --- ADDED: INJECT STATUS MODAL --- */}
+                    <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
                 </>
             );
         }
@@ -3911,6 +3946,9 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                     draftCount={currentUserDrafts.length}
                     onNavClick={handleMobileNavClick}
                  />
+                 
+                {/* --- ADDED: INJECT STATUS MODAL --- */}
+                <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
             </>
         );
     }
@@ -4234,10 +4272,10 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                 onSave={async (formData) => {
                                     try {
                                         await submitFacilityDataForApproval(formData);
-                                        setToast({ show: true, message: "تم إرسال التحديث للموافقة.", type: 'success' });
-                                        setIsStandaloneFacilityModalOpen(false);
+                                        setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
+                                        setStatusAction('standaloneFacility');
                                     } catch (error) {
-                                        setToast({ show: true, message: `فشل التحديث: ${error.message}`, type: 'error' });
+                                        setStatusData({ status: 'error', message: error.message });
                                     }
                                 }}
                                 onCancel={() => setIsStandaloneFacilityModalOpen(false)}
@@ -4395,6 +4433,9 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                     draftCount={currentUserDrafts.length}
                     onNavClick={handleMobileNavClick}
                  />
+
+                 {/* --- ADDED: INJECT STATUS MODAL HERE FOR SETUP VIEW POPUPS --- */}
+                 <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
             </>
         );
     }

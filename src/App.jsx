@@ -436,6 +436,9 @@ export default function App() {
     const [isOffline, setIsOffline] = useState(!navigator.onLine);
     const [isSyncing, setIsSyncing] = useState(false);
 
+    // Added user profile modal state
+    const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
+
     useEffect(() => {
         let networkListener;
 
@@ -495,6 +498,26 @@ export default function App() {
         }
         return false;
     }, [user, authLoading]);
+
+    // --- FETCH AND FIND USER'S HR PROFILE ---
+    const userHRProfile = useMemo(() => {
+        if (!user || !user.email) return null;
+        const allCoordinators = [
+            ...(federalCoordinators || []),
+            ...(stateCoordinators || []),
+            ...(localityCoordinators || [])
+        ];
+        return allCoordinators.find(c => c.email === user.email);
+    }, [user, federalCoordinators, stateCoordinators, localityCoordinators]);
+
+    // Fetch HR data when the modal opens so we definitely have the user's specific role
+    useEffect(() => {
+        if (isUserProfileModalOpen) {
+            fetchFederalCoordinators();
+            fetchStateCoordinators();
+            fetchLocalityCoordinators();
+        }
+    }, [isUserProfileModalOpen, fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators]);
 
     const [view, setView] = useState("landing");
     const [activeCourseType, setActiveCourseType] = useState(null);
@@ -2282,9 +2305,13 @@ export default function App() {
 
             {user && !isMinimalUILayout && (
                 <div className="bg-slate-700 text-slate-200 p-2 md:p-3 text-center flex items-center justify-center gap-4">
-                    <div className="flex items-center gap-2">
+                    <div 
+                        className="flex items-center gap-2 cursor-pointer hover:bg-slate-600 px-3 py-1.5 rounded-md transition-colors duration-200"
+                        onClick={() => setIsUserProfileModalOpen(true)}
+                        title="View Profile Information"
+                    >
                         <span>{t('app.welcome', 'Welcome')}, **{user.displayName || user.email}**</span>
-                        {userRole && <span className="bg-sky-600 text-xs px-2 py-1 rounded">{userRole}</span>}
+                        {userRole && <span className="bg-sky-500 text-xs px-2 py-1 rounded shadow-sm capitalize">{userRole.replace(/_/g, ' ')}</span>}
                     </div>
                     {permissions.canViewAdmin && (<Button onClick={() => navigate('admin')} variant="primary">{t('landing.modules.admin', 'Admin Dashboard')}</Button>)}
                     <Button onClick={handleLogout} className="px-3 py-1 text-sm font-semibold text-white bg-red-600 rounded-md hover:bg-red-700">{t('app.logout', 'Logout')}</Button>
@@ -2304,6 +2331,113 @@ export default function App() {
             <Suspense fallback={null}>
                 {isShareModalOpen && user && (
                      <ShareModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} shareableItem={itemToShare} shareType={shareType} onSave={handleSaveSharingSettings} />
+                )}
+            </Suspense>
+
+            <Suspense fallback={null}>
+                {isUserProfileModalOpen && user && (
+                    <Modal 
+                        isOpen={isUserProfileModalOpen} 
+                        onClose={() => setIsUserProfileModalOpen(false)} 
+                        title="My Profile Information"
+                    >
+                        <div className="p-6 space-y-6">
+                            <div className="flex items-start space-x-4 border-b border-gray-200 pb-6">
+                                <div className="h-16 w-16 bg-sky-100 rounded-full flex items-center justify-center text-sky-600 text-3xl font-bold shadow-inner shrink-0">
+                                    {(user.displayName || user.email || 'U')[0].toUpperCase()}
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="text-xl font-bold text-gray-800 mb-1">{user.displayName || 'No Name Set'}</h3>
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        Active Account
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="border border-gray-200 p-3 rounded-lg bg-white shadow-sm">
+                                    <span className="block text-xs text-gray-500 uppercase font-bold mb-1">Email Address</span>
+                                    <span className="text-gray-800 font-medium">{user.email}</span>
+                                </div>
+
+                                <div className="border border-gray-200 p-3 rounded-lg bg-white shadow-sm">
+                                    <span className="block text-xs text-gray-500 uppercase font-bold mb-1">Date of Registration</span>
+                                    <span className="text-gray-800 font-medium">
+                                        {user.metadata?.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString('en-US', {
+                                            year: 'numeric',
+                                            month: 'long',
+                                            day: 'numeric'
+                                        }) : 'Not Available'}
+                                    </span>
+                                </div>
+
+                                {/* Detailed Roles Section */}
+                                <div className="border border-gray-200 p-4 rounded-lg bg-white shadow-sm md:col-span-2">
+                                    <span className="block text-xs text-gray-500 uppercase font-bold mb-3">Roles & Designations</span>
+                                    <div className="flex flex-col gap-2">
+                                        {/* System Access Role */}
+                                        <div className="flex justify-between items-center bg-sky-50 p-2.5 rounded border border-sky-100">
+                                            <span className="text-sm font-medium text-sky-800">System Access Level</span>
+                                            <span className="text-sky-700 font-bold capitalize">
+                                                {(userRole || 'Standard User').replace(/_/g, ' ')}
+                                            </span>
+                                        </div>
+                                        
+                                        {/* HR Specific Roles (Only shows if they exist in HR Database) */}
+                                        {userHRProfile && userHRProfile.role && (
+                                            <div className="flex justify-between items-center bg-gray-50 p-2.5 rounded border border-gray-200">
+                                                <span className="text-sm font-medium text-gray-600">Program Team Role</span>
+                                                <span className="text-gray-800 font-bold">{userHRProfile.role}</span>
+                                            </div>
+                                        )}
+                                        
+                                        {userHRProfile && userHRProfile.unit && (
+                                            <div className="flex justify-between items-center bg-gray-50 p-2.5 rounded border border-gray-200">
+                                                <span className="text-sm font-medium text-gray-600">Assigned Unit</span>
+                                                <span className="text-gray-800 font-bold">{userHRProfile.unit}</span>
+                                            </div>
+                                        )}
+
+                                        {userHRProfile && userHRProfile.jobTitle && (
+                                            <div className="flex justify-between items-center bg-gray-50 p-2.5 rounded border border-gray-200">
+                                                <span className="text-sm font-medium text-gray-600">Job Title</span>
+                                                <span className="text-gray-800 font-bold">
+                                                    {userHRProfile.jobTitle === 'اخرى' ? userHRProfile.jobTitleOther : userHRProfile.jobTitle}
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        {/* Fallback if user isn't assigned an HR role yet */}
+                                        {!userHRProfile && (
+                                            <div className="text-center p-2 text-xs text-gray-400 mt-2">
+                                                No specific Program Team role assigned in the HR database yet.
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                
+                                <div className="border border-gray-200 p-3 rounded-lg bg-gray-50 shadow-sm">
+                                    <span className="block text-xs text-gray-500 uppercase font-bold mb-1">Assigned States</span>
+                                    <span className="text-gray-800 font-medium">
+                                        {userStates?.length > 0 ? userStates.join(', ') : 'Global / None'}
+                                    </span>
+                                </div>
+                                
+                                <div className="border border-gray-200 p-3 rounded-lg bg-gray-50 shadow-sm">
+                                    <span className="block text-xs text-gray-500 uppercase font-bold mb-1">Assigned Localities</span>
+                                    <span className="text-gray-800 font-medium">
+                                        {userLocalities?.length > 0 ? userLocalities.join(', ') : 'All Localities in State / None'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end rounded-b-lg">
+                            <Button onClick={() => setIsUserProfileModalOpen(false)} variant="secondary">
+                                Close
+                            </Button>
+                        </div>
+                    </Modal>
                 )}
             </Suspense>
 

@@ -59,13 +59,35 @@ const MentorshipDashboard = ({
     const [activeEencTab, setActiveEencTab] = useState('skills'); 
     const [activeImnciTab, setActiveImnciTab] = useState('skills'); 
     
+    // --- NEW: State for Admin custom date range ---
+    const [adminStartDate, setAdminStartDate] = useState('');
+    const [adminEndDate, setAdminEndDate] = useState('');
+    
     const recalcCacheRef = useRef({});
 
-    const checkDateFilter = useCallback((dateString, dateFilt) => {
-        if (!dateFilt) return true;
+    // --- UPDATED: Accepts customStart and customEnd ---
+    const checkDateFilter = useCallback((dateString, dateFilt, customStart, customEnd) => {
         if (!dateString) return false;
         const d = new Date(dateString);
         if (isNaN(d.getTime())) return false;
+        
+        // NEW: Apply custom Start/End Date override from Admin Tab
+        if (customStart || customEnd) {
+            let isValid = true;
+            if (customStart) {
+                const sDate = new Date(customStart);
+                sDate.setHours(0,0,0,0);
+                if (d < sDate) isValid = false;
+            }
+            if (customEnd) {
+                const eDate = new Date(customEnd);
+                eDate.setHours(23,59,59,999);
+                if (d > eDate) isValid = false;
+            }
+            return isValid;
+        }
+
+        if (!dateFilt) return true;
         
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -136,7 +158,9 @@ const MentorshipDashboard = ({
 
         if (activeFacilityId) filtered = filtered.filter(r => r.facilityId === activeFacilityId);
         if (activeProject) filtered = filtered.filter(r => r.project === activeProject);
-        filtered = filtered.filter(r => checkDateFilter(r.visitDate || r.date || r.visit_date, dateFilter));
+        
+        // UPDATED: Pass admin dates
+        filtered = filtered.filter(r => checkDateFilter(r.visitDate || r.date || r.visit_date, dateFilter, adminStartDate, adminEndDate));
 
         const totalVisits = filtered.length;
         const isStateLevel = !activeState;
@@ -220,7 +244,7 @@ const MentorshipDashboard = ({
         });
         
         return { totalVisits, geographicChartData, facilityTableData: Object.values(facilityMap), distinctSkillKeys: Array.from(skillKeys), groupedProblems, totalProblems, trainedSkillsGroups, totalSkillsTrained, rawReports: filtered };
-    }, [visitReports, activeService, activeState, activeLocality, activeFacilityId, activeProject, STATE_LOCALITIES, dynamicLocationLevel, dateFilter, checkDateFilter, language]);
+    }, [visitReports, activeService, activeState, activeLocality, activeFacilityId, activeProject, STATE_LOCALITIES, dynamicLocationLevel, dateFilter, checkDateFilter, language, adminStartDate, adminEndDate]);
 
     const reCalculatedSubmissions = useMemo(() => {
         if (!allSubmissions) return [];
@@ -490,10 +514,12 @@ const MentorshipDashboard = ({
         const workerMatch = !activeWorkerName || sub.staff === activeWorkerName;
         const projectMatch = !activeProject || sub.project === activeProject;
         const typeMatch = !activeWorkerType || sub.workerType === activeWorkerType;
-        const dateMatch = checkDateFilter(sub.date || sub.sessionDate || sub.visitDate, dateFilter);
+        
+        // UPDATED: Pass admin dates
+        const dateMatch = checkDateFilter(sub.date || sub.sessionDate || sub.visitDate, dateFilter, adminStartDate, adminEndDate);
         
         return stateMatch && localityMatch && facilityMatch && workerMatch && projectMatch && typeMatch && dateMatch;
-    }), [serviceCompletedSubmissions, activeState, activeLocality, activeFacilityId, activeWorkerName, activeProject, activeWorkerType, dateFilter, checkDateFilter]);
+    }), [serviceCompletedSubmissions, activeState, activeLocality, activeFacilityId, activeWorkerName, activeProject, activeWorkerType, dateFilter, checkDateFilter, adminStartDate, adminEndDate]);
 
     const overallKpis = useMemo(() => {
         if (activeService === 'IMNCI') return imnciKpiHelper(filteredSubmissions.filter(s => s.service === 'IMNCI'));
@@ -810,8 +836,22 @@ const MentorshipDashboard = ({
             <div>
                 {activeTab === 'admin' && canEditStatus && (
                     <AdminDashboardTab
-                        activeService={activeService} overallKpis={overallKpis} visitReportStats={visitReportStats} motherKpis={motherKpis} volumeChartData={volumeChartData}
-                        geographicKpis={geographicKpis} filteredSubmissions={filteredSubmissions} geographicLevelName={geographicLevelName} scopeTitle={scopeTitle} dateFilter={dateFilter} onDateFilterChange={onDateFilterChange}
+                        activeService={activeService} 
+                        overallKpis={overallKpis} 
+                        visitReportStats={visitReportStats} 
+                        motherKpis={motherKpis} 
+                        volumeChartData={volumeChartData}
+                        geographicKpis={geographicKpis} 
+                        filteredSubmissions={filteredSubmissions} 
+                        geographicLevelName={geographicLevelName} 
+                        scopeTitle={scopeTitle} 
+                        dateFilter={dateFilter} 
+                        onDateFilterChange={onDateFilterChange}
+                        // --- PASSED NEW START AND END DATE PROPS ---
+                        startDate={adminStartDate}
+                        endDate={adminEndDate}
+                        handleStartDateChange={setAdminStartDate}
+                        handleEndDateChange={setAdminEndDate}
                     />
                 )}
 
