@@ -103,7 +103,8 @@ const MapLegend = () => {
         <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full shadow-sm bg-[#6B6B6B]"></div><span className='text-xs font-medium'>{t('dashboard.map.no_data', '0-39% (or No Data)')}</span></div>
         <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full shadow-sm bg-[#6266B1]"></div><span className='text-xs font-medium'>{t('dashboard.map.range_mid', '40-74%')}</span></div>
         <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full shadow-sm bg-[#313695]"></div><span className='text-xs font-medium'>{t('dashboard.map.range_high', '≥75%')}</span></div>
-        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full border-2 border-white shadow-sm ring-1 ring-[#313695] bg-[#313695]"></div><span className='text-xs font-medium'>{t('dashboard.map.facility', 'Facility')}</span></div>
+        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full border-2 border-white shadow-sm ring-1 ring-[#313695] bg-[#313695]"></div><span className='text-xs font-medium'>{t('dashboard.map.facility', 'Facility (Active)')}</span></div>
+        <div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full border-2 border-white shadow-sm ring-1 ring-[#EAB308] bg-[#EAB308]"></div><span className='text-xs font-medium'>{t('dashboard.map.planned', 'Facility (Planned)')}</span></div>
     </div>
 )};
 
@@ -156,6 +157,11 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
     const [ownershipFilter, setOwnershipFilter] = useState('');
     const [projectFilter, setProjectFilter] = useState('');
     const [equipmentFilter, setEquipmentFilter] = useState('');
+    
+    // New Filters
+    const [neonatalLevelFilter, setNeonatalLevelFilter] = useState('');
+    const [neonatalStatusFilter, setNeonatalStatusFilter] = useState('');
+
     const [isMapFullscreen, setIsMapFullscreen] = useState(false); 
     const [mapViewLevel, setMapViewLevel] = useState('state');
     
@@ -185,28 +191,64 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
             if (ownershipFilter && f.facility_ownership !== ownershipFilter) return false;
             if (projectFilter && f.project_name !== projectFilter) return false;
             if (equipmentFilter && (Number(f[equipmentFilter]) || 0) === 0) return false;
+
             return true;
         });
     }, [activeFacilities, stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter]); 
 
-    const isFacilitySupposedToProvideCare = useCallback((f) => ['CEmONC', 'pediatric'].includes(f.eenc_service_type) || f.neonatal_level_of_care?.primary || f.neonatal_level_of_care?.secondary || f.neonatal_level_of_care?.tertiary, []);
-    const hasFunctioningSCNU = useCallback((f) => f['هل_المؤسسة_تعمل'] === 'Yes' && f.neonatal_level_of_care?.secondary, []);
+    const targetLevel = neonatalLevelFilter || 'secondary';
 
-    const hospitalsWithSCNU = useMemo(() => locationFilteredFacilities.filter(hasFunctioningSCNU), [locationFilteredFacilities, hasFunctioningSCNU]);
+    const isFacilitySupposedToProvideCare = useCallback((f) => {
+        if (targetLevel === 'secondary') {
+            return ['CEmONC', 'pediatric'].includes(f.eenc_service_type);
+        } else if (targetLevel === 'primary') {
+            return ['BEmONC', 'CEmONC', 'pediatric'].includes(f.eenc_service_type);
+        } else if (targetLevel === 'tertiary') {
+            // Denominator for level 3 is ALL functioning level 2
+            let level2Val = f.neonatal_level_secondary;
+            if (!level2Val && f.neonatal_level_of_care && f.neonatal_level_of_care.secondary !== undefined) {
+                level2Val = f.neonatal_level_of_care.secondary ? 'Yes' : 'No';
+            }
+            return f['هل_المؤسسة_تعمل'] === 'Yes' && level2Val === 'Yes';
+        }
+        return false;
+    }, [targetLevel]);
+
+    const hasFunctioningNeonatalUnit = useCallback((f) => {
+        let levelVal = f[`neonatal_level_${targetLevel}`];
+        if (!levelVal && f.neonatal_level_of_care && f.neonatal_level_of_care[targetLevel] !== undefined) {
+            levelVal = f.neonatal_level_of_care[targetLevel] ? 'Yes' : 'No';
+        }
+        if (!levelVal) levelVal = 'No';
+
+        if (neonatalStatusFilter === 'Planned') {
+            // When user explicitly selects "Planned", show both Yes and Planned to demonstrate potential coverage increase.
+            // Bypasses the strict hospital functioning check, as planned units might be in not-yet-functioning hospitals.
+            return levelVal === 'Yes' || levelVal === 'Planned';
+        } else if (neonatalStatusFilter === 'Yes') {
+            return f['هل_المؤسسة_تعمل'] === 'Yes' && levelVal === 'Yes';
+        } else if (neonatalStatusFilter === 'No') {
+            return f['هل_المؤسسة_تعمل'] === 'Yes' && levelVal === 'No';
+        }
+        
+        // Default behavior (no status filter)
+        return f['هل_المؤسسة_تعمل'] === 'Yes' && levelVal === 'Yes';
+    }, [targetLevel, neonatalStatusFilter]);
+
+    const functioningNeonatalUnits = useMemo(() => locationFilteredFacilities.filter(hasFunctioningNeonatalUnit), [locationFilteredFacilities, hasFunctioningNeonatalUnit]);
 
     const kpiData = useMemo(() => {
-        const functioningScnus = locationFilteredFacilities.filter(hasFunctioningSCNU);
         const totalSupposed = locationFilteredFacilities.filter(isFacilitySupposedToProvideCare).length;
-        const totalWithSCNU = functioningScnus.length;
-        const totalWithCPAP = functioningScnus.filter(f => (Number(f['neonatal_cpap']) || 0) > 0).length;
+        const totalWithUnit = functioningNeonatalUnits.length;
+        const totalWithCPAP = functioningNeonatalUnits.filter(f => (Number(f['neonatal_cpap']) || 0) > 0).length;
         return {
             totalSupposed,
-            totalWithSCNU,
-            scnuCoveragePercentage: totalSupposed > 0 ? Math.round((totalWithSCNU / totalSupposed) * 100) : 0,
+            totalWithUnit,
+            unitCoveragePercentage: totalSupposed > 0 ? Math.round((totalWithUnit / totalSupposed) * 100) : 0,
             totalWithCPAP,
-            cpapPercentage: totalWithSCNU > 0 ? Math.round((totalWithCPAP / totalWithSCNU) * 100) : 0,
+            cpapPercentage: totalWithUnit > 0 ? Math.round((totalWithCPAP / totalWithUnit) * 100) : 0,
         };
-    }, [locationFilteredFacilities, hasFunctioningSCNU, isFacilitySupposedToProvideCare]); 
+    }, [locationFilteredFacilities, functioningNeonatalUnits, isFacilitySupposedToProvideCare]); 
 
     const isLocalityView = !!stateFilter;
     const aggregationLevelName = isLocalityView ? t('dashboard.table.locality', 'Locality') : t('dashboard.table.state', 'State');
@@ -220,22 +262,22 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
             if (!key || key === 'إتحادي') return;
             if (!sum[key]) sum[key] = { 
                 name: isLocalityView ? getLocalizedLocalityName(stateFilter, key, i18n.language) : getLocalizedStateName(key, i18n.language), 
-                key, totalSupposed: 0, totalWithSCNU: 0 
+                key, totalSupposed: 0, totalWithUnit: 0 
             };
             if (isFacilitySupposedToProvideCare(f)) sum[key].totalSupposed++;
-            if (hasFunctioningSCNU(f)) sum[key].totalWithSCNU++;
+            if (hasFunctioningNeonatalUnit(f)) sum[key].totalWithUnit++;
         });
 
-        const sD = Object.values(sum).map(s => ({ ...s, coverage: s.totalSupposed > 0 ? Math.round((s.totalWithSCNU / s.totalSupposed) * 100) : 0 }));
+        const sD = Object.values(sum).map(s => ({ ...s, coverage: s.totalSupposed > 0 ? Math.round((s.totalWithUnit / s.totalSupposed) * 100) : 0 }));
         return { stateData: sD };
-    }, [locationFilteredFacilities, stateFilter, isLocalityView, hasFunctioningSCNU, isFacilitySupposedToProvideCare, i18n.language]); 
+    }, [locationFilteredFacilities, stateFilter, isLocalityView, hasFunctioningNeonatalUnit, isFacilitySupposedToProvideCare, i18n.language]); 
 
     const sortedTableData = useMemo(() => [...stateData].sort((a,b) => b.coverage - a.coverage), [stateData]);
 
     const equipmentTableData = useMemo(() => {
         const aggK = !!stateFilter ? 'اسم_المؤسسة' : 'الولاية';
         const sum = {};
-        hospitalsWithSCNU.forEach(f => {
+        functioningNeonatalUnits.forEach(f => {
             const key = f[aggK];
             if (!key || key === 'إتحادي') return;
             if (!sum[key]) sum[key] = { 
@@ -249,25 +291,42 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
             });
         });
         return Object.values(sum).filter(s => s.key !== 'إتحادي' && s.hasData).sort((a, b) => (b.neonatal_total_beds || 0) - (a.neonatal_total_beds || 0)).slice(0, 30);
-    }, [hospitalsWithSCNU, stateFilter, i18n.language]);
+    }, [functioningNeonatalUnits, stateFilter, i18n.language]);
 
-    const facilitySCNUTableData = useMemo(() => {
-        return hospitalsWithSCNU.map(f => {
+    const facilityNeonatalTableData = useMemo(() => {
+        return functioningNeonatalUnits.map(f => {
             let localityEn = f['المحلية'];
             const state = f['الولاية'];
             return { 
                 id: f.id, 
-                state: getLocalizedStateName(state, i18n.language), 
-                locality: getLocalizedLocalityName(state, localityEn, i18n.language), 
-                facilityName: f['اسم_المؤسسة'], 
+                state: getLocalizedStateName(state, i18n.language) || '', 
+                locality: getLocalizedLocalityName(state, localityEn, i18n.language) || '', 
+                facilityName: f['اسم_المؤسسة'] || '', 
                 incubators: Number(f['neonatal_total_incubators']) || 0, 
                 cots: Number(f['neonatal_total_cots']) || 0, 
                 totalBeds: (Number(f['neonatal_total_incubators']) || 0) + (Number(f['neonatal_total_cots']) || 0) 
             };
-        }).sort((a, b) => a.state.localeCompare(b.state) || a.locality.localeCompare(b.locality) || a.facilityName.localeCompare(b.facilityName));
-    }, [hospitalsWithSCNU, i18n.language]);
+        }).sort((a, b) => 
+            String(a.state).localeCompare(String(b.state)) || 
+            String(a.locality).localeCompare(String(b.locality)) || 
+            String(a.facilityName).localeCompare(String(b.facilityName))
+        );
+    }, [functioningNeonatalUnits, i18n.language]);
 
-    const facilityLocationMarkers = useMemo(() => hospitalsWithSCNU.filter(f=>f['_الإحداثيات_longitude']&&f['_الإحداثيات_latitude']).map(f=>({key:f.id,name:f['اسم_المؤسسة'],coordinates:[f['_الإحداثيات_longitude'],f['_الإحداثيات_latitude']]})), [hospitalsWithSCNU]);
+    const facilityLocationMarkers = useMemo(() => functioningNeonatalUnits.filter(f=>f['_الإحداثيات_longitude']&&f['_الإحداثيات_latitude']).map(f=>{
+        let levelVal = f[`neonatal_level_${targetLevel}`];
+        if (!levelVal && f.neonatal_level_of_care && f.neonatal_level_of_care[targetLevel] !== undefined) {
+            levelVal = f.neonatal_level_of_care[targetLevel] ? 'Yes' : 'No';
+        }
+        
+        return {
+            key:f.id,
+            name:f['اسم_المؤسسة'],
+            coordinates:[f['_الإحداثيات_longitude'],f['_الإحداثيات_latitude']],
+            color: levelVal === 'Planned' ? '#EAB308' : '#313695' // Yellow for Planned
+        };
+    }), [functioningNeonatalUnits, targetLevel]);
+    
     const mapViewConfig = useMemo(() => { const sC=stateFilter?mapCoordinates[stateFilter]:null; return sC ? {center:[sC.lng,sC.lat],scale:sC.scale,focusedState:stateFilter} : {center:[30,15.5],scale:2000,focusedState:null}; }, [stateFilter]);
     
     const nationalMapData = useMemo(() => { 
@@ -275,12 +334,12 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
         locationFilteredFacilities.forEach(f=>{
             const k=f['الولاية'];
             if(!k||k==='إتحادي')return;
-            if(!s[k])s[k]={totalSupposed:0,totalWithSCNU:0};
+            if(!s[k])s[k]={totalSupposed:0,totalWithUnit:0};
             if(isFacilitySupposedToProvideCare(f))s[k].totalSupposed++;
-            if(hasFunctioningSCNU(f))s[k].totalWithSCNU++;
+            if(hasFunctioningNeonatalUnit(f))s[k].totalWithUnit++;
         });
-        return Object.entries(s).map(([sK,c])=>({state:sK,percentage:c.totalSupposed>0?Math.round((c.totalWithSCNU/c.totalSupposed)*100):0,coordinates:mapCoordinates[sK]?[mapCoordinates[sK].lng,mapCoordinates[sK].lat]:[0,0]})); 
-    }, [locationFilteredFacilities, isFacilitySupposedToProvideCare, hasFunctioningSCNU]);
+        return Object.entries(s).map(([sK,c])=>({state:sK,percentage:c.totalSupposed>0?Math.round((c.totalWithUnit/c.totalSupposed)*100):0,coordinates:mapCoordinates[sK]?[mapCoordinates[sK].lng,mapCoordinates[sK].lat]:[0,0]})); 
+    }, [locationFilteredFacilities, isFacilitySupposedToProvideCare, hasFunctioningNeonatalUnit]);
     
     const handleStateChange = (e) => { setStateFilter(e.target.value); setLocalityFilter(''); };
     const handleMapHover = useCallback((key, event) => setHoverPosition({ x: event.clientX, y: event.clientY }), []);
@@ -306,15 +365,58 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
         ...Object.values(NEONATAL_EQUIPMENT_SPEC).map(h => t(`dashboard.equip.${h}`, h))
     ];
 
+    const displayTargetLevel = targetLevel.charAt(0).toUpperCase() + targetLevel.slice(1);
+
     return (
         <div onMouseMove={handleMouseMove}>
             <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm ignore-for-export mb-6">
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                    <FormGroup label={t('dashboard.filters.state', 'State')}><Select value={stateFilter} onChange={handleStateChange}><option value="">{t('dashboard.filters.all_states', 'All States')}</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{getLocalizedStateName(sKey, i18n.language)}</option>)}</Select></FormGroup>
-                    <FormGroup label={t('dashboard.filters.locality', 'Locality')}><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">{t('dashboard.filters.all_localities', 'All Localities')}</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{getLocalizedLocalityName(stateFilter, l.en, i18n.language)}</option>)}</Select></FormGroup>
-                    <FormGroup label={t('dashboard.filters.ownership', 'Ownership')}><Select value={ownershipFilter} onChange={(e) => setOwnershipFilter(e.target.value)}><option value="">{t('dashboard.filters.all_ownerships', 'All Ownerships')}</option>{OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
-                    <FormGroup label={t('dashboard.filters.project', 'Project')}><Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}><option value="">{t('dashboard.filters.all_projects', 'All Projects')}</option>{projectOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}</Select></FormGroup>
-                    <FormGroup label={t('dashboard.filters.has_equipment', 'Has Equipment')}><Select value={equipmentFilter} onChange={(e) => setEquipmentFilter(e.target.value)}><option value="">{t('dashboard.filters.any', 'Any')}</option>{Object.entries(NEONATAL_EQUIPMENT_SPEC).map(([key, label]) => <option key={key} value={key}>{t(`dashboard.equip.${label}`, label)}</option>)}</Select></FormGroup>
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+                    <FormGroup label={t('dashboard.filters.state', 'State')}>
+                        <Select value={stateFilter} onChange={handleStateChange}>
+                            <option value="">{t('dashboard.filters.all_states', 'All States')}</option>
+                            {Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{getLocalizedStateName(sKey, i18n.language)}</option>)}
+                        </Select>
+                    </FormGroup>
+                    <FormGroup label={t('dashboard.filters.locality', 'Locality')}>
+                        <Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}>
+                            <option value="">{t('dashboard.filters.all_localities', 'All Localities')}</option>
+                            {stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{getLocalizedLocalityName(stateFilter, l.en, i18n.language)}</option>)}
+                        </Select>
+                    </FormGroup>
+                    <FormGroup label={t('dashboard.filters.ownership', 'Ownership')}>
+                        <Select value={ownershipFilter} onChange={(e) => setOwnershipFilter(e.target.value)}>
+                            <option value="">{t('dashboard.filters.all_ownerships', 'All Ownerships')}</option>
+                            {OWNERSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </Select>
+                    </FormGroup>
+                    <FormGroup label={t('dashboard.filters.project', 'Project')}>
+                        <Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}>
+                            <option value="">{t('dashboard.filters.all_projects', 'All Projects')}</option>
+                            {projectOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </Select>
+                    </FormGroup>
+                    <FormGroup label={t('dashboard.filters.has_equipment', 'Has Equipment')}>
+                        <Select value={equipmentFilter} onChange={(e) => setEquipmentFilter(e.target.value)}>
+                            <option value="">{t('dashboard.filters.any', 'Any')}</option>
+                            {Object.entries(NEONATAL_EQUIPMENT_SPEC).map(([key, label]) => <option key={key} value={key}>{t(`dashboard.equip.${label}`, label)}</option>)}
+                        </Select>
+                    </FormGroup>
+                    <FormGroup label={t('dashboard.filters.neonatal_level', 'Neonatal Level')}>
+                        <Select value={neonatalLevelFilter} onChange={(e) => { setNeonatalLevelFilter(e.target.value); setNeonatalStatusFilter(''); }}>
+                            <option value="">{t('dashboard.filters.any_level', 'All Levels (Sec. Default)')}</option>
+                            <option value="primary">{t('dashboard.filters.primary', 'Primary')}</option>
+                            <option value="secondary">{t('dashboard.filters.secondary', 'Secondary (SCNU)')}</option>
+                            <option value="tertiary">{t('dashboard.filters.tertiary', 'Tertiary (NICU)')}</option>
+                        </Select>
+                    </FormGroup>
+                    <FormGroup label={t('dashboard.filters.availability_status', 'Level Status')}>
+                        <Select value={neonatalStatusFilter} onChange={(e) => setNeonatalStatusFilter(e.target.value)} disabled={!neonatalLevelFilter}>
+                            <option value="">{t('dashboard.filters.any_status', 'Any Status')}</option>
+                            <option value="Yes">{t('dashboard.filters.status_yes', 'Yes')}</option>
+                            <option value="No">{t('dashboard.filters.status_no', 'No')}</option>
+                            <option value="Planned">{t('dashboard.filters.status_planned', 'Planned')}</option>
+                        </Select>
+                    </FormGroup>
                 </div>
             </div>
 
@@ -322,9 +424,9 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
                 <div className="lg:col-span-1 flex flex-col gap-4 h-full">
                     {loading ? <Spinner/> : (
                         <>
-                            <TotalCountCard title={t('dashboard.cards.total_pediatrics_emonc', 'Total Pediatrics & EmONC')} count={kpiData.totalSupposed} className="flex-1" borderClass="border-s-slate-400" valueClass="text-slate-700" decorationColor="bg-slate-500" colorTheme="slate" />
-                            <ValueTotalPercentageCard title={t('dashboard.cards.functioning_scnu', 'Functioning SCNU Facilities')} value={kpiData.totalWithSCNU} total={kpiData.totalSupposed} percentage={kpiData.scnuCoveragePercentage} className="flex-1" borderClass="border-s-sky-500" valueClass="text-sky-600" decorationColor="bg-sky-500" colorTheme="sky" />
-                            <ValueTotalPercentageCard title={t('dashboard.cards.facilities_with_cpap', 'Facilities with CPAP')} value={kpiData.totalWithCPAP} total={kpiData.totalWithSCNU} percentage={kpiData.cpapPercentage} className="flex-1" borderClass="border-s-teal-500" valueClass="text-teal-600" decorationColor="bg-teal-500" colorTheme="teal" />
+                            <TotalCountCard title={t('dashboard.cards.total_pediatrics_emonc', 'Total Target Facilities')} count={kpiData.totalSupposed} className="flex-1" borderClass="border-s-slate-400" valueClass="text-slate-700" decorationColor="bg-slate-500" colorTheme="slate" />
+                            <ValueTotalPercentageCard title={t('dashboard.cards.functioning_scnu', `Functioning ${displayTargetLevel} Facilities`)} value={kpiData.totalWithUnit} total={kpiData.totalSupposed} percentage={kpiData.unitCoveragePercentage} className="flex-1" borderClass="border-s-sky-500" valueClass="text-sky-600" decorationColor="bg-sky-500" colorTheme="sky" />
+                            <ValueTotalPercentageCard title={t('dashboard.cards.facilities_with_cpap', 'Facilities with CPAP')} value={kpiData.totalWithCPAP} total={kpiData.totalWithUnit} percentage={kpiData.cpapPercentage} className="flex-1" borderClass="border-s-teal-500" valueClass="text-teal-600" decorationColor="bg-teal-500" colorTheme="teal" />
                         </>
                     )}
                 </div>
@@ -364,7 +466,7 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
                 <div className="mt-6 grid grid-cols-1 gap-6 items-stretch relative">
                     <Card className="p-0 flex flex-col overflow-hidden border border-gray-200 rounded-xl">
                         <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
-                            <h3 className="text-lg font-bold text-gray-800">{t('dashboard.headers.scnu_coverage', 'SCNU Coverage by')} {aggregationLevelName}</h3>
+                            <h3 className="text-lg font-bold text-gray-800">{t('dashboard.headers.scnu_coverage', `Neonatal (${displayTargetLevel}) Coverage by`)} {aggregationLevelName}</h3>
                             <button onClick={() => copyTableAsImage(coverageTableRef, setTable1CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table1CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table1CopyStatus}</span> : <CopyIcon />} </button>
                         </div>
                         <div className="flex-grow overflow-x-auto p-4">
@@ -373,7 +475,7 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
                                     <tr>
                                         <th className="p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 uppercase tracking-wider w-[25%]">{aggregationLevelName}</th>
                                         <th className="p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider w-[15%]">{t('dashboard.table.total_supposed', 'Total Supposed')}</th>
-                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider w-[15%]">{t('dashboard.table.with_scnu', 'With SCNU')}</th>
+                                        <th className="p-3 border-b border-gray-200 bg-slate-50 text-center font-semibold text-gray-600 uppercase tracking-wider w-[15%]">{t('dashboard.table.with_scnu', 'With Unit')}</th>
                                         <th className="p-3 border-b border-gray-200 bg-slate-50 text-start font-semibold text-gray-600 uppercase tracking-wider w-[45%]">{t('dashboard.table.coverage_chart', 'Coverage Chart')}</th>
                                     </tr>
                                 </thead>
@@ -383,7 +485,7 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
                                         <tr key={row.key} className='hover:bg-blue-50/50 transition-colors border-b border-gray-100'>
                                             <td className="p-3 whitespace-nowrap font-medium text-gray-700 text-start">{row.name}</td>
                                             <td className="p-3 text-center align-middle font-medium">{row.totalSupposed}</td>
-                                            <td className="p-3 text-center font-bold text-sky-700 align-middle">{row.totalWithSCNU} <span className="text-gray-400 font-normal ms-1">({row.coverage}%)</span></td>
+                                            <td className="p-3 text-center font-bold text-sky-700 align-middle">{row.totalWithUnit} <span className="text-gray-400 font-normal ms-1">({row.coverage}%)</span></td>
                                             <td className="p-3 align-middle text-start">
                                                 <div className="flex items-center w-full">
                                                     <div className="flex-grow bg-gray-200 rounded-sm h-3 overflow-hidden flex"><div className={`h-full transition-all shadow-sm ${row.coverage >= 75 ? 'bg-sky-700' : row.coverage >= 40 ? 'bg-sky-400' : 'bg-gray-600'}`} style={{ width: `${Math.max(row.coverage, 1)}%` }}></div></div>
@@ -425,7 +527,7 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
                 <div className="mt-6">
                     <Card className="p-0 overflow-hidden border border-gray-200 rounded-xl">
                         <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
-                            <h3 className="text-lg font-bold text-gray-800">{t('dashboard.headers.functioning_neonatal_units', 'Functioning Neonatal Units (SCNU) List')}</h3>
+                            <h3 className="text-lg font-bold text-gray-800">{t('dashboard.headers.functioning_neonatal_units', 'Functioning Neonatal Units List')}</h3>
                             <button onClick={() => copyTableAsImage(scnuListTableRef, setTable3CopyStatus)} className="text-gray-400 hover:text-sky-600 transition-colors p-1"> {table3CopyStatus ? <span className="text-[10px] font-semibold text-sky-600">{table3CopyStatus}</span> : <CopyIcon />} </button>
                         </div>
                         <div className="overflow-x-auto w-full max-h-[500px] overflow-y-auto p-4">
@@ -441,7 +543,7 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {facilitySCNUTableData.length === 0 ? <tr><td colSpan="6" className="p-4 text-center text-gray-500">{t('dashboard.table.no_data', 'No facilities found matching the current filters.')}</td></tr> : facilitySCNUTableData.map(row => (
+                                    {facilityNeonatalTableData.length === 0 ? <tr><td colSpan="6" className="p-4 text-center text-gray-500">{t('dashboard.table.no_data', 'No facilities found matching the current filters.')}</td></tr> : facilityNeonatalTableData.map(row => (
                                             <tr key={row.id} className="hover:bg-blue-50/50 transition-colors border-b border-gray-100">
                                                 <td className="p-3 font-medium text-gray-800 text-start">{row.state}</td>
                                                 <td className="p-3 text-gray-600 text-start">{row.locality}</td>
@@ -475,9 +577,9 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
                                         facilityMarkers={showFacilityMarkers ? facilityLocationMarkers : []}
                                         viewLevel={currentMapViewLevel}
                                         {...mapViewConfig}
-                                        onStateHover={handleStateHover} onStateLeave={handleMapMouseLeave}
+                                        onStateHover={handleMapHover} onStateLeave={handleMapMouseLeave}
                                         onFacilityHover={handleFacilityHover} onFacilityLeave={handleFacilityLeave}
-                                        onLocalityHover={handleMapLocalityHover} onLocalityLeave={handleMapMouseLeave}
+                                        onLocalityHover={handleMapHover} onLocalityLeave={handleMapMouseLeave}
                                         isMovable={false}
                                         pannable={false}
                                     />
@@ -900,7 +1002,7 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
                 percentageWithThermometer: total>0 ? Math.round((st.countWithThermometer/total)*100) : 0,
                 percentageWithTimer: total>0 ? Math.round((st.countWithTimer/total)*100) : 0
             };
-        }).sort((a,b)=> a.name.localeCompare(b.name));
+        }).sort((a,b)=> String(a.name).localeCompare(String(b.name)));
     }, [functioningPhcs, isLocalityView, isFacilityView, i18n.language]);
 
     const toolsAverages = useMemo(() => {

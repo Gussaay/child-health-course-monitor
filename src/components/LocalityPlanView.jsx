@@ -1,12 +1,12 @@
 // src/components/LocalityPlanView.jsx
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import jsPDF from "jspdf";
 import html2canvas from 'html2canvas';
 import { amiriFontBase64 } from './AmiriFont.js'; 
 import { Card, CardBody, Button, FormGroup, Select, EmptyState, PageHeader, Spinner } from './CommonComponents';
 import { upsertMasterPlan, deleteMasterPlan } from '../data';
 import { useDataCache } from '../DataContext';
-import { Save, Plus, Edit, Trash2, X, ChevronDown, ChevronUp, Layers, BarChart2, PieChart, Activity, Users, Calendar, Download, FileText, Target } from 'lucide-react';
+import { Save, Plus, Edit, Trash2, X, ChevronDown, ChevronUp, Layers, BarChart2, PieChart, Activity, Users, Calendar, Download, FileText, Target, CheckSquare } from 'lucide-react';
 import { STATE_LOCALITIES } from './constants';
 
 import { Capacitor } from '@capacitor/core';
@@ -57,22 +57,77 @@ const LOCALITY_TEMPLATE = [
     { axis: 'المعلومات', name: 'تنفيذ اجتماع شهري مع الكوادر المطبقة' }
 ];
 
-const generateTemplateInterventions = () => {
-    return LOCALITY_TEMPLATE.map((item, idx) => ({
-        id: `loc_inv_${Date.now()}_${idx}`,
-        axis: item.axis,
-        name: item.name,
-        indicator: ACTIVITY_INDICATOR_MAP[item.name] || 'عدد',
-        planned: '',
-        baseline: '',
-        target: '',
-        totalCost: '',
-        notes: ''
-    }));
+// Custom Component for Target Facilities Multi-Select Dropdown
+const TargetedFacilitiesSelect = ({ options, selectedIds, onChange, disabled }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const wrapperRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const toggleSelection = (id) => {
+        if (selectedIds.includes(id)) {
+            onChange(selectedIds.filter(x => x !== id));
+        } else {
+            onChange([...selectedIds, id]);
+        }
+    };
+
+    if (!options || options.length === 0) {
+        return <div className="text-[10px] text-gray-400 text-center py-2 bg-gray-50 border border-gray-200 rounded">مغطاة بالكامل / لا فجوة</div>;
+    }
+
+    return (
+        <div className="relative w-full" ref={wrapperRef}>
+            <div 
+                onClick={() => !disabled && setIsOpen(!isOpen)}
+                className={`border rounded p-2 text-[11px] font-bold flex justify-between items-center cursor-pointer min-h-[48px] ${disabled ? 'bg-gray-100 text-gray-400 border-gray-200' : 'bg-white border-teal-300 text-teal-800 hover:bg-teal-50'}`}
+            >
+                <span className="truncate flex-1 text-right pl-2">
+                    {selectedIds.length === 0 ? 'اختر المؤسسات المستهدفة...' : `تم تحديد (${selectedIds.length}) مؤسسة`}
+                </span>
+                <ChevronDown size={14} className="flex-shrink-0" />
+            </div>
+            
+            {isOpen && !disabled && (
+                <div className="absolute z-50 mt-1 w-64 bg-white border border-teal-200 rounded-lg shadow-xl max-h-48 overflow-y-auto right-0">
+                    <div className="p-2 border-b border-gray-100 bg-teal-50 text-[10px] font-bold text-teal-800 flex justify-between">
+                        <span>المؤسسات التي بها فجوة ({options.length})</span>
+                        {selectedIds.length > 0 && (
+                            <button onClick={() => onChange([])} className="text-red-500 hover:text-red-700 underline">مسح الكل</button>
+                        )}
+                    </div>
+                    {options.map(opt => (
+                        <label key={opt.id} className="flex items-center gap-3 p-2.5 hover:bg-teal-50 cursor-pointer border-b border-gray-50 last:border-0 transition-colors">
+                            <input 
+                                type="checkbox" 
+                                checked={selectedIds.includes(opt.id)}
+                                onChange={() => toggleSelection(opt.id)}
+                                className="w-4 h-4 text-teal-600 rounded border-gray-300 focus:ring-teal-500"
+                            />
+                            <span className="text-xs text-gray-700 font-medium truncate flex-1 text-right">{opt.name}</span>
+                        </label>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
 };
 
 export default function LocalityPlanView({ permissions, userStates, userLocalities }) {
-    const { masterPlans, fetchMasterPlans, isLoading } = useDataCache();
+    const { 
+        masterPlans, fetchMasterPlans, 
+        healthFacilities, fetchHealthFacilities,
+        skillMentorshipSubmissions, fetchSkillMentorshipSubmissions,
+        isLoading 
+    } = useDataCache();
     
     const isLocalityManager = permissions?.role === 'locality_manager' || permissions?.manageScope === 'locality';
     const isSuperUser = permissions?.canUseSuperUserAdvancedFeatures;
@@ -106,7 +161,108 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
 
     useEffect(() => {
         fetchMasterPlans();
-    }, [fetchMasterPlans]);
+        if (!healthFacilities) fetchHealthFacilities({}, false);
+        if (!skillMentorshipSubmissions) fetchSkillMentorshipSubmissions(false);
+    }, [fetchMasterPlans, fetchHealthFacilities, fetchSkillMentorshipSubmissions, healthFacilities, skillMentorshipSubmissions]);
+
+    // Compute Functioning PHCs for coverage denominators globally for the selected filters
+    const currentTotalPhcs = useMemo(() => {
+        const filteredLocFacs = (healthFacilities || []).filter(f => 
+            (!globalFilter.state || f['الولاية'] === globalFilter.state) && 
+            (!globalFilter.locality || f['المحلية'] === globalFilter.locality) && 
+            f.isDeleted !== true && f.isDeleted !== "true" &&
+            f['هل_المؤسسة_تعمل'] === 'Yes' && 
+            (f['نوع_المؤسسةالصحية'] === 'مركز صحة الاسرة' || f['نوع_المؤسسةالصحية'] === 'وحدة صحة الاسرة')
+        );
+        return filteredLocFacs.length;
+    }, [healthFacilities, globalFilter.state, globalFilter.locality]);
+
+    // System Baseline Computation Logic - NOW USES ROBUST STRING MATCHING
+    const computeSystemBaseline = useCallback((invName, state, locality) => {
+        if (!state || !locality) return { text: '-', value: 0, gapFacilities: [], isFacilityBased: false, hasGapTargeting: false, totalPhcs: 0 };
+
+        const locFacs = (healthFacilities || []).filter(f => 
+            f['الولاية'] === state && f['المحلية'] === locality && f.isDeleted !== true && f.isDeleted !== "true"
+        );
+        
+        // Functioning PHCs (Primary Health Centers)
+        const functioningPhcs = locFacs.filter(f => 
+            f['هل_المؤسسة_تعمل'] === 'Yes' && 
+            (f['نوع_المؤسسةالصحية'] === 'مركز صحة الاسرة' || f['نوع_المؤسسةالصحية'] === 'وحدة صحة الاسرة')
+        );
+        
+        const totalPhcs = functioningPhcs.length;
+        const countPhcField = (field) => functioningPhcs.filter(f => f[field] === 'Yes').length;
+        const getGap = (field) => functioningPhcs.filter(f => f[field] !== 'Yes').map(f => ({ id: f.id, name: f['اسم_المؤسسة'] }));
+        const getAllPhcs = () => functioningPhcs.map(f => ({ id: f.id, name: f['اسم_المؤسسة'] }));
+
+        const baseObj = { totalPhcs, gapFacilities: [], isFacilityBased: false, hasGapTargeting: false };
+
+        // Robust matching using .includes() to avoid minor string mismatches in older templates
+        if (invName.includes('ميزان وزن')) {
+            return { ...baseObj, text: `${countPhcField('ميزان_وزن')} من ${totalPhcs} رعاية اساسية`, value: countPhcField('ميزان_وزن'), gapFacilities: getGap('ميزان_وزن'), isFacilityBased: true, hasGapTargeting: true };
+        } 
+        else if (invName.includes('ميزان طول')) {
+            return { ...baseObj, text: `${countPhcField('ميزان_طول')} من ${totalPhcs} رعاية اساسية`, value: countPhcField('ميزان_طول'), gapFacilities: getGap('ميزان_طول'), isFacilityBased: true, hasGapTargeting: true };
+        } 
+        else if (invName.includes('ميزان حرارة')) {
+            return { ...baseObj, text: `${countPhcField('ميزان_حرارة')} من ${totalPhcs} رعاية اساسية`, value: countPhcField('ميزان_حرارة'), gapFacilities: getGap('ميزان_حرارة'), isFacilityBased: true, hasGapTargeting: true };
+        } 
+        else if (invName.includes('مؤقت تنفس')) {
+            return { ...baseObj, text: `${countPhcField('ساعة_مؤقت')} من ${totalPhcs} رعاية اساسية`, value: countPhcField('ساعة_مؤقت'), gapFacilities: getGap('ساعة_مؤقت'), isFacilityBased: true, hasGapTargeting: true };
+        } 
+        else if (invName.includes('كتيب لوحات')) {
+            return { ...baseObj, text: `${countPhcField('وجود_كتيب_لوحات')} من ${totalPhcs} رعاية اساسية`, value: countPhcField('وجود_كتيب_لوحات'), gapFacilities: getGap('وجود_كتيب_لوحات'), isFacilityBased: true, hasGapTargeting: true };
+        } 
+        else if (invName.includes('سجل استمارات')) {
+            return { ...baseObj, text: `${countPhcField('وجود_سجل_علاج_متكامل')} من ${totalPhcs} رعاية اساسية`, value: countPhcField('وجود_سجل_علاج_متكامل'), gapFacilities: getGap('وجود_سجل_علاج_متكامل'), isFacilityBased: true, hasGapTargeting: true };
+        } 
+        else if (invName.includes('مواك')) {
+            return { ...baseObj, text: 'لا يوجد معلومة في النظام', value: 0, gapFacilities: getAllPhcs() }; 
+        } 
+        else if (invName.includes('ادوية العلاج المتكامل') || invName.includes('أدوية العلاج المتكامل')) {
+            return { ...baseObj, text: `يعتمد على السكان (لا يحسب بالمنشأة)`, value: 0, gapFacilities: [] };
+        } 
+        else if (invName.includes('تدريب كادر') || invName.includes('تدريب كوادر')) {
+            // Strictly match ServiceCoverageDashboard logic: Functioning PHCs that implement IMNCI
+            const imnciCoveredPhcs = functioningPhcs.filter(f => f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes');
+            return { 
+                ...baseObj, 
+                text: `${imnciCoveredPhcs.length} مؤسسة مطبقة`, 
+                value: imnciCoveredPhcs.length,
+                gapFacilities: functioningPhcs.filter(f => f['وجود_العلاج_المتكامل_لامراض_الطفولة'] !== 'Yes').map(f => ({ id: f.id, name: f['اسم_المؤسسة'] })) // The gap is PHCs that DON'T have IMNCI
+            };
+        } 
+        else if (invName.includes('ارشاد سريري') || invName.includes('أرشاد سريري')) {
+            if (!skillMentorshipSubmissions) return { ...baseObj, text: 'جاري التحميل...', value: 0, gapFacilities: [] };
+            const stateObj = STATE_LOCALITIES[state];
+            const locAr = stateObj?.localities.find(l => l.en === locality)?.ar;
+            
+            const locMentorships = skillMentorshipSubmissions.filter(m =>
+                (m.state === state || m.state === stateObj?.ar) &&
+                (m.locality === locality || m.locality === locAr) &&
+                m.serviceType === 'IMNCI' && m.status === 'complete' && 
+                m.isDeleted !== true && m.isDeleted !== "true"
+            );
+            
+            const uniqueVisits = new Set();
+            locMentorships.forEach(m => {
+                let dateStr = 'unk';
+                if (m.sessionDate) dateStr = m.sessionDate;
+                else if (m.effectiveDate && m.effectiveDate.seconds) dateStr = new Date(m.effectiveDate.seconds * 1000).toISOString().split('T')[0];
+                else if (m.date) dateStr = m.date;
+                uniqueVisits.add(`${m.facilityId || 'unk'}_${m.healthWorkerName || m.staff || 'unk'}_${dateStr}`);
+            });
+
+            return { ...baseObj, text: `${uniqueVisits.size} زيارة إرشاد`, value: uniqueVisits.size, gapFacilities: getAllPhcs() };
+        } 
+        else if (invName.includes('زيارة اشرافية شهرية')) {
+            return { ...baseObj, text: 'لا يوجد معلومة في النظام', value: 0, gapFacilities: getAllPhcs() };
+        } 
+        else {
+            return { ...baseObj, text: 'لا يوجد معلومة في النظام', value: 0, gapFacilities: [] };
+        }
+    }, [healthFacilities, skillMentorshipSubmissions]);
 
     const localityPlans = useMemo(() => {
         return (masterPlans || [])
@@ -148,13 +304,12 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
         return Object.values(map);
     }, [localityPlans]);
 
-    // حساب الـ KPIs بناءً على حقل "المُخطط" (النخطط)
     const dashboardIndicatorKpis = useMemo(() => {
         const counts = {};
         aggregatedPlan.forEach(inv => {
             if (!inv.indicator) return;
             if (!counts[inv.indicator]) counts[inv.indicator] = 0;
-            counts[inv.indicator] += Number(inv.planned) || 0; // تم التغيير لجمع حقل "المخطط"
+            counts[inv.indicator] += Number(inv.planned) || 0; 
         });
         return Object.entries(counts)
             .map(([name, count]) => ({ name, count }))
@@ -171,27 +326,96 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
             doc.setFont('Amiri');
             
             const pageWidth = doc.internal.pageSize.getWidth();
-            const margin = 10;
-            let currentY = 15;
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 8; 
+            let currentY = 12;
 
-            doc.setFontSize(20);
+            doc.setFontSize(22);
             doc.text(`تقرير التخطيط القاعدي المجمع`, pageWidth / 2, currentY, { align: 'center' });
             currentY += 10;
 
-            doc.setFontSize(12);
+            doc.setFontSize(13);
             doc.setTextColor(100);
             const filterText = `السنة: ${globalFilter.year} | الولاية: ${globalFilter.state || 'الكل'} | المحلية: ${globalFilter.locality || 'الكل'} | الربع: ${globalFilter.quarter || 'الكل'}`;
             doc.text(filterText, pageWidth / 2, currentY, { align: 'center' });
-            currentY += 10;
+            currentY += 8; 
 
             const element = document.getElementById('locality-dashboard-export');
             if (element) {
-                const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-                const imgData = canvas.toDataURL('image/jpeg', 0.95);
-                const imgWidth = pageWidth - (margin * 2);
-                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                // --- INJECT TEMPORARY PRINT STYLES ---
+                const style = document.createElement('style');
+                style.innerHTML = `
+                    #locality-dashboard-export {
+                        width: 1500px !important; 
+                        max-width: 1500px !important;
+                        background-color: #ffffff !important;
+                        direction: rtl !important;
+                    }
+                    #locality-dashboard-export .space-y-6 > * + * {
+                        margin-top: 0.75rem !important;
+                    }
+                    #locality-dashboard-export .p-4 {
+                        padding: 0.75rem !important;
+                    }
+                    #locality-dashboard-export h4 {
+                        font-size: 18px !important;
+                        margin-bottom: 0.5rem !important;
+                    }
+                    #locality-dashboard-export .gap-3 {
+                        gap: 0.5rem !important;
+                    }
+                    #locality-dashboard-export .px-3 {
+                        padding-left: 0.5rem !important;
+                        padding-right: 0.5rem !important;
+                    }
+                    #locality-dashboard-export .py-2 {
+                        padding-top: 0.25rem !important;
+                        padding-bottom: 0.25rem !important;
+                    }
+                    #locality-dashboard-export table th {
+                        font-size: 15px !important;
+                        padding: 8px 6px !important;
+                    }
+                    #locality-dashboard-export table td {
+                        font-size: 15px !important;
+                        padding: 8px 6px !important;
+                        line-height: 1.5 !important; 
+                        text-rendering: geometricPrecision !important;
+                        letter-spacing: normal !important;
+                        word-spacing: normal !important;
+                    }
+                    #locality-dashboard-export .text-xs { font-size: 13px !important; }
+                    #locality-dashboard-export .text-sm { font-size: 15px !important; }
+                    #locality-dashboard-export .text-base { font-size: 16px !important; }
+                `;
+                document.head.appendChild(style);
+
+                await new Promise(resolve => setTimeout(resolve, 200));
+
+                const canvas = await html2canvas(element, { 
+                    scale: 2, 
+                    useCORS: true, 
+                    backgroundColor: '#ffffff',
+                    windowWidth: 1500 
+                });
                 
-                doc.addImage(imgData, 'JPEG', margin, currentY, imgWidth, imgHeight);
+                document.head.removeChild(style);
+
+                const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                
+                const maxImgWidth = pageWidth - (margin * 2);
+                const maxImgHeight = pageHeight - currentY - margin;
+
+                const widthRatio = maxImgWidth / canvas.width;
+                const heightRatio = maxImgHeight / canvas.height;
+                const bestRatio = Math.min(widthRatio, heightRatio); 
+
+                const finalImgWidth = canvas.width * bestRatio;
+                const finalImgHeight = canvas.height * bestRatio;
+                
+                const xOffset = margin + (maxImgWidth - finalImgWidth) / 2;
+                
+                doc.addImage(imgData, 'JPEG', xOffset, currentY, finalImgWidth, finalImgHeight);
             }
 
             const fileName = `Locality_Plan_${globalFilter.year}.pdf`;
@@ -218,14 +442,32 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
             return;
         }
 
+        const stateToUse = globalFilter.state || (isFederalManager ? Object.keys(STATE_LOCALITIES)[0] : userStates[0]);
+
+        const prefilledInterventions = LOCALITY_TEMPLATE.map((item, idx) => {
+            const systemData = computeSystemBaseline(item.name, stateToUse, assignedLocality);
+            return {
+                id: `loc_inv_${Date.now()}_${idx}`,
+                axis: item.axis,
+                name: item.name,
+                indicator: ACTIVITY_INDICATOR_MAP[item.name] || 'عدد',
+                planned: '',
+                baseline: systemData.value.toString(), 
+                target: systemData.value.toString(),
+                totalCost: '',
+                notes: '',
+                targetedFacilities: []
+            };
+        });
+
         setCurrentPlan({
             level: 'locality',
             year: globalFilter.year,
             quarter: globalFilter.quarter || QUARTERS_LIST[0], 
-            state: globalFilter.state || (isFederalManager ? Object.keys(STATE_LOCALITIES)[0] : userStates[0]),
+            state: stateToUse,
             locality: assignedLocality,
             expectedOutcome: 'خطة قاعدية (ربعية)',
-            interventions: generateTemplateInterventions()
+            interventions: prefilledInterventions
         });
         setIsEditing(true);
     };
@@ -249,7 +491,8 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                     baseline: Number(inv.baseline) || 0,
                     target: Number(inv.target) || 0,
                     totalCost: Number(inv.totalCost) || 0,
-                    notes: inv.notes || ''
+                    notes: inv.notes || '',
+                    targetedFacilities: inv.targetedFacilities || []
                 }))
             };
 
@@ -266,14 +509,13 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
 
     const updateIntervention = (idx, field, value) => {
         const updated = [...currentPlan.interventions];
-        let cleanValue = value ? String(value) : '';
-        if (['planned', 'baseline', 'target', 'totalCost'].includes(field)) {
-            cleanValue = cleanValue.replace(/[^0-9]/g, '');
-        }
-
-        updated[idx][field] = cleanValue;
         
-        if (field === 'planned' || field === 'baseline') {
+        if (field === 'targetedFacilities') {
+            updated[idx][field] = value;
+        } else {
+            let cleanValue = value ? String(value).replace(/[^0-9]/g, '') : '';
+            updated[idx][field] = cleanValue;
+            
             const pVal = Number(updated[idx].planned) || 0;
             const bVal = Number(updated[idx].baseline) || 0;
             updated[idx].target = (pVal + bVal).toString(); 
@@ -338,65 +580,97 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                     </div>
 
                     <div className="bg-white border shadow-sm w-full overflow-x-auto rounded-lg pb-10">
-                        <table className="w-full text-xs sm:text-sm text-right border-collapse min-w-[1000px]">
+                        <table className="w-full text-xs sm:text-sm text-right border-collapse min-w-[1250px]">
                             <thead className="bg-teal-800 text-white font-bold">
                                 <tr>
-                                    <th className="p-3 border-l border-teal-700 w-[15%]">المحور</th>
-                                    <th className="p-3 border-l border-teal-700 w-[30%]">النشاط (ثابت)</th>
-                                    <th className="p-3 border-l border-teal-700 w-[15%]">المؤشر</th>
-                                    <th className="p-3 border-l border-teal-700 text-center w-[8%] bg-teal-900">المُخطط</th>
+                                    <th className="p-3 border-l border-teal-700 w-[8%]">المحور</th>
+                                    <th className="p-3 border-l border-teal-700 w-[18%]">النشاط (ثابت)</th>
+                                    <th className="p-3 border-l border-teal-700 w-[8%]">المؤشر</th>
+                                    
+                                    <th className="p-3 border-l border-teal-700 text-center w-[12%] bg-amber-700 shadow-inner">أساس النظام</th>
                                     <th className="p-3 border-l border-teal-700 text-center w-[8%]">الابتدائي</th>
-                                    <th className="p-3 border-l border-teal-700 text-center w-[8%] bg-indigo-900">المستهدف</th>
+                                    <th className="p-3 border-l border-teal-700 text-center w-[8%] bg-teal-900">المُخطط</th>
+                                    
+                                    <th className="p-3 border-l border-teal-700 text-center w-[14%] bg-sky-800">المؤسسات المستهدفة (الفجوة)</th>
+                                    <th className="p-3 border-l border-teal-700 text-center w-[10%] bg-indigo-900">التغطية النهائية بالمحلية</th>
+                                    
                                     <th className="p-3 border-l border-teal-700 text-center w-[8%]">التكلفة</th>
-                                    <th className="p-3 border-l border-teal-700 text-center w-[12%]">ملاحظات</th>
+                                    <th className="p-3 border-l border-teal-700 text-center w-[8%]">ملاحظات</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">
-                                {currentPlan.interventions?.map((inv, idx) => (
-                                    <tr key={idx} className="hover:bg-teal-50 bg-white transition-colors">
-                                        <td className="p-3 border border-gray-200 font-bold text-teal-800 bg-teal-50/30">{inv.axis}</td>
-                                        <td className="p-3 border border-gray-200 text-gray-800 leading-relaxed">{inv.name}</td>
-                                        <td className="p-3 border border-gray-200 text-teal-700 text-xs font-bold">{ACTIVITY_INDICATOR_MAP[inv.name] || inv.indicator}</td>
-                                        
-                                        <td className="p-0 border border-gray-200 bg-teal-50/10">
-                                            <input 
-                                                type="text" 
-                                                inputMode="numeric" 
-                                                pattern="[0-9]*" 
-                                                className={numInputClass} 
-                                                value={inv.planned ?? ''} 
-                                                onChange={(e) => updateIntervention(idx, 'planned', e.target.value)} 
-                                                placeholder="0" 
-                                            />
-                                        </td>
-                                        <td className="p-0 border border-gray-200">
-                                            <input 
-                                                type="text" 
-                                                inputMode="numeric" 
-                                                pattern="[0-9]*" 
-                                                className={numInputClass} 
-                                                value={inv.baseline ?? ''} 
-                                                onChange={(e) => updateIntervention(idx, 'baseline', e.target.value)} 
-                                                placeholder="0" 
-                                            />
-                                        </td>
-                                        
-                                        <td className="p-0 border border-gray-200">
-                                            <input 
-                                                type="text" 
-                                                inputMode="numeric" 
-                                                pattern="[0-9]*" 
-                                                className={`${numInputClass} text-indigo-700 bg-indigo-50/20`} 
-                                                value={inv.target ?? ''} 
-                                                onChange={(e) => updateIntervention(idx, 'target', e.target.value)} 
-                                                placeholder="0" 
-                                            />
-                                        </td>
-                                        
-                                        <td className="p-0 border border-gray-200"><input type="text" inputMode="numeric" pattern="[0-9]*" className={`${numInputClass} bg-gray-50`} value={inv.totalCost ?? ''} onChange={(e) => updateIntervention(idx, 'totalCost', e.target.value)} placeholder="0" /></td>
-                                        <td className="p-0 border border-gray-200"><textarea className={`${inputClass} resize-none`} rows={1} value={inv.notes || ''} onChange={(e) => updateIntervention(idx, 'notes', e.target.value)} placeholder="ملاحظات..." /></td>
-                                    </tr>
-                                ))}
+                                {currentPlan.interventions?.map((inv, idx) => {
+                                    const systemData = computeSystemBaseline(inv.name, currentPlan.state, currentPlan.locality);
+                                    
+                                    const targetVal = Number(inv.target) || 0;
+                                    let targetDisplay = targetVal.toString();
+                                    if (systemData.isFacilityBased && systemData.totalPhcs > 0) {
+                                        const percentage = Math.min(100, Math.round((targetVal / systemData.totalPhcs) * 100));
+                                        targetDisplay = `${targetVal} (${percentage}%)`;
+                                    }
+
+                                    return (
+                                        <tr key={idx} className="hover:bg-teal-50 bg-white transition-colors">
+                                            <td className="p-3 border border-gray-200 font-bold text-teal-800 bg-teal-50/30">{inv.axis}</td>
+                                            <td className="p-3 border border-gray-200 text-gray-800 leading-relaxed">{inv.name}</td>
+                                            <td className="p-3 border border-gray-200 text-teal-700 text-xs font-bold">{ACTIVITY_INDICATOR_MAP[inv.name] || inv.indicator}</td>
+                                            
+                                            <td className="p-3 border border-gray-200 text-amber-800 text-xs font-bold text-center bg-amber-50/50">
+                                                {systemData.text}
+                                            </td>
+
+                                            <td className="p-0 border border-gray-200">
+                                                <input 
+                                                    type="text" 
+                                                    inputMode="numeric" 
+                                                    pattern="[0-9]*" 
+                                                    className={numInputClass} 
+                                                    value={inv.baseline ?? ''} 
+                                                    onChange={(e) => updateIntervention(idx, 'baseline', e.target.value)} 
+                                                    placeholder="0" 
+                                                />
+                                            </td>
+                                            
+                                            <td className="p-0 border border-gray-200 bg-teal-50/10">
+                                                <input 
+                                                    type="text" 
+                                                    inputMode="numeric" 
+                                                    pattern="[0-9]*" 
+                                                    className={numInputClass} 
+                                                    value={inv.planned ?? ''} 
+                                                    onChange={(e) => updateIntervention(idx, 'planned', e.target.value)} 
+                                                    placeholder="0" 
+                                                />
+                                            </td>
+
+                                            <td className="p-2 border border-gray-200 bg-sky-50/20 align-top text-center">
+                                                {systemData.hasGapTargeting ? (
+                                                    <TargetedFacilitiesSelect 
+                                                        options={systemData.gapFacilities} 
+                                                        selectedIds={inv.targetedFacilities || []} 
+                                                        onChange={(newIds) => updateIntervention(idx, 'targetedFacilities', newIds)}
+                                                    />
+                                                ) : (
+                                                    <div className="text-[11px] text-gray-400 py-2 bg-gray-50 border border-gray-200 rounded">لا ينطبق</div>
+                                                )}
+                                            </td>
+                                            
+                                            <td className="p-0 border border-gray-200">
+                                                <input 
+                                                    type="text" 
+                                                    className={`${numInputClass} text-indigo-700 bg-indigo-50/20 cursor-not-allowed font-extrabold`} 
+                                                    value={targetDisplay} 
+                                                    readOnly
+                                                    placeholder="0" 
+                                                    title="التغطية = المُخطط + الابتدائي"
+                                                />
+                                            </td>
+                                            
+                                            <td className="p-0 border border-gray-200"><input type="text" inputMode="numeric" pattern="[0-9]*" className={`${numInputClass} bg-gray-50`} value={inv.totalCost ?? ''} onChange={(e) => updateIntervention(idx, 'totalCost', e.target.value)} placeholder="0" /></td>
+                                            <td className="p-0 border border-gray-200"><textarea className={`${inputClass} resize-none`} rows={1} value={inv.notes || ''} onChange={(e) => updateIntervention(idx, 'notes', e.target.value)} placeholder="ملاحظات..." /></td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>
@@ -485,7 +759,7 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                                 plan.interventions?.forEach(inv => {
                                     const actualIndicator = ACTIVITY_INDICATOR_MAP[inv.name] || inv.indicator || 'عدد';
                                     if (!planKpis[actualIndicator]) planKpis[actualIndicator] = 0;
-                                    planKpis[actualIndicator] += Number(inv.planned) || 0; // جمع حقل المخطط للفردي
+                                    planKpis[actualIndicator] += Number(inv.planned) || 0; 
                                 });
                                 const planKpisArr = Object.entries(planKpis).map(([name, count]) => ({name, count})).filter(k => k.count > 0);
 
@@ -508,18 +782,19 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                                         </div>
                                         {expandedPlanId === plan.id && (
                                             <div className="p-2 sm:p-4">
-                                                {planKpisArr.length > 0 && (
-                                                    <div className="mb-4 p-3 bg-indigo-50 border border-indigo-100 rounded-lg">
-                                                        <h5 className="text-xs font-bold text-indigo-800 mb-2 flex items-center gap-1"><Target size={14}/> ملخص مؤشرات المُخطط:</h5>
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {planKpisArr.map((kpi, kIdx) => (
-                                                                <span key={kIdx} className="bg-white border border-indigo-200 text-indigo-700 text-[10px] sm:text-xs font-bold px-2 py-1 rounded">
-                                                                    {kpi.name}: <span className="text-gray-800 ml-1">{kpi.count.toLocaleString()}</span>
-                                                                </span>
-                                                            ))}
-                                                        </div>
+                                                <div className="mb-4 p-3 bg-indigo-50 border border-indigo-100 rounded-lg">
+                                                    <h5 className="text-xs font-bold text-indigo-800 mb-2 flex items-center gap-1"><Target size={14}/> ملخص مؤشرات المُخطط:</h5>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        <span className="bg-white border border-orange-200 text-orange-700 text-[10px] sm:text-xs font-bold px-2 py-1 rounded">
+                                                            إجمالي الميزانية: <span className="text-gray-800 ml-1">{plan.interventions.reduce((sum, inv) => sum + (Number(inv.totalCost) || 0), 0).toLocaleString()}</span>
+                                                        </span>
+                                                        {planKpisArr.map((kpi, kIdx) => (
+                                                            <span key={kIdx} className="bg-white border border-indigo-200 text-indigo-700 text-[10px] sm:text-xs font-bold px-2 py-1 rounded">
+                                                                {kpi.name}: <span className="text-gray-800 ml-1">{kpi.count.toLocaleString()}</span>
+                                                            </span>
+                                                        ))}
                                                     </div>
-                                                )}
+                                                </div>
 
                                                 <div className="overflow-x-auto">
                                                     <table className="w-full text-xs sm:text-sm text-right border-collapse min-w-[1000px]">
@@ -530,24 +805,41 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                                                                 <th className="p-3 border-l border-slate-200 w-[15%]">المؤشر</th>
                                                                 <th className="p-3 border-l border-slate-200 text-center w-[8%] text-indigo-700">المُخطط</th>
                                                                 <th className="p-3 border-l border-slate-200 text-center w-[8%]">الابتدائي</th>
-                                                                <th className="p-3 border-l border-slate-200 text-center w-[8%] bg-indigo-50">المستهدف</th>
+                                                                <th className="p-3 border-l border-slate-200 text-center w-[8%] bg-indigo-50">التغطية النهائية بالمحلية</th>
                                                                 <th className="p-3 border-l border-slate-200 text-center w-[8%]">التكلفة</th>
                                                                 <th className="p-3 border-l border-slate-200 text-center w-[12%]">ملاحظات</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody className="divide-y divide-gray-100">
-                                                            {plan.interventions?.filter(inv => Number(inv.target) > 0 || Number(inv.baseline) > 0 || Number(inv.planned) > 0 || Number(inv.totalCost) > 0).map(inv => (
-                                                                <tr key={inv.id} className="hover:bg-gray-50">
-                                                                    <td className="p-3 border-l border-slate-200 text-gray-600 font-bold">{inv.axis}</td>
-                                                                    <td className="p-3 border-l border-slate-200 text-gray-800 leading-relaxed">{inv.name}</td>
-                                                                    <td className="p-3 border-l border-slate-200 text-teal-700 text-xs font-bold">{ACTIVITY_INDICATOR_MAP[inv.name] || inv.indicator}</td>
-                                                                    <td className="p-3 border-l border-slate-200 text-center font-bold text-indigo-600 bg-indigo-50/30 text-base">{inv.planned || 0}</td>
-                                                                    <td className="p-3 border-l border-slate-200 text-center font-bold text-gray-600 text-base">{inv.baseline || 0}</td>
-                                                                    <td className="p-3 border-l border-slate-200 text-center font-bold text-teal-600 bg-teal-50/20 text-base">{inv.target || 0}</td>
-                                                                    <td className="p-3 border-l border-slate-200 text-center font-medium">{Number(inv.totalCost||0).toLocaleString()}</td>
-                                                                    <td className="p-3 border-l border-slate-200 text-xs text-gray-500 whitespace-normal">{inv.notes || '-'}</td>
-                                                                </tr>
-                                                            ))}
+                                                            {plan.interventions?.filter(inv => Number(inv.target) > 0 || Number(inv.baseline) > 0 || Number(inv.planned) > 0 || Number(inv.totalCost) > 0).map(inv => {
+                                                                const isFacilityBasedIndicator = ['توفير ميزان وزن', 'توفير ميزان طول', 'توفير ميزان حرارة', 'توفير مؤقت تنفس', 'توفير كتيب لوحات', 'توفير سجل استمارات العلاج المتكامل + كرت الام'].includes(inv.name);
+                                                                const targetValue = Number(inv.target) || 0;
+                                                                const systemData = computeSystemBaseline(inv.name, plan.state, plan.locality);
+                                                                
+                                                                const targetDisplay = isFacilityBasedIndicator && systemData.totalPhcs > 0 
+                                                                    ? `${targetValue} (${Math.min(100, Math.round((targetValue / systemData.totalPhcs) * 100))}%)`
+                                                                    : targetValue.toLocaleString();
+
+                                                                return (
+                                                                    <tr key={inv.id} className="hover:bg-gray-50">
+                                                                        <td className="p-3 border-l border-slate-200 text-gray-600 font-bold">{inv.axis}</td>
+                                                                        <td className="p-3 border-l border-slate-200 text-gray-800 leading-relaxed">{inv.name}</td>
+                                                                        <td className="p-3 border-l border-slate-200 text-teal-700 text-xs font-bold">{ACTIVITY_INDICATOR_MAP[inv.name] || inv.indicator}</td>
+                                                                        <td className="p-3 border-l border-slate-200 text-center font-bold text-indigo-600 bg-indigo-50/30 text-base">{inv.planned || 0}</td>
+                                                                        <td className="p-3 border-l border-slate-200 text-center font-bold text-gray-600 text-base">{inv.baseline || 0}</td>
+                                                                        <td className="p-3 border-l border-slate-200 text-center font-bold text-teal-600 bg-teal-50/20 text-base">{targetDisplay}</td>
+                                                                        <td className="p-3 border-l border-slate-200 text-center font-medium">{Number(inv.totalCost||0).toLocaleString()}</td>
+                                                                        <td className="p-3 border-l border-slate-200 text-xs text-gray-500 whitespace-normal">
+                                                                            {inv.notes || '-'}
+                                                                            {inv.targetedFacilities && inv.targetedFacilities.length > 0 && (
+                                                                                <div className="mt-1 text-[10px] text-teal-600 font-semibold bg-teal-50 p-1 rounded">
+                                                                                    <CheckSquare size={10} className="inline mr-1" /> المستهدف: {inv.targetedFacilities.length} مؤسسة
+                                                                                </div>
+                                                                            )}
+                                                                        </td>
+                                                                    </tr>
+                                                                );
+                                                            })}
                                                         </tbody>
                                                     </table>
                                                 </div>
@@ -564,13 +856,32 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
             {/* TAB: DASHBOARD */}
             {activeTab === 'dashboard' && (
                 <div className="space-y-6 animate-in fade-in pt-4">
-                    {dashboardIndicatorKpis.length > 0 && (
+                    
+                    {/* Separate Action Bar - EXCLUDED from PDF */}
+                    <div className="bg-white border rounded-lg shadow-sm p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div className="flex items-center gap-2">
+                            <FileText className="text-teal-600"/> 
+                            <h4 className="font-bold text-gray-800 text-sm sm:text-base">لوحة المؤشرات والتصدير</h4>
+                        </div>
+                        <Button size="sm" variant="primary" onClick={exportDashboardPDF} disabled={isPdfGenerating} className="w-full sm:w-auto justify-center bg-teal-600 hover:bg-teal-700 border-0 h-12 sm:h-auto">
+                            {isPdfGenerating ? <Spinner size="sm" className="ml-2" /> : <Download size={14} className="ml-1" />}
+                            {isPdfGenerating ? 'جاري التصدير...' : 'تصدير التقرير PDF'}
+                        </Button>
+                    </div>
+
+                    {/* WRAPPER FOR PDF EXPORT */}
+                    <div id="locality-dashboard-export" className="space-y-6 bg-transparent pb-4">
+                        
                         <div className="bg-white p-4 rounded-lg border shadow-sm">
                             <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
                                 <Target className="text-teal-600" size={18} />
                                 ملخص مؤشرات المُخطط (مجموع الخطط المعروضة)
                             </h4>
                             <div className="flex flex-wrap gap-3">
+                                <div className="bg-orange-50 border border-orange-200 px-3 py-2 rounded-md flex items-center gap-2 shadow-sm">
+                                    <span className="text-xs font-semibold text-orange-800">إجمالي الميزانية (Total Budget):</span>
+                                    <span className="text-sm font-bold text-orange-700">{dashboardStats.totalBudget.toLocaleString()}</span>
+                                </div>
                                 {dashboardIndicatorKpis.map((kpi, idx) => (
                                     <div key={idx} className="bg-teal-50 border border-teal-200 px-3 py-2 rounded-md flex items-center gap-2 shadow-sm">
                                         <span className="text-xs font-semibold text-teal-800">{kpi.name}:</span>
@@ -579,54 +890,54 @@ export default function LocalityPlanView({ permissions, userStates, userLocaliti
                                 ))}
                             </div>
                         </div>
-                    )}
 
-                    <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
-                        <div className="p-4 border-b bg-gray-50 flex flex-col sm:flex-row justify-between items-start sm:items-center flex-wrap gap-4">
-                            <div className="flex items-center gap-2">
-                                <FileText className="text-teal-600"/> 
+                        <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
+                            <div className="p-4 border-b bg-gray-50 flex items-center gap-2">
+                                <BarChart2 className="text-teal-600"/> 
                                 <h4 className="font-bold text-gray-800 text-sm sm:text-base">جدول التخطيط القاعدي المجمع بناءً على الفلاتر</h4>
                             </div>
-                            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                                <Button size="sm" variant="primary" onClick={exportDashboardPDF} disabled={isPdfGenerating} className="w-full sm:w-auto justify-center bg-teal-600 hover:bg-teal-700 border-0 h-12 sm:h-auto">
-                                    {isPdfGenerating ? <Spinner size="sm" className="ml-2" /> : <Download size={14} className="ml-1" />}
-                                    {isPdfGenerating ? 'جاري التصدير...' : 'تصدير التقرير PDF'}
-                                </Button>
-                            </div>
-                        </div>
 
-                        <div id="locality-dashboard-export" className="overflow-x-auto w-full pb-4">
-                            <table className="w-full text-xs sm:text-sm text-right border-collapse min-w-[1000px]">
-                                <thead className="bg-slate-800 text-white">
-                                    <tr>
-                                        <th className="p-3 border-l border-slate-700 w-[15%]">المحور</th>
-                                        <th className="p-3 border-l border-slate-700 w-[30%]">النشاط</th>
-                                        <th className="p-3 border-l border-slate-700 w-[15%]">المؤشر</th>
-                                        <th className="p-3 border-l border-slate-700 text-center w-[10%]">المُخطط الإجمالي</th>
-                                        <th className="p-3 border-l border-slate-700 text-center w-[10%]">الابتدائي الإجمالي</th>
-                                        <th className="p-3 border-l border-slate-700 text-center w-[10%] bg-indigo-900">المستهدف الكلي</th>
-                                        <th className="p-3 border-l border-slate-700 text-center w-[10%]">التكلفة الإجمالية</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-200">
-                                    {aggregatedPlan.filter(r => r.target > 0 || r.baseline > 0 || r.planned > 0 || r.totalCost > 0).map((row, idx) => (
-                                        <tr key={idx} className="hover:bg-teal-50 transition-colors bg-white">
-                                            <td className="p-3 border-l border-slate-200 font-bold text-teal-800 bg-teal-50/20">{row.axis}</td>
-                                            <td className="p-3 border-l border-slate-200 text-gray-800 font-medium">{row.name}</td>
-                                            <td className="p-3 border-l border-slate-200 text-teal-700 text-xs font-bold">{row.indicator}</td>
-                                            <td className="p-3 border-l border-slate-200 text-center font-bold text-gray-700">{row.planned.toLocaleString()}</td>
-                                            <td className="p-3 border-l border-slate-200 text-center font-bold text-gray-700">{row.baseline.toLocaleString()}</td>
-                                            <td className="p-3 border-l border-slate-200 text-center font-bold text-teal-700 bg-teal-50/20 text-base">{row.target.toLocaleString()}</td>
-                                            <td className="p-3 border-l border-slate-200 text-center font-bold text-orange-600">{row.totalCost.toLocaleString()}</td>
-                                        </tr>
-                                    ))}
-                                    {aggregatedPlan.filter(r => r.target > 0 || r.baseline > 0 || r.planned > 0 || r.totalCost > 0).length === 0 && (
+                            <div className="overflow-x-auto w-full pb-4">
+                                <table className="w-full text-xs sm:text-sm text-right border-collapse min-w-[1000px]">
+                                    <thead className="bg-slate-800 text-white">
                                         <tr>
-                                            <td colSpan="7" className="text-center p-8 text-gray-500 bg-white">لا توجد بيانات مجمعة لعرضها بناءً على الفلاتر الحالية.</td>
+                                            <th className="p-3 border-l border-slate-700 w-[15%]">المحور</th>
+                                            <th className="p-3 border-l border-slate-700 w-[30%]">النشاط</th>
+                                            <th className="p-3 border-l border-slate-700 w-[15%]">المؤشر</th>
+                                            <th className="p-3 border-l border-slate-700 text-center w-[10%]">الابتدائي الإجمالي</th>
+                                            <th className="p-3 border-l border-slate-700 text-center w-[10%]">المُخطط الإجمالي</th>
+                                            <th className="p-3 border-l border-slate-700 text-center w-[10%] bg-indigo-900">التغطية النهائية بالمحلية</th>
+                                            <th className="p-3 border-l border-slate-700 text-center w-[10%]">التكلفة الإجمالية</th>
                                         </tr>
-                                    )}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200">
+                                        {aggregatedPlan.filter(r => r.target > 0 || r.baseline > 0 || r.planned > 0 || r.totalCost > 0).map((row, idx) => {
+                                            const isFacilityBasedIndicator = ['توفير ميزان وزن', 'توفير ميزان طول', 'توفير ميزان حرارة', 'توفير مؤقت تنفس', 'توفير كتيب لوحات', 'توفير سجل استمارات العلاج المتكامل + كرت الام'].includes(row.name);
+                                            const targetValue = Number(row.target) || 0;
+                                            const targetDisplay = isFacilityBasedIndicator && currentTotalPhcs > 0 
+                                                ? `${targetValue} (${Math.min(100, Math.round((targetValue / currentTotalPhcs) * 100))}%)`
+                                                : targetValue.toLocaleString();
+
+                                            return (
+                                                <tr key={idx} className="hover:bg-teal-50 transition-colors bg-white">
+                                                    <td className="p-3 border-l border-slate-200 font-bold text-teal-800 bg-teal-50/20">{row.axis}</td>
+                                                    <td className="p-3 border-l border-slate-200 text-gray-800 font-medium">{row.name}</td>
+                                                    <td className="p-3 border-l border-slate-200 text-teal-700 text-xs font-bold">{row.indicator}</td>
+                                                    <td className="p-3 border-l border-slate-200 text-center font-bold text-gray-700">{row.baseline.toLocaleString()}</td>
+                                                    <td className="p-3 border-l border-slate-200 text-center font-bold text-gray-700">{row.planned.toLocaleString()}</td>
+                                                    <td className="p-3 border-l border-slate-200 text-center font-bold text-teal-700 bg-teal-50/20 text-base">{targetDisplay}</td>
+                                                    <td className="p-3 border-l border-slate-200 text-center font-bold text-orange-600">{row.totalCost.toLocaleString()}</td>
+                                                </tr>
+                                            );
+                                        })}
+                                        {aggregatedPlan.filter(r => r.target > 0 || r.baseline > 0 || r.planned > 0 || r.totalCost > 0).length === 0 && (
+                                            <tr>
+                                                <td colSpan="7" className="text-center p-8 text-gray-500 bg-white">لا توجد بيانات مجمعة لعرضها بناءً على الفلاتر الحالية.</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>

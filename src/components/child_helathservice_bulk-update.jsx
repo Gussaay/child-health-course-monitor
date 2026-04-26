@@ -1,16 +1,19 @@
 // child_helathservice_bulk-update.jsx
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
+import { getAuth } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 
 // --- ICONS ---
 import { Plus, Trash2, Edit } from 'lucide-react';
 
 // --- DATA & CONFIG ---
-import { submitFacilityDataForApproval } from "../data.js"; 
+import { db } from "../firebase";
+import { submitFacilityDataForApproval, saveFacilitySnapshot } from "../data.js"; 
 import { useDataCache } from '../DataContext'; 
 import { STATE_LOCALITIES } from "./constants.js";
 import { amiriFontBase64 } from './AmiriFont.js';
@@ -30,40 +33,115 @@ const LOCALITY_EN_TO_AR_MAP = Object.values(STATE_LOCALITIES).flatMap(s => s.loc
 const OWNERSHIP_OPTIONS = ['حكومي', 'خاص', 'منظمات', 'اهلي'];
 const FACILITY_TYPE_OPTIONS = ["مستشفى", "مستشفى ريفي", "مستشفى تخصصي", "مركز صحة الاسرة", "وحدة صحة الاسرة", "شفخانه", "نقطة غيار"];
 
-// --- HELPER: CALCULATE KPIS ---
-const calculateKPIs = (facilities, updates, config) => {
-    let targetFacilities = facilities;
-    
-    if (config.facilityTypes) {
-         targetFacilities = facilities.filter(f => {
-            const type = updates[f.id]?.['نوع_المؤسسةالصحية'] ?? f['نوع_المؤسسةالصحية'];
-            return config.facilityTypes.some(t => t === type || type?.includes(t));
-        });
-    }
+const SERVICE_TYPE_OPTIONS = [
+    { value: 'CEmONC', label: 'طواري شاملة (CEmONC)' },
+    { value: 'BEmONC', label: 'طواري أساسية (BEmONC)' },
+    { value: 'pediatric', label: 'مستشفى اطفال' },
+    { value: 'general', label: 'خدمات عامة' }
+];
+
+const getPct = (val, total) => total > 0 ? Math.round((val / total) * 100) : 0;
+
+// --- HELPER: GET LIVE VALUE (Includes unsaved edits) ---
+const getVal = (f, key, updates) => updates[f.id]?.[key] ?? f[key];
+const isYes = (val) => val === 'Yes' || val === true;
+
+// --- HELPER: CALCULATE DYNAMIC KPIS (Dashboard Logic) ---
+const calculateKPIs = (targetFacilities, updates, serviceCategory) => {
     const total = targetFacilities.length;
     if (total === 0) return null;
 
-    const countYes = (key) => targetFacilities.filter(f => {
-        const val = updates[f.id]?.[key] ?? f[key];
-        return val === 'Yes' || val === true;
-    }).length;
+    const countYes = (key) => targetFacilities.filter(f => isYes(getVal(f, key, updates))).length;
+    const sumNumber = (key) => targetFacilities.reduce((sum, f) => sum + (Number(getVal(f, key, updates)) || 0), 0);
 
-    const imnciCount = countYes('وجود_العلاج_المتكامل_لامراض_الطفولة');
-    const orsCount = countYes('غرفة_إرواء');
-    const timerCount = countYes('ساعة_مؤقت');
-    const scaleCount = countYes('ميزان_وزن');
+    // 1. IMNCI Logic
+    const functioningPhcs = targetFacilities.filter(f => 
+        isYes(getVal(f, 'هل_المؤسسة_تعمل', updates)) && 
+        ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(getVal(f, 'نوع_المؤسسةالصحية', updates))
+    );
+    const imnciInPhcs = functioningPhcs.filter(f => isYes(getVal(f, 'وجود_العلاج_المتكامل_لامراض_الطفولة', updates)));
 
-    return {
-        total,
-        imnciCount,
-        imnciPercentage: Math.round((imnciCount / total) * 100),
-        orsCount,
-        orsPercentage: Math.round((orsCount / total) * 100),
-        timerCount,
-        timerPercentage: Math.round((timerCount / total) * 100),
-        scaleCount,
-        scalePercentage: Math.round((scaleCount / total) * 100),
-    };
+    // 2. EENC Logic
+    const emoncFacilities = targetFacilities.filter(f => 
+        ['BEmONC', 'CEmONC'].includes(getVal(f, 'eenc_service_type', updates)) && 
+        isYes(getVal(f, 'هل_المؤسسة_تعمل', updates))
+    );
+    const eencProviders = emoncFacilities.filter(f => isYes(getVal(f, 'eenc_provides_essential_care', updates)));
+
+    // 3. Neonatal (SCNU) Logic
+    const supposedScnuFacilities = targetFacilities.filter(f => {
+        const sType = getVal(f, 'eenc_service_type', updates);
+        const p = getVal(f, 'neonatal_level_primary', updates) ?? f.neonatal_level_of_care?.primary;
+        const s = getVal(f, 'neonatal_level_secondary', updates) ?? f.neonatal_level_of_care?.secondary;
+        const t = getVal(f, 'neonatal_level_tertiary', updates) ?? f.neonatal_level_of_care?.tertiary;
+        return ['CEmONC', 'pediatric'].includes(sType) || isYes(p) || isYes(s) || isYes(t);
+    });
+    const functioningScnus = supposedScnuFacilities.filter(f => 
+        isYes(getVal(f, 'هل_المؤسسة_تعمل', updates)) && 
+        isYes(getVal(f, 'neonatal_level_secondary', updates) ?? f.neonatal_level_of_care?.secondary)
+    );
+
+    // 4. Critical Care (ETAT) Logic
+    const targetHospitals = targetFacilities.filter(f => 
+        ['مستشفى', 'مستشفى ريفي'].includes(getVal(f, 'نوع_المؤسسةالصحية', updates)) || 
+        getVal(f, 'eenc_service_type', updates) === 'pediatric'
+    );
+    const hospitalsWithEtat = targetHospitals.filter(f => isYes(getVal(f, 'etat_has_service', updates)));
+
+    if (serviceCategory === 'IMNCI') {
+        return {
+            total,
+            type: 'IMNCI',
+            imnci: imnciInPhcs.length,
+            imnciTotal: functioningPhcs.length, 
+            ors: countYes('غرفة_إرواء'),
+            timer: countYes('ساعة_مؤقت'),
+            scale: countYes('ميزان_وزن'),
+        };
+    } else if (serviceCategory === 'EENC') {
+        return {
+            total,
+            type: 'EENC',
+            eenc: eencProviders.length,
+            eencTotal: emoncFacilities.length, 
+            ambu: sumNumber('eenc_ambu_bags'),
+            resuscitation: sumNumber('eenc_resuscitation_stations'),
+            workers: sumNumber('eenc_trained_workers')
+        };
+    } else if (serviceCategory === 'Neonatal') {
+        return {
+            total,
+            type: 'Neonatal',
+            scnu: functioningScnus.length,
+            scnuTotal: supposedScnuFacilities.length, 
+            primary: countYes('neonatal_level_primary') || targetFacilities.filter(f=>isYes(f.neonatal_level_of_care?.primary)).length,
+            secondary: countYes('neonatal_level_secondary') || targetFacilities.filter(f=>isYes(f.neonatal_level_of_care?.secondary)).length,
+            tertiary: countYes('neonatal_level_tertiary') || targetFacilities.filter(f=>isYes(f.neonatal_level_of_care?.tertiary)).length,
+            kmc: countYes('neonatal_kmc_unit')
+        };
+    } else if (serviceCategory === 'Critical Care') {
+        return {
+            total,
+            type: 'Critical',
+            etat: hospitalsWithEtat.length,
+            etatTotal: targetHospitals.length, 
+            hdu: countYes('hdu_has_service'),
+            picu: countYes('picu_has_service')
+        };
+    } else {
+        return {
+            total,
+            type: 'General',
+            imnci: imnciInPhcs.length,
+            imnciTotal: functioningPhcs.length,
+            eenc: eencProviders.length,
+            eencTotal: emoncFacilities.length,
+            scnu: functioningScnus.length,
+            scnuTotal: supposedScnuFacilities.length,
+            critical: hospitalsWithEtat.length,
+            criticalTotal: targetHospitals.length
+        };
+    }
 };
 
 // --- HELPER COMPONENT: STAFF MANAGEMENT MODAL ---
@@ -145,6 +223,7 @@ const StaffManagementModal = ({ isOpen, onClose, facilityName, initialStaff, onS
                                         >
                                             <option value="No">لا</option>
                                             <option value="Yes">نعم</option>
+                                            <option value="Planned">مخططة</option>
                                         </Select>
                                     </FormGroup>
                                     {staff.is_trained === 'Yes' && (
@@ -186,7 +265,8 @@ const StaffManagementModal = ({ isOpen, onClose, facilityName, initialStaff, onS
 
 // --- MAIN EXPORT: BULK UPDATE VIEW ---
 const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }) => {
-    const { fetchHealthFacilities } = useDataCache(); // Use cache fetcher
+    const { healthFacilities, fetchHealthFacilities, isLoading } = useDataCache();
+    const isFetchingData = isLoading?.healthFacilities || false;
 
     const currentFilters = useMemo(() => {
         if (filters && Object.keys(filters).length > 0) return filters;
@@ -196,19 +276,42 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
     const activeService = currentFilters.service || 'General';
     
     // States
-    const [facilities, setFacilities] = useState([]);
-    const [allProjectOptions, setAllProjectOptions] = useState([]); // Global project list
-    const [loading, setLoading] = useState(true);
     const [updates, setUpdates] = useState({}); 
+    const [canApprove, setCanApprove] = useState(false); 
+    const [isSaving, setIsSaving] = useState(false); 
+    
+    // Pagination & Display States
+    const [displayedFacilities, setDisplayedFacilities] = useState([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(50);
+    const [viewKpiData, setViewKpiData] = useState(null);
+    const [isFiltering, setIsFiltering] = useState(false);
     
     // Search & Filter States
     const [searchTerm, setSearchTerm] = useState('');
     const [ownershipFilter, setOwnershipFilter] = useState(''); 
+    const [selectedServiceTypes, setSelectedServiceTypes] = useState([]); 
     
-    // UI Filters to narrow down the fetched results
-    const [localStateFilter, setLocalStateFilter] = useState(currentFilters.state && currentFilters.state !== 'ALL_STATES' ? currentFilters.state : 'All');
+    // UI Filters
+    const [localStateFilter, setLocalStateFilter] = useState(
+        currentFilters.state && currentFilters.state !== 'ALL_STATES' && currentFilters.state !== 'NOT_ASSIGNED' 
+        ? currentFilters.state 
+        : 'All'
+    );
     const [localLocalityFilter, setLocalLocalityFilter] = useState(currentFilters.locality || 'All');
-    
+    const [localProjectFilter, setLocalProjectFilter] = useState(currentFilters.project || 'All');
+
+    // Reset pagination to Page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [localStateFilter, localLocalityFilter, localProjectFilter, searchTerm, ownershipFilter, selectedServiceTypes]);
+
+    // Initial background fetch. We fetch all data {} so we don't corrupt the global DataContext cache.
+    // We rely purely on the useMemo filter + pagination to prevent UI freezing.
+    useEffect(() => {
+        fetchHealthFacilities({}, false);
+    }, [fetchHealthFacilities]);
+
     const tableRef = useRef(null);
     
     // Staff Modal State
@@ -217,25 +320,35 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
     const [selectedFacilityName, setSelectedFacilityName] = useState('');
     const [currentStaffList, setCurrentStaffList] = useState([]);
 
-    // --- FETCH GLOBAL PROJECT NAMES FOR DROPDOWN (USING CACHE) ---
+    // --- CHECK USER PERMISSIONS FOR DIRECT SAVE ---
     useEffect(() => {
-        const fetchAllProjects = async () => {
-            try {
-                // Fetch from cache, force=false
-                const allData = await fetchHealthFacilities({}, false); 
-                const names = new Set();
-                allData.forEach(f => {
-                    if (f.project_name && f.project_name.trim() !== '') {
-                        names.add(f.project_name.trim());
+        const checkPerms = async () => {
+            const auth = getAuth();
+            if (auth.currentUser) {
+                const userRef = doc(db, 'users', auth.currentUser.uid);
+                const snap = await getDoc(userRef);
+                if (snap.exists()) {
+                    const data = snap.data();
+                    if (data.role === 'super_user' || data.role === 'federal_manager' || data.permissions?.canApproveSubmissions) {
+                        setCanApprove(true);
                     }
-                });
-                setAllProjectOptions(Array.from(names).sort());
-            } catch (err) {
-                console.error("Failed to fetch global project list:", err);
+                }
             }
         };
-        fetchAllProjects();
-    }, [fetchHealthFacilities]);
+        checkPerms();
+    }, []);
+
+    // --- SYNCHRONOUSLY DERIVE PROJECTS FROM CACHE ---
+    const allProjectOptions = useMemo(() => {
+        if (!healthFacilities) return [];
+        const names = new Set();
+        healthFacilities.forEach(f => {
+            if (f.project_name && f.project_name.trim() !== '') {
+                names.add(f.project_name.trim());
+            }
+        });
+        return Array.from(names).sort();
+    }, [healthFacilities]);
 
     // --- CONFIG ---
     const BULK_VIEW_CONFIG = useMemo(() => ({
@@ -245,10 +358,16 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
             columns: [
                 { key: 'facility_ownership', label: 'ملكية المؤسسة', type: 'select', options: OWNERSHIP_OPTIONS },
                 { key: 'project_name', label: 'اسم المشروع', type: 'select', options: allProjectOptions },
+                { key: 'eenc_service_type', label: 'نوع الخدمة', type: 'readonly' },
                 { key: 'هل_المؤسسة_تعمل', label: 'هل المؤسسة تعمل', type: 'select', options: ['Yes', 'No'] },
-                { key: 'وجود_العلاج_المتكامل_لامراض_الطفولة', label: 'العلاج المتكامل', type: 'select', options: ['Yes', 'No'] },
-                { key: 'eenc_provides_essential_care', label: 'رعاية حديثي الولادة', type: 'select', options: ['Yes', 'No'] },
-                { key: 'neonatal_level_of_care_primary', label: 'الرعاية المبكرة', type: 'select', options: ['Yes', 'No'] }
+                { key: 'وجود_العلاج_المتكامل_لامراض_الطفولة', label: 'العلاج المتكامل', type: 'select', options: ['Yes', 'No', 'Planned'] },
+                { key: 'eenc_provides_essential_care', label: 'رعاية EENC', type: 'select', options: ['Yes', 'No', 'Planned'] },
+                { key: 'neonatal_level_primary', label: 'حضانة مستوى 1', type: 'select', options: ['Yes', 'No', 'Planned'] },
+                { key: 'neonatal_level_secondary', label: 'حضانة مستوى 2', type: 'select', options: ['Yes', 'No', 'Planned'] },
+                { key: 'neonatal_level_tertiary', label: 'حضانة مستوى 3', type: 'select', options: ['Yes', 'No', 'Planned'] },
+                { key: 'etat_has_service', label: 'فرز الحالات (ETAT)', type: 'select', options: ['Yes', 'No', 'Planned'] },
+                { key: 'hdu_has_service', label: 'عناية وسيطة (HDU)', type: 'select', options: ['Yes', 'No', 'Planned'] },
+                { key: 'picu_has_service', label: 'عناية مكثفة (PICU)', type: 'select', options: ['Yes', 'No', 'Planned'] }
             ]
         },
         'IMNCI': {
@@ -258,7 +377,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
                 { key: 'facility_ownership', label: 'ملكية المؤسسة', type: 'select', options: OWNERSHIP_OPTIONS },
                 { key: 'project_name', label: 'اسم المشروع', type: 'select', options: allProjectOptions },
                 { key: 'هل_المؤسسة_تعمل', label: 'هل المؤسسة تعمل', type: 'select', options: ['Yes', 'No'] },
-                { key: 'وجود_العلاج_المتكامل_لامراض_الطفولة', label: 'وجود العلاج المتكامل', type: 'select', options: ['Yes', 'No'] },
+                { key: 'وجود_العلاج_المتكامل_لامراض_الطفولة', label: 'وجود العلاج المتكامل', type: 'select', options: ['Yes', 'No', 'Planned'] },
                 { key: 'STAFF_NAMES', label: 'اسم الكادر', type: 'staff_names' },
                 { key: 'STAFF_TRAINING', label: 'هل الكادر مدرب', type: 'staff_training' },
                 { key: 'STAFF_PHONES', label: 'رقم الهاتف', type: 'staff_phones' },
@@ -276,11 +395,12 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
             facilityTypes: ["مستشفى", "مستشفى ريفي", "مستشفى تخصصي", "Hospital", "Rural Hospital"],
             columns: [
                 { key: 'facility_ownership', label: 'ملكية المؤسسة', type: 'select', options: OWNERSHIP_OPTIONS },
+                { key: 'eenc_service_type', label: 'نوع الخدمة', type: 'readonly' },
                 { key: 'project_name', label: 'اسم المشروع', type: 'select', options: allProjectOptions },
                 { key: 'هل_المؤسسة_تعمل', label: 'هل المؤسسة تعمل', type: 'select', options: ['Yes', 'No'] },
-                { key: 'neonatal_level_of_care_primary', label: 'رعاية أولية', type: 'select', options: ['Yes', 'No'] },
-                { key: 'neonatal_level_of_care_secondary', label: 'رعاية ثانوية', type: 'select', options: ['Yes', 'No'] },
-                { key: 'neonatal_level_of_care_tertiary', label: 'رعاية تخصصية (NICU)', type: 'select', options: ['Yes', 'No'] },
+                { key: 'neonatal_level_primary', label: 'رعاية أولية', type: 'select', options: ['Yes', 'No', 'Planned'] },
+                { key: 'neonatal_level_secondary', label: 'رعاية ثانوية', type: 'select', options: ['Yes', 'No', 'Planned'] },
+                { key: 'neonatal_level_tertiary', label: 'رعاية تخصصية (NICU)', type: 'select', options: ['Yes', 'No', 'Planned'] },
                 { key: 'neonatal_total_incubators', label: 'عدد الحضانَات', type: 'number' },
                 { key: 'neonatal_kmc_unit', label: 'وحدة الكنغر (KMC)', type: 'select', options: ['Yes', 'No'] }
             ]
@@ -290,9 +410,10 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
             facilityTypes: ["مستشفى", "مستشفى ريفي", "مستشفى تخصصي", "Hospital", "Rural Hospital"],
             columns: [
                 { key: 'facility_ownership', label: 'ملكية المؤسسة', type: 'select', options: OWNERSHIP_OPTIONS },
+                { key: 'eenc_service_type', label: 'نوع الخدمة', type: 'readonly' },
                 { key: 'project_name', label: 'اسم المشروع', type: 'select', options: allProjectOptions },
                 { key: 'هل_المؤسسة_تعمل', label: 'هل المؤسسة تعمل', type: 'select', options: ['Yes', 'No'] },
-                { key: 'eenc_provides_essential_care', label: 'تقدم خدمة EENC', type: 'select', options: ['Yes', 'No'] },
+                { key: 'eenc_provides_essential_care', label: 'تقدم خدمة EENC', type: 'select', options: ['Yes', 'No', 'Planned'] },
                 { key: 'eenc_ambu_bags', label: 'عدد الامبوباق', type: 'number' },
                 { key: 'eenc_resuscitation_stations', label: 'محطات الانعاش', type: 'number' },
                 { key: 'eenc_trained_workers', label: 'عدد الكوادر المدربة', type: 'number' }
@@ -303,11 +424,12 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
             facilityTypes: ["مستشفى", "مستشفى ريفي", "مستشفى تخصصي", "Hospital", "Rural Hospital"],
             columns: [
                 { key: 'facility_ownership', label: 'ملكية المؤسسة', type: 'select', options: OWNERSHIP_OPTIONS },
+                { key: 'eenc_service_type', label: 'نوع الخدمة', type: 'readonly' },
                 { key: 'project_name', label: 'اسم المشروع', type: 'select', options: allProjectOptions },
                 { key: 'هل_المؤسسة_تعمل', label: 'هل المؤسسة تعمل', type: 'select', options: ['Yes', 'No'] },
-                { key: 'etat_has_service', label: 'فرز الحالات (ETAT)', type: 'select', options: ['Yes', 'No'] },
-                { key: 'hdu_has_service', label: 'عناية وسيطة (HDU)', type: 'select', options: ['Yes', 'No'] },
-                { key: 'picu_has_service', label: 'عناية مكثفة (PICU)', type: 'select', options: ['Yes', 'No'] },
+                { key: 'etat_has_service', label: 'فرز الحالات (ETAT)', type: 'select', options: ['Yes', 'No', 'Planned'] },
+                { key: 'hdu_has_service', label: 'عناية وسيطة (HDU)', type: 'select', options: ['Yes', 'No', 'Planned'] },
+                { key: 'picu_has_service', label: 'عناية مكثفة (PICU)', type: 'select', options: ['Yes', 'No', 'Planned'] },
                 { key: 'etat_trained_workers', label: 'الكوادر المدربة', type: 'number' }
             ]
         },
@@ -336,36 +458,89 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
         }
     }), [allProjectOptions]);
 
-    const filtersString = JSON.stringify(currentFilters);
+    const config = BULK_VIEW_CONFIG[activeService] || BULK_VIEW_CONFIG['General'];
 
-    // --- FETCH FACILITIES VIA CACHE ---
+    // --- SYNCHRONOUS FAST FILTERING ---
     useEffect(() => {
-        const load = async () => {
-            setLoading(true);
-            setFacilities([]); 
-            try {
-                const fetchFilters = {
-                    state: localStateFilter === 'All' ? undefined : localStateFilter,
-                    locality: localLocalityFilter === 'All' ? undefined : localLocalityFilter,
-                    facilityType: currentFilters.facilityType,
-                    functioningStatus: currentFilters.functioning,
-                    project: currentFilters.project
-                };
-                
-                // Use fetchHealthFacilities with force=false to utilize cache
-                const raw = await fetchHealthFacilities(fetchFilters, false);
-                const data = raw.map(r => ({ ...r, locality: r['المحلية'] || 'Unknown' }));
-                
-                setFacilities(data);
-            } catch (err) {
-                console.error("Load Error:", err);
-                setToast({ show: true, message: "Failed to load facilities data.", type: "error" });
-            } finally {
-                setLoading(false);
+        if (!healthFacilities || healthFacilities.length === 0) {
+            setDisplayedFacilities([]);
+            setIsFiltering(false);
+            return;
+        }
+        
+        setIsFiltering(true);
+
+        const timerId = setTimeout(() => {
+            let filtered = [...healthFacilities].filter(f => f.isDeleted !== true && f.isDeleted !== "true");
+            
+            // 1. URL Filters
+            if (currentFilters.facilityType) {
+                filtered = filtered.filter(f => f['نوع_المؤسسةالصحية'] === currentFilters.facilityType);
             }
-        };
-        load();
-    }, [filtersString, localStateFilter, localLocalityFilter, setToast, fetchHealthFacilities]);
+            if (currentFilters.functioning && currentFilters.functioning !== 'NOT_SET') {
+                filtered = filtered.filter(f => f['هل_المؤسسة_تعمل'] === currentFilters.functioning);
+            }
+
+            // 2. UI Filter: State (Strict match)
+            if (localStateFilter !== 'All' && localStateFilter !== '') {
+                filtered = filtered.filter(f => f['الولاية'] === localStateFilter);
+            } else if (localStateFilter === '') {
+                filtered = [];
+            }
+
+            // 3. UI Filter: Locality
+            if (localLocalityFilter && localLocalityFilter !== 'All') {
+                filtered = filtered.filter(f => f['المحلية'] === localLocalityFilter);
+            }
+            
+            // 4. System Filter: Facility Types based on Service Configuration
+            if (config?.facilityTypes && filtered.length > 0) {
+                filtered = filtered.filter(f => {
+                    const type = updates[f.id]?.['نوع_المؤسسةالصحية'] ?? f['نوع_المؤسسةالصحية'];
+                    return config.facilityTypes.includes(type);
+                });
+            }
+
+            // 5. UI Filter: Text Search
+            if (searchTerm && filtered.length > 0) {
+                const term = searchTerm.toLowerCase();
+                filtered = filtered.filter(f => (f['اسم_المؤسسة'] || '').toLowerCase().includes(term));
+            }
+
+            // 6. UI Filter: Ownership
+            if (ownershipFilter && filtered.length > 0) {
+                filtered = filtered.filter(f => {
+                    const ownership = updates[f.id]?.facility_ownership ?? f.facility_ownership;
+                    return ownership === ownershipFilter;
+                });
+            }
+
+            // 7. UI Filter: Project
+            if (localProjectFilter && localProjectFilter !== 'All' && filtered.length > 0) {
+                filtered = filtered.filter(f => {
+                    const proj = updates[f.id]?.project_name ?? f.project_name;
+                    return proj === localProjectFilter;
+                });
+            }
+
+            // 8. UI Filter: Service Type
+            if (selectedServiceTypes.length > 0 && filtered.length > 0) {
+                filtered = filtered.filter(f => {
+                    const sType = updates[f.id]?.eenc_service_type ?? f.eenc_service_type;
+                    return selectedServiceTypes.includes(sType);
+                });
+            }
+
+            setDisplayedFacilities(filtered);
+            setViewKpiData(calculateKPIs(filtered, updates, activeService));
+            setIsFiltering(false);
+
+        }, 0); 
+
+        return () => clearTimeout(timerId);
+
+    }, [healthFacilities, currentFilters.facilityType, currentFilters.functioning, config, searchTerm, ownershipFilter, updates, localStateFilter, localLocalityFilter, localProjectFilter, selectedServiceTypes, activeService]);
+
 
     const handleInputChange = (id, field, value) => {
         setUpdates(prev => {
@@ -400,105 +575,76 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
         handleInputChange(selectedFacilityId, 'imnci_staff', newStaffList);
     };
 
+    const toggleServiceType = (val) => {
+        setSelectedServiceTypes(prev => 
+            prev.includes(val) ? prev.filter(t => t !== val) : [...prev, val]
+        );
+    };
+
     const handleSaveAll = async () => {
         const changeCount = Object.keys(updates).length;
         if (changeCount === 0) return;
         try {
-            setLoading(true);
+            setIsSaving(true);
             const submissionPromises = Object.entries(updates).map(([id, data]) => {
-                const original = facilities.find(f => f.id === id);
+                const original = healthFacilities.find(f => f.id === id); 
                 let cleanData = { ...data };
-                if (data.neonatal_level_of_care_primary || data.neonatal_level_of_care_secondary || data.neonatal_level_of_care_tertiary) {
-                    const existingLevels = original.neonatal_level_of_care || {};
-                    cleanData.neonatal_level_of_care = {
-                        primary: data.neonatal_level_of_care_primary === 'Yes' ? true : (data.neonatal_level_of_care_primary === 'No' ? false : existingLevels.primary),
-                        secondary: data.neonatal_level_of_care_secondary === 'Yes' ? true : (data.neonatal_level_of_care_secondary === 'No' ? false : existingLevels.secondary),
-                        tertiary: data.neonatal_level_of_care_tertiary === 'Yes' ? true : (data.neonatal_level_of_care_tertiary === 'No' ? false : existingLevels.tertiary),
-                    };
-                    delete cleanData.neonatal_level_of_care_primary;
-                    delete cleanData.neonatal_level_of_care_secondary;
-                    delete cleanData.neonatal_level_of_care_tertiary;
-                }
+                
                 const payload = { ...original, ...cleanData, date_of_visit: new Date().toISOString().split('T')[0] };
-                return submitFacilityDataForApproval(payload, `Bulk Update (${activeService})`);
+                
+                if (payload.neonatal_level_of_care) {
+                    delete payload.neonatal_level_of_care;
+                }
+                
+                if (canApprove) {
+                    return saveFacilitySnapshot(payload);
+                } else {
+                    return submitFacilityDataForApproval(payload, `Bulk Update (${activeService})`);
+                }
             });
             await Promise.all(submissionPromises);
-            setToast({ show: true, message: `Successfully submitted ${changeCount} updates for approval.`, type: "success" });
+            setToast({ show: true, message: `Successfully ${canApprove ? 'saved' : 'submitted'} ${changeCount} updates.`, type: "success" });
             setUpdates({}); 
+            
+            // Refresh global cache after save
+            fetchHealthFacilities({}, true);
         } catch (err) {
             console.error(err);
             setToast({ show: true, message: "Error submitting batch updates.", type: "error" });
         } finally {
-            setLoading(false);
+            setIsSaving(false);
         }
     };
 
-    const config = BULK_VIEW_CONFIG[activeService] || BULK_VIEW_CONFIG['General'];
-    
     // --- DYNAMIC ARABIC TITLE ---
-    const stateAr = localStateFilter !== 'All' 
+    const stateAr = localStateFilter !== 'All' && localStateFilter !== ''
         ? (STATE_LOCALITIES[localStateFilter]?.ar || localStateFilter) 
         : 'كل الولايات';
         
     const localityAr = localLocalityFilter !== 'All' 
         ? (LOCALITY_EN_TO_AR_MAP[localLocalityFilter] || localLocalityFilter) 
-        : (localStateFilter !== 'All' ? 'كل المحليات' : '');
+        : (localStateFilter !== 'All' && localStateFilter !== '' ? 'كل المحليات' : '');
 
     let filterTitleParts = [];
-    if (currentFilters.project) filterTitleParts.push(`مشروع: ${currentFilters.project}`);
+    if (localProjectFilter !== 'All') filterTitleParts.push(`مشروع: ${localProjectFilter}`);
     if (currentFilters.facilityType) filterTitleParts.push(`نوع: ${currentFilters.facilityType}`);
     if (currentFilters.functioning && currentFilters.functioning !== 'NOT_SET') filterTitleParts.push(`حالة: ${currentFilters.functioning}`);
+    if (selectedServiceTypes.length > 0) {
+        const labels = selectedServiceTypes.map(val => SERVICE_TYPE_OPTIONS.find(o => o.value === val)?.label || val);
+        filterTitleParts.push(`نوع الخدمة: ${labels.join('، ')}`);
+    }
 
     const filterTitleStr = filterTitleParts.length > 0 ? ` (${filterTitleParts.join(' | ')})` : '';
     const arabicTitle = `${stateAr}${localityAr ? ` - ${localityAr}` : ''}${filterTitleStr}`;
     
     // Get localities for the currently selected UI State Filter
-    const availableLocalities = localStateFilter !== 'All' && STATE_LOCALITIES[localStateFilter] 
+    const availableLocalities = localStateFilter !== 'All' && localStateFilter !== '' && STATE_LOCALITIES[localStateFilter] 
         ? STATE_LOCALITIES[localStateFilter].localities 
         : [];
 
-    const displayedFacilities = useMemo(() => {
-        let filtered = facilities;
-        
-        // 1. UI Filter: State
-        if (localStateFilter !== 'All') {
-            filtered = filtered.filter(f => f['الولاية'] === localStateFilter);
-        }
-
-        // 2. UI Filter: Locality
-        if (localLocalityFilter !== 'All') {
-            filtered = filtered.filter(f => f['المحلية'] === localLocalityFilter);
-        }
-        
-        // 3. System Filter: Facility Types based on Service
-        if (config.facilityTypes) {
-            filtered = filtered.filter(f => {
-                const type = updates[f.id]?.['نوع_المؤسسةالصحية'] ?? f['نوع_المؤسسةالصحية'];
-                return config.facilityTypes.some(t => t === type || type?.includes(t));
-            });
-        }
-
-        // 4. UI Filter: Text Search
-        if (searchTerm) {
-            const term = searchTerm.toLowerCase();
-            filtered = filtered.filter(f => f['اسم_المؤسسة']?.toLowerCase().includes(term));
-        }
-
-        // 5. UI Filter: Ownership
-        if (ownershipFilter) {
-            filtered = filtered.filter(f => {
-                const ownership = updates[f.id]?.facility_ownership ?? f.facility_ownership;
-                return ownership === ownershipFilter;
-            });
-        }
-
-        return filtered;
-    }, [facilities, config, searchTerm, ownershipFilter, updates, localStateFilter, localLocalityFilter]);
-
-    const viewKpiData = useMemo(() => calculateKPIs(displayedFacilities, updates, config), [displayedFacilities, updates, config]);
 
     const handleExportPDF = async () => {
-        const safeStateName = localStateFilter !== 'All' ? localStateFilter : 'All_States';
+        const safeStateName = localStateFilter !== 'All' && localStateFilter !== '' ? localStateFilter : 'All_States';
         const fileName = `${activeService}_${safeStateName}.pdf`;
         const doc = new jsPDF('landscape', 'mm', 'a4');
         doc.addFileToVFS('Amiri-Regular.ttf', amiriFontBase64);
@@ -526,18 +672,29 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
             doc.text(pageTitle, 148.5, 15, { align: 'center' });
 
             const currentFacilities = groupedFacilities[locKey];
-            const localKpi = calculateKPIs(currentFacilities, updates, config);
+            const localKpi = calculateKPIs(currentFacilities, updates, activeService);
             
             let mainTableStartY = 25; 
             if (localKpi) {
-                const kpiHeaders = [['ميزان وزن', 'ساعة مؤقت', 'غرفة إرواء', 'العلاج المتكامل', 'العدد الكلي']];
-                const kpiBody = [[
-                    `${localKpi.scaleCount} (${localKpi.scalePercentage}%)`,
-                    `${localKpi.timerCount} (${localKpi.timerPercentage}%)`,
-                    `${localKpi.orsCount} (${localKpi.orsPercentage}%)`,
-                    `${localKpi.imnciCount} (${localKpi.imnciPercentage}%)`,
-                    `${localKpi.total}`
-                ]];
+                let kpiHeaders = [];
+                let kpiBody = [];
+
+                if (localKpi.type === 'IMNCI') {
+                    kpiHeaders = [['ميزان وزن', 'ساعة مؤقت', 'غرفة إرواء', 'العلاج المتكامل', 'العدد الكلي']];
+                    kpiBody = [[`${localKpi.scale} (${getPct(localKpi.scale, localKpi.imnciTotal)}%)`, `${localKpi.timer} (${getPct(localKpi.timer, localKpi.imnciTotal)}%)`, `${localKpi.ors} (${getPct(localKpi.ors, localKpi.imnciTotal)}%)`, `${localKpi.imnci} (${getPct(localKpi.imnci, localKpi.imnciTotal)}%)`, `${localKpi.total}`]];
+                } else if (localKpi.type === 'EENC') {
+                    kpiHeaders = [['الكوادر المدربة', 'محطات الإنعاش', 'أجهزة الإنعاش (Ambu)', 'تقدم الخدمة', 'العدد الكلي']];
+                    kpiBody = [[`${localKpi.workers}`, `${localKpi.resuscitation}`, `${localKpi.ambu}`, `${localKpi.eenc} (${getPct(localKpi.eenc, localKpi.eencTotal)}%)`, `${localKpi.total}`]];
+                } else if (localKpi.type === 'Neonatal') {
+                    kpiHeaders = [['وحدة الكنغر (KMC)', 'عناية تخصصية (3)', 'عناية ثانوية (2)', 'عناية أولية (1)', 'العدد الكلي']];
+                    kpiBody = [[`${localKpi.kmc} (${getPct(localKpi.kmc, localKpi.scnuTotal)}%)`, `${localKpi.tertiary} (${getPct(localKpi.tertiary, localKpi.scnuTotal)}%)`, `${localKpi.secondary} (${getPct(localKpi.secondary, localKpi.scnuTotal)}%)`, `${localKpi.primary} (${getPct(localKpi.primary, localKpi.scnuTotal)}%)`, `${localKpi.total}`]];
+                } else if (localKpi.type === 'Critical') {
+                    kpiHeaders = [['العناية المكثفة (PICU)', 'العناية الوسيطة (HDU)', 'فرز الحالات (ETAT)', 'العدد الكلي']];
+                    kpiBody = [[`${localKpi.picu} (${getPct(localKpi.picu, localKpi.etatTotal)}%)`, `${localKpi.hdu} (${getPct(localKpi.hdu, localKpi.etatTotal)}%)`, `${localKpi.etat} (${getPct(localKpi.etat, localKpi.etatTotal)}%)`, `${localKpi.total}`]];
+                } else {
+                    kpiHeaders = [['تغطية الرعاية الحرجة', 'تغطية حديثي الولادة', 'تغطية EENC', 'تغطية IMNCI', 'العدد الكلي']];
+                    kpiBody = [[`${localKpi.critical} (${getPct(localKpi.critical, localKpi.criticalTotal)}%)`, `${localKpi.scnu} (${getPct(localKpi.scnu, localKpi.scnuTotal)}%)`, `${localKpi.eenc} (${getPct(localKpi.eenc, localKpi.eencTotal)}%)`, `${localKpi.imnci} (${getPct(localKpi.imnci, localKpi.imnciTotal)}%)`, `${localKpi.total}`]];
+                }
 
                 autoTable(doc, {
                     head: kpiHeaders,
@@ -570,17 +727,27 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
                     
                     let val = updates[f.id]?.[col.key];
                     if (val === undefined) {
-                        if (col.key === 'neonatal_level_of_care_primary') val = f.neonatal_level_of_care?.primary ? 'Yes' : 'No';
-                        else if (col.key === 'neonatal_level_of_care_secondary') val = f.neonatal_level_of_care?.secondary ? 'Yes' : 'No';
-                        else if (col.key === 'neonatal_level_of_care_tertiary') val = f.neonatal_level_of_care?.tertiary ? 'Yes' : 'No';
+                        if (col.key === 'neonatal_level_primary') val = f.neonatal_level_primary || (f.neonatal_level_of_care?.primary ? 'Yes' : 'No');
+                        else if (col.key === 'neonatal_level_secondary') val = f.neonatal_level_secondary || (f.neonatal_level_of_care?.secondary ? 'Yes' : 'No');
+                        else if (col.key === 'neonatal_level_tertiary') val = f.neonatal_level_tertiary || (f.neonatal_level_of_care?.tertiary ? 'Yes' : 'No');
                         else val = f[col.key];
                     }
+                    
+                    if (col.type === 'readonly' && col.key === 'eenc_service_type') {
+                         if (val === 'CEmONC') return 'طواري شاملة';
+                         if (val === 'BEmONC') return 'طواري أساسية';
+                         if (val === 'pediatric') return 'مستشفى اطفال';
+                         if (val === 'general') return 'خدمات عامة';
+                         return val || '-';
+                    }
+
                     if (val === true || val === 'Yes') return 'نعم';
                     if (val === false || val === 'No') return 'لا';
+                    if (val === 'Planned') return 'مخططة';
                     return val || '';
                 });
                 
-                const type = updates[f.id]?.['نوع_المؤسسةالصحية'] ?? f['نوع_المؤسسةالصحية'];
+                const type = updates[f.id]?.[col.key] ?? f['نوع_المؤسسةالصحية'];
                 return [...dynamicVals.reverse(), type || '', f['اسم_المؤسسة'] || '', (i + 1).toString()];
             });
 
@@ -613,6 +780,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
                         const text = data.cell.text[0];
                         if (text === 'نعم') data.cell.styles.fillColor = [220, 252, 231]; 
                         if (text === 'لا') data.cell.styles.fillColor = [254, 226, 226]; 
+                        if (text === 'مخططة') data.cell.styles.fillColor = [254, 240, 138]; 
                     }
                 },
                 didDrawCell: function (data) {
@@ -660,14 +828,80 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
         }
     };
 
-    if (loading) return <div className="p-10 text-center"><Spinner /></div>;
-
+    // --- KPICard component Definition ---
     const KPICard = ({ label, value, colorClass = "bg-sky-50 text-sky-800" }) => (
         <div className={`p-4 rounded shadow-sm border ${colorClass} text-center flex flex-col justify-center items-center h-full`}>
             <span className="text-2xl font-bold mb-1" dir="ltr">{value}</span>
             <span className="text-xs font-medium opacity-90">{label}</span>
         </div>
     );
+
+    // Render Dynamic KPI section
+    const renderKPIs = () => {
+        if (!viewKpiData || displayedFacilities.length === 0) return null;
+
+        return (
+            <div className="mb-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3" dir="rtl">
+                <KPICard 
+                    label="العدد الكلي (المعروض)" 
+                    value={viewKpiData.total} 
+                    colorClass="bg-gray-100 text-gray-800 border-gray-200" 
+                />
+                
+                {viewKpiData.type === 'IMNCI' && (
+                    <>
+                        <KPICard label="تغطية IMNCI (للمراكز)" value={`${viewKpiData.imnci} (${getPct(viewKpiData.imnci, viewKpiData.imnciTotal)}%)`} colorClass="bg-blue-50 text-blue-800 border-blue-200" />
+                        <KPICard label="توفر غرفة إرواء" value={`${viewKpiData.ors} (${getPct(viewKpiData.ors, viewKpiData.imnciTotal)}%)`} colorClass="bg-green-50 text-green-800 border-green-200" />
+                        <KPICard label="توفر ساعة مؤقت" value={`${viewKpiData.timer} (${getPct(viewKpiData.timer, viewKpiData.imnciTotal)}%)`} colorClass="bg-teal-50 text-teal-800 border-teal-200" />
+                        <KPICard label="توفر ميزان وزن" value={`${viewKpiData.scale} (${getPct(viewKpiData.scale, viewKpiData.imnciTotal)}%)`} colorClass="bg-indigo-50 text-indigo-800 border-indigo-200" />
+                    </>
+                )}
+
+                {viewKpiData.type === 'EENC' && (
+                    <>
+                        <KPICard label="تغطية EENC (للطوارئ)" value={`${viewKpiData.eenc} (${getPct(viewKpiData.eenc, viewKpiData.eencTotal)}%)`} colorClass="bg-teal-50 text-teal-800 border-teal-200" />
+                        <KPICard label="محطات الإنعاش" value={viewKpiData.resuscitation} colorClass="bg-blue-50 text-blue-800 border-blue-200" />
+                        <KPICard label="أجهزة الإنعاش (Ambu)" value={viewKpiData.ambu} colorClass="bg-indigo-50 text-indigo-800 border-indigo-200" />
+                        <KPICard label="الكوادر المدربة" value={viewKpiData.workers} colorClass="bg-emerald-50 text-emerald-800 border-emerald-200" />
+                    </>
+                )}
+
+                {viewKpiData.type === 'Neonatal' && (
+                    <>
+                        <KPICard label="عناية ثانوية (SCNU)" value={`${viewKpiData.scnu} (${getPct(viewKpiData.scnu, viewKpiData.scnuTotal)}%)`} colorClass="bg-blue-50 text-blue-800 border-blue-200" />
+                        <KPICard label="عناية تخصصية (3)" value={`${viewKpiData.tertiary} (${getPct(viewKpiData.tertiary, viewKpiData.scnuTotal)}%)`} colorClass="bg-teal-50 text-teal-800 border-teal-200" />
+                        <KPICard label="عناية أولية (1)" value={`${viewKpiData.primary} (${getPct(viewKpiData.primary, viewKpiData.scnuTotal)}%)`} colorClass="bg-indigo-50 text-indigo-800 border-indigo-200" />
+                        <KPICard label="وحدة الكنغر (KMC)" value={`${viewKpiData.kmc} (${getPct(viewKpiData.kmc, viewKpiData.scnuTotal)}%)`} colorClass="bg-purple-50 text-purple-800 border-purple-200" />
+                    </>
+                )}
+
+                {viewKpiData.type === 'Critical' && (
+                    <>
+                        <KPICard label="فرز الحالات (ETAT)" value={`${viewKpiData.etat} (${getPct(viewKpiData.etat, viewKpiData.etatTotal)}%)`} colorClass="bg-red-50 text-red-800 border-red-200" />
+                        <KPICard label="العناية الوسيطة (HDU)" value={`${viewKpiData.hdu} (${getPct(viewKpiData.hdu, viewKpiData.etatTotal)}%)`} colorClass="bg-orange-50 text-orange-800 border-orange-200" />
+                        <KPICard label="العناية المكثفة (PICU)" value={`${viewKpiData.picu} (${getPct(viewKpiData.picu, viewKpiData.etatTotal)}%)`} colorClass="bg-rose-50 text-rose-800 border-rose-200" />
+                    </>
+                )}
+
+                {viewKpiData.type === 'General' && (
+                    <>
+                        <KPICard label="تغطية IMNCI" value={`${viewKpiData.imnci} (${getPct(viewKpiData.imnci, viewKpiData.imnciTotal)}%)`} colorClass="bg-blue-50 text-blue-800 border-blue-200" />
+                        <KPICard label="تغطية EENC" value={`${viewKpiData.eenc} (${getPct(viewKpiData.eenc, viewKpiData.eencTotal)}%)`} colorClass="bg-teal-50 text-teal-800 border-teal-200" />
+                        <KPICard label="تغطية حديثي الولادة" value={`${viewKpiData.scnu} (${getPct(viewKpiData.scnu, viewKpiData.scnuTotal)}%)`} colorClass="bg-indigo-50 text-indigo-800 border-indigo-200" />
+                        <KPICard label="تغطية الرعاية الحرجة" value={`${viewKpiData.critical} (${getPct(viewKpiData.critical, viewKpiData.criticalTotal)}%)`} colorClass="bg-red-50 text-red-800 border-red-200" />
+                    </>
+                )}
+            </div>
+        );
+    };
+
+    // Apply Pagination logic based on displayedFacilities
+    const paginatedFacilities = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return displayedFacilities.slice(startIndex, startIndex + itemsPerPage);
+    }, [displayedFacilities, currentPage, itemsPerPage]);
+
+    const totalPages = Math.ceil(displayedFacilities.length / itemsPerPage);
 
     return (
         <Card>
@@ -676,35 +910,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
                      <h1 className="text-2xl font-bold text-gray-800">{arabicTitle}</h1>
                 </div>
                 
-                {viewKpiData && (
-                    <div className="mb-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3" dir="rtl">
-                        <KPICard 
-                            label="العدد الكلي للمؤسسات" 
-                            value={viewKpiData.total} 
-                            colorClass="bg-gray-100 text-gray-800 border-gray-200" 
-                        />
-                        <KPICard 
-                            label="توفر العلاج المتكامل" 
-                            value={`${viewKpiData.imnciCount} (${viewKpiData.imnciPercentage}%)`} 
-                            colorClass="bg-blue-50 text-blue-800 border-blue-200" 
-                        />
-                        <KPICard 
-                            label="توفر غرفة إرواء" 
-                            value={`${viewKpiData.orsCount} (${viewKpiData.orsPercentage}%)`} 
-                            colorClass="bg-green-50 text-green-800 border-green-200" 
-                        />
-                        <KPICard 
-                            label="توفر ساعة مؤقت" 
-                            value={`${viewKpiData.timerCount} (${viewKpiData.timerPercentage}%)`} 
-                            colorClass="bg-teal-50 text-teal-800 border-teal-200" 
-                        />
-                        <KPICard 
-                            label="توفر ميزان وزن" 
-                            value={`${viewKpiData.scaleCount} (${viewKpiData.scalePercentage}%)`} 
-                            colorClass="bg-indigo-50 text-indigo-800 border-indigo-200" 
-                        />
-                    </div>
-                )}
+                {renderKPIs()}
 
                 <div className="p-4 bg-slate-50 border-b border-slate-200 rounded-lg flex flex-col gap-4" dir="rtl">
                     <div className="flex flex-wrap items-center gap-4 w-full">
@@ -731,7 +937,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
                             </Select>
                         </div>
 
-                        {/* NEW: Client-side State Filter */}
+                        {/* Client-side State Filter */}
                         <div className="w-full md:w-48">
                             <Select 
                                 value={localStateFilter} 
@@ -741,15 +947,15 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
                                 }} 
                                 className="bg-white border-gray-300 w-full"
                             >
-                                <option value="All">كل الولايات (All States)</option>
+                                <option value="All">كل الولايات</option>
                                 {Object.keys(STATE_LOCALITIES).sort((a,b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar)).map(s => (
                                     <option key={s} value={s}>{STATE_LOCALITIES[s].ar} ({s})</option>
                                 ))}
                             </Select>
                         </div>
 
-                        {/* NEW: Client-side Locality Filter (Shows only if State is selected) */}
-                        {localStateFilter !== 'All' && availableLocalities.length > 0 && (
+                        {/* Client-side Locality Filter */}
+                        {localStateFilter !== 'All' && localStateFilter !== '' && availableLocalities.length > 0 && (
                             <div className="w-full md:w-48">
                                 <Select 
                                     value={localLocalityFilter} 
@@ -763,28 +969,75 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
                                 </Select>
                             </div>
                         )}
-
+                        
+                        {/* Client-side Project Filter */}
+                        <div className="w-full md:w-48">
+                            <Select 
+                                value={localProjectFilter} 
+                                onChange={(e) => setLocalProjectFilter(e.target.value)} 
+                                className="bg-white border-gray-300 w-full"
+                            >
+                                <option value="All">كل المشاريع (All Projects)</option>
+                                {allProjectOptions.map(proj => (
+                                    <option key={proj} value={proj}>{proj}</option>
+                                ))}
+                            </Select>
+                        </div>
+                    </div>
+                    
+                    {/* Multi-Select Filter for Service Types */}
+                    <div className="w-full flex flex-wrap gap-2 items-center border-t border-slate-200 pt-3">
+                        <span className="text-sm font-semibold text-slate-700 ml-2">تصفية بنوع الخدمة:</span>
+                        {SERVICE_TYPE_OPTIONS.map(opt => (
+                            <button
+                                key={opt.value}
+                                onClick={() => toggleServiceType(opt.value)}
+                                className={`px-3 py-1 border rounded-full text-xs font-bold transition-colors ${
+                                    selectedServiceTypes.includes(opt.value)
+                                    ? 'bg-sky-600 text-white border-sky-600 shadow-sm'
+                                    : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100'
+                                }`}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                        {selectedServiceTypes.length > 0 && (
+                            <button 
+                                onClick={() => setSelectedServiceTypes([])} 
+                                className="text-xs text-red-500 hover:underline mr-2 font-semibold"
+                            >
+                                مسح الخدمات
+                            </button>
+                        )}
                     </div>
                     
                     <div className="flex gap-2 w-full justify-end mt-2">
                         <Button onClick={handleExportPDF} variant="secondary" className="flex items-center gap-1" disabled={displayedFacilities.length === 0}>
                             <PdfIcon /> تحميل الملف
                         </Button>
-                        <Button onClick={handleSaveAll} disabled={Object.keys(updates).length === 0 || loading} variant="primary">
-                            {loading ? <Spinner size="sm" /> : `احفظ التغييرات (${Object.keys(updates).length})`}
+                        <Button onClick={handleSaveAll} disabled={Object.keys(updates).length === 0 || isSaving} variant="primary">
+                            {isSaving ? <Spinner size="sm" /> : `احفظ التغييرات (${Object.keys(updates).length})`}
                         </Button>
                     </div>
                 </div>
             </div>
 
-            <div className="p-4">
+            <div className="p-4 relative min-h-[300px]">
+                {/* Minimal Loading Indicator (Top Right) so it doesn't block the UI */}
+                {isFetchingData && (
+                    <div className="absolute top-2 left-2 z-10 flex items-center bg-white/80 px-3 py-1 rounded shadow-sm border border-sky-100">
+                        <Spinner size="sm" />
+                        <span className="ml-2 text-xs font-bold text-sky-700">جاري المزامنة...</span>
+                    </div>
+                )}
+                
                 <div className="overflow-x-auto rounded-lg border border-slate-200" dir="rtl">
                     <table ref={tableRef} className="w-full table-fixed divide-y divide-gray-200 border-collapse bg-white">
                         <thead className="bg-slate-100">
                             <tr>
                                 <th className="px-1 py-1 text-center text-xs font-bold text-slate-800 uppercase w-12 border border-slate-300">#</th>
                                 <th className="px-1 py-1 text-right text-xs font-bold text-slate-800 uppercase w-48 whitespace-normal break-words align-bottom border border-slate-300">اسم المؤسسة</th>
-                                <th className="px-1 py-1 text-right text-xs font-bold text-slate-800 uppercase w-20 whitespace-normal break-words align-bottom border border-slate-300">النوع</th>
+                                <th className="px-1 py-1 text-right text-xs font-bold text-slate-800 uppercase w-28 whitespace-normal break-words align-bottom border border-slate-300">النوع</th>
                                 {config.columns.map(col => (
                                     <th key={col.key} className={`px-1 py-1 text-right text-xs font-bold text-slate-800 uppercase whitespace-normal break-words align-bottom border border-slate-300 ${col.type === 'staff_names' ? 'w-40' : ''}`}>{col.label}</th>
                                 ))}
@@ -792,21 +1045,16 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {displayedFacilities.length > 0 ? displayedFacilities.map((f, index) => (
+                            {paginatedFacilities.length > 0 ? paginatedFacilities.map((f, index) => (
                                 <tr key={f.id} className={updates[f.id] ? "bg-blue-50" : "hover:bg-gray-50"}>
-                                    <td className="px-1 py-1 text-center text-xs text-gray-500 font-medium border border-slate-300 align-top">{index + 1}</td>
+                                    <td className="px-1 py-1 text-center text-xs text-gray-500 font-medium border border-slate-300 align-top">
+                                        {(currentPage - 1) * itemsPerPage + index + 1}
+                                    </td>
                                     <td className="px-1 py-1 text-xs font-medium text-right border border-slate-300 whitespace-normal break-words leading-tight">{f['اسم_المؤسسة']}</td>
-                                    <td className="px-1 py-1 border border-slate-300">
-                                        <Select
-                                            value={updates[f.id]?.['نوع_المؤسسةالصحية'] ?? f['نوع_المؤسسةالصحية'] ?? ''}
-                                            onChange={(e) => handleInputChange(f.id, 'نوع_المؤسسةالصحية', e.target.value)}
-                                            className="text-[10px] py-0 px-1 h-7 w-full border rounded-sm focus:ring-1 focus:ring-sky-500 text-gray-700"
-                                        >
-                                            <option value="">-</option>
-                                            {FACILITY_TYPE_OPTIONS.map(opt => (
-                                                <option key={opt} value={opt}>{opt}</option>
-                                            ))}
-                                        </Select>
+                                    <td className="px-1 py-1 border border-slate-300 align-top">
+                                        <div className="text-[10px] py-1 px-1 w-full bg-slate-100 text-slate-700 border border-slate-200 rounded-sm cursor-not-allowed text-right whitespace-normal break-words leading-tight min-h-[28px] flex items-center">
+                                            {f['نوع_المؤسسةالصحية'] || '-'}
+                                        </div>
                                     </td>
                                     {config.columns.map(col => {
                                         if (col.type === 'staff_names' || col.type === 'staff_training' || col.type === 'staff_phones') {
@@ -822,7 +1070,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
                                                                 {staffArr.map((s, idx) => (
                                                                     <div key={idx} className="text-[10px] h-7 flex items-center whitespace-nowrap w-full border-b border-gray-200 last:border-0 overflow-hidden text-ellipsis px-1">
                                                                         {col.type === 'staff_names' && (s.name || '-')}
-                                                                        {col.type === 'staff_training' && (s.is_trained === 'Yes' ? 'نعم' : 'لا')}
+                                                                        {col.type === 'staff_training' && (s.is_trained === 'Yes' ? 'نعم' : (s.is_trained === 'Planned' ? 'مخططة' : 'لا'))}
                                                                         {col.type === 'staff_phones' && (s.phone || '-')}
                                                                     </div>
                                                                 ))}
@@ -840,17 +1088,35 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
                                             );
                                         }
                                         
-                                        // Standard cells
                                         let val = updates[f.id]?.[col.key];
                                         if (val === undefined) {
-                                            if (col.key === 'neonatal_level_of_care_primary') val = f.neonatal_level_of_care?.primary ? 'Yes' : 'No';
-                                            else if (col.key === 'neonatal_level_of_care_secondary') val = f.neonatal_level_of_care?.secondary ? 'Yes' : 'No';
-                                            else if (col.key === 'neonatal_level_of_care_tertiary') val = f.neonatal_level_of_care?.tertiary ? 'Yes' : 'No';
+                                            if (col.key === 'neonatal_level_primary') val = f.neonatal_level_primary || (f.neonatal_level_of_care?.primary ? 'Yes' : 'No');
+                                            else if (col.key === 'neonatal_level_secondary') val = f.neonatal_level_secondary || (f.neonatal_level_of_care?.secondary ? 'Yes' : 'No');
+                                            else if (col.key === 'neonatal_level_tertiary') val = f.neonatal_level_tertiary || (f.neonatal_level_of_care?.tertiary ? 'Yes' : 'No');
                                             else val = f[col.key];
                                         }
+                                        
+                                        if (col.type === 'readonly') {
+                                            let displayVal = val;
+                                            if (col.key === 'eenc_service_type') {
+                                                 if (val === 'CEmONC') displayVal = 'طواري شاملة (CEmONC)';
+                                                 else if (val === 'BEmONC') displayVal = 'طواري أساسية (BEmONC)';
+                                                 else if (val === 'pediatric') displayVal = 'مستشفى اطفال';
+                                                 else if (val === 'general') displayVal = 'خدمات عامة';
+                                            }
+                                            return (
+                                                <td key={`${f.id}-${col.key}`} className="px-1 py-1 border border-slate-300 align-top">
+                                                    <div className="text-[9px] py-1 px-1 h-7 w-full bg-slate-100 text-slate-500 border border-slate-200 rounded-sm cursor-not-allowed flex items-center overflow-hidden text-ellipsis whitespace-nowrap" title={displayVal || '-'}>
+                                                        {displayVal || '-'}
+                                                    </div>
+                                                </td>
+                                            );
+                                        }
+                                        
                                         let selectColorClass = "text-gray-700";
                                         if (val === 'Yes' || val === true) selectColorClass = "bg-green-100 text-green-800 border-green-200 font-semibold";
                                         if (val === 'No' || val === false) selectColorClass = "bg-red-100 text-red-800 border-red-200 font-semibold";
+                                        if (val === 'Planned') selectColorClass = "bg-yellow-100 text-yellow-800 border-yellow-200 font-semibold";
                                         
                                         return (
                                             <td key={`${f.id}-${col.key}`} className="px-1 py-1 border border-slate-300 align-top">
@@ -859,7 +1125,7 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
                                                         <option value="">-</option>
                                                         {col.options.map(opt => (
                                                             <option key={opt} value={opt}>
-                                                                {opt === 'Yes' ? 'نعم' : (opt === 'No' ? 'لا' : opt)}
+                                                                {opt === 'Yes' ? 'نعم' : (opt === 'No' ? 'لا' : (opt === 'Planned' ? 'مخططة' : opt))}
                                                             </option>
                                                         ))}
                                                     </Select>
@@ -874,11 +1140,58 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
                                     </td>
                                 </tr>
                             )) : (
-                                <tr><td colSpan={config.columns.length + 4} className="px-4 py-8 text-center text-gray-500 border border-slate-300">لا توجد مؤسسات مطابقة للبحث. (No facilities match these filters)</td></tr>
+                                <tr>
+                                    <td colSpan={config.columns.length + 4} className="px-4 py-8 text-center text-gray-500 border border-slate-300">
+                                        لا توجد مؤسسات مطابقة للبحث. (No facilities match these filters)
+                                    </td>
+                                </tr>
                             )}
                         </tbody>
                     </table>
                 </div>
+
+                {/* --- Added Pagination Controls --- */}
+                {displayedFacilities.length > 0 && (
+                    <div className="flex flex-col sm:flex-row justify-between items-center mt-4 p-4 bg-gray-50 rounded-b-lg border border-slate-200" dir="rtl">
+                        <div className="flex items-center gap-4 mb-4 sm:mb-0">
+                            <span className="text-sm text-gray-700">
+                                الصفحة <strong>{currentPage}</strong> من <strong>{totalPages}</strong> (الإجمالي: {displayedFacilities.length} منشأة)
+                            </span>
+                            <div className="flex items-center gap-2">
+                                <label className="text-sm text-gray-600">العدد بالصفحة:</label>
+                                <Select 
+                                    value={itemsPerPage} 
+                                    onChange={(e) => { 
+                                        setItemsPerPage(Number(e.target.value)); 
+                                        setCurrentPage(1); 
+                                    }} 
+                                    className="w-20 bg-white border-gray-300 py-1"
+                                >
+                                    <option value={20}>20</option>
+                                    <option value={50}>50</option>
+                                    <option value={100}>100</option>
+                                    <option value={500}>500</option>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button 
+                                variant="secondary" 
+                                onClick={() => setCurrentPage(p => p - 1)} 
+                                disabled={currentPage === 1}
+                            >
+                                السابق
+                            </Button>
+                            <Button 
+                                variant="secondary" 
+                                onClick={() => setCurrentPage(p => p + 1)} 
+                                disabled={currentPage === totalPages || totalPages === 0}
+                            >
+                                التالي
+                            </Button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             <StaffManagementModal isOpen={isStaffModalOpen} onClose={() => setIsStaffModalOpen(false)} facilityName={selectedFacilityName} initialStaff={currentStaffList} onSave={handleSaveStaffList} />

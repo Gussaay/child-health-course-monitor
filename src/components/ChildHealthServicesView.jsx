@@ -39,7 +39,7 @@ import {
     EENCFormFields,
     NeonatalFormFields,
     CriticalCareFormFields,
-    SaveStatusModal // --- ADDED IMPORT ---
+    SaveStatusModal 
 } from './FacilityForms.jsx';
 import { STATE_LOCALITIES } from "./constants.js";
 
@@ -120,7 +120,9 @@ const getServiceConfig = (serviceType) => {
     switch (serviceType) {
         case TABS.IMNCI: case 'IMNCI': finalHeaders.push(...imnciConfig.headers); finalDataKeys.push(...imnciConfig.dataKeys); fileName = 'IMNCI_Template.xlsx'; break;
         case TABS.EENC: case 'EENC': finalHeaders.push(...eencConfig.headers); finalDataKeys.push(...eencConfig.dataKeys); fileName = 'EENC_Template.xlsx'; break;
-        case TABS.NEONATAL: case 'Neonatal': finalHeaders.push(...eencConfig.headers, ...neonatalConfig.headers); finalDataKeys.push(...eencConfig.dataKeys, ...neonatalConfig.dataKeys); fileName = 'Neonatal_Care_Template.xlsx'; break;
+        case TABS.NEONATAL: case 'Neonatal': 
+        case 'Neonatal (Any Level)': case 'Neonatal (Primary)': case 'Neonatal (Secondary)': case 'Neonatal (Tertiary)':
+            finalHeaders.push(...eencConfig.headers, ...neonatalConfig.headers); finalDataKeys.push(...eencConfig.dataKeys, ...neonatalConfig.dataKeys); fileName = 'Neonatal_Care_Template.xlsx'; break;
         case TABS.CRITICAL: case 'Critical Care': finalHeaders.push(...eencConfig.headers, ...criticalCareConfig.headers); finalDataKeys.push(...eencConfig.dataKeys, ...criticalCareConfig.dataKeys); fileName = 'Critical_Care_Template.xlsx'; break;
         default: finalHeaders.push(...imnciConfig.headers, ...eencConfig.headers, ...neonatalConfig.headers, ...criticalCareConfig.headers); finalDataKeys.push(...imnciConfig.dataKeys, ...imnciConfig.dataKeys, ...eencConfig.dataKeys, ...neonatalConfig.dataKeys, ...criticalCareConfig.dataKeys); fileName = 'All_Services_Template.xlsx';
     }
@@ -281,9 +283,10 @@ const ApprovalComparisonModal = ({ submission, allFacilities, onClose, onConfirm
     if (!submission) return null;
     const isDeletionRequest = submission?._action === 'DELETE';
     const modalTitle = isDeletionRequest ? `Review Deletion Request: ${submission['اسم_المؤسسة']}` : `Review Submission: ${submission['اسم_المؤسسة']}`;
+    
     return (
         <Modal isOpen={!!submission} onClose={onClose} title={modalTitle} size="full">
-            <div className="p-6 h-full flex flex-col relative">
+            <div className="p-6 h-full relative overflow-y-auto">
                  <div className="absolute top-4 right-4 z-10 flex gap-2">
                      {(!isEditing || isDeletionRequest) && (
                          <Button variant={isDeletionRequest ? "danger" : "success"} onClick={handleDirectApprove} disabled={isSubmitting}>
@@ -292,19 +295,21 @@ const ApprovalComparisonModal = ({ submission, allFacilities, onClose, onConfirm
                      )}
                      {!isSubmitting && ( <Button variant="secondary" onClick={onClose} > Close </Button> )}
                  </div>
+                 
                 {isDeletionRequest && (
                     <div className="p-4 bg-red-100 border border-red-300 rounded-md mb-4 mt-12 flex-shrink-0">
                         <h4 className="font-semibold text-lg text-red-800">DELETION REQUEST</h4>
                         <p className="text-red-700">A user has requested to **permanently delete** this facility. Review the details below. Approving will remove the facility.</p>
                     </div>
                 )}
+                
                 {!isDeletionRequest && comparison && (
                      <div className={`p-4 border rounded-md mb-4 mt-12 flex-shrink-0 ${comparison.isUpdate ? 'bg-yellow-50 border-yellow-200' : 'bg-blue-50 border-blue-200'}`}>
                         <h4 className={`font-semibold text-lg ${comparison.isUpdate ? 'text-yellow-800' : 'text-blue-800'}`}>
                              {comparison.isUpdate ? "Summary of Changes" : "New Facility Submission"}
                         </h4>
                             {comparison.hasChanges ? (
-                            <div className="max-h-60 overflow-y-auto mt-2">
+                            <div className="mt-2">
                                 <Table headers={comparison.isUpdate ? ['Field', 'Previous Value', 'New Value'] : ['Field', 'Submitted Value']}>
                                      {comparison.changes .filter(c => c.to !== 'N/A') .map(({ label, from, to }) => (
                                         <tr key={label}>
@@ -320,8 +325,9 @@ const ApprovalComparisonModal = ({ submission, allFacilities, onClose, onConfirm
                                 </p>}
                     </div>
                 )}
+                
                 {(isEditing || isDeletionRequest) && (
-                    <div className={`flex-grow overflow-y-auto mb-4 ${!isDeletionRequest && !comparison?.isUpdate ? 'mt-12' : ''}`}>
+                    <div className={`mb-4 ${!isDeletionRequest && !comparison?.isUpdate ? 'mt-12' : ''}`}>
                         <GenericFacilityForm
                             ref={formRef}
                             initialData={submission}
@@ -364,7 +370,7 @@ const ApprovalComparisonModal = ({ submission, allFacilities, onClose, onConfirm
 
 const MappingRow = React.memo(({ field, headers, selectedValue, onMappingChange }) => ( <div className="flex items-center"><label className="w-1/2 font-medium text-sm capitalize">{field.label}{field.key === 'اسم_المؤسسة' && '*'}</label><Select value={selectedValue || ''} onChange={(e) => onMappingChange(field.key, e.target.value)} className="flex-1"><option value="">-- Select Excel Column --</option>{headers.map(header => <option key={header} value={header}>{header}</option>)}</Select></div> ));
 
-const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, filteredData, cleanupConfig }) => {
+const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, filteredData, cleanupConfig, projectNames = [] }) => {
     const [currentPage, setCurrentPage] = useState(0);
     const [error, setError] = useState('');
     const [excelData, setExcelData] = useState([]);
@@ -376,6 +382,7 @@ const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, f
     
     const [uploadState, setUploadState] = useState('');
     const [uploadLocality, setUploadLocality] = useState('');
+    const [uploadProject, setUploadProject] = useState('');
 
     const fileInputRef = useRef(null);
     const MAX_STAFF = 5;
@@ -394,7 +401,7 @@ const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, f
         if (isOpen) { 
             setCurrentPage(0); setError(''); setExcelData([]); setHeaders([]); 
             setFieldMappings({}); setValidationIssues([]); setUserCorrections({}); setFailedRows([]); 
-            setUploadState(''); setUploadLocality(''); 
+            setUploadState(''); setUploadLocality(''); setUploadProject('');
         } 
     }, [isOpen]);
 
@@ -432,6 +439,7 @@ const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, f
         let dataToDownload = filteredData || [];
         if (uploadState) dataToDownload = dataToDownload.filter(f => f['الولاية'] === uploadState);
         if (uploadLocality) dataToDownload = dataToDownload.filter(f => f['المحلية'] === uploadLocality);
+        if (uploadProject) dataToDownload = dataToDownload.filter(f => f['project_name'] === uploadProject);
 
         if (dataToDownload && dataToDownload.length > 0) {
             downloadFileName = `Update_Template_For_${fileName}`;
@@ -510,6 +518,10 @@ const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, f
 
             if (uploadState && !facilityFromRow['الولاية']) facilityFromRow['الولاية'] = uploadState;
             if (uploadLocality && !facilityFromRow['المحلية']) facilityFromRow['المحلية'] = uploadLocality;
+            if (uploadProject && !facilityFromRow['project_name']) {
+                facilityFromRow['project_name'] = uploadProject;
+                facilityFromRow['project_participation'] = 'Yes';
+            }
 
             const commonData = Object.keys(facilityFromRow).filter(key => !allServiceDataKeys.includes(key)).reduce((obj, key) => { obj[key] = facilityFromRow[key]; return obj; }, {});
             const payloadsByDate = new Map();
@@ -563,7 +575,7 @@ const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, f
                 
                 {currentPage === 0 && (
                     <div>
-                        <p className="mb-4">Download the template to get started. You can select a State and Locality to restrict the template to specific facilities.</p>
+                        <p className="mb-4">Download the template to get started. You can select a State, Locality, or Project to restrict the template.</p>
                         
                         <div className="flex flex-col md:flex-row gap-4 mb-4 p-4 border rounded bg-gray-50">
                             <FormGroup label="Filter Template by State (Optional)" className="flex-1">
@@ -589,8 +601,19 @@ const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, f
                                     ))}
                                 </Select>
                             </FormGroup>
+                            <FormGroup label="Filter Template by Project (Optional)" className="flex-1">
+                                <Select 
+                                    value={uploadProject} 
+                                    onChange={e => setUploadProject(e.target.value)}
+                                >
+                                    <option value="">-- All Projects --</option>
+                                    {projectNames.map(p => (
+                                        <option key={p} value={p}>{p}</option>
+                                    ))}
+                                </Select>
+                            </FormGroup>
                         </div>
-                        <p className="text-xs text-gray-500 italic mb-4">Note: Selecting a State/Locality above will also auto-assign uploaded facilities to them if they are missing from your Excel file.</p>
+                        <p className="text-xs text-gray-500 italic mb-4">Note: Selecting a State/Locality/Project above will also auto-assign uploaded facilities to them if they are missing from your Excel file.</p>
 
                         <Button variant="secondary" onClick={handleDownloadTemplate} className="mb-4">
                             Download Template
@@ -866,23 +889,43 @@ const ChildHealthServicesView = ({
     const handleShareBulkUpdateLink = () => {
         const params = new URLSearchParams();
 
-        if (!stateFilter || stateFilter === 'NOT_ASSIGNED' || stateFilter === 'ALL_STATES') {
-            setToast({ show: true, message: "Please select a specific State before sharing the bulk update link to prevent load errors.", type: "warning" });
-            return;
+        if (stateFilter && stateFilter !== 'ALL_STATES' && stateFilter !== 'NOT_ASSIGNED') {
+            params.append('state', stateFilter);
+        }
+        
+        let description = `الرجاء تحديث بيانات المنشآت الصحية عبر الرابط التالي:\n\n`;
+        
+        if (stateFilter && stateFilter !== 'ALL_STATES' && stateFilter !== 'NOT_ASSIGNED') {
+            description += `الولاية: ${STATE_LOCALITIES[stateFilter]?.ar || stateFilter}\n`;
         }
 
-        params.append('state', stateFilter);
-        if (localityFilter) params.append('locality', localityFilter);
-        if (facilityTypeFilter) params.append('facilityType', facilityTypeFilter);
-        if (functioningFilter && functioningFilter !== 'NOT_SET') params.append('functioning', functioningFilter);
-        if (projectFilter) params.append('project', projectFilter);
-        if (serviceTypeFilter) params.append('service', serviceTypeFilter);
+        if (localityFilter) {
+            params.append('locality', localityFilter);
+            description += `المحلية: ${LOCALITY_EN_TO_AR_MAP[localityFilter] || localityFilter}\n`;
+        }
+        if (facilityTypeFilter) {
+            params.append('facilityType', facilityTypeFilter);
+            description += `نوع المنشأة: ${facilityTypeFilter}\n`;
+        }
+        if (functioningFilter && functioningFilter !== 'NOT_SET') {
+            params.append('functioning', functioningFilter);
+            description += `حالة العمل: ${functioningFilter === 'Yes' ? 'نعم' : 'لا'}\n`;
+        }
+        if (projectFilter) {
+            params.append('project', projectFilter);
+            description += `المشروع: ${projectFilter}\n`;
+        }
+        if (serviceTypeFilter) {
+            params.append('service', serviceTypeFilter);
+            description += `الخدمة: ${serviceTypeFilter}\n`;
+        }
         
         const url = `${window.location.origin}/public/bulk-update?${params.toString()}`;
+        const textToCopy = `${description}\nالرابط:\n${url}`;
         
-        navigator.clipboard.writeText(url).then(() => {
-            setToast({ show: true, message: "Bulk update link copied to clipboard!", type: "success" });
-            window.location.href = url;
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            setToast({ show: true, message: "تم نسخ رابط التحديث الجماعي مع الوصف بنجاح!", type: "success" });
+            window.open(url, '_blank');
         });
     };
 
@@ -1157,7 +1200,11 @@ const ChildHealthServicesView = ({
                  switch (serviceTypeFilter) {
                     case 'IMNCI': if (f['وجود_العلاج_المتكامل_لامراض_الطفولة'] !== 'Yes') return false; break;
                     case 'EENC': if (f.eenc_provides_essential_care !== 'Yes') return false; break;
-                    case 'Neonatal': if (!f.neonatal_level_of_care || !(f.neonatal_level_of_care.primary || f.neonatal_level_of_care.secondary || f.neonatal_level_of_care.tertiary)) return false; break;
+                    case 'Neonatal': 
+                    case 'Neonatal (Any Level)': if (!f.neonatal_level_of_care || !(f.neonatal_level_of_care.primary || f.neonatal_level_of_care.secondary || f.neonatal_level_of_care.tertiary)) return false; break;
+                    case 'Neonatal (Primary)': if (!f.neonatal_level_of_care?.primary) return false; break;
+                    case 'Neonatal (Secondary)': if (!f.neonatal_level_of_care?.secondary) return false; break;
+                    case 'Neonatal (Tertiary)': if (!f.neonatal_level_of_care?.tertiary) return false; break;
                     case 'Critical Care': if (f.etat_has_service !== 'Yes' && f.hdu_has_service !== 'Yes' && f.picu_has_service !== 'Yes') return false; break;
                     default: break;
                 }
@@ -1343,9 +1390,36 @@ const ChildHealthServicesView = ({
 
 
     const handleGenerateLink = (facilityId) => {
+        const facility = (filteredFacilities || []).find(f => f.id === facilityId);
+        const facilityName = facility ? facility['اسم_المؤسسة'] : 'المنشأة';
+        
         let url = `${window.location.origin}/facilities/data-entry/${facilityId}`;
         if (serviceTypeFilter) { url += `?service=${encodeURIComponent(serviceTypeFilter)}`; }
-        navigator.clipboard.writeText(url).then(() => { setToast({ show: true, message: 'Public update link copied to clipboard!', type: 'success' }); }, (err) => { setToast({ show: true, message: 'Failed to copy link.', type: 'error' }); });
+        
+        const textToCopy = `الرجاء تحديث بيانات المنشأة "${facilityName}" عبر الرابط التالي:\n\n${url}`;
+        
+        navigator.clipboard.writeText(textToCopy).then(() => { 
+            setToast({ show: true, message: 'تم نسخ الرابط مع الوصف بنجاح!', type: 'success' }); 
+        }, (err) => { 
+            setToast({ show: true, message: 'Failed to copy link.', type: 'error' }); 
+        });
+    };
+
+    const handleCopySingleUpdateLink = () => {
+        if (!updateSelectionData.facilityId) return;
+        const facility = facilitiesToDisplay.find(fac => fac.id === updateSelectionData.facilityId);
+        const facilityName = facility ? facility['اسم_المؤسسة'] : 'المنشأة';
+        
+        let url = `${window.location.origin}/facilities/data-entry/${updateSelectionData.facilityId}`;
+        if (updateSelectionService) { 
+            url += `?service=${encodeURIComponent(updateSelectionService)}`; 
+        }
+        
+        const textToCopy = `الرجاء تحديث بيانات المنشأة "${facilityName}" لخدمة "${updateSelectionService}" عبر الرابط التالي:\n\n${url}`;
+        
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            setToast({ show: true, message: 'تم نسخ رابط التحديث مع الوصف بنجاح!', type: 'success' });
+        });
     };
 
     const handleExportExcel = () => {
@@ -1388,7 +1462,15 @@ const ChildHealthServicesView = ({
 
     const renderListView = () => {
         const FACILITY_TYPES = ["مركز صحة الاسرة", "مستشفى ريفي", "وحدة صحة الاسرة", "مستشفى"];
-        const SERVICE_TYPES = ['IMNCI', 'EENC', 'Neonatal', 'Critical Care'];
+        const SERVICE_TYPES = [
+            'IMNCI', 
+            'EENC', 
+            'Neonatal (Any Level)', 
+            'Neonatal (Primary)', 
+            'Neonatal (Secondary)', 
+            'Neonatal (Tertiary)', 
+            'Critical Care'
+        ];
         
         const isLocalityManager = permissions.manageScope === 'locality';
         const isStateManager = permissions.manageScope === 'state';
@@ -1690,6 +1772,13 @@ const ChildHealthServicesView = ({
                     <div className="flex justify-end gap-2 mt-6 border-t pt-4">
                         <Button variant="secondary" onClick={() => setUpdateSelectionService(null)}>إلغاء</Button>
                         <Button 
+                            variant="info" 
+                            onClick={handleCopySingleUpdateLink} 
+                            disabled={!updateSelectionData.facilityId || isFacilitiesLoading}
+                        >
+                            نسخ الرابط
+                        </Button>
+                        <Button 
                             onClick={() => {
                                 const f = facilitiesToDisplay.find(fac => fac.id === updateSelectionData.facilityId);
                                 if (f) {
@@ -1738,6 +1827,7 @@ const ChildHealthServicesView = ({
                 uploadStatus={uploadStatus}
                 filteredData={filteredFacilities || []}
                 cleanupConfig={CLEANABLE_FIELDS_CONFIG}
+                projectNames={projectNames}
             />
             <DuplicateFinderModal
                 isOpen={isDuplicateModalOpen}

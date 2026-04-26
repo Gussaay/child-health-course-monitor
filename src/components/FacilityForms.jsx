@@ -280,13 +280,7 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
     useEffect(() => {
         const fetchAndPartitionFacilities = async () => {
             if (selectionData.state && selectionData.locality) {
-                setIsLoading(true);
-                try {
-                    const allFacilities = await listHealthFacilities({
-                        state: selectionData.state,
-                        locality: selectionData.locality,
-                    });
-
+                const partitionFacilities = (allFacilities) => {
                     const withService = [];
                     const withoutService = [];
 
@@ -295,7 +289,7 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
                         switch (formTypeKey) {
                             case 'imnci': hasService = f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes'; break;
                             case 'eenc': hasService = f.eenc_provides_essential_care === 'Yes'; break;
-                            case 'neonatal': hasService = f.neonatal_has_service === 'Yes' || f.neonatal_level_primary === 'Yes' || f.neonatal_level_secondary === 'Yes' || f.neonatal_level_tertiary === 'Yes'; break;
+                            case 'neonatal': hasService = f.neonatal_level_primary === 'Yes' || f.neonatal_level_secondary === 'Yes' || f.neonatal_level_tertiary === 'Yes'; break;
                             case 'critical': hasService = f.etat_has_service === 'Yes' || f.hdu_has_service === 'Yes' || f.picu_has_service === 'Yes'; break;
                         }
                         if (hasService) withService.push(f);
@@ -305,8 +299,37 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
                     setFacilitiesWithService(withService);
                     setFacilitiesWithoutService(withoutService);
                     if (withService.length === 0) setShowOtherFacilities(true);
+                };
+
+                // Try fetching from Cache first for immediate display
+                let cachedData = [];
+                try {
+                    cachedData = await listHealthFacilities(
+                        { state: selectionData.state, locality: selectionData.locality },
+                        { source: 'cache' }
+                    );
+                } catch (e) {
+                    // Ignore cache errors
+                }
+
+                if (cachedData && cachedData.length > 0) {
+                    partitionFacilities(cachedData);
+                    setIsLoading(false);
+                } else {
+                    setIsLoading(true);
+                }
+
+                // Fetch fresh data in the background
+                try {
+                    const freshData = await listHealthFacilities({
+                        state: selectionData.state,
+                        locality: selectionData.locality,
+                    });
+                    partitionFacilities(freshData);
                 } catch (error) {
-                    setToast({ show: true, message: 'Could not fetch list.', type: 'error' });
+                    if (!cachedData || cachedData.length === 0) {
+                        setToast({ show: true, message: 'Could not fetch list.', type: 'error' });
+                    }
                 } finally {
                     setIsLoading(false);
                 }
@@ -995,17 +1018,8 @@ export const NeonatalFormFields = ({ formData, handleChange, handleStaffChange, 
                 <h3 className="text-lg font-semibold text-sky-800">Neonatal Care Unit (وحدة رعاية حديثي الولادة)</h3>
             </div>
             <div className="p-5 space-y-6">
-                
-                <FormGroup label="هل تتوفر وحدة رعاية حديثي الولادة؟">
-                    <Select name="neonatal_has_service" value={formData.neonatal_has_service || ''} onChange={handleChange} disabled={isReadOnly} required>
-                        <option value="">اختر...</option>
-                        <option value="Yes">نعم</option>
-                        <option value="No">لا</option>
-                        <option value="Planned">مخططة</option>
-                    </Select>
-                </FormGroup>
 
-                <div className="space-y-8 animate-fade-in pt-4 border-t border-gray-200">
+                <div className="space-y-8 animate-fade-in">
                     
                     {/* --- DEDICATED LEVEL OF CARE QUESTIONS --- */}
                     <div className="bg-gray-50 p-5 rounded-xl border border-gray-200 space-y-6">

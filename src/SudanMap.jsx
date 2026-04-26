@@ -213,11 +213,11 @@ const SudanMap = ({
           );
       })}
 
-      {(facilityMarkers || []).map(({ key, coordinates, name }) => (
+      {(facilityMarkers || []).map(({ key, coordinates, name, color }) => (
         <Marker key={key} coordinates={coordinates}>
           <circle
             r={4}
-            fill="#313695" 
+            fill={color || "#313695"} 
             stroke="#FFFFFF"
             strokeWidth={1.5}
             style={{ cursor: 'pointer' }}
