@@ -237,10 +237,23 @@ export const IMNCIVisitReport = ({
     const [showSuccessModal, setShowSuccessModal] = useState(false);
 
     useEffect(() => {
-        if (!existingReportData && visitNumber) {
-            setFormData(prev => ({ ...prev, visitNumber: visitNumber }));
+        if (existingReportData) return;
+        const currentVisitDate = formData.visit_date;
+        if (!currentVisitDate) return;
+
+        const uniqueDates = [...new Set(
+            allVisitReports
+                .filter(r => r.facilityId === facility?.id)
+                .map(r => r.visitDate)
+        )].filter(d => d && d !== 'N/A').sort();
+
+        if (uniqueDates.includes(currentVisitDate)) {
+            const index = uniqueDates.indexOf(currentVisitDate);
+            setFormData(prev => ({ ...prev, visitNumber: index + 1 }));
+        } else {
+            setFormData(prev => ({ ...prev, visitNumber: uniqueDates.length + 1 }));
         }
-    }, [visitNumber, existingReportData]);
+    }, [formData.visit_date, allVisitReports, facility?.id, existingReportData]);
 
     const sessionsForThisVisit = useMemo(() => {
         if (!allSubmissions || !facility || !formData.visit_date) return [];
@@ -339,7 +352,7 @@ export const IMNCIVisitReport = ({
     };
 
     const addChallengeRow = (e) => {
-        if (e && e.preventDefault) e.preventDefault(); // FIX: Prevent form submission
+        if (e && e.preventDefault) e.preventDefault();
         setFormData(prev => ({
             ...prev,
             challenges_table: [
@@ -881,7 +894,24 @@ export const EENCVisitReport = ({
     const [previousUpdates, setPreviousUpdates] = useState({}); 
     const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-    useEffect(() => { if (!existingReportData && visitNumber) setFormData(prev => ({ ...prev, visitNumber: visitNumber })); }, [visitNumber, existingReportData]);
+    useEffect(() => {
+        if (existingReportData) return;
+        const currentVisitDate = formData.visit_date;
+        if (!currentVisitDate) return;
+
+        const uniqueDates = [...new Set(
+            allVisitReports
+                .filter(r => r.facilityId === facility?.id)
+                .map(r => r.visitDate)
+        )].filter(d => d && d !== 'N/A').sort();
+
+        if (uniqueDates.includes(currentVisitDate)) {
+            const index = uniqueDates.indexOf(currentVisitDate);
+            setFormData(prev => ({ ...prev, visitNumber: index + 1 }));
+        } else {
+            setFormData(prev => ({ ...prev, visitNumber: uniqueDates.length + 1 }));
+        }
+    }, [formData.visit_date, allVisitReports, facility?.id, existingReportData]);
 
     const sessionsForThisVisit = useMemo(() => {
         if (!allSubmissions || !facility || !formData.visit_date) return [];

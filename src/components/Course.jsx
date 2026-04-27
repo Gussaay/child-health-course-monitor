@@ -31,6 +31,7 @@ import {
     AlertTriangle, Shield, Check, X, RefreshCw, Archive, ClipboardList
 } from 'lucide-react'; 
 import { useDataCache } from '../DataContext'; 
+import { Capacitor } from '@capacitor/core';
 
 // NEW IMPORTS FOR MIGRATED DASHBOARDS
 import SudanMap from '../SudanMap';
@@ -359,6 +360,21 @@ export function CoursesTable({
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
 
+    // Helper functions for Sharing
+    const getBaseUrl = () => Capacitor.isNativePlatform() ? 'https://imnci-courses-monitor.web.app' : window.location.origin;
+
+    const shareViaWhatsApp = (textToShare, successMessage) => {
+        navigator.clipboard.writeText(textToShare).then(() => {
+            if (Capacitor.isNativePlatform()) {
+                window.open(`whatsapp://send?text=${encodeURIComponent(textToShare)}`, '_system');
+            } else {
+                alert(successMessage || 'Link copied!');
+            }
+        }).catch(() => {
+            alert('Failed to copy text. Please try again.');
+        });
+    };
+
     // Reset to page 1 when courses array or items per page change
     useEffect(() => {
         setCurrentPage(1);
@@ -552,13 +568,21 @@ export function CoursesTable({
                                     <div className="bg-gray-50 p-3 rounded border">
                                         <div className="flex justify-between items-center mb-1">
                                             <span className="text-sm font-semibold">Participant Registration</span>
-                                            <Button variant="secondary" size="sm" className="flex items-center gap-1" onClick={() => { const link = `${window.location.origin}/public/register/course/${shareModalCourse.id}`; navigator.clipboard.writeText(link).then(() => alert('Registration link copied!')); }}><LinkIcon size={14} /> Copy Link</Button>
+                                            <Button variant="secondary" size="sm" className="flex items-center gap-1" onClick={() => {
+                                                const link = `${getBaseUrl()}/public/register/course/${shareModalCourse.id}`;
+                                                const text = `*Participant Registration*\nCourse: ${shareModalCourse.course_type}\nLocation: ${shareModalCourse.state} - ${shareModalCourse.locality}\n\nPlease register using this link:\n${link}`;
+                                                shareViaWhatsApp(text, 'Registration link copied!');
+                                            }}><LinkIcon size={14} /> Share</Button>
                                         </div>
                                     </div>
                                     <div className="bg-gray-50 p-3 rounded border">
                                         <div className="flex justify-between items-center mb-1">
                                             <span className="text-sm font-semibold">Course Monitoring</span>
-                                            <Button variant="secondary" size="sm" className="flex items-center gap-1" onClick={() => { const link = `${window.location.origin}/monitor/course/${shareModalCourse.id}`; navigator.clipboard.writeText(link).then(() => alert('Monitoring link copied!')); }}><Eye size={14} /> Copy Link</Button>
+                                            <Button variant="secondary" size="sm" className="flex items-center gap-1" onClick={() => {
+                                                const link = `${getBaseUrl()}/monitor/course/${shareModalCourse.id}`;
+                                                const text = `*Course Monitoring*\nCourse: ${shareModalCourse.course_type}\nLocation: ${shareModalCourse.state} - ${shareModalCourse.locality}\n\nAccess monitoring dashboard here:\n${link}`;
+                                                shareViaWhatsApp(text, 'Monitoring link copied!');
+                                            }}><Eye size={14} /> Share</Button>
                                         </div>
                                     </div>
                                     
@@ -566,8 +590,17 @@ export function CoursesTable({
                                         <div className="bg-gray-50 p-3 rounded border">
                                             <span className="text-sm font-semibold block mb-2">Testing</span>
                                             <div className="grid grid-cols-2 gap-2">
-                                                <Button variant="secondary" size="sm" className="flex items-center gap-1 justify-center" onClick={() => { const link = `${window.location.origin}/public/test/course/${shareModalCourse.id}?type=pre`; navigator.clipboard.writeText(link).then(() => alert('Pre-Test link copied!')); }}><FileText size={14} /> Copy Pre-Test</Button>
-                                                <Button variant="secondary" size="sm" className="flex items-center gap-1 justify-center" onClick={() => { const link = `${window.location.origin}/public/test/course/${shareModalCourse.id}?type=post`; navigator.clipboard.writeText(link).then(() => alert('Post-Test link copied!')); }}><FileText size={14} /> Copy Post-Test</Button>
+                                                <Button variant="secondary" size="sm" className="flex items-center gap-1 justify-center" onClick={() => {
+                                                    const link = `${getBaseUrl()}/public/test/course/${shareModalCourse.id}?type=pre`;
+                                                    const text = `*Pre-Test Form*\nCourse: ${shareModalCourse.course_type}\n\nPlease complete the pre-test here:\n${link}`;
+                                                    shareViaWhatsApp(text, 'Pre-Test link copied!');
+                                                }}><FileText size={14} /> Share Pre-Test</Button>
+
+                                                <Button variant="secondary" size="sm" className="flex items-center gap-1 justify-center" onClick={() => {
+                                                    const link = `${getBaseUrl()}/public/test/course/${shareModalCourse.id}?type=post`;
+                                                    const text = `*Post-Test Form*\nCourse: ${shareModalCourse.course_type}\n\nPlease complete the post-test here:\n${link}`;
+                                                    shareViaWhatsApp(text, 'Post-Test link copied!');
+                                                }}><FileText size={14} /> Share Post-Test</Button>
                                             </div>
                                         </div>
                                     )}
@@ -575,8 +608,33 @@ export function CoursesTable({
                                     <div className="bg-gray-50 p-3 rounded border">
                                         <span className="text-sm font-semibold block mb-2">Daily Attendance</span>
                                         <div className="flex gap-2">
-                                            <Input type="date" value={attendanceDate} onChange={(e) => setAttendanceDate(e.target.value)} className="py-1 text-sm" />
-                                            <Button variant="secondary" size="sm" className="flex items-center gap-1" onClick={() => { const link = `${window.location.origin}/attendance/course/${shareModalCourse.id}`; navigator.clipboard.writeText(link).then(() => alert(`Attendance link for ${attendanceDate} copied!`)); }}><LinkIcon size={14} /> Copy Link</Button>
+                                            <Input 
+                                                type="date" 
+                                                value={attendanceDate} 
+                                                onChange={(e) => setAttendanceDate(e.target.value)} 
+                                                className="py-1 text-sm" 
+                                            />
+                                            <Button 
+                                                variant="secondary" 
+                                                size="sm" 
+                                                className="flex items-center gap-1" 
+                                                onClick={() => { 
+                                                    const link = `${getBaseUrl()}/attendance/course/${shareModalCourse.id}?date=${attendanceDate}`; 
+                                                    
+                                                    let subCourseText = '';
+                                                    if (shareModalCourse.facilitatorAssignments && shareModalCourse.facilitatorAssignments.length > 0) {
+                                                        const subcourses = [...new Set(shareModalCourse.facilitatorAssignments.map(a => a.imci_sub_type).filter(Boolean))];
+                                                        if (subcourses.length > 0) {
+                                                            subCourseText = ` - ${subcourses.join(' / ')}`;
+                                                        }
+                                                    }
+
+                                                    const text = `*Attendance Form: ${shareModalCourse.course_type}${subCourseText}*\nDate: ${attendanceDate}\n\nPlease register your attendance here: \n${link}`;
+                                                    shareViaWhatsApp(text, `Attendance link for ${attendanceDate} copied!`);
+                                                }}
+                                            >
+                                                <LinkIcon size={14} /> Share
+                                            </Button>
                                         </div>
                                     </div>
                                 </div>
@@ -631,13 +689,14 @@ export function CoursesTable({
                             )}
 
                             <Button variant="secondary" className="flex items-center gap-3 p-4 justify-start" onClick={() => {
-                                const link = `${window.location.origin}/public/report/course/${reportModalCourse.id}`;
-                                navigator.clipboard.writeText(link).then(() => alert('Report link copied to clipboard!'));
+                                const link = `${getBaseUrl()}/public/report/course/${reportModalCourse.id}`;
+                                const text = `*Course Report*\nCourse: ${reportModalCourse.course_type}\nLocation: ${reportModalCourse.state} - ${reportModalCourse.locality}\n\nView the comprehensive course report here:\n${link}`;
+                                shareViaWhatsApp(text, 'Report link copied to clipboard!');
                             }}>
                                 <div className="bg-indigo-100 p-2 rounded-full"><LinkIcon className="text-indigo-600" size={20} /></div>
                                 <div className="text-left">
                                     <div className="font-semibold text-gray-800">Share Report Link</div>
-                                    <div className="text-xs text-gray-500">Copy public link to course report</div>
+                                    <div className="text-xs text-gray-500">Copy & share report link via WhatsApp</div>
                                 </div>
                             </Button>
 

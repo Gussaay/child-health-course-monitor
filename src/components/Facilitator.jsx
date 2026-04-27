@@ -27,6 +27,22 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { useDataCache } from '../DataContext'; 
 import { DEFAULT_ROLE_PERMISSIONS, ALL_PERMISSIONS } from './AdminDashboard';
 import SudanMap from '../SudanMap'; // Imported the map for the dashboard
+import { Capacitor } from '@capacitor/core';
+
+// --- Helper Functions ---
+const getBaseUrl = () => Capacitor.isNativePlatform() ? 'https://imnci-courses-monitor.web.app' : window.location.origin;
+
+const shareViaWhatsApp = (textToShare, successMessage) => {
+    navigator.clipboard.writeText(textToShare).then(() => {
+        if (Capacitor.isNativePlatform()) {
+            window.open(`whatsapp://send?text=${encodeURIComponent(textToShare)}`, '_system');
+        } else {
+            alert(successMessage || 'تم النسخ بنجاح!');
+        }
+    }).catch(() => {
+        alert('فشل النسخ. يرجى المحاولة مرة أخرى.');
+    });
+};
 
 const getCertificateName = (key) => {
     const names = {
@@ -71,13 +87,13 @@ function ViewCertificatesModal({ isOpen, onClose, facilitator }) {
 
 function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleStatus }) {
     const [showLinkCopied, setShowLinkCopied] = useState(false);
-    const link = `${window.location.origin}/public/facilitator-application`;
+    const link = `${getBaseUrl()}/public/facilitator-application`;
 
     const handleCopyLink = () => {
-        navigator.clipboard.writeText(link).then(() => {
-            setShowLinkCopied(true);
-            setTimeout(() => setShowLinkCopied(false), 2500);
-        });
+        const textToShare = `*Facilitator Registration*\n\nPlease submit your facilitator application via this link:\n${link}`;
+        shareViaWhatsApp(textToShare, 'Link copied!');
+        setShowLinkCopied(true);
+        setTimeout(() => setShowLinkCopied(false), 2500);
     };
 
     return (
@@ -94,7 +110,7 @@ function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleSta
                                     variant="secondary"
                                     size="sm"
                                 >
-                                    {showLinkCopied ? 'Copied!' : 'Copy'}
+                                    {showLinkCopied ? 'Shared!' : 'Share'}
                                 </Button>
                             </div>
                         </FormGroup>
@@ -556,7 +572,8 @@ function ShareLinkModal({ isOpen, onClose, title, link }) {
     const [copied, setCopied] = useState(false);
 
     const handleCopy = () => {
-        navigator.clipboard.writeText(link);
+        const textToShare = `${title}\n\nيرجى زيارة الرابط التالي:\n${link}`;
+        shareViaWhatsApp(textToShare, 'تم نسخ الرابط!');
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
@@ -569,7 +586,7 @@ function ShareLinkModal({ isOpen, onClose, title, link }) {
                 <div className="flex gap-2">
                     <Input type="text" value={link} readOnly />
                     <Button onClick={handleCopy} variant="secondary" className="w-24">
-                        {copied ? 'Copied!' : 'Copy'}
+                        {copied ? 'Copied!' : 'Share'}
                     </Button>
                 </div>
             </FormGroup>
@@ -690,7 +707,7 @@ export function FacilitatorsView({
     };
     
     const handleShare = (facilitator) => {
-        const link = `${window.location.origin}/public/report/facilitator/${facilitator.id}`;
+        const link = `${getBaseUrl()}/public/report/facilitator/${facilitator.id}`;
         setShareModalInfo({ isOpen: true, link: link });
     };
 
@@ -1270,7 +1287,7 @@ export function FacilitatorReportView({
     const hasCerts = facilitator?.certificateUrls && Object.keys(facilitator.certificateUrls).length > 0;
     
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-    const publicLink = isSharedView ? window.location.href : `${window.location.origin}/public/report/facilitator/${facilitator?.id}`;
+    const publicLink = isSharedView ? window.location.href : `${getBaseUrl()}/public/report/facilitator/${facilitator?.id}`;
     
     const { 
         directedCourses, 

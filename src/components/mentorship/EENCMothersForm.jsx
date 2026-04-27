@@ -69,7 +69,6 @@ const StickyOverallScore = ({ totalScore, totalMaxScore }) => {
     );
 };
 
-// Refactored Row Component with Required Indicator
 const EENCFormRow = ({ label, value, onChange }) => {
     return (
         <div dir="rtl" className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 border-b last:border-b-0 bg-white hover:bg-gray-50 transition-colors">
@@ -100,7 +99,6 @@ const EENCFormRow = ({ label, value, onChange }) => {
     );
 };
 
-// --- Logic to calculate scores ---
 const calculateScores = (data) => {
     const calcSection = (keys, targetIsNo = []) => {
         let score = 0;
@@ -139,7 +137,6 @@ const calculateScores = (data) => {
     return { ...sections, overall: { score: totalScore, maxScore: totalMax } };
 };
 
-// List of mandatory fields for validation
 const REQUIRED_CLINICAL_FIELDS = [
     'skin_to_skin_immediate', 'skin_to_skin_90min',
     'breastfed_first_hour', 'given_other_fluids', 'given_other_fluids_bottle',
@@ -149,17 +146,16 @@ const REQUIRED_CLINICAL_FIELDS = [
     'baby_registered', 'given_discharge_card'
 ];
 
-// --- Updated Component Signature ---
 const EENCMothersForm = ({ 
     facility, 
     onCancel,
-    onSaveComplete, // <--- New Prop
+    onSaveComplete,
     setToast, 
     visitNumber = 1, 
     existingSessionData = null,
-    canEditVisitNumber = false 
+    canEditVisitNumber = false,
+    allSubmissions = [] // Dynamic recalculation history
 }) => {
-    // Initialize State
     const [formData, setFormData] = useState(() => {
         if (existingSessionData) {
             const mothersData = existingSessionData.eencMothersData || {};
@@ -202,11 +198,28 @@ const EENCMothersForm = ({
 
     const scores = useMemo(() => calculateScores(formData), [formData]);
 
+    // --- DYNAMIC VISIT NUMBER CALCULATION ---
     useEffect(() => {
-        if (!existingSessionData && visitNumber) {
-            setFormData(prev => ({ ...prev, visitNumber: visitNumber }));
+        if (existingSessionData) return;
+        const currentSessionDate = formData.session_date;
+        if (!currentSessionDate || !facility?.id) return;
+
+        const facilityMotherSessions = allSubmissions.filter(sub => 
+            sub.facilityId === facility.id && 
+            sub.service === 'EENC_MOTHERS'
+        );
+
+        const uniqueDates = [...new Set(
+            facilityMotherSessions.map(s => s.sessionDate || (s.effectiveDate ? new Date(s.effectiveDate.seconds * 1000).toISOString().split('T')[0] : ''))
+        )].filter(d => d).sort();
+
+        if (uniqueDates.includes(currentSessionDate)) {
+            const index = uniqueDates.indexOf(currentSessionDate);
+            setFormData(prev => ({ ...prev, visitNumber: index + 1 }));
+        } else {
+            setFormData(prev => ({ ...prev, visitNumber: uniqueDates.length + 1 }));
         }
-    }, [visitNumber, existingSessionData]);
+    }, [formData.session_date, allSubmissions, facility?.id, existingSessionData]);
 
     const handleChange = (key, value) => {
         setFormData(prev => ({ ...prev, [key]: value }));
@@ -220,8 +233,6 @@ const EENCMothersForm = ({
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // --- VALIDATION CHECK ---
-        // Ensure all clinical questions have been answered (value is not empty string)
         const missingFields = REQUIRED_CLINICAL_FIELDS.filter(field => !formData[field]);
         
         if (missingFields.length > 0) {
@@ -230,7 +241,7 @@ const EENCMothersForm = ({
                 message: 'يرجى الإجابة على جميع الأسئلة (نعم/لا) قبل الحفظ.', 
                 type: 'error' 
             });
-            return; // Stop execution if validation fails
+            return;
         }
 
         setIsSaving(true);
@@ -296,7 +307,6 @@ const EENCMothersForm = ({
             await saveMentorshipSession(payload, sessionId);
             setToast({ show: true, message: 'تم حفظ استبيان الأم بنجاح!', type: 'success' });
             
-            // --- SUCCESS HANDLER ---
             if (onSaveComplete) {
                 onSaveComplete('complete', payload);
             } else if (onCancel) {
@@ -338,19 +348,17 @@ const EENCMothersForm = ({
                                 <Input type="date" name="session_date" value={formData.session_date} onChange={handleSimpleChange} required className="p-1 text-sm w-full border rounded" />
                             </FormGroup>
 
-                            {/* --- MODIFIED: Visit Number Input --- */}
                             <FormGroup label="رقم الزيارة" className="text-right">
                                 <Input 
                                     type="number" 
                                     name="visitNumber" 
                                     value={formData.visitNumber} 
-                                    readOnly={!canEditVisitNumber} // Toggle ReadOnly
-                                    onChange={handleSimpleChange} // Allow change if editable
+                                    readOnly={!canEditVisitNumber} 
+                                    onChange={handleSimpleChange} 
                                     min="1" 
                                     className={`p-1 text-sm w-full border rounded text-right font-bold ${canEditVisitNumber ? 'bg-white text-sky-700 border-sky-300' : 'bg-gray-200 cursor-not-allowed text-gray-600'}`} 
                                 />
                             </FormGroup>
-                            {/* ----------------------------------- */}
 
                             <FormGroup label="اسم الأم (اختياري)" className="text-right">
                                 <Input type="text" name="motherName" value={formData.motherName} onChange={handleSimpleChange} placeholder="اسم الأم" className="p-1 text-sm w-full border rounded text-right" />
@@ -434,7 +442,6 @@ const EENCMothersForm = ({
                     </div>
                 </div>
 
-                {/* Desktop Buttons */}
                 <div className="hidden sm:flex gap-2 justify-end p-4 border-t bg-gray-50 sticky bottom-0 z-10">
                     <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving}>
                         إلغاء
@@ -444,7 +451,6 @@ const EENCMothersForm = ({
                     </Button>
                 </div>
 
-                {/* Mobile Buttons - MODIFIED: bottom-0 -> bottom-16 to avoid overlap */}
                 <div className="flex sm:hidden fixed bottom-16 left-0 right-0 z-20 p-2 bg-gray-50 border-t border-gray-200 shadow-lg justify-around items-center" dir="rtl">
                     <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving} size="sm">
                         إلغاء

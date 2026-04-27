@@ -157,7 +157,11 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
         } else {
             routePrefix = `shared/${shareType}-report`;
         }
-        const shareUrl = `${window.location.origin}/${routePrefix}/${shareableItem.id}`;
+        
+        // Fix: Use production URL if native app, otherwise fallback to origin
+        const baseUrl = Capacitor.isNativePlatform() ? 'https://imnci-courses-monitor.web.app' : window.location.origin;
+        const shareUrl = `${baseUrl}/${routePrefix}/${shareableItem.id}`;
+        
         navigator.clipboard.writeText(shareUrl).then(() => {
             setCopySuccess('Link copied!');
             setTimeout(() => setCopySuccess(''), 2000);
@@ -269,6 +273,8 @@ const ALL_PERMISSIONS = {
     canApproveSubmissions: true,
     canUseSuperUserAdvancedFeatures: true,
     canUseFederalManagerAdvancedFeatures: true,
+    canViewLocalityPlan: true,
+    canEditLocalityPlan: true,
 };
 
 const ALL_PERMISSION_KEYS = Object.keys(ALL_PERMISSIONS);
@@ -278,11 +284,11 @@ const DEFAULT_ROLE_PERMISSIONS = {
     'federal_manager': [
         'canViewDashboard', 'canViewCourse', 'canViewHumanResource', 'canViewFacilities', 'canViewSkillsMentorship',
         'canManageCourse', 'canManageHumanResource', 'canManageFacilities',
-        'canApproveSubmissions', 'canUseFederalManagerAdvancedFeatures'
+        'canApproveSubmissions', 'canUseFederalManagerAdvancedFeatures', 'canViewLocalityPlan', 'canEditLocalityPlan'
     ],
     'state_manager': [
         'canViewDashboard', 'canViewCourse', 'canViewHumanResource', 'canViewFacilities', 'canViewSkillsMentorship',
-        'canManageCourse', 'canManageHumanResource', 'canManageFacilities'
+        'canManageCourse', 'canManageHumanResource', 'canManageFacilities', 'canViewLocalityPlan'
     ],
     'locality_manager': [
         'canViewDashboard', 'canViewCourse', 'canViewHumanResource', 'canViewFacilities', 'canViewSkillsMentorship',
@@ -348,7 +354,7 @@ function Landing({ navigate, permissions }) {
         { label: t('landing.modules.imci', 'IMCI Assessment'), view: 'imciForm', icon: Activity, permission: permissions.canViewCourse },
         { label: t('landing.modules.projects', 'Project Tracker'), view: 'projects', icon: FolderKanban, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.planning', 'Master Plan'), view: 'planning', icon: TrendingUp, permission: permissions.canUseFederalManagerAdvancedFeatures }, 
-        { label: 'التخطيط القاعدي', view: 'localityPlan', icon: Layers, permission: permissions.canUseFederalManagerAdvancedFeatures || permissions.canManageCourse },
+        { label: t('landing.modules.locality_plan', 'Bottom-up Planning'), view: 'localityPlan', icon: Layers, permission: permissions.canViewLocalityPlan },
         { label: t('landing.modules.admin', 'Admin'), view: 'admin', icon: User, permission: permissions.canViewAdmin },
     ];
 
@@ -996,6 +1002,16 @@ export default function App() {
             derivedPermissions.canManageSkillsMentorship = false;
         }
 
+        if (userRole?.toLowerCase() === 'federal_manager') {
+            derivedPermissions.canViewLocalityPlan = true;
+            if (derivedPermissions.canUseFederalManagerAdvancedFeatures) {
+                derivedPermissions.canEditLocalityPlan = true;
+            }
+        }
+        if (userRole?.toLowerCase() === 'state_manager') {
+            derivedPermissions.canViewLocalityPlan = true;
+        }
+
         const ALL_PERMISSIONS_MINIMAL = ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
         return { ...ALL_PERMISSIONS_MINIMAL, ...derivedPermissions, role: userRole };
     }, [userRole, userPermissions]);
@@ -1264,7 +1280,7 @@ export default function App() {
             'attendanceManager': permissions.canManageCourse,
             'projects': permissions.canUseFederalManagerAdvancedFeatures, 
             'planning': permissions.canUseFederalManagerAdvancedFeatures, 
-            'localityPlan': permissions.canUseFederalManagerAdvancedFeatures || permissions.canManageCourse,
+            'localityPlan': permissions.canViewLocalityPlan,
         };
 
         if (user && !viewPermissions[newView]) {
@@ -1824,7 +1840,7 @@ export default function App() {
                 ) : null;
 
             case 'localityPlan':
-                return (permissions.canUseFederalManagerAdvancedFeatures || permissions.canManageCourse) ? (
+                return permissions.canViewLocalityPlan ? (
                     <Suspense fallback={<Spinner />}>
                         <LocalityPlanView permissions={permissions} userStates={userStates} userLocalities={userLocalities} />
                     </Suspense>
@@ -1934,7 +1950,7 @@ export default function App() {
         { label: t('landing.modules.mentorship', 'Skills Mentorship'), view: 'skillsMentorship', active: view === 'skillsMentorship', disabled: !permissions.canViewSkillsMentorship },
         { label: t('landing.modules.projects', 'Project Tracker'), view: 'projects', active: view === 'projects', disabled: !permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.planning', 'Master Plan'), view: 'planning', active: view === 'planning', disabled: !permissions.canUseFederalManagerAdvancedFeatures },
-        { label: 'التخطيط القاعدي', view: 'localityPlan', active: view === 'localityPlan', disabled: !(permissions.canUseFederalManagerAdvancedFeatures || permissions.canManageCourse) },
+        { label: t('landing.modules.locality_plan', 'Bottom-up Planning'), view: 'localityPlan', active: view === 'localityPlan', disabled: !permissions.canViewLocalityPlan },
     ], [view, permissions, t]);
 
     const visibleNavItems = useMemo(() => navItems.filter(item => !item.disabled), [navItems]);

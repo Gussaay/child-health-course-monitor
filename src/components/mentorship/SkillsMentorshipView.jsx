@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useDataCache } from "../../DataContext";
 import { Timestamp } from 'firebase/firestore';
-import { PlusCircle, Trash2, FileText, Users, Building, ClipboardCheck, Archive, LayoutDashboard, Search, Share2, List, ArrowLeft, Target } from 'lucide-react';
+import { PlusCircle, Trash2, FileText, Users, Building, ClipboardCheck, Archive, LayoutDashboard, Search, Share2, List, ArrowLeft, Target, AlertTriangle } from 'lucide-react';
 import {
     saveMentorshipSession,
     importMentorshipSessions,
@@ -13,10 +13,10 @@ import {
     deleteFile, 
     saveIMNCIVisitReport,
     deleteIMNCIVisitReport,
-    listIMNCIVisitReports,
     saveEENCVisitReport,
     deleteEENCVisitReport,
     listMentorshipSessions, 
+    listIMNCIVisitReports,
     listEENCVisitReports    
 } from '../../data';
 
@@ -55,7 +55,7 @@ import {
     GenericFacilityForm,
     SharedFacilityFields,
     IMNCIFormFields,
-    SaveStatusModal // --- ADDED IMPORT FOR OFFLINE POPUPS ---
+    SaveStatusModal 
 } from '../FacilityForms.jsx';
 import { onAuthStateChanged } from "firebase/auth";
 
@@ -71,14 +71,12 @@ const normalizeState = (stateVal) => {
 const normalizeLocality = (stateEnKey, localityVal) => {
     if (!localityVal || localityVal === 'N/A') return 'N/A';
     
-    // Trim and normalize spacing for comparison
     const cleanVal = localityVal.trim();
     
     if (stateEnKey && stateEnKey !== 'N/A' && STATE_LOCALITIES[stateEnKey]) {
         const locObj = STATE_LOCALITIES[stateEnKey].localities.find(l => l.en === cleanVal || l.ar === cleanVal || l.ar.trim() === cleanVal);
         if (locObj) return locObj.en;
     }
-    // Fallback: search all states if state is missing
     for (const data of Object.values(STATE_LOCALITIES)) {
         const locObj = data.localities.find(l => l.en === cleanVal || l.ar === cleanVal || l.ar.trim() === cleanVal);
         if (locObj) return locObj.en;
@@ -86,7 +84,6 @@ const normalizeLocality = (stateEnKey, localityVal) => {
     return cleanVal;
 };
 
-// --- Date Range Filter Helper ---
 const isDateInRange = (dateString, filterType) => {
     if (!filterType) return true;
     if (!dateString || dateString === 'N/A') return false;
@@ -129,7 +126,6 @@ const isDateInRange = (dateString, filterType) => {
     }
 };
 
-// --- Normalization Helper for Job Titles ---
 const normalizeJobTitle = (title) => {
     if (!title || typeof title !== 'string') return title;
     const t = title.trim();
@@ -140,7 +136,6 @@ const normalizeJobTitle = (title) => {
     return t;
 };
 
-// --- Dictionaries for Visit Report View ---
 const IMNCI_SKILLS_LABELS = {
     skill_weight: "قياس الوزن",
     skill_height: "قياس الطول",
@@ -185,17 +180,175 @@ const EENC_ORIENTATIONS_LABELS = {
     orient_nutrition: "قسم التغذية عن الرعاية الضرورية المبكرة للاطفال حديث الولادة",
 };
 
-// --- Action Menu Component (Enhanced Visualization) ---
+// --- Helper: Calculate Proposed Visit Number Updates for Visit Reports ---
+const calculateVisitNumberUpdates = (allVisitReports, serviceType) => {
+    if (!allVisitReports || allVisitReports.length === 0) return [];
+
+    const reportsByFacility = allVisitReports.reduce((acc, report) => {
+        const facId = report.facilityId || report.fullData?.facilityId;
+        if (!facId) return acc;
+        if (!acc[facId]) acc[facId] = [];
+        acc[facId].push(report);
+        return acc;
+    }, {});
+
+    const updatesToMake = [];
+
+    for (const [facilityId, facilityReports] of Object.entries(reportsByFacility)) {
+        const uniqueDates = [...new Set(
+            facilityReports.map(r => r.visitDate || r.fullData?.visitDate)
+        )].filter(d => d && d !== 'N/A').sort();
+
+        for (const report of facilityReports) {
+            const reportDate = report.visitDate || report.fullData?.visitDate;
+            if (!reportDate || reportDate === 'N/A') continue;
+
+            const correctVisitNumber = uniqueDates.indexOf(reportDate) + 1;
+            const currentVisitNumber = parseInt(report.visitNumber || report.fullData?.visitNumber);
+
+            if (currentVisitNumber !== correctVisitNumber && !isNaN(correctVisitNumber)) {
+                updatesToMake.push({
+                    id: report.id,
+                    facilityName: report.facilityName || report.fullData?.facilityName || 'Unknown Facility',
+                    visitDate: reportDate,
+                    oldNumber: currentVisitNumber || '-',
+                    newNumber: correctVisitNumber,
+                    service: serviceType,
+                    payload: {
+                        ...report.fullData, 
+                        visitNumber: correctVisitNumber
+                    }
+                });
+            }
+        }
+    }
+    
+    return updatesToMake.sort((a, b) => new Date(a.visitDate) - new Date(b.visitDate));
+};
+
+// --- Helper: Calculate Proposed Visit Number Updates for Submissions (Skills & Mothers) ---
+const calculateSubmissionVisitNumberUpdates = (submissions, activeTab) => {
+    if (!submissions || submissions.length === 0) return [];
+
+    const updatesToMake = [];
+
+    // Grouping logic based on tab (Skills groups by Facility + Worker, Mothers groups by Facility)
+    const grouped = submissions.reduce((acc, sub) => {
+        const facId = sub.facilityId;
+        if (!facId) return acc;
+
+        let groupKey = facId;
+        if (activeTab === 'skills_list') {
+            const worker = sub.staff || 'N/A';
+            groupKey = `${facId}_${worker}`;
+        }
+
+        if (!acc[groupKey]) acc[groupKey] = [];
+        acc[groupKey].push(sub);
+        return acc;
+    }, {});
+
+    for (const [groupKey, groupSubs] of Object.entries(grouped)) {
+        const uniqueDates = [...new Set(
+            groupSubs.map(s => s.sessionDate || s.date)
+        )].filter(d => d && d !== 'N/A').sort();
+
+        for (const sub of groupSubs) {
+            const subDate = sub.sessionDate || sub.date;
+            if (!subDate || subDate === 'N/A') continue;
+
+            const correctVisitNumber = uniqueDates.indexOf(subDate) + 1;
+            const currentVisitNumber = parseInt(sub.visitNumber);
+
+            if (currentVisitNumber !== correctVisitNumber && !isNaN(correctVisitNumber)) {
+                updatesToMake.push({
+                    id: sub.id,
+                    facilityName: sub.facility || 'Unknown Facility',
+                    workerName: activeTab === 'skills_list' ? sub.staff : 'N/A',
+                    visitDate: subDate,
+                    oldNumber: currentVisitNumber || '-',
+                    newNumber: correctVisitNumber,
+                    service: sub.service,
+                    payload: {
+                        ...sub.fullData,
+                        visitNumber: correctVisitNumber
+                    }
+                });
+            }
+        }
+    }
+    return updatesToMake.sort((a, b) => new Date(a.visitDate) - new Date(b.visitDate));
+};
+
+// --- Component: Preview Sync Modal ---
+const PreviewSyncModal = ({ isOpen, onClose, onConfirm, proposedUpdates, isSyncing, activeTab }) => {
+    if (!isOpen) return null;
+    
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="مراجعة أرقام الزيارات (Review Visit Numbers)" size="3xl">
+            <div className="p-6 text-right" dir="rtl">
+                <div className="mb-4 bg-yellow-50 border border-yellow-200 p-4 rounded-lg flex items-start gap-3">
+                    <AlertTriangle className="text-yellow-600 mt-1 flex-shrink-0" />
+                    <div>
+                        <h4 className="font-bold text-yellow-800">تحذير!</h4>
+                        <p className="text-sm text-yellow-700">
+                            تم العثور على <strong>{proposedUpdates.length}</strong> تقرير/جلسة يحتاج إلى تصحيح. النظام سيقوم بإعادة ترتيب أرقام الزيارات لتكون متسلسلة حسب تاريخ الزيارة للمرافق (والكوادر) المحددة. يرجى المراجعة والتأكيد.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="max-h-[50vh] overflow-y-auto border rounded-lg mb-6 bg-white shadow-sm">
+                    <table className="min-w-full text-sm">
+                        <thead className="bg-sky-100 text-sky-900 sticky top-0 shadow-sm">
+                            <tr>
+                                <th className="px-4 py-3 border-b text-right font-bold">المنشأة</th>
+                                {activeTab === 'skills_list' && <th className="px-4 py-3 border-b text-right font-bold">العامل الصحي</th>}
+                                <th className="px-4 py-3 border-b text-center font-bold">الخدمة</th>
+                                <th className="px-4 py-3 border-b text-center font-bold">تاريخ الزيارة</th>
+                                <th className="px-4 py-3 border-b text-center font-bold">الرقم الحالي</th>
+                                <th className="px-4 py-3 border-b text-center font-bold text-green-700">الرقم المقترح</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                            {proposedUpdates.map((update, idx) => (
+                                <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                                    <td className="px-4 py-3 font-semibold text-gray-800">{update.facilityName}</td>
+                                    {activeTab === 'skills_list' && <td className="px-4 py-3 font-semibold text-sky-800">{update.workerName}</td>}
+                                    <td className="px-4 py-3 text-center text-gray-600">{update.service}</td>
+                                    <td className="px-4 py-3 text-center" dir="ltr">{update.visitDate}</td>
+                                    <td className="px-4 py-3 text-center text-red-500 font-bold line-through">{update.oldNumber}</td>
+                                    <td className="px-4 py-3 text-center font-extrabold text-green-600 text-lg bg-green-50/50">{update.newNumber}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div className="flex justify-end gap-3 mt-4 pt-4 border-t">
+                    <Button variant="secondary" onClick={onClose} disabled={isSyncing}>إلغاء</Button>
+                    <Button variant="primary" onClick={onConfirm} disabled={isSyncing} className="px-6">
+                        {isSyncing ? (
+                            <><Spinner size="sm" className="ml-2"/> جاري التحديث...</>
+                        ) : (
+                            'تأكيد وتحديث الكل'
+                        )}
+                    </Button>
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
+
+// --- Action Menu Component ---
 const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, permissions, canManage }) => {
     
-    // Allow any user with Skills Mentorship view permissions (including State & Locality Managers)
     const canViewSubmissions = 
         permissions?.canViewSkillsMentorship ||
         permissions?.canUseFederalManagerAdvancedFeatures ||
         permissions?.canUseSuperUserAdvancedFeatures ||
         ['super_user', 'federal_manager', 'states_manager', 'locality_manager'].includes(permissions?.role);
 
-    // Section 1: Adding Forms
     const addItems = [
         { id: 'new_skill', label: 'Add New Skill Form', icon: PlusCircle, color: 'text-emerald-600', bg: 'bg-emerald-100', border: 'hover:border-emerald-400', shadow: 'hover:shadow-emerald-100' },
         { id: 'new_mother', label: 'Add New Mother Form', icon: Users, color: 'text-pink-600', bg: 'bg-pink-100', border: 'hover:border-pink-400', shadow: 'hover:shadow-pink-100' },
@@ -203,14 +356,12 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
         { id: 'update_facility', label: 'Update Facility Info', icon: Building, color: 'text-cyan-600', bg: 'bg-cyan-100', border: 'hover:border-cyan-400', shadow: 'hover:shadow-cyan-100' },
     ];
 
-    // Section 2: Viewing Forms
     const viewItems = [
         { id: 'view_dashboard', label: 'Show Dashboard', icon: LayoutDashboard, color: 'text-purple-600', bg: 'bg-purple-100', border: 'hover:border-purple-400', shadow: 'hover:shadow-purple-100' },
         { id: 'view_drafts', label: `My Drafts & Reports (${draftCount + (reportCount || 0)})`, icon: Archive, color: 'text-amber-600', bg: 'bg-amber-100', border: 'hover:border-amber-400', shadow: 'hover:shadow-amber-100' },
         { id: 'training_priorities', label: 'Training Priorities', icon: Target, color: 'text-teal-600', bg: 'bg-teal-100', border: 'hover:border-teal-400', shadow: 'hover:shadow-teal-100' },
     ];
 
-    // Conditionally add 'Show Submitted Forms'
     if (canViewSubmissions) {
         viewItems.unshift({ 
             id: 'view_submissions', 
@@ -223,7 +374,6 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
         });
     }
 
-    // Helper to render grids consistently
     const renderGrid = (items) => (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {items.map(item => {
@@ -248,15 +398,12 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
 
     return (
         <div className="max-w-6xl mx-auto mt-8 p-4 space-y-12" dir="ltr">
-            {/* Adding Section */}
             {canManage && (
                 <section>
                     <h3 className="text-xl font-bold text-gray-800 mb-6 border-b border-gray-200 pb-2">Add New Data</h3>
                     {renderGrid(addItems)}
                 </section>
             )}
-
-            {/* Viewing Section */}
             <section>
                 <h3 className="text-xl font-bold text-gray-800 mb-6 border-b border-gray-200 pb-2">View Records & Dashboards</h3>
                 {renderGrid(viewItems)}
@@ -354,7 +501,6 @@ const TrainingPrioritiesView = ({ activeService, submissions, currentUserEmail, 
         return weakSkills;
     }, []);
 
-    // 1. Filter out only complete sessions for this supervisor
     const mySessions = useMemo(() => {
         if (!submissions || !currentUserEmail) return [];
         return submissions.filter(s =>
@@ -364,7 +510,6 @@ const TrainingPrioritiesView = ({ activeService, submissions, currentUserEmail, 
         );
     }, [submissions, currentUserEmail, activeService]);
 
-    // 2. Group by worker and calculate weaknesses per visit and collective
     const workerData = useMemo(() => {
         const map = new Map();
         let globalMaxVisits = 0;
@@ -378,7 +523,7 @@ const TrainingPrioritiesView = ({ activeService, submissions, currentUserEmail, 
                     facilityName: sub.facility,
                     staff: sub.staff,
                     sessions: [],
-                    visitsMap: {} // Stores data by visitNumber
+                    visitsMap: {}
                 });
             }
             
@@ -390,7 +535,6 @@ const TrainingPrioritiesView = ({ activeService, submissions, currentUserEmail, 
             if (vNum > globalMaxVisits) globalMaxVisits = vNum;
         });
 
-        // Compute weaknesses for each worker
         const computedWorkers = Array.from(map.values()).map(worker => {
             const rowData = {
                 facilityName: worker.facilityName,
@@ -400,7 +544,6 @@ const TrainingPrioritiesView = ({ activeService, submissions, currentUserEmail, 
                 collectiveWeaknesses: computeWeaknesses(worker.sessions, activeService)
             };
 
-            // Calculate for each individual visit
             Object.keys(worker.visitsMap).forEach(vNum => {
                 rowData.visitWeaknesses[vNum] = computeWeaknesses([worker.visitsMap[vNum]], activeService);
             });
@@ -411,7 +554,6 @@ const TrainingPrioritiesView = ({ activeService, submissions, currentUserEmail, 
         return { workers: computedWorkers.sort((a,b) => a.facilityName.localeCompare(b.facilityName) || a.staff.localeCompare(b.staff)), maxVisits: globalMaxVisits };
     }, [mySessions, activeService, computeWeaknesses]);
 
-    // 3. Extract lists for filters
     const filterOptions = useMemo(() => {
         const facs = new Set();
         const workers = new Set();
@@ -430,7 +572,6 @@ const TrainingPrioritiesView = ({ activeService, submissions, currentUserEmail, 
         };
     }, [workerData.workers]);
 
-    // 4. Apply Filters
     const filteredWorkers = useMemo(() => {
         return workerData.workers.filter(w => {
             if (facilityFilter && w.facilityName !== facilityFilter) return false;
@@ -440,7 +581,6 @@ const TrainingPrioritiesView = ({ activeService, submissions, currentUserEmail, 
         });
     }, [workerData.workers, facilityFilter, workerFilter, visitCountFilter]);
 
-    // --- Render Helpers ---
     const renderWeaknessPills = (weaknesses) => {
         if (!weaknesses || weaknesses.length === 0) {
             return <span className="text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-1 rounded">ممتاز (بدون ضعف)</span>;
@@ -500,7 +640,6 @@ const TrainingPrioritiesView = ({ activeService, submissions, currentUserEmail, 
                                 <th className="px-4 py-3 text-right text-xs font-extrabold text-sky-900 uppercase tracking-wider border-l border-gray-200 min-w-[150px]">العامل الصحي</th>
                                 <th className="px-4 py-3 text-center text-xs font-extrabold text-sky-900 uppercase tracking-wider border-l border-gray-200">الزيارات</th>
                                 
-                                {/* Dynamic Visit Columns */}
                                 {Array.from({ length: workerData.maxVisits }).map((_, i) => (
                                     <th key={i} className="px-4 py-3 text-center text-xs font-extrabold text-gray-600 uppercase tracking-wider border-l border-gray-200 min-w-[200px]">
                                         الزيارة رقم {i + 1}
@@ -532,7 +671,6 @@ const TrainingPrioritiesView = ({ activeService, submissions, currentUserEmail, 
                                             {worker.totalVisits}
                                         </td>
                                         
-                                        {/* Render cells for each possible visit */}
                                         {Array.from({ length: workerData.maxVisits }).map((_, i) => {
                                             const visitNum = i + 1;
                                             const hasVisit = worker.visitWeaknesses[visitNum] !== undefined;
@@ -619,11 +757,10 @@ const AddHealthWorkerModal = ({ isOpen, onClose, onSave, facilityName }) => {
     );
 };
 
-// --- NEW: Facility Selection Modal ---
+// --- Facility Selection Modal ---
 const FacilitySelectionModal = ({ isOpen, onClose, facilities, onSelect }) => {
     const [searchTerm, setSearchTerm] = useState('');
     
-    // Filter facilities based on search term
     const filteredList = useMemo(() => {
         if (!searchTerm) return facilities;
         const lowerTerm = searchTerm.toLowerCase();
@@ -805,51 +942,18 @@ const TrainingPrioritiesModal = ({ isOpen, onClose, onSelect, currentSessionData
 
 // --- Visit Reports Table Component ---
 const VisitReportsTable = ({ 
-    reports, onEdit, onDelete, onView, selectedIds, onSelectionChange, isReportsLoading, canManage, currentUserEmail,
-    stateFilter, localityFilter, supervisorFilter, visitNumberFilter, facilityFilter, dateFilter
+    reports, onEdit, onDelete, onView, selectedIds, onSelectionChange, isReportsLoading, canManage, currentUserEmail
 }) => {
 
-    // 1. Filter and Sort logic
-    const filteredReports = useMemo(() => {
-        let filtered = reports;
-
-        if (stateFilter) {
-            filtered = filtered.filter(rep => rep.state === stateFilter);
-        }
-        if (localityFilter) {
-            filtered = filtered.filter(rep => rep.locality === localityFilter);
-        }
-        if (facilityFilter) {
-            filtered = filtered.filter(rep => rep.facilityName === facilityFilter);
-        }
-        if (supervisorFilter) {
-            filtered = filtered.filter(rep => rep.mentorEmail === supervisorFilter);
-        }
-        if (visitNumberFilter) {
-            filtered = filtered.filter(rep => String(rep.visitNumber) === String(visitNumberFilter));
-        }
-        if (dateFilter) {
-            filtered = filtered.filter(rep => isDateInRange(rep.visitDate, dateFilter));
-        }
-
-        // Sort from newest to oldest strictly by precise timestamps
-        return filtered.sort((a, b) => {
-            const timeA = a.fullData?.createdAt ? (a.fullData.createdAt.seconds || a.fullData.createdAt._seconds) : new Date(a.visitDate || 0).getTime() / 1000;
-            const timeB = b.fullData?.createdAt ? (b.fullData.createdAt.seconds || b.fullData.createdAt._seconds) : new Date(b.visitDate || 0).getTime() / 1000;
-            return timeB - timeA; 
-        });
-    }, [reports, stateFilter, localityFilter, facilityFilter, supervisorFilter, visitNumberFilter, dateFilter]);
-
-    // 2. Adjust selection logic to only affect filtered results
-    const isAllSelected = filteredReports.length > 0 && filteredReports.every(r => selectedIds.includes(r.id));
-    const isSomeSelected = filteredReports.length > 0 && filteredReports.some(r => selectedIds.includes(r.id));
+    const isAllSelected = reports.length > 0 && reports.every(r => selectedIds.includes(r.id));
+    const isSomeSelected = reports.length > 0 && reports.some(r => selectedIds.includes(r.id));
 
     const handleSelectAll = (e) => {
         if (e.target.checked) {
-            const newSelection = new Set([...selectedIds, ...filteredReports.map(r => r.id)]);
+            const newSelection = new Set([...selectedIds, ...reports.map(r => r.id)]);
             onSelectionChange(Array.from(newSelection));
         } else {
-            const visibleIds = filteredReports.map(r => r.id);
+            const visibleIds = reports.map(r => r.id);
             onSelectionChange(selectedIds.filter(id => !visibleIds.includes(id)));
         }
     };
@@ -891,10 +995,10 @@ const VisitReportsTable = ({
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                        {filteredReports.length === 0 ? (
+                        {reports.length === 0 ? (
                             <tr><td colSpan={canManage ? "8" : "7"} className="border border-gray-300"><EmptyState title="No Records Found" message="No visit reports found for this service." /></td></tr>
                         ) : (
-                            filteredReports.map(rep => (
+                            reports.map(rep => (
                                 <tr key={rep.id} className={selectedIds.includes(rep.id) ? 'bg-sky-50' : ''}>
                                     {canManage && (
                                         <td className="px-3 py-2 text-center border border-gray-300">
@@ -1267,7 +1371,6 @@ const DraftsModal = ({ isOpen, onClose, drafts, reports = [], onViewSession, onE
                 ) : (
                     <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2">
                         
-                        {/* Section 1: Mentorship Drafts */}
                         {drafts.length > 0 && (
                             <div>
                                 <h4 className="text-lg font-bold text-amber-700 mb-3 border-b pb-2">مسودات الإشراف غير المكتملة</h4>
@@ -1290,7 +1393,6 @@ const DraftsModal = ({ isOpen, onClose, drafts, reports = [], onViewSession, onE
                             </div>
                         )}
 
-                        {/* Section 2: Visit Reports */}
                         {reports.length > 0 && (
                             <div>
                                 <h4 className="text-lg font-bold text-sky-700 mb-3 border-b pb-2">تقارير الزيارات الخاصة بي</h4>
@@ -1327,8 +1429,6 @@ const MentorshipSubmissionsTable = ({
     submissions, activeService, onView, onEdit, onDelete,
     isSubmissionsLoading,
     filterServiceType,
-    stateFilter, localityFilter, supervisorFilter, statusFilter, visitNumberFilter,
-    facilityFilter, workerFilter, projectFilter, workerTypeFilter, dateFilter,
     selectedIds, onSelectionChange, canManage
 }) => {
     
@@ -1342,58 +1442,9 @@ const MentorshipSubmissionsTable = ({
         }
     };
 
-    const filteredSubmissions = useMemo(() => {
-        let filtered = submissions;
-        const motherServiceType = `${activeService}_MOTHERS`;
-
-        if (activeService) {
-            filtered = filtered.filter(sub => sub.service === activeService || sub.service === motherServiceType); 
-        }
-        if (filterServiceType) {
-            filtered = filtered.filter(sub => sub.service === filterServiceType);
-        }
-        if (stateFilter) {
-             filtered = filtered.filter(sub => sub.state === stateFilter);
-        }
-        if (localityFilter) {
-             filtered = filtered.filter(sub => sub.locality === localityFilter);
-        }
-        if (supervisorFilter) {
-            filtered = filtered.filter(sub => sub.supervisorEmail === supervisorFilter);
-        }
-        if (statusFilter) {
-             filtered = filtered.filter(sub => sub.status === statusFilter);
-        }
-        if (visitNumberFilter) {
-             filtered = filtered.filter(sub => String(sub.visitNumber) === String(visitNumberFilter));
-        }
-        if (facilityFilter) {
-            filtered = filtered.filter(sub => sub.facility === facilityFilter);
-        }
-        if (workerFilter) {
-            filtered = filtered.filter(sub => sub.staff === workerFilter);
-        }
-        if (projectFilter) {
-            filtered = filtered.filter(sub => sub.project === projectFilter);
-        }
-        if (workerTypeFilter) {
-            filtered = filtered.filter(sub => sub.workerType === workerTypeFilter);
-        }
-        if (dateFilter) {
-            filtered = filtered.filter(sub => isDateInRange(sub.date, dateFilter));
-        }
-        // Strict chronological sorting based on accurate timestamp
-        return filtered.sort((a, b) => {
-            const timeA = a.effectiveDateTimestamp ? (a.effectiveDateTimestamp.seconds || a.effectiveDateTimestamp._seconds) : new Date(a.date).getTime() / 1000;
-            const timeB = b.effectiveDateTimestamp ? (b.effectiveDateTimestamp.seconds || b.effectiveDateTimestamp._seconds) : new Date(b.date).getTime() / 1000;
-            return timeB - timeA;
-        });
-    }, [submissions, activeService, filterServiceType, stateFilter, localityFilter, supervisorFilter, statusFilter, visitNumberFilter, facilityFilter, workerFilter, projectFilter, workerTypeFilter, dateFilter]);
-
-    // --- Bulk Selection Handlers ---
-    const allFilteredIds = filteredSubmissions.map(s => s.id);
-    const isAllSelected = filteredSubmissions.length > 0 && allFilteredIds.every(id => selectedIds.includes(id));
-    const isSomeSelected = filteredSubmissions.length > 0 && allFilteredIds.some(id => selectedIds.includes(id));
+    const allFilteredIds = submissions.map(s => s.id);
+    const isAllSelected = submissions.length > 0 && allFilteredIds.every(id => selectedIds.includes(id));
+    const isSomeSelected = submissions.length > 0 && allFilteredIds.some(id => selectedIds.includes(id));
 
     const handleSelectAll = (e) => {
         if (e.target.checked) {
@@ -1431,10 +1482,10 @@ const MentorshipSubmissionsTable = ({
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                                {filteredSubmissions.length === 0 ? (
+                                {submissions.length === 0 ? (
                                     <tr><td colSpan={canManage ? "12" : "11"} className="border border-gray-300"><EmptyState title="No Records Found" message="No mentorship visits matched the current filters." /></td></tr>
                                 ) : (
-                                    filteredSubmissions.map((sub, index) => {
+                                    submissions.map((sub, index) => {
                                         const scoreData = sub.scores;
                                         let percentage = null;
                                         if (scoreData && scoreData.overallScore_maxScore > 0) {
@@ -1456,7 +1507,6 @@ const MentorshipSubmissionsTable = ({
 
                                         return (
                                         <tr key={sub.id} className={rowBgClass}>
-                                            {/* Selection Checkbox */}
                                             {canManage && (
                                                 <td className="px-3 py-2 text-center border border-gray-300">
                                                     <input 
@@ -1593,7 +1643,6 @@ const SkillsMentorshipView = ({
             const langParam = params.get('lang');
             
             if (langParam) {
-                // Synchronize with localStorage so LanguageContext picks it up
                 localStorage.setItem('language', langParam);
                 localStorage.setItem('app_language', langParam);
             }
@@ -1608,8 +1657,6 @@ const SkillsMentorshipView = ({
         return 'service_selection';
     });
     
-    // Check if the user is allowed to manage (add, edit, delete).
-    // Public submission mode implies they are granted temporary creation rights.
     const canManageMentorship = publicSubmissionMode || permissions?.canManageSkillsMentorship || permissions?.canUseSuperUserAdvancedFeatures || permissions?.role === 'super_user' || false;
 
     const [activeService, setActiveService] = useState(defaultService);
@@ -1626,18 +1673,20 @@ const SkillsMentorshipView = ({
     const [isReadyToStart, setIsReadyToStart] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     
-    // --- Multiple Selection and Optimistic Deletion States ---
     const [selectedSubmissionIds, setSelectedSubmissionIds] = useState([]);
     const [selectedReportIds, setSelectedReportIds] = useState([]);
     const [deletedSubmissionIds, setDeletedSubmissionIds] = useState(new Set());
     const [deletedReportIds, setDeletedReportIds] = useState(new Set());
 
-    // Dashboard Last Updated Timestamp tracking
     const [lastSyncTime, setLastSyncTime] = useState(null);
 
-    // --- ADDED: State for Status Modal ---
     const [statusData, setStatusData] = useState(null);
     const [statusAction, setStatusAction] = useState(null);
+    
+    // --- Sync Preview State ---
+    const [proposedSyncUpdates, setProposedSyncUpdates] = useState([]);
+    const [isPreviewSyncModalOpen, setIsPreviewSyncModalOpen] = useState(false);
+    const [isExecutingSync, setIsExecutingSync] = useState(false);
 
     const updateLastSyncTime = useCallback(() => {
         let lastTimeMs = 0;
@@ -1645,7 +1694,6 @@ const SkillsMentorshipView = ({
         if (publicDashboardMode) {
             lastTimeMs = parseInt(localStorage.getItem('publicDashboardLastSync') || '0', 10);
         } else {
-            // Check all relevant authenticated cache keys to find the most recent server fetch
             const keys = [
                 'lastServerFetch_skillMentorshipSubmissions', 
                 'lastServerFetch_imnciVisitReports', 
@@ -1668,7 +1716,6 @@ const SkillsMentorshipView = ({
         }
     }, [publicDashboardMode]);
 
-    // Automatically update the sync time badge when background server fetches complete
     useEffect(() => {
         if (!publicDashboardMode) {
             updateLastSyncTime();
@@ -1681,12 +1728,9 @@ const SkillsMentorshipView = ({
         publicDashboardMode
     ]);
 
-    // Determine if user can see all data
     const canSeeAllMentorshipData = useMemo(() => {
         if (publicDashboardMode || publicSubmissionMode) return true;
         if (permissions?.canUseSuperUserAdvancedFeatures || permissions?.canUseFederalManagerAdvancedFeatures) return true;
-        
-        // Explicitly grant access to facilitators and federal-level roles
         if (['facilitator', 'super_user', 'federal_manager'].includes(permissions?.role)) return true;
         if (permissions?.manageLocation === 'federal_level') return true;
 
@@ -1695,7 +1739,6 @@ const SkillsMentorshipView = ({
 
     const isLocalityManager = permissions?.manageScope === 'locality' || permissions?.role === 'locality_manager';
 
-    // Initialize Dashboard Filters with parameters if available
     const [activeDashboardState, setActiveDashboardState] = useState(() => {
         if (publicDashboardMode) return publicDashboardParams?.state || '';
         if (!canSeeAllMentorshipData && userStates?.length === 1) return userStates[0];
@@ -1714,16 +1757,11 @@ const SkillsMentorshipView = ({
     const [activeDashboardWorkerType, setActiveDashboardWorkerType] = useState(publicDashboardMode ? publicDashboardParams?.workerType || '' : '');
     const [activeDashboardDate, setActiveDashboardDate] = useState(publicDashboardMode ? (publicDashboardParams?.dateFilter || publicDashboardParams?.week || '') : '');
 
-    // --- State for Viewing Visit Reports ---
     const [viewingVisitReport, setViewingVisitReport] = useState(null);
 
-    // --- State for Facility Selection Modal ---
     const [isFacilitySelectionModalOpen, setIsFacilitySelectionModalOpen] = useState(false);
-    
-    // --- State for Standalone Facility Update Modal ---
     const [isStandaloneFacilityModalOpen, setIsStandaloneFacilityModalOpen] = useState(false);
 
-    // --- State for Training Priorities / Post Save Modal ---
     const [lastSavedSessionData, setLastSavedSessionData] = useState(null);
     const [isTrainingPrioritiesModalOpen, setIsTrainingPrioritiesModalOpen] = useState(false);
 
@@ -1742,7 +1780,6 @@ const SkillsMentorshipView = ({
 
     const [localHealthFacilities, setLocalHealthFacilities] = useState(healthFacilities || []);
 
-    // --- Local State for direct Public Fetching ---
     const [publicData, setPublicData] = useState({ submissions: null, imnci: null, eenc: null });
     const [publicLoading, setPublicLoading] = useState(publicDashboardMode);
 
@@ -1754,21 +1791,19 @@ const SkillsMentorshipView = ({
         }
     }, [healthFacilities]);
 
-    // --- Fetch public data safely with Cache-First Strategy & Incremental Sync ---
     useEffect(() => {
         if (publicDashboardMode) {
             let isMounted = true;
             const fetchPublicData = async () => {
                 const timeKey = 'publicDashboardLastSync';
                 const lastFetchTime = parseInt(localStorage.getItem(timeKey) || '0', 10);
-                const isStale = (Date.now() - lastFetchTime) > (1 * 60 * 60 * 1000); // 1 HOUR TTL
+                const isStale = (Date.now() - lastFetchTime) > (1 * 60 * 60 * 1000); 
                 
                 let localSubs = [];
                 let localImnci = [];
                 let localEenc = [];
                 let hasLocalData = false;
 
-                // 1. Try fetching from Cache first for instant loading
                 try {
                     const [cachedSubs, cachedImnci, cachedEenc] = await Promise.all([
                         typeof listMentorshipSessions === 'function' ? listMentorshipSessions({ source: 'cache' }).catch(() => []) : Promise.resolve([]),
@@ -1776,7 +1811,6 @@ const SkillsMentorshipView = ({
                         typeof listEENCVisitReports === 'function' ? listEENCVisitReports({ source: 'cache' }).catch(() => []) : Promise.resolve([])
                     ]);
                     
-                    // Accept ANY successful cache response, even empty arrays []
                     if (isMounted && cachedSubs !== undefined && cachedImnci !== undefined && cachedEenc !== undefined) {
                         localSubs = cachedSubs;
                         localImnci = cachedImnci;
@@ -1791,11 +1825,9 @@ const SkillsMentorshipView = ({
                     console.log("Cache miss or unavailable. Waiting for server data...");
                 }
 
-                // 2. Fetch from Server if Cache missed OR if data is Stale (> 1 hour)
                 if (!hasLocalData || isStale) {
                     try {
                         let effectiveLastFetchTime = lastFetchTime;
-                        // If no local data at all, fetch everything
                         if (!hasLocalData || localSubs.length === 0) {
                             effectiveLastFetchTime = 0;
                         }
@@ -1835,9 +1867,7 @@ const SkillsMentorshipView = ({
         }
     }, [publicDashboardMode, updateLastSyncTime]);
 
-    // Ensure data is cached on mount without triggering new server loads unnecessarily
     useEffect(() => {
-        // ALWAYS fetch facilities, as they are required for Project/Partner mapping in all modes
         if (fetchHealthFacilities) {
             fetchHealthFacilities({}, false);
         }
@@ -1849,7 +1879,6 @@ const SkillsMentorshipView = ({
             updateLastSyncTime();
         }
     }, [fetchHealthFacilities, fetchSkillMentorshipSubmissions, fetchIMNCIVisitReports, fetchEENCVisitReports, publicDashboardMode, updateLastSyncTime]);
-
 
     const [viewingSubmission, setViewingSubmission] = useState(null);
     const [editingSubmission, setEditingSubmission] = useState(null);
@@ -1881,7 +1910,6 @@ const SkillsMentorshipView = ({
  
     const formRef = useRef(null);
     
-    // --- FILTERS STATE ---
     const [stateFilter, setStateFilter] = useState('');
     const [localityFilter, setLocalityFilter] = useState('');
     const [supervisorFilter, setSupervisorFilter] = useState(''); 
@@ -1893,7 +1921,6 @@ const SkillsMentorshipView = ({
     const [workerTypeFilter, setWorkerTypeFilter] = useState('');
     const [dateFilter, setDateFilter] = useState('');
 
-    // --- Calculate permission to edit visit number ---
     const canEditVisitNumber = useMemo(() => {
         if (publicSubmissionMode || publicDashboardMode) return false;
         return permissions?.canUseFederalManagerAdvancedFeatures || 
@@ -1902,16 +1929,13 @@ const SkillsMentorshipView = ({
                permissions?.role === 'super_user' || 
                permissions?.role === 'federal_manager';
     }, [permissions, publicSubmissionMode, publicDashboardMode]);
-    // -------------------------------------------------------------
 
-    // --- Restrict Dropdowns for Dashboard ---
     const dashboardStateLocalities = useMemo(() => {
         if (canSeeAllMentorshipData || !userStates || userStates.length === 0) return STATE_LOCALITIES;
         const filtered = {};
         userStates.forEach(stateKey => {
             if (STATE_LOCALITIES[stateKey]) {
                 filtered[stateKey] = { ...STATE_LOCALITIES[stateKey] };
-                // Further restrict localities if the user is a locality manager
                 if (isLocalityManager && userLocalities && userLocalities.length > 0) {
                      filtered[stateKey].localities = filtered[stateKey].localities.filter(l => 
                          userLocalities.includes(l.en) || userLocalities.includes(l.ar)
@@ -1922,7 +1946,6 @@ const SkillsMentorshipView = ({
         return filtered;
     }, [canSeeAllMentorshipData, userStates, userLocalities, isLocalityManager]);
 
-    // O(1) Facility Lookup Map to prevent extreme slowdowns
     const facilityMap = useMemo(() => {
         const map = new Map();
         if (localHealthFacilities) {
@@ -1933,7 +1956,6 @@ const SkillsMentorshipView = ({
         return map;
     }, [localHealthFacilities]);
 
-    // UPDATED: Filter out records not belonging to the user's assigned area with English Key Normalization
     const processedSubmissions = useMemo(() => {
         const sourceData = publicDashboardMode ? publicData.submissions : skillMentorshipSubmissions;
         if (!sourceData) return [];
@@ -1942,7 +1964,6 @@ const SkillsMentorshipView = ({
             !deletedSubmissionIds.has(sub.id) && sub.isDeleted !== true && sub.isDeleted !== "true"
         );
 
-        // Map and Normalize FIRST
         let mappedData = filteredData.map(sub => {
             const fac = facilityMap.get(sub.facilityId);
             const projectInfo = fac?.project_name || fac?.['المشروع'] || fac?.project || fac?.['الشركاء_الداعمين'] || fac?.['المنظمة_الداعمة'] || sub.project || 'N/A';
@@ -1978,7 +1999,6 @@ const SkillsMentorshipView = ({
             };
         });
 
-        // Apply Role-Based Filtering AFTER Normalization
         if (!canSeeAllMentorshipData) {
             if (userStates && userStates.length > 0) {
                 const stateSet = new Set(userStates);
@@ -1993,7 +2013,34 @@ const SkillsMentorshipView = ({
         return mappedData;
     }, [skillMentorshipSubmissions, publicDashboardMode, publicData.submissions, facilityMap, deletedSubmissionIds, canSeeAllMentorshipData, userStates, userLocalities, isLocalityManager]);
 
-    // Extract unique visit numbers for the filter dropdown
+    // --- LIFTED SUBMISSIONS FILTERING TO TOP LEVEL ---
+    const filteredSubmissions = useMemo(() => {
+        let filtered = processedSubmissions;
+        
+        const motherServiceType = `${activeService}_MOTHERS`;
+        const filterServiceTarget = activeTab === 'mothers_list' ? motherServiceType : activeService;
+        
+        if (filterServiceTarget) {
+            filtered = filtered.filter(sub => sub.service === filterServiceTarget); 
+        }
+        if (stateFilter) filtered = filtered.filter(sub => sub.state === stateFilter);
+        if (localityFilter) filtered = filtered.filter(sub => sub.locality === localityFilter);
+        if (supervisorFilter) filtered = filtered.filter(sub => sub.supervisorEmail === supervisorFilter);
+        if (statusFilter) filtered = filtered.filter(sub => sub.status === statusFilter);
+        if (visitNumberFilter) filtered = filtered.filter(sub => String(sub.visitNumber) === String(visitNumberFilter));
+        if (facilityFilter) filtered = filtered.filter(sub => sub.facility === facilityFilter);
+        if (workerFilter) filtered = filtered.filter(sub => sub.staff === workerFilter);
+        if (projectFilter) filtered = filtered.filter(sub => sub.project === projectFilter);
+        if (workerTypeFilter) filtered = filtered.filter(sub => sub.workerType === workerTypeFilter);
+        if (dateFilter) filtered = filtered.filter(sub => isDateInRange(sub.date, dateFilter));
+        
+        return filtered.sort((a, b) => {
+            const timeA = a.effectiveDateTimestamp ? (a.effectiveDateTimestamp.seconds || a.effectiveDateTimestamp._seconds) : new Date(a.date).getTime() / 1000;
+            const timeB = b.effectiveDateTimestamp ? (b.effectiveDateTimestamp.seconds || b.effectiveDateTimestamp._seconds) : new Date(b.date).getTime() / 1000;
+            return timeB - timeA;
+        });
+    }, [processedSubmissions, activeService, activeTab, stateFilter, localityFilter, supervisorFilter, statusFilter, visitNumberFilter, facilityFilter, workerFilter, projectFilter, workerTypeFilter, dateFilter]);
+
     const uniqueVisitNumbers = useMemo(() => {
         const numbers = new Set();
         processedSubmissions.forEach(sub => {
@@ -2002,7 +2049,6 @@ const SkillsMentorshipView = ({
         return Array.from(numbers).sort((a, b) => a - b);
     }, [processedSubmissions]);
     
-    // Extract unique Facilities for filter dropdown
     const uniqueFacilitiesList = useMemo(() => {
         const facs = new Set();
         processedSubmissions.forEach(sub => {
@@ -2014,7 +2060,6 @@ const SkillsMentorshipView = ({
         return Array.from(facs).sort();
     }, [processedSubmissions, stateFilter, localityFilter]);
 
-    // Extract unique Workers for filter dropdown 
     const uniqueWorkersList = useMemo(() => {
         const workers = new Set();
         processedSubmissions.forEach(sub => {
@@ -2027,7 +2072,6 @@ const SkillsMentorshipView = ({
         return Array.from(workers).sort();
     }, [processedSubmissions, stateFilter, localityFilter, facilityFilter]);
 
-    // Extract unique Projects for filter dropdown 
     const uniqueProjectsList = useMemo(() => {
         const projects = new Set();
         processedSubmissions.forEach(sub => {
@@ -2040,7 +2084,6 @@ const SkillsMentorshipView = ({
         return Array.from(projects).sort();
     }, [processedSubmissions, stateFilter, localityFilter, facilityFilter]);
 
-    // Extract unique Worker Types (Job Titles) for filter dropdown
     const uniqueWorkerTypesList = useMemo(() => {
         const types = new Set();
         processedSubmissions.forEach(sub => {
@@ -2053,7 +2096,6 @@ const SkillsMentorshipView = ({
         return Array.from(types).sort();
     }, [processedSubmissions, stateFilter, localityFilter, facilityFilter]);
 
-    // --- Calculate Worker History to pass to Form ---
     const workerHistory = useMemo(() => {
         if (!processedSubmissions || !selectedFacilityId || !selectedHealthWorkerName || !activeService) return [];
         return processedSubmissions.filter(sub =>
@@ -2063,7 +2105,6 @@ const SkillsMentorshipView = ({
             sub.sessionDate
         );
     }, [processedSubmissions, selectedFacilityId, selectedHealthWorkerName, activeService]);
-    // ---------------------------------------------------
 
     const currentUserDrafts = useMemo(() => {
         if (!user || !processedSubmissions || !activeService) return [];
@@ -2074,7 +2115,6 @@ const SkillsMentorshipView = ({
         ).sort((a, b) => new Date(b.date) - new Date(a.date));
     }, [processedSubmissions, user, activeService]);
 
-    // UPDATED: Filter visit reports based on role assignment with English Key Normalization
     const processedVisitReports = useMemo(() => {
         const rawImnci = publicDashboardMode ? publicData.imnci : imnciVisitReports;
         const rawEenc = publicDashboardMode ? publicData.eenc : eencVisitReports;
@@ -2117,7 +2157,6 @@ const SkillsMentorshipView = ({
             rep.fullData?.isDeleted !== "true"
         );
 
-        // Apply Role-Based Filtering AFTER Normalization
         if (!canSeeAllMentorshipData) {
             if (userStates && userStates.length > 0) {
                 const stateSet = new Set(userStates);
@@ -2131,8 +2170,25 @@ const SkillsMentorshipView = ({
 
         return allReports;
     }, [imnciVisitReports, eencVisitReports, activeService, publicDashboardMode, publicData, deletedReportIds, facilityMap, canSeeAllMentorshipData, userStates, userLocalities, isLocalityManager]);
+    
+    // --- LIFTED VISIT REPORTS FILTERING TO TOP LEVEL ---
+    const filteredVisitReports = useMemo(() => {
+        let filtered = processedVisitReports;
 
-    // NEW: Fetch user's own visit reports
+        if (stateFilter) filtered = filtered.filter(rep => rep.state === stateFilter);
+        if (localityFilter) filtered = filtered.filter(rep => rep.locality === localityFilter);
+        if (facilityFilter) filtered = filtered.filter(rep => rep.facilityName === facilityFilter);
+        if (supervisorFilter) filtered = filtered.filter(rep => rep.mentorEmail === supervisorFilter);
+        if (visitNumberFilter) filtered = filtered.filter(rep => String(rep.visitNumber) === String(visitNumberFilter));
+        if (dateFilter) filtered = filtered.filter(rep => isDateInRange(rep.visitDate, dateFilter));
+
+        return filtered.sort((a, b) => {
+            const timeA = a.fullData?.createdAt ? (a.fullData.createdAt.seconds || a.fullData.createdAt._seconds) : new Date(a.visitDate || 0).getTime() / 1000;
+            const timeB = b.fullData?.createdAt ? (b.fullData.createdAt.seconds || b.fullData.createdAt._seconds) : new Date(b.visitDate || 0).getTime() / 1000;
+            return timeB - timeA; 
+        });
+    }, [processedVisitReports, stateFilter, localityFilter, facilityFilter, supervisorFilter, visitNumberFilter, dateFilter]);
+
     const currentUserVisitReports = useMemo(() => {
         if (!user || !processedVisitReports || !activeService) return [];
         return processedVisitReports.filter(rep =>
@@ -2141,7 +2197,6 @@ const SkillsMentorshipView = ({
         ).sort((a, b) => new Date(b.visitDate) - new Date(a.visitDate));
     }, [processedVisitReports, user, activeService]);
 
-    // UPDATED: Allow editing if author
     const handleEditVisitReport = (reportId) => {
         const reportList = activeService === 'IMNCI' ? imnciVisitReports : eencVisitReports;
         if (!reportList) return;
@@ -2151,7 +2206,6 @@ const SkillsMentorshipView = ({
 
         const isAuthor = report.mentorEmail === user?.email;
 
-        // Strict Check: Must be admin OR the original author
         if (!canManageMentorship && !isAuthor) {
             setToast({ show: true, message: 'You do not have permission to edit this report.', type: 'error' });
             return;
@@ -2166,7 +2220,6 @@ const SkillsMentorshipView = ({
         setIsReadyToStart(true); 
     };
 
-    // --- Handle Viewing Visit Report ---
     const handleViewVisitReport = (reportId) => {
         const report = processedVisitReports.find(r => r.id === reportId);
         if (report) {
@@ -2177,7 +2230,6 @@ const SkillsMentorshipView = ({
     const handleDeleteVisitReport = async (reportId) => {
         if (!canManageMentorship) return;
         if (window.confirm('Are you sure you want to delete this visit report?')) {
-            // Optimistic Update
             setDeletedReportIds(prev => new Set(prev).add(reportId));
             try {
                 if (activeService === 'IMNCI') {
@@ -2196,10 +2248,8 @@ const SkillsMentorshipView = ({
         if (!canManageMentorship) return;
         if (!window.confirm(`Are you sure you want to delete ${selectedReportIds.length} reports?`)) return;
 
-        // Find actual reports before optimistic delete removes them
         const reportsToDelete = selectedReportIds.map(id => processedVisitReports.find(r => r.id === id)).filter(Boolean);
 
-        // Optimistic Update
         const newDeleted = new Set(deletedReportIds);
         selectedReportIds.forEach(id => newDeleted.add(id));
         setDeletedReportIds(newDeleted);
@@ -2218,7 +2268,6 @@ const SkillsMentorshipView = ({
         }
     };
 
-    // --- Handle Challenge Status Update (Federal Manager) ---
     const handleChallengeStatusUpdate = async (reportId, challengeId, newStatus, fieldName = 'status') => {
         const reportList = activeService === 'IMNCI' ? imnciVisitReports : eencVisitReports;
         const report = reportList.find(r => r.id === reportId);
@@ -2252,8 +2301,84 @@ const SkillsMentorshipView = ({
             setToast({ show: true, message: `Failed to update status: ${error.message}`, type: 'error' });
         }
     };
-    
-    // --- Manual Refresh Data ---
+
+    // --- Handle Previewing Visit Numbers Sync Based on Current Filters ---
+    const handlePreviewVisitNumbers = () => {
+        let allUpdates = [];
+
+        if (activeTab === 'visit_reports') {
+            const facilitiesToProcess = new Set(filteredVisitReports.map(r => r.facilityId));
+            if (facilitiesToProcess.size === 0) {
+                setToast({ show: true, message: 'لا توجد تقارير حالية لعمل مزامنة عليها بناءً على التصفية الحالية.', type: 'info' });
+                return;
+            }
+
+            const reportsToProcess = processedVisitReports.filter(r => facilitiesToProcess.has(r.facilityId));
+            const imnciReportsToProcess = reportsToProcess.filter(r => r.service === 'IMNCI');
+            const eencReportsToProcess = reportsToProcess.filter(r => r.service === 'EENC');
+
+            allUpdates = [
+                ...calculateVisitNumberUpdates(imnciReportsToProcess, 'IMNCI'),
+                ...calculateVisitNumberUpdates(eencReportsToProcess, 'EENC')
+            ];
+        } else {
+            // For skills_list and mothers_list
+            const facilitiesToProcess = new Set(filteredSubmissions.map(s => s.facilityId));
+            if (facilitiesToProcess.size === 0) {
+                setToast({ show: true, message: 'لا توجد جلسات حالية لعمل مزامنة عليها بناءً على التصفية الحالية.', type: 'info' });
+                return;
+            }
+
+            const targetService = activeTab === 'mothers_list' ? `${activeService}_MOTHERS` : activeService;
+            
+            // For chronological calculation to be accurate, we grab all matching targetService 
+            // records for the filtered facilities.
+            const subsToProcess = processedSubmissions.filter(s => {
+                if (s.service !== targetService) return false;
+                if (!facilitiesToProcess.has(s.facilityId)) return false;
+                return true;
+            });
+
+            allUpdates = calculateSubmissionVisitNumberUpdates(subsToProcess, activeTab);
+        }
+        
+        if (allUpdates.length === 0) {
+            setToast({ show: true, message: 'أرقام الزيارات للمنشآت المحددة صحيحة بالفعل.', type: 'success' });
+        } else {
+            setProposedSyncUpdates(allUpdates);
+            setIsPreviewSyncModalOpen(true);
+        }
+    };
+
+    // --- Handle Confirming the Sync ---
+    const handleConfirmSync = async () => {
+        setIsExecutingSync(true);
+        let successCount = 0;
+        try {
+            for (const update of proposedSyncUpdates) {
+                if (activeTab === 'visit_reports') {
+                    if (update.service === 'IMNCI') {
+                        await saveIMNCIVisitReport(update.payload, update.id);
+                    } else if (update.service === 'EENC') {
+                        await saveEENCVisitReport(update.payload, update.id);
+                    }
+                } else {
+                    await saveMentorshipSession(update.payload, update.id);
+                }
+                successCount++;
+            }
+            setToast({ show: true, message: `Successfully updated ${successCount} records.`, type: 'success' });
+            setIsPreviewSyncModalOpen(false);
+            setProposedSyncUpdates([]);
+            handleRefresh(); 
+        } catch (error) {
+            console.error("Sync error:", error);
+            setToast({ show: true, message: `Error during sync: ${error.message}`, type: 'error' });
+        } finally {
+            setIsExecutingSync(false);
+        }
+    };
+
     const handleRefresh = async () => {
         setIsRefreshing(true);
         try {
@@ -2262,12 +2387,10 @@ const SkillsMentorshipView = ({
                 const lastFetch = parseInt(localStorage.getItem(timeKey) || '0', 10);
                 
                 let effectiveLastFetch = lastFetch;
-                // If we have no public data loaded, pull everything
                 if (!publicData.submissions || publicData.submissions.length === 0) {
                     effectiveLastFetch = 0;
                 }
 
-                // FIX: Refresh facility mapping data in public mode as well
                 if (fetchHealthFacilities) {
                     fetchHealthFacilities({}, true);
                 }
@@ -2278,7 +2401,6 @@ const SkillsMentorshipView = ({
                     listEENCVisitReports({ source: 'server' }, effectiveLastFetch).catch(() => [])
                 ]);
 
-                // Merge logic
                 const mergeData = (oldData, newData) => {
                     if (!newData || newData.length === 0) return oldData || [];
                     const map = new Map((oldData || []).map(i => [i.id, i]));
@@ -2295,7 +2417,6 @@ const SkillsMentorshipView = ({
                 localStorage.setItem(timeKey, Date.now().toString());
 
             } else {
-                // Standard refresh for authenticated users (uses DataContext which now properly handles force=true and merges)
                 const promises = [
                     fetchSkillMentorshipSubmissions(true),
                     fetchIMNCIVisitReports(true),
@@ -2403,14 +2524,12 @@ const SkillsMentorshipView = ({
         setIsReadyToStart(false);
     };
 
-
     const filteredFacilities = useMemo(() => {
         if (!localHealthFacilities || !selectedState || !selectedLocality) return [];
         return localHealthFacilities.filter(f => f['الولاية'] === selectedState && f['المحلية'] === selectedLocality)
                .sort((a, b) => (a['اسم_المؤسسة'] || '').localeCompare(b['اسم_المؤسسة'] || ''));
     }, [localHealthFacilities, selectedState, selectedLocality]);
 
-    // --- Facility Selection Handler ---
     const handleFacilitySelect = (facilityId) => {
         setSelectedFacilityId(facilityId);
         setSelectedHealthWorkerName('');
@@ -2483,7 +2602,6 @@ const SkillsMentorshipView = ({
 
     }, [processedSubmissions, selectedFacilityId, selectedHealthWorkerName, activeService, editingSubmission]);
 
-    // --- Calculate Mother Visit Number Logic ---
     const motherVisitNumber = useMemo(() => {
         if (!Array.isArray(processedSubmissions) || !selectedFacilityId || !activeService) {
             return 1;
@@ -2520,7 +2638,6 @@ const SkillsMentorshipView = ({
 
     }, [processedSubmissions, selectedFacilityId, activeService, editingSubmission]);
 
-    // --- Calculate Visit Report Visit Number Logic ---
     const visitReportVisitNumber = useMemo(() => {
         if (!selectedFacilityId || !activeService) {
             return 1;
@@ -2574,7 +2691,6 @@ const SkillsMentorshipView = ({
             return workerSessions.length > 0 ? workerSessions[0].date : null;
         }
     }, [processedSubmissions, selectedFacilityId, selectedHealthWorkerName, activeService, editingSubmission]);
-
 
     useEffect(() => {
         if (selectedHealthWorkerName && selectedFacility?.imnci_staff) {
@@ -2658,7 +2774,6 @@ const SkillsMentorshipView = ({
         }
     };
 
-    // Action Menu handler
     const handleActionMenuClick = (action) => {
         if (action === 'view_submissions') {
             setCurrentView('history');
@@ -2715,7 +2830,6 @@ const SkillsMentorshipView = ({
         setCurrentView('action_menu');
     };
 
-    // --- MODIFIED: Ensure status popup resolves cleanly ---
     const handleSaveSuccess = async (status, savedData) => {
         let lastFacilityInfo = null;
         if (savedData) {
@@ -2727,7 +2841,6 @@ const SkillsMentorshipView = ({
             };
         }
         
-        // IMMEDIATE SYNC
         if (status === 'complete' || status === 'draft') {
             fetchSkillMentorshipSubmissions(true);
         }
@@ -2740,7 +2853,6 @@ const SkillsMentorshipView = ({
             setIsTrainingPrioritiesModalOpen(true);
         } else {
             if (publicSubmissionMode) {
-                // Remove the toast since the Modal will show instead
                 setCurrentView('action_menu');
             } else {
                 setCurrentView('action_menu');
@@ -2757,7 +2869,6 @@ const SkillsMentorshipView = ({
     useEffect(() => {
         previousViewRef.current = currentView;
     }, [currentView]);
-
 
     const handleBackToMainMenu = () => {
         setCurrentView('action_menu');
@@ -2893,7 +3004,6 @@ const SkillsMentorshipView = ({
         }
     };
     
-    // --- MODIFIED: Handle New Worker Submission with Offline Popup ---
     const handleSaveNewHealthWorker = async (workerData) => {
         const user = auth.currentUser;
         
@@ -2924,7 +3034,6 @@ const SkillsMentorshipView = ({
 
             setSelectedHealthWorkerName(workerData.name);
             
-            // Trigger offline-safe popup
             setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
             setStatusAction('addWorker');
 
@@ -2934,7 +3043,6 @@ const SkillsMentorshipView = ({
         }
     };
 
-    // --- MODIFIED: Handle Update Worker Submission with Offline Popup ---
     const handleUpdateHealthWorkerInfo = async () => {
         if (!selectedHealthWorkerName || !selectedFacility || !isWorkerInfoChanged) {
             return;
@@ -2980,7 +3088,6 @@ const SkillsMentorshipView = ({
             setSelectedWorkerOriginalData(updatedOriginalData);
             setIsWorkerInfoChanged(false);
 
-            // Trigger offline-safe popup
             setStatusData({ status: navigator.onLine ? 'success' : 'queued', message: '' });
             setStatusAction('updateWorker');
 
@@ -2992,7 +3099,6 @@ const SkillsMentorshipView = ({
         }
     };
 
-    // --- ADDED: Global Status Modal Close Handler ---
     const handleCloseStatusModal = () => {
         const wasSuccessOrQueued = statusData?.status !== 'error';
         setStatusData(null);
@@ -3043,7 +3149,6 @@ const SkillsMentorshipView = ({
         setCurrentView('form_setup');
     };
 
-
     const handleDeleteSubmission = async (submissionId) => {
         if (!canManageMentorship) return;
         const submissionToDelete = processedSubmissions.find(s => s.id === submissionId);
@@ -3053,7 +3158,6 @@ const SkillsMentorshipView = ({
 ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
 
         if (window.confirm(confirmMessage)) {
-            // Optimistic update
             setDeletedSubmissionIds(prev => new Set(prev).add(submissionId));
             try {
                 await deleteMentorshipSession(submissionId);
@@ -3071,7 +3175,6 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
         if (!canManageMentorship) return;
         if (!window.confirm(`Are you sure you want to delete ${selectedSubmissionIds.length} items?`)) return;
 
-        // Optimistic update
         const newDeleted = new Set(deletedSubmissionIds);
         selectedSubmissionIds.forEach(id => newDeleted.add(id));
         setDeletedSubmissionIds(newDeleted);
@@ -3237,9 +3340,6 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
     }
 
     if (currentView === 'history') {
-        const canShareLink = permissions?.canManageSkillsMentorship || permissions?.canUseSuperUserAdvancedFeatures;
-        const isFederalManager = permissions?.manageScope === 'federal' || permissions?.isSuperUser || permissions?.role === 'federal_manager';
-
         return (
             <>
                 <Card dir="ltr">
@@ -3271,7 +3371,6 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                         </>
                                     )}
                                 </Button>
-                                {/* Last Updated Badge placed beside the Refresh button */}
                                 {lastSyncTime && (
                                     <div className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-white text-slate-600 border border-slate-300 shadow-sm">
                                         <svg className="w-3.5 h-3.5 mr-1.5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -3282,7 +3381,6 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                 )}
                             </div>
                             
-                            {/* MOVED SHARE BUTTON TO TOP RIGHT, REPLACING TABS */}
                             {activeTab === 'dashboard' && !publicDashboardMode && (
                                 <div className="flex items-center">
                                     <Button variant="secondary" onClick={handleShareDashboardLink} title="Share Public Dashboard Link">
@@ -3292,7 +3390,6 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                             )}
                         </div>
 
-                        {/* --- ADDED: Tab Navigation for History Forms --- */}
                         {!publicDashboardMode && activeTab !== 'dashboard' && (
                             <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
                                 <button
@@ -3449,6 +3546,12 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                             </Button>
                                         )}
 
+                                        {canManageMentorship && (
+                                            <Button variant="warning" onClick={handlePreviewVisitNumbers} className="bg-amber-500 hover:bg-amber-600 text-white">
+                                                Sync Visit Numbers
+                                            </Button>
+                                        )}
+
                                         {activeTab === 'skills_list' && canBulkUploadMentorships && selectedSubmissionIds.length === 0 && canManageMentorship && (
                                             <Button onClick={() => setIsBulkUploadModalOpen(true)}>Bulk Upload</Button>
                                         )}
@@ -3460,7 +3563,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         <div>
                             {activeTab === 'skills_list' && !publicDashboardMode && (
                                 <MentorshipSubmissionsTable
-                                    submissions={processedSubmissions}
+                                    submissions={filteredSubmissions}
                                     activeService={activeService}
                                     filterServiceType={activeService}
                                     onView={handleViewSubmission}
@@ -3484,7 +3587,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                             )}
                             {activeTab === 'mothers_list' && !publicDashboardMode && (
                                 <MentorshipSubmissionsTable
-                                    submissions={processedSubmissions}
+                                    submissions={filteredSubmissions}
                                     activeService={activeService}
                                     filterServiceType={`${activeService}_MOTHERS`}
                                     onView={handleViewSubmission}
@@ -3508,7 +3611,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                             )}
                             {activeTab === 'visit_reports' && !publicDashboardMode && (
                                 <VisitReportsTable
-                                    reports={processedVisitReports}
+                                    reports={filteredVisitReports}
                                     onEdit={handleEditVisitReport}
                                     onDelete={handleDeleteVisitReport}
                                     onView={handleViewVisitReport} 
@@ -3517,12 +3620,6 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                     isReportsLoading={activeService === 'IMNCI' ? (isDataCacheLoading.imnciVisitReports && imnciVisitReports === null) : (isDataCacheLoading.eencVisitReports && eencVisitReports === null)}
                                     canManage={canManageMentorship}
                                     currentUserEmail={user?.email}
-                                    stateFilter={stateFilter}
-                                    localityFilter={localityFilter}
-                                    facilityFilter={facilityFilter}
-                                    supervisorFilter={supervisorFilter}
-                                    visitNumberFilter={visitNumberFilter}
-                                    dateFilter={dateFilter}
                                 />
                             )}
 
@@ -3616,6 +3713,18 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         onClose={() => setViewingVisitReport(null)}
                     />
                 )}
+
+                <PreviewSyncModal
+                    isOpen={isPreviewSyncModalOpen}
+                    onClose={() => {
+                        setIsPreviewSyncModalOpen(false);
+                        setProposedSyncUpdates([]);
+                    }}
+                    onConfirm={handleConfirmSync}
+                    proposedUpdates={proposedSyncUpdates}
+                    isSyncing={isExecutingSync}
+                    activeTab={activeTab}
+                />
             </>
         );
     }
@@ -3831,7 +3940,6 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         />
                     )}
                     
-                    {/* --- ADDED: INJECT STATUS MODAL --- */}
                     <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
                 </>
             );
@@ -3862,7 +3970,6 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         />
                     )}
                     
-                    {/* --- ADDED: INJECT STATUS MODAL --- */}
                     <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
                 </>
             );
@@ -3888,7 +3995,6 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         onNavClick={handleMobileNavClick}
                     />
                     
-                    {/* --- ADDED: INJECT STATUS MODAL --- */}
                     <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
                 </>
             );
@@ -3905,7 +4011,6 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         canEditVisitNumber={canEditVisitNumber}
                     />
                     
-                    {/* --- ADDED: INJECT STATUS MODAL --- */}
                     <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
                 </>
             );
@@ -3947,7 +4052,6 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                     onNavClick={handleMobileNavClick}
                  />
                  
-                {/* --- ADDED: INJECT STATUS MODAL --- */}
                 <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
             </>
         );
@@ -4434,7 +4538,6 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                     onNavClick={handleMobileNavClick}
                  />
 
-                 {/* --- ADDED: INJECT STATUS MODAL HERE FOR SETUP VIEW POPUPS --- */}
                  <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
             </>
         );

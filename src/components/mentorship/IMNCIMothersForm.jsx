@@ -161,20 +161,19 @@ const MotherFormRow = ({ name, label, value, onChange, options = ['نعم', 'ل�
     );
 };
 
-// --- Updated Component Signature ---
 const MothersForm = ({ 
     facility, 
     onCancel,
-    onSaveComplete, // <--- New Prop
+    onSaveComplete,
     setToast, 
     visitNumber = 1, 
     existingSessionData = null,
-    canEditVisitNumber = false 
+    canEditVisitNumber = false,
+    allSubmissions = [] // Dynamic recalculation history
 }) => {
-    // Initialize State (with Hydration logic for Edit Mode)
+    // Initialize State
     const [formData, setFormData] = useState(() => {
         if (existingSessionData) {
-            // Populate form with existing data
             return {
                 session_date: existingSessionData.sessionDate || new Date().toISOString().split('T')[0],
                 visitNumber: existingSessionData.visitNumber || visitNumber,
@@ -194,12 +193,28 @@ const MothersForm = ({
     const user = auth.currentUser;
     const formRef = useRef(null); 
     
-    // Sync visitNumber prop if it changes (only in Create mode)
+    // --- DYNAMIC VISIT NUMBER CALCULATION ---
     useEffect(() => {
-        if (!existingSessionData && visitNumber) {
-            setFormData(prev => ({ ...prev, visitNumber: visitNumber }));
+        if (existingSessionData) return;
+        const currentSessionDate = formData.session_date;
+        if (!currentSessionDate || !facility?.id) return;
+
+        const facilityMotherSessions = allSubmissions.filter(sub => 
+            sub.facilityId === facility.id && 
+            sub.service === 'IMNCI_MOTHERS'
+        );
+
+        const uniqueDates = [...new Set(
+            facilityMotherSessions.map(s => s.sessionDate || (s.effectiveDate ? new Date(s.effectiveDate.seconds * 1000).toISOString().split('T')[0] : ''))
+        )].filter(d => d).sort();
+
+        if (uniqueDates.includes(currentSessionDate)) {
+            const index = uniqueDates.indexOf(currentSessionDate);
+            setFormData(prev => ({ ...prev, visitNumber: index + 1 }));
+        } else {
+            setFormData(prev => ({ ...prev, visitNumber: uniqueDates.length + 1 }));
         }
-    }, [visitNumber, existingSessionData]);
+    }, [formData.session_date, allSubmissions, facility?.id, existingSessionData]);
     
     const scores = useMemo(() => calculateScores(formData), [formData]);
 
@@ -237,8 +252,6 @@ const MothersForm = ({
         
         try {
             const effectiveDateTimestamp = Timestamp.fromDate(new Date(formData.session_date));
-            
-            // Determine if updating or creating
             const sessionId = existingSessionData ? existingSessionData.id : null;
 
             const payload = {
@@ -273,7 +286,6 @@ const MothersForm = ({
                 status: 'complete',
             };
 
-            // Add Mentor Info / Edit Trail
             if (sessionId) {
                 payload.mentorEmail = existingSessionData?.mentorEmail || 'unknown';
                 payload.mentorName = existingSessionData?.mentorName || 'Unknown Mentor';
@@ -289,7 +301,6 @@ const MothersForm = ({
 
             setToast({ show: true, message: 'تم حفظ استبيان الأم بنجاح!', type: 'success' });
             
-            // --- SUCCESS HANDLER ---
             if (onSaveComplete) {
                 onSaveComplete('complete', payload);
             } else if (onCancel) {
@@ -332,19 +343,17 @@ const MothersForm = ({
                                 <Input type="date" name="session_date" value={formData.session_date} onChange={handleSimpleChange} required className="p-1 text-sm w-full border rounded" />
                             </FormGroup>
                             
-                            {/* --- MODIFIED: Visit Number Input --- */}
                             <FormGroup label="رقم الزيارة" className="text-right">
                                 <Input 
                                     type="number" 
                                     name="visitNumber" 
                                     value={formData.visitNumber} 
-                                    readOnly={!canEditVisitNumber} // Toggle ReadOnly
-                                    onChange={handleSimpleChange} // Allow change if editable
+                                    readOnly={!canEditVisitNumber} 
+                                    onChange={handleSimpleChange} 
                                     min="1" 
                                     className={`p-1 text-sm w-full border rounded text-right font-bold ${canEditVisitNumber ? 'bg-white text-sky-700 border-sky-300' : 'bg-gray-200 cursor-not-allowed text-gray-600'}`} 
                                 />
                             </FormGroup>
-                            {/* ----------------------------------- */}
 
                             <FormGroup label="اسم الأم / مقدم الرعاية (اختياري)" className="text-right">
                                 <Input type="text" name="mother_name" value={formData.mother_name} onChange={handleSimpleChange} placeholder="اسم الأم" className="p-1 text-sm w-full border rounded text-right" />

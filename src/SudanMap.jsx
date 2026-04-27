@@ -92,9 +92,13 @@ const SudanMap = ({
                 return null;
             }
             
-            const fillColor = (viewLevel === 'locality' && isFocused)
+            let fillColor = (viewLevel === 'locality' && isFocused)
                 ? "#525252" 
                 : (choroplethEnabled ? getColorForPercentage(stateData ? stateData.percentage : undefined) : "#6B6B6B");
+
+            if (choroplethEnabled && viewLevel === 'state' && stateData && stateData.hasPlannedOnly) {
+                fillColor = "#F59E0B";
+            }
 
             const stateName = geo.properties.name;
 
@@ -131,8 +135,12 @@ const SudanMap = ({
           {({ geographies }) =>
             geographies.map(geo => {
               const lData = localityDataMap.get(geo.properties.admin_2);
-              const coverage = lData ? lData.coverage : undefined;
-              const fillColor = choroplethEnabled ? getColorForPercentage(coverage) : "#6B6B6B";
+              const coverage = lData ? (lData.percentage !== undefined ? lData.percentage : lData.coverage) : undefined;
+              let fillColor = choroplethEnabled ? getColorForPercentage(coverage) : "#6B6B6B";
+              
+              if (choroplethEnabled && lData && lData.hasPlannedOnly) {
+                  fillColor = "#F59E0B";
+              }
               
               return (
                 <Geography

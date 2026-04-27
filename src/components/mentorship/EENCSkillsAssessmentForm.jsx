@@ -299,7 +299,8 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
         setIsMothersFormModalOpen,
         setIsDashboardModalOpen,
         setIsVisitReportModalOpen,
-        draftCount
+        draftCount,
+        workerHistory = []
     } = props;
 
     const [formData, setFormData] = useState(() => 
@@ -313,11 +314,27 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
     const user = auth.currentUser;
     const [isFormComplete, setIsFormComplete] = useState(false);
 
-    const [currentVisitNumber, setCurrentVisitNumber] = useState(visitNumber);
+    const [currentVisitNumber, setCurrentVisitNumber] = useState(() => 
+        existingSessionData?.visitNumber ? existingSessionData.visitNumber : visitNumber
+    );
 
+    // --- DYNAMIC VISIT NUMBER CALCULATION ---
     useEffect(() => {
-        setCurrentVisitNumber(visitNumber);
-    }, [visitNumber]);
+        if (existingSessionData) return;
+        const currentSessionDate = formData.session_date;
+        if (!currentSessionDate) return;
+
+        const uniqueDates = [...new Set(
+            (workerHistory || []).map(s => s.sessionDate || (s.effectiveDate ? new Date(s.effectiveDate.seconds * 1000).toISOString().split('T')[0] : ''))
+        )].filter(d => d).sort();
+
+        if (uniqueDates.includes(currentSessionDate)) {
+            const index = uniqueDates.indexOf(currentSessionDate);
+            setCurrentVisitNumber(index + 1);
+        } else {
+            setCurrentVisitNumber(uniqueDates.length + 1);
+        }
+    }, [formData.session_date, workerHistory, existingSessionData]);
 
     const formDataRef = useRef(formData);
     useEffect(() => {

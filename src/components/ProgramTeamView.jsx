@@ -64,12 +64,28 @@ const normalizeState = (rawState) => {
     return trimmed; // Return original if no match found
 };
 
+// --- Helper Functions ---
+const getBaseUrl = () => Capacitor.isNativePlatform() ? 'https://imnci-courses-monitor.web.app' : window.location.origin;
+
+const shareViaWhatsApp = (textToShare, successMessage) => {
+    navigator.clipboard.writeText(textToShare).then(() => {
+        if (Capacitor.isNativePlatform()) {
+            window.open(`whatsapp://send?text=${encodeURIComponent(textToShare)}`, '_system');
+        } else {
+            alert(successMessage || 'تم النسخ بنجاح!');
+        }
+    }).catch(() => {
+        alert('فشل النسخ. يرجى المحاولة مرة أخرى.');
+    });
+};
+
 // Reusable Share Link Modal
 function ShareLinkModal({ isOpen, onClose, title, link }) {
     const [copied, setCopied] = useState(false);
 
     const handleCopy = () => {
-        navigator.clipboard.writeText(link);
+        const textToShare = `${title}\n\nيرجى زيارة الرابط التالي:\n${link}`;
+        shareViaWhatsApp(textToShare, 'تم نسخ الرابط!');
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
@@ -82,7 +98,7 @@ function ShareLinkModal({ isOpen, onClose, title, link }) {
                 <div className="flex gap-2">
                     <Input type="text" value={link} readOnly />
                     <Button onClick={handleCopy} variant="secondary" className="w-24">
-                        {copied ? 'Copied!' : 'Copy'}
+                        {copied ? 'Copied!' : 'Share'}
                     </Button>
                 </div>
             </FormGroup>
@@ -115,8 +131,25 @@ function DynamicExperienceFields({ experiences, onChange }) {
         <div className="space-y-4" dir="rtl">
             {experiences.map((exp, index) => (
                 <div key={index} className="flex flex-col sm:flex-row gap-2 p-3 border rounded-md bg-gray-50">
-                    <Input label="الخبرة/المهمة" value={exp.role} onChange={(e) => handleExperienceChange(index, 'role', e.target.value)} placeholder="مكان العمل السابق" className="flex-grow" required />
-                    <Input label="مدة الخبرة بالسنوات" value={exp.duration} onChange={(e) => handleExperienceChange(index, 'duration', e.target.value)} placeholder="مثال: سنتان" className="sm:w-40" required />
+                    <Input 
+                        label="الخبرة/المهمة" 
+                        value={exp.role} 
+                        onChange={(e) => handleExperienceChange(index, 'role', e.target.value)} 
+                        placeholder="مكان العمل السابق" 
+                        className="flex-grow" 
+                        required 
+                    />
+                    <Input 
+                        label="مدة الخبرة بالسنوات" 
+                        type="number" 
+                        min="0"
+                        step="any"
+                        value={exp.duration} 
+                        onChange={(e) => handleExperienceChange(index, 'duration', e.target.value)} 
+                        placeholder="مثال: 2" 
+                        className="sm:w-40" 
+                        required 
+                    />
                     <Button size="sm" variant="danger" onClick={() => handleRemoveExperience(index)} className="self-end sm:self-center mt-2 sm:mt-0 h-10">حذف</Button>
                 </div>
             ))}
@@ -140,7 +173,18 @@ function MemberFormFieldset({ level, formData, onFormChange, onDynamicFieldChang
                 <Input label="الإسم (باللغة الإنجليزية)" name="name" value={formData.name} onChange={onFormChange} required />
                 <Input label="الإسم (باللغة العربية)" name="nameAr" value={formData.nameAr || ''} onChange={onFormChange} required />
                 <Input label="رقم الهاتف" name="phone" type="tel" value={formData.phone} onChange={onFormChange} required />
-                <Input label="الايميل" name="email" type="email" value={formData.email} onChange={onFormChange} required disabled={formData.isUserEmail} />
+                
+                {/* Email now features anti-autofill and is optional if skipRoleUpdate is true */}
+                <Input 
+                    label="الايميل" 
+                    name="email" 
+                    type="email" 
+                    value={formData.email} 
+                    onChange={onFormChange} 
+                    required={!formData.skipRoleUpdate} 
+                    disabled={formData.isUserEmail} 
+                    autoComplete="new-password" 
+                />
             </div>
 
             <div className="p-5 border border-gray-200 shadow-sm rounded-lg bg-white space-y-4">
@@ -186,13 +230,13 @@ function MemberFormFieldset({ level, formData, onFormChange, onDynamicFieldChang
 }
 
 // A single, configurable form for all team levels (internal use)
-function TeamMemberForm({ member, onSave, onCancel }) {
+function TeamMemberForm({ member, onSave, onCancel, isSaving }) {
     const [selectedLevel, setSelectedLevel] = useState(member?.level || (member ? (member.locality ? 'locality' : member.state ? 'state' : 'federal') : ''));
     const [formData, setFormData] = useState(() => {
-        const initialData = member ? { ...member, state: normalizeState(member.state) } : { 
+        const initialData = member ? { ...member, state: normalizeState(member.state), skipRoleUpdate: false } : { 
             name: '', nameAr: '', phone: '', email: '', state: '', locality: '', 
             jobTitle: '', jobTitleOther: '', role: '', directorDate: '', unit: '', 
-            joinDate: '', bankAccount: '', bankName: '', bankBranch: '', accountHolder: '', comments: '' 
+            joinDate: '', bankAccount: '', bankName: '', bankBranch: '', accountHolder: '', comments: '', skipRoleUpdate: false
         };
         if (!initialData.previousRoles || !Array.isArray(initialData.previousRoles) || initialData.previousRoles.length === 0) {
             initialData.previousRoles = [{ role: '', duration: '' }];
@@ -218,16 +262,42 @@ function TeamMemberForm({ member, onSave, onCancel }) {
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4" dir="rtl">
+        <form onSubmit={handleSubmit} className="space-y-4" dir="rtl" autoComplete="off">
             <CardBody>
                 <h2 className="text-xl font-bold text-gray-800 text-center border-b pb-4 mb-6">{member?.id ? `تعديل بيانات العضو` : `إضافة عضو جديد`}</h2>
-                {!member?.id && ( <Select label="اختر المستوى" value={selectedLevel} onChange={(e) => setSelectedLevel(e.target.value)} required><option value="">-- Select Level --</option><option value="federal">Federal</option><option value="state">State</option><option value="locality">Locality</option></Select> )}
+                {!member?.id && ( <Select label="اختر المستوى" value={selectedLevel} onChange={(e) => setSelectedLevel(e.target.value)} required disabled={isSaving}><option value="">-- Select Level --</option><option value="federal">Federal</option><option value="state">State</option><option value="locality">Locality</option></Select> )}
+                
                 {selectedLevel && <MemberFormFieldset level={selectedLevel} formData={formData} onFormChange={handleChange} onDynamicFieldChange={handlePreviousRolesChange} />}
+                
+                {selectedLevel && (
+                    <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+                        <label className="flex items-center gap-3 cursor-pointer text-sm font-semibold text-yellow-800">
+                            <input 
+                                type="checkbox" 
+                                name="skipRoleUpdate" 
+                                checked={formData.skipRoleUpdate} 
+                                onChange={(e) => setFormData({...formData, skipRoleUpdate: e.target.checked})}
+                                className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                disabled={isSaving}
+                            />
+                            عدم تحديث صلاحيات الدخول لهذا المستخدم (لا تقم بربطه بحساب النظام)
+                            <span className="block text-xs font-normal text-yellow-700 mt-1">
+                                حدد هذا الخيار إذا كنت تضيف عضواً لا يحتاج إلى حساب دخول، أو لتجنب تغيير صلاحيات حسابك بالخطأ. سيصبح حقل الإيميل اختيارياً.
+                            </span>
+                        </label>
+                    </div>
+                )}
             </CardBody>
             {selectedLevel && (
                 <CardFooter>
-                    <Button type="button" variant="secondary" onClick={onCancel}>Cancel</Button>
-                    <Button type="submit">Save</Button>
+                    <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving}>Cancel</Button>
+                    <Button type="submit" disabled={isSaving}>
+                        {isSaving ? (
+                            <span className="flex items-center gap-2">
+                                <Spinner size="sm" /> جاري الحفظ...
+                            </span>
+                        ) : 'Save'}
+                    </Button>
                 </CardFooter>
             )}
         </form>
@@ -359,7 +429,9 @@ function TeamMemberView({ level, member, originalMember, onBack }) {
 
 function PendingSubmissions({ submissions, isLoading, onApprove, onReject, onView, isActionDisabled }) {
     const headers = ['Name', 'Email', 'Actions'];
-    if (isLoading) return <Card><Spinner /></Card>;
+    
+    // We intentionally don't show the spinner if there's already data so optimistic updates don't flicker the screen
+    if (isLoading && (!submissions || submissions.length === 0)) return <Card><Spinner /></Card>;
     
     return (
         <Card>
@@ -395,7 +467,7 @@ function PendingSubmissions({ submissions, isLoading, onApprove, onReject, onVie
 function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleStatus }) {
     const [copiedState, setCopiedState] = useState('');
     
-    const baseUrl = `${window.location.origin}/public/team-member-application`;
+    const baseUrl = `${getBaseUrl()}/public/team-member-application`;
     
     const links = {
         'General (Select Level manually)': baseUrl,
@@ -405,10 +477,10 @@ function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleSta
     };
 
     const handleCopyLink = (levelName, link) => {
-        navigator.clipboard.writeText(link).then(() => {
-            setCopiedState(levelName);
-            setTimeout(() => setCopiedState(''), 2500);
-        });
+        const textToShare = `*Registration Form for ${levelName}*\n\nPlease complete your application via this link:\n${link}`;
+        shareViaWhatsApp(textToShare, 'Link copied!');
+        setCopiedState(levelName);
+        setTimeout(() => setCopiedState(''), 2500);
     };
 
     return (
@@ -427,7 +499,7 @@ function LinkManagementModal({ isOpen, onClose, settings, isLoading, onToggleSta
                                         variant="secondary" 
                                         size="sm"
                                     >
-                                        {copiedState === levelName ? 'Copied!' : 'Copy'}
+                                        {copiedState === levelName ? 'Shared!' : 'Share'}
                                     </Button>
                                 </div>
                             </FormGroup>
@@ -1458,6 +1530,7 @@ function BulkImportModal({ isOpen, onClose, allData, fetchers, permissions, setT
     );
 }
 
+// PROTECTED ROLE UPDATE: Ensures the manager making changes doesn't downgrade themselves
 const updateUserRoleByEmail = async (email, newRole, state, locality) => {
     if (!email || !newRole) return; 
 
@@ -1475,8 +1548,9 @@ const updateUserRoleByEmail = async (email, newRole, state, locality) => {
         const userRef = doc(db, "users", userDoc.id);
         const currentUserRole = userDoc.data().role;
 
-        if (currentUserRole === 'super_user') {
-             console.warn(`Role assignment skipped: Cannot programmatically change the role of a Super User (${email}).`);
+        // Block system from accidentally downgrading critical Admin accounts
+        if (currentUserRole === 'super_user' || currentUserRole === 'federal_manager') {
+             console.warn(`Role assignment skipped: Cannot programmatically downgrade the role of a high-level admin (${email}) via the program team menu.`);
              return;
         }
 
@@ -1553,6 +1627,12 @@ export function ProgramTeamView({ permissions, userStates }) {
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+
+    // NEW STATE: Loading state for the save operation
+    const [isSaving, setIsSaving] = useState(false);
+    
+    // NEW STATE: Track IDs of pending submissions we just acted upon (so they vanish instantly)
+    const [processedPendingIds, setProcessedPendingIds] = useState(new Set());
 
     const [modalMode, setModalMode] = useState(null); 
     const [editingMember, setEditingMember] = useState(null);
@@ -1641,6 +1721,7 @@ export function ProgramTeamView({ permissions, userStates }) {
 
     useEffect(() => {
         setSelectedMemberIds(new Set());
+        setProcessedPendingIds(new Set()); // Reset the hidden items if tab or filters change
     }, [filters, activeTab]);
 
     const handleFilterChange = (filterName, value) => {
@@ -1688,28 +1769,39 @@ export function ProgramTeamView({ permissions, userStates }) {
     };
     
     const handleShare = (level, member) => {
-        const link = `${window.location.origin}/public/profile/team/${level}/${member.id}`;
+        const link = `${getBaseUrl()}/public/profile/team/${level}/${member.id}`;
         setShareModalInfo({ isOpen: true, link: link });
     };
 
     const handleSave = async (level, payload) => {
+        setIsSaving(true); // START SAVING SPINNER
         const upsertFnMap = { federal: upsertFederalCoordinator, state: upsertStateCoordinator, locality: upsertLocalityCoordinator };
         try {
             const upsertFn = upsertFnMap[level];
             if (!upsertFn) throw new Error("Invalid save level selected.");
-            await upsertFn({ ...payload, id: editingMember?.id });
             
-            let newRole = null;
-            const roleFromForm = payload.role; 
-            const isManagerOrHead = roleFromForm === 'مدير البرنامج' || roleFromForm === 'رئيس وحدة';
-            if (level === 'federal') newRole = isManagerOrHead ? 'federal_manager' : 'federal_coordinator';
-            else if (level === 'state') newRole = isManagerOrHead ? 'states_manager' : 'state_coordinator';
-            else if (level === 'locality') newRole = 'locality_manager';
+            // Extract the skipRoleUpdate flag from payload
+            const skipRoleUpdate = payload.skipRoleUpdate;
+            const dataToSave = { ...payload };
+            delete dataToSave.skipRoleUpdate; // Do not save the flag boolean to DB
 
-            if (newRole && payload.email) {
-                try { await updateUserRoleByEmail(payload.email, newRole, payload.state, payload.locality); } 
-                catch (roleError) { alert(`Team member saved, but role could not be assigned. \n\nError: ${roleError.message}`); }
+            await upsertFn({ ...dataToSave, id: editingMember?.id });
+            
+            // Only update system/database permissions if the user did NOT opt-out
+            if (!skipRoleUpdate) {
+                let newRole = null;
+                const roleFromForm = dataToSave.role; 
+                const isManagerOrHead = roleFromForm === 'مدير البرنامج' || roleFromForm === 'رئيس وحدة';
+                if (level === 'federal') newRole = isManagerOrHead ? 'federal_manager' : 'federal_coordinator';
+                else if (level === 'state') newRole = isManagerOrHead ? 'states_manager' : 'state_coordinator';
+                else if (level === 'locality') newRole = 'locality_manager';
+
+                if (newRole && dataToSave.email) {
+                    try { await updateUserRoleByEmail(dataToSave.email, newRole, dataToSave.state, dataToSave.locality); } 
+                    catch (roleError) { alert(`Team member saved, but role could not be assigned. \n\nError: ${roleError.message}`); }
+                }
             }
+
             fetchersByLevel[level].list(true); 
             if (level !== filters.level) handleFilterChange('level', level);
             handleCloseModal(); 
@@ -1717,6 +1809,8 @@ export function ProgramTeamView({ permissions, userStates }) {
         } catch (error) { 
             console.error("Error saving member:", error);
             setFeedbackModal({ isOpen: true, type: 'error', message: `Failed to save member: ${error.message}` });
+        } finally {
+            setIsSaving(false); // STOP SAVING SPINNER
         }
     };
     
@@ -1741,7 +1835,7 @@ export function ProgramTeamView({ permissions, userStates }) {
                     locality: deleteLocalityCoordinator
                 };
                 await deleteFnMap[level](id);
-                fetchersByLevel[level].list(true);
+                await fetchersByLevel[level].list(true);
                 setFeedbackModal({ isOpen: true, type: 'success', message: 'Team member deleted successfully.' });
 
             } else if (type === 'bulk') {
@@ -1756,7 +1850,7 @@ export function ProgramTeamView({ permissions, userStates }) {
                 await Promise.all(deletePromises);
                 
                 setSelectedMemberIds(new Set());
-                fetchersByLevel[filters.level].list(true); 
+                await fetchersByLevel[filters.level].list(true); 
                 setFeedbackModal({ isOpen: true, type: 'success', message: `Successfully deleted ${selectedMemberIds.size} team members.` });
             }
         } catch (err) {
@@ -1885,12 +1979,19 @@ export function ProgramTeamView({ permissions, userStates }) {
             else if (filters.level === 'locality') newRole = 'locality_manager';
 
             await approveFn(submission, approverInfo);
+            
+            // Instantly hide the row in UI
+            setProcessedPendingIds(prev => new Set(prev).add(submission.id));
+
             if (newRole && submission.email) {
                  try { await updateUserRoleByEmail(submission.email, newRole, submission.state, submission.locality); } 
                  catch (roleError) { alert(`Approved, but role assignment failed. \n\nError: ${roleError.message}`); }
             }
-            fetchersByLevel[filters.level].listPending(true); 
-            fetchersByLevel[filters.level].list(true); 
+            
+            // Allow the actual backend fetch to happen silently in background
+            await fetchersByLevel[filters.level].listPending(true); 
+            await fetchersByLevel[filters.level].list(true); 
+            
             setFeedbackModal({ isOpen: true, type: 'success', message: 'Submission approved successfully.' });
         } catch (error) { 
             console.error("Error approving:", error); 
@@ -1908,8 +2009,15 @@ export function ProgramTeamView({ permissions, userStates }) {
             try {
                 const rejectFn = rejectFnMap[filters.level];
                 const rejecterInfo = { uid: auth.currentUser.uid, email: auth.currentUser.email, rejectedAt: new Date() };
+                
                 await rejectFn(submissionId, rejecterInfo);
-                fetchersByLevel[filters.level].listPending(true); 
+                
+                // Instantly hide the row in UI
+                setProcessedPendingIds(prev => new Set(prev).add(submissionId));
+
+                // Allow the actual backend fetch to happen silently in background
+                await fetchersByLevel[filters.level].listPending(true); 
+                
                 setFeedbackModal({ isOpen: true, type: 'success', message: 'Submission rejected successfully.' });
             } catch (error) { 
                 console.error("Error rejecting:", error); 
@@ -1988,7 +2096,8 @@ export function ProgramTeamView({ permissions, userStates }) {
                             <Button variant="tab" isActive={activeTab === 'pending'} onClick={() => setActiveTab('pending')}>
                                 Pending Approvals 
                                 <span className="ml-2 bg-sky-100 text-sky-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
-                                    {currentLevelData.pending ? currentLevelData.pending.length : 0}
+                                    {/* Exclude instantly hidden rows from the badge count too */}
+                                    {currentLevelData.pending ? currentLevelData.pending.filter(s => !processedPendingIds.has(s.id)).length : 0}
                                 </span>
                             </Button>
                         )}
@@ -2154,8 +2263,9 @@ export function ProgramTeamView({ permissions, userStates }) {
                 </Card>
             ) : (
                 <PendingSubmissions 
-                    submissions={currentLevelData.pending} 
-                    isLoading={currentLevelData.pendingLoading} 
+                    // Hide any submissions that we just approved or rejected optimistically
+                    submissions={currentLevelData.pending?.filter(s => !processedPendingIds.has(s.id))} 
+                    isLoading={currentLevelData.pendingLoading && (!currentLevelData.pending || currentLevelData.pending.length === 0)} 
                     onApprove={handleApproveSubmission} 
                     onReject={handleRejectSubmission} 
                     onView={handleView} 
@@ -2226,7 +2336,7 @@ export function ProgramTeamView({ permissions, userStates }) {
                     <TeamMemberView level={editingMember.level || filters.level} member={editingMember} originalMember={originalMember} onBack={handleCloseModal} />
                 )}
                 {modalMode === 'edit' && (
-                    <TeamMemberForm member={editingMember} onSave={handleSave} onCancel={handleCloseModal} />
+                    <TeamMemberForm member={editingMember} onSave={handleSave} onCancel={handleCloseModal} isSaving={isSaving} />
                 )}
             </Modal>
 
@@ -2412,6 +2522,7 @@ export function TeamMemberApplicationForm() {
             payload.previousRoles = payload.previousRoles.filter(exp => exp.role && exp.role.trim() !== '');
             delete payload.isUserEmail; 
             delete payload.pendingCollName; // Ensure internal flag is removed
+            delete payload.skipRoleUpdate; // Ensure new internal flag is ignored here
             
             if (payload.jobTitle !== 'اخرى') payload.jobTitleOther = '';
             
@@ -2519,7 +2630,7 @@ export function TeamMemberApplicationForm() {
                 </div>
             </Modal>
 
-            <form onSubmit={handleSubmit} className="space-y-4" dir="rtl">
+            <form onSubmit={handleSubmit} className="space-y-4" dir="rtl" autoComplete="off">
                 <CardBody>
                     <PageHeader 
                         title={isUpdate ? "تحديث معلومات فريق صحة الطفل" : "معلومات فريق صحة الطفل"}

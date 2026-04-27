@@ -6,6 +6,7 @@ import { writeBatch } from "firebase/firestore";
 import { db } from "../firebase";
 import { useDataCache } from '../DataContext';
 import { amiriFontBase64 } from './AmiriFont.js';
+import { Capacitor } from '@capacitor/core'; // <--- ADDED CAPACITOR IMPORT
 
 // --- ICONS ---
 import { PdfIcon } from './CommonComponents';
@@ -215,7 +216,7 @@ const AllFacilitiesTab = ({ facilities, onEdit, onDelete, onGenerateLink, onOpen
                                         <Button variant="danger" size="sm" onClick={() => onDelete(f.id)}>Delete</Button>
                                     </>
                                 )}
-                                <Button size="sm" onClick={() => onGenerateLink(f.id)}>Link</Button>
+                                <Button size="sm" onClick={() => onGenerateLink(f.id)}>Share Link</Button>
                                 <Button variant="secondary" size="sm" onClick={() => onOpenMap(f)}>Map</Button>
                             </div>
                         </td>
@@ -869,6 +870,21 @@ const ChildHealthServicesView = ({
     // --- ADDED: State for Status Modal ---
     const [statusData, setStatusData] = useState(null);
 
+    // --- Helper Functions ---
+    const getBaseUrl = () => Capacitor.isNativePlatform() ? 'https://imnci-courses-monitor.web.app' : window.location.origin;
+
+    const shareViaWhatsApp = (textToShare, successMessage) => {
+        navigator.clipboard.writeText(textToShare).then(() => {
+            if (Capacitor.isNativePlatform()) {
+                window.open(`whatsapp://send?text=${encodeURIComponent(textToShare)}`, '_system');
+            } else {
+                setToast({ show: true, message: successMessage || 'تم النسخ بنجاح!', type: 'success' });
+            }
+        }).catch(() => {
+            setToast({ show: true, message: 'فشل النسخ. يرجى المحاولة مرة أخرى.', type: 'error' });
+        });
+    };
+
     const handleActionMenuClick = (action) => {
         if (action === 'show_list') {
             setView('list');
@@ -920,13 +936,10 @@ const ChildHealthServicesView = ({
             description += `الخدمة: ${serviceTypeFilter}\n`;
         }
         
-        const url = `${window.location.origin}/public/bulk-update?${params.toString()}`;
+        const url = `${getBaseUrl()}/public/bulk-update?${params.toString()}`;
         const textToCopy = `${description}\nالرابط:\n${url}`;
         
-        navigator.clipboard.writeText(textToCopy).then(() => {
-            setToast({ show: true, message: "تم نسخ رابط التحديث الجماعي مع الوصف بنجاح!", type: "success" });
-            window.open(url, '_blank');
-        });
+        shareViaWhatsApp(textToCopy, "تم نسخ رابط التحديث الجماعي مع الوصف بنجاح!");
     };
 
     const { 
@@ -1393,16 +1406,12 @@ const ChildHealthServicesView = ({
         const facility = (filteredFacilities || []).find(f => f.id === facilityId);
         const facilityName = facility ? facility['اسم_المؤسسة'] : 'المنشأة';
         
-        let url = `${window.location.origin}/facilities/data-entry/${facilityId}`;
+        let url = `${getBaseUrl()}/facilities/data-entry/${facilityId}`;
         if (serviceTypeFilter) { url += `?service=${encodeURIComponent(serviceTypeFilter)}`; }
         
         const textToCopy = `الرجاء تحديث بيانات المنشأة "${facilityName}" عبر الرابط التالي:\n\n${url}`;
         
-        navigator.clipboard.writeText(textToCopy).then(() => { 
-            setToast({ show: true, message: 'تم نسخ الرابط مع الوصف بنجاح!', type: 'success' }); 
-        }, (err) => { 
-            setToast({ show: true, message: 'Failed to copy link.', type: 'error' }); 
-        });
+        shareViaWhatsApp(textToCopy, 'تم نسخ الرابط مع الوصف بنجاح!');
     };
 
     const handleCopySingleUpdateLink = () => {
@@ -1410,16 +1419,14 @@ const ChildHealthServicesView = ({
         const facility = facilitiesToDisplay.find(fac => fac.id === updateSelectionData.facilityId);
         const facilityName = facility ? facility['اسم_المؤسسة'] : 'المنشأة';
         
-        let url = `${window.location.origin}/facilities/data-entry/${updateSelectionData.facilityId}`;
+        let url = `${getBaseUrl()}/facilities/data-entry/${updateSelectionData.facilityId}`;
         if (updateSelectionService) { 
             url += `?service=${encodeURIComponent(updateSelectionService)}`; 
         }
         
         const textToCopy = `الرجاء تحديث بيانات المنشأة "${facilityName}" لخدمة "${updateSelectionService}" عبر الرابط التالي:\n\n${url}`;
         
-        navigator.clipboard.writeText(textToCopy).then(() => {
-            setToast({ show: true, message: 'تم نسخ رابط التحديث مع الوصف بنجاح!', type: 'success' });
-        });
+        shareViaWhatsApp(textToCopy, 'تم نسخ رابط التحديث مع الوصف بنجاح!');
     };
 
     const handleExportExcel = () => {
