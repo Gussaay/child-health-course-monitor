@@ -276,7 +276,8 @@ const MentorshipDashboard = ({
 
     const imnciKpiHelper = useCallback((submissions) => {
         const scores = { overall: [], assessment: [], decision: [], treatment: [], handsOnWeight: [], handsOnTemp: [], handsOnHeight: [], respiratoryRateCalculation: [], dehydrationAssessment: [], handsOnMUAC: [], handsOnWFH: [], handsOnPallor: [], pneuAmox: [], diarOrs: [], diarZinc: [], anemiaIron: [], immunization: [], vitaminAssessment: [], malariaCoartem: [], returnImm: [], returnFu: [], recordSigns: [], recordClassifications: [], recordTreatments: [], vitalSigns: [], dangerSigns: [], mainSymptoms: [], malnutrition: [], otherProblems: [], measurementSkills: [], malnutritionAnemiaSkills: [] };
-        const uniqueVisits = new Set(submissions.map(s => `${s.facilityId || 'unk'}_${s.staff || 'unk'}_${s.date || 'unk'}`));
+        // UPDATED: Use date and facilityId to group visits uniquely
+        const uniqueVisits = new Set(submissions.map(s => `${s.facilityId || 'unk'}_${s.date || 'unk'}`));
         const uniqueWorkers = new Set(submissions.map(s => `${s.facilityId || 'unk'}_${s.staff || 'unk'}`));
         const skillStats = {};
         const initStat = (key) => { if (!skillStats[key]) skillStats[key] = { yes: 0, no: 0 }; };
@@ -356,7 +357,8 @@ const MentorshipDashboard = ({
 
     const eencKpiHelper = useCallback((submissions) => {
         const scores = { overall: [], preparation: [], drying: [], normal_breathing: [], resuscitation: [], inf_wash1: [], inf_wash2: [], inf_gloves: [], prep_towel: [], prep_equip: [], prep_ambu: [], care_dry: [], care_skin: [], care_cover: [], cord_hygiene: [], cord_delay: [], cord_clamp: [], bf_advice: [], resus_head: [], resus_mask: [], resus_chest: [], resus_rate: [] };
-        const uniqueVisits = new Set(submissions.map(s => `${s.facilityId || 'unk'}_${s.staff || 'unk'}_${s.date || 'unk'}`));
+        // UPDATED: Use date and facilityId to group visits uniquely
+        const uniqueVisits = new Set(submissions.map(s => `${s.facilityId || 'unk'}_${s.date || 'unk'}`));
         const uniqueWorkers = new Set(submissions.map(s => `${s.facilityId || 'unk'}_${s.staff || 'unk'}`));
 
         const skillStats = {};
@@ -541,7 +543,8 @@ const MentorshipDashboard = ({
             if (visitNum === 'N/A') return acc;
             if (!acc[visitNum]) acc[visitNum] = { cases: 0, visits: new Set() };
             acc[visitNum].cases += 1;
-            acc[visitNum].visits.add(`${sub.facilityId || 'unk'}_${sub.staff || 'unk'}_${sub.date || 'unk'}`);
+            // UPDATED: Use date and facilityId to count unique visits in the volume chart
+            acc[visitNum].visits.add(`${sub.facilityId || 'unk'}_${sub.date || 'unk'}`);
             return acc;
         }, {});
         return Object.keys(visitGroups).map(v => ({ visitNumber: parseInt(v), name: `Visit ${v}`, 'Cases Observed': visitGroups[v].cases, 'Completed Visits': visitGroups[v].visits.size })).sort((a,b) => a.visitNumber - b.visitNumber).slice(0, 4);

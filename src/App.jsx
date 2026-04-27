@@ -13,7 +13,6 @@ import {
 
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
-// --- ADDED: Capacitor Network plugin for reliable native detection ---
 import { Network } from '@capacitor/network';
 
 // --- PRE-FLIGHT LANGUAGE CHECK ---
@@ -158,7 +157,6 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
             routePrefix = `shared/${shareType}-report`;
         }
         
-        // Fix: Use production URL if native app, otherwise fallback to origin
         const baseUrl = Capacitor.isNativePlatform() ? 'https://imnci-courses-monitor.web.app' : window.location.origin;
         const shareUrl = `${baseUrl}/${routePrefix}/${shareableItem.id}`;
         
@@ -193,25 +191,11 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
                     <label className="font-semibold text-gray-700">General Access</label>
                     <div className="flex space-x-4">
                         <label className="flex items-center space-x-2">
-                            <input
-                                type="radio"
-                                name="accessLevel"
-                                value="private"
-                                checked={accessLevel === 'private'}
-                                onChange={() => setAccessLevel('private')}
-                                className="form-radio text-sky-600"
-                            />
+                            <input type="radio" name="accessLevel" value="private" checked={accessLevel === 'private'} onChange={() => setAccessLevel('private')} className="form-radio text-sky-600" />
                             <span>Restricted</span>
                         </label>
                         <label className="flex items-center space-x-2">
-                            <input
-                                type="radio"
-                                name="accessLevel"
-                                value="public"
-                                checked={accessLevel === 'public'}
-                                onChange={() => setAccessLevel('public')}
-                                className="form-radio text-sky-600"
-                            />
+                            <input type="radio" name="accessLevel" value="public" checked={accessLevel === 'public'} onChange={() => setAccessLevel('public')} className="form-radio text-sky-600" />
                             <span>Anyone with the link</span>
                         </label>
                     </div>
@@ -221,13 +205,7 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
                     <div className="space-y-4">
                         <label className="font-semibold text-gray-700">Share with specific people</label>
                         <div className="flex space-x-2">
-                            <Input
-                                type="email"
-                                placeholder="Enter email address"
-                                value={emailInput}
-                                onChange={(e) => setEmailInput(e.target.value)}
-                                className="flex-grow"
-                            />
+                            <Input type="email" placeholder="Enter email address" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} className="flex-grow" />
                             <Button onClick={handleAddEmail}>Add</Button>
                         </div>
                         <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -313,20 +291,8 @@ const ResourceMonitor = ({ counts, onReset, onDismiss }) => {
                     <h4 className="font-bold text-sm">Session Ops</h4>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button
-                        onClick={onReset}
-                        className="text-xs text-gray-400 hover:text-white transition-colors"
-                        title="Reset Counts"
-                    >
-                        Reset
-                    </button>
-                    <button
-                        onClick={onDismiss}
-                        className="text-gray-400 hover:text-white transition-colors"
-                        title="Dismiss Monitor"
-                    >
-                        <X className="w-4 h-4" />
-                    </button>
+                    <button onClick={onReset} className="text-xs text-gray-400 hover:text-white transition-colors" title="Reset Counts">Reset</button>
+                    <button onClick={onDismiss} className="text-gray-400 hover:text-white transition-colors" title="Dismiss Monitor"><X className="w-4 h-4" /></button>
                 </div>
             </div>
             <div className="grid grid-cols-2 gap-2 text-center">
@@ -362,21 +328,14 @@ function Landing({ navigate, permissions }) {
 
     return (
         <Card>
-            <PageHeader 
-                title={t('landing.welcome', 'Welcome')} 
-                subtitle={t('landing.subtitle', 'Select a module to get started')} 
-            />
+            <PageHeader title={t('landing.welcome', 'Welcome')} subtitle={t('landing.subtitle', 'Select a module to get started')} />
             <div className="p-4">
                 {accessibleButtons.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {accessibleButtons.map(btn => {
                             const Icon = btn.icon; 
                             return (
-                                <button
-                                    key={btn.view}
-                                    onClick={() => navigate(btn.view)}
-                                    className="flex flex-col items-center justify-center gap-3 p-6 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md hover:bg-slate-50 transition-all duration-150 text-slate-700 hover:text-sky-600"
-                                >
+                                <button key={btn.view} onClick={() => navigate(btn.view)} className="flex flex-col items-center justify-center gap-3 p-6 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md hover:bg-slate-50 transition-all duration-150 text-slate-700 hover:text-sky-600">
                                     <Icon className="w-12 h-12 text-sky-500" />
                                     <span className="text-lg font-semibold">{btn.label}</span>
                                 </button>
@@ -393,16 +352,8 @@ function Landing({ navigate, permissions }) {
 
 const BottomNav = React.memo(function BottomNav({ navItems, navigate }) {
     const icons = { 
-        'landing': Home, 
-        'dashboard': Home, 
-        'courses': Book, 
-        'humanResources': Users, 
-        'childHealthServices': Hospital, 
-        'skillsMentorship': ClipboardCheck, 
-        'projects': FolderKanban,
-        'planning': TrendingUp,
-        'localityPlan': Layers,
-        'admin': User 
+        'landing': Home, 'dashboard': Home, 'courses': Book, 'humanResources': Users, 'childHealthServices': Hospital, 
+        'skillsMentorship': ClipboardCheck, 'projects': FolderKanban, 'planning': TrendingUp, 'localityPlan': Layers, 'admin': User 
     };
     return (
         <nav className="md:hidden fixed bottom-0 inset-x-0 bg-slate-800 border-t border-slate-700 flex justify-around items-center z-20">
@@ -442,55 +393,33 @@ export default function App() {
     const [isOffline, setIsOffline] = useState(!navigator.onLine);
     const [isSyncing, setIsSyncing] = useState(false);
 
-    // Added user profile modal state
     const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
 
     useEffect(() => {
         let networkListener;
-
         const setupNetworkListener = async () => {
             const status = await Network.getStatus();
             setIsOffline(!status.connected);
-
             networkListener = await Network.addListener('networkStatusChange', async (status) => {
                 const offline = !status.connected;
                 setIsOffline(offline);
-                
                 if (!offline) {
                     setIsSyncing(true);
                     try {
-                        await Promise.race([
-                            waitForPendingWrites(db),
-                            new Promise(resolve => setTimeout(resolve, 5000))
-                        ]);
-                    } catch (e) {
-                        console.error("Error waiting for pending writes during sync:", e);
-                    } finally {
-                        setIsSyncing(false);
-                    }
+                        await Promise.race([ waitForPendingWrites(db), new Promise(resolve => setTimeout(resolve, 5000)) ]);
+                    } catch (e) { console.error("Error waiting for pending writes during sync:", e); } finally { setIsSyncing(false); }
                 }
             });
         };
-
         setupNetworkListener();
-
-        return () => {
-            if (networkListener) {
-                networkListener.remove();
-            }
-        };
+        return () => { if (networkListener) networkListener.remove(); };
     }, []);
 
     const {
-        courses: rawCourses,
-        facilitators: rawFacilitators,
-        funders, federalCoordinators, stateCoordinators, localityCoordinators,
-        healthFacilities,
-        participantTests, 
+        courses: rawCourses, facilitators: rawFacilitators,
+        funders, federalCoordinators, stateCoordinators, localityCoordinators, healthFacilities, participantTests, 
         fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators,
-        fetchHealthFacilities,
-        fetchSkillMentorshipSubmissions,
-        fetchParticipantTests
+        fetchHealthFacilities, fetchSkillMentorshipSubmissions, fetchParticipantTests
     } = useDataCache();
 
     const allCourses = useMemo(() => (rawCourses || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true"), [rawCourses]);
@@ -499,30 +428,18 @@ export default function App() {
     const { user, userStates, authLoading, userLocalities } = useAuth();
 
     const isProfileIncomplete = useMemo(() => {
-        if (!authLoading && user && (!user.displayName || user.displayName.trim().length === 0)) {
-            return true;
-        }
+        if (!authLoading && user && (!user.displayName || user.displayName.trim().length === 0)) return true;
         return false;
     }, [user, authLoading]);
 
-    // --- FETCH AND FIND USER'S HR PROFILE ---
     const userHRProfile = useMemo(() => {
         if (!user || !user.email) return null;
-        const allCoordinators = [
-            ...(federalCoordinators || []),
-            ...(stateCoordinators || []),
-            ...(localityCoordinators || [])
-        ];
+        const allCoordinators = [ ...(federalCoordinators || []), ...(stateCoordinators || []), ...(localityCoordinators || []) ];
         return allCoordinators.find(c => c.email === user.email);
     }, [user, federalCoordinators, stateCoordinators, localityCoordinators]);
 
-    // Fetch HR data when the modal opens so we definitely have the user's specific role
     useEffect(() => {
-        if (isUserProfileModalOpen) {
-            fetchFederalCoordinators();
-            fetchStateCoordinators();
-            fetchLocalityCoordinators();
-        }
+        if (isUserProfileModalOpen) { fetchFederalCoordinators(); fetchStateCoordinators(); fetchLocalityCoordinators(); }
     }, [isUserProfileModalOpen, fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators]);
 
     const [view, setView] = useState("landing");
@@ -606,67 +523,40 @@ export default function App() {
     useEffect(() => {
         if (Capacitor.isNativePlatform()) {
             const checkAndDownloadUpdate = async () => {
-                if (!navigator.onLine) {
-                    console.log("Device is offline. Skipping background update check.");
-                    return;
-                }
-
+                if (!navigator.onLine) return;
                 try {
-                    // --- USE DIRECT NATIVE HTTP CALL ---
-                    // This bypasses CORS without requiring global CapacitorHttp to be enabled,
-                    // which ensures Firebase continues to work normally.
                     const response = await CapacitorHttp.request({
                         method: 'GET',
                         url: 'https://imnci-courses-monitor.web.app/latest/update.json?t=' + Date.now(),
-                        connectTimeout: 5000, // Handle Lie-Fi gracefully
+                        connectTimeout: 5000,
                         readTimeout: 5000
                     });
 
                     if (response.status !== 200) throw new Error("Network response was not ok");
-                    
-                    // CapacitorHttp parses JSON automatically
                     const latestUpdate = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
-                    
                     const currentState = await CapacitorUpdater.current();
                     const currentVersion = currentState.bundle?.version || "builtin";
 
                     if (currentVersion !== latestUpdate.version) {
-                        const downloadedBundle = await CapacitorUpdater.download({
-                            url: latestUpdate.url,
-                            version: latestUpdate.version
-                        });
-
+                        const downloadedBundle = await CapacitorUpdater.download({ url: latestUpdate.url, version: latestUpdate.version });
                         setUpdateBundle(downloadedBundle); 
                         setIsUpdateReady(true);
                     }
-                } catch (error) {
-                    console.warn("Self-hosted update check skipped or failed due to network conditions.");
-                }
+                } catch (error) { console.warn("Self-hosted update check skipped or failed due to network conditions."); }
             };
-
             checkAndDownloadUpdate();
         }
     }, []);
 
-    useEffect(() => {
-        if (!authLoading && user) {
-            initializeUsageTracking();
-        }
-    }, [authLoading, user]);
+    useEffect(() => { if (!authLoading && user) initializeUsageTracking(); }, [authLoading, user]);
 
     useEffect(() => {
       const handleOperation = (event) => {
         const { type, count } = event.detail;
-        setOperationCounts(prev => ({
-          ...prev,
-          [type === 'read' ? 'reads' : 'writes']: (prev[type === 'read' ? 'reads' : 'writes'] || 0) + count
-        }));
+        setOperationCounts(prev => ({ ...prev, [type === 'read' ? 'reads' : 'writes']: (prev[type === 'read' ? 'reads' : 'writes'] || 0) + count }));
       };
-
       window.addEventListener('firestoreOperation', handleOperation);
-      return () => {
-        window.removeEventListener('firestoreOperation', handleOperation);
-      };
+      return () => { window.removeEventListener('firestoreOperation', handleOperation); };
     }, []);
 
     useEffect(() => {
@@ -676,66 +566,59 @@ export default function App() {
         const handlePathChange = async () => { 
             const path = window.location.pathname;
 
-            setIsSharedView(false);
-            setIsPublicSubmissionView(false);
-            setIsNewFacilityView(false);
-            setIsPublicFacilityUpdateView(false);
-            setPublicServiceType(null); 
-            setIsPublicMonitoringView(false); 
-            setPublicMonitorError(null); 
-            setPublicMonitorData({ course: null, participants: [] }); 
-            setPublicMentorshipProps(null);
-            setSubmissionType(null);
-            setSharedViewError(null);
+            setIsSharedView(false); setIsPublicSubmissionView(false); setIsNewFacilityView(false); setIsPublicFacilityUpdateView(false); setPublicServiceType(null); 
+            setIsPublicMonitoringView(false); setPublicMonitorError(null); setPublicMonitorData({ course: null, participants: [] }); 
+            setPublicMentorshipProps(null); setSubmissionType(null); setSharedViewError(null);
             
-            setIsPublicMentorshipDashboardView(false);
-            setPublicMentorshipDashboardParams(null);
+            setIsPublicMentorshipDashboardView(false); setPublicMentorshipDashboardParams(null);
 
-            setPublicViewData(null);
-            setPublicViewType(null);
-            setPublicViewLoading(false);
+            setPublicViewData(null); setPublicViewType(null); setPublicViewLoading(false);
 
-            setIsPublicTestView(false);
-            setPublicTestError(null);
-            setPublicTestData({ course: null, participants: [], tests: [] });
-            setPublicTestType(null); 
+            setIsPublicTestView(false); setPublicTestError(null); setPublicTestData({ course: null, participants: [], tests: [] }); setPublicTestType(null); 
 
-            setIsPublicRegistrationView(false);
-            setPublicRegistrationCourseId(null);
+            setIsPublicRegistrationView(false); setPublicRegistrationCourseId(null);
 
-            setIsBulkUpdateView(false);
-            setPublicBulkUpdateParams({});
+            setIsBulkUpdateView(false); setPublicBulkUpdateParams({});
 
-            setIsPublicMeetingView(false);
-            setPublicMeetingId(null);
-            setPublicMeetingData(null);
+            setIsPublicMeetingView(false); setPublicMeetingId(null); setPublicMeetingData(null);
 
+            // --- PUBLIC ROUTES EVALUATION ---
+            
             const publicMeetingMatch = path.match(/^\/public\/meeting\/([a-zA-Z0-9_-]+)\/?$/);
             if (publicMeetingMatch && publicMeetingMatch[1]) {
-                setIsPublicMeetingView(true);
-                setPublicMeetingId(publicMeetingMatch[1]);
-                setPublicViewLoading(true);
-                
+                setIsPublicMeetingView(true); setPublicMeetingId(publicMeetingMatch[1]); setPublicViewLoading(true);
                 getUnitMeetingById(publicMeetingMatch[1], 'server')
-                    .then(data => {
-                        if (!data) throw new Error("Meeting not found.");
-                        setPublicMeetingData(data);
-                    })
+                    .then(data => { if (!data) throw new Error("Meeting not found."); setPublicMeetingData(data); })
                     .catch(err => setSharedViewError(err.message))
                     .finally(() => setPublicViewLoading(false));
                 return;
             }
 
+            // Mentorship Record Deep Link explicitly formatted so it doesn't default to dashboard
+            const publicMentorshipRecordMatch = path.match(/^\/public\/mentorship\/record\/([a-zA-Z0-9_]+)\/(cases|mothers|reports)\/([a-zA-Z0-9_-]+)\/?$/);
+            if (publicMentorshipRecordMatch) {
+                setIsPublicMentorshipDashboardView(true);
+                const searchParams = new URLSearchParams(window.location.search);
+                const langParam = searchParams.get('lang');
+                if (langParam) { localStorage.setItem('language', langParam); localStorage.setItem('app_language', langParam); }
+                
+                setPublicMentorshipDashboardParams({
+                    serviceType: publicMentorshipRecordMatch[1],
+                    viewType: publicMentorshipRecordMatch[2],
+                    viewId: publicMentorshipRecordMatch[3],
+                    isRecordView: true,
+                    state: '', locality: '', facilityId: '', workerName: '', project: '', workerType: '', week: '', month: '', lang: langParam || ''
+                });
+                return;
+            }
+
+            // Mentorship Dashboard Deep Link
             const publicMentorshipDashboardMatch = path.match(/^\/public\/mentorship\/dashboard\/([a-zA-Z0-9_]+)\/?$/);
             if (publicMentorshipDashboardMatch && publicMentorshipDashboardMatch[1]) {
                 setIsPublicMentorshipDashboardView(true);
                 const searchParams = new URLSearchParams(window.location.search);
-                
                 const langParam = searchParams.get('lang');
-                if (langParam) {
-                    localStorage.setItem('language', langParam);
-                    localStorage.setItem('app_language', langParam);
-                }
+                if (langParam) { localStorage.setItem('language', langParam); localStorage.setItem('app_language', langParam); }
 
                 setPublicMentorshipDashboardParams({
                     serviceType: publicMentorshipDashboardMatch[1],
@@ -757,18 +640,14 @@ export default function App() {
                 setIsNewFacilityView(true);
                 const searchParams = new URLSearchParams(window.location.search);
                 const service = searchParams.get('service');
-                if (service) {
-                    setPublicServiceType(service); 
-                }
+                if (service) setPublicServiceType(service); 
                 return;
             }
             if (facilityUpdateMatch) {
                 setIsPublicFacilityUpdateView(true);
                 const searchParams = new URLSearchParams(window.location.search);
                 const service = searchParams.get('service');
-                if (service) {
-                    setPublicServiceType(service); 
-                }
+                if (service) setPublicServiceType(service); 
                 return;
             }
 
@@ -779,22 +658,13 @@ export default function App() {
                 setPublicMonitorLoading(true);
                 const fetchData = async () => {
                     try {
-                        const [courseData, participantData] = await Promise.all([
-                            getCourseById(courseId, 'server'),
-                            listAllParticipantsForCourse(courseId, { source: 'server' }) 
-                        ]);
+                        const [courseData, participantData] = await Promise.all([ getCourseById(courseId, 'server'), listAllParticipantsForCourse(courseId, { source: 'server' }) ]);
                         if (!courseData) throw new Error('Course not found.');
                         if (!participantData) throw new Error('Participants not found.'); 
-                        
                         const activeParticipants = (participantData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
-                        
                         setPublicMonitorData({ course: courseData, participants: activeParticipants });
                         setPublicMonitorError(null);
-                    } catch (err) {
-                        setPublicMonitorError(err.message);
-                    } finally {
-                        setPublicMonitorLoading(false);
-                    }
+                    } catch (err) { setPublicMonitorError(err.message); } finally { setPublicMonitorLoading(false); }
                 };
                 fetchData();
                 return; 
@@ -805,185 +675,86 @@ export default function App() {
                 setIsBulkUpdateView(true);
                 const searchParams = new URLSearchParams(window.location.search);
                 setPublicBulkUpdateParams({
-                    state: searchParams.get('state') || '',
-                    locality: searchParams.get('locality') || '',
-                    facilityType: searchParams.get('facilityType') || '',
-                    functioning: searchParams.get('functioning') || '',
-                    project: searchParams.get('project') || '',
-                    service: searchParams.get('service') || ''
+                    state: searchParams.get('state') || '', locality: searchParams.get('locality') || '', facilityType: searchParams.get('facilityType') || '',
+                    functioning: searchParams.get('functioning') || '', project: searchParams.get('project') || '', service: searchParams.get('service') || ''
                 });
                 return;
             }
 
             const publicMentorshipMatch = path.match(/^\/mentorship\/submit\/([a-zA-Z0-9_]+)\/?$/);
-            if (publicMentorshipMatch && publicMentorshipMatch[1]) {
-                setPublicMentorshipProps({ serviceType: publicMentorshipMatch[1] });
-                return;
-            }
+            if (publicMentorshipMatch && publicMentorshipMatch[1]) { setPublicMentorshipProps({ serviceType: publicMentorshipMatch[1] }); return; }
 
             const facilitatorAppMatch = path.match(/^\/public\/facilitator-application\/?$/);
-            if (facilitatorAppMatch) {
-                setIsPublicSubmissionView(true);
-                setSubmissionType('facilitator-application');
-                return;
-            }
+            if (facilitatorAppMatch) { setIsPublicSubmissionView(true); setSubmissionType('facilitator-application'); return; }
 
             const teamAppMatch = path.match(/^\/public\/team-member-application\/?$/);
-            if (teamAppMatch) {
-                setIsPublicSubmissionView(true);
-                setSubmissionType('team-member-application');
-                return;
-            }
+            if (teamAppMatch) { setIsPublicSubmissionView(true); setSubmissionType('team-member-application'); return; }
             
             const publicRegistrationMatch = path.match(/^\/public\/register\/course\/([a-zA-Z0-9_-]+)\/?$/);
-            if (publicRegistrationMatch && publicRegistrationMatch[1]) {
-                setIsPublicRegistrationView(true);
-                setPublicRegistrationCourseId(publicRegistrationMatch[1]);
-                return;
-            }
+            if (publicRegistrationMatch && publicRegistrationMatch[1]) { setIsPublicRegistrationView(true); setPublicRegistrationCourseId(publicRegistrationMatch[1]); return; }
 
             const publicTestMatch = path.match(/^\/public\/test\/course\/([a-zA-Z0-9_-]+)\/?$/);
             if (publicTestMatch && publicTestMatch[1]) {
                 setIsPublicTestView(true);
                 const courseId = publicTestMatch[1];
-                
                 const searchParams = new URLSearchParams(window.location.search);
-                const testTypeParam = searchParams.get('type');
-                setPublicTestType(testTypeParam);
-
+                setPublicTestType(searchParams.get('type'));
                 setPublicTestLoading(true);
                 const fetchData = async () => {
                     try {
-                        const [courseData, participantData, testData] = await Promise.all([
-                            getCourseById(courseId, 'server'),
-                            listAllParticipantsForCourse(courseId, { source: 'server' }),
-                            listParticipantTestsForCourse(courseId, { source: 'server' })
-                        ]);
-
-                        if (!courseData) throw new Error('Course not found.');
-                        if (!participantData) throw new Error('Participants not found.');
-
-                        if (courseData.course_type !== 'ICCM' && 
-                            courseData.course_type !== 'EENC' && 
-                            courseData.course_type !== 'Small & Sick Newborn' && 
-                            courseData.course_type !== 'IMNCI' && 
-                            courseData.course_type !== 'ETAT' &&
-                            courseData.course_type !== 'Program Management') {
-                            throw new Error('Test forms are only available for ICCM, EENC, Small & Sick Newborn, IMNCI, ETAT, and Program Management courses.');
-                        }
-                        
+                        const [courseData, participantData, testData] = await Promise.all([ getCourseById(courseId, 'server'), listAllParticipantsForCourse(courseId, { source: 'server' }), listParticipantTestsForCourse(courseId, { source: 'server' }) ]);
+                        if (!courseData) throw new Error('Course not found.'); if (!participantData) throw new Error('Participants not found.');
+                        if (!['ICCM', 'EENC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management'].includes(courseData.course_type)) { throw new Error('Test forms are only available for selected courses.'); }
                         const activeParticipants = (participantData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
                         const activeTests = (testData || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true");
-
                         setPublicTestData({ course: courseData, participants: activeParticipants, tests: activeTests });
                         setPublicTestError(null);
-                    } catch (err) {
-                        setPublicTestError(err.message);
-                    } finally {
-                        setPublicTestLoading(false);
-                    }
+                    } catch (err) { setPublicTestError(err.message); } finally { setPublicTestLoading(false); }
                 };
                 fetchData();
                 return; 
             }
             
             const certDownloadMatch = path.match(/^\/public\/certificate\/download\/([a-zA-Z0-9_-]+)\/?$/);
-            if (certDownloadMatch && certDownloadMatch[1]) {
-                const participantId = certDownloadMatch[1];
-                setPublicViewType('certificateDownload');
-                setPublicViewData({ participantId });
-                return;
-            }
+            if (certDownloadMatch && certDownloadMatch[1]) { setPublicViewType('certificateDownload'); setPublicViewData({ participantId: certDownloadMatch[1] }); return; }
             
             const courseCertPageMatch = path.match(/^\/public\/course\/certificates\/([a-zA-Z0-9_-]+)\/?$/);
-            if (courseCertPageMatch && courseCertPageMatch[1]) {
-                const courseId = courseCertPageMatch[1];
-                setPublicViewType('courseCertificatesPage');
-                setPublicViewData({ courseId });
-                return;
-            }
+            if (courseCertPageMatch && courseCertPageMatch[1]) { setPublicViewType('courseCertificatesPage'); setPublicViewData({ courseId: courseCertPageMatch[1] }); return; }
             
             const publicAttendanceMatch = path.match(/^\/attendance\/course\/([a-zA-Z0-9]+)\/?$/);
-            if (publicAttendanceMatch && publicAttendanceMatch[1]) {
-                const courseId = publicAttendanceMatch[1];
-                setPublicViewType('attendance');
-                setPublicViewData({ courseId });
-                return;
-            }
+            if (publicAttendanceMatch && publicAttendanceMatch[1]) { setPublicViewType('attendance'); setPublicViewData({ courseId: publicAttendanceMatch[1] }); return; }
 
             const publicCertificateMatch = path.match(/^\/verify\/certificate\/([a-zA-Z0-9_-]+)\/?$/);
             if (publicCertificateMatch && publicCertificateMatch[1]) {
-                const participantId = publicCertificateMatch[1];
-                setPublicViewType('certificateVerification');
-                setPublicViewLoading(true);
+                setPublicViewType('certificateVerification'); setPublicViewLoading(true);
                 try {
-                    const participant = await getParticipantById(participantId, 'server');
-                    if (!participant || !participant.courseId) {
-                        throw new Error("Certificate invalid or participant not found.");
-                    }
-                    
+                    const participant = await getParticipantById(publicCertificateMatch[1], 'server');
+                    if (!participant || !participant.courseId) throw new Error("Certificate invalid or participant not found.");
                     const course = await getCourseById(participant.courseId, 'server');
-                    if (!course) {
-                        throw new Error("Associated course data not found.");
-                    }
-                    
+                    if (!course) throw new Error("Associated course data not found.");
                     setPublicViewData({ participant, course });
-                } catch (error) {
-                    setSharedViewError(error.message); 
-                } finally {
-                    setPublicViewLoading(false);
-                }
+                } catch (error) { setSharedViewError(error.message); } finally { setPublicViewLoading(false); }
                 return; 
             }
 
             const publicCourseReportMatch = path.match(/^\/public\/report\/course\/([a-zA-Z0-9_-]+)\/?$/);
             if (publicCourseReportMatch && publicCourseReportMatch[1]) {
-                const courseId = publicCourseReportMatch[1];
-                setIsSharedView(true); 
-                setPublicViewType('courseReport'); 
-                setPublicViewLoading(true);
-                try {
-                    const data = await getPublicCourseReportData(courseId);
-                    setSharedReportData(data); 
-                    setPublicViewData(data); 
-                } catch (error) {
-                    setSharedViewError(error.message);
-                } finally {
-                    setPublicViewLoading(false);
-                }
+                setIsSharedView(true); setPublicViewType('courseReport'); setPublicViewLoading(true);
+                try { const data = await getPublicCourseReportData(publicCourseReportMatch[1]); setSharedReportData(data); setPublicViewData(data); } catch (error) { setSharedViewError(error.message); } finally { setPublicViewLoading(false); }
                 return; 
             }
 
             const publicFacilitatorReportMatch = path.match(/^\/public\/report\/facilitator\/([a-zA-Z0-9_-]+)\/?$/);
             if (publicFacilitatorReportMatch && publicFacilitatorReportMatch[1]) {
-                const facilitatorId = publicFacilitatorReportMatch[1];
-                setPublicViewType('facilitatorReport');
-                setPublicViewLoading(true);
-                try {
-                    const data = await getPublicFacilitatorReportData(facilitatorId);
-                    setPublicViewData(data);
-                } catch (error) {
-                    setSharedViewError(error.message); 
-                } finally {
-                    setPublicViewLoading(false);
-                }
+                setPublicViewType('facilitatorReport'); setPublicViewLoading(true);
+                try { const data = await getPublicFacilitatorReportData(publicFacilitatorReportMatch[1]); setPublicViewData(data); } catch (error) { setSharedViewError(error.message); } finally { setPublicViewLoading(false); }
                 return; 
             }
 
             const publicTeamMemberMatch = path.match(/^\/public\/profile\/team\/(federal|state|locality)\/([a-zA-Z0-9]+)\/?$/);
             if (publicTeamMemberMatch && publicTeamMemberMatch[1] && publicTeamMemberMatch[2]) {
-                const level = publicTeamMemberMatch[1];
-                const memberId = publicTeamMemberMatch[2];
-                setPublicViewType('teamMemberProfile');
-                setPublicViewLoading(true);
-                try {
-                    const data = await getPublicTeamMemberProfileData(level, memberId);
-                    setPublicViewData(data);
-                } catch (error) {
-                    setSharedViewError(error.message); 
-                } finally {
-                    setPublicViewLoading(false);
-                }
+                setPublicViewType('teamMemberProfile'); setPublicViewLoading(true);
+                try { const data = await getPublicTeamMemberProfileData(publicTeamMemberMatch[1], publicTeamMemberMatch[2]); setPublicViewData(data); } catch (error) { setSharedViewError(error.message); } finally { setPublicViewLoading(false); }
                 return; 
             }
         };
@@ -993,24 +764,11 @@ export default function App() {
 
     const permissions = useMemo(() => {
         let derivedPermissions = { ...userPermissions };
-        if (userRole?.toLowerCase() === 'super_user') {
-            return ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: true }), { role: userRole });
-        }
+        if (userRole?.toLowerCase() === 'super_user') return ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: true }), { role: userRole });
 
-        if (userRole?.toLowerCase() === 'user') {
-            derivedPermissions.canViewSkillsMentorship = false;
-            derivedPermissions.canManageSkillsMentorship = false;
-        }
-
-        if (userRole?.toLowerCase() === 'federal_manager') {
-            derivedPermissions.canViewLocalityPlan = true;
-            if (derivedPermissions.canUseFederalManagerAdvancedFeatures) {
-                derivedPermissions.canEditLocalityPlan = true;
-            }
-        }
-        if (userRole?.toLowerCase() === 'state_manager') {
-            derivedPermissions.canViewLocalityPlan = true;
-        }
+        if (userRole?.toLowerCase() === 'user') { derivedPermissions.canViewSkillsMentorship = false; derivedPermissions.canManageSkillsMentorship = false; }
+        if (userRole?.toLowerCase() === 'federal_manager') { derivedPermissions.canViewLocalityPlan = true; if (derivedPermissions.canUseFederalManagerAdvancedFeatures) derivedPermissions.canEditLocalityPlan = true; }
+        if (userRole?.toLowerCase() === 'state_manager') derivedPermissions.canViewLocalityPlan = true;
 
         const ALL_PERMISSIONS_MINIMAL = ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
         return { ...ALL_PERMISSIONS_MINIMAL, ...derivedPermissions, role: userRole };
@@ -1039,8 +797,7 @@ export default function App() {
                 if (user) {
                     const userRef = doc(db, "users", user.uid);
                     const userSnap = await getDoc(userRef);
-                    let role;
-                    let permissionsData = {};
+                    let role; let permissionsData = {};
 
                     if (!userSnap.exists() || !userSnap.data().role) {
                         role = 'user';
@@ -1053,85 +810,43 @@ export default function App() {
                         const rawPerms = { ...ALL_PERMISSIONS_MINIMAL, ...(userSnap.data().permissions || {}) };
                         permissionsData = applyDerivedPermissions(rawPerms);
                     }
-                    setUserRole(role);
-                    setUserPermissions(permissionsData);
-                } else {
-                    setUserRole(null);
-                    setUserPermissions({});
-                }
+                    setUserRole(role); setUserPermissions(permissionsData);
+                } else { setUserRole(null); setUserPermissions({}); }
             } catch (error) {
                 console.error("Error checking user role:", error);
-                setUserRole('user');
-                setUserPermissions(applyDerivedPermissions(DEFAULT_ROLE_PERMISSIONS.user));
-            } finally {
-                setPermissionsLoading(false);
-            }
+                setUserRole('user'); setUserPermissions(applyDerivedPermissions(DEFAULT_ROLE_PERMISSIONS.user));
+            } finally { setPermissionsLoading(false); }
         };
         checkUserRoleAndPermissions();
     }, [user]);
 
-    useEffect(() => {
-        if (!user) {
-            initialViewIsSet.current = false;
-        }
-    }, [user]);
+    useEffect(() => { if (!user) initialViewIsSet.current = false; }, [user]);
 
     useEffect(() => {
         const handlePopState = (event) => {
             isPopStateNavigation.current = true;
-            if (window.location.pathname === '/') {
-                navigate('landing');
-            }
+            if (window.location.pathname === '/') navigate('landing');
         };
-
         window.addEventListener('popstate', handlePopState);
         return () => window.removeEventListener('popstate', handlePopState);
     }, []);
 
-    const fetchCoordinators = useCallback(async (force = false) => {
-        await fetchFederalCoordinators(force);
-        await fetchStateCoordinators(force);
-        await fetchLocalityCoordinators(force);
-    }, [fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators]);
+    const fetchCoordinators = useCallback(async (force = false) => { await fetchFederalCoordinators(force); await fetchStateCoordinators(force); await fetchLocalityCoordinators(force); }, [fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators]);
 
     useEffect(() => {
         if (isSharedView || isPublicMentorshipDashboardView || (!user && !isPublicMentorshipDashboardView)) return;
-
-        if (view === 'dashboard') {
-            fetchCourses();
-            fetchParticipants();
-            fetchFacilitators();
-            fetchHealthFacilities();
-        }
-        if (['humanResources', 'facilitatorForm', 'facilitatorReport', 'courseForm', 'dashboard', 'landing'].includes(view)) {
-             fetchFacilitators();
-        }
-        if (['courseForm', 'humanResources'].includes(view)) {
-            fetchFunders();
-        }
-        if (['courseForm'].includes(view)) {
-            fetchCoordinators();
-        }
-        if (view === 'courses' || view === 'facilitatorReport') {
-            fetchCourses();
-        }
-        if (view === 'skillsMentorship') {
-            fetchHealthFacilities();
-            fetchSkillMentorshipSubmissions();
-        }
-        
-        if (view === 'childHealthServices') {
-            fetchHealthFacilities();
-        }
-
-        if (view === 'courseReport') {
-            fetchHealthFacilities();
-        }
+        if (view === 'dashboard') { fetchCourses(); fetchParticipants(); fetchFacilitators(); fetchHealthFacilities(); }
+        if (['humanResources', 'facilitatorForm', 'facilitatorReport', 'courseForm', 'dashboard', 'landing'].includes(view)) fetchFacilitators();
+        if (['courseForm', 'humanResources'].includes(view)) fetchFunders();
+        if (['courseForm'].includes(view)) fetchCoordinators();
+        if (view === 'courses' || view === 'facilitatorReport') fetchCourses();
+        if (view === 'skillsMentorship') { fetchHealthFacilities(); fetchSkillMentorshipSubmissions(); }
+        if (view === 'childHealthServices') fetchHealthFacilities();
+        if (view === 'courseReport') fetchHealthFacilities();
     }, [view, isSharedView, user, fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchCoordinators, fetchHealthFacilities, fetchSkillMentorshipSubmissions, isPublicMentorshipDashboardView]);
 
     useEffect(() => {
         if (selectedCourseId && !courseDetailsCache[selectedCourseId]?.allObs && !courseDetailsLoading) {
-            
             const fetchFullCourseDetails = async () => {
                 setCourseDetailsLoading(true);
                 try {
@@ -1151,85 +866,50 @@ export default function App() {
                         
                         setCourseDetailsCache(prev => ({
                             ...prev,
-                            [selectedCourseId]: { 
-                                participants: activeParticipants, 
-                                allObs: activeObs, 
-                                allCases: activeCases, 
-                                finalReport: activeFinalReport, 
-                                participantTests: activeTests 
-                            }
+                            [selectedCourseId]: { participants: activeParticipants, allObs: activeObs, allCases: activeCases, finalReport: activeFinalReport, participantTests: activeTests }
                         }));
                     };
 
-                    if (hasData) {
-                        processAndSet(participantsData, allCourseData, finalReport, testData);
-                    }
-
+                    if (hasData) processAndSet(participantsData, allCourseData, finalReport, testData);
                     if (!hasData) {
                         participantsData = await listAllParticipantsForCourse(selectedCourseId, { source: 'server' }).catch(()=>[]);
                         allCourseData = await listAllDataForCourse(selectedCourseId, { source: 'server' }).catch(()=>({allObs:[], allCases:[]}));
                         finalReport = await getFinalReportByCourseId(selectedCourseId, { source: 'server' }).catch(()=>null);
                         testData = await listParticipantTestsForCourse(selectedCourseId, { source: 'server' }).catch(()=>[]);
-
                         processAndSet(participantsData, allCourseData, finalReport, testData);
                     }
-                    
-                } catch (error) {
-                    console.error("Background fetch of course details failed:", error);
-                } finally {
-                    setCourseDetailsLoading(false);
-                }
+                } catch (error) { console.error("Background fetch of course details failed:", error); } finally { setCourseDetailsLoading(false); }
             };
-            
             fetchFullCourseDetails();
         }
     }, [selectedCourseId, courseDetailsCache, courseDetailsLoading]); 
 
-    const canSeeAllData = useMemo(() => {
-        return permissions.canUseSuperUserAdvancedFeatures || permissions.canUseFederalManagerAdvancedFeatures;
-    }, [permissions]);
+    const canSeeAllData = useMemo(() => permissions.canUseSuperUserAdvancedFeatures || permissions.canUseFederalManagerAdvancedFeatures, [permissions]);
 
     const filteredCourses = useMemo(() => {
-        if (!allCourses) {
-            return [];
-        }
-        if (canSeeAllData || !userStates || userStates.length === 0) {
-            return allCourses;
-        }
+        if (!allCourses) return [];
+        if (canSeeAllData || !userStates || userStates.length === 0) return allCourses;
         const userStateSet = new Set(userStates);
         let filtered = allCourses.filter(c => userStateSet.has(c.state));
-        
-        if (userLocalities && userLocalities.length > 0) {
-            filtered = filtered.filter(c => userLocalities.includes(c.locality));
-        }
-        
+        if (userLocalities && userLocalities.length > 0) filtered = filtered.filter(c => userLocalities.includes(c.locality));
         return filtered;
     }, [allCourses, userStates, userLocalities, canSeeAllData]);
 
     const filteredFacilitators = useMemo(() => {
-        if (!allFacilitators) {
-            return [];
-        }
-        if (canSeeAllData || !userStates || userStates.length === 0) {
-            return allFacilitators;
-        }
+        if (!allFacilitators) return [];
+        if (canSeeAllData || !userStates || userStates.length === 0) return allFacilitators;
         const userStateSet = new Set(userStates);
         let filtered = allFacilitators.filter(f => userStateSet.has(f.currentState));
-        
-        if (userLocalities && userLocalities.length > 0) {
-            filtered = filtered.filter(f => userLocalities.includes(f.currentLocality));
-        }
-        
+        if (userLocalities && userLocalities.length > 0) filtered = filtered.filter(f => userLocalities.includes(f.currentLocality));
         return filtered;
     }, [allFacilitators, userStates, userLocalities, canSeeAllData]);
 
     const fetchPendingSubmissions = useCallback(async () => {
         if (!permissions.canApproveSubmissions) return;
         setIsSubmissionsLoading(true);
-        try {
-            const submissions = await listPendingFacilitatorSubmissions();
-            setPendingSubmissions(submissions);
-        } catch (error) { setToast({ show: true, message: 'Failed to load submissions.', type: 'error' }); } finally { setIsSubmissionsLoading(false); }
+        try { const submissions = await listPendingFacilitatorSubmissions(); setPendingSubmissions(submissions); } 
+        catch (error) { setToast({ show: true, message: 'Failed to load submissions.', type: 'error' }); } 
+        finally { setIsSubmissionsLoading(false); }
     }, [permissions.canApproveSubmissions]);
 
     useEffect(() => { if (view === 'humanResources' && activeHRTab === 'facilitators' && permissions.canApproveSubmissions) fetchPendingSubmissions(); }, [view, activeHRTab, permissions.canApproveSubmissions, fetchPendingSubmissions]);
@@ -1237,15 +917,10 @@ export default function App() {
     const selectedCourse = useMemo(() => (allCourses || []).find(c => c.id === selectedCourseId) || null, [allCourses, selectedCourseId]);
 
     const isCourseActive = useMemo(() => {
-        if (!selectedCourse?.start_date || !selectedCourse?.course_duration || selectedCourse.course_duration <= 0) {
-            return false;
-        }
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const startDate = new Date(selectedCourse.start_date);
-        startDate.setHours(0, 0, 0, 0);
-        const endDate = new Date(startDate);
-        endDate.setDate(startDate.getDate() + selectedCourse.course_duration);
+        if (!selectedCourse?.start_date || !selectedCourse?.course_duration || selectedCourse.course_duration <= 0) return false;
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const startDate = new Date(selectedCourse.start_date); startDate.setHours(0, 0, 0, 0);
+        const endDate = new Date(startDate); endDate.setDate(startDate.getDate() + selectedCourse.course_duration);
         return today >= startDate && today < endDate;
     }, [selectedCourse]);
 
@@ -1253,47 +928,24 @@ export default function App() {
 
     const navigate = useCallback((newView, state = {}) => {
         const viewPermissions = {
-            'landing': true,
-            'dashboard': true,
-            'admin': permissions.canViewAdmin,
-            'imciForm': permissions.canViewCourse,
-            'humanResources': permissions.canViewHumanResource,
-            'courses': permissions.canViewCourse,
-            'courseDetails': permissions.canViewCourse,
-            'participants': permissions.canViewCourse,
-            'reports': permissions.canViewCourse,
+            'landing': true, 'dashboard': true, 'admin': permissions.canViewAdmin, 'imciForm': permissions.canViewCourse, 'humanResources': permissions.canViewHumanResource,
+            'courses': permissions.canViewCourse, 'courseDetails': permissions.canViewCourse, 'participants': permissions.canViewCourse, 'reports': permissions.canViewCourse,
             'observe': (permissions.canManageCourse && isCourseActive) || permissions.canUseFederalManagerAdvancedFeatures,
             'monitoring': (permissions.canManageCourse && isCourseActive) || permissions.canUseFederalManagerAdvancedFeatures,
-            'courseForm': permissions.canManageCourse,
-            'participantForm': permissions.canManageCourse,
-            'facilitatorForm': permissions.canManageHumanResource,
-            'courseReport': permissions.canViewCourse,
-            'participantReport': permissions.canViewCourse,
-            'facilitatorReport': permissions.canViewHumanResource,
-            'finalReport': permissions.canViewCourse,
-            'participantMigration': permissions.canUseSuperUserAdvancedFeatures,
-            'childHealthServices': permissions.canViewFacilities,
-            'skillsMentorship': permissions.canViewSkillsMentorship,
-            'facilitators': permissions.canViewHumanResource,
-            'programTeams': permissions.canViewHumanResource,
-            'partnersPage': permissions.canViewHumanResource,
-            'attendanceManager': permissions.canManageCourse,
-            'projects': permissions.canUseFederalManagerAdvancedFeatures, 
-            'planning': permissions.canUseFederalManagerAdvancedFeatures, 
-            'localityPlan': permissions.canViewLocalityPlan,
+            'courseForm': permissions.canManageCourse, 'participantForm': permissions.canManageCourse, 'facilitatorForm': permissions.canManageHumanResource,
+            'courseReport': permissions.canViewCourse, 'participantReport': permissions.canViewCourse, 'facilitatorReport': permissions.canViewHumanResource,
+            'finalReport': permissions.canViewCourse, 'participantMigration': permissions.canUseSuperUserAdvancedFeatures, 'childHealthServices': permissions.canViewFacilities,
+            'skillsMentorship': permissions.canViewSkillsMentorship, 'facilitators': permissions.canViewHumanResource, 'programTeams': permissions.canViewHumanResource,
+            'partnersPage': permissions.canViewHumanResource, 'attendanceManager': permissions.canManageCourse, 'projects': permissions.canUseFederalManagerAdvancedFeatures, 
+            'planning': permissions.canUseFederalManagerAdvancedFeatures, 'localityPlan': permissions.canViewLocalityPlan,
         };
 
         if (user && !viewPermissions[newView]) {
             console.warn(`Access denied to view: ${newView}. Redirecting to landing.`);
-            setView('landing');
-            return;
+            setView('landing'); return;
         }
 
-        setPreviousView(view);
-        setEditingCourse(null);
-        setEditingParticipant(null);
-        setEditingFacilitator(null);
-        setEditingCaseFromReport(null);
+        setPreviousView(view); setEditingCourse(null); setEditingParticipant(null); setEditingFacilitator(null); setEditingCaseFromReport(null);
 
         if (state.courseId && state.courseId !== selectedCourseId) setSelectedCourseId(state.courseId);
         if (state.participantId && state.participantId !== selectedParticipantId) setSelectedParticipantId(state.participantId);
@@ -1315,163 +967,78 @@ export default function App() {
         if (state.caseToEdit) setEditingCaseFromReport(state.caseToEdit);
 
         if (['courses', 'humanResources', 'dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan'].includes(newView)) {
-            setSelectedCourseId(null);
-            setSelectedParticipantId(null);
-            setFinalReportCourse(null);
-            if (['dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan'].includes(newView)) {
-                setActiveCourseType(null);
-            }
+            setSelectedCourseId(null); setSelectedParticipantId(null); setFinalReportCourse(null);
+            if (['dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan'].includes(newView)) setActiveCourseType(null);
         }
-        if ((view === 'observe' || view === 'participantReport') && !['observe', 'participantReport'].includes(newView)) {
-            setSelectedParticipantId(null);
-        }
+        if ((view === 'observe' || view === 'participantReport') && !['observe', 'participantReport'].includes(newView)) setSelectedParticipantId(null);
     }, [view, selectedCourseId, selectedParticipantId, permissions, user, isCourseActive]);
 
-    const handleOpenCourse = useCallback((courseId) => {
-        setSelectedCourseId(courseId);
-        setLoading(false); 
-        navigate('participants', { courseId });
-    }, [navigate]);
+    const handleOpenCourse = useCallback((courseId) => { setSelectedCourseId(courseId); setLoading(false); navigate('participants', { courseId }); }, [navigate]);
 
     const handleOpenCourseReport = useCallback(async (courseId) => {
         setSelectedCourseId(courseId);
-        
-        if (courseDetailsCache[courseId]?.allObs && courseDetailsCache[courseId]?.participants && courseDetailsCache[courseId]?.participantTests) { 
-             navigate('courseReport', { courseId });
-             return; 
-        }
-        
-        if (courseDetailsLoading) {
-             setToast({ show: true, message: 'Report data is still loading, please wait...', type: 'info' });
-             return; 
-        }
-
-        setLoading(true); 
-        setCourseDetailsLoading(true); 
+        if (courseDetailsCache[courseId]?.allObs && courseDetailsCache[courseId]?.participants && courseDetailsCache[courseId]?.participantTests) { navigate('courseReport', { courseId }); return; }
+        if (courseDetailsLoading) { setToast({ show: true, message: 'Report data is still loading, please wait...', type: 'info' }); return; }
+        setLoading(true); setCourseDetailsLoading(true); 
         try {
             const [participantsData, allCourseData, finalReport, testData] = await Promise.all([
-                listAllParticipantsForCourse(courseId, { source: 'server' }),
-                listAllDataForCourse(courseId, { source: 'server' }),
-                getFinalReportByCourseId(courseId, { source: 'server' }),
-                listParticipantTestsForCourse(courseId, { source: 'server' }) 
+                listAllParticipantsForCourse(courseId, { source: 'server' }), listAllDataForCourse(courseId, { source: 'server' }), getFinalReportByCourseId(courseId, { source: 'server' }), listParticipantTestsForCourse(courseId, { source: 'server' }) 
             ]);
-            
             const activeParticipants = (participantsData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
             const activeTests = (testData || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true");
             const activeObs = (allCourseData.allObs || []).filter(o => o.isDeleted !== true && o.isDeleted !== "true");
             const activeCases = (allCourseData.allCases || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true");
             const activeFinalReport = (finalReport && finalReport.isDeleted !== true && finalReport.isDeleted !== "true") ? finalReport : null;
-            
-            setCourseDetailsCache(prev => ({
-                ...prev,
-                [courseId]: { participants: activeParticipants, allObs: activeObs, allCases: activeCases, finalReport: activeFinalReport, participantTests: activeTests }
-            }));
-            
+            setCourseDetailsCache(prev => ({ ...prev, [courseId]: { participants: activeParticipants, allObs: activeObs, allCases: activeCases, finalReport: activeFinalReport, participantTests: activeTests } }));
             navigate('courseReport', { courseId });
-        } catch (error) {
-            console.error("Error loading course report data:", error);
-            setToast({ show: true, message: 'Failed to load course report data. Please try again.', type: 'error' });
-        } finally {
-            setLoading(false);
-            setCourseDetailsLoading(false); 
-        }
+        } catch (error) { console.error("Error loading course report data:", error); setToast({ show: true, message: 'Failed to load course report data. Please try again.', type: 'error' }); } 
+        finally { setLoading(false); setCourseDetailsLoading(false); }
     }, [navigate, courseDetailsCache, courseDetailsLoading]);
 
     const handleOpenCourseForTestForm = useCallback(async (courseId) => {
-        setLoading(true);
-        setSelectedCourseId(courseId);
-        setSelectedParticipantId(null); 
-
+        setLoading(true); setSelectedCourseId(courseId); setSelectedParticipantId(null); 
         try {
-            const [participantsData, testData] = await Promise.all([
-                listAllParticipantsForCourse(courseId, { source: 'server' }), 
-                listParticipantTestsForCourse(courseId, { source: 'server' }) 
-            ]);
-            
+            const [participantsData, testData] = await Promise.all([ listAllParticipantsForCourse(courseId, { source: 'server' }), listParticipantTestsForCourse(courseId, { source: 'server' }) ]);
             const activeParticipants = (participantsData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
             const activeTests = (testData || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true");
-            
-            setCourseDetailsCache(prev => ({
-                ...prev,
-                [courseId]: { 
-                    ...(prev[courseId] || {}), 
-                    participants: activeParticipants,
-                    participantTests: activeTests
-                }
-            }));
-
-            setActiveCoursesTab('test-dashboard'); 
-            setView('courses');
-
-        } catch (error) {
-            console.error("Error loading data for test form:", error);
-            setToast({ show: true, message: 'Failed to load test form data. Please try again.', type: 'error' });
-            navigate('courses'); 
-        } finally {
-            setLoading(false);
-        }
+            setCourseDetailsCache(prev => ({ ...prev, [courseId]: { ...(prev[courseId] || {}), participants: activeParticipants, participantTests: activeTests } }));
+            setActiveCoursesTab('test-dashboard'); setView('courses');
+        } catch (error) { console.error("Error loading data for test form:", error); setToast({ show: true, message: 'Failed to load test form data. Please try again.', type: 'error' }); navigate('courses'); } 
+        finally { setLoading(false); }
     }, [navigate]); 
-
 
     const handleApproveSubmission = useCallback(async (submission) => {
         if (window.confirm(`Approve ${submission.name}?`)) {
             try {
                 await approveFacilitatorSubmission(submission, user.email);
                 setToast({ show: true, message: 'Facilitator approved.', type: 'success' });
-                await fetchPendingSubmissions();
-                await fetchFacilitators(navigator.onLine);
-            } catch (error) {
-                setToast({ show: true, message: `Approval failed: ${error.message}`, type: 'error' });
-            }
+                await fetchPendingSubmissions(); await fetchFacilitators(navigator.onLine);
+            } catch (error) { setToast({ show: true, message: `Approval failed: ${error.message}`, type: 'error' }); }
         }
     }, [user, fetchPendingSubmissions, fetchFacilitators]);
 
     const handleRejectSubmission = useCallback(async (submissionId) => {
         if (window.confirm('Reject this submission?')) {
-            try {
-                await rejectFacilitatorSubmission(submissionId, user.email);
-                setToast({ show: true, message: 'Submission rejected.', type: 'success' });
-                await fetchPendingSubmissions();
-            } catch (error) {
-                setToast({ show: true, message: `Rejection failed: ${error.message}`, type: 'error' });
-            }
+            try { await rejectFacilitatorSubmission(submissionId, user.email); setToast({ show: true, message: 'Submission rejected.', type: 'success' }); await fetchPendingSubmissions(); } 
+            catch (error) { setToast({ show: true, message: `Rejection failed: ${error.message}`, type: 'error' }); }
         }
     }, [user, fetchPendingSubmissions]);
 
-    const handleShare = useCallback((item, type) => {
-        setItemToShare(item);
-        setShareType(type);
-        setIsShareModalOpen(true);
-    }, []);
+    const handleShare = useCallback((item, type) => { setItemToShare(item); setShareType(type); setIsShareModalOpen(true); }, []);
 
     const handleSaveSharingSettings = useCallback(async (itemId, settings) => {
         try {
-            if (shareType === 'course') await updateCourseSharingSettings(itemId, settings);
-            else if (shareType === 'participant') await updateParticipantSharingSettings(itemId, settings);
-            await fetchCourses(navigator.onLine);
-            setToast({ show: true, message: "Sharing settings updated.", type: "success" });
-        } catch (error) {
-            setToast({ show: true, message: "Failed to update sharing settings.", type: "error" });
-        }
+            if (shareType === 'course') await updateCourseSharingSettings(itemId, settings); else if (shareType === 'participant') await updateParticipantSharingSettings(itemId, settings);
+            await fetchCourses(navigator.onLine); setToast({ show: true, message: "Sharing settings updated.", type: "success" });
+        } catch (error) { setToast({ show: true, message: "Failed to update sharing settings.", type: "error" }); }
     }, [shareType, fetchCourses]);
 
     const handleDeleteCourse = useCallback(async (courseId) => {
         if (!permissions.canManageCourse) return;
         if (window.confirm('Are you sure you want to delete this course and all its data?')) {
-            await deleteCourse(courseId);
-            await fetchCourses(navigator.onLine);
-            
-            setCourseDetailsCache(prev => {
-                const newCache = { ...prev };
-                delete newCache[courseId];
-                return newCache;
-            });
-            
-            if (selectedCourseId === courseId) {
-                setSelectedCourseId(null);
-                setSelectedParticipantId(null);
-                navigate('courses');
-            }
+            await deleteCourse(courseId); await fetchCourses(navigator.onLine);
+            setCourseDetailsCache(prev => { const newCache = { ...prev }; delete newCache[courseId]; return newCache; });
+            if (selectedCourseId === courseId) { setSelectedCourseId(null); setSelectedParticipantId(null); navigate('courses'); }
         }
     }, [permissions, selectedCourseId, navigate, fetchCourses]);
 
@@ -1479,19 +1046,11 @@ export default function App() {
         if (!permissions.canManageCourse) return;
         if (window.confirm('Are you sure you want to delete this participant and all their data?')) {
             await deleteParticipant(participantId);
-            
             if (selectedCourseId) {
-                setCourseDetailsCache(prev => {
-                    const newCache = { ...prev };
-                    delete newCache[selectedCourseId];
-                    return newCache;
-                });
+                setCourseDetailsCache(prev => { const newCache = { ...prev }; delete newCache[selectedCourseId]; return newCache; });
                 navigate('participants', { courseId: selectedCourseId });
             }
-            if (selectedParticipantId === participantId) {
-                setSelectedParticipantId(null);
-                navigate('participants');
-            }
+            if (selectedParticipantId === participantId) { setSelectedParticipantId(null); navigate('participants'); }
         }
     }, [permissions, selectedCourseId, selectedParticipantId, navigate]);
 
@@ -1500,21 +1059,11 @@ export default function App() {
         if (window.confirm('Are you sure you want to delete this facilitator?')) {
             setLoading(true);
             try {
-                await deleteFacilitator(facilitatorId);
-                await fetchFacilitators(navigator.onLine); 
-                
-                if (selectedFacilitatorId === facilitatorId) {
-                    setSelectedFacilitatorId(null);
-                    navigate('humanResources');
-                }
-                
+                await deleteFacilitator(facilitatorId); await fetchFacilitators(navigator.onLine); 
+                if (selectedFacilitatorId === facilitatorId) { setSelectedFacilitatorId(null); navigate('humanResources'); }
                 setToast({ show: true, message: 'Facilitator deleted successfully.', type: 'success' });
-            } catch (error) {
-                console.error("Error deleting facilitator:", error);
-                setToast({ show: true, message: `Failed to delete facilitator: ${error.message}`, type: 'error' });
-            } finally {
-                setLoading(false);
-            }
+            } catch (error) { console.error("Error deleting facilitator:", error); setToast({ show: true, message: `Failed to delete facilitator: ${error.message}`, type: 'error' }); } 
+            finally { setLoading(false); }
         }
     }, [permissions.canManageHumanResource, selectedFacilitatorId, navigate, fetchFacilitators]);
 
@@ -1522,65 +1071,29 @@ export default function App() {
         if (!permissions.canUseSuperUserAdvancedFeatures) return;
         try {
             setLoading(true);
-            if (facilitiesToUpsert?.length > 0) { /* ... */ }
             const participantsWithCourseId = participantsToImport.map(p => ({ ...p, courseId: selectedCourse.id }));
             await importParticipants(participantsWithCourseId);
-            
-            setCourseDetailsCache(prev => {
-                const newCache = { ...prev };
-                delete newCache[selectedCourse.id];
-                return newCache;
-            });
-            
+            setCourseDetailsCache(prev => { const newCache = { ...prev }; delete newCache[selectedCourse.id]; return newCache; });
             navigate('participants', { courseId: selectedCourse.id });
-
             setToast({ show: true, message: `Successfully imported ${participantsToImport.length} participants.`, type: 'success' });
-        } catch (error) {
-            setToast({ show: true, message: "Error during import: " + error.message, type: "error" });
-        } finally {
-            setLoading(false);
-        }
+        } catch (error) { setToast({ show: true, message: "Error during import: " + error.message, type: "error" }); } 
+        finally { setLoading(false); }
     }, [permissions, selectedCourse, navigate]); 
 
     const handleBulkMigrate = useCallback((courseId) => { navigate('participantMigration', { courseId }); }, [navigate]);
     const handleExecuteBulkMigration = useCallback(async (mappings) => {
-        if (!mappings || mappings.length === 0) {
-            setToast({ show: true, message: 'No mappings were provided.', type: 'info' });
-            return;
-        }
-
+        if (!mappings || mappings.length === 0) { setToast({ show: true, message: 'No mappings were provided.', type: 'info' }); return; }
         setLoading(true); 
         try {
             const result = await bulkMigrateFromMappings(mappings, { dryRun: false });
-
             let summaryMessage = `${result.submitted} participants submitted for migration.`;
-            if (result.errors > 0) {
-                summaryMessage += ` ${result.errors} failed.`;
-            }
-            if (result.skipped > 0) {
-                summaryMessage += ` ${result.skipped} skipped.`;
-            }
-
-            setToast({
-                show: true,
-                message: summaryMessage,
-                type: result.errors > 0 ? 'warning' : 'success'
-            });
-
-            setCourseDetailsCache(prev => {
-                const newCache = { ...prev };
-                delete newCache[selectedCourseId];
-                return newCache;
-            });
-            
+            if (result.errors > 0) summaryMessage += ` ${result.errors} failed.`;
+            if (result.skipped > 0) summaryMessage += ` ${result.skipped} skipped.`;
+            setToast({ show: true, message: summaryMessage, type: result.errors > 0 ? 'warning' : 'success' });
+            setCourseDetailsCache(prev => { const newCache = { ...prev }; delete newCache[selectedCourseId]; return newCache; });
             navigate('participants', { courseId: selectedCourseId });
-
-        } catch (error) {
-            console.error("Bulk migration failed:", error);
-            setToast({ show: true, message: `Migration failed: ${error.message}`, type: 'error' });
-        } finally {
-            setLoading(false); 
-        }
+        } catch (error) { console.error("Bulk migration failed:", error); setToast({ show: true, message: `Migration failed: ${error.message}`, type: 'error' }); } 
+        finally { setLoading(false); }
     }, [navigate, selectedCourseId, setToast]); 
     const handleAddNewCoordinator = useCallback(async (coordinatorData) => { await upsertCoordinator(coordinatorData); await fetchCoordinators(navigator.onLine); }, [fetchCoordinators]);
     const handleAddNewFunder = useCallback(async (funderData) => { await upsertFunder(funderData); await fetchFunders(navigator.onLine); }, [fetchFunders]);
@@ -1589,26 +1102,15 @@ export default function App() {
         if (!permissions.canUseFederalManagerAdvancedFeatures) return;
         const courseToReport = (allCourses || []).find(c => c.id === courseId);
         if (!courseToReport) return;
-        setFinalReportCourse(courseToReport);
-        setSelectedCourseId(courseId);
-        setLoading(true);
+        setFinalReportCourse(courseToReport); setSelectedCourseId(courseId); setLoading(true);
         try {
-            const [participantsData, existingReport] = await Promise.all([
-                listAllParticipantsForCourse(courseId, { source: 'server' }),
-                getFinalReportByCourseId(courseId, { source: 'server' })
-            ]);
-            
+            const [participantsData, existingReport] = await Promise.all([ listAllParticipantsForCourse(courseId, { source: 'server' }), getFinalReportByCourseId(courseId, { source: 'server' }) ]);
             const activeParticipants = (participantsData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
             const activeFinalReport = (existingReport && existingReport.isDeleted !== true && existingReport.isDeleted !== "true") ? existingReport : null;
-            
-            setCourseDetailsCache(prev => ({
-                ...prev,
-                [courseId]: { ...prev[courseId], participants: activeParticipants, finalReport: activeFinalReport }
-            }));
+            setCourseDetailsCache(prev => ({ ...prev, [courseId]: { ...prev[courseId], participants: activeParticipants, finalReport: activeFinalReport } }));
             navigate('finalReport');
-        } catch (error) {
-            setToast({ show: true, message: 'Failed to load data for Final Report.', type: 'error' });
-        } finally { setLoading(false); }
+        } catch (error) { setToast({ show: true, message: 'Failed to load data for Final Report.', type: 'error' }); } 
+        finally { setLoading(false); }
     }, [permissions, allCourses, navigate]);
 
     const handleSaveFinalReport = useCallback(async (reportData) => {
@@ -1617,28 +1119,19 @@ export default function App() {
         try {
             let pdfUrl = reportData.existingPdfUrl || null;
             if (reportData.pdfFile) { if (pdfUrl) await deleteFile(pdfUrl); pdfUrl = await uploadFile(reportData.pdfFile); }
-            const finalUrlsToSave = [];
-            const originalUrls = reportData.originalGalleryUrls || [];
-            const finalUrlsFromEditor = reportData.finalGalleryUrls || [];
-            const filesToUpload = reportData.galleryImageFiles || {};
+            const finalUrlsToSave = []; const originalUrls = reportData.originalGalleryUrls || []; const finalUrlsFromEditor = reportData.finalGalleryUrls || []; const filesToUpload = reportData.galleryImageFiles || {};
             for (let i = 0; i < 3; i++) {
                 const originalUrl = originalUrls[i]; const finalUrl = finalUrlsFromEditor[i]; const newFile = filesToUpload[i];
                 if (newFile) { if (originalUrl) await deleteFile(originalUrl); const uploadedUrl = await uploadFile(newFile); finalUrlsToSave.push(uploadedUrl); }
-                else if (finalUrl) { finalUrlsToSave.push(finalUrl); }
-                else if (originalUrl && !finalUrl) { await deleteFile(originalUrl); }
+                else if (finalUrl) { finalUrlsToSave.push(finalUrl); } else if (originalUrl && !finalUrl) { await deleteFile(originalUrl); }
             }
             const payload = { id: reportData.id, courseId: reportData.courseId, summary: reportData.summary, recommendations: reportData.recommendations, potentialFacilitators: reportData.participantsForFollowUp, pdfUrl: pdfUrl, galleryImageUrls: finalUrlsToSave, participantsForFollowUp: reportData.participantsForFollowUp };
             await upsertFinalReport(payload);
             const savedReport = await getFinalReportByCourseId(reportData.courseId, { source: 'server' });
-            setCourseDetailsCache(prev => ({
-                ...prev,
-                [reportData.courseId]: { ...prev[reportData.courseId], finalReport: savedReport }
-            }));
+            setCourseDetailsCache(prev => ({ ...prev, [reportData.courseId]: { ...prev[reportData.courseId], finalReport: savedReport } }));
             setToast({ show: true, message: 'Final report saved successfully.', type: 'success' });
-        } catch (error) {
-            console.error("Error saving final report:", error);
-            setToast({ show: true, message: `Error saving final report: ${error.message}`, type: 'error' });
-        } finally { setLoading(false); }
+        } catch (error) { console.error("Error saving final report:", error); setToast({ show: true, message: `Error saving final report: ${error.message}`, type: 'error' }); } 
+        finally { setLoading(false); }
     }, [permissions]);
 
     const handleEditFinalReport = useCallback(async (courseId) => {
@@ -1648,14 +1141,9 @@ export default function App() {
         setFinalReportCourse(courseToEditReport); setSelectedCourseId(courseId); setLoading(true);
         try {
             const [participantsData, existingReport] = await Promise.all([ listAllParticipantsForCourse(courseId, { source: 'server' }), getFinalReportByCourseId(courseId, { source: 'server' }) ]);
-            
             const activeParticipants = (participantsData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
             const activeFinalReport = (existingReport && existingReport.isDeleted !== true && existingReport.isDeleted !== "true") ? existingReport : null;
-            
-            setCourseDetailsCache(prev => ({
-                ...prev,
-                [courseId]: { ...prev[courseId], participants: activeParticipants, finalReport: activeFinalReport }
-            }));
+            setCourseDetailsCache(prev => ({ ...prev, [courseId]: { ...prev[courseId], participants: activeParticipants, finalReport: activeFinalReport } }));
             navigate('finalReport');
         } catch (error) { console.error("Error fetching final report for editing:", error); setToast({ show: true, message: 'Failed to load the final report.', type: 'error' }); }
         finally { setLoading(false); }
@@ -1665,25 +1153,15 @@ export default function App() {
     const handleLogout = useCallback(async () => { try { await signOut(auth); } catch (error) { console.error("Error signing out:", error); } }, []);
     const handleLoginForSharedView = useCallback(async () => {  }, []);
 
-    const handleResetMonitor = useCallback(() => {
-        setOperationCounts({ reads: 0, writes: 0 });
-    }, []);
-    
-    const handleDismissMonitor = useCallback(() => {
-        setIsMonitorVisible(false);
-    }, []);
+    const handleResetMonitor = useCallback(() => { setOperationCounts({ reads: 0, writes: 0 }); }, []);
+    const handleDismissMonitor = useCallback(() => { setIsMonitorVisible(false); }, []);
     
     const handleSaveParticipantFromTestForm = useCallback(async (participantData, facilityUpdateData) => {
         try {
             const savedParticipant = await saveParticipantAndSubmitFacilityUpdate(participantData, facilityUpdateData);
-            if (facilityUpdateData) {
-                setToast({ show: true, message: 'Facility update submitted for approval.', type: 'info' });
-            }
+            if (facilityUpdateData) setToast({ show: true, message: 'Facility update submitted for approval.', type: 'info' });
             return savedParticipant; 
-        } catch (e) {
-            setToast({ show: true, message: `Submission failed: ${e.message}`, type: 'error' });
-            throw e; 
-        }
+        } catch (e) { setToast({ show: true, message: `Submission failed: ${e.message}`, type: 'error' }); throw e; }
     }, [setToast]); 
 
     const renderView = () => {
@@ -1692,109 +1170,46 @@ export default function App() {
 
         switch (viewToRender) {
             case 'landing': return <Landing navigate={navigate} permissions={permissions} />;
-
             case 'admin': return <AdminDashboard />;
-
             case 'imciForm': 
-                return permissions.canViewCourse ? (
-                    <Suspense fallback={<Card><div className="flex justify-center p-8"><Spinner /></div></Card>}>
-                        <IMNCIRecordingForm />
-                    </Suspense>
-                ) : null;
+                return permissions.canViewCourse ? ( <Suspense fallback={<Card><div className="flex justify-center p-8"><Spinner /></div></Card>}><IMNCIRecordingForm /></Suspense> ) : null;
 
             case 'humanResources': return <HumanResourcesPage
-                activeTab={activeHRTab}
-                setActiveTab={setActiveHRTab}
+                activeTab={activeHRTab} setActiveTab={setActiveHRTab}
                 onAddFacilitator={() => navigate('facilitatorForm')}
                 onEditFacilitator={(f) => navigate('facilitatorForm', { editFacilitator: f })}
                 onDeleteFacilitator={handleDeleteFacilitator}
                 onOpenFacilitatorReport={(fid) => navigate('facilitatorReport', { openFacilitatorReport: fid })}
                 onImportFacilitators={async (data) => { await importParticipants(data); await fetchFacilitators(navigator.onLine); }}
-                userStates={userStates}
-                userLocalities={userLocalities}
-                onApproveSubmission={handleApproveSubmission}
-                onRejectSubmission={handleRejectSubmission}
-                permissions={permissions}
+                userStates={userStates} userLocalities={userLocalities} onApproveSubmission={handleApproveSubmission} onRejectSubmission={handleRejectSubmission} permissions={permissions}
             />;
 
             case 'courses': return <CourseManagementView
-                allCourses={filteredCourses}
-                activeCourseType={activeCourseType}
-                setActiveCourseType={setActiveCourseType}
-                onAdd={() => navigate('courseForm')}
-                onOpen={handleOpenCourse}
-                onEdit={(c) => navigate('courseForm', { editCourse: c })}
-                onDelete={handleDeleteCourse}
-                onOpenReport={handleOpenCourseReport}
-                onOpenTestForm={handleOpenCourseForTestForm} 
-                onOpenAttendanceManager={(courseId) => { 
-                    setSelectedCourseId(courseId);
-                    navigate('attendanceManager', { courseId });
-                }}
-                userStates={userStates}
-                userLocalities={userLocalities}
-                activeCoursesTab={activeCoursesTab}
-                setActiveCoursesTab={setActiveCoursesTab}
-                selectedCourse={selectedCourse}
-                participants={courseDetails.participants || []} 
-                participantTests={courseDetails.participantTests || []} 
-                onAddParticipant={() => navigate('participantForm')}
-                onEditParticipant={(p) => navigate('participantForm', { editParticipant: p })}
-                onDeleteParticipant={handleDeleteParticipant}
-                onOpenParticipantReport={(pid) => { setSelectedCourseId(selectedCourse.id); setSelectedParticipantId(pid); navigate('participantReport'); }}
-                onImportParticipants={handleImportParticipants}
-                onAddFinalReport={handleAddFinalReport}
-                onEditFinalReport={handleEditFinalReport}
-                selectedParticipantId={selectedParticipantId}
-                onSetSelectedParticipantId={setSelectedParticipantId}
+                allCourses={filteredCourses} activeCourseType={activeCourseType} setActiveCourseType={setActiveCourseType}
+                onAdd={() => navigate('courseForm')} onOpen={handleOpenCourse} onEdit={(c) => navigate('courseForm', { editCourse: c })}
+                onDelete={handleDeleteCourse} onOpenReport={handleOpenCourseReport} onOpenTestForm={handleOpenCourseForTestForm} 
+                onOpenAttendanceManager={(courseId) => { setSelectedCourseId(courseId); navigate('attendanceManager', { courseId }); }}
+                userStates={userStates} userLocalities={userLocalities} activeCoursesTab={activeCoursesTab} setActiveCoursesTab={setActiveCoursesTab}
+                selectedCourse={selectedCourse} participants={courseDetails.participants || []} participantTests={courseDetails.participantTests || []} 
+                onAddParticipant={() => navigate('participantForm')} onEditParticipant={(p) => navigate('participantForm', { editParticipant: p })}
+                onDeleteParticipant={handleDeleteParticipant} onOpenParticipantReport={(pid) => { setSelectedCourseId(selectedCourse.id); setSelectedParticipantId(pid); navigate('participantReport'); }}
+                onImportParticipants={handleImportParticipants} onAddFinalReport={handleAddFinalReport} onEditFinalReport={handleEditFinalReport}
+                selectedParticipantId={selectedParticipantId} onSetSelectedParticipantId={setSelectedParticipantId}
                 onBulkMigrate={handleBulkMigrate}
-                onBatchUpdate={() => {
-                    setCourseDetailsCache(prev => {
-                        const newCache = { ...prev };
-                        delete newCache[selectedCourse.id];
-                        return newCache;
-                    });
-                    setSelectedCourseId(null); 
-                    setSelectedCourseId(selectedCourse.id); 
-                }}
+                onBatchUpdate={() => { setCourseDetailsCache(prev => { const newCache = { ...prev }; delete newCache[selectedCourse.id]; return newCache; }); setSelectedCourseId(null); setSelectedCourseId(selectedCourse.id); }}
                 loadingDetails={loading || (selectedCourseId && courseDetailsLoading)} 
-                canManageCourse={permissions.canManageCourse}
-                canUseSuperUserAdvancedFeatures={permissions.canUseSuperUserAdvancedFeatures}
-                canUseFederalManagerAdvancedFeatures={permissions.canUseFederalManagerAdvancedFeatures}
-                canEditDeleteActiveCourse={permissions.canManageCourse}
-                canEditDeleteInactiveCourse={permissions.canUseFederalManagerAdvancedFeatures}
+                canManageCourse={permissions.canManageCourse} canUseSuperUserAdvancedFeatures={permissions.canUseSuperUserAdvancedFeatures}
+                canUseFederalManagerAdvancedFeatures={permissions.canUseFederalManagerAdvancedFeatures} canEditDeleteActiveCourse={permissions.canManageCourse} canEditDeleteInactiveCourse={permissions.canUseFederalManagerAdvancedFeatures}
                 onSaveParticipantTest={async (payload) => {
-                    if (!payload.deleted) {
-                        await upsertParticipantTest(payload);
-                    }
-                    
-                    setCourseDetailsCache(prev => {
-                        const newCache = { ...prev };
-                        delete newCache[selectedCourse?.id];
-                        return newCache;
-                    });
-                    
-                    if (selectedCourse) {
-                        const currentId = selectedCourse.id;
-                        setSelectedCourseId(null);
-                        setTimeout(() => setSelectedCourseId(currentId), 0);
-                    }
+                    if (!payload.deleted) await upsertParticipantTest(payload);
+                    setCourseDetailsCache(prev => { const newCache = { ...prev }; delete newCache[selectedCourse?.id]; return newCache; });
+                    if (selectedCourse) { const currentId = selectedCourse.id; setSelectedCourseId(null); setTimeout(() => setSelectedCourseId(currentId), 0); }
                 }}
-                
                 onSaveParticipant={handleSaveParticipantFromTestForm}
-                
-                facilitatorsList={allFacilitators || []}
-                fundersList={funders || []}
-                federalCoordinatorsList={federalCoordinators || []}
-                stateCoordinatorsList={stateCoordinators || []}
-                localityCoordinatorsList={localityCoordinators || []}
-                onSaveCourse={async (payload) => { 
-                    const id = await upsertCourse({ ...payload, id: payload.id }); 
-                    await fetchCourses(navigator.onLine); 
-                    return id; 
-                }}
-                onAddNewCoordinator={handleAddNewCoordinator}
-                onAddNewFunder={handleAddNewFunder}
+                facilitatorsList={allFacilitators || []} fundersList={funders || []} federalCoordinatorsList={federalCoordinators || []}
+                stateCoordinatorsList={stateCoordinators || []} localityCoordinatorsList={localityCoordinators || []}
+                onSaveCourse={async (payload) => { const id = await upsertCourse({ ...payload, id: payload.id }); await fetchCourses(navigator.onLine); return id; }}
+                onAddNewCoordinator={handleAddNewCoordinator} onAddNewFunder={handleAddNewFunder}
             />;
 
             case 'participantMigration': return selectedCourse && (permissions.canUseSuperUserAdvancedFeatures ? <ParticipantMigrationMappingView course={selectedCourse} participants={courseDetails.participants} onCancel={() => navigate('participants')} onSave={handleExecuteBulkMigration} setToast={setToast} /> : null);
@@ -1802,49 +1217,26 @@ export default function App() {
             case 'childHealthServices':
                 return permissions.canViewFacilities ? (
                     <ChildHealthServicesView
-                        permissions={permissions}
-                        setToast={setToast}
-                        userStates={userStates}
-                        userLocalities={userLocalities}
-                        canManageFacilities={permissions.canManageFacilities}
-                        canBulkUploadFacilities={permissions.canUseSuperUserAdvancedFeatures}
-                        canCleanFacilityData={permissions.canUseSuperUserAdvancedFeatures}
-                        canFindFacilityDuplicates={permissions.canUseSuperUserAdvancedFeatures}
+                        permissions={permissions} setToast={setToast} userStates={userStates} userLocalities={userLocalities}
+                        canManageFacilities={permissions.canManageFacilities} canBulkUploadFacilities={permissions.canUseSuperUserAdvancedFeatures}
+                        canCleanFacilityData={permissions.canUseSuperUserAdvancedFeatures} canFindFacilityDuplicates={permissions.canUseSuperUserAdvancedFeatures}
                         canCheckFacilityLocations={permissions.canUseSuperUserAdvancedFeatures}
                     />
                 ) : null;
 
             case 'skillsMentorship':
                 return permissions.canViewSkillsMentorship ? (
-                    <SkillsMentorshipView
-                        setToast={setToast}
-                        permissions={permissions}
-                        userStates={userStates}
-                        userLocalities={userLocalities}
-                        canBulkUploadMentorships={permissions.canUseSuperUserAdvancedFeatures}
-                    />
+                    <SkillsMentorshipView setToast={setToast} permissions={permissions} userStates={userStates} userLocalities={userLocalities} canBulkUploadMentorships={permissions.canUseSuperUserAdvancedFeatures} />
                 ) : null;
 
             case 'projects':
-                return permissions.canUseFederalManagerAdvancedFeatures ? (
-                    <Suspense fallback={<Spinner />}>
-                        <ProjectTrackerView permissions={permissions} />
-                    </Suspense>
-                ) : null;
+                return permissions.canUseFederalManagerAdvancedFeatures ? ( <Suspense fallback={<Spinner />}><ProjectTrackerView permissions={permissions} /></Suspense> ) : null;
 
             case 'planning':
-                return permissions.canUseFederalManagerAdvancedFeatures ? (
-                    <Suspense fallback={<Spinner />}>
-                        <PlanningView permissions={permissions} userStates={userStates} />
-                    </Suspense>
-                ) : null;
+                return permissions.canUseFederalManagerAdvancedFeatures ? ( <Suspense fallback={<Spinner />}><PlanningView permissions={permissions} userStates={userStates} /></Suspense> ) : null;
 
             case 'localityPlan':
-                return permissions.canViewLocalityPlan ? (
-                    <Suspense fallback={<Spinner />}>
-                        <LocalityPlanView permissions={permissions} userStates={userStates} userLocalities={userLocalities} />
-                    </Suspense>
-                ) : null;
+                return permissions.canViewLocalityPlan ? ( <Suspense fallback={<Spinner />}><LocalityPlanView permissions={permissions} userStates={userStates} userLocalities={userLocalities} /></Suspense> ) : null;
 
             case 'monitoring': case 'observe':
                 const canMonitor = (permissions.canManageCourse && isCourseActive) || permissions.canUseFederalManagerAdvancedFeatures;
@@ -1852,40 +1244,22 @@ export default function App() {
 
             case 'courseForm': 
                 return permissions.canManageCourse ? (<CourseForm
-                    courseType={activeCourseType || editingCourse?.course_type}
-                    initialData={editingCourse}
-                    facilitatorsList={allFacilitators || []}
-                    onCancel={() => navigate(previousView)}
-                    onSave={async (payload) => { const id = await upsertCourse({ ...payload, id: editingCourse?.id, course_type: activeCourseType || editingCourse?.course_type }); await fetchCourses(navigator.onLine); handleOpenCourse(id); }}
-                    onAddNewCoordinator={handleAddNewCoordinator}
-                    onAddNewFunder={handleAddNewFunder}
-                    fundersList={funders || []}
-                    federalCoordinatorsList={federalCoordinators || []}
-                    stateCoordinatorsList={stateCoordinators || []}
-                    localityCoordinatorsList={localityCoordinators || []}
+                    courseType={activeCourseType || editingCourse?.course_type} initialData={editingCourse} facilitatorsList={allFacilitators || []}
+                    onCancel={() => navigate(previousView)} onSave={async (payload) => { const id = await upsertCourse({ ...payload, id: editingCourse?.id, course_type: activeCourseType || editingCourse?.course_type }); await fetchCourses(navigator.onLine); handleOpenCourse(id); }}
+                    onAddNewCoordinator={handleAddNewCoordinator} onAddNewFunder={handleAddNewFunder} fundersList={funders || []} federalCoordinatorsList={federalCoordinators || []}
+                    stateCoordinatorsList={stateCoordinators || []} localityCoordinatorsList={localityCoordinators || []}
                 />) : null;
 
             case 'participantForm': return permissions.canManageCourse ? (selectedCourse && <ParticipantForm course={selectedCourse} initialData={editingParticipant} onCancel={() => navigate(previousView)} onSave={async (participantData, facilityUpdateData) => { try { const fullPayload = { ...participantData, id: editingParticipant?.id, courseId: selectedCourse.id }; await saveParticipantAndSubmitFacilityUpdate(fullPayload, facilityUpdateData); if (facilityUpdateData) setToast({ show: true, message: 'Facility update submitted for approval.', type: 'info' }); 
-            
-            setCourseDetailsCache(prev => {
-                const newCache = { ...prev };
-                delete newCache[selectedCourse.id];
-                return newCache;
-            });
-            navigate('participants', { courseId: selectedCourse.id });
-
+            setCourseDetailsCache(prev => { const newCache = { ...prev }; delete newCache[selectedCourse.id]; return newCache; }); navigate('participants', { courseId: selectedCourse.id });
             } catch (e) { setToast({ show: true, message: `Submission failed: ${e.message}`, type: 'error' }); } }} />) : null;
 
             case 'participantReport': return permissions.canViewCourse ? (
                 selectedCourse && currentParticipant && 
                 <ParticipantReportView 
-                    course={selectedCourse} 
-                    participant={currentParticipant} 
-                    participants={courseDetails.participants} 
-                    observations={courseDetails.allObs?.filter(o => o.participant_id === currentParticipant.id) || []}
-                    cases={courseDetails.allCases?.filter(c => c.participant_id === currentParticipant.id) || []}
-                    onChangeParticipant={(pid) => setSelectedParticipantId(pid)} 
-                    onBack={() => navigate(previousView)} 
+                    course={selectedCourse} participant={currentParticipant} participants={courseDetails.participants} 
+                    observations={courseDetails.allObs?.filter(o => o.participant_id === currentParticipant.id) || []} cases={courseDetails.allCases?.filter(c => c.participant_id === currentParticipant.id) || []}
+                    onChangeParticipant={(pid) => setSelectedParticipantId(pid)} onBack={() => navigate(previousView)} 
                     onNavigateToCase={(caseToEdit) => navigate('observe', { caseToEdit, courseId: caseToEdit.courseId, participantId: caseToEdit.participant_id })} 
                     onShare={(participant) => handleShare(participant, 'participant')} 
                 />
@@ -1895,47 +1269,24 @@ export default function App() {
 
             case 'facilitatorForm':
                 return permissions.canManageHumanResource ? (<FacilitatorForm 
-                    initialData={editingFacilitator} 
-                    onCancel={() => navigate(previousView)} 
-                    onSave={async () => { 
-                        await fetchFacilitators(navigator.onLine); 
-                        setToast({ show: true, message: 'Facilitator saved.', type: 'success' }); 
-                        navigate('humanResources'); 
-                    }}
-                    setToast={setToast}
-                    setLoading={setLoading}
+                    initialData={editingFacilitator} onCancel={() => navigate(previousView)} 
+                    onSave={async () => { await fetchFacilitators(navigator.onLine); setToast({ show: true, message: 'Facilitator saved.', type: 'success' }); navigate('humanResources'); }}
+                    setToast={setToast} setLoading={setLoading}
                 />) : null;
 
-            case 'facilitatorReport': return permissions.canViewHumanResource ? (selectedFacilitator && <FacilitatorReportView
-                facilitator={selectedFacilitator}
-                allCourses={allCourses || []}
-                onBack={() => navigate(previousView)}
-            />) : null;
+            case 'facilitatorReport': return permissions.canViewHumanResource ? (selectedFacilitator && <FacilitatorReportView facilitator={selectedFacilitator} allCourses={allCourses || []} onBack={() => navigate(previousView)} />) : null;
 
             case 'dashboard': return <DashboardView onOpenCourseReport={handleOpenCourseReport} onOpenParticipantReport={(pId, cId) => navigate('participantReport', { openParticipantReport: pId, openCourseReport: cId })} onOpenFacilitatorReport={(id) => { setSelectedFacilitatorId(id); navigate('facilitatorReport'); }} permissions={permissions} userStates={userStates} userLocalities={userLocalities} STATE_LOCALITIES={STATE_LOCALITIES} />;
 
             case 'finalReport':
                 return (
                     <FinalReportManager
-                        course={finalReportCourse || selectedCourse}
-                        participants={courseDetails.participants}
-                        initialData={courseDetails.finalReport}
-                        onSave={handleSaveFinalReport}
-                        onCancel={() => navigate(previousView)}
-                        canUseFederalManagerAdvancedFeatures={permissions.canUseFederalManagerAdvancedFeatures}
+                        course={finalReportCourse || selectedCourse} participants={courseDetails.participants} initialData={courseDetails.finalReport}
+                        onSave={handleSaveFinalReport} onCancel={() => navigate(previousView)} canUseFederalManagerAdvancedFeatures={permissions.canUseFederalManagerAdvancedFeatures}
                     />
                 );
             case 'attendanceManager':
-                return permissions.canManageCourse ? (
-                    selectedCourse && (
-                        <Suspense fallback={<Card><Spinner /></Card>}>
-                            <AttendanceManagerView 
-                                course={selectedCourse} 
-                                onClose={() => navigate('courses')} 
-                            />
-                        </Suspense>
-                    )
-                ) : null;
+                return permissions.canManageCourse ? ( selectedCourse && ( <Suspense fallback={<Card><Spinner /></Card>}><AttendanceManagerView course={selectedCourse} onClose={() => navigate('courses')} /></Suspense> ) ) : null;
 
             default: return <Landing navigate={navigate} permissions={permissions} />;
         }
@@ -2019,12 +1370,7 @@ export default function App() {
     else if (isBulkUpdateView) {
         mainContent = (
             <Suspense fallback={<Card><Spinner /></Card>}>
-                <LocalityBulkUpdateView 
-                    stateParam={publicBulkUpdateParams.state}
-                    localityParam={publicBulkUpdateParams.locality}
-                    filters={publicBulkUpdateParams}
-                    setToast={setToast}
-                />
+                <LocalityBulkUpdateView stateParam={publicBulkUpdateParams.state} localityParam={publicBulkUpdateParams.locality} filters={publicBulkUpdateParams} setToast={setToast} />
             </Suspense>
         );
     }
@@ -2032,9 +1378,7 @@ export default function App() {
         if (publicRegistrationCourseId) {
             mainContent = (
                 <Suspense fallback={<Card><Spinner /></Card>}>
-                    <PublicParticipantRegistrationView 
-                        courseId={publicRegistrationCourseId} 
-                    />
+                    <PublicParticipantRegistrationView courseId={publicRegistrationCourseId} />
                 </Suspense>
             );
         } else {
@@ -2076,80 +1420,26 @@ export default function App() {
             
             switch (viewType) {
                 case 'courseReport':
-                    mainContent = (
-                        <CourseReportView
-                            course={publicViewData.course}
-                            participants={publicViewData.participants}
-                            allObs={publicViewData.allObs}
-                            allCases={publicViewData.allCases}
-                            finalReportData={publicViewData.finalReport}
-                            allHealthFacilities={null} 
-                            isSharedView={true}
-                            onBack={() => {}}
-                            onShare={() => {}} 
-                        />
-                    );
+                    mainContent = ( <CourseReportView course={publicViewData.course} participants={publicViewData.participants} allObs={publicViewData.allObs} allCases={publicViewData.allCases} finalReportData={publicViewData.finalReport} allHealthFacilities={null} isSharedView={true} onBack={() => {}} onShare={() => {}} /> );
                     break;
                 case 'facilitatorReport':
-                    mainContent = (
-                        <FacilitatorReportView
-                            facilitator={publicViewData.facilitator}
-                            allCourses={publicViewData.allCourses}
-                            isSharedView={true}
-                            onBack={() => {}}
-                        />
-                    );
+                    mainContent = ( <FacilitatorReportView facilitator={publicViewData.facilitator} allCourses={publicViewData.allCourses} isSharedView={true} onBack={() => {}} /> );
                     break;
                 case 'teamMemberProfile':
-                    mainContent = (
-                        <PublicTeamMemberProfileView
-                            member={publicViewData.member}
-                            level={publicViewData.level}
-                        />
-                    );
+                    mainContent = ( <PublicTeamMemberProfileView member={publicViewData.member} level={publicViewData.level} /> );
                     break;
-                
                 case 'certificateVerification':
-                    mainContent = (
-                        <Suspense fallback={<Card><Spinner /></Card>}>
-                            <CertificateVerificationView
-                                participant={publicViewData.participant}
-                                course={publicViewData.course}
-                            />
-                        </Suspense>
-                    );
+                    mainContent = ( <Suspense fallback={<Card><Spinner /></Card>}><CertificateVerificationView participant={publicViewData.participant} course={publicViewData.course} /></Suspense> );
                     break;
-
                 case 'certificateDownload':
-                    mainContent = (
-                         <Suspense fallback={<Card><Spinner /></Card>}>
-                             <PublicCertificateDownloadView 
-                                 participantId={publicViewData.participantId} 
-                             />
-                         </Suspense>
-                    );
+                    mainContent = ( <Suspense fallback={<Card><Spinner /></Card>}><PublicCertificateDownloadView participantId={publicViewData.participantId} /></Suspense> );
                     break;
-                
                 case 'courseCertificatesPage':
-                    mainContent = (
-                        <Suspense fallback={<Card><Spinner /></Card>}>
-                            <PublicCourseCertificatesView 
-                                courseId={publicViewData.courseId} 
-                            />
-                        </Suspense>
-                    );
+                    mainContent = ( <Suspense fallback={<Card><Spinner /></Card>}><PublicCourseCertificatesView courseId={publicViewData.courseId} /></Suspense> );
                     break;
-                
                 case 'attendance':
-                    mainContent = (
-                        <Suspense fallback={<Card><Spinner /></Card>}>
-                            <PublicAttendanceView
-                                courseId={publicViewData.courseId}
-                            />
-                        </Suspense>
-                    );
+                    mainContent = ( <Suspense fallback={<Card><Spinner /></Card>}><PublicAttendanceView courseId={publicViewData.courseId} /></Suspense> );
                     break;
-                
                 default:
                     mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">Invalid report type.</div></Card>;
             }
@@ -2169,12 +1459,7 @@ export default function App() {
         } else if (publicMonitorError) {
             mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">{publicMonitorError}</div></Card>;
         } else if (publicMonitorData.course && publicMonitorData.participants) {
-            mainContent = (
-                <PublicCourseMonitoringView
-                    course={publicMonitorData.course}
-                    allParticipants={publicMonitorData.participants}
-                />
-            );
+            mainContent = ( <PublicCourseMonitoringView course={publicMonitorData.course} allParticipants={publicMonitorData.participants} /> );
         } else {
              mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">Could not load monitoring session.</div></Card>;
         }
@@ -2188,13 +1473,8 @@ export default function App() {
         } else {
             mainContent = (
                 <SkillsMentorshipView
-                    setToast={setToast}
-                    permissions={permissions} 
-                    userStates={userStates} 
-                    userLocalities={userLocalities} 
-                    publicSubmissionMode={true} 
-                    publicServiceType={publicMentorshipProps.serviceType}
-                    canBulkUploadMentorships={permissions.canUseSuperUserAdvancedFeatures}
+                    setToast={setToast} permissions={permissions} userStates={userStates} userLocalities={userLocalities} 
+                    publicSubmissionMode={true} publicServiceType={publicMentorshipProps.serviceType} canBulkUploadMentorships={permissions.canUseSuperUserAdvancedFeatures}
                 />
             );
         }
@@ -2211,36 +1491,22 @@ export default function App() {
             mainContent = (
                 <Suspense fallback={<Card><Spinner /></Card>}>
                     <CourseTestForm
-                        course={publicTestData.course}
-                        participants={publicTestData.participants}
-                        participantTests={publicTestData.tests}
-                        onSaveTest={upsertParticipantTest} 
-                        onSaveParticipant={handleSaveParticipantFromTestForm}
-                        onCancel={() => {}} 
+                        course={publicTestData.course} participants={publicTestData.participants} participantTests={publicTestData.tests}
+                        onSaveTest={upsertParticipantTest} onSaveParticipant={handleSaveParticipantFromTestForm} onCancel={() => {}} 
                         onSave={(savedTest) => { 
                             setToast({ show: true, message: 'Test saved successfully!', type: 'success' });
                             const refetchData = async () => {
                                 setPublicTestLoading(true);
                                 try {
-                                    const [testData, participantData] = await Promise.all([
-                                        listParticipantTestsForCourse(publicTestData.course.id, 'server'),
-                                        listAllParticipantsForCourse(publicTestData.course.id, 'server')
-                                    ]);
+                                    const [testData, participantData] = await Promise.all([ listParticipantTestsForCourse(publicTestData.course.id, 'server'), listAllParticipantsForCourse(publicTestData.course.id, 'server') ]);
                                     const activeParticipants = (participantData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
                                     const activeTests = (testData || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true");
                                     setPublicTestData(prev => ({ ...prev, tests: activeTests, participants: activeParticipants }));
-                                } catch (err) {
-                                    setToast({ show: true, message: 'Failed to refresh test data.', type: 'error' });
-                                } finally {
-                                    setPublicTestLoading(false);
-                                }
+                                } catch (err) { setToast({ show: true, message: 'Failed to refresh test data.', type: 'error' }); } finally { setPublicTestLoading(false); }
                             };
                             refetchData();
                         }}
-                        initialParticipantId={''} 
-                        isPublicView={true} 
-                        canManageTests={permissions.canUseFederalManagerAdvancedFeatures}
-                        testType={publicTestType}
+                        initialParticipantId={''} isPublicView={true} canManageTests={permissions.canUseFederalManagerAdvancedFeatures} testType={publicTestType}
                     />
                 </Suspense>
             );
@@ -2258,7 +1524,6 @@ export default function App() {
     else {
         mainContent = renderView();
     }
-
 
     return (
         <div className="min-h-screen bg-sky-50 flex flex-col pt-0 relative">
@@ -2288,9 +1553,6 @@ export default function App() {
                             </div>
                         </div>
                         
-                        {/* ========================================================= */}
-                        {/* WRAPPER FOR NAV AND LANGUAGE BUTTON */}
-                        {/* ========================================================= */}
                         <div className="flex items-center gap-3">
                             {!isMinimalUILayout && user && (
                                 <nav className="hidden md:flex items-center gap-1">
@@ -2302,7 +1564,6 @@ export default function App() {
                                 </nav>
                             )}
 
-                            {/* ALWAYS VISIBLE LANGUAGE TOGGLE BUTTON */}
                             <button
                                 onClick={() => {
                                     const newLang = i18n.language?.startsWith('en') ? 'ar' : 'en';
@@ -2387,11 +1648,9 @@ export default function App() {
                                     </span>
                                 </div>
 
-                                {/* Detailed Roles Section */}
                                 <div className="border border-gray-200 p-4 rounded-lg bg-white shadow-sm md:col-span-2">
                                     <span className="block text-xs text-gray-500 uppercase font-bold mb-3">Roles & Designations</span>
                                     <div className="flex flex-col gap-2">
-                                        {/* System Access Role */}
                                         <div className="flex justify-between items-center bg-sky-50 p-2.5 rounded border border-sky-100">
                                             <span className="text-sm font-medium text-sky-800">System Access Level</span>
                                             <span className="text-sky-700 font-bold capitalize">
@@ -2399,7 +1658,6 @@ export default function App() {
                                             </span>
                                         </div>
                                         
-                                        {/* HR Specific Roles (Only shows if they exist in HR Database) */}
                                         {userHRProfile && userHRProfile.role && (
                                             <div className="flex justify-between items-center bg-gray-50 p-2.5 rounded border border-gray-200">
                                                 <span className="text-sm font-medium text-gray-600">Program Team Role</span>
@@ -2423,7 +1681,6 @@ export default function App() {
                                             </div>
                                         )}
 
-                                        {/* Fallback if user isn't assigned an HR role yet */}
                                         {!userHRProfile && (
                                             <div className="text-center p-2 text-xs text-gray-400 mt-2">
                                                 No specific Program Team role assigned in the HR database yet.
@@ -2458,11 +1715,7 @@ export default function App() {
             </Suspense>
 
             {permissions.canUseSuperUserAdvancedFeatures && isMonitorVisible && (
-                <ResourceMonitor
-                    counts={operationCounts}
-                    onReset={handleResetMonitor}
-                    onDismiss={handleDismissMonitor}
-                />
+                <ResourceMonitor counts={operationCounts} onReset={handleResetMonitor} onDismiss={handleDismissMonitor} />
             )}
 
             {isUpdateReady && updateBundle && (
@@ -2477,11 +1730,7 @@ export default function App() {
                         </p>
                         <button 
                             onClick={async () => {
-                                try {
-                                    await CapacitorUpdater.set({ id: updateBundle.id }); 
-                                } catch (e) {
-                                    console.error("Failed to apply update", e);
-                                }
+                                try { await CapacitorUpdater.set({ id: updateBundle.id }); } catch (e) { console.error("Failed to apply update", e); }
                             }}
                             className="w-full inline-flex justify-center rounded-md border border-transparent bg-sky-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 sm:text-sm"
                         >

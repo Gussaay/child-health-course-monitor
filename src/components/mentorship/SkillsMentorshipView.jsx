@@ -57,7 +57,6 @@ import {
     IMNCIFormFields,
     SaveStatusModal 
 } from '../FacilityForms.jsx';
-import { onAuthStateChanged } from "firebase/auth";
 
 // --- Bilingual Normalization Helpers ---
 const normalizeState = (stateVal) => {
@@ -1716,14 +1715,31 @@ const SkillsMentorshipView = ({
         }
     }, [publicDashboardMode]);
 
+    const {
+        healthFacilities,
+        fetchHealthFacilities,
+        isLoading: isDataCacheLoading,
+        skillMentorshipSubmissions,
+        fetchSkillMentorshipSubmissions,
+        imnciVisitReports,
+        fetchIMNCIVisitReports,
+        eencVisitReports,
+        fetchEENCVisitReports,
+    } = useDataCache();
+
+    const [localHealthFacilities, setLocalHealthFacilities] = useState(healthFacilities || []);
+
+    // Provide a non-blocking loading state for facilities when cached data exists
+    const isFacilitiesLoading = isDataCacheLoading?.healthFacilities && (!localHealthFacilities || localHealthFacilities.length === 0);
+
     useEffect(() => {
         if (!publicDashboardMode) {
             updateLastSyncTime();
         }
     }, [
-        useDataCache().isLoading?.skillMentorshipSubmissions, 
-        useDataCache().isLoading?.imnciVisitReports, 
-        useDataCache().isLoading?.eencVisitReports, 
+        isDataCacheLoading?.skillMentorshipSubmissions, 
+        isDataCacheLoading?.imnciVisitReports, 
+        isDataCacheLoading?.eencVisitReports, 
         updateLastSyncTime, 
         publicDashboardMode
     ]);
@@ -1765,20 +1781,6 @@ const SkillsMentorshipView = ({
     const [lastSavedSessionData, setLastSavedSessionData] = useState(null);
     const [isTrainingPrioritiesModalOpen, setIsTrainingPrioritiesModalOpen] = useState(false);
 
-    const {
-        healthFacilities,
-        fetchHealthFacilities,
-        isLoading: isDataCacheLoading,
-        skillMentorshipSubmissions,
-        fetchSkillMentorshipSubmissions,
-        imnciVisitReports,
-        fetchIMNCIVisitReports,
-        eencVisitReports,
-        fetchEENCVisitReports,
-        isFacilitiesLoading,
-    } = useDataCache();
-
-    const [localHealthFacilities, setLocalHealthFacilities] = useState(healthFacilities || []);
 
     const [publicData, setPublicData] = useState({ submissions: null, imnci: null, eenc: null });
     const [publicLoading, setPublicLoading] = useState(publicDashboardMode);
@@ -2451,6 +2453,36 @@ const SkillsMentorshipView = ({
         }
     }, [activeTab, publicDashboardMode]);
 
+    // 1. Add this reference to track if the record has been triggered already
+    const hasTriggeredRecordView = useRef(false);
+
+    // 2. Add this useEffect near the other data-fetching effects to handle isRecordView logic
+    useEffect(() => {
+        if (publicDashboardMode && publicDashboardParams?.isRecordView && !publicLoading && !hasTriggeredRecordView.current) {
+            // Only trigger if data arrays are populated (or at least we tried fetching them)
+            if (processedSubmissions.length > 0 || processedVisitReports.length > 0) {
+                hasTriggeredRecordView.current = true;
+                const { viewId, viewType } = publicDashboardParams;
+                
+                if (viewType === 'cases' || viewType === 'mothers') {
+                    const sub = processedSubmissions.find(s => s.id === viewId);
+                    if (sub) {
+                        setViewingSubmission(sub);
+                    } else {
+                        setToast({ show: true, message: 'Record not found.', type: 'error' });
+                    }
+                } else if (viewType === 'reports') {
+                    const rep = processedVisitReports.find(r => r.id === viewId);
+                    if (rep) {
+                        setViewingVisitReport(rep);
+                    } else {
+                        setToast({ show: true, message: 'Report not found.', type: 'error' });
+                    }
+                }
+            }
+        }
+    }, [publicDashboardMode, publicDashboardParams, publicLoading, processedSubmissions, processedVisitReports, setToast]);
+
 
     const availableStates = useMemo(() => {
         const allStates = Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar));
@@ -2959,18 +2991,18 @@ const SkillsMentorshipView = ({
         if (projectToShare) params.append('project', projectToShare);
         if (workerTypeToShare) params.append('workerType', workerTypeToShare);
         if (dateToShare) params.append('dateFilter', dateToShare);
-    if (language) {
-        params.append('lang', language);
-    }
-    
-    const shareUrl = `${baseUrl}?${params.toString()}`;
-    
-    navigator.clipboard.writeText(shareUrl).then(() => {
-        setToast({ show: true, message: 'Public Dashboard link copied to clipboard!', type: 'success' });
-    }).catch((err) => {
-        setToast({ show: true, message: 'Failed to copy dashboard link.', type: 'error' });
-    });
-};
+        if (language) {
+            params.append('lang', language);
+        }
+        
+        const shareUrl = `${baseUrl}?${params.toString()}`;
+        
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            setToast({ show: true, message: 'Public Dashboard link copied to clipboard!', type: 'success' });
+        }).catch((err) => {
+            setToast({ show: true, message: 'Failed to copy dashboard link.', type: 'error' });
+        });
+    };
 
     const handleImportMentorships = async (data, originalRows) => {
         if (!canBulkUploadMentorships) {
@@ -3154,8 +3186,7 @@ const SkillsMentorshipView = ({
         const submissionToDelete = processedSubmissions.find(s => s.id === submissionId);
         if (!submissionToDelete) return;
 
-        const confirmMessage = `هل أنت متأكد من حذف جلسة العامل الصحي: ${submissionToDelete.staff || submissionToDelete.motherName || 'N/A'} بتاريخ ${submissionToDelete.date}؟
-${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
+        const confirmMessage = `هل أنت متأكد من حذف جلسة العامل الصحي: ${submissionToDelete.staff || submissionToDelete.motherName || 'N/A'} بتاريخ ${submissionToDelete.date}؟\n${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
 
         if (window.confirm(confirmMessage)) {
             setDeletedSubmissionIds(prev => new Set(prev).add(submissionId));
@@ -3546,7 +3577,7 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                             </Button>
                                         )}
 
-                                        {canManageMentorship && (
+                                        {canManageMentorship && ['federal_manager', 'super_user'].includes(permissions?.role) && (
                                             <Button variant="warning" onClick={handlePreviewVisitNumbers} className="bg-amber-500 hover:bg-amber-600 text-white">
                                                 Sync Visit Numbers
                                             </Button>
@@ -3629,6 +3660,11 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                                         <Spinner />
                                         <span className="ml-3 text-sky-700 font-medium">Loading Dashboard Data...</span>
                                     </div>
+                                ) : publicDashboardParams?.isRecordView ? (
+                                    <div className="flex flex-col justify-center items-center p-12 text-slate-500 h-[60vh]">
+                                        <div className="text-xl font-bold text-sky-800 mb-2">Viewing Individual Record</div>
+                                        <p>{(!viewingSubmission && !viewingVisitReport) ? "Record not found or loading..." : "The record details are open in the popup window."}</p>
+                                    </div>
                                 ) : (
                                     <MentorshipDashboard
                                         allSubmissions={processedSubmissions}
@@ -3700,17 +3736,28 @@ ${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
                         allSubmissions={processedSubmissions} 
                     />
                 )}
+                
                 {viewingSubmission && (
                     <ViewSubmissionModal
                         submission={viewingSubmission}
-                        onClose={() => setViewingSubmission(null)}
+                        onClose={() => {
+                            setViewingSubmission(null);
+                            if (publicDashboardMode && publicDashboardParams?.isRecordView) {
+                                window.close(); 
+                            }
+                        }}
                     />
                 )}
                 
                 {viewingVisitReport && (
                     <ViewVisitReportModal
                         report={viewingVisitReport}
-                        onClose={() => setViewingVisitReport(null)}
+                        onClose={() => {
+                            setViewingVisitReport(null);
+                            if (publicDashboardMode && publicDashboardParams?.isRecordView) {
+                                window.close(); 
+                            }
+                        }}
                     />
                 )}
 

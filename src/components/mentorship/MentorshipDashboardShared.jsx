@@ -15,7 +15,7 @@ import {
   Filler 
 } from 'chart.js';
 
-import { Spinner } from '../CommonComponents'; 
+import { Spinner, Modal } from '../CommonComponents'; 
 import { useTranslation } from './LanguageContext'; 
 
 import { 
@@ -736,18 +736,64 @@ export const MentorPerformanceTable = ({ title, submissions, visitReports, activ
     const { t, language } = useTranslation();
     const isAr = language === 'ar';
     const tableRef = useRef(null);
+
+    const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', type: '', data: [] });
+
+    const handleCellClick = (mentorName, type, data, colTitle) => {
+        if (!data || data.length === 0) return;
+
+        // Sort data by date from latest to earliest
+        const sortedData = [...data].sort((a, b) => {
+            const dateA = new Date(a.date || a.sessionDate || a.visitDate || 0).getTime();
+            const dateB = new Date(b.date || b.sessionDate || b.visitDate || 0).getTime();
+            return dateB - dateA;
+        });
+
+        setModalConfig({
+            isOpen: true,
+            title: `${t(colTitle)} - ${mentorName}`,
+            type,
+            data: sortedData
+        });
+    };
+
+    const closeModal = () => setModalConfig({ isOpen: false, title: '', type: '', data: [] });
+
     const data = useMemo(() => {
         if (!submissions) return [];
         const mentorMap = {}; 
         submissions.forEach(sub => {
             const mentor = sub.supervisorDisplay || sub.supervisorEmail || 'Unknown';
-            if (!mentorMap[mentor]) mentorMap[mentor] = { mentorName: mentor, healthWorkers: new Set(), visits: new Set(), totalCases: 0, motherForms: 0, visitReports: 0 };
+            if (!mentorMap[mentor]) mentorMap[mentor] = { mentorName: mentor, healthWorkersMap: new Map(), visitsMap: new Map(), casesList: [], mothersList: [], reportsList: [] };
+            
+            const m = mentorMap[mentor];
+
             if (sub.service === activeService) {
-                mentorMap[mentor].totalCases += 1;
-                if (sub.staff) mentorMap[mentor].healthWorkers.add(sub.staff);
-                if (sub.facilityId && sub.staff && sub.date) mentorMap[mentor].visits.add(`${sub.facilityId}_${sub.staff}_${sub.date}`);
+                m.casesList.push(sub);
+                if (sub.staff) {
+                    m.healthWorkersMap.set(sub.staff, { staff: sub.staff, facility: sub.facility || 'Unknown' });
+                }
+                // Combine visits to the same facility on the same date into ONE visit record
+                if (sub.facilityId && sub.date) {
+                    const visitKey = `${sub.facilityId}_${sub.date}`;
+                    if (!m.visitsMap.has(visitKey)) {
+                        m.visitsMap.set(visitKey, { 
+                            facility: sub.facility || 'Unknown', 
+                            staff: sub.staff || 'Unknown', 
+                            staffList: [sub.staff || 'Unknown'], 
+                            date: sub.date,
+                            id: sub.id 
+                        });
+                    } else {
+                        const existing = m.visitsMap.get(visitKey);
+                        if (sub.staff && !existing.staffList.includes(sub.staff)) {
+                            existing.staffList.push(sub.staff);
+                            existing.staff = existing.staffList.join(', ');
+                        }
+                    }
+                }
             } else if (sub.service === `${activeService}_MOTHERS`) {
-                mentorMap[mentor].motherForms += 1;
+                m.mothersList.push(sub);
             }
         });
 
@@ -755,23 +801,146 @@ export const MentorPerformanceTable = ({ title, submissions, visitReports, activ
             visitReports.forEach(rep => {
                 if (rep.service === activeService) {
                     const mentor = rep.mentorDisplay || rep.mentorEmail || 'Unknown';
-                    if (mentorMap[mentor]) mentorMap[mentor].visitReports += 1;
-                    else mentorMap[mentor] = { mentorName: mentor, healthWorkers: new Set(), visits: new Set(), totalCases: 0, motherForms: 0, visitReports: 1 };
+                    if (!mentorMap[mentor]) mentorMap[mentor] = { mentorName: mentor, healthWorkersMap: new Map(), visitsMap: new Map(), casesList: [], mothersList: [], reportsList: [] };
+                    mentorMap[mentor].reportsList.push(rep);
                 }
             });
         }
 
         return Object.values(mentorMap).map(m => {
-            const hwCount = m.healthWorkers.size; const visitCount = m.visits.size; const cases = m.totalCases; const mothers = m.motherForms; const reports = m.visitReports;
+            const hwList = Array.from(m.healthWorkersMap.values());
+            const visitsList = Array.from(m.visitsMap.values());
+            const hwCount = hwList.length; 
+            const visitCount = visitsList.length; 
+            const casesCount = m.casesList.length; 
+            const mothersCount = m.mothersList.length; 
+            const reportsCount = m.reportsList.length;
             return {
-                mentorName: m.mentorName, hwCount, visitCount, visitsPerHw: hwCount > 0 ? (visitCount / hwCount).toFixed(1) : '0',
-                cases, casesPerVisit: visitCount > 0 ? (cases / visitCount).toFixed(1) : '0', mothers, mothersPerVisit: visitCount > 0 ? (mothers / visitCount).toFixed(1) : '0',
-                reports, reportCompliance: visitCount > 0 ? Math.round((reports / visitCount) * 100) : 0
+                mentorName: m.mentorName, 
+                hwCount, hwList,
+                visitCount, visitsList, visitsPerHw: hwCount > 0 ? (visitCount / hwCount).toFixed(1) : '0',
+                casesCount, casesList: m.casesList, casesPerVisit: visitCount > 0 ? (casesCount / visitCount).toFixed(1) : '0',
+                mothersCount, mothersList: m.mothersList, mothersPerVisit: visitCount > 0 ? (mothersCount / visitCount).toFixed(1) : '0',
+                reportsCount, reportsList: m.reportsList, reportCompliance: visitCount > 0 ? Math.round((reportsCount / visitCount) * 100) : 0
             };
         }).sort((a, b) => a.mentorName.localeCompare(b.mentorName));
     }, [submissions, visitReports, activeService]);
 
     if (!data || data.length === 0) return null;
+
+    const renderModalContent = () => {
+        if (!modalConfig.data || modalConfig.data.length === 0) return <div className="p-4 text-center">{t('No data available')}</div>;
+
+        if (modalConfig.type === 'healthWorkers') {
+            return (
+                <table className="w-full text-sm border-collapse" dir={isAr ? 'rtl' : 'ltr'}>
+                    <thead className="bg-slate-200">
+                        <tr>
+                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-left'}`}>{t('Health Worker')}</th>
+                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-left'}`}>{t('Facility')}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {modalConfig.data.map((item, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50 border-b border-slate-200">
+                                <td className="p-2 border-l border-r border-slate-300">{item.staff}</td>
+                                <td className="p-2 border-l border-r border-slate-300">{item.facility}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            );
+        }
+
+        if (modalConfig.type === 'visits') {
+            return (
+                <table className="w-full text-sm border-collapse" dir={isAr ? 'rtl' : 'ltr'}>
+                    <thead className="bg-slate-200">
+                        <tr>
+                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-left'}`}>{t('Facility')}</th>
+                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-left'}`}>{t('Health Worker(s)')}</th>
+                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-left'}`}>{t('Date')}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {modalConfig.data.map((item, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50 border-b border-slate-200">
+                                <td className="p-2 border-l border-r border-slate-300">{item.facility}</td>
+                                <td className="p-2 border-l border-r border-slate-300">{item.staff}</td>
+                                <td className="p-2 border-l border-r border-slate-300" dir="ltr">{item.date}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            );
+        }
+
+        if (modalConfig.type === 'cases' || modalConfig.type === 'mothers') {
+            return (
+                <table className="w-full text-sm border-collapse" dir={isAr ? 'rtl' : 'ltr'}>
+                    <thead className="bg-slate-200">
+                        <tr>
+                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-left'}`}>{t('Facility')}</th>
+                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-left'}`}>{modalConfig.type === 'cases' ? t('Health Worker') : t('Mother Name')}</th>
+                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-left'}`}>{t('Date')}</th>
+                            <th className={`p-2 border border-slate-300 text-center`}>{t('Action')}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {modalConfig.data.map((item, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50 border-b border-slate-200">
+                                <td className="p-2 border-l border-r border-slate-300">{item.facility}</td>
+                                <td className="p-2 border-l border-r border-slate-300">{modalConfig.type === 'cases' ? item.staff : item.motherName || 'N/A'}</td>
+                                <td className="p-2 border-l border-r border-slate-300" dir="ltr">{item.date || item.sessionDate}</td>
+                                <td className="p-2 border-l border-r border-slate-300 text-center">
+                                    <button 
+                                        onClick={() => window.open(`/public/mentorship/record/${activeService}/${modalConfig.type}/${item.id}`, '_blank')}
+                                        className="text-sky-600 hover:text-sky-800 underline text-xs font-bold"
+                                    >
+                                        {t('Open')}
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            );
+        }
+
+        if (modalConfig.type === 'reports') {
+            return (
+                <table className="w-full text-sm border-collapse" dir={isAr ? 'rtl' : 'ltr'}>
+                    <thead className="bg-slate-200">
+                        <tr>
+                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-left'}`}>{t('Facility')}</th>
+                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-left'}`}>{t('Date')}</th>
+                            <th className={`p-2 border border-slate-300 ${isAr ? 'text-right' : 'text-left'}`}>{t('Visit #')}</th>
+                            <th className={`p-2 border border-slate-300 text-center`}>{t('Action')}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {modalConfig.data.map((item, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50 border-b border-slate-200">
+                                <td className="p-2 border-l border-r border-slate-300">{item.facilityName}</td>
+                                <td className="p-2 border-l border-r border-slate-300" dir="ltr">{item.visitDate}</td>
+                                <td className="p-2 border-l border-r border-slate-300 text-center" dir="ltr">{item.visitNumber || '-'}</td>
+                                <td className="p-2 border-l border-r border-slate-300 text-center">
+                                    <button 
+                                        onClick={() => window.open(`/public/mentorship/record/${activeService}/reports/${item.id}`, '_blank')}
+                                        className="text-sky-600 hover:text-sky-800 underline text-xs font-bold"
+                                    >
+                                        {t('Open')}
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            );
+        }
+
+        return null;
+    };
 
     return (
         <div ref={tableRef} className="bg-white rounded-2xl shadow-md border border-black overflow-hidden mb-10 relative">
@@ -793,16 +962,66 @@ export const MentorPerformanceTable = ({ title, submissions, visitReports, activ
                         {data.map((row, idx) => (
                             <tr key={idx} className="hover:bg-sky-50 transition-colors border-b border-black">
                                 <td className={`px-5 py-3 border-l border-black font-bold text-slate-800 ${isAr ? 'text-right' : 'text-left'}`}>{row.mentorName}</td>
-                                <td className="px-5 py-3 border-l border-black text-center font-bold text-slate-700" dir="ltr">{row.hwCount}</td>
-                                <td className="px-5 py-3 border-l border-black text-center bg-sky-50/50" dir="ltr"><div className="font-bold text-sky-800 text-base">{row.visitCount}</div><div className="text-xs text-slate-500 font-semibold">{row.visitsPerHw} {t('visits/hw')}</div></td>
-                                <td className="px-5 py-3 border-l border-black text-center" dir="ltr"><div className="font-bold text-slate-700 text-base">{row.cases}</div><div className="text-xs text-slate-500 font-semibold">{row.casesPerVisit} {t('cases/visit')}</div></td>
-                                <td className="px-5 py-3 border-l border-black text-center bg-emerald-50/50" dir="ltr"><div className="font-bold text-emerald-800 text-base">{row.mothers}</div><div className="text-xs text-slate-500 font-semibold">{row.mothersPerVisit} {t('forms/visit')}</div></td>
-                                <td className="px-5 py-3 text-center bg-purple-50/50" dir="ltr"><div className="font-bold text-purple-800 text-base">{row.reports}</div><div className={`text-xs font-bold ${row.reportCompliance >= 100 ? 'text-emerald-600' : 'text-rose-600'}`}>{row.reportCompliance}% {t('submitted')}</div></td>
+                                
+                                <td className="px-5 py-3 border-l border-black text-center font-bold text-slate-700" dir="ltr">
+                                    {row.hwCount > 0 ? (
+                                        <button onClick={() => handleCellClick(row.mentorName, 'healthWorkers', row.hwList, 'Health Workers')} className="hover:underline text-sky-700 hover:text-sky-900 transition-colors">{row.hwCount}</button>
+                                    ) : row.hwCount}
+                                </td>
+                                
+                                <td className="px-5 py-3 border-l border-black text-center bg-sky-50/50" dir="ltr">
+                                    <div className="font-bold text-sky-800 text-base">
+                                        {row.visitCount > 0 ? (
+                                            <button onClick={() => handleCellClick(row.mentorName, 'visits', row.visitsList, 'Total Visits')} className="hover:underline text-sky-700 hover:text-sky-900 transition-colors">{row.visitCount}</button>
+                                        ) : row.visitCount}
+                                    </div>
+                                    <div className="text-xs text-slate-500 font-semibold">{row.visitsPerHw} {t('visits/hw')}</div>
+                                </td>
+                                
+                                <td className="px-5 py-3 border-l border-black text-center" dir="ltr">
+                                    <div className="font-bold text-slate-700 text-base">
+                                        {row.casesCount > 0 ? (
+                                            <button onClick={() => handleCellClick(row.mentorName, 'cases', row.casesList, 'Total Cases')} className="hover:underline text-sky-700 hover:text-sky-900 transition-colors">{row.casesCount}</button>
+                                        ) : row.casesCount}
+                                    </div>
+                                    <div className="text-xs text-slate-500 font-semibold">{row.casesPerVisit} {t('cases/visit')}</div>
+                                </td>
+                                
+                                <td className="px-5 py-3 border-l border-black text-center bg-emerald-50/50" dir="ltr">
+                                    <div className="font-bold text-emerald-800 text-base">
+                                        {row.mothersCount > 0 ? (
+                                            <button onClick={() => handleCellClick(row.mentorName, 'mothers', row.mothersList, 'Mother Forms')} className="hover:underline text-emerald-700 hover:text-emerald-900 transition-colors">{row.mothersCount}</button>
+                                        ) : row.mothersCount}
+                                    </div>
+                                    <div className="text-xs text-slate-500 font-semibold">{row.mothersPerVisit} {t('forms/visit')}</div>
+                                </td>
+                                
+                                <td className="px-5 py-3 text-center bg-purple-50/50" dir="ltr">
+                                    <div className="font-bold text-purple-800 text-base">
+                                        {row.reportsCount > 0 ? (
+                                            <button onClick={() => handleCellClick(row.mentorName, 'reports', row.reportsList, 'Visit Reports')} className="hover:underline text-purple-700 hover:text-purple-900 transition-colors">{row.reportsCount}</button>
+                                        ) : row.reportsCount}
+                                    </div>
+                                    <div className={`text-xs font-bold ${row.reportCompliance >= 100 ? 'text-emerald-600' : 'text-rose-600'}`}>{row.reportCompliance}% {t('submitted')}</div>
+                                </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
+
+            {modalConfig.isOpen && (
+                <Modal isOpen={modalConfig.isOpen} onClose={closeModal} title={modalConfig.title} size="2xl">
+                    <div className="p-4 sm:p-6 bg-slate-50 max-h-[70vh] overflow-y-auto">
+                        {renderModalContent()}
+                    </div>
+                    <div className="p-4 border-t border-slate-200 bg-white flex justify-end">
+                        <button onClick={closeModal} className="px-4 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 transition-colors font-bold text-sm">
+                            {t('Close')}
+                        </button>
+                    </div>
+                </Modal>
+            )}
         </div>
     );
 };

@@ -124,7 +124,10 @@ export const DataProvider = ({ children }) => {
                 if (fetchingRef.current[filterKey]) return cacheRef.current.healthFacilities; 
                 fetchingRef.current[filterKey] = true;
                 
-                setIsLoading(prev => ({ ...prev, healthFacilities: true }));
+                // Only set global loading to true if we don't have it in memory already
+                if (!internalCache[filterKey]) {
+                    setIsLoading(prev => ({ ...prev, healthFacilities: true }));
+                }
 
                 // 2. ALWAYS Try fetching from Firebase IndexedDB Cache first
                 let localData = [];
@@ -140,6 +143,11 @@ export const DataProvider = ({ children }) => {
                                 currentFacilitiesFilterKeyRef.current = filterKey;
                             }
                             
+                            // STALE-WHILE-REVALIDATE: Instantly drop the loading flag if cache yielded data!
+                            if (localData.length > 0) {
+                                setIsLoading(prev => ({ ...prev, healthFacilities: false }));
+                            }
+                            
                             if (!shouldForceServer) {
                                 setIsLoading(prev => ({ ...prev, healthFacilities: false }));
                                 fetchingRef.current[filterKey] = false;
@@ -151,6 +159,10 @@ export const DataProvider = ({ children }) => {
                     }
                 } else {
                     localData = internalCache[filterKey];
+                    // Drop flag immediately if memory cache exists
+                    if (localData.length > 0) {
+                        setIsLoading(prev => ({ ...prev, healthFacilities: false }));
+                    }
                 }
 
                 // --- OFFLINE GUARD: Return local cache instantly if offline ---
@@ -229,7 +241,10 @@ export const DataProvider = ({ children }) => {
             if (fetchingRef.current[key]) return currentCache;
             fetchingRef.current[key] = true;
             
-            setIsLoading(prev => ({ ...prev, [key]: true }));
+            // ONLY set loading to true if we DON'T have data in memory cache
+            if (!hasData) {
+                setIsLoading(prev => ({ ...prev, [key]: true }));
+            }
             
             // 2. ALWAYS Try Firebase Cache first to establish our "Base"
             let localData = hasData ? currentCache : [];
@@ -241,6 +256,11 @@ export const DataProvider = ({ children }) => {
                         
                         setCache(prev => ({ ...prev, [key]: localData }));
                         
+                        // STALE-WHILE-REVALIDATE: Immediately disable loading if cache yielded data
+                        if ((Array.isArray(localData) && localData.length > 0) || (!Array.isArray(localData) && localData && Object.keys(localData).length > 0)) {
+                            setIsLoading(prev => ({ ...prev, [key]: false }));
+                        }
+                        
                         if (!shouldForceServer) {
                             setIsLoading(prev => ({ ...prev, [key]: false }));
                             fetchingRef.current[key] = false;
@@ -250,6 +270,9 @@ export const DataProvider = ({ children }) => {
                 } catch (e) {
                     // Silent catch, fallback
                 }
+            } else {
+                // Ensure loading is false if memory cache exists
+                setIsLoading(prev => ({ ...prev, [key]: false }));
             }
             
             // --- OFFLINE GUARD: Return local cache instantly if offline ---
