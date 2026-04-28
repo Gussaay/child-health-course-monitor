@@ -231,7 +231,6 @@ const calculateSubmissionVisitNumberUpdates = (submissions, activeTab) => {
 
     const updatesToMake = [];
 
-    // Grouping logic based on tab (Skills groups by Facility + Worker, Mothers groups by Facility)
     const grouped = submissions.reduce((acc, sub) => {
         const facId = sub.facilityId;
         if (!facId) return acc;
@@ -337,7 +336,6 @@ const PreviewSyncModal = ({ isOpen, onClose, onConfirm, proposedUpdates, isSynci
         </Modal>
     );
 };
-
 
 // --- Action Menu Component ---
 const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, permissions, canManage }) => {
@@ -997,7 +995,9 @@ const VisitReportsTable = ({
                         {reports.length === 0 ? (
                             <tr><td colSpan={canManage ? "8" : "7"} className="border border-gray-300"><EmptyState title="No Records Found" message="No visit reports found for this service." /></td></tr>
                         ) : (
-                            reports.map(rep => (
+                            reports.map(rep => {
+                                const isAuthor = rep.mentorEmail === currentUserEmail;
+                                return (
                                 <tr key={rep.id} className={selectedIds.includes(rep.id) ? 'bg-sky-50' : ''}>
                                     {canManage && (
                                         <td className="px-3 py-2 text-center border border-gray-300">
@@ -1018,12 +1018,13 @@ const VisitReportsTable = ({
                                     <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-left border border-gray-300">
                                         <div className="flex gap-2">
                                             <Button size="sm" variant="info" onClick={() => onView(rep.id)}>View</Button>
-                                            {(canManage || rep.mentorEmail === currentUserEmail) && <Button size="sm" variant="warning" onClick={() => onEdit(rep.id)}>Edit</Button>}
+                                            {(canManage || isAuthor) && <Button size="sm" variant="warning" onClick={() => onEdit(rep.id)}>Edit</Button>}
                                             {canManage && <Button size="sm" variant="danger" onClick={() => onDelete(rep.id)}>Delete</Button>}
                                         </div>
                                     </td>
                                 </tr>
-                            ))
+                                )
+                            })
                         )}
                     </tbody>
                 </table>
@@ -1428,7 +1429,7 @@ const MentorshipSubmissionsTable = ({
     submissions, activeService, onView, onEdit, onDelete,
     isSubmissionsLoading,
     filterServiceType,
-    selectedIds, onSelectionChange, canManage
+    selectedIds, onSelectionChange, canManage, currentUserEmail
 }) => {
     
     const handleAction = (action, submission) => {
@@ -1504,6 +1505,12 @@ const MentorshipSubmissionsTable = ({
                                         const isSelected = selectedIds.includes(sub.id);
                                         const rowBgClass = isSelected ? 'bg-sky-50' : (sub.status === 'draft' ? 'bg-yellow-50' : (isMotherSurvey ? 'bg-blue-50' : 'bg-white'));
 
+                                        const isAuthor = sub.supervisorEmail === currentUserEmail || sub.mentorEmail === currentUserEmail;
+                                        
+                                        // UPDATED: Facilitator cannot edit/delete completed skills/mothers forms. Only drafts.
+                                        const canEditRow = canManage || (isAuthor && sub.status === 'draft');
+                                        const canDeleteRow = canManage || (isAuthor && sub.status === 'draft');
+
                                         return (
                                         <tr key={sub.id} className={rowBgClass}>
                                             {canManage && (
@@ -1564,10 +1571,10 @@ const MentorshipSubmissionsTable = ({
                                             <td className="px-2 py-2 whitespace-nowrap text-xs font-medium text-left border border-gray-300">
                                                 <div className="flex flex-col xl:flex-row gap-1">
                                                     <Button size="sm" variant="info" onClick={() => handleAction('view', sub)} className="text-xs px-2 py-1">View</Button>
-                                                    {canManage && (sub.service === 'IMNCI' || sub.service === 'IMNCI_MOTHERS' || sub.service === 'EENC_MOTHERS') && 
+                                                    {canEditRow && (sub.service === 'IMNCI' || sub.service === 'IMNCI_MOTHERS' || sub.service === 'EENC_MOTHERS') && 
                                                         <Button size="sm" variant="warning" onClick={() => handleAction('edit', sub)} className="text-xs px-2 py-1">Edit</Button>
                                                     }
-                                                    {canManage && <Button size="sm" variant="danger" onClick={() => handleAction('delete', sub)} className="text-xs px-2 py-1">Del</Button>}
+                                                    {canDeleteRow && <Button size="sm" variant="danger" onClick={() => handleAction('delete', sub)} className="text-xs px-2 py-1">Del</Button>}
                                                 </div>
                                             </td>
                                         </tr>
@@ -1657,6 +1664,9 @@ const SkillsMentorshipView = ({
     });
     
     const canManageMentorship = publicSubmissionMode || permissions?.canManageSkillsMentorship || permissions?.canUseSuperUserAdvancedFeatures || permissions?.role === 'super_user' || false;
+    
+    // UPDATED: Strictly check canAddMentorshipVisit instead of falling back to canManageMentorship
+    const canAddMentorshipData = publicSubmissionMode || permissions?.canAddMentorshipVisit || permissions?.canUseSuperUserAdvancedFeatures || permissions?.role === 'super_user' || false;
 
     const [activeService, setActiveService] = useState(defaultService);
     
@@ -1747,13 +1757,14 @@ const SkillsMentorshipView = ({
     const canSeeAllMentorshipData = useMemo(() => {
         if (publicDashboardMode || publicSubmissionMode) return true;
         if (permissions?.canUseSuperUserAdvancedFeatures || permissions?.canUseFederalManagerAdvancedFeatures) return true;
-        if (['facilitator', 'super_user', 'federal_manager'].includes(permissions?.role)) return true;
-        if (permissions?.manageLocation === 'federal_level') return true;
+        if (['super_user', 'federal_manager'].includes(permissions?.role)) return true;
+        if (permissions?.manageLocation === 'federal_level' && permissions?.role !== 'facilitator') return true;
 
         return false;
     }, [permissions, publicDashboardMode, publicSubmissionMode]);
 
     const isLocalityManager = permissions?.manageScope === 'locality' || permissions?.role === 'locality_manager';
+    const isFacilitator = permissions?.role === 'facilitator';
 
     const [activeDashboardState, setActiveDashboardState] = useState(() => {
         if (publicDashboardMode) return publicDashboardParams?.state || '';
@@ -2001,7 +2012,9 @@ const SkillsMentorshipView = ({
             };
         });
 
-        if (!canSeeAllMentorshipData) {
+        if (isFacilitator && user?.email) {
+            mappedData = mappedData.filter(sub => sub.supervisorEmail === user.email);
+        } else if (!canSeeAllMentorshipData) {
             if (userStates && userStates.length > 0) {
                 const stateSet = new Set(userStates);
                 mappedData = mappedData.filter(sub => stateSet.has(sub.state));
@@ -2013,7 +2026,7 @@ const SkillsMentorshipView = ({
         }
 
         return mappedData;
-    }, [skillMentorshipSubmissions, publicDashboardMode, publicData.submissions, facilityMap, deletedSubmissionIds, canSeeAllMentorshipData, userStates, userLocalities, isLocalityManager]);
+    }, [skillMentorshipSubmissions, publicDashboardMode, publicData.submissions, facilityMap, deletedSubmissionIds, canSeeAllMentorshipData, userStates, userLocalities, isLocalityManager, isFacilitator, user?.email]);
 
     // --- LIFTED SUBMISSIONS FILTERING TO TOP LEVEL ---
     const filteredSubmissions = useMemo(() => {
@@ -2159,7 +2172,9 @@ const SkillsMentorshipView = ({
             rep.fullData?.isDeleted !== "true"
         );
 
-        if (!canSeeAllMentorshipData) {
+        if (isFacilitator && user?.email) {
+            allReports = allReports.filter(rep => rep.mentorEmail === user.email);
+        } else if (!canSeeAllMentorshipData) {
             if (userStates && userStates.length > 0) {
                 const stateSet = new Set(userStates);
                 allReports = allReports.filter(rep => stateSet.has(rep.state));
@@ -2171,7 +2186,7 @@ const SkillsMentorshipView = ({
         }
 
         return allReports;
-    }, [imnciVisitReports, eencVisitReports, activeService, publicDashboardMode, publicData, deletedReportIds, facilityMap, canSeeAllMentorshipData, userStates, userLocalities, isLocalityManager]);
+    }, [imnciVisitReports, eencVisitReports, activeService, publicDashboardMode, publicData, deletedReportIds, facilityMap, canSeeAllMentorshipData, userStates, userLocalities, isLocalityManager, isFacilitator, user?.email]);
     
     // --- LIFTED VISIT REPORTS FILTERING TO TOP LEVEL ---
     const filteredVisitReports = useMemo(() => {
@@ -2208,6 +2223,7 @@ const SkillsMentorshipView = ({
 
         const isAuthor = report.mentorEmail === user?.email;
 
+        // UPDATED: Facilitators CAN edit their own visit reports
         if (!canManageMentorship && !isAuthor) {
             setToast({ show: true, message: 'You do not have permission to edit this report.', type: 'error' });
             return;
@@ -2230,7 +2246,12 @@ const SkillsMentorshipView = ({
     };
 
     const handleDeleteVisitReport = async (reportId) => {
-        if (!canManageMentorship) return;
+        // UPDATED: Only canManageMentorship can delete submitted reports.
+        if (!canManageMentorship) {
+             setToast({ show: true, message: 'You do not have permission to delete submitted reports.', type: 'error' });
+             return;
+        }
+        
         if (window.confirm('Are you sure you want to delete this visit report?')) {
             setDeletedReportIds(prev => new Set(prev).add(reportId));
             try {
@@ -2818,18 +2839,22 @@ const SkillsMentorshipView = ({
         } else if (action === 'view_drafts') {
             setIsDraftsModalOpen(true);
         } else if (action === 'new_skill') {
+            if (!canAddMentorshipData) return;
             resetSelection();
             setActiveFormType('skills_assessment');
             setCurrentView('form_setup');
         } else if (action === 'new_mother') {
+            if (!canAddMentorshipData) return;
             resetSelection();
             setActiveFormType('mothers_form');
             setCurrentView('form_setup');
         } else if (action === 'new_visit_report') {
+            if (!canAddMentorshipData) return;
             resetSelection();
             setActiveFormType('visit_report');
             setCurrentView('form_setup');
         } else if (action === 'update_facility') {
+            if (!canAddMentorshipData) return;
             resetSelection();
             setActiveFormType('facility_update');
             setCurrentView('form_setup');
@@ -2837,21 +2862,21 @@ const SkillsMentorshipView = ({
     };
     
     const handleStartNewVisit = async () => {
-        if (!canManageMentorship) return;
+        if (!canAddMentorshipData) return;
         resetSelection();
         setActiveFormType('skills_assessment');
         setCurrentView('form_setup');
     };
     
     const handleStartMothersForm = () => {
-        if (!canManageMentorship) return;
+        if (!canAddMentorshipData) return;
         resetSelection();
         setActiveFormType('mothers_form');
         setCurrentView('form_setup');
     };
 
     const handleStartNewVisitReport = () => {
-        if (!canManageMentorship) return;
+        if (!canAddMentorshipData) return;
         resetSelection();
         setActiveFormType('visit_report');
         setCurrentView('form_setup');
@@ -3151,12 +3176,15 @@ const SkillsMentorshipView = ({
     };
 
     const handleEditSubmission = async (submissionId) => {
-        if (!canManageMentorship) {
-            setToast({ show: true, message: 'You do not have permission to perform this action.', type: 'error' });
-            return;
-        }
         const fullSubmission = skillMentorshipSubmissions.find(s => s.id === submissionId);
         if (!fullSubmission) return;
+
+        const isAuthor = fullSubmission.supervisorEmail === user?.email || fullSubmission.mentorEmail === user?.email;
+        // UPDATED: Facilitators CANNOT edit completed sessions
+        if (!canManageMentorship && !(isAuthor && fullSubmission.status === 'draft')) {
+            setToast({ show: true, message: 'You do not have permission to edit completed sessions.', type: 'error' });
+            return;
+        }
         
         if (fullSubmission.serviceType === 'IMNCI_MOTHERS' || fullSubmission.serviceType === 'EENC_MOTHERS') {
             setActiveFormType('mothers_form');
@@ -3182,9 +3210,15 @@ const SkillsMentorshipView = ({
     };
 
     const handleDeleteSubmission = async (submissionId) => {
-        if (!canManageMentorship) return;
         const submissionToDelete = processedSubmissions.find(s => s.id === submissionId);
         if (!submissionToDelete) return;
+
+        const isAuthor = submissionToDelete.supervisorEmail === user?.email || submissionToDelete.mentorEmail === user?.email;
+        // UPDATED: Facilitators CANNOT delete completed sessions
+        if (!canManageMentorship && !(isAuthor && submissionToDelete.status === 'draft')) {
+            setToast({ show: true, message: 'You do not have permission to delete completed sessions.', type: 'error' });
+            return;
+        }
 
         const confirmMessage = `هل أنت متأكد من حذف جلسة العامل الصحي: ${submissionToDelete.staff || submissionToDelete.motherName || 'N/A'} بتاريخ ${submissionToDelete.date}؟\n${submissionToDelete.status === 'draft' ? '\n(هذه مسودة)' : ''}`;
 
@@ -3340,7 +3374,7 @@ const SkillsMentorshipView = ({
                     draftCount={currentUserDrafts.length}
                     reportCount={currentUserVisitReports.length}
                     permissions={permissions}
-                    canManage={canManageMentorship}
+                    canManage={canAddMentorshipData}
                     onBack={() => {
                         setActiveService(null);
                         setCurrentView('service_selection');
@@ -3547,7 +3581,7 @@ const SkillsMentorshipView = ({
                                 <div className="flex justify-between items-center mb-6">
                                     <div className="flex gap-2 flex-wrap">
                                         
-                                        {activeTab === 'skills_list' && selectedSubmissionIds.length === 0 && canManageMentorship && (
+                                        {activeTab === 'skills_list' && selectedSubmissionIds.length === 0 && canAddMentorshipData && (
                                             <Button onClick={handleStartNewVisit}>Add New Skills Observation</Button>
                                         )}
                                         {activeTab === 'skills_list' && selectedSubmissionIds.length > 0 && canManageMentorship && (
@@ -3556,7 +3590,7 @@ const SkillsMentorshipView = ({
                                             </Button>
                                         )}
                                         
-                                        {activeTab === 'mothers_list' && selectedSubmissionIds.length === 0 && canManageMentorship && (
+                                        {activeTab === 'mothers_list' && selectedSubmissionIds.length === 0 && canAddMentorshipData && (
                                             <Button variant="primary" onClick={handleStartMothersForm}>Add Mother's Knowledge & Satisfaction Form</Button>
                                         )}
                                         {activeTab === 'mothers_list' && selectedSubmissionIds.length > 0 && canManageMentorship && (
@@ -3565,10 +3599,10 @@ const SkillsMentorshipView = ({
                                             </Button>
                                         )}
 
-                                        {activeTab === 'visit_reports' && activeService === 'IMNCI' && selectedReportIds.length === 0 && canManageMentorship && (
+                                        {activeTab === 'visit_reports' && activeService === 'IMNCI' && selectedReportIds.length === 0 && canAddMentorshipData && (
                                             <Button variant="primary" onClick={handleStartNewVisitReport}>Add New IMNCI Visit Report</Button>
                                         )}
-                                        {activeTab === 'visit_reports' && activeService === 'EENC' && selectedReportIds.length === 0 && canManageMentorship && (
+                                        {activeTab === 'visit_reports' && activeService === 'EENC' && selectedReportIds.length === 0 && canAddMentorshipData && (
                                             <Button variant="primary" onClick={handleStartNewVisitReport}>Add New EENC Visit Report</Button>
                                         )}
                                         {activeTab === 'visit_reports' && selectedReportIds.length > 0 && canManageMentorship && (
@@ -3614,6 +3648,7 @@ const SkillsMentorshipView = ({
                                     selectedIds={selectedSubmissionIds}
                                     onSelectionChange={setSelectedSubmissionIds}
                                     canManage={canManageMentorship}
+                                    currentUserEmail={user?.email}
                                 />
                             )}
                             {activeTab === 'mothers_list' && !publicDashboardMode && (
@@ -3638,6 +3673,7 @@ const SkillsMentorshipView = ({
                                     selectedIds={selectedSubmissionIds}
                                     onSelectionChange={setSelectedSubmissionIds}
                                     canManage={canManageMentorship}
+                                    currentUserEmail={user?.email}
                                 />
                             )}
                             {activeTab === 'visit_reports' && !publicDashboardMode && (

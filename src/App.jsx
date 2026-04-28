@@ -72,6 +72,14 @@ const PublicMeetingAttendanceView = lazy(() => import('./components/ProjectTrack
 const PlanningView = lazy(() => import('./components/PlanningView'));
 const LocalityPlanView = lazy(() => import('./components/LocalityPlanView'));
 
+// --- PERMISSIONS IMPORT ---
+import { 
+    ALL_PERMISSIONS, 
+    ALL_PERMISSION_KEYS, 
+    DEFAULT_ROLE_PERMISSIONS, 
+    applyDerivedPermissions 
+} from './components/permissions.js';
+
 import {
     upsertCourse, deleteCourse, listParticipants, deleteParticipant, listObservationsForParticipant,
     listCasesForParticipant, listAllDataForCourse, upsertFacilitator, deleteFacilitator, importParticipants,
@@ -237,50 +245,6 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
         </Modal>
     );
 }
-
-const ALL_PERMISSIONS = {
-    canViewDashboard: true,
-    canViewCourse: true,
-    canViewHumanResource: true,
-    canViewFacilities: true,
-    canViewSkillsMentorship: true,
-    canViewAdmin: true,
-    canManageCourse: true,
-    canManageHumanResource: true,
-    canManageFacilities: true,
-    canApproveSubmissions: true,
-    canUseSuperUserAdvancedFeatures: true,
-    canUseFederalManagerAdvancedFeatures: true,
-    canViewLocalityPlan: true,
-    canEditLocalityPlan: true,
-};
-
-const ALL_PERMISSION_KEYS = Object.keys(ALL_PERMISSIONS);
-
-const DEFAULT_ROLE_PERMISSIONS = {
-    'super_user': ALL_PERMISSION_KEYS,
-    'federal_manager': [
-        'canViewDashboard', 'canViewCourse', 'canViewHumanResource', 'canViewFacilities', 'canViewSkillsMentorship',
-        'canManageCourse', 'canManageHumanResource', 'canManageFacilities',
-        'canApproveSubmissions', 'canUseFederalManagerAdvancedFeatures', 'canViewLocalityPlan', 'canEditLocalityPlan'
-    ],
-    'state_manager': [
-        'canViewDashboard', 'canViewCourse', 'canViewHumanResource', 'canViewFacilities', 'canViewSkillsMentorship',
-        'canManageCourse', 'canManageHumanResource', 'canManageFacilities', 'canViewLocalityPlan'
-    ],
-    'locality_manager': [
-        'canViewDashboard', 'canViewCourse', 'canViewHumanResource', 'canViewFacilities', 'canViewSkillsMentorship',
-        'canManageCourse',
-        'canManageFacilities'
-    ],
-    'user': [
-        'canViewDashboard', 'canViewCourse', 'canViewHumanResource', 'canViewFacilities'
-    ]
-};
-
-const applyDerivedPermissions = (basePermissions) => {
-    return basePermissions;
-};
 
 const ResourceMonitor = ({ counts, onReset, onDismiss }) => {
     return (
