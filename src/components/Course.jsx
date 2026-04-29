@@ -23,7 +23,7 @@ import {
 import html2canvas from 'html2canvas';
 import { db } from '../firebase';
 import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
-import { DEFAULT_ROLE_PERMISSIONS, ALL_PERMISSIONS } from './AdminDashboard';
+import { DEFAULT_ROLE_PERMISSIONS, ALL_PERMISSIONS } from './permissions';
 import { generateCertificatePdf } from './CertificateGenerator'; 
 import { 
     Users, Download, Calendar, Clock, Share2, UserPlus, CheckCircle, 

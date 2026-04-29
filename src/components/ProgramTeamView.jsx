@@ -39,7 +39,7 @@ import {
     DEFAULT_ROLE_PERMISSIONS, 
     applyDerivedPermissions, 
     ALL_PERMISSIONS 
-} from './AdminDashboard';
+} from './permissions';
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 import { amiriFontBase64 } from './AmiriFont.js';
