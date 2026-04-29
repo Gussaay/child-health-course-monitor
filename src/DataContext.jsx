@@ -22,7 +22,8 @@ import {
     listProjects,
     listMasterPlans,
     listOperationalPlans,
-    listUnitMeetings
+    listUnitMeetings,
+    listIMNCIPatientRecords
 } from './data';
 import { useAuth } from './hooks/useAuth';
 
@@ -53,6 +54,7 @@ export const DataProvider = ({ children }) => {
         skillMentorshipSubmissions: null,
         imnciVisitReports: null,
         eencVisitReports: null, 
+        imnciPatientRecords: null, // <--- ADDED
         participantTests: null,
         pendingFacilitatorSubmissions: null,
         facilitatorApplicationSettings: { isActive: false, openCount: 0 },
@@ -74,6 +76,7 @@ export const DataProvider = ({ children }) => {
         skillMentorshipSubmissions: true,
         imnciVisitReports: true,
         eencVisitReports: true, 
+        imnciPatientRecords: true, // <--- ADDED
         participantTests: true,
         pendingFacilitatorSubmissions: true,
         facilitatorApplicationSettings: true,
@@ -337,6 +340,9 @@ export const DataProvider = ({ children }) => {
         fetchIMNCIVisitReports: createFetcher('imnciVisitReports', (opts, lastSync) => listIMNCIVisitReports(opts, lastSync)),
         fetchEENCVisitReports: createFetcher('eencVisitReports', (opts, lastSync) => listEENCVisitReports(opts, lastSync)), 
         
+        // <--- ADDED FETCHER --->
+        fetchIMNCIPatientRecords: createFetcher('imnciPatientRecords', (opts, lastSync) => listIMNCIPatientRecords(opts, lastSync)), 
+
         fetchParticipantTests: createFetcher('participantTests', (opts) => listParticipantTestsForCourse(null, opts)),
         fetchPendingFacilitatorSubmissions: createFetcher('pendingFacilitatorSubmissions', (opts) => listPendingFacilitatorSubmissions(opts)),
         fetchFacilitatorApplicationSettings: createFetcher('facilitatorApplicationSettings', (opts) => getFacilitatorApplicationSettings(opts)),

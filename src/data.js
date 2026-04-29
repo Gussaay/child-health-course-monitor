@@ -1985,3 +1985,53 @@ export async function getUnitMeetingById(meetingId, sourceOptions = {}) {
     if (docSnap.exists()) return { id: docSnap.id, ...docSnap.data() };
     return null;
 }
+
+// ============================================================================
+// --- IMNCI PATIENT RECORDS (From IMNCIRecordingForm) ---
+// ============================================================================
+
+export async function saveIMNCIPatientRecord(payload, recordId = null) {
+    try {
+        const recordData = {
+            ...payload,
+            lastUpdatedAt: serverTimestamp(),
+            ...( !recordId ? { createdAt: serverTimestamp() } : {} ),
+        };
+        const docRef = recordId 
+            ? doc(db, "imnciPatientRecords", recordId) 
+            : doc(collection(db, "imnciPatientRecords")); 
+            
+        const writePromise = setDoc(docRef, recordData, { merge: !!recordId });
+        
+        // Use your existing offline-safe wrapper
+        await executeOfflineSafeWrite(writePromise);
+        return docRef.id;
+    } catch (error) {
+        console.error("Error saving IMNCI patient record:", error);
+        throw error;
+    }
+}
+
+export async function listIMNCIPatientRecords(sourceOptions = {}, lastSync = 0) {
+    try {
+        let q = collection(db, "imnciPatientRecords");
+        if (lastSync > 0) {
+            q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
+        }
+        // Exclude softly deleted records
+        q = query(q, where("isDeleted", "!=", true)); 
+        
+        const snapshot = await getData(q, sourceOptions);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error fetching IMNCI patient records:", error);
+        throw error;
+    }
+}
+
+export async function deleteIMNCIPatientRecord(recordId) {
+    if (!recordId) throw new Error("Record ID is required to delete.");
+    const recordRef = doc(db, "imnciPatientRecords", recordId);
+    await updateDoc(recordRef, { isDeleted: true, lastUpdatedAt: serverTimestamp() }); 
+    return true;
+}

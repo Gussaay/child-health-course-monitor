@@ -1,8 +1,476 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, PageHeader, Button } from './CommonComponents'; 
-import { AlertCircle, Baby, User, ClipboardList, CheckSquare, CalendarDays, UserSquare2, Ruler, Weight, Thermometer } from 'lucide-react';
+import { AlertCircle, Baby, User, ClipboardList, CheckSquare, CalendarDays, UserSquare2, Ruler, Weight, Thermometer, Building, LayoutDashboard, Activity, Syringe, ArrowRight, CheckCircle, XCircle } from 'lucide-react';
 import zScoreData from './zscore_reference_data.json'; 
+import { STATE_LOCALITIES } from './constants'; 
+
+// --- Firebase & Context Imports ---
+import { db } from '../firebase';
+import { serverTimestamp } from 'firebase/firestore';
+import { useDataCache } from '../DataContext';
+import { saveIMNCIPatientRecord } from '../data';
+
+// ============================================================================
+// SAVE STATUS POPUP
+// ============================================================================
+const SaveStatusPopup = ({ status, onClose, onBack }) => {
+    if (!status) return null;
+    const isSuccess = status.type === 'success';
+
+    return (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4 animate-fade-in" dir="rtl">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center transform scale-100 transition-transform">
+                <div className={`mb-4 flex justify-center ${isSuccess ? 'text-green-500' : 'text-red-500'}`}>
+                    {isSuccess ? <CheckCircle className="w-16 h-16" /> : <XCircle className="w-16 h-16" />}
+                </div>
+                
+                <h3 className="text-xl font-extrabold mb-2 text-gray-800">
+                    {isSuccess ? 'تم الحفظ بنجاح' : 'فشل الحفظ'}
+                </h3>
+                <p className="text-gray-600 mb-6 text-sm font-medium">
+                    {status.message}
+                </p>
+                
+                <div className="flex flex-col gap-3">
+                    {isSuccess ? (
+                        <>
+                            <Button onClick={onClose} className="w-full font-bold py-3 rounded-xl">
+                                إدخال حالة جديدة (نفس المنشأة)
+                            </Button>
+                            <Button onClick={onBack} variant="secondary" className="w-full font-bold py-3 rounded-xl">
+                                العودة للقائمة الرئيسية
+                            </Button>
+                        </>
+                    ) : (
+                        <Button onClick={onClose} variant="secondary" className="w-full font-bold py-3 rounded-xl">
+                            حسناً (إغلاق)
+                        </Button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ============================================================================
+// DASHBOARD & REPORT COMPONENT
+// ============================================================================
+const IMNCIDashboard = ({ onNavigate, records, isLoading }) => {
+    const { t } = useTranslation();
+    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+    // Compute all statistics and KPIs
+    const stats = useMemo(() => {
+        const data = {
+            totalVisits: 0,
+            infants: 0, 
+            children: 0,
+            referred: 0,
+            vaccineUpToDate: 0,
+            vaccineNotUpToDate: 0,
+            infant: {
+                severeBacterial: 0, localBacterial: 0,
+                severeJaundice: 0, jaundice: 0,
+                bloodStool: 0, feeding: 0
+            },
+            child: {
+                severePneumonia: 0, pneumonia: 0, cough: 0,
+                mastoiditis: 0, acuteEar: 0, chronicEar: 0,
+                diarrheaDehydration: 0, diarrheaNoDehydration: 0, persistent: 0, dysentery: 0,
+                samComplicated: 0, samUncomplicated: 0, mam: 0,
+                severeAnemia: 0, anemia: 0,
+                severeFebrile: 0, malaria: 0, measlesComp: 0, measles: 0,
+                feedingProblem: 0, otherProblems: 0
+            }
+        };
+
+        if (!records) return data;
+
+        const filteredRecords = records.filter(r => {
+            const dateStr = r.patientData?.date;
+            let d;
+            if (dateStr) {
+                d = new Date(dateStr);
+            } else if (r.createdAt) {
+                d = r.createdAt.toDate ? r.createdAt.toDate() : new Date(r.createdAt);
+            } else {
+                return false;
+            }
+            return d.getMonth() + 1 === parseInt(selectedMonth) && d.getFullYear() === parseInt(selectedYear);
+        });
+
+        filteredRecords.forEach(r => {
+            data.totalVisits++;
+            const c = r.classifications || {};
+            const a = r.assessments || {};
+
+            const hasRed = (cat) => c[cat]?.c?.some(cls => cls.color === 'bg-red-500');
+            const hasYellow = (cat) => c[cat]?.c?.some(cls => cls.color === 'bg-yellow-400');
+            const hasGreen = (cat) => c[cat]?.c?.some(cls => cls.color === 'bg-green-500');
+
+            // Referral check
+            let isReferred = false;
+            Object.keys(c).forEach(k => { if (hasRed(k)) isReferred = true; });
+            if (isReferred) data.referred++;
+
+            // Vaccination
+            if (hasGreen('vaccine')) data.vaccineUpToDate++;
+            else data.vaccineNotUpToDate++;
+
+            if (r.formType === 'infant') {
+                data.infants++;
+                if (hasRed('infection')) data.infant.severeBacterial++;
+                if (hasYellow('infection')) data.infant.localBacterial++;
+                if (hasRed('jaundice')) data.infant.severeJaundice++;
+                if (hasYellow('jaundice')) data.infant.jaundice++;
+                if (a.bloodInStool) data.infant.bloodStool++;
+                if (hasYellow('feeding')) data.infant.feeding++;
+            } else {
+                data.children++;
+                // Respiratory
+                if (hasRed('cough') || hasRed('danger')) data.child.severePneumonia++;
+                else if (hasYellow('cough')) data.child.pneumonia++;
+                else if (hasGreen('cough')) data.child.cough++;
+
+                // Ear
+                if (hasRed('ear')) data.child.mastoiditis++;
+                else if (hasYellow('ear')) {
+                    if (parseInt(a.earDischargeDays || 0) >= 14) data.child.chronicEar++;
+                    else data.child.acuteEar++;
+                }
+
+                // Diarrhea
+                if (hasRed('diarrhea') || (hasYellow('diarrhea') && c.diarrhea?.c?.some(x => x.label?.toLowerCase().includes('some')))) {
+                    data.child.diarrheaDehydration++;
+                } else if (hasGreen('diarrhea')) {
+                    data.child.diarrheaNoDehydration++;
+                }
+                if (parseInt(a.diarrheaDays || 0) >= 14) data.child.persistent++;
+                if (a.bloodInStool) data.child.dysentery++;
+
+                // Malnutrition
+                if (hasRed('malnutrition')) data.child.samComplicated++;
+                else if (hasYellow('malnutrition')) {
+                    const muac = parseFloat(a.muacCm || 0);
+                    if (muac > 0 && muac < 11.5) data.child.samUncomplicated++;
+                    else data.child.mam++;
+                }
+
+                // Anemia
+                if (hasRed('anemia')) data.child.severeAnemia++;
+                if (hasYellow('anemia')) data.child.anemia++;
+
+                // Fever
+                if (hasRed('fever')) data.child.severeFebrile++;
+                if (a.malariaTest === 'positive') data.child.malaria++;
+                if (a.measles3Months || a.measlesRash) {
+                    if (a.corneaClouding || a.pusFromEye || a.mouthUlcers || a.deepExtensiveUlcers) data.child.measlesComp++;
+                    else data.child.measles++;
+                }
+
+                // Others
+                if (a.feedingStatus === 'problem') data.child.feedingProblem++;
+                if (a.hasOtherProblems) data.child.otherProblems++;
+            }
+        });
+
+        return data;
+    }, [records, selectedMonth, selectedYear]);
+
+    const pct = (val, total) => total > 0 ? Math.round((val / total) * 100) : 0;
+
+    return (
+        <div className="space-y-6 animate-fade-in" dir="rtl">
+            <div className="flex justify-start">
+                <Button variant="secondary" onClick={() => onNavigate('nav')} className="flex items-center gap-2 font-bold bg-white text-slate-700 shadow-sm border border-slate-200">
+                    <ArrowRight size={18} /> العودة إلى القائمة الرئيسية
+                </Button>
+            </div>
+
+            {/* Quick Navigation Action Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <button onClick={() => onNavigate('infant')} className="text-right cursor-pointer focus:outline-none w-full h-full block">
+                    <Card className="hover:shadow-lg transition-shadow border-t-4 border-t-sky-500 group h-full">
+                        <div className="p-6 flex items-center gap-6">
+                            <div className="p-4 bg-sky-100 text-sky-600 rounded-2xl group-hover:scale-110 transition-transform">
+                                <Baby size={32} />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold text-sky-900">تسجيل طفل أقل من شهرين</h3>
+                                <p className="text-sky-600 text-sm mt-1">إدخال بيانات التقييم والعلاج للرضع (Young Infant Form)</p>
+                            </div>
+                        </div>
+                    </Card>
+                </button>
+
+                <button onClick={() => onNavigate('child')} className="text-right cursor-pointer focus:outline-none w-full h-full block">
+                    <Card className="hover:shadow-lg transition-shadow border-t-4 border-t-indigo-500 group h-full">
+                        <div className="p-6 flex items-center gap-6">
+                            <div className="p-4 bg-indigo-100 text-indigo-600 rounded-2xl group-hover:scale-110 transition-transform">
+                                <User size={32} />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold text-indigo-900">تسجيل طفل من شهرين إلى 5 سنوات</h3>
+                                <p className="text-indigo-600 text-sm mt-1">إدخال بيانات التقييم والعلاج للأطفال (Sick Child Form)</p>
+                            </div>
+                        </div>
+                    </Card>
+                </button>
+            </div>
+
+            {/* Dashboard & Report Section */}
+            <Card>
+                <div className="bg-emerald-700 p-4 rounded-t-md flex flex-col md:flex-row justify-between items-center text-white">
+                    <h2 className="font-bold text-lg flex items-center gap-2">
+                        <LayoutDashboard size={20} /> لوحة بيانات وتقارير IMNCI
+                    </h2>
+                    <div className="flex gap-3 mt-3 md:mt-0 text-slate-800">
+                        <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="p-1.5 rounded text-sm font-bold bg-white outline-none">
+                            {Array.from({length: 12}, (_, i) => i + 1).map(m => <option key={m} value={m}>شهر {m}</option>)}
+                        </select>
+                        <select value={selectedYear} onChange={e => setSelectedYear(e.target.value)} className="p-1.5 rounded text-sm font-bold bg-white outline-none">
+                            {[2023, 2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
+                        </select>
+                    </div>
+                </div>
+
+                <div className="p-6 bg-slate-50 space-y-8">
+                    {isLoading ? (
+                        <div className="text-center py-10 text-slate-500">جاري تحميل البيانات...</div>
+                    ) : (
+                        <>
+                            {/* KPI Row */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center justify-center">
+                                    <span className="text-slate-500 text-sm font-bold mb-1">إجمالي الحالات المسجلة</span>
+                                    <span className="text-3xl font-black text-slate-800">{stats.totalVisits}</span>
+                                </div>
+                                <div className="bg-white p-4 rounded-xl border border-red-100 shadow-sm flex flex-col items-center justify-center">
+                                    <span className="text-red-500 text-sm font-bold mb-1 flex items-center gap-1"><AlertCircle size={14}/> حالات خطرة (محولة)</span>
+                                    <div className="flex items-end gap-2">
+                                        <span className="text-3xl font-black text-red-600">{stats.referred}</span>
+                                        <span className="text-sm font-bold text-red-400 mb-1">({pct(stats.referred, stats.totalVisits)}%)</span>
+                                    </div>
+                                </div>
+                                <div className="bg-white p-4 rounded-xl border border-green-100 shadow-sm flex flex-col items-center justify-center">
+                                    <span className="text-green-600 text-sm font-bold mb-1 flex items-center gap-1"><Syringe size={14}/> مكتملي التطعيم</span>
+                                    <div className="flex items-end gap-2">
+                                        <span className="text-3xl font-black text-green-600">{stats.vaccineUpToDate}</span>
+                                        <span className="text-sm font-bold text-green-400 mb-1">({pct(stats.vaccineUpToDate, stats.totalVisits)}%)</span>
+                                    </div>
+                                </div>
+                                <div className="bg-white p-4 rounded-xl border border-sky-100 shadow-sm flex flex-col items-center justify-center">
+                                    <span className="text-sky-600 text-sm font-bold mb-1 flex items-center gap-1"><Activity size={14}/> أمراض الجهاز التنفسي</span>
+                                    <div className="flex items-end gap-2">
+                                        <span className="text-3xl font-black text-sky-600">{stats.child.pneumonia + stats.child.severePneumonia}</span>
+                                        <span className="text-sm font-bold text-sky-400 mb-1">حالة</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Official Report Table */}
+                            <div className="bg-white border-2 border-slate-800 rounded shadow-md overflow-hidden">
+                                <div className="bg-slate-100 p-4 text-center border-b-2 border-slate-800">
+                                    <h3 className="font-black text-xl text-slate-900">البرنامج القومي لصحة الطفل - تقرير شهري من مؤسسة الرعاية الصحية الأساسية</h3>
+                                </div>
+                                
+                                <table className="w-full text-sm border-collapse text-right">
+                                    <tbody>
+                                        {/* Ages Summary */}
+                                        <tr className="bg-slate-50 font-bold border-b-2 border-slate-800">
+                                            <td className="p-3 border-l border-slate-300 w-1/2">عدد الاطفال (اقل من عمر شهرين): <span className="text-blue-600 ml-2">{stats.infants}</span></td>
+                                            <td className="p-3">عدد الاطفال من عمر شهرين الى أقل من خمسة سنوات: <span className="text-blue-600 ml-2">{stats.children}</span></td>
+                                        </tr>
+
+                                        {/* INFANTS SECTION */}
+                                        <tr className="bg-slate-200 border-y border-slate-800 font-bold text-center">
+                                            <td colSpan={2} className="p-2">تصنيفات وعدد الحالات المرضية للمترددين من الأطفال عمر أقل من شهرين:</td>
+                                        </tr>
+                                        <tr>
+                                            <td colSpan={2} className="p-0">
+                                                <table className="w-full border-collapse">
+                                                    <thead>
+                                                        <tr className="bg-slate-100 border-b border-slate-300">
+                                                            <th className="p-2 border-l border-slate-300 w-3/4">التصنيف</th>
+                                                            <th className="p-2 w-1/4 text-center">عدد الحالات</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr className="border-b border-slate-200">
+                                                            <td className="p-2 border-l border-slate-300 font-bold">التهاب بكتيري: احتمال الإصابة بالتهاب بكتيري خطير</td>
+                                                            <td className="p-2 text-center text-red-600 font-bold">{stats.infant.severeBacterial}</td>
+                                                        </tr>
+                                                        <tr className="border-b border-slate-200">
+                                                            <td className="p-2 border-l border-slate-300">التهاب بكتيري: التهاب بكتيري موضعي</td>
+                                                            <td className="p-2 text-center font-bold">{stats.infant.localBacterial}</td>
+                                                        </tr>
+                                                        <tr className="border-b border-slate-200">
+                                                            <td className="p-2 border-l border-slate-300 font-bold">يرقان: يرقان شديد</td>
+                                                            <td className="p-2 text-center text-red-600 font-bold">{stats.infant.severeJaundice}</td>
+                                                        </tr>
+                                                        <tr className="border-b border-slate-200">
+                                                            <td className="p-2 border-l border-slate-300">يرقان: يرقان</td>
+                                                            <td className="p-2 text-center font-bold">{stats.infant.jaundice}</td>
+                                                        </tr>
+                                                        <tr className="border-b border-slate-200">
+                                                            <td className="p-2 border-l border-slate-300">إسهال: دم في البراز</td>
+                                                            <td className="p-2 text-center font-bold">{stats.infant.bloodStool}</td>
+                                                        </tr>
+                                                        <tr className="border-b border-slate-800">
+                                                            <td className="p-2 border-l border-slate-300">مشكلة في التغذية أو نقص في الوزن</td>
+                                                            <td className="p-2 text-center font-bold">{stats.infant.feeding}</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </td>
+                                        </tr>
+
+                                        {/* CHILDREN SECTION */}
+                                        <tr className="bg-slate-200 border-b border-slate-800 font-bold text-center">
+                                            <td colSpan={2} className="p-2">تصنيفات وعدد الحالات المرضية للمترددين من الأطفال عمر شهرين إلى أقل من 5 سنوات:</td>
+                                        </tr>
+                                        <tr>
+                                            <td colSpan={2} className="p-0">
+                                                <table className="w-full border-collapse">
+                                                    <thead>
+                                                        <tr className="bg-slate-100 border-b border-slate-300">
+                                                            <th className="p-2 border-l border-slate-300 w-3/4">التصنيف</th>
+                                                            <th className="p-2 w-1/4 text-center">عدد الحالات</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {/* Respiratory */}
+                                                        <tr className="border-b border-slate-200">
+                                                            <td className="p-2 border-l border-slate-300 font-bold">التهابات الجهاز التنفسي: التهاب رئوي شديد أو مرض شديد جداً</td>
+                                                            <td className="p-2 text-center text-red-600 font-bold">{stats.child.severePneumonia}</td>
+                                                        </tr>
+                                                        <tr className="border-b border-slate-200">
+                                                            <td className="p-2 border-l border-slate-300">التهابات الجهاز التنفسي: التهاب رئوي</td>
+                                                            <td className="p-2 text-center font-bold">{stats.child.pneumonia}</td>
+                                                        </tr>
+                                                        <tr className="border-b border-slate-300 bg-slate-50">
+                                                            <td className="p-2 border-l border-slate-300">التهابات الجهاز التنفسي: كحة أو نزلة برد</td>
+                                                            <td className="p-2 text-center font-bold">{stats.child.cough}</td>
+                                                        </tr>
+                                                        {/* Ear */}
+                                                        <tr className="border-b border-slate-200">
+                                                            <td className="p-2 border-l border-slate-300 font-bold">التهاب الأذن: التهاب عظمة خلف الأذن</td>
+                                                            <td className="p-2 text-center text-red-600 font-bold">{stats.child.mastoiditis}</td>
+                                                        </tr>
+                                                        <tr className="border-b border-slate-200">
+                                                            <td className="p-2 border-l border-slate-300">التهاب الأذن: التهاب الأذن الحاد</td>
+                                                            <td className="p-2 text-center font-bold">{stats.child.acuteEar}</td>
+                                                        </tr>
+                                                        <tr className="border-b border-slate-300 bg-slate-50">
+                                                            <td className="p-2 border-l border-slate-300">التهاب الأذن: التهاب الأذن المزمن</td>
+                                                            <td className="p-2 text-center font-bold">{stats.child.chronicEar}</td>
+                                                        </tr>
+                                                        {/* Diarrhea */}
+                                                        <tr className="border-b border-slate-200">
+                                                            <td className="p-2 border-l border-slate-300 font-bold">إسهالات: إسهال يوجد جفاف</td>
+                                                            <td className="p-2 text-center text-red-600 font-bold">{stats.child.diarrheaDehydration}</td>
+                                                        </tr>
+                                                        <tr className="border-b border-slate-200">
+                                                            <td className="p-2 border-l border-slate-300">إسهالات: إسهال لا يوجد جفاف</td>
+                                                            <td className="p-2 text-center font-bold">{stats.child.diarrheaNoDehydration}</td>
+                                                        </tr>
+                                                        <tr className="border-b border-slate-200">
+                                                            <td className="p-2 border-l border-slate-300">إسهالات: إسهال مستمر</td>
+                                                            <td className="p-2 text-center font-bold">{stats.child.persistent}</td>
+                                                        </tr>
+                                                        <tr className="border-b border-slate-300 bg-slate-50">
+                                                            <td className="p-2 border-l border-slate-300">إسهالات: دسنتاريا (دم في البراز)</td>
+                                                            <td className="p-2 text-center font-bold">{stats.child.dysentery}</td>
+                                                        </tr>
+                                                        {/* Malnutrition */}
+                                                        <tr className="border-b border-slate-200">
+                                                            <td className="p-2 border-l border-slate-300 font-bold">سوء التغذية: سوء التغذية الحاد الشديد مصحوب بمضاعفات</td>
+                                                            <td className="p-2 text-center text-red-600 font-bold">{stats.child.samComplicated}</td>
+                                                        </tr>
+                                                        <tr className="border-b border-slate-200">
+                                                            <td className="p-2 border-l border-slate-300">سوء التغذية: سوء التغذية الحاد الشديد غير مصحوب بمضاعفات</td>
+                                                            <td className="p-2 text-center font-bold">{stats.child.samUncomplicated}</td>
+                                                        </tr>
+                                                        <tr className="border-b border-slate-300 bg-slate-50">
+                                                            <td className="p-2 border-l border-slate-300">سوء التغذية: سوء التغذية الحاد المتوسط</td>
+                                                            <td className="p-2 text-center font-bold">{stats.child.mam}</td>
+                                                        </tr>
+                                                        {/* Anemia */}
+                                                        <tr className="border-b border-slate-200">
+                                                            <td className="p-2 border-l border-slate-300 font-bold">فقر الدم: فقر دم شديد</td>
+                                                            <td className="p-2 text-center text-red-600 font-bold">{stats.child.severeAnemia}</td>
+                                                        </tr>
+                                                        <tr className="border-b border-slate-300 bg-slate-50">
+                                                            <td className="p-2 border-l border-slate-300">فقر الدم: فقر دم</td>
+                                                            <td className="p-2 text-center font-bold">{stats.child.anemia}</td>
+                                                        </tr>
+                                                        {/* Fever */}
+                                                        <tr className="border-b border-slate-200">
+                                                            <td className="p-2 border-l border-slate-300 font-bold">حمى: مرض حمي شديد</td>
+                                                            <td className="p-2 text-center text-red-600 font-bold">{stats.child.severeFebrile}</td>
+                                                        </tr>
+                                                        <tr className="border-b border-slate-200">
+                                                            <td className="p-2 border-l border-slate-300">حمى: ملاريا</td>
+                                                            <td className="p-2 text-center font-bold">{stats.child.malaria}</td>
+                                                        </tr>
+                                                        <tr className="border-b border-slate-200">
+                                                            <td className="p-2 border-l border-slate-300 font-bold">حمى: حصبة مصحوبة بمضاعفات في العين والفم</td>
+                                                            <td className="p-2 text-center text-red-600 font-bold">{stats.child.measlesComp}</td>
+                                                        </tr>
+                                                        <tr className="border-b border-slate-300 bg-slate-50">
+                                                            <td className="p-2 border-l border-slate-300">حمى: حصبة</td>
+                                                            <td className="p-2 text-center font-bold">{stats.child.measles}</td>
+                                                        </tr>
+                                                        {/* General */}
+                                                        <tr className="border-b border-slate-200">
+                                                            <td className="p-2 border-l border-slate-300">مشاكل التغذية</td>
+                                                            <td className="p-2 text-center font-bold">{stats.child.feedingProblem}</td>
+                                                        </tr>
+                                                        <tr className="border-b border-slate-200">
+                                                            <td className="p-2 border-l border-slate-300">مشاكل أخرى</td>
+                                                            <td className="p-2 text-center font-bold">{stats.child.otherProblems}</td>
+                                                        </tr>
+                                                        <tr className="border-b border-slate-800 bg-slate-50">
+                                                            <td className="p-2 border-l border-slate-300 font-bold text-slate-800">الأطفال المحولين (الحالات الخطرة)</td>
+                                                            <td className="p-2 text-center font-bold text-slate-800">{stats.referred}</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </td>
+                                        </tr>
+
+                                        {/* VACCINATION SECTION */}
+                                        <tr className="bg-slate-200 border-b border-slate-800 font-bold text-center">
+                                            <td colSpan={2} className="p-2">حالة التطعيمات وفيتامين أ: عدد الاطفال المواكبين وغير المواكبين</td>
+                                        </tr>
+                                        <tr>
+                                            <td colSpan={2} className="p-0">
+                                                <table className="w-full border-collapse">
+                                                    <tbody>
+                                                        <tr className="border-b border-slate-200">
+                                                            <td className="p-2 border-l border-slate-300 font-bold w-3/4">مواكب (Up to date)</td>
+                                                            <td className="p-2 text-center font-bold w-1/4 text-green-600">{stats.vaccineUpToDate}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td className="p-2 border-l border-slate-300 font-bold">غير مواكب (Not up to date)</td>
+                                                            <td className="p-2 text-center font-bold text-red-600">{stats.vaccineNotUpToDate}</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </>
+                    )}
+                </div>
+            </Card>
+        </div>
+    );
+};
 
 // --- Reusable Grid Row Component for IMNCI Layout ---
 const AssessmentRow = ({ title, isConditional = false, yesNoValue, onYesNoChange, children, classifyData = [], treatmentData = [] }) => {
@@ -68,14 +536,16 @@ const AssessmentRow = ({ title, isConditional = false, yesNoValue, onYesNoChange
 // ============================================================================
 // FORM 1: SICK YOUNG INFANT (UP TO 2 MONTHS)
 // ============================================================================
-function InfantForm() {
+function InfantForm({ selectedState, selectedLocality, selectedFacility, onBack, onSaveSuccess }) {
     const { t } = useTranslation();
-    const [infantData, setInfantData] = useState({
+    const [isSaving, setIsSaving] = useState(false);
+    const [statusModal, setStatusModal] = useState(null);
+
+    const initialInfantData = {
         date: new Date().toISOString().split('T')[0], childName: '', ageDaysWeeks: '', weightKg: '', tempC: '',
         problems: '', visitType: 'initial'
-    });
-
-    const [assessments, setAssessments] = useState({
+    };
+    const initialAssessments = {
         notFeedingWell: false, convulsions: false, convulsingNow: false, movementOnlyStimulatedNoMovement: false,
         breathRate: '', fastBreathing: false, severeChestIndrawing: false, fever38: false, lowTemp35_5: false,
         umbilicusRedDraining: false, pusFromEyes: false, skinPustules: false,
@@ -90,7 +560,10 @@ function InfantForm() {
         v_opv0: false, v_bcg: false, v_opv1: false, v_rota1: false, v_pcv1: false, v_penta1: false, v_ipv1: false,
         vaccineStatus: '', nextVaccine: '',
         hasOtherProblems: null, otherProblemsText: '', followUpDays: ''
-    });
+    };
+
+    const [infantData, setInfantData] = useState({ ...initialInfantData });
+    const [assessments, setAssessments] = useState({ ...initialAssessments });
 
     const handleDataChange = (e) => setInfantData(prev => ({ ...prev, [e.target.name]: e.target.value }));
     const handleCheckboxChange = (e) => setAssessments(prev => ({ ...prev, [e.target.name]: e.target.checked }));
@@ -195,11 +668,81 @@ function InfantForm() {
         return cat;
     }, [infantData, assessments, t]);
 
+    const handleSave = async () => {
+        if (!selectedState || !selectedLocality || !selectedFacility) {
+            alert(t('imci.common.please_select_facility', 'Please select a facility first.'));
+            return;
+        }
+        if (!infantData.childName) {
+            alert(t('imci.common.please_enter_name', 'Please enter the child\'s name.'));
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            // Helper to extract plain text from React Elements
+            const extractText = (node) => {
+                if (node === null || node === undefined) return '';
+                if (typeof node === 'string' || typeof node === 'number' || typeof node === 'boolean') return String(node);
+                if (Array.isArray(node)) return node.map(extractText).join('');
+                if (node.props && node.props.children) return extractText(node.props.children);
+                return '';
+            };
+
+            const cleanClassifications = {};
+            for (const [key, category] of Object.entries(results)) {
+                cleanClassifications[key] = {
+                    c: category.c.map(cls => ({ label: cls.label, color: cls.color })),
+                    t: category.t.map(extractText).filter(text => text.trim() !== '')
+                };
+            }
+
+            const safeAssessments = JSON.parse(JSON.stringify(assessments, (k, v) => v === undefined ? null : v));
+            const safePatientData = JSON.parse(JSON.stringify(infantData, (k, v) => v === undefined ? null : v));
+
+            const payload = {
+                formType: 'infant',
+                facilityId: selectedFacility,
+                state: selectedState,
+                locality: selectedLocality,
+                patientData: safePatientData,
+                assessments: safeAssessments,
+                classifications: cleanClassifications,
+                createdAt: serverTimestamp()
+            };
+            
+            await saveIMNCIPatientRecord(payload);
+            
+            // Success! Reset form data but keep the facility selection
+            setInfantData({ ...initialInfantData });
+            setAssessments({ ...initialAssessments });
+            
+            if (onSaveSuccess) onSaveSuccess();
+            setStatusModal({ type: 'success', message: 'تم حفظ بيانات المريض بنجاح.' });
+        } catch (error) {
+            console.error("Error saving form: ", error);
+            setStatusModal({ type: 'error', message: 'حدث خطأ أثناء حفظ البيانات. يرجى المحاولة مرة أخرى.' });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     return (
-        <div className="space-y-6 animate-in fade-in duration-300">
+        <div className="space-y-6 animate-in fade-in duration-300 relative">
+            <SaveStatusPopup 
+                status={statusModal} 
+                onClose={() => setStatusModal(null)} 
+                onBack={onBack} 
+            />
+
+            <div className="flex justify-start">
+                <Button variant="secondary" onClick={onBack} className="flex items-center gap-2 font-bold bg-white text-slate-700 shadow-sm border border-slate-200">
+                    <ArrowRight size={18} /> العودة إلى القائمة الرئيسية
+                </Button>
+            </div>
             <Card>
-                <div className="bg-slate-800 text-white p-3 rounded-t-md font-bold text-center uppercase tracking-wide shadow-sm">
-                    {t('imci.infant_title')}
+                <div className="bg-sky-700 text-white p-3 rounded-t-md font-bold text-center uppercase tracking-wide flex items-center justify-center gap-2">
+                    <Baby /> {t('imci.infant_title')}
                 </div>
                 <div className="p-5 space-y-5 bg-slate-50">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
@@ -493,23 +1036,28 @@ function InfantForm() {
             </div>
             
             <div className="flex justify-end pb-8">
-                <Button variant="primary" className="w-full md:w-auto py-3.5 shadow-lg px-12 text-lg font-bold"><ClipboardList className="w-5 h-5 mr-2 inline-block"/> {t('imci.common.save_infant')}</Button>
+                <Button variant="primary" onClick={handleSave} disabled={isSaving} className="w-full md:w-auto py-3.5 shadow-lg px-12 text-lg font-bold">
+                    <ClipboardList className="w-5 h-5 mr-2 inline-block"/> 
+                    {isSaving ? t('imci.common.saving', 'Saving...') : t('imci.common.save_infant', 'Save Infant Record')}
+                </Button>
             </div>
         </div>
     );
 }
 
 // ============================================================================
-// FORM 2: SICK CHILD (2 MONTHS UP TO 5 YEARS) - ALIGNED GRID LAYOUT
+// FORM 2: SICK CHILD (2 MONTHS UP TO 5 YEARS)
 // ============================================================================
-function ChildForm() {
+function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, onSaveSuccess }) {
     const { t } = useTranslation();
-    const [childData, setChildData] = useState({
+    const [isSaving, setIsSaving] = useState(false);
+    const [statusModal, setStatusModal] = useState(null);
+
+    const initialChildData = {
         date: new Date().toISOString().split('T')[0], childName: '', sex: 'male', ageMonths: '', weightKg: '', lengthCm: '', tempC: '',
         problems: '', visitType: 'initial'
-    });
-
-    const [assessments, setAssessments] = useState({
+    };
+    const initialAssessments = {
         notAbleToDrink: false, vomitsEverything: false, historyOfConvulsions: false, lethargicUnconscious: false, convulsingNow: false,
         hasCough: null, coughDays: '', breathRate: '', fastBreathing: false, chestIndrawing: false, stridor: false, wheeze: false,
         hasDiarrhea: null, diarrheaDays: '', bloodInStool: false, lethargic: false, restlessIrritable: false, sunkenEyes: false,
@@ -527,7 +1075,10 @@ function ChildForm() {
         hasOtherProblems: null, otherProblemsText: '',
         feed_ageLess2: false, feed_hadMAM: false, feed_hadAnemia: false, feedingStatus: '',
         followUpDays: ''
-    });
+    };
+
+    const [childData, setChildData] = useState({ ...initialChildData });
+    const [assessments, setAssessments] = useState({ ...initialAssessments });
 
     const handleChildDataChange = (e) => setChildData(prev => ({ ...prev, [e.target.name]: e.target.value }));
     const handleCheckboxChange = (e) => setAssessments(prev => ({ ...prev, [e.target.name]: e.target.checked }));
@@ -1010,11 +1561,81 @@ function ChildForm() {
         return cat;
     }, [childData, assessments, zScoreResult, t]);
 
+    const handleSave = async () => {
+        if (!selectedState || !selectedLocality || !selectedFacility) {
+            alert(t('imci.common.please_select_facility', 'Please select a facility first.'));
+            return;
+        }
+        if (!childData.childName) {
+            alert(t('imci.common.please_enter_name', 'Please enter the child\'s name.'));
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            // Helper to extract plain text from React Elements
+            const extractText = (node) => {
+                if (node === null || node === undefined) return '';
+                if (typeof node === 'string' || typeof node === 'number' || typeof node === 'boolean') return String(node);
+                if (Array.isArray(node)) return node.map(extractText).join('');
+                if (node.props && node.props.children) return extractText(node.props.children);
+                return '';
+            };
+
+            const cleanClassifications = {};
+            for (const [key, category] of Object.entries(results)) {
+                cleanClassifications[key] = {
+                    c: category.c.map(cls => ({ label: cls.label, color: cls.color })),
+                    t: category.t.map(extractText).filter(text => text.trim() !== '')
+                };
+            }
+
+            const safeAssessments = JSON.parse(JSON.stringify(assessments, (k, v) => v === undefined ? null : v));
+            const safePatientData = JSON.parse(JSON.stringify(childData, (k, v) => v === undefined ? null : v));
+
+            const payload = {
+                formType: 'child',
+                facilityId: selectedFacility,
+                state: selectedState,
+                locality: selectedLocality,
+                patientData: safePatientData,
+                assessments: safeAssessments,
+                classifications: cleanClassifications,
+                createdAt: serverTimestamp()
+            };
+            
+            await saveIMNCIPatientRecord(payload);
+            
+            // Success! Reset form data but keep the facility selection
+            setChildData({ ...initialChildData });
+            setAssessments({ ...initialAssessments });
+            
+            if (onSaveSuccess) onSaveSuccess();
+            setStatusModal({ type: 'success', message: 'تم حفظ بيانات المريض بنجاح.' });
+        } catch (error) {
+            console.error("Error saving form: ", error);
+            setStatusModal({ type: 'error', message: 'حدث خطأ أثناء حفظ البيانات. يرجى المحاولة مرة أخرى.' });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     return (
-        <div className="space-y-6 animate-in fade-in duration-300">
+        <div className="space-y-6 animate-in fade-in duration-300 relative">
+            <SaveStatusPopup 
+                status={statusModal} 
+                onClose={() => setStatusModal(null)} 
+                onBack={onBack} 
+            />
+
+            <div className="flex justify-start">
+                <Button variant="secondary" onClick={onBack} className="flex items-center gap-2 font-bold bg-white text-slate-700 shadow-sm border border-slate-200">
+                    <ArrowRight size={18} /> العودة إلى القائمة الرئيسية
+                </Button>
+            </div>
             <Card>
-                <div className="bg-slate-800 text-white p-3 rounded-t-md font-bold text-center uppercase tracking-wide shadow-sm">
-                    {t('imci.child_title')}
+                <div className="bg-indigo-700 text-white p-3 rounded-t-md font-bold text-center uppercase tracking-wide flex items-center justify-center gap-2">
+                    <User /> {t('imci.child_title')}
                 </div>
                 <div className="p-5 space-y-5 bg-slate-50">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -1382,7 +2003,10 @@ function ChildForm() {
             </div>
 
             <div className="flex justify-end pb-8">
-                <Button variant="primary" className="w-full md:w-auto py-3.5 shadow-lg px-12 text-lg font-bold"><ClipboardList className="w-5 h-5 mr-2 inline-block"/> {t('imci.common.save_child')}</Button>
+                <Button variant="primary" onClick={handleSave} disabled={isSaving} className="w-full md:w-auto py-3.5 shadow-lg px-12 text-lg font-bold">
+                    <ClipboardList className="w-5 h-5 mr-2 inline-block"/> 
+                    {isSaving ? t('imci.common.saving', 'Saving...') : t('imci.common.save_child', 'Save Child Record')}
+                </Button>
             </div>
         </div>
     );
@@ -1393,32 +2017,187 @@ function ChildForm() {
 // ============================================================================
 export default function IMNCIRecordingForm() {
     const { t } = useTranslation();
-    const [activeForm, setActiveForm] = useState('child');
+    const [activeView, setActiveView] = useState('nav'); // 'nav', 'dashboard', 'infant', 'child'
+
+    // --- Facility Selection State ---
+    const [selectedState, setSelectedState] = useState('');
+    const [selectedLocality, setSelectedLocality] = useState('');
+    const [selectedFacility, setSelectedFacility] = useState('');
+
+    const { healthFacilities, fetchHealthFacilities, imnciPatientRecords, fetchIMNCIPatientRecords, isLoading } = useDataCache();
+
+    // Fetch facilities on load if they don't exist
+    useEffect(() => {
+        if (!healthFacilities) {
+            fetchHealthFacilities({}, false);
+        }
+        if (!imnciPatientRecords) {
+            fetchIMNCIPatientRecords(false);
+        }
+    }, [healthFacilities, imnciPatientRecords, fetchHealthFacilities, fetchIMNCIPatientRecords]);
+    
+    const activeFacilities = useMemo(() => {
+        return healthFacilities?.filter(f => f.isDeleted !== true && f.isDeleted !== "true") || [];
+    }, [healthFacilities]);
+
+    const states = useMemo(() => [...new Set(activeFacilities.map(f => f['الولاية']).filter(Boolean))].sort((a, b) => (STATE_LOCALITIES[a]?.ar || '').localeCompare(STATE_LOCALITIES[b]?.ar || '')), [activeFacilities]);
+    const localities = useMemo(() => [...new Set(activeFacilities.filter(f => f['الولاية'] === selectedState).map(f => f['المحلية']).filter(Boolean))].sort(), [activeFacilities, selectedState]);
+    const facilities = useMemo(() => {
+        return activeFacilities
+            .filter(f => f['الولاية'] === selectedState && f['المحلية'] === selectedLocality)
+            .sort((a,b) => (a['اسم_المؤسسة']||'').localeCompare(b['اسم_المؤسسة']||''));
+    }, [activeFacilities, selectedState, selectedLocality]);
+
+    const filteredRecords = useMemo(() => {
+        let filtered = imnciPatientRecords || [];
+        if (selectedState) filtered = filtered.filter(r => r.state === selectedState);
+        if (selectedLocality) filtered = filtered.filter(r => r.locality === selectedLocality);
+        if (selectedFacility) filtered = filtered.filter(r => r.facilityId === selectedFacility);
+        return filtered;
+    }, [imnciPatientRecords, selectedState, selectedLocality, selectedFacility]);
+
+    const handleNavigation = (view) => {
+        if ((view === 'infant' || view === 'child') && !selectedFacility) {
+            alert("الرجاء اختيار المؤسسة الصحية أولاً للبدء في التسجيل.");
+            return;
+        }
+        setActiveView(view);
+    };
 
     return (
         <div className="space-y-6 max-w-7xl mx-auto pb-12">
-            <PageHeader title={t('imci.form_title')} subtitle={t('imci.common.select_age_group')} />
             
-            {/* Age Group Toggle */}
-            <div className="flex flex-col sm:flex-row gap-4 bg-white p-2 rounded-lg shadow-sm border border-slate-200 w-fit mx-auto lg:mx-0">
-                <button 
-                    onClick={() => setActiveForm('infant')} 
-                    className={`flex items-center gap-2 px-6 py-2.5 rounded-md font-semibold transition-all duration-200 ${activeForm === 'infant' ? 'bg-sky-600 text-white shadow-md scale-105' : 'text-slate-600 hover:bg-slate-100'}`}
-                >
-                    <Baby size={20} />
-                    {t('imci.common.infant_button')}
-                </button>
-                <button 
-                    onClick={() => setActiveForm('child')} 
-                    className={`flex items-center gap-2 px-6 py-2.5 rounded-md font-semibold transition-all duration-200 ${activeForm === 'child' ? 'bg-sky-600 text-white shadow-md scale-105' : 'text-slate-600 hover:bg-slate-100'}`}
-                >
-                    <User size={20} />
-                    {t('imci.common.child_button')}
-                </button>
-            </div>
+            {activeView === 'nav' && (
+                <PageHeader title="التسجيل والتقارير - الرعاية المتكاملة" subtitle="اختر نافذة الإدخال أو استعرض تقارير الإحصائيات" />
+            )}
+            {(activeView === 'infant' || activeView === 'child') && (
+                <PageHeader title={t('imci.form_title')} subtitle={activeFacilities.find(f => f.id === selectedFacility)?.['اسم_المؤسسة'] || "إدخال البيانات"} />
+            )}
 
-            {/* Render Form based on Selection */}
-            {activeForm === 'infant' ? <InfantForm /> : <ChildForm />}
+            {/* --- Facility Selector (Always visible to maintain selection) --- */}
+            <Card>
+                <div className="p-5 space-y-4 bg-slate-50 rounded-lg shadow-sm border border-slate-200" dir="rtl">
+                    <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                        <Building size={18} /> اختر المؤسسة الصحية للبدء بالإدخال أو لتصفية التقرير:
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-500 uppercase">الولاية</label>
+                            <select 
+                                value={selectedState} 
+                                onChange={e => { setSelectedState(e.target.value); setSelectedLocality(''); setSelectedFacility(''); }} 
+                                className="block w-full rounded-md border-slate-200 shadow-sm focus:ring-sky-500 sm:text-sm p-2.5 bg-white"
+                            >
+                                <option value="">-- اختر الولاية --</option>
+                                {states.map(sKey => (
+                                    <option key={sKey} value={sKey}>{STATE_LOCALITIES[sKey]?.ar || sKey}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-500 uppercase">المحلية</label>
+                            <select 
+                                value={selectedLocality} 
+                                onChange={e => { setSelectedLocality(e.target.value); setSelectedFacility(''); }} 
+                                disabled={!selectedState} 
+                                className="block w-full rounded-md border-slate-200 shadow-sm focus:ring-sky-500 sm:text-sm p-2.5 bg-white disabled:bg-slate-100 disabled:cursor-not-allowed"
+                            >
+                                <option value="">-- اختر المحلية --</option>
+                                {selectedState && STATE_LOCALITIES[selectedState]?.localities.map(l => (
+                                    <option key={l.en} value={l.en}>{l.ar}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-500 uppercase">اسم المؤسسة الصحية</label>
+                            <select 
+                                value={selectedFacility} 
+                                onChange={e => setSelectedFacility(e.target.value)} 
+                                disabled={!selectedLocality || isLoading?.healthFacilities} 
+                                className="block w-full rounded-md border-slate-200 shadow-sm focus:ring-sky-500 sm:text-sm p-2.5 bg-white disabled:bg-slate-100 disabled:cursor-not-allowed"
+                            >
+                                <option value="">-- {isLoading?.healthFacilities ? 'جاري التحميل...' : 'اختر المؤسسة الصحية'} --</option>
+                                {facilities.map(f => <option key={f.id} value={f.id}>{f['اسم_المؤسسة']}</option>)}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </Card>
+
+            {/* View Rendering */}
+            {activeView === 'nav' && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6 animate-fade-in" dir="rtl">
+                    <button onClick={() => handleNavigation('infant')} className="text-right cursor-pointer focus:outline-none w-full h-full block group">
+                        <Card className="hover:shadow-lg transition-shadow border-t-4 border-t-sky-500 h-full">
+                            <div className="p-6 flex flex-col items-center text-center gap-4">
+                                <div className="p-4 bg-sky-100 text-sky-600 rounded-full group-hover:scale-110 transition-transform">
+                                    <Baby size={40} />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-bold text-sky-900">أقل من شهرين</h3>
+                                    <p className="text-sky-600 text-sm mt-2">تسجيل بيانات الرضع (Young Infant)</p>
+                                </div>
+                            </div>
+                        </Card>
+                    </button>
+
+                    <button onClick={() => handleNavigation('child')} className="text-right cursor-pointer focus:outline-none w-full h-full block group">
+                        <Card className="hover:shadow-lg transition-shadow border-t-4 border-t-indigo-500 h-full">
+                            <div className="p-6 flex flex-col items-center text-center gap-4">
+                                <div className="p-4 bg-indigo-100 text-indigo-600 rounded-full group-hover:scale-110 transition-transform">
+                                    <User size={40} />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-bold text-indigo-900">شهرين إلى 5 سنوات</h3>
+                                    <p className="text-indigo-600 text-sm mt-2">تسجيل بيانات الأطفال (Sick Child)</p>
+                                </div>
+                            </div>
+                        </Card>
+                    </button>
+
+                    <button onClick={() => handleNavigation('dashboard')} className="text-right cursor-pointer focus:outline-none w-full h-full block group">
+                        <Card className="hover:shadow-lg transition-shadow border-t-4 border-t-emerald-500 h-full">
+                            <div className="p-6 flex flex-col items-center text-center gap-4">
+                                <div className="p-4 bg-emerald-100 text-emerald-600 rounded-full group-hover:scale-110 transition-transform">
+                                    <LayoutDashboard size={40} />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-bold text-emerald-900">لوحة القيادة والتقارير</h3>
+                                    <p className="text-emerald-600 text-sm mt-2">استعراض إحصائيات وتقارير IMNCI</p>
+                                </div>
+                            </div>
+                        </Card>
+                    </button>
+                </div>
+            )}
+
+            {activeView === 'dashboard' && (
+                <IMNCIDashboard 
+                    onNavigate={(view) => setActiveView(view)} 
+                    records={filteredRecords} 
+                    isLoading={isLoading?.imnciPatientRecords}
+                />
+            )}
+
+            {activeView === 'infant' && (
+                <InfantForm 
+                    selectedState={selectedState} 
+                    selectedLocality={selectedLocality} 
+                    selectedFacility={selectedFacility} 
+                    onBack={() => setActiveView('nav')}
+                    onSaveSuccess={() => fetchIMNCIPatientRecords(true)}
+                />
+            )}
+
+            {activeView === 'child' && (
+                <ChildForm 
+                    selectedState={selectedState} 
+                    selectedLocality={selectedLocality} 
+                    selectedFacility={selectedFacility} 
+                    onBack={() => setActiveView('nav')}
+                    onSaveSuccess={() => fetchIMNCIPatientRecords(true)}
+                />
+            )}
         </div>
     );
 }
