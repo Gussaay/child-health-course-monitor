@@ -419,6 +419,7 @@ export default function App() {
     const [loading, setLoading] = useState(false);
     const [previousView, setPreviousView] = useState("landing");
     const [userRole, setUserRole] = useState(null);
+    const [userRoles, setUserRoles] = useState([]); // <-- ADD THIS LINE
     const [userPermissions, setUserPermissions] = useState({});
     const [permissionsLoading, setPermissionsLoading] = useState(true);
     const [toast, setToast] = useState({ show: false, message: '', type: '' });
@@ -761,24 +762,26 @@ export default function App() {
                 if (user) {
                     const userRef = doc(db, "users", user.uid);
                     const userSnap = await getDoc(userRef);
-                    let role; let permissionsData = {};
+                    let role; let roles = []; let permissionsData = {};
 
                     if (!userSnap.exists() || !userSnap.data().role) {
                         role = 'user';
+                        roles = ['user'];
                         const rawPerms = DEFAULT_ROLE_PERMISSIONS.user;
                         permissionsData = applyDerivedPermissions(rawPerms);
-                        await setDoc(userRef, { email: user.email, role: role, permissions: permissionsData, lastLogin: new Date(), assignedState: '' }, { merge: true });
+                        await setDoc(userRef, { email: user.email, role: role, roles: roles, permissions: permissionsData, lastLogin: new Date(), assignedState: '' }, { merge: true });
                     } else {
                         role = userSnap.data().role;
+                        roles = userSnap.data().roles || [role]; // <-- GRAB THE ROLES ARRAY
                         const ALL_PERMISSIONS_MINIMAL = ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
                         const rawPerms = { ...ALL_PERMISSIONS_MINIMAL, ...(userSnap.data().permissions || {}) };
                         permissionsData = applyDerivedPermissions(rawPerms);
                     }
-                    setUserRole(role); setUserPermissions(permissionsData);
-                } else { setUserRole(null); setUserPermissions({}); }
+                    setUserRole(role); setUserRoles(roles); setUserPermissions(permissionsData); // <-- SET THE STATE
+                } else { setUserRole(null); setUserRoles([]); setUserPermissions({}); }
             } catch (error) {
                 console.error("Error checking user role:", error);
-                setUserRole('user'); setUserPermissions(applyDerivedPermissions(DEFAULT_ROLE_PERMISSIONS.user));
+                setUserRole('user'); setUserRoles(['user']); setUserPermissions(applyDerivedPermissions(DEFAULT_ROLE_PERMISSIONS.user));
             } finally { setPermissionsLoading(false); }
         };
         checkUserRoleAndPermissions();
@@ -1527,37 +1530,67 @@ export default function App() {
                                     ))} 
                                 </nav>
                             )}
-
-                            <button
-                                onClick={() => {
-                                    const newLang = i18n.language?.startsWith('en') ? 'ar' : 'en';
-                                    i18n.changeLanguage(newLang);
-                                }}
-                                className="px-3 py-1.5 text-sm font-bold text-sky-100 bg-slate-700 border border-slate-600 rounded hover:bg-slate-600 hover:text-white transition-colors"
-                                title={i18n.language?.startsWith('en') ? 'التبديل إلى العربية' : 'Switch to English'}
-                            >
-                                {i18n.language?.startsWith('en') ? 'العربية' : 'English'}
-                            </button>
+                            {/* We keep a fallback language toggle here ONLY for public/logged-out views where the secondary banner isn't visible */}
+                            {(!user || isMinimalUILayout) && (
+                                <button
+                                    onClick={() => {
+                                        const newLang = i18n.language?.startsWith('en') ? 'ar' : 'en';
+                                        i18n.changeLanguage(newLang);
+                                    }}
+                                    className="px-3 py-1.5 text-sm font-bold text-sky-100 bg-slate-700 border border-slate-600 rounded hover:bg-slate-600 hover:text-white transition-colors"
+                                    title={i18n.language?.startsWith('en') ? 'التبديل إلى العربية' : 'Switch to English'}
+                                >
+                                    {i18n.language?.startsWith('en') ? 'العربية' : 'English'}
+                                </button>
+                            )}
                         </div>
-
                     </div>
                 </div>
             </header>
 
             {user && !isMinimalUILayout && (
-                <div className="bg-slate-700 text-slate-200 p-2 md:p-3 text-center flex items-center justify-center gap-4">
+                <div className="bg-slate-700 text-slate-200 p-2 md:p-3 text-center flex items-center justify-center gap-4 flex-wrap">
                     <div 
                         className="flex items-center gap-2 cursor-pointer hover:bg-slate-600 px-3 py-1.5 rounded-md transition-colors duration-200"
                         onClick={() => setIsUserProfileModalOpen(true)}
                         title="View Profile Information"
                     >
-                        <span>{t('app.welcome', 'Welcome')}, **{user.displayName || user.email}**</span>
-                        {userRole && <span className="bg-sky-500 text-xs px-2 py-1 rounded shadow-sm capitalize">{userRole.replace(/_/g, ' ')}</span>}
+                        <span className="font-semibold">{user.displayName || user.email}</span>
+                        
+                        {/* System Roles - NOW LOOPS THROUGH ALL ROLES */}
+                        {userRoles && userRoles.length > 0 && userRoles.map(r => (
+                            <span key={r} className="bg-sky-500 text-white text-xs px-2 py-1 rounded shadow-sm capitalize">
+                                {r.replace(/_/g, ' ')}
+                            </span>
+                        ))}
+
+                        {/* HR / Program Team Role (if available) */}
+                        {userHRProfile && userHRProfile.role && (
+                            <span className="bg-teal-500 text-white text-xs px-2 py-1 rounded shadow-sm capitalize">
+                                {userHRProfile.role}
+                            </span>
+                        )}
                     </div>
                     {permissions.canViewAdmin && (<Button onClick={() => navigate('admin')} variant="primary">{t('landing.modules.admin', 'Admin Dashboard')}</Button>)}
-                    <Button onClick={handleLogout} className="px-3 py-1 text-sm font-semibold text-white bg-red-600 rounded-md hover:bg-red-700">{t('app.logout', 'Logout')}</Button>
+                    
+                    <div className="flex items-center gap-2 ml-auto md:ml-0">
+                        <button
+                            onClick={() => {
+                                const newLang = i18n.language?.startsWith('en') ? 'ar' : 'en';
+                                i18n.changeLanguage(newLang);
+                            }}
+                            className="px-3 py-1 text-sm font-bold text-sky-100 bg-slate-600 border border-slate-500 rounded hover:bg-slate-500 hover:text-white transition-colors h-full"
+                            title={i18n.language?.startsWith('en') ? 'التبديل إلى العربية' : 'Switch to English'}
+                        >
+                            {i18n.language?.startsWith('en') ? 'العربية' : 'English'}
+                        </button>
+                        <Button onClick={handleLogout} className="px-3 py-1 text-sm font-semibold text-white bg-red-600 rounded-md hover:bg-red-700">
+                            {t('app.logout', 'Logout')}
+                        </Button>
+                    </div>
                 </div>
             )}
+            
             {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ show: false, message: '', type: '' })} />}
 
             <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 w-full flex-grow mb-16 md:mb-0 overflow-x-hidden">
@@ -1615,11 +1648,21 @@ export default function App() {
                                 <div className="border border-gray-200 p-4 rounded-lg bg-white shadow-sm md:col-span-2">
                                     <span className="block text-xs text-gray-500 uppercase font-bold mb-3">Roles & Designations</span>
                                     <div className="flex flex-col gap-2">
-                                        <div className="flex justify-between items-center bg-sky-50 p-2.5 rounded border border-sky-100">
-                                            <span className="text-sm font-medium text-sky-800">System Access Level</span>
-                                            <span className="text-sky-700 font-bold capitalize">
-                                                {(userRole || 'Standard User').replace(/_/g, ' ')}
-                                            </span>
+                                        
+                                        {/* Updated to show multiple roles here too */}
+                                        <div className="flex flex-col gap-2 bg-sky-50 p-2.5 rounded border border-sky-100">
+                                            <span className="text-sm font-medium text-sky-800">System Access Levels</span>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {userRoles && userRoles.length > 0 ? userRoles.map(r => (
+                                                    <span key={r} className="text-sky-700 font-bold capitalize bg-white px-2 py-0.5 rounded shadow-sm text-xs">
+                                                        {r.replace(/_/g, ' ')}
+                                                    </span>
+                                                )) : (
+                                                    <span className="text-sky-700 font-bold capitalize">
+                                                        {(userRole || 'Standard User').replace(/_/g, ' ')}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                         
                                         {userHRProfile && userHRProfile.role && (
