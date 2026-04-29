@@ -43,17 +43,17 @@ const getRoleBadgeStyle = (role) => {
 
 // --- Helper Components ---
 
-const AdminTabs = ({ activeTab, setActiveTab, currentUserRole }) => {
+const AdminTabs = ({ activeTab, setActiveTab, currentUserRoles = [] }) => {
     const tabs = [
         { key: 'roles', label: 'Manage User Roles', icon: Users },
         { key: 'permissions', label: 'Manage Role Permissions', icon: Shield },
     ];
 
-    if (currentUserRole === 'super_user' || currentUserRole === 'federal_manager') {
+    if (currentUserRoles.includes('super_user') || currentUserRoles.includes('federal_manager')) {
         tabs.push({ key: 'approvals', label: 'Certificate Approvals', icon: Award });
     }
 
-    if (currentUserRole === 'super_user') {
+    if (currentUserRoles.includes('super_user')) {
         tabs.push({ key: 'usage', label: 'Resource Usage', icon: Activity });
     }
 
@@ -498,7 +498,11 @@ export function AdminDashboard() {
     const [loading, setLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState(null);
     const [toast, setToast] = useState({ show: false, message: '', type: '' });
+    
     const [currentUserRole, setCurrentUserRole] = useState(null);
+    const [currentUserRoles, setCurrentUserRoles] = useState([]); // NEW STATE
+    const [currentUserPermissions, setCurrentUserPermissions] = useState({}); // NEW STATE
+    
     const [activeTab, setActiveTab] = useState('roles');
 
     const [filterRole, setFilterRole] = useState('');
@@ -520,21 +524,33 @@ export function AdminDashboard() {
             if (user) {
                 const userRef = doc(db, 'users', user.uid);
                 getDoc(userRef).then(docSnap => {
-                    let role = null;
+                    let role = 'user';
+                    let roles = ['user'];
+                    let perms = {};
+                    
                     if (docSnap.exists()) {
-                        role = docSnap.data().role;
-                    } else {
-                        role = 'user'; 
-                    }
+                        const data = docSnap.data();
+                        role = data.role || 'user';
+                        roles = data.roles || [role];
+                        perms = data.permissions || {};
+                    } 
+                    
                     setCurrentUserRole(role);
-                    loadData(role);
+                    setCurrentUserRoles(roles);
+                    setCurrentUserPermissions(perms);
+                    
+                    // Allow Super User or Federal Manager data levels 
+                    const effectiveRole = roles.includes('super_user') ? 'super_user' : role;
+                    loadData(effectiveRole);
                 }).catch(error => {
                     console.error("Error fetching current user's role:", error);
                     setCurrentUserRole(null);
+                    setCurrentUserRoles([]);
                     setLoading(false);
                 });
             } else {
                 setCurrentUserRole(null);
+                setCurrentUserRoles([]);
                 setUsers([]);
                 setRolesAndPermissions({});
                 setUsageStats([]);
@@ -714,7 +730,7 @@ export function AdminDashboard() {
             
             await batch.commit();
             setRolesAndPermissions(rolesAndPermissionsWithDerived);
-            await loadData(currentUserRole); 
+            await loadData(currentUserRoles.includes('super_user') ? 'super_user' : currentUserRole); 
             setToast({ show: true, message: "Permissions saved and synchronized with all users successfully!", type: "success" });
         } catch (error) {
             setToast({ show: true, message: "Failed to save and sync permissions. Please try again.", type: "error" });
@@ -927,7 +943,7 @@ export function AdminDashboard() {
                         Adjusting permissions here defines the default blueprint for each role. Clicking <strong>Save and Sync</strong> will permanently overwrite the permissions for all users to match their assigned roles.
                     </p>
                 </div>
-                <Button onClick={handleSaveAndSyncAllPermissions} disabled={loading || currentUserRole !== 'super_user'} className="shrink-0 shadow-md">
+                <Button onClick={handleSaveAndSyncAllPermissions} disabled={loading || !currentUserRoles.includes('super_user')} className="shrink-0 shadow-md">
                     {loading ? <><Spinner size="sm" className="mr-2" /> Syncing Data...</> : <><RefreshCw className="w-4 h-4 mr-2" /> Save & Sync Globally</>}
                 </Button>
             </div>
@@ -1036,12 +1052,12 @@ export function AdminDashboard() {
             />
             {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ show: false, message: '', type: '' })} />}
 
-            <AdminTabs activeTab={activeTab} setActiveTab={setActiveTab} currentUserRole={currentUserRole} />
+            <AdminTabs activeTab={activeTab} setActiveTab={setActiveTab} currentUserRoles={currentUserRoles} />
 
             <div className="mt-4">
                 {activeTab === 'roles' && renderUserRolesTab()}
                 {activeTab === 'permissions' && renderRolePermissionsTab()}
-                {activeTab === 'usage' && currentUserRole === 'super_user' && renderUsageTab()}
+                {activeTab === 'usage' && currentUserRoles.includes('super_user') && renderUsageTab()}
                 {activeTab === 'approvals' && <CertificateApprovalsTab setToast={setToast} />}
             </div>
 
@@ -1116,7 +1132,7 @@ export function AdminDashboard() {
                                 currentPermissions={rolesAndPermissions[editingPermissionRole]} 
                                 allPermissions={ALL_PERMISSIONS} 
                                 onPermissionChange={handlePermissionChange} 
-                                disabled={currentUserRole !== 'super_user' || editingPermissionRole === 'super_user'} 
+                                disabled={!currentUserRoles.includes('super_user') || editingPermissionRole === 'super_user'} 
                             />
                         </div>
                     )}
@@ -1200,7 +1216,7 @@ export function AdminDashboard() {
                                 </Button>
                                 
                                 {/* Only allow Super Users to delete accounts to prevent accidents */}
-                                {currentUserRole === 'super_user' && (
+                                {currentUserRoles.includes('super_user') && (
                                     <Button 
                                         onClick={() => handleDeleteAccount(viewingUser.id, viewingUser.email)} 
                                         variant="danger" 

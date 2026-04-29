@@ -25,7 +25,7 @@ import { auth, db } from '../firebase';
 import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useDataCache } from '../DataContext'; 
-import { DEFAULT_ROLE_PERMISSIONS, ALL_PERMISSIONS } from './AdminDashboard';
+import { DEFAULT_ROLE_PERMISSIONS, ALL_PERMISSIONS } from './permissions';
 import SudanMap from '../SudanMap'; // Imported the map for the dashboard
 import { Capacitor } from '@capacitor/core';
 
