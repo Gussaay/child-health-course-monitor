@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, PageHeader, Button } from './CommonComponents'; 
-import { AlertCircle, Baby, User, ClipboardList, CheckSquare, CalendarDays, UserSquare2, Ruler, Weight, Thermometer, Building, LayoutDashboard, Activity, Syringe, ArrowRight, CheckCircle, XCircle } from 'lucide-react';
+import { AlertCircle, Baby, User, ClipboardList, CheckSquare, CalendarDays, UserSquare2, Ruler, Weight, Thermometer, Building, LayoutDashboard, Activity, Syringe, ArrowRight, CheckCircle, XCircle, FileText, X } from 'lucide-react';
 import zScoreData from './zscore_reference_data.json'; 
 import { STATE_LOCALITIES } from './constants'; 
 
@@ -10,6 +10,96 @@ import { db } from '../firebase';
 import { serverTimestamp } from 'firebase/firestore';
 import { useDataCache } from '../DataContext';
 import { saveIMNCIPatientRecord } from '../data';
+
+// ============================================================================
+// RECORD DETAILS MODAL (VIEW INDIVIDUAL FORM)
+// ============================================================================
+const RecordDetailsModal = ({ record, onClose }) => {
+    if (!record) return null;
+
+    const pd = record.patientData || {};
+    const as = record.assessments || {};
+    const cls = record.classifications || {};
+
+    return (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4 animate-fade-in" dir="rtl">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+                {/* Header */}
+                <div className="flex justify-between items-center p-4 border-b border-slate-200 bg-slate-50 rounded-t-2xl">
+                    <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <FileText className="text-sky-600" /> تفاصيل حالة الطفل: {pd.childName || 'غير متوفر'}
+                    </h2>
+                    <button onClick={onClose} className="text-slate-400 hover:text-red-500 transition-colors p-1 bg-white rounded-full shadow-sm border border-slate-200">
+                        <X size={20} />
+                    </button>
+                </div>
+                
+                {/* Content */}
+                <div className="p-6 overflow-y-auto space-y-6 flex-1">
+                    
+                    {/* Basic Info */}
+                    <div className="bg-sky-50 border border-sky-100 p-4 rounded-xl">
+                        <h3 className="font-bold text-sky-800 mb-3 border-b border-sky-200 pb-2">البيانات الأساسية</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                            <div><span className="text-slate-500 block">التاريخ:</span> <span className="font-bold">{pd.date}</span></div>
+                            <div><span className="text-slate-500 block">العمر:</span> <span className="font-bold">{pd.ageDaysWeeks || pd.ageMonths} {record.formType === 'infant' ? 'يوم/أسبوع' : 'شهر'}</span></div>
+                            {pd.sex && <div><span className="text-slate-500 block">الجنس:</span> <span className="font-bold">{pd.sex === 'male' ? 'ذكر' : 'أنثى'}</span></div>}
+                            <div><span className="text-slate-500 block">الوزن:</span> <span className="font-bold">{pd.weightKg || '-'} كجم</span></div>
+                            {pd.lengthCm && <div><span className="text-slate-500 block">الطول:</span> <span className="font-bold">{pd.lengthCm} سم</span></div>}
+                            <div><span className="text-slate-500 block">الحرارة:</span> <span className="font-bold">{pd.tempC || '-'} °C</span></div>
+                            <div><span className="text-slate-500 block">نوع الزيارة:</span> <span className="font-bold">{pd.visitType === 'initial' ? 'زيارة أولى' : 'متابعة'}</span></div>
+                        </div>
+                        {pd.problems && (
+                            <div className="mt-3 pt-3 border-t border-sky-200 text-sm">
+                                <span className="text-slate-500 block">مشاكل الطفل:</span> <span className="font-bold text-slate-800">{pd.problems}</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Classifications & Treatments */}
+                    <div className="space-y-4">
+                        <h3 className="font-bold text-slate-800 text-lg border-b border-slate-200 pb-2">التصنيفات والعلاج</h3>
+                        
+                        {Object.entries(cls).map(([catKey, catData]) => {
+                            if (!catData?.c || catData.c.length === 0) return null;
+                            
+                            // Don't show green default boxes if they have no significant treatments, unless it's vaccine
+                            if (catData.c.every(c => c.color === 'bg-green-500') && catData.t.length === 0 && catKey !== 'vaccine') return null;
+
+                            return (
+                                <div key={catKey} className="border border-slate-200 rounded-lg overflow-hidden">
+                                    <div className="flex flex-col md:flex-row">
+                                        <div className="md:w-1/3 p-3 bg-slate-50 border-b md:border-b-0 md:border-l border-slate-200 flex flex-col gap-2 justify-center">
+                                            {catData.c.map((classification, idx) => (
+                                                <div key={idx} className={`${classification.color} text-white text-center font-bold text-sm px-2 py-2 rounded shadow-sm`}>
+                                                    {classification.label}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="md:w-2/3 p-4 bg-white">
+                                            {catData.t && catData.t.length > 0 ? (
+                                                <ul className="space-y-2">
+                                                    {catData.t.map((treatment, idx) => (
+                                                        <li key={idx} className="flex gap-2 text-sm items-start">
+                                                            <CheckSquare size={16} className="text-sky-600 mt-0.5 flex-shrink-0" />
+                                                            <span>{treatment}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            ) : (
+                                                <span className="text-sm text-slate-400 italic">لا توجد علاجات إضافية.</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 // ============================================================================
 // SAVE STATUS POPUP
@@ -60,8 +150,34 @@ const IMNCIDashboard = ({ onNavigate, records, isLoading }) => {
     const { t } = useTranslation();
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [dashboardTab, setDashboardTab] = useState('report'); // 'report' or 'records'
+    const [selectedRecordDetails, setSelectedRecordDetails] = useState(null);
 
-    // Compute all statistics and KPIs
+    // Pre-filter records for the selected month/year
+    const filteredRecords = useMemo(() => {
+        if (!records) return [];
+        return records.filter(r => {
+            const dateStr = r.patientData?.date;
+            let d;
+            if (dateStr) {
+                // Safely parse YYYY-MM-DD to avoid timezone shifting the month back by 1 day
+                const [year, month, day] = dateStr.split('-');
+                d = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+            } else if (r.createdAt) {
+                d = r.createdAt.toDate ? r.createdAt.toDate() : new Date(r.createdAt);
+            } else {
+                return false;
+            }
+            return d.getMonth() + 1 === parseInt(selectedMonth) && d.getFullYear() === parseInt(selectedYear);
+        }).sort((a, b) => {
+            // Sort by date descending
+            const dateA = new Date(a.patientData?.date || 0).getTime();
+            const dateB = new Date(b.patientData?.date || 0).getTime();
+            return dateB - dateA;
+        });
+    }, [records, selectedMonth, selectedYear]);
+
+    // Compute all statistics and KPIs based on filteredRecords
     const stats = useMemo(() => {
         const data = {
             totalVisits: 0,
@@ -85,21 +201,6 @@ const IMNCIDashboard = ({ onNavigate, records, isLoading }) => {
                 feedingProblem: 0, otherProblems: 0
             }
         };
-
-        if (!records) return data;
-
-        const filteredRecords = records.filter(r => {
-            const dateStr = r.patientData?.date;
-            let d;
-            if (dateStr) {
-                d = new Date(dateStr);
-            } else if (r.createdAt) {
-                d = r.createdAt.toDate ? r.createdAt.toDate() : new Date(r.createdAt);
-            } else {
-                return false;
-            }
-            return d.getMonth() + 1 === parseInt(selectedMonth) && d.getFullYear() === parseInt(selectedYear);
-        });
 
         filteredRecords.forEach(r => {
             data.totalVisits++;
@@ -177,12 +278,14 @@ const IMNCIDashboard = ({ onNavigate, records, isLoading }) => {
         });
 
         return data;
-    }, [records, selectedMonth, selectedYear]);
+    }, [filteredRecords]);
 
     const pct = (val, total) => total > 0 ? Math.round((val / total) * 100) : 0;
 
     return (
         <div className="space-y-6 animate-fade-in" dir="rtl">
+            <RecordDetailsModal record={selectedRecordDetails} onClose={() => setSelectedRecordDetails(null)} />
+
             <div className="flex justify-start">
                 <Button variant="secondary" onClick={() => onNavigate('nav')} className="flex items-center gap-2 font-bold bg-white text-slate-700 shadow-sm border border-slate-200">
                     <ArrowRight size={18} /> العودة إلى القائمة الرئيسية
@@ -236,11 +339,27 @@ const IMNCIDashboard = ({ onNavigate, records, isLoading }) => {
                     </div>
                 </div>
 
-                <div className="p-6 bg-slate-50 space-y-8">
+                <div className="p-6 bg-slate-50 space-y-6">
+                    {/* View Tabs */}
+                    <div className="flex gap-4 border-b border-slate-200 pb-2">
+                        <button
+                            className={`pb-2 font-bold px-4 text-sm sm:text-base transition-colors ${dashboardTab === 'report' ? 'border-b-4 border-emerald-600 text-emerald-800' : 'text-slate-500 hover:text-slate-700'}`}
+                            onClick={() => setDashboardTab('report')}
+                        >
+                            تقرير الإحصائيات (Report)
+                        </button>
+                        <button
+                            className={`pb-2 font-bold px-4 text-sm sm:text-base transition-colors ${dashboardTab === 'records' ? 'border-b-4 border-emerald-600 text-emerald-800' : 'text-slate-500 hover:text-slate-700'}`}
+                            onClick={() => setDashboardTab('records')}
+                        >
+                            سجل الحالات الفردية (Individual Records)
+                        </button>
+                    </div>
+
                     {isLoading ? (
                         <div className="text-center py-10 text-slate-500">جاري تحميل البيانات...</div>
-                    ) : (
-                        <>
+                    ) : dashboardTab === 'report' ? (
+                        <div className="space-y-8 animate-fade-in">
                             {/* KPI Row */}
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center justify-center">
@@ -464,7 +583,44 @@ const IMNCIDashboard = ({ onNavigate, records, isLoading }) => {
                                     </tbody>
                                 </table>
                             </div>
-                        </>
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto bg-white border border-slate-200 rounded-xl shadow-sm animate-fade-in">
+                            <table className="min-w-full border-collapse text-sm text-right">
+                                <thead className="bg-slate-100 border-b border-slate-300">
+                                    <tr>
+                                        <th className="p-4 font-bold text-slate-700">تاريخ الزيارة</th>
+                                        <th className="p-4 font-bold text-slate-700">اسم الطفل</th>
+                                        <th className="p-4 font-bold text-slate-700">الفئة العمرية</th>
+                                        <th className="p-4 font-bold text-slate-700">نوع الزيارة</th>
+                                        <th className="p-4 font-bold text-slate-700 text-center">الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredRecords.length === 0 ? (
+                                        <tr><td colSpan="5" className="p-8 text-center text-slate-500 font-medium">لا توجد سجلات مسجلة في هذا الشهر.</td></tr>
+                                    ) : (
+                                        filteredRecords.map(r => (
+                                            <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                                                <td className="p-4 text-slate-600">{r.patientData?.date || 'N/A'}</td>
+                                                <td className="p-4 font-bold text-slate-800">{r.patientData?.childName || 'غير متوفر'}</td>
+                                                <td className="p-4">
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${r.formType === 'infant' ? 'bg-sky-100 text-sky-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                                                        {r.formType === 'infant' ? 'أقل من شهرين' : 'شهرين إلى 5 سنوات'}
+                                                    </span>
+                                                </td>
+                                                <td className="p-4 text-slate-600">{r.patientData?.visitType === 'initial' ? 'زيارة أولى' : 'متابعة'}</td>
+                                                <td className="p-4 text-center">
+                                                    <Button size="sm" variant="secondary" onClick={() => setSelectedRecordDetails(r)}>
+                                                        عرض التفاصيل
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     )}
                 </div>
             </Card>
@@ -708,6 +864,7 @@ function InfantForm({ selectedState, selectedLocality, selectedFacility, onBack,
                 patientData: safePatientData,
                 assessments: safeAssessments,
                 classifications: cleanClassifications,
+                isDeleted: false, // Ensures visibility in Firebase queries using != true
                 createdAt: serverTimestamp()
             };
             
@@ -1601,6 +1758,7 @@ function ChildForm({ selectedState, selectedLocality, selectedFacility, onBack, 
                 patientData: safePatientData,
                 assessments: safeAssessments,
                 classifications: cleanClassifications,
+                isDeleted: false, // Ensures visibility in Firebase queries using != true
                 createdAt: serverTimestamp()
             };
             
