@@ -80,84 +80,145 @@ export const IMNCI_TEST_QUESTIONS = [
 export const ETAT_TEST_QUESTIONS = [
     { 
         id: 'q1', 
-        text: '1. Define triage?', 
-        type: 'open', 
-        lines: 1 
+        text: '1. ماذا يعني مصطلح "الفرز " (triage)؟', 
+        type: 'mc', 
+        options: [{ id: 'a', text: 'تقديم العلاج الفوري لجميع المرضى' }, { id: 'b', text: 'تصنيف المرضى إلى مجموعات حسب أولوية الاحتياج' }, { id: 'c', text: 'تصنيف المرضى إلى مجموعات حسب الموارد المتاحة' }, { id: 'd', text: 'الإجابتان (ب و ت) معا' }], 
+        correctAnswer: 'd' 
     },
     { 
         id: 'q2', 
-        text: '2. What do the letters A, B, C and D in the "ABCD" stand for?', 
-        type: 'open', 
-        lines: 4 
+        text: '2. في منهجية ABCD في ETAT، ما الذي يمثله الحرف "C"؟', 
+        type: 'mc', 
+        options: [{ id: 'a', text: 'الدورة الدموية والغيبوبة' }, { id: 'b', text: 'الوعي والتشنجات' }, { id: 'c', text: 'الدورة الدموية والغيبوبة والتشنجات' }, { id: 'd', text: 'الدورة الدموية والوعي' }], 
+        correctAnswer: 'c' 
     },
     { 
         id: 'q3', 
-        text: '3. List the three things you do to check airway and breathing?', 
-        type: 'open', 
-        lines: 3 
+        text: '3. أي من العلامات التالية تعتبر علامة طارئة؟', 
+        type: 'mc', 
+        options: [{ id: 'a', text: 'رضيع صغير جدًا (أقل من شهرين)' }, { id: 'b', text: 'ضيق تنفس شديد' }, { id: 'c', text: 'ارتفاع درجة الحرارة (حمى شديدة)' }, { id: 'd', text: 'شحوب شديد' }], 
+        correctAnswer: 'b' 
     },
     { 
         id: 'q4', 
-        text: '4. At what flow (volume/time) should oxygen be started?', 
-        type: 'open', 
-        lines: 1 
+        text: '4. إذا ظهرت على الطفل علامات طارئة، ما الذي يجب فعله أولاً؟', 
+        type: 'mc', 
+        options: [{ id: 'a', text: 'الاتصال بالطبيب أو الكادر الصحي الأقدم' }, { id: 'b', text: 'البدء فوراً بالعلاج الطارئ' }, { id: 'c', text: 'إكمال إجراءات التسجيل' }, { id: 'd', text: 'تقييم العلامات ذات الأولوية' }], 
+        correctAnswer: 'b' 
     },
     { 
         id: 'q5', 
-        text: '5. Define a normal capillary refill time?', 
-        type: 'open', 
-        lines: 1 
+        text: '5. ما هي الخطوات الثلاث للتحقق من مجرى التنفس والتنفس؟', 
+        type: 'mc', 
+        options: [{ id: 'a', text: 'انظر، استمع، وتحسس' }, { id: 'b', text: 'اسأل، قيم، افعل' }, { id: 'c', text: 'افتح، نظف، ساعد على التنفس' }, { id: 'd', text: 'ضع بوضعية جيدة، أشفط، أعطِ الأكسجين' }], 
+        correctAnswer: 'a' 
     },
     { 
         id: 'q6', 
-        text: '6. If you cannot feel the radial pulse in an older child, which pulse should you look for next?', 
-        type: 'open', 
-        lines: 1 
+        text: '6. في حالة اشتباه إصابة في رقبة الطفل، كيف يجب فتح مجرى التنفس؟', 
+        type: 'mc', 
+        options: [{ id: 'a', text: 'رفع الذقن' }, { id: 'b', text: 'إمالة الرأس للخلف' }, { id: 'c', text: 'دفع الفك السفلي لأعلى' }, { id: 'd', text: 'مد الرقبة' }], 
+        correctAnswer: 'c' 
     },
     { 
         id: 'q7', 
-        text: '7. Name the two types of fluid you can give to treat shock initially?', 
-        type: 'open', 
-        lines: 2 
+        text: '7. ما هو معدل تدفق الأكسجين المبدئي الذي يجب إعطاءه لرضيع عمره أقل من سنة؟', 
+        type: 'mc', 
+        options: [{ id: 'a', text: '0.5–1 لتر/دقيقة' }, { id: 'b', text: '1–2 لتر/دقيقة' }, { id: 'c', text: '2–4 لتر/دقيقة' }, { id: 'd', text: '4–6 لتر/دقيقة' }], 
+        correctAnswer: 'a' 
     },
     { 
         id: 'q8', 
-        text: '8. What volume of fluid would you give to a well-nourished one-year old weighing 11kg who is in shock?', 
-        type: 'open', 
-        lines: 1 
+        text: '8. أي مما يلي يعتبر علامة على ضيق التنفس الشديد؟', 
+        type: 'mc', 
+        options: [{ id: 'a', text: 'إنسحاب الصدر الخفيف للداخل' }, { id: 'b', text: 'توسع فتحتي الأنف مع التنفس' }, { id: 'c', text: 'إيماءة الرأس مع كل شهيق' }, { id: 'd', text: 'تسارع التنفس دون علامات ضيق' }], 
+        correctAnswer: 'c' 
     },
     { 
         id: 'q9', 
-        text: '9. What do the letters AVPU stand for?', 
-        type: 'open', 
-        lines: 4 
+        text: '9. ما هو الزمن الطبيعي لعودة الامتلاء الشعيري؟', 
+        type: 'mc', 
+        options: [{ id: 'a', text: 'أقل من ثانية واحدة' }, { id: 'b', text: 'أقل من 3 ثوانٍ' }, { id: 'c', text: 'أقل من 5 ثوانٍ' }, { id: 'd', text: 'أقل من 7 ثوانٍ' }], 
+        correctAnswer: 'b' 
     },
     { 
         id: 'q10', 
-        text: '10. A child who is unconscious, with no history of trauma, but maintaining the airway should be put in which position?', 
-        type: 'open', 
-        lines: 1 
+        text: '10. إذا لم تتمكن من جس النبض الكعبري لدى طفل كبير، فأي نبض يجب التحقق منه بعد ذلك؟', 
+        type: 'mc', 
+        options: [{ id: 'a', text: 'النبض الفخذي' }, { id: 'b', text: 'النبض العضدي' }, { id: 'c', text: 'النبض السباتي' }, { id: 'd', text: 'النبض المأبضي' }], 
+        correctAnswer: 'c' 
     },
     { 
         id: 'q11', 
-        text: '11. How much rectal diazepam (in ml of the 10mg/2ml solution) would you give to a four-year old weighing 15kg who is having a convulsion? How long should you wait before giving a second dose if the convulsion does not stop?', 
-        type: 'open', 
-        lines: 2 
+        text: '11. ما هو السائل الأولي الذي يعطى لعلاج الصدمة لدى الطفل جيد التغذية؟', 
+        type: 'mc', 
+        options: [{ id: 'a', text: 'محلول جلوكوز 5%' }, { id: 'b', text: 'رينجر لاكتات' }, { id: 'c', text: 'محلول ملحي نصف عياري' }, { id: 'd', text: 'ريسومال' }], 
+        correctAnswer: 'b' 
     },
     { 
         id: 'q12', 
-        text: '12. An eight-month old weighing 6kg is severely dehydrated. How much fluid would you give in the first hour? For how long you give the second lot of fluid in the same child?', 
-        type: 'open', 
-        lines: 2 
+        text: '12. كم مقدار السائل الذي تعطيه لطفل ليس لديه سو التغذية، عمره سنة (11 كجم) كجرعة أولى سريعة لعلاج صدمة فقد السوائل؟', 
+        type: 'mc', 
+        options: [{ id: 'a', text: '110 مل' }, { id: 'b', text: '220 مل' }, { id: 'c', text: '330 مل' }, { id: 'd', text: '440 مل' }], 
+        correctAnswer: 'b' 
     },
     { 
         id: 'q13', 
-        text: '13. A three-year old weighing 15kg is severely dehydrated. He has received 450 ml of fluid in 30 minutes. How much fluid are you going to give him next, and over what period of time?', 
-        type: 'open', 
-        lines: 2 
+        text: '13. ماذا يعني الحرف "P" في مقياس AVPU؟', 
+        type: 'mc', 
+        options: [{ id: 'a', text: 'الاستجابة للألم' }, { id: 'b', text: 'وجود النبض' }, { id: 'c', text: 'تفاعل الحدقتين' }, { id: 'd', text: 'وعي جزئي' }], 
+        correctAnswer: 'a' 
+    },
+    { 
+        id: 'q14', 
+        text: '14. كم مقدار الديازيبام الشرجي (تركيز 10 مجم/2 مل) الذي يجب إعطاؤه لطفل عمره 4 سنوات (15 كجم) إثناء التتشنجات؟', 
+        type: 'mc', 
+        options: [{ id: 'a', text: '0.5 مل' }, { id: 'b', text: '1.0 مل' }, { id: 'c', text: '1.5 مل' }, { id: 'd', text: '2.0 مل' }], 
+        correctAnswer: 'c' 
+    },
+    { 
+        id: 'q15', 
+        text: '15. بعد كم من الزمن يمكن إعطاء جرعة ثانية من الديازيبام الشرجي إذا استمرت التشنجات؟', 
+        type: 'mc', 
+        options: [{ id: 'a', text: 'دقيقتان' }, { id: 'b', text: '5 دقائق' }, { id: 'c', text: '10 دقائق' }, { id: 'd', text: '20 دقيقة' }], 
+        correctAnswer: 'c' 
+    },
+    { 
+        id: 'q16', 
+        text: '16. ما هي الخطوة الأولى في التعامل مع طفل فاقد للوعي دون تاريخ لإصابة أو كسور؟', 
+        type: 'mc', 
+        options: [{ id: 'a', text: 'إعطاء جلوكوز وريدي' }, { id: 'b', text: 'وضعه في وضعية الإفاقة' }, { id: 'c', text: 'إعطاء الأكسجين' }, { id: 'd', text: 'التعامل مع مجرى التنفس' }], 
+        correctAnswer: 'd' 
+    },
+    { 
+        id: 'q17', 
+        text: '17. طفل عمره 8 أشهر ووزنه 6 كجم يعاني من جفاف شديد. كم مقدار السائل الوريدي الذي يجب إعطاؤه في الساعة الأولى؟', 
+        type: 'mc', 
+        options: [{ id: 'a', text: '60 مل' }, { id: 'b', text: '120 مل' }, { id: 'c', text: '180 مل' }, { id: 'd', text: '240 مل' }], 
+        correctAnswer: 'c' 
+    },
+    { 
+        id: 'q18', 
+        text: '18. إذا تعذر الوصول الوريدي، فكم مقدار محلول معالجة الجفاف عن طريق الفم (ORS) يجب إعطاؤه عبر الأنبوب الأنفي المعدي كل ساعة للجفاف الشديد؟', 
+        type: 'mc', 
+        options: [{ id: 'a', text: '10 مل/كجم/ساعة' }, { id: 'b', text: '20 مل/كجم/ساعة' }, { id: 'c', text: '30 مل/كجم/ساعة' }, { id: 'd', text: '40 مل/كجم/ساعة' }], 
+        correctAnswer: 'b' 
+    },
+    { 
+        id: 'q19', 
+        text: '19. أي سائل يستخدم لعلاج الجفاف الشديد لدى الطفل المصاب بسوء تغذية حاد شديد؟', 
+        type: 'mc', 
+        options: [{ id: 'a', text: 'رينجر لاكتات' }, { id: 'b', text: 'محلول ملحي عادي' }, { id: 'c', text: 'ريسومال' }, { id: 'd', text: 'محلول جلوكوز 5%' }], 
+        correctAnswer: 'c' 
+    },
+    { 
+        id: 'q20', 
+        text: '20. طفل عمره 3 سنوات (15 كجم) مصاب بجفاف شديد، تلقى 450 مل خلال 30 دقيقة. ما هي الخطوة التالية؟', 
+        type: 'mc', 
+        options: [{ id: 'a', text: 'إعطاء 450 مل أخرى خلال 2.5 ساعة' }, { id: 'b', text: 'إعطاء 1050 مل خلال 2.5 ساعة' }, { id: 'c', text: 'إعطاء 600 مل خلال 5 ساعات' }, { id: 'd', text: 'التحول إلى محلول معالجة الجفاف عن طريق الفم فقط' }], 
+        correctAnswer: 'b' 
     }
 ];
-
 export const PROGRAM_MANAGEMENT_TEST_QUESTIONS = [
     { id: 'q1', text: '1. ما هو الفرق الرئيسي بين المقاربات التقليدية (نهج الحالات المنفردة) واستراتيجية العلاج المتكامل لأمراض الطفولة؟', type: 'mc', options: [{ id: 'a', text: 'التركيز فقط على العرض الذي تشتكي منه الأم.' }, { id: 'b', text: 'التعامل مع الطفل ككيان عضوي واحد من خلال فحص شامل للعلامات السريرية للأمراض الأكثر فتكاً.' }, { id: 'c', text: 'الاعتماد على تدريب دورات متعددة ومشتتة.' }, { id: 'd', text: 'التركيز فقط على الجانب الوقائي وتجاهل العلاج.' }], correctAnswer: 'b' },
     { id: 'q2', text: '2. ما هي الفئة العمرية المستهدفة لخفض معدلات المرض والوفيات ضمن استراتيجية العلاج المتكامل؟', type: 'mc', options: [{ id: 'a', text: 'الأطفال تحت سن سنتين.' }, { id: 'b', text: 'الأطفال من 5 إلى 10 سنوات.' }, { id: 'c', text: 'الأطفال حديثي الولادة فقط.' }, { id: 'd', text: 'الأطفال تحت سن الخامسة.' }], correctAnswer: 'd' },
