@@ -233,7 +233,6 @@ async function getData(query, sourceOptions = {}) {
 }
 
 // --- NEW: OFFLINE-SAFE WRITE HELPER ---
-// Resolves immediately if offline so the UI doesn't hang forever
 export const executeOfflineSafeWrite = async (writePromise) => {
     if (!navigator.onLine) {
         writePromise.catch(e => console.error("Offline write later failed:", e));
@@ -244,23 +243,19 @@ export const executeOfflineSafeWrite = async (writePromise) => {
     
     try {
         await Promise.race([writePromise, timeoutPromise]);
-        if (isTimeout) return { status: 'queued' }; // Treat Lie-Fi (very slow net) as queued
+        if (isTimeout) return { status: 'queued' }; 
         return { status: 'success' };
     } catch (error) {
-        throw error; // Let actual security/validation rejections bubble up
+        throw error; 
     }
 };
 
 // --- STORAGE HELPERS ---
 export async function uploadFile(file) {
     if (!file) return null;
-    
-    // --- OFFLINE UPLOAD GUARD ---
     if (!navigator.onLine) {
         throw new Error("Cannot upload files while offline. Please connect to the internet to upload PDFs or images.");
     }
-    // ----------------------------
-
     const storageRef = ref(storage, `uploads/${Date.now()}_${file.name}`);
     try {
         const snapshot = await uploadBytes(storageRef, file);
@@ -313,7 +308,6 @@ export async function saveFacilitySnapshot(payload, externalBatch = null) {
         
         let querySnapshot;
         try {
-            // Force cache if offline to prevent the UI from crashing on un-cached duplicate checks
             querySnapshot = await getDocs(q, { source: navigator.onLine ? 'default' : 'cache' });
         } catch(e) {
             querySnapshot = { empty: true };
@@ -345,7 +339,6 @@ export async function saveFacilitySnapshot(payload, externalBatch = null) {
     batch.set(facilityRef, mainFacilityData, { merge: true });
 
     if (!externalBatch) {
-        // Prevent hanging offline
         await executeOfflineSafeWrite(batch.commit());
     }
     return facilityId;
@@ -1029,16 +1022,29 @@ export async function deleteFunder(funderId) {
     await updateDoc(doc(db, "funders", funderId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
     return true;
 }
-export async function upsertCourse(payload) {
+
+// --- FULLY UPDATED UPSERT COURSE ---
+export async function upsertCourse(payload, userIdentifier = 'Unknown') {
+    const timestamp = serverTimestamp();
     if (payload.id) {
         const courseRef = doc(db, "courses", payload.id);
-        const writePromise = setDoc(courseRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
+        const writePromise = setDoc(courseRef, { 
+            ...payload, 
+            lastUpdatedAt: timestamp,
+            updatedBy: userIdentifier
+        }, { merge: true });
         await executeOfflineSafeWrite(writePromise);
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
         const newCourseRef = doc(collection(db, "courses"));
-        const writePromise = setDoc(newCourseRef, { ...dataToSave, lastUpdatedAt: serverTimestamp() });
+        const writePromise = setDoc(newCourseRef, { 
+            ...dataToSave, 
+            createdAt: timestamp,
+            createdBy: userIdentifier,
+            lastUpdatedAt: timestamp,
+            updatedBy: userIdentifier
+        });
         await executeOfflineSafeWrite(writePromise);
         return newCourseRef.id;
     }
@@ -1087,25 +1093,33 @@ export async function listAllCourses(sourceOptions = {}, lastSync = 0) {
         throw error;
     }
 }
-export async function deleteCourse(courseId) {
+
+// --- FULLY UPDATED DELETE COURSE ---
+export async function deleteCourse(courseId, userIdentifier = 'Unknown') {
     const batch = writeBatch(db);
-    batch.update(doc(db, "courses", courseId), { isDeleted: true, lastUpdatedAt: serverTimestamp() });
+    const timestamp = serverTimestamp();
+    
+    batch.update(doc(db, "courses", courseId), { 
+        isDeleted: true, 
+        lastUpdatedAt: timestamp,
+        updatedBy: userIdentifier
+    });
     
     const participantsQuery = query(collection(db, "participants"), where("courseId", "==", courseId));
     const participantsSnap = await getDocs(participantsQuery);
-    participantsSnap.forEach(d => batch.update(d.ref, { isDeleted: true, lastUpdatedAt: serverTimestamp() }));
+    participantsSnap.forEach(d => batch.update(d.ref, { isDeleted: true, lastUpdatedAt: timestamp, updatedBy: userIdentifier }));
     
     const observationsQuery = query(collection(db, "observations"), where("courseId", "==", courseId));
     const observationsSnap = await getDocs(observationsQuery);
-    observationsSnap.forEach(d => batch.update(d.ref, { isDeleted: true, lastUpdatedAt: serverTimestamp() }));
+    observationsSnap.forEach(d => batch.update(d.ref, { isDeleted: true, lastUpdatedAt: timestamp, updatedBy: userIdentifier }));
     
     const casesQuery = query(collection(db, "cases"), where("courseId", "==", courseId));
     const casesSnap = await getDocs(casesQuery);
-    casesSnap.forEach(d => batch.update(d.ref, { isDeleted: true, lastUpdatedAt: serverTimestamp() }));
+    casesSnap.forEach(d => batch.update(d.ref, { isDeleted: true, lastUpdatedAt: timestamp, updatedBy: userIdentifier }));
     
     const finalReportQuery = query(collection(db, "finalReports"), where("courseId", "==", courseId));
     const finalReportSnap = await getDocs(finalReportQuery);
-    finalReportSnap.forEach(d => batch.update(d.ref, { isDeleted: true, lastUpdatedAt: serverTimestamp() }));
+    finalReportSnap.forEach(d => batch.update(d.ref, { isDeleted: true, lastUpdatedAt: timestamp, updatedBy: userIdentifier }));
 
     await batch.commit();
     return true;
@@ -2003,7 +2017,6 @@ export async function saveIMNCIPatientRecord(payload, recordId = null) {
             
         const writePromise = setDoc(docRef, recordData, { merge: !!recordId });
         
-        // Use your existing offline-safe wrapper
         await executeOfflineSafeWrite(writePromise);
         return docRef.id;
     } catch (error) {

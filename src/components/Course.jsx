@@ -1,36 +1,30 @@
 // src/components/Course.jsx
 import React, { useState, useMemo, useRef, useEffect, Suspense } from 'react';
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-import { Bar, Line } from 'react-chartjs-2';
 import { 
-    Button, Card, EmptyState, FormGroup, Input, PageHeader, PdfIcon, 
-    Select, Spinner, Table, Textarea, CourseIcon, Modal, CardBody, CardFooter 
+    Button, Card, EmptyState, FormGroup, Input, PageHeader, 
+    Select, Spinner, Table, CourseIcon, Modal, CardBody, CardFooter, Toast 
 } from './CommonComponents'; 
 import { 
-    listAllDataForCourse, listParticipants, listCoordinators, upsertCoordinator, 
-    deleteCoordinator, listFunders, upsertFunder, deleteFunder, listFinalReport, 
-    upsertFinalReport, deleteFinalReport, uploadFile, getParticipantById, 
-    getCourseById, listAllParticipantsForCourse,
+    getCourseById, 
     listHealthFacilities,
-    saveParticipantAndSubmitFacilityUpdate
+    upsertCourse,   
+    deleteCourse,
+    saveParticipantAndSubmitFacilityUpdate,
+    upsertParticipantTest
 } from '../data.js'; 
-import { ParticipantsView, ParticipantForm } from './Participants';
+import { ParticipantsView } from './Participants';
 import { CourseTestForm } from './CourseTestForm'; 
 import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_SSNC
 } from './constants.js';
-import html2canvas from 'html2canvas';
-import { db } from '../firebase';
-import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
-import { DEFAULT_ROLE_PERMISSIONS, ALL_PERMISSIONS } from './permissions';
-import { generateCertificatePdf } from './CertificateGenerator'; 
 import { 
-    Users, Download, Calendar, Clock, Share2, UserPlus, CheckCircle, 
+    Users, Share2, UserPlus, CheckCircle, 
     FileText, Edit, Trash2, ExternalLink, Link as LinkIcon, Eye, BarChart2,
     AlertTriangle, Shield, Check, X, RefreshCw, Archive, ClipboardList
 } from 'lucide-react'; 
 import { useDataCache } from '../DataContext'; 
+import { useAuth } from '../hooks/useAuth'; 
 import { Capacitor } from '@capacitor/core';
 
 // NEW IMPORTS FOR MIGRATED DASHBOARDS
@@ -43,48 +37,6 @@ const ObservationView = React.lazy(() => import('./MonitoringView').then(module 
 
 
 // Helper functions 
-const calcPct = (correct, total) => {
-    if (total === 0) {
-        return 0;
-    }
-    return (correct / total) * 100;
-};
-
-const fmtPct = (value) => {
-    if (isNaN(value) || value === null) return 'N/A';
-    return `${value.toFixed(1)}%`;
-};
-
-const pctBgClass = (value, customClasses) => {
-    if (isNaN(value) || value === null) {
-        return 'bg-gray-100 text-gray-800';
-    }
-    const classes = customClasses || '>80:bg-green-100;60-80:bg-yellow-100;<60:bg-red-100';
-    const rules = classes.split(';').map(r => r.split(':'));
-    for (const rule of rules) {
-        const [condition, bgClass] = rule;
-        if (condition.includes('>=')) {
-            const num = parseFloat(condition.replace('>=', ''));
-            if (value >= num) return bgClass;
-        } else if (condition.includes('>')) {
-            const num = parseFloat(condition.replace('>', ''));
-            if (value > num) return bgClass;
-        } else if (condition.includes('<=')) {
-            const num = parseFloat(condition.replace('<', ''));
-            if (value <= num) return bgClass;
-        } else if (condition.includes('<')) {
-            const num = parseFloat(condition.replace('<', ''));
-            if (value < num) return bgClass;
-        } else if (condition.includes('-')) {
-            const [min, max] = condition.split('-').map(Number);
-            if (value >= min && value <= max) return bgClass;
-        }
-    }
-    return '';
-};
-
-const HospitalIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v2.85c-.9.17-1.72.6-2.43 1.24L4.3 11.2a1 1 0 0 0-.2 1.39l.2.2c.45.6.84 1.34 1.36 2.14L6 15l2.43-1.6c.71-.48 1.54-.74 2.43-.84V14a1 1 0 0 0 1 1h2c.7 0 1.25-.56 1.25-1.25S15.7 12.5 15 12.5V11a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v1.5a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5V9.85c-.9-.1-1.72-.36-2.43-.84L4.3 7.8a1 1 0 0 0-.2-1.39l.2-.2c.45-.6.84-1.34 1.36-2.14L6 3l2.43 1.6c.71.48 1.54-.74 2.43 .84V5a3 3 0 0 0-3-3zM12 22v-2a3 3 0 0 0-3-3h-2a3 3 0 0 0-3 3v2zM18 22v-2a3 3 0 0 0-3-3h-2a3 3 0 0 0-3 3v2z"></path><path d="M12 18.5V22"></path><path d="M12 11h-2"></path><path d="M14 11h2"></path><path d="M18 11h2"></path></svg>;
-
 const IccmIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline><path d="M12 9v6"></path><path d="M9 12h6"></path></svg>;
 const IpcIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M12 11v4"></path><path d="M10 13h4"></path></svg>;
 const NewbornIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 9c0-2-1.5-3.5-4-3.5C7.5 5.5 6 7 6 9c0 1.5.5 2.5 1 3.5h0l-1 4.5h10L17 17l-1-4.5h0c.5-1 1-2.5 1-3.5z"></path><path d="M12 18h.01"></path><path d="M10.5 21v-1.5h3V21"></path></svg>;
@@ -103,7 +55,6 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
     const [error, setError] = useState('');
     const [isFacilitySelectorOpen, setIsFacilitySelectorOpen] = useState(false);
 
-    // Load job titles based on course type
     const jobOptions = useMemo(() => {
         if (course.course_type === 'ICCM') return ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
         if (course.course_type === 'Small & Sick Newborn' || course.course_type === 'SSNC') return JOB_TITLES_SSNC;
@@ -144,7 +95,7 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
                 facilityId: facilityId 
             };
 
-            await saveParticipantAndSubmitFacilityUpdate(participantData, null);
+            await saveParticipantAndSubmitFacilityUpdate(participantData, null, 'Public Form');
             
             if (onSuccess) onSuccess(participantData);
             onClose();
@@ -162,27 +113,27 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Register New Participant" size="lg">
+        <Modal isOpen={isOpen} onClose={isSaving ? null : onClose} title="Register New Participant" size="lg">
             <CardBody className="p-6">
                 {error && <div className="mb-4 p-3 bg-red-50 text-red-700 rounded border border-red-200">{error}</div>}
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormGroup label="Full Name">
-                        <Input value={name} onChange={e => setName(e.target.value)} placeholder="Enter full name" />
+                        <Input disabled={isSaving} value={name} onChange={e => setName(e.target.value)} placeholder="Enter full name" />
                     </FormGroup>
                     <FormGroup label="Phone Number">
-                        <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="0xxxxxxxxx" />
+                        <Input disabled={isSaving} value={phone} onChange={e => setPhone(e.target.value)} placeholder="0xxxxxxxxx" />
                     </FormGroup>
                     
                     <FormGroup label="Job Title">
-                        <Select value={jobTitle} onChange={e => setJobTitle(e.target.value)}>
+                        <Select disabled={isSaving} value={jobTitle} onChange={e => setJobTitle(e.target.value)}>
                             <option value="">-- Select Job --</option>
                             {jobOptions.map(j => <option key={j} value={j}>{j}</option>)}
                         </Select>
                     </FormGroup>
 
                     <FormGroup label="Group">
-                        <Select value={group} onChange={e => setGroup(e.target.value)}>
+                        <Select disabled={isSaving} value={group} onChange={e => setGroup(e.target.value)}>
                             <option>Group A</option>
                             <option>Group B</option>
                             <option>Group C</option>
@@ -195,22 +146,21 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
                             Health Facility (in {course.locality})
                         </label>
                         
-                        {/* Searchable Select for Facility (Read-only selection from list) */}
                         <div className="relative">
                             <Input 
                                 value={facilityName} 
                                 onChange={(e) => {
                                     setFacilityName(e.target.value);
-                                    setFacilityId(''); // Clear ID if user types something new
+                                    setFacilityId(''); 
                                     setIsFacilitySelectorOpen(true);
                                 }}
                                 onFocus={() => setIsFacilitySelectorOpen(true)}
                                 placeholder="Search facility name..."
-                                disabled={loadingFacilities}
+                                disabled={loadingFacilities || isSaving}
                             />
                             {loadingFacilities && <div className="absolute right-3 top-2.5"><Spinner size="sm" /></div>}
                             
-                            {isFacilitySelectorOpen && (
+                            {isFacilitySelectorOpen && !isSaving && (
                                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
                                     {facilities.length > 0 ? (
                                         facilities
@@ -349,18 +299,20 @@ const Landing = React.memo(function Landing({ active, onPick }) {
 export function CoursesTable({ 
     courses, onOpen, onEdit, onDelete, onOpenReport, onOpenTestForm, 
     canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates, userLocalities, onAddFinalReport, canManageFinalReport,
-    onOpenAttendanceManager 
+    onOpenAttendanceManager, isProcessing 
 }) {
     const [shareModalCourse, setShareModalCourse] = useState(null);
     const [reportModalCourse, setReportModalCourse] = useState(null);
     const [deleteRequestCourse, setDeleteRequestCourse] = useState(null); 
     const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
 
+    // Accordion State
+    const [expandedId, setExpandedId] = useState(null);
+
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
 
-    // Helper functions for Sharing
     const getBaseUrl = () => Capacitor.isNativePlatform() ? 'https://imnci-courses-monitor.web.app' : window.location.origin;
 
     const shareViaWhatsApp = (textToShare, successMessage) => {
@@ -375,18 +327,11 @@ export function CoursesTable({
         });
     };
 
-    // Reset to page 1 when courses array or items per page change
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [courses, itemsPerPage]);
+    useEffect(() => { setCurrentPage(1); }, [courses, itemsPerPage]);
 
     const isCourseActive = (course) => {
-        if (course.approvalStatus === 'pending') {
-            return false; 
-        }
-        if (!course.start_date || !course.course_duration || course.course_duration <= 0) {
-            return false;
-        }
+        if (course.approvalStatus === 'pending') return false; 
+        if (!course.start_date || !course.course_duration || course.course_duration <= 0) return false;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const startDate = new Date(course.start_date);
@@ -398,12 +343,8 @@ export function CoursesTable({
 
     const filteredCourses = useMemo(() => {
         let filtered = courses;
-        if (userStates && userStates.length > 0) {
-            filtered = filtered.filter(c => userStates.includes(c.state));
-        }
-        if (userLocalities && userLocalities.length > 0) {
-            filtered = filtered.filter(c => userLocalities.includes(c.locality));
-        }
+        if (userStates && userStates.length > 0) filtered = filtered.filter(c => userStates.includes(c.state));
+        if (userLocalities && userLocalities.length > 0) filtered = filtered.filter(c => userLocalities.includes(c.locality));
         return filtered;
     }, [courses, userStates, userLocalities]);
 
@@ -417,335 +358,315 @@ export function CoursesTable({
         });
     }, [filteredCourses]);
 
-    // Calculate Pagination Data
     const totalItems = sortedCourses.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const paginatedCourses = sortedCourses.slice(startIndex, startIndex + itemsPerPage);
 
-    const courseType = sortedCourses.length > 0 ? sortedCourses[0].course_type : 'Courses';
+    const toggleExpand = (id) => {
+        setExpandedId(prev => (prev === id ? null : id));
+    };
+
+    if (sortedCourses.length === 0) return <EmptyState message="No courses found matching the selected filters." />;
 
     return (
-        sortedCourses.length === 0 ? <EmptyState message="No courses found matching the selected filters." /> : ( 
-            <div>
-                <h3 className="text-xl font-bold mb-4">{courseType} Courses</h3>
-                <Table headers={["State", "Subcourses", "Status", "Actions"]}>
-                    {paginatedCourses.map((c, index) => {
-                        // Pending deletion flag
-                        const isPendingDeletion = c.deletionRequested === true;
-                        
-                        const active = isCourseActive(c);
-                        const canEdit = active ? canEditDeleteActiveCourse : canEditDeleteInactiveCourse;
-                        const canDelete = active ? canEditDeleteActiveCourse : canEditDeleteInactiveCourse;
-                        
-                        const subcourses = c.facilitatorAssignments && c.facilitatorAssignments.length > 0
-                            ? [...new Set(c.facilitatorAssignments.map(a => a.imci_sub_type))].join(', ')
-                            : 'N/A';
+        <div>
+            <h3 className="text-xl font-bold mb-4">{sortedCourses[0]?.course_type || 'Courses'} Courses</h3>
+            
+            <div className="grid gap-4">
+                {paginatedCourses.map((c) => {
+                    const isPendingDeletion = c.deletionRequested === true;
+                    const active = isCourseActive(c);
+                    const canEdit = active ? canEditDeleteActiveCourse : canEditDeleteInactiveCourse;
+                    const canDelete = active ? canEditDeleteActiveCourse : canEditDeleteInactiveCourse;
+                    const isExpanded = expandedId === c.id;
+                    
+                    const subcourses = c.facilitatorAssignments && c.facilitatorAssignments.length > 0
+                        ? [...new Set(c.facilitatorAssignments.map(a => a.imci_sub_type))].join(', ') : 'N/A';
 
-                        return (
-                            <tr key={c.id} className={`hover:bg-gray-50 ${isPendingDeletion ? 'bg-red-50' : ''}`}>
-                                <td className="p-4 border">
-                                    {c.state} - {c.locality}
-                                    {isPendingDeletion && <span className="block text-xs text-red-600 font-bold mt-1">(Deletion Pending)</span>}
-                                </td>
-                                <td className="p-4 border">{subcourses}</td>
-                                <td className="p-4 border">
-                                    {c.approvalStatus === 'pending' ? (
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
-                                            Not Approved
-                                        </span>
-                                    ) : active ? (
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                            Active
-                                        </span>
-                                    ) : (
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                            Inactive
-                                        </span>
-                                    )}
-                                </td>
-                                <td className="p-2 border text-right whitespace-nowrap">
-                                    <div className="flex gap-2 justify-end items-center">
-                                        <Button 
-                                            variant="primary" 
-                                            className="px-3 py-1 text-sm flex items-center gap-1" 
-                                            onClick={() => onOpen(c.id)}
-                                        >
-                                           <ExternalLink size={14} /> Open
-                                        </Button>
-
-                                        <Button
-                                            variant="secondary"
-                                            className="px-3 py-1 text-sm flex items-center gap-1"
-                                            onClick={() => onEdit(c)}
-                                            disabled={!canEdit || isPendingDeletion}
-                                            title={!canEdit ? "You do not have permission to edit." : ""}
-                                        >
-                                            <Edit size={14} /> Edit
-                                        </Button>
-
-                                        <Button
-                                            variant="secondary"
-                                            className="px-3 py-1 text-sm flex items-center gap-1"
-                                            onClick={() => setReportModalCourse(c)}
-                                        >
-                                            <FileText size={14} /> Reports
-                                        </Button>
-                                        
-                                        <Button 
-                                            variant="secondary" 
-                                            className="px-3 py-1 text-sm flex items-center gap-1" 
-                                            onClick={() => setShareModalCourse(c)}
-                                        >
-                                           <Share2 size={14} /> Share
-                                        </Button>
-                                        
-                                        <Button
-                                            variant="danger"
-                                            className="px-3 py-1 text-sm flex items-center gap-1"
-                                            onClick={() => setDeleteRequestCourse(c)}
-                                            disabled={!canDelete || isPendingDeletion}
-                                            title={isPendingDeletion ? "Deletion already requested" : (!canDelete ? "No permission" : "")}
-                                        >
-                                           <Trash2 size={14} /> Delete
-                                        </Button>
+                    return (
+                        <div key={c.id} className={`border rounded-lg bg-white shadow-sm overflow-hidden ${isPendingDeletion ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
+                            {/* Card Header (Clickable for Accordion) */}
+                            <div 
+                                className="p-4 cursor-pointer hover:bg-gray-50 flex justify-between items-center"
+                                onClick={() => toggleExpand(c.id)}
+                            >
+                                <div>
+                                    <h4 className="font-bold text-lg text-gray-800">
+                                        {c.state} - {c.locality}
+                                    </h4>
+                                    <p className="text-sm text-gray-600 line-clamp-1">{subcourses}</p>
+                                    <div className="mt-2 flex gap-2 items-center">
+                                        {c.approvalStatus === 'pending' ? (
+                                            <span className="px-2 py-1 rounded-full text-[10px] font-medium bg-red-100 text-red-800">Not Approved</span>
+                                        ) : active ? (
+                                            <span className="px-2 py-1 rounded-full text-[10px] font-medium bg-green-100 text-green-800">Active</span>
+                                        ) : (
+                                            <span className="px-2 py-1 rounded-full text-[10px] font-medium bg-gray-100 text-gray-800">Inactive</span>
+                                        )}
+                                        {isPendingDeletion && <span className="text-[10px] text-red-600 font-bold">(Deletion Pending)</span>}
                                     </div>
-                                </td>
-                            </tr>
-                        );
-                    })}
-                </Table>
-
-                {/* --- Pagination Controls --- */}
-                {totalItems > 0 && (
-                    <div className="flex flex-col sm:flex-row items-center justify-between mt-4 p-4 bg-white border rounded-lg text-sm text-gray-700 shadow-sm">
-                        <div className="flex items-center gap-4 mb-4 sm:mb-0">
-                            <span>Page <strong>{currentPage}</strong> of <strong>{totalPages || 1}</strong> <span className="text-gray-500">(Total: {totalItems} courses)</span></span>
-                            <div className="flex items-center gap-2">
-                                <span className="font-medium">Per Page:</span>
-                                <Select 
-                                    value={itemsPerPage} 
-                                    onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                                    className="py-1 px-2 text-sm w-20 border-gray-300 rounded"
-                                >
-                                    <option value={5}>5</option>
-                                    <option value={10}>10</option>
-                                    <option value={25}>25</option>
-                                    <option value={50}>50</option>
-                                </Select>
+                                </div>
+                                <div className="text-gray-400">
+                                    <svg className={`w-6 h-6 transform transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </div>
                             </div>
+
+                            {/* Collapsible Actions Menu */}
+                            {isExpanded && (
+                                <div className="p-4 border-t border-gray-100 bg-gray-50 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                    <Button variant="primary" className="w-full flex justify-center items-center gap-2" onClick={() => onOpen(c.id)} disabled={isProcessing}>
+                                        <ExternalLink size={16} /> Open
+                                    </Button>
+                                    <Button variant="secondary" className="w-full flex justify-center items-center gap-2" onClick={() => onEdit(c)} disabled={!canEdit || isPendingDeletion || isProcessing}>
+                                        <Edit size={16} /> Edit
+                                    </Button>
+                                    <Button variant="secondary" className="w-full flex justify-center items-center gap-2" onClick={() => setReportModalCourse(c)} disabled={isProcessing}>
+                                        <FileText size={16} /> Reports
+                                    </Button>
+                                    <Button variant="secondary" className="w-full flex justify-center items-center gap-2" onClick={() => setShareModalCourse(c)} disabled={isProcessing}>
+                                        <Share2 size={16} /> Share
+                                    </Button>
+                                    <Button variant="danger" className="w-full flex justify-center items-center gap-2 sm:col-span-2 md:col-span-1" onClick={() => setDeleteRequestCourse(c)} disabled={!canDelete || isPendingDeletion || isProcessing}>
+                                        <Trash2 size={16} /> Delete
+                                    </Button>
+                                </div>
+                            )}
                         </div>
-                        <div className="flex gap-2">
-                            <Button 
-                                variant="secondary" 
-                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                disabled={currentPage === 1}
-                                className="px-3 py-1"
+                    );
+                })}
+            </div>
+
+            {/* --- Pagination Controls --- */}
+            {totalItems > 0 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between mt-4 p-4 bg-white border rounded-lg text-sm text-gray-700 shadow-sm">
+                    <div className="flex items-center gap-4 mb-4 sm:mb-0">
+                        <span>Page <strong>{currentPage}</strong> of <strong>{totalPages || 1}</strong> <span className="text-gray-500">(Total: {totalItems} courses)</span></span>
+                        <div className="flex items-center gap-2">
+                            <span className="font-medium">Per Page:</span>
+                            <Select 
+                                disabled={isProcessing}
+                                value={itemsPerPage} 
+                                onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                                className="py-1 px-2 text-sm w-20 border-gray-300 rounded"
                             >
-                                &larr; Previous
-                            </Button>
-                            <Button 
-                                variant="secondary" 
-                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                disabled={currentPage >= totalPages || totalPages === 0}
-                                className="px-3 py-1"
-                            >
-                                Next &rarr;
-                            </Button>
+                                <option value={5}>5</option>
+                                <option value={10}>10</option>
+                                <option value={25}>25</option>
+                                <option value={50}>50</option>
+                            </Select>
                         </div>
                     </div>
-                )}
+                    <div className="flex gap-2">
+                        <Button 
+                            variant="secondary" 
+                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                            disabled={currentPage === 1 || isProcessing}
+                            className="px-3 py-1"
+                        >
+                            &larr; Previous
+                        </Button>
+                        <Button 
+                            variant="secondary" 
+                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                            disabled={currentPage >= totalPages || totalPages === 0 || isProcessing}
+                            className="px-3 py-1"
+                        >
+                            Next &rarr;
+                        </Button>
+                    </div>
+                </div>
+            )}
 
-                {/* --- SHARE & MANAGE MODAL --- */}
-                {shareModalCourse && (
-                    <Modal isOpen={!!shareModalCourse} onClose={() => setShareModalCourse(null)} title="Share Public Links">
-                         <CardBody className="flex flex-col gap-6 p-4">
-                            <div>
-                                <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-                                    <Share2 size={16} /> Public Links
-                                </h4>
-                                <div className="space-y-3 pl-2">
+            {/* --- SHARE & MANAGE MODAL --- */}
+            {shareModalCourse && (
+                <Modal isOpen={!!shareModalCourse} onClose={() => setShareModalCourse(null)} title="Share Public Links">
+                     <CardBody className="flex flex-col gap-6 p-4">
+                        <div>
+                            <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                                <Share2 size={16} /> Public Links
+                            </h4>
+                            <div className="space-y-3 pl-2">
+                                <div className="bg-gray-50 p-3 rounded border">
+                                    <div className="flex justify-between items-center mb-1">
+                                        <span className="text-sm font-semibold">Participant Registration</span>
+                                        <Button variant="secondary" size="sm" className="flex items-center gap-1" onClick={() => {
+                                            const link = `${getBaseUrl()}/public/register/course/${shareModalCourse.id}`;
+                                            const text = `*Participant Registration*\nCourse: ${shareModalCourse.course_type}\nLocation: ${shareModalCourse.state} - ${shareModalCourse.locality}\n\nPlease register using this link:\n${link}`;
+                                            shareViaWhatsApp(text, 'Registration link copied!');
+                                        }}><LinkIcon size={14} /> Share</Button>
+                                    </div>
+                                </div>
+                                <div className="bg-gray-50 p-3 rounded border">
+                                    <div className="flex justify-between items-center mb-1">
+                                        <span className="text-sm font-semibold">Course Monitoring</span>
+                                        <Button variant="secondary" size="sm" className="flex items-center gap-1" onClick={() => {
+                                            const link = `${getBaseUrl()}/monitor/course/${shareModalCourse.id}`;
+                                            const text = `*Course Monitoring*\nCourse: ${shareModalCourse.course_type}\nLocation: ${shareModalCourse.state} - ${shareModalCourse.locality}\n\nAccess monitoring dashboard here:\n${link}`;
+                                            shareViaWhatsApp(text, 'Monitoring link copied!');
+                                        }}><Eye size={14} /> Share</Button>
+                                    </div>
+                                </div>
+                                
+                                {(['ICCM', 'EENC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management'].includes(shareModalCourse.course_type)) && (
                                     <div className="bg-gray-50 p-3 rounded border">
-                                        <div className="flex justify-between items-center mb-1">
-                                            <span className="text-sm font-semibold">Participant Registration</span>
-                                            <Button variant="secondary" size="sm" className="flex items-center gap-1" onClick={() => {
-                                                const link = `${getBaseUrl()}/public/register/course/${shareModalCourse.id}`;
-                                                const text = `*Participant Registration*\nCourse: ${shareModalCourse.course_type}\nLocation: ${shareModalCourse.state} - ${shareModalCourse.locality}\n\nPlease register using this link:\n${link}`;
-                                                shareViaWhatsApp(text, 'Registration link copied!');
-                                            }}><LinkIcon size={14} /> Share</Button>
+                                        <span className="text-sm font-semibold block mb-2">Testing</span>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <Button variant="secondary" size="sm" className="flex items-center gap-1 justify-center" onClick={() => {
+                                                const link = `${getBaseUrl()}/public/test/course/${shareModalCourse.id}?type=pre`;
+                                                const text = `*Pre-Test Form*\nCourse: ${shareModalCourse.course_type}\n\nPlease complete the pre-test here:\n${link}`;
+                                                shareViaWhatsApp(text, 'Pre-Test link copied!');
+                                            }}><FileText size={14} /> Share Pre-Test</Button>
+
+                                            <Button variant="secondary" size="sm" className="flex items-center gap-1 justify-center" onClick={() => {
+                                                const link = `${getBaseUrl()}/public/test/course/${shareModalCourse.id}?type=post`;
+                                                const text = `*Post-Test Form*\nCourse: ${shareModalCourse.course_type}\n\nPlease complete the post-test here:\n${link}`;
+                                                shareViaWhatsApp(text, 'Post-Test link copied!');
+                                            }}><FileText size={14} /> Share Post-Test</Button>
                                         </div>
                                     </div>
-                                    <div className="bg-gray-50 p-3 rounded border">
-                                        <div className="flex justify-between items-center mb-1">
-                                            <span className="text-sm font-semibold">Course Monitoring</span>
-                                            <Button variant="secondary" size="sm" className="flex items-center gap-1" onClick={() => {
-                                                const link = `${getBaseUrl()}/monitor/course/${shareModalCourse.id}`;
-                                                const text = `*Course Monitoring*\nCourse: ${shareModalCourse.course_type}\nLocation: ${shareModalCourse.state} - ${shareModalCourse.locality}\n\nAccess monitoring dashboard here:\n${link}`;
-                                                shareViaWhatsApp(text, 'Monitoring link copied!');
-                                            }}><Eye size={14} /> Share</Button>
-                                        </div>
-                                    </div>
-                                    
-                                    {(['ICCM', 'EENC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management'].includes(shareModalCourse.course_type)) && (
-                                        <div className="bg-gray-50 p-3 rounded border">
-                                            <span className="text-sm font-semibold block mb-2">Testing</span>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <Button variant="secondary" size="sm" className="flex items-center gap-1 justify-center" onClick={() => {
-                                                    const link = `${getBaseUrl()}/public/test/course/${shareModalCourse.id}?type=pre`;
-                                                    const text = `*Pre-Test Form*\nCourse: ${shareModalCourse.course_type}\n\nPlease complete the pre-test here:\n${link}`;
-                                                    shareViaWhatsApp(text, 'Pre-Test link copied!');
-                                                }}><FileText size={14} /> Share Pre-Test</Button>
+                                )}
 
-                                                <Button variant="secondary" size="sm" className="flex items-center gap-1 justify-center" onClick={() => {
-                                                    const link = `${getBaseUrl()}/public/test/course/${shareModalCourse.id}?type=post`;
-                                                    const text = `*Post-Test Form*\nCourse: ${shareModalCourse.course_type}\n\nPlease complete the post-test here:\n${link}`;
-                                                    shareViaWhatsApp(text, 'Post-Test link copied!');
-                                                }}><FileText size={14} /> Share Post-Test</Button>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    <div className="bg-gray-50 p-3 rounded border">
-                                        <span className="text-sm font-semibold block mb-2">Daily Attendance</span>
-                                        <div className="flex gap-2">
-                                            <Input 
-                                                type="date" 
-                                                value={attendanceDate} 
-                                                onChange={(e) => setAttendanceDate(e.target.value)} 
-                                                className="py-1 text-sm" 
-                                            />
-                                            <Button 
-                                                variant="secondary" 
-                                                size="sm" 
-                                                className="flex items-center gap-1" 
-                                                onClick={() => { 
-                                                    const link = `${getBaseUrl()}/attendance/course/${shareModalCourse.id}?date=${attendanceDate}`; 
-                                                    
-                                                    let subCourseText = '';
-                                                    if (shareModalCourse.facilitatorAssignments && shareModalCourse.facilitatorAssignments.length > 0) {
-                                                        const subcourses = [...new Set(shareModalCourse.facilitatorAssignments.map(a => a.imci_sub_type).filter(Boolean))];
-                                                        if (subcourses.length > 0) {
-                                                            subCourseText = ` - ${subcourses.join(' / ')}`;
-                                                        }
+                                <div className="bg-gray-50 p-3 rounded border">
+                                    <span className="text-sm font-semibold block mb-2">Daily Attendance</span>
+                                    <div className="flex gap-2">
+                                        <Input 
+                                            type="date" 
+                                            value={attendanceDate} 
+                                            onChange={(e) => setAttendanceDate(e.target.value)} 
+                                            className="py-1 text-sm" 
+                                        />
+                                        <Button 
+                                            variant="secondary" 
+                                            size="sm" 
+                                            className="flex items-center gap-1" 
+                                            onClick={() => { 
+                                                const link = `${getBaseUrl()}/attendance/course/${shareModalCourse.id}?date=${attendanceDate}`; 
+                                                
+                                                let subCourseText = '';
+                                                if (shareModalCourse.facilitatorAssignments && shareModalCourse.facilitatorAssignments.length > 0) {
+                                                    const subcourses = [...new Set(shareModalCourse.facilitatorAssignments.map(a => a.imci_sub_type).filter(Boolean))];
+                                                    if (subcourses.length > 0) {
+                                                        subCourseText = ` - ${subcourses.join(' / ')}`;
                                                     }
+                                                }
 
-                                                    const text = `*Attendance Form: ${shareModalCourse.course_type}${subCourseText}*\nDate: ${attendanceDate}\n\nPlease register your attendance here: \n${link}`;
-                                                    shareViaWhatsApp(text, `Attendance link for ${attendanceDate} copied!`);
-                                                }}
-                                            >
-                                                <LinkIcon size={14} /> Share
-                                            </Button>
-                                        </div>
+                                                const text = `*Attendance Form: ${shareModalCourse.course_type}${subCourseText}*\nDate: ${attendanceDate}\n\nPlease register your attendance here: \n${link}`;
+                                                shareViaWhatsApp(text, `Attendance link for ${attendanceDate} copied!`);
+                                            }}
+                                        >
+                                            <LinkIcon size={14} /> Share
+                                        </Button>
                                     </div>
                                 </div>
                             </div>
-                        </CardBody>
-                        <CardFooter>
-                            <Button variant="secondary" onClick={() => setShareModalCourse(null)}>Close</Button>
-                        </CardFooter>
-                    </Modal>
-                )}
+                        </div>
+                    </CardBody>
+                    <CardFooter>
+                        <Button variant="secondary" onClick={() => setShareModalCourse(null)}>Close</Button>
+                    </CardFooter>
+                </Modal>
+            )}
 
-                {/* --- REPORTS MODAL --- */}
-                {reportModalCourse && (
-                    <Modal isOpen={!!reportModalCourse} onClose={() => setReportModalCourse(null)} title="Course Reports">
-                        <CardBody className="p-6 flex flex-col gap-3">
-                            <p className="text-sm text-gray-500 mb-2">Access all reporting and analysis tools for this course.</p>
-                            
-                            <Button variant="secondary" className="flex items-center gap-3 p-4 justify-start" onClick={() => { onOpenReport(reportModalCourse.id); setReportModalCourse(null); }}>
-                                <div className="bg-blue-100 p-2 rounded-full"><BarChart2 className="text-blue-600" size={20} /></div>
-                                <div className="text-left">
-                                    <div className="font-semibold text-gray-800">Course Analytics</div>
-                                    <div className="text-xs text-gray-500">View charts and performance metrics</div>
-                                </div>
-                            </Button>
-
-                            <Button variant="secondary" className="flex items-center gap-3 p-4 justify-start" onClick={() => { onOpenAttendanceManager(reportModalCourse.id); setReportModalCourse(null); }}>
-                                <div className="bg-green-100 p-2 rounded-full"><ClipboardList className="text-green-600" size={20} /></div>
-                                <div className="text-left">
-                                    <div className="font-semibold text-gray-800">Attendance Dashboard</div>
-                                    <div className="text-xs text-gray-500">View daily attendance logs</div>
-                                </div>
-                            </Button>
-
-                            {(['ICCM', 'EENC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management'].includes(reportModalCourse.course_type)) && (
-                                <Button variant="secondary" className="flex items-center gap-3 p-4 justify-start" onClick={() => { onOpenTestForm(reportModalCourse.id); setReportModalCourse(null); }}>
-                                    <div className="bg-orange-100 p-2 rounded-full"><CheckCircle className="text-orange-600" size={20} /></div>
-                                    <div className="text-left">
-                                        <div className="font-semibold text-gray-800">Test Scores Dashboard</div>
-                                        <div className="text-xs text-gray-500">Manage pre-test and post-test scores</div>
-                                    </div>
-                                </Button>
-                            )}
-
-                            {canManageFinalReport && (
-                                <Button variant="secondary" className="flex items-center gap-3 p-4 justify-start" onClick={() => { onAddFinalReport(reportModalCourse.id); setReportModalCourse(null); }}>
-                                    <div className="bg-purple-100 p-2 rounded-full"><FileText className="text-purple-600" size={20} /></div>
-                                    <div className="text-left">
-                                        <div className="font-semibold text-gray-800">Final Report</div>
-                                        <div className="text-xs text-gray-500">Generate or view the narrative report</div>
-                                    </div>
-                                </Button>
-                            )}
-
-                            <Button variant="secondary" className="flex items-center gap-3 p-4 justify-start" onClick={() => {
-                                const link = `${getBaseUrl()}/public/report/course/${reportModalCourse.id}`;
-                                const text = `*Course Report*\nCourse: ${reportModalCourse.course_type}\nLocation: ${reportModalCourse.state} - ${reportModalCourse.locality}\n\nView the comprehensive course report here:\n${link}`;
-                                shareViaWhatsApp(text, 'Report link copied to clipboard!');
-                            }}>
-                                <div className="bg-indigo-100 p-2 rounded-full"><LinkIcon className="text-indigo-600" size={20} /></div>
-                                <div className="text-left">
-                                    <div className="font-semibold text-gray-800">Share Report Link</div>
-                                    <div className="text-xs text-gray-500">Copy & share report link via WhatsApp</div>
-                                </div>
-                            </Button>
-
-                        </CardBody>
-                        <CardFooter>
-                             <Button variant="secondary" onClick={() => setReportModalCourse(null)}>Close</Button>
-                        </CardFooter>
-                    </Modal>
-                )}
-
-                {/* --- Deletion Request Confirmation Modal --- */}
-                {deleteRequestCourse && (
-                    <Modal isOpen={!!deleteRequestCourse} onClose={() => setDeleteRequestCourse(null)} title="Request Course Deletion">
-                        <CardBody className="p-6">
-                            <div className="flex flex-col items-center text-center gap-4">
-                                <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
-                                    <AlertTriangle className="h-6 w-6 text-red-600" />
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-medium text-gray-900">Confirm Deletion Request</h3>
-                                    <p className="text-sm text-gray-500 mt-2">
-                                        Are you sure you want to delete the course <strong>{deleteRequestCourse.course_type} ({deleteRequestCourse.state})</strong>?
-                                    </p>
-                                    <p className="text-sm text-gray-600 mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded text-left">
-                                        <strong>Note:</strong> This action will not delete the course immediately. It will be marked for deletion and sent to the <strong>Course Administration</strong> tab for approval. Approved courses will be moved to the <strong>Recycle Bin</strong>.
-                                    </p>
-                                </div>
+            {/* --- REPORTS MODAL --- */}
+            {reportModalCourse && (
+                <Modal isOpen={!!reportModalCourse} onClose={() => setReportModalCourse(null)} title="Course Reports">
+                    <CardBody className="p-6 flex flex-col gap-3">
+                        <p className="text-sm text-gray-500 mb-2">Access all reporting and analysis tools for this course.</p>
+                        
+                        <Button variant="secondary" className="flex items-center gap-3 p-4 justify-start" onClick={() => { onOpenReport(reportModalCourse.id); setReportModalCourse(null); }}>
+                            <div className="bg-blue-100 p-2 rounded-full"><BarChart2 className="text-blue-600" size={20} /></div>
+                            <div className="text-left">
+                                <div className="font-semibold text-gray-800">Course Analytics</div>
+                                <div className="text-xs text-gray-500">View charts and performance metrics</div>
                             </div>
-                        </CardBody>
-                        <CardFooter className="flex justify-end gap-2">
-                            <Button variant="secondary" onClick={() => setDeleteRequestCourse(null)}>Cancel</Button>
-                            <Button variant="danger" onClick={() => {
-                                onDelete(deleteRequestCourse.id, true); 
-                                setDeleteRequestCourse(null);
-                            }}>
-                                Request Deletion
+                        </Button>
+
+                        <Button variant="secondary" className="flex items-center gap-3 p-4 justify-start" onClick={() => { onOpenAttendanceManager(reportModalCourse.id); setReportModalCourse(null); }}>
+                            <div className="bg-green-100 p-2 rounded-full"><ClipboardList className="text-green-600" size={20} /></div>
+                            <div className="text-left">
+                                <div className="font-semibold text-gray-800">Attendance Dashboard</div>
+                                <div className="text-xs text-gray-500">View daily attendance logs</div>
+                            </div>
+                        </Button>
+
+                        {(['ICCM', 'EENC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management'].includes(reportModalCourse.course_type)) && (
+                            <Button variant="secondary" className="flex items-center gap-3 p-4 justify-start" onClick={() => { onOpenTestForm(reportModalCourse.id); setReportModalCourse(null); }}>
+                                <div className="bg-orange-100 p-2 rounded-full"><CheckCircle className="text-orange-600" size={20} /></div>
+                                <div className="text-left">
+                                    <div className="font-semibold text-gray-800">Test Scores Dashboard</div>
+                                    <div className="text-xs text-gray-500">Manage pre-test and post-test scores</div>
+                                </div>
                             </Button>
-                        </CardFooter>
-                    </Modal>
-                )}
-            </div>
-        )
+                        )}
+
+                        {canManageFinalReport && (
+                            <Button variant="secondary" className="flex items-center gap-3 p-4 justify-start" onClick={() => { onAddFinalReport(reportModalCourse.id); setReportModalCourse(null); }}>
+                                <div className="bg-purple-100 p-2 rounded-full"><FileText className="text-purple-600" size={20} /></div>
+                                <div className="text-left">
+                                    <div className="font-semibold text-gray-800">Final Report</div>
+                                    <div className="text-xs text-gray-500">Generate or view the narrative report</div>
+                                </div>
+                            </Button>
+                        )}
+
+                        <Button variant="secondary" className="flex items-center gap-3 p-4 justify-start" onClick={() => {
+                            const link = `${getBaseUrl()}/public/report/course/${reportModalCourse.id}`;
+                            const text = `*Course Report*\nCourse: ${reportModalCourse.course_type}\nLocation: ${reportModalCourse.state} - ${reportModalCourse.locality}\n\nView the comprehensive course report here:\n${link}`;
+                            shareViaWhatsApp(text, 'Report link copied to clipboard!');
+                        }}>
+                            <div className="bg-indigo-100 p-2 rounded-full"><LinkIcon className="text-indigo-600" size={20} /></div>
+                            <div className="text-left">
+                                <div className="font-semibold text-gray-800">Share Report Link</div>
+                                <div className="text-xs text-gray-500">Copy & share report link via WhatsApp</div>
+                            </div>
+                        </Button>
+
+                    </CardBody>
+                    <CardFooter>
+                         <Button variant="secondary" onClick={() => setReportModalCourse(null)}>Close</Button>
+                    </CardFooter>
+                </Modal>
+            )}
+
+            {/* --- Deletion Request Confirmation Modal --- */}
+            {deleteRequestCourse && (
+                <Modal isOpen={!!deleteRequestCourse} onClose={isProcessing ? null : () => setDeleteRequestCourse(null)} title="Request Course Deletion">
+                    <CardBody className="p-6">
+                        <div className="flex flex-col items-center text-center gap-4">
+                            <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+                                <AlertTriangle className="h-6 w-6 text-red-600" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-medium text-gray-900">Confirm Deletion Request</h3>
+                                <p className="text-sm text-gray-500 mt-2">
+                                    Are you sure you want to delete the course <strong>{deleteRequestCourse.course_type} ({deleteRequestCourse.state})</strong>?
+                                </p>
+                                <p className="text-sm text-gray-600 mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded text-left">
+                                    <strong>Note:</strong> This action will not delete the course immediately. It will be marked for deletion and sent to the <strong>Course Administration</strong> tab for approval. Approved courses will be moved to the <strong>Recycle Bin</strong>.
+                                </p>
+                            </div>
+                        </div>
+                    </CardBody>
+                    <CardFooter className="flex justify-end gap-2">
+                        <Button variant="secondary" onClick={() => setDeleteRequestCourse(null)} disabled={isProcessing}>Cancel</Button>
+                        <Button variant="danger" disabled={isProcessing} onClick={async () => {
+                            await onDelete(deleteRequestCourse.id, true); 
+                            setDeleteRequestCourse(null);
+                        }}>
+                            {isProcessing ? <Spinner size="sm" /> : 'Request Deletion'}
+                        </Button>
+                    </CardFooter>
+                </Modal>
+            )}
+        </div>
     );
 }
 
 export { PublicAttendanceView, AttendanceManagerView } from './CourseAttendanceView';
 
 // --- Recycle Bin View ---
-function RecycleBinView({ courses, onRestore, onPermanentDelete }) {
+function RecycleBinView({ courses, onRestore, onPermanentDelete, isProcessing }) {
     if (courses.length === 0) {
         return <EmptyState message="The recycle bin is empty." />;
     }
@@ -774,6 +695,7 @@ function RecycleBinView({ courses, onRestore, onPermanentDelete }) {
                                     variant="secondary" 
                                     className="flex items-center gap-1"
                                     onClick={() => onRestore(c)}
+                                    disabled={isProcessing}
                                 >
                                     <RefreshCw size={14} /> Restore
                                 </Button>
@@ -781,6 +703,7 @@ function RecycleBinView({ courses, onRestore, onPermanentDelete }) {
                                     variant="danger" 
                                     className="flex items-center gap-1"
                                     onClick={() => onPermanentDelete(c.id)}
+                                    disabled={isProcessing}
                                 >
                                     <X size={14} /> Delete Forever
                                 </Button>
@@ -794,7 +717,7 @@ function RecycleBinView({ courses, onRestore, onPermanentDelete }) {
 }
 
 // --- Federal Approvals View ---
-function CourseApprovalsView({ courses, onApproveCourse }) {
+function CourseApprovalsView({ courses, onApproveCourse, isProcessing }) {
     const pendingApprovalCourses = useMemo(() => courses.filter(c => c.approvalStatus === 'pending' && !c.deletionRequested && !c.inRecycleBin), [courses]);
 
     if (pendingApprovalCourses.length === 0) {
@@ -825,6 +748,7 @@ function CourseApprovalsView({ courses, onApproveCourse }) {
                                     variant="primary" 
                                     className="flex items-center gap-1 ml-auto"
                                     onClick={() => onApproveCourse(c.id)}
+                                    disabled={isProcessing}
                                 >
                                     <Check size={14} /> Approve Course
                                 </Button>
@@ -837,9 +761,8 @@ function CourseApprovalsView({ courses, onApproveCourse }) {
     );
 }
 
-
 // --- Course Administration View (Deletions Only Now) ---
-function CourseAdministrationView({ courses, onApproveDelete, onRejectDelete }) {
+function CourseAdministrationView({ courses, onApproveDelete, onRejectDelete, isProcessing }) {
     const pendingDeletionCourses = useMemo(() => courses.filter(c => c.deletionRequested === true && !c.inRecycleBin), [courses]);
 
     if (pendingDeletionCourses.length === 0) {
@@ -868,10 +791,10 @@ function CourseAdministrationView({ courses, onApproveDelete, onRejectDelete }) 
                             <td className="p-4 border">{c.coordinator || 'N/A'}</td>
                             <td className="p-4 border text-right">
                                 <div className="flex justify-end gap-2">
-                                    <Button variant="secondary" className="text-green-700 border-green-200 hover:bg-green-50 flex items-center gap-1" onClick={() => onRejectDelete(c)}>
+                                    <Button variant="secondary" className="text-green-700 border-green-200 hover:bg-green-50 flex items-center gap-1" onClick={() => onRejectDelete(c)} disabled={isProcessing}>
                                         <X size={14} /> Reject
                                     </Button>
-                                    <Button variant="danger" className="flex items-center gap-1" onClick={() => onApproveDelete(c.id)}>
+                                    <Button variant="danger" className="flex items-center gap-1" onClick={() => onApproveDelete(c.id)} disabled={isProcessing}>
                                         <Check size={14} /> Approve (Move to Bin)
                                     </Button>
                                 </div>
@@ -885,25 +808,21 @@ function CourseAdministrationView({ courses, onApproveDelete, onRejectDelete }) 
 }
 
 export function CourseManagementView({
-    allCourses, onOpen, onDelete, onOpenReport,
+    allCourses, onOpen, onOpenReport,
     onOpenTestForm,
     canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates, userLocalities,
     activeCoursesTab, setActiveCoursesTab, selectedCourse,
     participants,
     participantTests,
-    onAddParticipant, onEditParticipant, onDeleteParticipant,
-    onOpenParticipantReport, onImportParticipants, onAddFinalReport, onEditFinalReport,
-    selectedParticipantId, onSetSelectedParticipantId, onBulkMigrate, onBatchUpdate,
+    onOpenParticipantReport, onAddFinalReport, onEditFinalReport,
+    selectedParticipantId, onSetSelectedParticipantId, onBatchUpdate,
     loadingDetails,
     canManageCourse,
     canUseSuperUserAdvancedFeatures,
     canUseFederalManagerAdvancedFeatures,
     activeCourseType,
     setActiveCourseType,
-    onSaveParticipantTest,
-    onSaveParticipant, 
     facilitatorsList,
-    onSaveCourse, 
     onOpenAttendanceManager
 }) {
     const { 
@@ -916,9 +835,17 @@ export function CourseManagementView({
         fetchParticipants
     } = useDataCache();
 
+    // Get current user data for capturing "who edited" and "who created"
+    const { user } = useAuth();
+    const currentUserIdentifier = user?.displayName || user?.email || 'Unknown';
+
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [allHealthFacilities, setAllHealthFacilities] = useState([]);
     const [loadingFacilities, setLoadingFacilities] = useState(false);
+    
+    // UI Locking and Toast state
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
     useEffect(() => {
         fetchFederalCoordinators();
@@ -1122,7 +1049,7 @@ export function CourseManagementView({
     const handleOpenCourse = (id) => {
         onOpen(id);
         onSetSelectedParticipantId(null);
-        setActiveCoursesTab('participants'); // Shift into Course Specific View automatically
+        setActiveCoursesTab('participants'); 
     };
 
     const handleOpenTestForm = async (courseId) => {
@@ -1141,33 +1068,114 @@ export function CourseManagementView({
     const handleCancelCourseForm = () => { setCourseToEdit(null); setActiveCoursesTab('courses'); };
 
     const handleSaveCourseAndReturn = async (courseData) => {
-        if (onSaveCourse) await onSaveCourse(courseData); 
-        setActiveCoursesTab('courses'); 
-        setCourseToEdit(null);
+        setIsProcessing(true);
+        try {
+            await upsertCourse(courseData, currentUserIdentifier);
+            await fetchCourses(navigator.onLine);
+            setActiveCoursesTab('courses'); 
+            setCourseToEdit(null);
+            setToast({ show: true, message: 'Course saved successfully!', type: 'success' });
+        } catch (error) {
+            setToast({ show: true, message: `Failed to save course: ${error.message}`, type: 'error' });
+        } finally {
+            setIsProcessing(false);
+        }
     };
 
     const handleCourseDeleteAction = async (courseId, isRequest = false) => {
         const courseToUpdate = allCourses.find(c => c.id === courseId);
-        if (isRequest) {
-            if (courseToUpdate) {
-                await onSaveCourse({ ...courseToUpdate, deletionRequested: true });
-                alert("Deletion requested. Please wait for approval.");
+        if (!courseToUpdate) return;
+        
+        setIsProcessing(true);
+        try {
+            if (isRequest) {
+                await upsertCourse({ ...courseToUpdate, deletionRequested: true }, currentUserIdentifier);
+                setToast({ show: true, message: 'Deletion requested. Please wait for approval.', type: 'info' });
+            } else {
+                await upsertCourse({ ...courseToUpdate, deletionRequested: false, inRecycleBin: true }, currentUserIdentifier);
+                setToast({ show: true, message: 'Course moved to Recycle Bin.', type: 'success' });
             }
-        } else {
-            if (courseToUpdate) await onSaveCourse({ ...courseToUpdate, deletionRequested: false, inRecycleBin: true });
+            await fetchCourses(navigator.onLine);
+        } catch (error) {
+            setToast({ show: true, message: `Failed to process deletion: ${error.message}`, type: 'error' });
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const handlePermanentDelete = async (courseId) => { 
+        if (window.confirm("Are you sure? This will permanently delete the course and cannot be undone.")) {
+            setIsProcessing(true);
+            try {
+                await deleteCourse(courseId, currentUserIdentifier);
+                await fetchCourses(navigator.onLine);
+                setToast({ show: true, message: 'Course permanently deleted.', type: 'success' });
+            } catch (error) {
+                setToast({ show: true, message: `Deletion failed: ${error.message}`, type: 'error' });
+            } finally {
+                setIsProcessing(false);
+            }
         }
     };
 
     const handleApproveCourse = async (courseId) => {
         const courseToUpdate = allCourses.find(c => c.id === courseId);
         if (courseToUpdate) {
-            await onSaveCourse({ ...courseToUpdate, approvalStatus: 'approved' });
+            setIsProcessing(true);
+            try {
+                await upsertCourse({ ...courseToUpdate, approvalStatus: 'approved' }, currentUserIdentifier);
+                await fetchCourses(navigator.onLine);
+                setToast({ show: true, message: 'Course approved successfully!', type: 'success' });
+            } catch (error) {
+                setToast({ show: true, message: `Approval failed: ${error.message}`, type: 'error' });
+            } finally {
+                setIsProcessing(false);
+            }
         }
     };
 
-    const handleRejectDelete = async (course) => await onSaveCourse({ ...course, deletionRequested: false });
-    const handleRestoreCourse = async (course) => { if (window.confirm(`Are you sure you want to restore the course: ${course.course_type}?`)) await onSaveCourse({ ...course, inRecycleBin: false }); };
-    const handlePermanentDelete = async (courseId) => { if (window.confirm("Are you sure? This will permanently delete the course and cannot be undone.")) await onDelete(courseId); };
+    const handleRejectDelete = async (course) => {
+        setIsProcessing(true);
+        try {
+            await upsertCourse({ ...course, deletionRequested: false }, currentUserIdentifier);
+            await fetchCourses(navigator.onLine);
+            setToast({ show: true, message: 'Deletion request rejected.', type: 'success' });
+        } catch (error) {
+            setToast({ show: true, message: `Failed to reject deletion: ${error.message}`, type: 'error' });
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+    
+    const handleRestoreCourse = async (course) => { 
+        if (window.confirm(`Are you sure you want to restore the course: ${course.course_type}?`)) {
+            setIsProcessing(true);
+            try {
+                await upsertCourse({ ...course, inRecycleBin: false }, currentUserIdentifier); 
+                await fetchCourses(navigator.onLine);
+                setToast({ show: true, message: 'Course restored successfully!', type: 'success' });
+            } catch (error) {
+                setToast({ show: true, message: `Failed to restore course: ${error.message}`, type: 'error' });
+            } finally {
+                setIsProcessing(false);
+            }
+        }
+    };
+
+    const handleSaveParticipantTest = async (payload) => {
+        setIsProcessing(true);
+        try {
+            if (!payload.deleted) {
+                await upsertParticipantTest(payload);
+            }
+            if (onBatchUpdate) onBatchUpdate();
+            // Note: Toast is usually managed by the specific CourseTestForm internally as well
+        } catch (error) {
+            setToast({ show: true, message: `Failed to save test score: ${error.message}`, type: 'error' });
+        } finally {
+            setIsProcessing(false);
+        }
+    };
 
     // Group tabs logically to handle display visibility
     const globalTabs = ['courses', 'add-course', 'edit-course', 'dashboard', 'compiled-reports', 'administration', 'approvals', 'recycle-bin'];
@@ -1175,9 +1183,11 @@ export function CourseManagementView({
 
     return (
         <Card>
+            {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ show: false, message: '', type: '' })} />}
             <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-4">
                 <Button 
                     variant="tab" 
+                    disabled={isProcessing}
                     isActive={activeCoursesTab === 'courses' || activeCoursesTab === 'add-course' || activeCoursesTab === 'edit-course'} 
                     onClick={() => { 
                         setActiveCoursesTab('courses');
@@ -1190,11 +1200,11 @@ export function CourseManagementView({
                 {/* Global Management Tabs */}
                 {isGlobalView && (
                     <>
-                        <Button variant="tab" isActive={activeCoursesTab === 'dashboard'} onClick={() => { setActiveCoursesTab('dashboard'); onSetSelectedParticipantId(null); }}>Course Dashboard</Button>
-                        <Button variant="tab" isActive={activeCoursesTab === 'compiled-reports'} onClick={() => { setActiveCoursesTab('compiled-reports'); onSetSelectedParticipantId(null); }}>Compiled Reports</Button>
+                        <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'dashboard'} onClick={() => { setActiveCoursesTab('dashboard'); onSetSelectedParticipantId(null); }}>Course Dashboard</Button>
+                        <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'compiled-reports'} onClick={() => { setActiveCoursesTab('compiled-reports'); onSetSelectedParticipantId(null); }}>Compiled Reports</Button>
 
                         {canAccessAdminTab && (
-                            <Button variant="tab" isActive={activeCoursesTab === 'administration'} onClick={() => { setActiveCoursesTab('administration'); onSetSelectedParticipantId(null); }}>
+                            <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'administration'} onClick={() => { setActiveCoursesTab('administration'); onSetSelectedParticipantId(null); }}>
                                 Administration
                                  {allCourses.filter(c => c.deletionRequested && !c.inRecycleBin).length > 0 && (
                                      <span className="ml-2 bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded-full">
@@ -1205,7 +1215,7 @@ export function CourseManagementView({
                         )}
 
                         {canUseFederalManagerAdvancedFeatures && (
-                            <Button variant="tab" isActive={activeCoursesTab === 'approvals'} onClick={() => { setActiveCoursesTab('approvals'); onSetSelectedParticipantId(null); }}>
+                            <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'approvals'} onClick={() => { setActiveCoursesTab('approvals'); onSetSelectedParticipantId(null); }}>
                                 Approvals
                                  {allCourses.filter(c => c.approvalStatus === 'pending' && !c.inRecycleBin).length > 0 && (
                                      <span className="ml-2 bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full">
@@ -1216,7 +1226,7 @@ export function CourseManagementView({
                         )}
 
                         {canAccessRecycleBin && (
-                            <Button variant="tab" isActive={activeCoursesTab === 'recycle-bin'} onClick={() => { setActiveCoursesTab('recycle-bin'); onSetSelectedParticipantId(null); }}>
+                            <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'recycle-bin'} onClick={() => { setActiveCoursesTab('recycle-bin'); onSetSelectedParticipantId(null); }}>
                                 Recycle Bin
                                  {allCourses.filter(c => c.inRecycleBin).length > 0 && (
                                      <span className="ml-2 bg-gray-200 text-gray-800 text-xs px-2 py-0.5 rounded-full">{allCourses.filter(c => c.inRecycleBin).length}</span>
@@ -1229,11 +1239,11 @@ export function CourseManagementView({
                 {/* Course-Specific Tabs */}
                 {!isGlobalView && selectedCourse && (
                     <>
-                        <Button variant="tab" isActive={activeCoursesTab === 'participants'} onClick={() => { setActiveCoursesTab('participants'); onSetSelectedParticipantId(null); }}>Participants</Button>
-                        <Button variant="tab" isActive={activeCoursesTab === 'monitoring'} onClick={() => setActiveCoursesTab('monitoring')} disabled={!currentParticipant}>Monitoring</Button>
-                        <Button variant="tab" isActive={activeCoursesTab === 'reports'} onClick={() => setActiveCoursesTab('reports')}>Reports</Button>
+                        <Button disabled={isProcessing} variant="tab" isActive={['participants', 'participant-form', 'participant-migration'].includes(activeCoursesTab)} onClick={() => { setActiveCoursesTab('participants'); onSetSelectedParticipantId(null); }}>Participants</Button>
+                        <Button disabled={isProcessing || !currentParticipant} variant="tab" isActive={activeCoursesTab === 'monitoring'} onClick={() => setActiveCoursesTab('monitoring')}>Monitoring</Button>
+                        <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'reports'} onClick={() => setActiveCoursesTab('reports')}>Reports</Button>
                         {(['ICCM', 'EENC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management'].includes(selectedCourse.course_type)) && (
-                            <Button variant="tab" isActive={activeCoursesTab === 'enter-test-scores'} onClick={() => { setActiveCoursesTab('enter-test-scores'); }}>Test Scores</Button>
+                            <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'enter-test-scores'} onClick={() => { setActiveCoursesTab('enter-test-scores'); }}>Test Scores</Button>
                         )}
                     </>
                 )}
@@ -1248,19 +1258,19 @@ export function CourseManagementView({
                             <div>
                                 <div className="mb-4 flex flex-wrap justify-between items-center gap-2">
                                     <div className="flex gap-2">
-                                        {canManageCourse && <Button onClick={handleOpenAddForm} className="bg-sky-600 text-white hover:bg-sky-700">Add New Course</Button>}
-                                        <Button variant="secondary" onClick={handleRefresh} disabled={isRefreshing}>{isRefreshing ? <Spinner size="sm" /> : <><RefreshCw size={14} className="mr-1"/> Refresh Data</>}</Button>
+                                        {canManageCourse && <Button disabled={isProcessing} onClick={handleOpenAddForm} className="bg-sky-600 text-white hover:bg-sky-700">Add New Course</Button>}
+                                        <Button variant="secondary" onClick={handleRefresh} disabled={isRefreshing || isProcessing}>{isRefreshing ? <Spinner size="sm" /> : <><RefreshCw size={14} className="mr-1"/> Refresh Data</>}</Button>
                                     </div>
-                                    <Button variant="secondary" onClick={() => setActiveCourseType(null)}>Change Course Package</Button>
+                                    <Button disabled={isProcessing} variant="secondary" onClick={() => setActiveCourseType(null)}>Change Course Package</Button>
                                 </div>
                                 
                                 <Card className="p-4 mb-4 bg-gray-50">
                                     <h4 className="text-lg font-semibold mb-3">Filter Courses</h4>
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                        <FormGroup label="Filter by State"><Select value={filterState} onChange={(e) => setFilterState(e.target.value)}>{filterStateOptions.map(s => <option key={s} value={s}>{s}</option>)}</Select></FormGroup>
-                                        <FormGroup label="Filter by Locality"><Select value={filterLocality} onChange={(e) => setFilterLocality(e.target.value)} disabled={filterLocalityOptions.length <= 1}>{filterLocalityOptions.map(l => <option key={l} value={l}>{l}</option>)}</Select></FormGroup>
-                                        <FormGroup label="Filter by Sub-course"><Select value={filterSubCourse} onChange={(e) => setFilterSubCourse(e.target.value)} disabled={filterSubCourseOptions.length <= 1}>{filterSubCourseOptions.map(s => <option key={s} value={s}>{s}</option>)}</Select></FormGroup>
-                                        <FormGroup label="Filter by Project"><Select value={filterProject} onChange={(e) => setFilterProject(e.target.value)} disabled={filterProjectOptions.length <= 1}>{filterProjectOptions.map(p => <option key={p} value={p}>{p}</option>)}</Select></FormGroup>
+                                        <FormGroup label="Filter by State"><Select disabled={isProcessing} value={filterState} onChange={(e) => setFilterState(e.target.value)}>{filterStateOptions.map(s => <option key={s} value={s}>{s}</option>)}</Select></FormGroup>
+                                        <FormGroup label="Filter by Locality"><Select disabled={isProcessing || filterLocalityOptions.length <= 1} value={filterLocality} onChange={(e) => setFilterLocality(e.target.value)}>{filterLocalityOptions.map(l => <option key={l} value={l}>{l}</option>)}</Select></FormGroup>
+                                        <FormGroup label="Filter by Sub-course"><Select disabled={isProcessing || filterSubCourseOptions.length <= 1} value={filterSubCourse} onChange={(e) => setFilterSubCourse(e.target.value)}>{filterSubCourseOptions.map(s => <option key={s} value={s}>{s}</option>)}</Select></FormGroup>
+                                        <FormGroup label="Filter by Project"><Select disabled={isProcessing || filterProjectOptions.length <= 1} value={filterProject} onChange={(e) => setFilterProject(e.target.value)}>{filterProjectOptions.map(p => <option key={p} value={p}>{p}</option>)}</Select></FormGroup>
                                     </div>
                                 </Card>
                                 
@@ -1269,6 +1279,7 @@ export function CourseManagementView({
                                     onOpenReport={onOpenReport} onOpenTestForm={handleOpenTestForm} onOpenAttendanceManager={onOpenAttendanceManager} 
                                     canEditDeleteActiveCourse={canEditDeleteActiveCourse} canEditDeleteInactiveCourse={canEditDeleteInactiveCourse}
                                     userStates={userStates} userLocalities={userLocalities} onAddFinalReport={onAddFinalReport} canManageFinalReport={canUseFederalManagerAdvancedFeatures}
+                                    isProcessing={isProcessing}
                                 />
                             </div>
                         )}
@@ -1318,6 +1329,7 @@ export function CourseManagementView({
                         courses={allCourses} 
                         onApproveDelete={(id) => handleCourseDeleteAction(id, false)} 
                         onRejectDelete={handleRejectDelete} 
+                        isProcessing={isProcessing}
                     />
                 )}
 
@@ -1325,10 +1337,11 @@ export function CourseManagementView({
                     <CourseApprovalsView 
                         courses={allCourses} 
                         onApproveCourse={handleApproveCourse}
+                        isProcessing={isProcessing}
                     />
                 )}
 
-                {activeCoursesTab === 'recycle-bin' && <RecycleBinView courses={allCourses.filter(c => c.inRecycleBin)} onRestore={handleRestoreCourse} onPermanentDelete={handlePermanentDelete} />}
+                {activeCoursesTab === 'recycle-bin' && <RecycleBinView courses={allCourses.filter(c => c.inRecycleBin)} onRestore={handleRestoreCourse} onPermanentDelete={handlePermanentDelete} isProcessing={isProcessing} />}
                 
                 {(activeCoursesTab === 'add-course' || activeCoursesTab === 'edit-course') && (
                     <CourseForm courseType={activeCourseType} initialData={courseToEdit} onCancel={handleCancelCourseForm} onSave={handleSaveCourseAndReturn} facilitatorsList={facilitatorsList} fundersList={funders || []} federalCoordinatorsList={federalCoordinators || []} stateCoordinatorsList={stateCoordinators || []} localityCoordinatorsList={localityCoordinators || []} userStates={userStates} userLocalities={userLocalities} />
@@ -1336,26 +1349,45 @@ export function CourseManagementView({
                 
                 {loadingDetails && (!globalTabs.includes(activeCoursesTab)) ? <div className="flex justify-center p-8"><Spinner /></div> : (
                     <>
-                        {activeCoursesTab === 'participants' && selectedCourse && (
+                        {/* DELEGATING ALL PARTICIPANT LOGIC TO ParticipantsView */}
+                        {['participants', 'participant-form', 'participant-migration'].includes(activeCoursesTab) && selectedCourse && (
                             <ParticipantsView
-                                course={selectedCourse} participants={participants} onAdd={onAddParticipant} onOpen={(id) => { onSetSelectedParticipantId(id); setActiveCoursesTab('monitoring'); }}
-                                onEdit={onEditParticipant} onDelete={onDeleteParticipant} onOpenReport={onOpenParticipantReport} onImport={onImportParticipants}
-                                onBatchUpdate={onBatchUpdate} onBulkMigrate={onBulkMigrate} onOpenTestFormForParticipant={handleOpenTestFormForParticipant}
-                                isCourseActive={isCourseActive} canAddParticipant={canManageCourse} canImportParticipants={canUseSuperUserAdvancedFeatures}
-                                canCleanParticipantData={canUseSuperUserAdvancedFeatures} canBulkChangeParticipants={canUseSuperUserAdvancedFeatures}
-                                canBulkMigrateParticipants={canUseSuperUserAdvancedFeatures} canAddMonitoring={(canManageCourse && isCourseActive) || canUseFederalManagerAdvancedFeatures || canEditDeleteInactiveCourse}
-                                canEditDeleteParticipantActiveCourse={canManageCourse} canEditDeleteParticipantInactiveCourse={canEditDeleteInactiveCourse}
+                                course={selectedCourse} 
+                                participants={participants} 
+                                onOpen={(id) => { onSetSelectedParticipantId(id); setActiveCoursesTab('monitoring'); }}
+                                onOpenReport={onOpenParticipantReport} 
+                                onBatchUpdate={onBatchUpdate} 
+                                onOpenTestFormForParticipant={handleOpenTestFormForParticipant}
+                                isCourseActive={isCourseActive} 
+                                canAddParticipant={canManageCourse} 
+                                canImportParticipants={canUseSuperUserAdvancedFeatures}
+                                canCleanParticipantData={canUseSuperUserAdvancedFeatures} 
+                                canBulkChangeParticipants={canUseSuperUserAdvancedFeatures}
+                                canBulkMigrateParticipants={canUseSuperUserAdvancedFeatures} 
+                                canAddMonitoring={(canManageCourse && isCourseActive) || canUseFederalManagerAdvancedFeatures || canEditDeleteInactiveCourse}
+                                canEditDeleteParticipantActiveCourse={canManageCourse} 
+                                canEditDeleteParticipantInactiveCourse={canEditDeleteInactiveCourse}
                             />
                         )}
+                        
                         {activeCoursesTab === 'participants' && !selectedCourse && activeCoursesTab !== 'courses' && <EmptyState message="Please select a course from the 'Courses' tab to view participants." />}
                         {activeCoursesTab === 'monitoring' && selectedCourse && currentParticipant && <Suspense fallback={<Spinner />}><ObservationView course={selectedCourse} participant={currentParticipant} participants={participants} onChangeParticipant={(id) => onSetSelectedParticipantId(id)} /></Suspense>}
                         {activeCoursesTab === 'monitoring' && selectedCourse && !currentParticipant && activeCoursesTab !== 'courses' && <EmptyState message="Please select a participant from the 'Participants' tab to begin monitoring." />}
                         {activeCoursesTab === 'reports' && selectedCourse && <Suspense fallback={<Spinner />}><ReportsView course={selectedCourse} participants={participants} /></Suspense>}
+                        
                         {activeCoursesTab === 'enter-test-scores' && selectedCourse && (
                             <CourseTestForm
                                 course={selectedCourse} participants={participants} participantTests={participantTests} initialParticipantId={selectedParticipantId}
-                                onSaveTest={onSaveParticipantTest} onCancel={() => setActiveCoursesTab(selectedParticipantId ? 'participants' : 'courses')}
-                                onSave={() => { setActiveCoursesTab('participants'); onBatchUpdate(); }} canManageTests={canManageCourse || canUseFederalManagerAdvancedFeatures} onSaveParticipant={onSaveParticipant}
+                                onSaveTest={handleSaveParticipantTest} 
+                                onCancel={() => setActiveCoursesTab(selectedParticipantId ? 'participants' : 'courses')}
+                                onSave={() => { setActiveCoursesTab('participants'); onBatchUpdate(); }} 
+                                canManageTests={canManageCourse || canUseFederalManagerAdvancedFeatures} 
+                                // Test form needs to save new participants if created during test score entry
+                                onSaveParticipant={async (participantData, facilityUpdateData) => {
+                                    const savedParticipant = await saveParticipantAndSubmitFacilityUpdate(participantData, facilityUpdateData, currentUserIdentifier);
+                                    if (facilityUpdateData) setToast({ show: true, message: 'Facility update submitted for approval.', type: 'info' });
+                                    return savedParticipant;
+                                }}
                             />
                         )}
                     </>
@@ -1365,7 +1397,7 @@ export function CourseManagementView({
     );
 }
 
-const SearchableSelect = ({ label, options, value, onChange, onOpenNewForm, placeholder }) => {
+const SearchableSelect = ({ label, options, value, onChange, onOpenNewForm, placeholder, disabled }) => {
      const [isOpen, setIsOpen] = useState(false);
     const [inputValue, setInputValue] = useState(value || '');
     const ref = useRef(null);
@@ -1419,8 +1451,9 @@ const SearchableSelect = ({ label, options, value, onChange, onOpenNewForm, plac
                 }}
                 onFocus={() => setIsOpen(true)}
                 placeholder={placeholder}
+                disabled={disabled}
             />
-            {isOpen && (
+            {isOpen && !disabled && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
                     {onOpenNewForm && (
                         <div
@@ -1452,22 +1485,20 @@ const SearchableSelect = ({ label, options, value, onChange, onOpenNewForm, plac
 export function CourseForm({ 
     courseType, initialData, facilitatorsList, fundersList, onCancel, onSave, 
     federalCoordinatorsList = [], stateCoordinatorsList = [], localityCoordinatorsList = [],
-    userStates, userLocalities // Access to the user's allowed states and localities
+    userStates, userLocalities 
 }) {
-    // Determine allowed states based on userStates prop
     const availableStates = useMemo(() => {
         const allStates = Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(b.ar));
-        // If userStates is null or empty, assume they have access to all (like a super user)
         if (!userStates || userStates.length === 0) {
             return allStates;
         }
         return allStates.filter(s => userStates.includes(s));
     }, [userStates]);
 
-    // If initialData exists, use it. Otherwise, if the user only has exactly 1 state, auto-select it.
+    const [isSaving, setIsSaving] = useState(false);
+
     const [state, setState] = useState(initialData?.state || (userStates && userStates.length === 1 ? userStates[0] : ''));
     
-    // Determine allowed localities based on the selected state AND the userLocalities prop
     const availableLocalities = useMemo(() => {
         if (!state) return [];
         const allLocalitiesForState = (STATE_LOCALITIES[state]?.localities || []).sort((a,b) => a.ar.localeCompare(b.ar));
@@ -1476,11 +1507,9 @@ export function CourseForm({
             return allLocalitiesForState;
         }
         
-        // Filter the state's localities by what the user is allowed to access
         return allLocalitiesForState.filter(l => userLocalities.includes(l.en) || userLocalities.includes(l.ar));
     }, [state, userLocalities]);
 
-    // Set initial locality. If availableLocalities is exactly 1, auto select it.
     const [locality, setLocality] = useState(initialData?.locality || (userLocalities && userLocalities.length === 1 ? userLocalities[0] : ''));
     
     const [hall, setHall] = useState(initialData?.hall || '');
@@ -1538,10 +1567,8 @@ export function CourseForm({
     const isEtat = courseType === 'ETAT';
     const isProgramManagement = courseType === 'Program Management';
 
-    // DEFAULT TO TWO GROUPS
     const [groups, setGroups] = useState(initialData?.facilitatorAssignments?.length > 0 ? [...new Set(initialData.facilitatorAssignments.map(a => a.group))] : ['Group A', 'Group B']);
 
-    // DEFAULT TO TWO FACILITATORS PER GROUP
     const [facilitatorGroups, setFacilitatorGroups] = useState(() => {
         const defaultSubcourse = isIccm ? ICCM_SUBCOURSE_TYPES[0] : '';
         if (initialData?.facilitatorAssignments?.length > 0) {
@@ -1684,7 +1711,7 @@ export function CourseForm({
         });
     };
 
-    const submit = () => {
+    const submit = async () => {
         const allFacilitatorAssignments = groups.reduce((acc, group) => {
             const groupAssignments = facilitatorGroups[group].map(assignment => ({
                 ...assignment,
@@ -1741,7 +1768,13 @@ export function CourseForm({
             payload.clinical_instructor_imci_sub_type = isIccm ? ICCM_SUBCOURSE_TYPES[0] : clinicalImciSubType;
         }
 
-        onSave(payload);
+        setIsSaving(true);
+        try {
+            await onSave(payload);
+        } catch(e) {
+            setError(e.message || "حدث خطأ أثناء حفظ الدورة.");
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -1750,36 +1783,35 @@ export function CourseForm({
                 <PageHeader title={initialData ? 'تعديل دورة' : 'إضافة دورة'} subtitle={`الحزمة: ${courseType || 'غير محدد'}`} className="mb-6" />
                 {error && <div className="p-3 mb-6 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
                 
-                {/* Section 1: Course Information */}
                 <div className="mb-8">
                     <h3 className="text-lg font-bold bg-sky-100 text-sky-800 p-3 rounded-md mb-4 border-r-4 border-sky-500">معلومات الدورة الأساسية</h3>
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <FormGroup label="الولاية">
-                            <Select value={state} onChange={(e) => { setState(e.target.value); setLocality(''); }}>
+                            <Select disabled={isSaving} value={state} onChange={(e) => { setState(e.target.value); setLocality(''); }}>
                                 <option value="">— اختر الولاية —</option>
                                 {availableStates.map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar}</option>)}
                             </Select>
                         </FormGroup>
                         <FormGroup label="المحلية">
-                            <Select value={locality} onChange={(e) => setLocality(e.target.value)} disabled={!state}>
+                            <Select disabled={isSaving || !state} value={locality} onChange={(e) => setLocality(e.target.value)}>
                                 <option value="">— اختر المحلية —</option>
                                 {availableLocalities.map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
                             </Select>
                         </FormGroup>
-                        <FormGroup label="قاعة الدورة"><Input value={hall} onChange={(e) => setHall(e.target.value)} /></FormGroup>
-                        <FormGroup label="تاريخ بداية الدورة"><Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></FormGroup>
-                        <FormGroup label="مدة الدورة بالأيام"><Input type="number" value={courseDuration} onChange={(e) => setCourseDuration(Number(e.target.value))} /></FormGroup>
-                        <FormGroup label="عدد المشاركين"><Input type="number" value={participantsCount} onChange={(e) => setParticipantsCount(Number(e.target.value))} /></FormGroup>
-                        <FormGroup label="ميزانية الدورة بالدولار الأمريكي"><Input type="number" value={courseBudget} onChange={(e) => setCourseBudget(Number(e.target.value))} /></FormGroup>
+                        <FormGroup label="قاعة الدورة"><Input disabled={isSaving} value={hall} onChange={(e) => setHall(e.target.value)} /></FormGroup>
+                        <FormGroup label="تاريخ بداية الدورة"><Input disabled={isSaving} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></FormGroup>
+                        <FormGroup label="مدة الدورة بالأيام"><Input disabled={isSaving} type="number" value={courseDuration} onChange={(e) => setCourseDuration(Number(e.target.value))} /></FormGroup>
+                        <FormGroup label="عدد المشاركين"><Input disabled={isSaving} type="number" value={participantsCount} onChange={(e) => setParticipantsCount(Number(e.target.value))} /></FormGroup>
+                        <FormGroup label="ميزانية الدورة بالدولار الأمريكي"><Input disabled={isSaving} type="number" value={courseBudget} onChange={(e) => setCourseBudget(Number(e.target.value))} /></FormGroup>
                     </div>
                 </div>
 
-                {/* Section 2: Coordination & Funding */}
                 <div className="mb-8">
                     <h3 className="text-lg font-bold bg-green-100 text-green-800 p-3 rounded-md mb-4 border-r-4 border-green-500">التنسيق والتمويل</h3>
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <FormGroup label="المنسق الاتحادي للدورة">
                             <SearchableSelect
+                                disabled={isSaving}
                                 value={coordinator}
                                 onChange={setCoordinator}
                                 options={federalCoordinatorOptions}
@@ -1789,6 +1821,7 @@ export function CourseForm({
                         </FormGroup>
                         <FormGroup label="المنسق الولائي للدورة">
                             <SearchableSelect
+                                disabled={isSaving}
                                 value={stateCoordinator}
                                 onChange={setStateCoordinator}
                                 options={stateCoordinatorOptions}
@@ -1798,6 +1831,7 @@ export function CourseForm({
                         </FormGroup>
                         <FormGroup label="منسق الدورة بالمحلية">
                             <SearchableSelect
+                                disabled={isSaving}
                                 value={localityCoordinator}
                                 onChange={setLocalityCoordinator}
                                 options={localityCoordinatorOptions}
@@ -1807,6 +1841,7 @@ export function CourseForm({
                         </FormGroup>
                         <FormGroup label="بتمويل من">
                             <SearchableSelect
+                                disabled={isSaving}
                                 value={supporter}
                                 onChange={setSupporter}
                                 options={funderOptions}
@@ -1816,6 +1851,7 @@ export function CourseForm({
                         </FormGroup>
                         <FormGroup label="تنفيذ">
                             <SearchableSelect
+                                disabled={isSaving}
                                 value={implementedBy}
                                 onChange={setImplementedBy}
                                 options={funderOptions}
@@ -1825,6 +1861,7 @@ export function CourseForm({
                         </FormGroup>
                         <FormGroup label="مشروع الدورة">
                              <SearchableSelect
+                                disabled={isSaving}
                                 value={courseProject}
                                 onChange={setCourseProject}
                                 options={projectOptions}
@@ -1835,15 +1872,14 @@ export function CourseForm({
                     </div>
                 </div>
 
-                {/* Section 3: Leadership Assignments */}
                 {!isInfectionControl && (
                     <div className="mb-8">
                         <h3 className="text-lg font-bold bg-amber-100 text-amber-800 p-3 rounded-md mb-4 border-r-4 border-amber-500">مهام القيادة</h3>
                         <div className="flex flex-col space-y-4 p-5 border border-gray-200 shadow-sm rounded-lg bg-white">
-                            {/* Director Row */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-end">
                                 <FormGroup label="مدير الدورة">
                                     <SearchableSelect
+                                        disabled={isSaving}
                                         value={director}
                                         onChange={setDirector}
                                         options={directorOptions}
@@ -1853,18 +1889,18 @@ export function CourseForm({
                                 </FormGroup>
                                 {isImnci && (
                                     <FormGroup label="اسم الورشة الفرعية">
-                                        <Select value={directorImciSubType} onChange={(e) => setDirectorImciSubType(e.target.value)} className="w-full">
+                                        <Select disabled={isSaving} value={directorImciSubType} onChange={(e) => setDirectorImciSubType(e.target.value)} className="w-full">
                                             {IMNCI_SUBCOURSE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
                                         </Select>
                                     </FormGroup>
                                 )}
                             </div>
 
-                            {/* Clinical Instructor Row */}
                             {(isImnci || isIccm) && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-end pt-5 border-t border-gray-100">
                                     <FormGroup label="المدرب السريري - اختياري">
                                         <SearchableSelect
+                                            disabled={isSaving}
                                             value={clinical}
                                             onChange={setClinical}
                                             options={clinicalInstructorOptions}
@@ -1874,7 +1910,7 @@ export function CourseForm({
                                     </FormGroup>
                                     {isImnci && (
                                         <FormGroup label="اسم الورشة الفرعية">
-                                            <Select value={clinicalImciSubType} onChange={(e) => setClinicalImciSubType(e.target.value)} className="w-full">
+                                            <Select disabled={isSaving} value={clinicalImciSubType} onChange={(e) => setClinicalImciSubType(e.target.value)} className="w-full">
                                                 {IMNCI_SUBCOURSE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
                                             </Select>
                                         </FormGroup>
@@ -1885,7 +1921,6 @@ export function CourseForm({
                     </div>
                 )}
 
-                {/* Section 4: Facilitators */}
                 <div className="mb-8">
                     <h3 className="text-lg font-bold bg-purple-100 text-purple-800 p-3 rounded-md mb-4 border-r-4 border-purple-500">مهام الميسرين / المدربين</h3>
                     <div className="space-y-6">
@@ -1894,9 +1929,9 @@ export function CourseForm({
                                 <h4 className="text-md font-bold mb-5 text-indigo-700 bg-indigo-50 inline-block px-4 py-1.5 rounded-lg border border-indigo-200">{groupName}</h4>
                                 {facilitatorGroups[groupName]?.map((assignment, index) => (
                                     <div key={index} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-4 items-end pb-4 border-b border-gray-50 last:border-0">
-                                        {/* NAME FIRST */}
                                         <FormGroup label="اسم الميسر" className={isIccm ? "lg:col-span-2" : ""}>
                                             <SearchableSelect
+                                                disabled={isSaving}
                                                 value={assignment.name}
                                                 onChange={(value) => updateFacilitatorAssignment(groupName, index, 'name', value)}
                                                 options={facilitatorOptions}
@@ -1904,10 +1939,10 @@ export function CourseForm({
                                                 label="اسم الميسر"
                                             />
                                         </FormGroup>
-                                        {/* SUBCOURSE SECOND */}
                                         {!isIccm && (
                                             <FormGroup label="اسم الورشة الفرعية">
                                                 <Select
+                                                    disabled={isSaving}
                                                     value={assignment.imci_sub_type || ''}
                                                     onChange={(e) => updateFacilitatorAssignment(groupName, index, 'imci_sub_type', e.target.value)}
                                                     className="w-full"
@@ -1927,28 +1962,29 @@ export function CourseForm({
                                                 </Select>
                                             </FormGroup>
                                         )}
-                                        {/* ACTION BUTTON */}
                                         <div className="flex items-end pb-1">
-                                            <Button type="button" variant="danger" onClick={() => removeFacilitatorFromGroup(groupName, index)} disabled={facilitatorGroups[groupName]?.length <= 1}>إزالة</Button>
+                                            <Button type="button" variant="danger" disabled={isSaving || facilitatorGroups[groupName]?.length <= 1} onClick={() => removeFacilitatorFromGroup(groupName, index)}>إزالة</Button>
                                         </div>
                                     </div>
                                 ))}
                                 <div className="flex justify-end mt-2 pt-4">
-                                    <Button type="button" variant="secondary" onClick={() => addFacilitatorToGroup(groupName)} className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200">إضافة ميسر آخر لهذه المجموعة</Button>
+                                    <Button type="button" variant="secondary" disabled={isSaving} onClick={() => addFacilitatorToGroup(groupName)} className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200">إضافة ميسر آخر لهذه المجموعة</Button>
                                 </div>
                             </div>
                         ))}
                     </div>
                     {groups.length < COURSE_GROUPS.length && (
                         <div className="flex justify-start mt-4">
-                            <Button type="button" variant="secondary" onClick={addGroup} className="font-bold border-dashed border-2">إضافة مجموعة أخرى</Button>
+                            <Button type="button" variant="secondary" disabled={isSaving} onClick={addGroup} className="font-bold border-dashed border-2">إضافة مجموعة أخرى</Button>
                         </div>
                     )}
                 </div>
 
                 <div className="flex gap-2 justify-end mt-8 border-t pt-6">
-                    <Button variant="secondary" onClick={onCancel}>إلغاء</Button>
-                    <Button onClick={submit}>حفظ الدورة</Button>
+                    <Button variant="secondary" onClick={onCancel} disabled={isSaving}>إلغاء</Button>
+                    <Button onClick={submit} disabled={isSaving}>
+                        {isSaving ? <Spinner size="sm" /> : 'حفظ الدورة'}
+                    </Button>
                 </div>
             </div>
         </Card>

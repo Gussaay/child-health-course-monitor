@@ -2,7 +2,6 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import * as XLSX from 'xlsx'; 
 import jsPDF from "jspdf"; 
-import { createRoot } from 'react-dom/client'; 
 
 // --- Icons ---
 import { Mail, Lock, RefreshCw, Search, Printer, ArrowLeft, Save } from 'lucide-react'; 
@@ -21,9 +20,12 @@ import {
     importParticipants,
     bulkMigrateFromMappings,
     getHealthFacilityById,
-    queueCertificateEmail
+    queueCertificateEmail,
+    saveParticipantAndSubmitFacilityUpdate,
+    deleteParticipant
 } from '../data.js';
 import { useDataCache } from '../DataContext';
+import { useAuth } from '../hooks/useAuth'; 
 
 // --- Import Certificate Generators ---
 import { generateCertificatePdf, generateAllCertificatesPdf, generateBlankCertificatePdf } from './CertificateGenerator';
@@ -33,7 +35,6 @@ import { generateCertificatePdf, generateAllCertificatesPdf, generateBlankCertif
 // ===== 1. CUSTOM UI COMPONENTS ======================================
 // ====================================================================
 
-// --- Multi-Select Dropdown Component for Filters ---
 const MultiSelectDropdown = ({ options, selected, onChange, label, placeholder }) => {
     const [isOpen, setIsOpen] = useState(false);
     const ref = useRef(null);
@@ -103,7 +104,6 @@ const MultiSelectDropdown = ({ options, selected, onChange, label, placeholder }
 // ===== 2. MODAL COMPONENTS (Nested) =================================
 // ====================================================================
 
-// --- Email Certificate Modal ---
 const EmailCertificateModal = ({ isOpen, onClose, participants = [], isBulk = false, setToast }) => {
     const [language, setLanguage] = useState('en');
     const [isSending, setIsSending] = useState(false);
@@ -171,7 +171,7 @@ const EmailCertificateModal = ({ isOpen, onClose, participants = [], isBulk = fa
                         )}
 
                         <FormGroup label="Select Certificate Language">
-                            <Select value={language} onChange={(e) => setLanguage(e.target.value)}>
+                            <Select value={language} onChange={(e) => setLanguage(e.target.value)} disabled={isSending}>
                                 <option value="en">English</option>
                                 <option value="ar">Arabic (عربي)</option>
                             </Select>
@@ -194,7 +194,7 @@ const EmailCertificateModal = ({ isOpen, onClose, participants = [], isBulk = fa
                 <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
                     <Button variant="secondary" onClick={onClose} disabled={isSending}>Close</Button>
                     {!isSending && progress.current === 0 && (
-                        <Button onClick={handleSend} variant="primary">
+                        <Button onClick={handleSend} variant="primary" disabled={isSending}>
                             {isBulk ? "Send All Emails" : "Send Email"}
                         </Button>
                     )}
@@ -204,7 +204,6 @@ const EmailCertificateModal = ({ isOpen, onClose, participants = [], isBulk = fa
     );
 };
 
-// --- Share Course Page Modal ---
 const ShareCoursePageModal = ({ isOpen, onClose, courseId, courseName }) => {
     const [link, setLink] = useState('');
     const [copied, setCopied] = useState(false);
@@ -247,7 +246,6 @@ const ShareCoursePageModal = ({ isOpen, onClose, courseId, courseName }) => {
     );
 };
 
-// --- Share Certificate Modal ---
 const ShareCertificateModal = ({ isOpen, onClose, participantName, participantId }) => {
     const [language, setLanguage] = useState('en');
     const [generatedLink, setGeneratedLink] = useState('');
@@ -307,7 +305,6 @@ const ShareCertificateModal = ({ isOpen, onClose, participantName, participantId
     );
 };
 
-// --- Reusable Searchable Select Component (Used in Migration View) ---
 const SearchableSelect = ({ options, value, onChange, placeholder, disabled }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [inputValue, setInputValue] = useState('');
@@ -383,8 +380,7 @@ const SearchableSelect = ({ options, value, onChange, placeholder, disabled }) =
     );
 };
 
-// --- New Participant Popup Form ---
-const NewParticipantForm = ({ initialName, jobTitleOptions, onCancel, onSave }) => {
+const NewParticipantForm = ({ initialName, jobTitleOptions, onCancel, onSave, isSaving }) => {
     const [name, setName] = useState(initialName || '');
     const [phone, setPhone] = useState('');
 
@@ -407,17 +403,17 @@ const NewParticipantForm = ({ initialName, jobTitleOptions, onCancel, onSave }) 
     };
 
     return (
-        <Modal isOpen={true} onClose={onCancel} title="Add New Participant Details">
+        <Modal isOpen={true} onClose={isSaving ? null : onCancel} title="Add New Participant Details">
             <Card>
                 <div className="p-6">
                     <p className="text-sm text-gray-600 mb-4">This person was not found in the facility's staff list. Please provide their details.</p>
                     {error && <div className="p-3 my-4 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
                     <div className="space-y-4 pt-6">
                         <FormGroup label="Participant Name">
-                            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full Name" />
+                            <Input disabled={isSaving} value={name} onChange={(e) => setName(e.target.value)} placeholder="Full Name" />
                         </FormGroup>
                         <FormGroup label="Job Title">
-                            <Select value={job} onChange={(e) => setJob(e.target.value)}>
+                            <Select disabled={isSaving} value={job} onChange={(e) => setJob(e.target.value)}>
                                 <option value="">— Select Job —</option>
                                 {jobTitleOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 <option value="Other">Other</option>
@@ -425,16 +421,18 @@ const NewParticipantForm = ({ initialName, jobTitleOptions, onCancel, onSave }) 
                         </FormGroup>
                         {job === 'Other' && (
                             <FormGroup label="Specify Job Title">
-                                <Input value={otherJobTitle} onChange={(e) => setOtherJobTitle(e.target.value)} placeholder="Please specify" />
+                                <Input disabled={isSaving} value={otherJobTitle} onChange={(e) => setOtherJobTitle(e.target.value)} placeholder="Please specify" />
                             </FormGroup>
                         )}
                         <FormGroup label="Phone Number">
-                            <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone Number" />
+                            <Input disabled={isSaving} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone Number" />
                         </FormGroup>
                     </div>
                     <div className="flex gap-2 justify-end mt-6 border-t pt-6">
-                        <Button variant="secondary" onClick={onCancel}>Cancel</Button>
-                        <Button onClick={handleSave}>Continue</Button>
+                        <Button variant="secondary" onClick={onCancel} disabled={isSaving}>Cancel</Button>
+                        <Button onClick={handleSave} disabled={isSaving}>
+                            {isSaving ? <Spinner size="sm" /> : 'Continue'}
+                        </Button>
                     </div>
                 </div>
             </Card>
@@ -442,8 +440,7 @@ const NewParticipantForm = ({ initialName, jobTitleOptions, onCancel, onSave }) 
     );
 };
 
-// --- Participant Data Cleanup Modal ---
-const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, courseType }) => {
+const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, courseType, setToast }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
     const [selectedFieldKey, setSelectedFieldKey] = useState('');
@@ -602,11 +599,13 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, co
 
         try {
             await onSave(participantsToUpdate, facilitiesToUpsert);
+            setToast({ show: true, message: 'Data cleaned successfully!', type: 'success' });
+            onClose();
         } catch (error) {
             console.error("Failed to update participants:", error);
+            setToast({ show: true, message: `Failed to clean data: ${error.message}`, type: 'error' });
         } finally {
             setIsUpdating(false);
-            onClose();
         }
     };
 
@@ -616,7 +615,7 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, co
                 This tool helps standardize data for all participants in the current course. Select a field to find and correct non-standard entries.
             </p>
             <FormGroup label="Select a data field to clean">
-                <Select value={selectedFieldKey} onChange={(e) => setSelectedFieldKey(e.target.value)}>
+                <Select value={selectedFieldKey} onChange={(e) => setSelectedFieldKey(e.target.value)} disabled={isUpdating}>
                     <option value="">-- Choose field --</option>
                     {Object.entries(CLEANABLE_FIELDS_CONFIG).map(([key, config]) => (
                         <option key={key} value={key}>{config.label}</option>
@@ -647,7 +646,7 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, co
                                     <span className="bg-yellow-50 text-yellow-800 p-2 rounded text-sm truncate" title={String(value)}>
                                         Current: "{String(value)}"
                                     </span>
-                                    <Select value={mappings[String(value)] || ''} onChange={(e) => handleMappingChange(String(value), e.target.value)}>
+                                    <Select disabled={isUpdating} value={mappings[String(value)] || ''} onChange={(e) => handleMappingChange(String(value), e.target.value)}>
                                         <option value="">-- Map to standard value --</option>
                                         {config.standardValues.map(opt => <option key={opt} value={opt}>{config.getOptionLabel ? config.getOptionLabel(opt) : opt}</option>)}
                                     </Select>
@@ -657,9 +656,9 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, co
                     </div>
                 )}
                 <div className="flex justify-between items-center mt-6">
-                    <Button variant="secondary" onClick={() => setSelectedFieldKey('')}>Back to Selection</Button>
+                    <Button variant="secondary" onClick={() => setSelectedFieldKey('')} disabled={isUpdating}>Back to Selection</Button>
                     <Button onClick={handleApplyFixes} disabled={isUpdating || nonStandardValues.length === 0}>
-                        {isUpdating ? 'Applying Fixes...' : `Apply Fixes for ${Object.keys(mappings).length} Value(s)`}
+                        {isUpdating ? <Spinner size="sm"/> : `Apply Fixes for ${Object.keys(mappings).length} Value(s)`}
                     </Button>
                 </div>
             </div>
@@ -667,7 +666,7 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, co
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Clean Participant Data">
+        <Modal isOpen={isOpen} onClose={isUpdating ? null : onClose} title="Clean Participant Data">
             <div className="p-4">
                 {!selectedFieldKey ? renderSelectionScreen() : renderMappingScreen()}
             </div>
@@ -675,8 +674,7 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, co
     );
 };
 
-// --- Bulk Change Modal Component ---
-const BulkChangeModal = ({ isOpen, onClose, participants, onSave, courseType }) => {
+const BulkChangeModal = ({ isOpen, onClose, participants, onSave, courseType, setToast }) => {
     const [isUpdating, setIsUpdating] = useState(false);
     const [selectedFieldKey, setSelectedFieldKey] = useState('');
     const [fromValue, setFromValue] = useState('');
@@ -752,12 +750,14 @@ const BulkChangeModal = ({ isOpen, onClose, participants, onSave, courseType }) 
         try {
             if (participantsToUpdate.length > 0) {
                 await onSave(participantsToUpdate, facilitiesToUpsert);
+                setToast({ show: true, message: `Successfully updated ${participantsToUpdate.length} participants!`, type: 'success' });
             }
+            onClose();
         } catch (error) {
             console.error("Failed to bulk update participants:", error);
+            setToast({ show: true, message: `Update failed: ${error.message}`, type: 'error' });
         } finally {
             setIsUpdating(false);
-            onClose();
         }
     };
 
@@ -768,13 +768,13 @@ const BulkChangeModal = ({ isOpen, onClose, participants, onSave, courseType }) 
     }, [participants, selectedFieldKey, fromValue]);
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Bulk Change Participant Data">
+        <Modal isOpen={isOpen} onClose={isUpdating ? null : onClose} title="Bulk Change Participant Data">
             <div className="p-4 space-y-4">
                 <p className="text-sm text-gray-600">
                     This tool allows you to change a value for a specific field across all participants in this course.
                 </p>
                 <FormGroup label="Select a field to change">
-                    <Select value={selectedFieldKey} onChange={(e) => {
+                    <Select disabled={isUpdating} value={selectedFieldKey} onChange={(e) => {
                         setSelectedFieldKey(e.target.value);
                         setFromValue('');
                         setToValue('');
@@ -789,13 +789,13 @@ const BulkChangeModal = ({ isOpen, onClose, participants, onSave, courseType }) 
                 {currentConfig && (
                     <>
                         <FormGroup label={`Change from value:`}>
-                            <Select value={fromValue} onChange={(e) => setFromValue(e.target.value)}>
+                            <Select disabled={isUpdating} value={fromValue} onChange={(e) => setFromValue(e.target.value)}>
                                 <option value="">-- Select original value --</option>
                                 {currentConfig.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                             </Select>
                         </FormGroup>
                         <FormGroup label={`Change to value:`}>
-                            <Select value={toValue} onChange={(e) => setToValue(e.target.value)}>
+                            <Select disabled={isUpdating} value={toValue} onChange={(e) => setToValue(e.target.value)}>
                                 <option value="">-- Select new value --</option>
                                 {currentConfig.options.filter(opt => opt !== fromValue).map(opt => <option key={opt} value={opt}>{opt}</option>)}
                             </Select>
@@ -810,12 +810,12 @@ const BulkChangeModal = ({ isOpen, onClose, participants, onSave, courseType }) 
                 )}
 
                 <div className="flex justify-end items-center mt-6 pt-4 border-t">
-                    <Button variant="secondary" onClick={onClose} className="mr-2">Cancel</Button>
+                    <Button variant="secondary" onClick={onClose} className="mr-2" disabled={isUpdating}>Cancel</Button>
                     <Button
                         onClick={handleApplyChange}
                         disabled={isUpdating || !selectedFieldKey || !fromValue || !toValue || fromValue === toValue || affectedParticipantsCount === 0}
                     >
-                        {isUpdating ? 'Applying...' : `Apply Change`}
+                        {isUpdating ? <Spinner size="sm"/> : `Apply Change`}
                     </Button>
                 </div>
             </div>
@@ -823,8 +823,7 @@ const BulkChangeModal = ({ isOpen, onClose, participants, onSave, courseType }) 
     );
 };
 
-// --- Excel Import Modal Component ---
-const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) => {
+const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, setToast }) => {
     const [excelData, setExcelData] = useState([]);
     const [headers, setHeaders] = useState([]);
     const [fieldMappings, setFieldMappings] = useState({});
@@ -833,6 +832,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
     const fileInputRef = useRef(null);
 
     const [isValidating, setIsValidating] = useState(false);
+    const [isImporting, setIsImporting] = useState(false);
     const [validationIssues, setValidationIssues] = useState([]);
     const [userCorrections, setUserCorrections] = useState({});
 
@@ -853,6 +853,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
             setValidationIssues([]);
             setUserCorrections({});
             setIsValidating(false);
+            setIsImporting(false);
             if (fileInputRef.current) {
                 fileInputRef.current.value = "";
             }
@@ -1003,7 +1004,8 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
         setUserCorrections(prev => ({ ...prev, [invalidValue]: correctedValue }));
     };
 
-    const startImportProcess = () => {
+    const startImportProcess = async () => {
+        setIsImporting(true);
         const participantsToImport = [];
         const facilityUpdatesMap = new Map();
 
@@ -1089,8 +1091,16 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
 
         const facilitiesToUpsert = Array.from(facilityUpdatesMap.values());
 
-        onImport({ participantsToImport, facilitiesToUpsert });
-        onClose();
+        try {
+            await onImport({ participantsToImport, facilitiesToUpsert });
+            setToast({ show: true, message: `Successfully imported ${participantsToImport.length} records.`, type: 'success' });
+            onClose();
+        } catch (error) {
+            setError(error.message || 'An error occurred during import.');
+            setToast({ show: true, message: `Import failed: ${error.message}`, type: 'error' });
+        } finally {
+            setIsImporting(false);
+        }
     };
 
     const renderValidationScreen = () => {
@@ -1112,7 +1122,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
                                     {issue.invalidValues.map(val => (
                                         <div key={val} className="grid grid-cols-1 md:grid-cols-2 items-center gap-2 mt-1 p-2 bg-white rounded border">
                                             <span className="bg-red-50 text-red-800 p-1 rounded text-xs truncate" title={val}>Your value: "{val}"</span>
-                                            <Select value={userCorrections[val] || ''} onChange={(e) => handleCorrectionChange(val, e.target.value)}>
+                                            <Select disabled={isImporting} value={userCorrections[val] || ''} onChange={(e) => handleCorrectionChange(val, e.target.value)}>
                                                 <option value="">-- Choose correct option --</option>
                                                 {issue.options.map(opt => <option key={opt} value={opt}>{STATE_LOCALITIES[opt]?.ar || opt}</option>)}
                                             </Select>
@@ -1126,9 +1136,9 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
                 )}
 
                 <div className="flex justify-end mt-6 space-x-2">
-                    <Button variant="secondary" onClick={() => setCurrentPage(1)}>Back to Mapping</Button>
-                    <Button onClick={startImportProcess} disabled={!allCorrectionsMade}>
-                        Apply Corrections & Import
+                    <Button variant="secondary" onClick={() => setCurrentPage(1)} disabled={isImporting}>Back to Mapping</Button>
+                    <Button onClick={startImportProcess} disabled={!allCorrectionsMade || isImporting}>
+                        {isImporting ? <Spinner size="sm" /> : 'Apply Corrections & Import'}
                     </Button>
                 </div>
             </div>
@@ -1136,7 +1146,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Import Participants from Excel">
+        <Modal isOpen={isOpen} onClose={isImporting ? null : onClose} title="Import Participants from Excel">
             <div className="p-4">
                 {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
 
@@ -1190,7 +1200,6 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants }) =
     );
 };
 
-// --- Searchable and Creatable Name Input Component (for Participant Name) ---
 const CreatableNameInput = ({ value, onChange, options, onSelect, disabled }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [inputValue, setInputValue] = useState(value || '');
@@ -1237,7 +1246,7 @@ const CreatableNameInput = ({ value, onChange, options, onSelect, disabled }) =>
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
                     <div
                         className="p-2 cursor-pointer hover:bg-gray-100 font-semibold text-blue-600"
-                        onClick={() => handleSelect(null)} // `null` signifies "add new"
+                        onClick={() => handleSelect(null)} 
                     >
                         -- Add as New Participant --
                     </div>
@@ -1260,7 +1269,6 @@ const CreatableNameInput = ({ value, onChange, options, onSelect, disabled }) =>
     );
 };
 
-// --- Facility Search Popup Modal ---
 const FacilitySearchModal = ({ isOpen, onClose, facilities, onSelect }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const inputRef = useRef(null);
@@ -1329,39 +1337,165 @@ const FacilitySearchModal = ({ isOpen, onClose, facilities, onSelect }) => {
     );
 };
 
-
 // ====================================================================
 // ===== 3. EXPORTED COMPONENTS (Top Level) ===========================
 // ====================================================================
 
-// --- Participants List View Component ---
+// --- Participant Master Manager Component ---
 export function ParticipantsView({
-    course, participants, onAdd, onOpen, onEdit, onDelete, onOpenReport,
-    onImport, onBatchUpdate, onBulkMigrate,
-    onOpenTestFormForParticipant, 
-    isCourseActive,
-    canAddParticipant,
-    canImportParticipants,
-    canCleanParticipantData,
-    canBulkChangeParticipants,
-    canBulkMigrateParticipants,
-    canAddMonitoring,
-    canEditDeleteParticipantActiveCourse,
-    canEditDeleteParticipantInactiveCourse
+    course, participants, onOpen, onOpenReport, onBatchUpdate, onOpenTestFormForParticipant, 
+    isCourseActive, canAddParticipant, canImportParticipants, canCleanParticipantData,
+    canBulkChangeParticipants, canBulkMigrateParticipants, canAddMonitoring,
+    canEditDeleteParticipantActiveCourse, canEditDeleteParticipantInactiveCourse
 }) {
-    const [isBulkEditing, setIsBulkEditing] = useState(false); 
+    const { user } = useAuth();
+    const currentUserIdentifier = user?.displayName || user?.email || 'Unknown';
+    const { fetchParticipants } = useDataCache();
 
-    // --- Progress & Approval States ---
+    const [activeScreen, setActiveScreen] = useState('list'); // 'list', 'form', 'migration'
+    const [editingParticipant, setEditingParticipant] = useState(null);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [processingRowId, setProcessingRowId] = useState(null);
+    const [toast, setToast] = useState({ show: false, message: '', type: '' });
+    
+    // UI Accordion & Mobile Toggles
+    const [expandedParticipantId, setExpandedParticipantId] = useState(null);
+    const [showTopActions, setShowTopActions] = useState(false); 
+
+    const toggleExpandParticipant = (id) => {
+        setExpandedParticipantId(prev => (prev === id ? null : id));
+    };
+
+    // --- Component-specific data operations ---
+    
+    const handleDeleteParticipant = async (participantId) => {
+        if (!canEditDeleteParticipantActiveCourse && !canEditDeleteParticipantInactiveCourse) return;
+        if (window.confirm('Are you sure you want to delete this participant and all their data?')) {
+            setProcessingRowId(participantId);
+            setIsProcessing(true);
+            try {
+                await deleteParticipant(participantId, currentUserIdentifier);
+                await fetchParticipants(navigator.onLine);
+                if (onBatchUpdate) onBatchUpdate();
+                setToast({ show: true, message: 'Participant deleted successfully.', type: 'success' });
+            } catch (error) {
+                setToast({ show: true, message: `Failed to delete participant: ${error.message}`, type: 'error' });
+            } finally {
+                setProcessingRowId(null);
+                setIsProcessing(false);
+            }
+        }
+    };
+
+    const handleSaveParticipant = async (participantData, facilityUpdateData) => {
+        setIsProcessing(true);
+        try {
+            const fullPayload = { ...participantData, id: editingParticipant?.id, courseId: course.id };
+            await saveParticipantAndSubmitFacilityUpdate(fullPayload, facilityUpdateData, currentUserIdentifier);
+            await fetchParticipants(navigator.onLine);
+            if (onBatchUpdate) onBatchUpdate();
+            setActiveScreen('list');
+            setToast({ show: true, message: facilityUpdateData ? 'Participant saved and facility update submitted.' : 'Participant saved successfully.', type: 'success' });
+        } catch (error) {
+            setToast({ show: true, message: `Submission failed: ${error.message}`, type: 'error' });
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const handleAdvancedSave = async (participantsData, facilitiesData) => {
+        if (!participantsData || participantsData.length === 0) return;
+        setIsProcessing(true);
+        try {
+            if (facilitiesData && facilitiesData.length > 0) {
+                await handleImportParticipants({ participantsToImport: participantsData, facilitiesToUpsert: facilitiesData }, false);
+            } else {
+                await importParticipants(participantsData);
+                await fetchParticipants(navigator.onLine);
+                if (onBatchUpdate) onBatchUpdate();
+                setToast({ show: true, message: 'Data updated successfully.', type: 'success' });
+            }
+        } catch (err) {
+            console.error("Advanced save failed", err);
+            setToast({ show: true, message: `Operation failed: ${err.message}`, type: 'error' });
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const handleImportParticipants = async ({ participantsToImport, facilitiesToUpsert }, setLocalToast = true) => {
+        setIsProcessing(true);
+        try {
+            const participantsWithCourseId = participantsToImport.map(p => ({ ...p, courseId: course.id }));
+            await importParticipants(participantsWithCourseId);
+            await fetchParticipants(navigator.onLine);
+            if (onBatchUpdate) onBatchUpdate();
+            if (setLocalToast) setToast({ show: true, message: `Successfully imported ${participantsToImport.length} participants.`, type: 'success' });
+        } catch (error) {
+            if (setLocalToast) setToast({ show: true, message: `Error during import: ${error.message}`, type: 'error' });
+            throw error;
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const handleExecuteBulkMigration = async (mappings) => {
+        if (!mappings || mappings.length === 0) {
+            setToast({ show: true, message: 'No mappings were provided.', type: 'info' });
+            return;
+        }
+        setIsProcessing(true);
+        try {
+            const result = await bulkMigrateFromMappings(mappings, { dryRun: false });
+            await fetchParticipants(navigator.onLine);
+            if (onBatchUpdate) onBatchUpdate();
+            setActiveScreen('list');
+            
+            let summaryMessage = `${result.submitted} participants submitted for migration.`;
+            if (result.errors > 0) summaryMessage += ` ${result.errors} failed.`;
+            if (result.skipped > 0) summaryMessage += ` ${result.skipped} skipped.`;
+            setToast({ show: true, message: summaryMessage, type: result.errors > 0 ? 'warning' : 'success' });
+        } catch (error) {
+            setToast({ show: true, message: `Migration failed: ${error.message}`, type: 'error' });
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    // Sub-routes logic
+    if (activeScreen === 'form') {
+        return (
+            <ParticipantForm 
+                course={course} 
+                initialData={editingParticipant} 
+                onCancel={() => setActiveScreen('list')} 
+                onSave={handleSaveParticipant} 
+            />
+        );
+    }
+
+    if (activeScreen === 'migration' && canUseSuperUserAdvancedFeatures) {
+        // Assume ParticipantMigrationMappingView is in this file or imported properly in the environment
+        return (
+            <ParticipantMigrationMappingView 
+                course={course} 
+                participants={participants} 
+                onCancel={() => setActiveScreen('list')} 
+                onSave={handleExecuteBulkMigration} 
+                setToast={setToast} 
+            />
+        );
+    }
+
+    // LIST VIEW STATE
+    const [isBulkEditing, setIsBulkEditing] = useState(false); 
     const [isBulkCertLoading, setIsBulkCertLoading] = useState(false);
     const [isGeneratingTemplate, setIsGeneratingTemplate] = useState(false);
     const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0 });
     const [certLanguage, setCertLanguage] = useState('en'); 
-
-    // --- Local Approval State ---
     const [localApprovalStatus, setLocalApprovalStatus] = useState(course.isCertificateApproved);
     const [isRefreshingApproval, setIsRefreshingApproval] = useState(false);
 
-    // --- Filter States (Multi-Select Arrays) ---
     const [groupFilter, setGroupFilter] = useState([]);
     const [jobTitleFilter, setJobTitleFilter] = useState([]);
     const [facilityFilter, setFacilityFilter] = useState([]);
@@ -1371,16 +1505,12 @@ export function ParticipantsView({
     const [importModalOpen, setImportModalOpen] = useState(false);
     const [isCleanupModalOpen, setIsCleanupModalOpen] = useState(false);
     const [isBulkChangeModalOpen, setIsBulkChangeModalOpen] = useState(false);
-
     const [shareModalOpen, setShareModalOpen] = useState(false);
     const [shareTarget, setShareTarget] = useState({ id: '', name: '' });
     const [sharePageModalOpen, setSharePageModalOpen] = useState(false); 
-    
-    // --- Email States ---
     const [emailModalOpen, setEmailModalOpen] = useState(false);
     const [emailTargets, setEmailTargets] = useState([]);
     const [isBulkEmail, setIsBulkEmail] = useState(false);
-    const [toast, setToast] = useState({ show: false, message: '', type: '' }); 
 
     const { federalCoordinators, fetchFederalCoordinators, isLoading: isCacheLoading } = useDataCache();
 
@@ -1388,46 +1518,21 @@ export function ParticipantsView({
         fetchFederalCoordinators();
     }, [fetchFederalCoordinators]);
 
-    // Sync local state if prop changes
     useEffect(() => {
         setLocalApprovalStatus(course.isCertificateApproved);
     }, [course.isCertificateApproved]);
 
     const federalProgramManagerName = useMemo(() => {
-        if (!federalCoordinators || federalCoordinators.length === 0) {
-            return "Federal Program Manager"; 
-        }
+        if (!federalCoordinators || federalCoordinators.length === 0) return "Federal Program Manager"; 
         const manager = federalCoordinators.find(c => c.role === 'مدير البرنامج');
         return manager ? manager.name : "Federal Program Manager"; 
     }, [federalCoordinators]);
 
-    // --- Filtering Logic ---
-    const uniqueGroups = useMemo(() => {
-        return [...new Set((participants || []).map(p => p.group).filter(Boolean))].sort();
-    }, [participants]);
-
-    const uniqueJobTitles = useMemo(() => {
-        return [...new Set((participants || []).map(p => p.job_title).filter(Boolean))].sort();
-    }, [participants]);
-
-    const uniqueFacilities = useMemo(() => {
-        return [...new Set((participants || []).map(p => p.center_name).filter(Boolean))].sort();
-    }, [participants]);
-
-    const uniqueLocalities = useMemo(() => {
-        return [...new Set((participants || []).map(p => p.locality).filter(Boolean))].sort();
-    }, [participants]);
-
-    const uniqueSubTypes = useMemo(() => {
-        return [...new Set((participants || []).map(p => {
-             let subType = p.imci_sub_type;
-             if (!subType && course.facilitatorAssignments) {
-                 const assignment = course.facilitatorAssignments.find(a => a.group === p.group);
-                 subType = assignment?.imci_sub_type;
-             }
-             return subType;
-        }).filter(Boolean))].sort();
-    }, [participants, course.facilitatorAssignments]);
+    const uniqueGroups = useMemo(() => [...new Set((participants || []).map(p => p.group).filter(Boolean))].sort(), [participants]);
+    const uniqueJobTitles = useMemo(() => [...new Set((participants || []).map(p => p.job_title).filter(Boolean))].sort(), [participants]);
+    const uniqueFacilities = useMemo(() => [...new Set((participants || []).map(p => p.center_name).filter(Boolean))].sort(), [participants]);
+    const uniqueLocalities = useMemo(() => [...new Set((participants || []).map(p => p.locality).filter(Boolean))].sort(), [participants]);
+    const uniqueSubTypes = useMemo(() => [...new Set((participants || []).map(p => p.imci_sub_type || course.facilitatorAssignments?.find(a => a.group === p.group)?.imci_sub_type).filter(Boolean))].sort(), [participants, course.facilitatorAssignments]);
 
     const filtered = useMemo(() => {
         return (participants || []).filter(p => {
@@ -1435,19 +1540,12 @@ export function ParticipantsView({
             const matchJob = jobTitleFilter.length === 0 || jobTitleFilter.includes(p.job_title);
             const matchFacility = facilityFilter.length === 0 || facilityFilter.includes(p.center_name);
             const matchLocality = localityFilter.length === 0 || localityFilter.includes(p.locality);
-            
-            let pSubType = p.imci_sub_type;
-            if (!pSubType && course.facilitatorAssignments) {
-                const assignment = course.facilitatorAssignments.find(a => a.group === p.group);
-                pSubType = assignment?.imci_sub_type;
-            }
+            const pSubType = p.imci_sub_type || course.facilitatorAssignments?.find(a => a.group === p.group)?.imci_sub_type;
             const matchSubType = subTypeFilter.length === 0 || subTypeFilter.includes(pSubType);
-            
             return matchGroup && matchJob && matchFacility && matchLocality && matchSubType;
         });
     }, [participants, groupFilter, jobTitleFilter, facilityFilter, localityFilter, subTypeFilter, course.facilitatorAssignments]);
 
-    // --- Refresh Approval Handler ---
     const handleRefreshApproval = async () => {
         if (!course.id) return;
         setIsRefreshingApproval(true);
@@ -1457,83 +1555,74 @@ export function ParticipantsView({
             if (snapshot.exists()) {
                 const data = snapshot.data();
                 setLocalApprovalStatus(data.isCertificateApproved === true);
-                if (data.isCertificateApproved) {
-                    setToast({ show: true, message: 'Status updated! Certificates are approved.', type: 'success' });
-                } else {
-                    setToast({ show: true, message: 'Status refreshed. Still pending.', type: 'info' });
-                }
+                setToast({ show: true, message: data.isCertificateApproved ? 'Status updated! Certificates are approved.' : 'Status refreshed. Still pending.', type: data.isCertificateApproved ? 'success' : 'info' });
             }
         } catch (error) {
-            console.error("Error refreshing status:", error);
             setToast({ show: true, message: 'Failed to refresh status.', type: 'error' });
         } finally {
             setIsRefreshingApproval(false);
         }
     };
 
-    // Unified Advanced Save for Bulk Operations
-    const handleAdvancedSave = async (participantsData, facilitiesData) => {
-        if (!participantsData || participantsData.length === 0) return;
+    const handleGenerateSingleCert = async (p, participantSubCourse) => {
+        setProcessingRowId(p.id);
+        setIsProcessing(true);
         try {
-            if (facilitiesData && facilitiesData.length > 0) {
-                await onImport({ participantsToImport: participantsData, facilitiesToUpsert: facilitiesData });
-            } else {
-                await importParticipants(participantsData);
-            }
-            onBatchUpdate(); 
-        } catch (err) {
-            console.error("Advanced save failed", err);
-        }
-    };
-    
-    const centerNameLabel = course.course_type === 'ICCM' ? 'Village Name' : (course.course_type === 'Program Management' ? 'Department' : 'Facility Name');
-
-    const handleBulkCertificateDownload = async () => {
-        if (filtered.length === 0) {
-            alert("No participants available for bulk certificate download.");
-            return;
-        }
-        setIsBulkCertLoading(true);
-        setDownloadProgress({ current: 0, total: filtered.length }); // Update to track filtered count
-
-        try {
-             // Pass filtered array instead of full participants array
-             await generateAllCertificatesPdf(
-                course, 
-                filtered, 
-                federalProgramManagerName, 
-                certLanguage,
-                (current, total) => setDownloadProgress({ current, total }) 
-             );
-        } catch(error) {
-            console.error("Bulk certificate download failed:", error);
-            alert("Failed to generate bulk certificates. See console for details.");
-        } finally {
-            setIsBulkCertLoading(false);
-            setDownloadProgress({ current: 0, total: 0 });
-        }
-    };
-
-    // --- Handle Design Certificate Template ---
-    const handleDesignCertificate = async () => {
-        setIsGeneratingTemplate(true);
-        try {
-            // Determine language (using existing state `certLanguage`)
-            const canvas = await generateBlankCertificatePdf(course, federalProgramManagerName, certLanguage);
+            const canvas = await generateCertificatePdf(course, p, federalProgramManagerName, participantSubCourse, certLanguage);
             if (canvas) {
                 const doc = new jsPDF('landscape', 'mm', 'a4');
                 const imgWidth = 297;
                 const imgHeight = 210;
-                const imgData = canvas.toDataURL('image/jpeg', 1.0);
-                doc.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
-                const fileName = `Certificate_Template_${course.course_type}.pdf`;
-                doc.save(fileName);
+                const imgData = canvas.toDataURL('image/png');
+                doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+                doc.save(`Certificate_${p.name.replace(/ /g, '_')}_${course.course_type}.pdf`);
+                setToast({ show: true, message: 'Certificate downloaded successfully!', type: 'success' });
+            }
+        } catch (err) {
+            setToast({ show: true, message: `Failed to generate certificate: ${err.message}`, type: 'error' });
+        } finally {
+            setProcessingRowId(null);
+            setIsProcessing(false);
+        }
+    };
+
+    const handleBulkCertificateDownload = async () => {
+        if (filtered.length === 0) {
+            setToast({ show: true, message: "No participants available for bulk certificate download.", type: 'warning' });
+            return;
+        }
+        setIsBulkCertLoading(true);
+        setIsProcessing(true);
+        setDownloadProgress({ current: 0, total: filtered.length }); 
+
+        try {
+             await generateAllCertificatesPdf(course, filtered, federalProgramManagerName, certLanguage, (current, total) => setDownloadProgress({ current, total }));
+             setToast({ show: true, message: "Bulk certificates downloaded successfully!", type: 'success' });
+        } catch(error) {
+            setToast({ show: true, message: "Failed to generate bulk certificates. See console.", type: 'error' });
+        } finally {
+            setIsBulkCertLoading(false);
+            setIsProcessing(false);
+            setDownloadProgress({ current: 0, total: 0 });
+        }
+    };
+
+    const handleDesignCertificate = async () => {
+        setIsGeneratingTemplate(true);
+        setIsProcessing(true);
+        try {
+            const canvas = await generateBlankCertificatePdf(course, federalProgramManagerName, certLanguage);
+            if (canvas) {
+                const doc = new jsPDF('landscape', 'mm', 'a4');
+                doc.addImage(canvas.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, 297, 210);
+                doc.save(`Certificate_Template_${course.course_type}.pdf`);
+                setToast({ show: true, message: 'Template downloaded successfully!', type: 'success' });
             }
         } catch (error) {
-            console.error("Error generating template:", error);
             setToast({ show: true, message: "Failed to generate template.", type: 'error' });
         } finally {
             setIsGeneratingTemplate(false);
+            setIsProcessing(false);
         }
     };
 
@@ -1542,8 +1631,8 @@ export function ParticipantsView({
         setShareModalOpen(true);
     };
 
-    const handleOpenSingleEmail = (participant) => {
-        setEmailTargets([participant]);
+    const handleOpenSingleEmail = (p) => {
+        setEmailTargets([p]);
         setIsBulkEmail(false);
         setEmailModalOpen(true);
     };
@@ -1554,7 +1643,6 @@ export function ParticipantsView({
         setEmailModalOpen(true);
     };
 
-    // Render Full Page View instead if Bulk Editing
     if (isBulkEditing) {
         return (
             <BulkEditParticipantsView
@@ -1563,11 +1651,14 @@ export function ParticipantsView({
                 onCancel={() => setIsBulkEditing(false)}
                 onSave={async (pData, fData) => {
                     await handleAdvancedSave(pData, fData);
+                    setToast({ show: true, message: 'Bulk edit saved successfully!', type: 'success' });
                     setIsBulkEditing(false);
                 }}
             />
         );
     }
+
+    const centerNameLabel = course.course_type === 'ICCM' ? 'Village Name' : (course.course_type === 'Program Management' ? 'Department' : 'Facility Name');
 
     return (
         <Card>
@@ -1578,9 +1669,10 @@ export function ParticipantsView({
             <ExcelImportModal
                 isOpen={importModalOpen}
                 onClose={() => setImportModalOpen(false)}
-                onImport={onImport}
+                onImport={handleImportParticipants}
                 course={course}
                 participants={participants} 
+                setToast={setToast}
             />
 
             <ParticipantDataCleanupModal
@@ -1589,6 +1681,7 @@ export function ParticipantsView({
                 participants={participants} 
                 onSave={handleAdvancedSave}
                 courseType={course.course_type}
+                setToast={setToast}
             />
 
             <BulkChangeModal
@@ -1597,146 +1690,79 @@ export function ParticipantsView({
                 participants={participants} 
                 onSave={handleAdvancedSave}
                 courseType={course.course_type}
-            />
-            
-            <ShareCertificateModal 
-                isOpen={shareModalOpen} 
-                onClose={() => setShareModalOpen(false)} 
-                participantName={shareTarget.name}
-                participantId={shareTarget.id}
-            />
-            
-             <ShareCoursePageModal
-                isOpen={sharePageModalOpen}
-                onClose={() => setSharePageModalOpen(false)}
-                courseId={course.id}
-                courseName={course.course_type}
-             />
-
-             <EmailCertificateModal 
-                isOpen={emailModalOpen}
-                onClose={() => setEmailModalOpen(false)}
-                participants={emailTargets}
-                isBulk={isBulkEmail}
                 setToast={setToast}
-             />
+            />
+            
+            <ShareCertificateModal isOpen={shareModalOpen} onClose={() => setShareModalOpen(false)} participantName={shareTarget.name} participantId={shareTarget.id} />
+            <ShareCoursePageModal isOpen={sharePageModalOpen} onClose={() => setSharePageModalOpen(false)} courseId={course.id} courseName={course.course_type} />
+            <EmailCertificateModal isOpen={emailModalOpen} onClose={() => setEmailModalOpen(false)} participants={emailTargets} isBulk={isBulkEmail} setToast={setToast} />
 
-            <div className="flex flex-col gap-4 mb-4">
-                {/* Action Buttons */}
+            {/* Mobile Toggle for Top Functions */}
+            <div className="mb-4 block md:hidden">
+                <Button 
+                    className="w-full justify-center bg-slate-100 text-slate-800 hover:bg-slate-200 border border-slate-300"
+                    onClick={() => setShowTopActions(!showTopActions)}
+                >
+                    {showTopActions ? 'Hide Actions & Filters' : 'Show Actions & Filters'}
+                </Button>
+            </div>
+
+            {/* Collapsible Top Functions */}
+            <div className={`${showTopActions ? 'block' : 'hidden'} md:block flex flex-col gap-4 mb-4`}>
                 <div className="flex flex-wrap justify-between items-center gap-4">
                     <div className="flex flex-wrap gap-2 items-center">
-                        {canAddParticipant && (
-                            <Button onClick={onAdd}>Add Participant</Button>
-                        )}
-                        {canImportParticipants && (
-                            <Button variant="secondary" onClick={() => setImportModalOpen(true)}>
-                                Import from Excel
-                            </Button>
-                        )}
-                        {canCleanParticipantData && (
-                            <Button variant="secondary" onClick={() => setIsCleanupModalOpen(true)}>
-                                Clean Data
-                            </Button>
-                        )}
+                        {canAddParticipant && <Button onClick={() => { setEditingParticipant(null); setActiveScreen('form'); }} disabled={isProcessing}>Add Participant</Button>}
+                        {canImportParticipants && <Button variant="secondary" onClick={() => setImportModalOpen(true)} disabled={isProcessing}>Import from Excel</Button>}
+                        {canCleanParticipantData && <Button variant="secondary" onClick={() => setIsCleanupModalOpen(true)} disabled={isProcessing}>Clean Data</Button>}
                         {canBulkChangeParticipants && (
                             <>
-                                <Button variant="secondary" onClick={() => setIsBulkChangeModalOpen(true)}>
-                                    Bulk Change
-                                </Button>
-                                <Button variant="secondary" onClick={() => setIsBulkEditing(true)}>
-                                    Bulk Edit Table
-                                </Button>
+                                <Button variant="secondary" onClick={() => setIsBulkChangeModalOpen(true)} disabled={isProcessing}>Bulk Change</Button>
+                                <Button variant="secondary" onClick={() => setIsBulkEditing(true)} disabled={isProcessing}>Bulk Edit Table</Button>
                             </>
                         )}
                         {canBulkMigrateParticipants && (
-                            <Button
-                                variant="secondary"
-                                onClick={() => onBulkMigrate(course.id)}
-                                disabled={!participants || participants.length === 0}
-                                title="Update facility records based on these participants"
-                            >
+                            <Button variant="secondary" onClick={() => setActiveScreen('migration')} disabled={!participants || participants.length === 0 || isProcessing} title="Update facility records based on these participants">
                                 Bulk Migrate to Facilities
                             </Button>
                         )}
                         
                         <div className="flex items-center bg-white border border-gray-300 rounded px-2 h-10">
                             <span className="text-xs font-bold text-gray-600 mr-2 uppercase">Cert. Lang:</span>
-                            <select 
-                                value={certLanguage} 
-                                onChange={(e) => setCertLanguage(e.target.value)}
-                                className="border-none text-sm focus:ring-0 py-1 cursor-pointer bg-transparent"
-                                style={{ outline: 'none' }}
-                            >
-                                <option value="en">English</option>
-                                <option value="ar">Arabic (عربي)</option>
+                            <select value={certLanguage} onChange={(e) => setCertLanguage(e.target.value)} className="border-none text-sm focus:ring-0 py-1 cursor-pointer bg-transparent" style={{ outline: 'none' }} disabled={isProcessing}>
+                                <option value="en">English</option><option value="ar">Arabic (عربي)</option>
                             </select>
                         </div>
 
-                        {/* ALWAYS VISIBLE: Design Certificate Button (Green) */}
-                        <Button
-                            onClick={handleDesignCertificate}
-                            disabled={isGeneratingTemplate || isCacheLoading.federalCoordinators}
-                            className="bg-green-600 hover:bg-green-700 text-white border-transparent focus:ring-green-500"
-                            title="Download a blank certificate template for printing"
-                        >
+                        <Button onClick={handleDesignCertificate} disabled={isProcessing || isGeneratingTemplate || isCacheLoading.federalCoordinators} className="bg-green-600 hover:bg-green-700 text-white border-transparent focus:ring-green-500" title="Download a blank certificate template for printing">
                             {isGeneratingTemplate ? <Spinner size="sm" /> : 'Design Certificate'}
                         </Button>
 
                         {localApprovalStatus ? (
                             <>
                                 <div className="flex items-center gap-2">
-                                    <Button
-                                        variant="primary"
-                                        onClick={handleBulkCertificateDownload}
-                                        disabled={isBulkCertLoading || filtered.length === 0 || isCacheLoading.federalCoordinators}
-                                        title="Download filtered certificates as one PDF"
-                                    >
+                                    <Button variant="primary" onClick={handleBulkCertificateDownload} disabled={isProcessing || isBulkCertLoading || filtered.length === 0 || isCacheLoading.federalCoordinators} title="Download filtered certificates as one PDF">
                                         Download Filtered Certificates
                                     </Button>
-                                    
                                     {isBulkCertLoading && (
                                         <div className="flex items-center gap-2 px-2 py-1 bg-blue-50 text-blue-700 rounded text-sm border border-blue-200">
                                             <Spinner size="sm" />
-                                            <span className="font-medium whitespace-nowrap">
-                                                Generating {downloadProgress.current} / {downloadProgress.total}
-                                            </span>
+                                            <span className="font-medium whitespace-nowrap">Generating {downloadProgress.current} / {downloadProgress.total}</span>
                                         </div>
                                     )}
                                 </div>
-                                
-                                <Button
-                                    variant="secondary"
-                                    onClick={() => setSharePageModalOpen(true)}
-                                    title="Share a public link where all participants can download their certificates"
-                                    className="border-sky-600 text-sky-700 hover:bg-sky-50"
-                                >
+                                <Button variant="secondary" onClick={() => setSharePageModalOpen(true)} title="Share a public link where all participants can download their certificates" className="border-sky-600 text-sky-700 hover:bg-sky-50" disabled={isProcessing}>
                                     Share Public Page
                                 </Button>
-
-                                <Button
-                                    variant="secondary"
-                                    onClick={handleOpenBulkEmail}
-                                    disabled={!filtered || filtered.length === 0}
-                                    title="Send certificate emails to all visible participants"
-                                    className="border-green-600 text-green-700 hover:bg-green-50 flex items-center gap-1"
-                                >
-                                    <Mail className="w-4 h-4" />
-                                    Email All Certs
+                                <Button variant="secondary" onClick={handleOpenBulkEmail} disabled={!filtered || filtered.length === 0 || isProcessing} title="Send certificate emails to all visible participants" className="border-green-600 text-green-700 hover:bg-green-50 flex items-center gap-1">
+                                    <Mail className="w-4 h-4" /> Email All Certs
                                 </Button>
                             </>
                         ) : (
                             <div className="flex items-center gap-2">
                                 <div className="flex items-center gap-1 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded border border-orange-200" title="Certificates must be approved by the Federal Program Manager in the Admin Dashboard before downloading.">
-                                    <Lock className="w-3 h-3" />
-                                    <span>Pending</span>
+                                    <Lock className="w-3 h-3" /><span>Pending</span>
                                 </div>
-                                
-                                <button 
-                                    onClick={handleRefreshApproval}
-                                    disabled={isRefreshingApproval}
-                                    className="p-2 bg-white border border-gray-300 rounded hover:bg-gray-100 text-gray-600 transition-colors"
-                                    title="Check for approval status update"
-                                >
+                                <button onClick={handleRefreshApproval} disabled={isRefreshingApproval || isProcessing} className="p-2 bg-white border border-gray-300 rounded hover:bg-gray-100 text-gray-600 transition-colors" title="Check for approval status update">
                                     {isRefreshingApproval ? <Spinner size="sm" /> : <RefreshCw className="w-4 h-4" />}
                                 </button>
                             </div>
@@ -1744,261 +1770,88 @@ export function ParticipantsView({
                     </div>
                 </div>
 
-                {/* Multi-Filter Bar */}
                 <div className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3">
                     <div className="flex flex-wrap items-end gap-3">
-                        
-                        <MultiSelectDropdown 
-                            label="Group" 
-                            placeholder="All Groups" 
-                            options={uniqueGroups.length > 0 ? uniqueGroups : ['Group A', 'Group B', 'Group C', 'Group D']} 
-                            selected={groupFilter} 
-                            onChange={setGroupFilter} 
-                        />
-
-                        <MultiSelectDropdown 
-                            label="Job Title" 
-                            placeholder="All Job Titles" 
-                            options={uniqueJobTitles} 
-                            selected={jobTitleFilter} 
-                            onChange={setJobTitleFilter} 
-                        />
-
-                        <MultiSelectDropdown 
-                            label="Locality" 
-                            placeholder="All Localities" 
-                            options={uniqueLocalities} 
-                            selected={localityFilter} 
-                            onChange={setLocalityFilter} 
-                        />
-
-                        <MultiSelectDropdown 
-                            label="Facility" 
-                            placeholder="All Facilities" 
-                            options={uniqueFacilities} 
-                            selected={facilityFilter} 
-                            onChange={setFacilityFilter} 
-                        />
-
-                        {uniqueSubTypes.length > 0 && (
-                            <MultiSelectDropdown 
-                                label="Course Sub Type" 
-                                placeholder="All Sub Types" 
-                                options={uniqueSubTypes} 
-                                selected={subTypeFilter} 
-                                onChange={setSubTypeFilter} 
-                            />
-                        )}
-
-                        {/* Clear Filters Button (Only shows if a filter is active) */}
+                        <MultiSelectDropdown label="Group" placeholder="All Groups" options={uniqueGroups.length > 0 ? uniqueGroups : ['Group A', 'Group B', 'Group C', 'Group D']} selected={groupFilter} onChange={setGroupFilter} />
+                        <MultiSelectDropdown label="Job Title" placeholder="All Job Titles" options={uniqueJobTitles} selected={jobTitleFilter} onChange={setJobTitleFilter} />
+                        <MultiSelectDropdown label="Locality" placeholder="All Localities" options={uniqueLocalities} selected={localityFilter} onChange={setLocalityFilter} />
+                        <MultiSelectDropdown label="Facility" placeholder="All Facilities" options={uniqueFacilities} selected={facilityFilter} onChange={setFacilityFilter} />
+                        {uniqueSubTypes.length > 0 && <MultiSelectDropdown label="Course Sub Type" placeholder="All Sub Types" options={uniqueSubTypes} selected={subTypeFilter} onChange={setSubTypeFilter} />}
                         {(groupFilter.length > 0 || jobTitleFilter.length > 0 || localityFilter.length > 0 || facilityFilter.length > 0 || subTypeFilter.length > 0) && (
                             <div className="flex flex-col justify-end pb-0.5">
-                                <Button 
-                                    variant="secondary" 
-                                    onClick={() => {
-                                        setGroupFilter([]);
-                                        setJobTitleFilter([]);
-                                        setLocalityFilter([]);
-                                        setFacilityFilter([]);
-                                        setSubTypeFilter([]);
-                                    }}
-                                    className="text-xs py-1.5 px-3 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
-                                >
+                                <Button variant="secondary" onClick={() => { setGroupFilter([]); setJobTitleFilter([]); setLocalityFilter([]); setFacilityFilter([]); setSubTypeFilter([]); }} className="text-xs py-1.5 px-3 hover:bg-red-50 hover:text-red-600 hover:border-red-200" disabled={isProcessing}>
                                     Clear Filters
                                 </Button>
                             </div>
                         )}
-                        
                     </div>
                 </div>
             </div>
 
-            {/* Desktop View */}
-            <div className="hidden md:block">
-                <Table headers={["Name", "Group", "Job Title", centerNameLabel, "Locality", "Actions"]}>
-                    {filtered.length > 0 && filtered.map(p => {
-                        const canEdit = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
-                        const canDelete = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
-                        const isCertApproved = localApprovalStatus === true;
-
-                        let participantSubCourse = p.imci_sub_type;
-                        if (!participantSubCourse) {
-                             const participantAssignment = course.facilitatorAssignments?.find(
-                                (a) => a.group === p.group
-                            );
-                            participantSubCourse = participantAssignment?.imci_sub_type;
-                        }
-
-                        return (
-                            <tr key={p.id} className="hover:bg-gray-50">
-                                <td className="p-4 border border-gray-200 font-medium text-gray-800">{p.name}</td>
-                                <td className="p-4 border border-gray-200">{p.group}</td>
-                                <td className="p-4 border border-gray-200">{p.job_title}</td>
-                                <td className="p-4 border border-gray-200">{course.course_type === 'Program Management' ? (p.department || 'N/A') : p.center_name}</td>
-                                <td className="p-4 border border-gray-200">{p.locality}</td>
-                                <td className="p-4 border border-gray-200 text-right">
-                                    <div className="flex gap-2 flex-wrap justify-end">
-                                        <Button variant="primary" onClick={() => onOpen(p.id)} disabled={!canAddMonitoring} title={!canAddMonitoring ? "You do not have permission to monitor" : "Monitor Participant"}>Monitor</Button>
-                                        <Button variant="secondary" onClick={() => onOpenReport(p.id)}>Report</Button>
-                                        
-                                        {isCertApproved ? (
-                                            <>
-                                                <Button 
-                                                    variant="secondary" 
-                                                    onClick={() => handleShareClick(p)}
-                                                    title="Share Public Download Link"
-                                                >
-                                                    Share Cert.
-                                                </Button>
-                                                
-                                                <Button 
-                                                    variant="secondary" 
-                                                    onClick={async () => {
-                                                        const canvas = await generateCertificatePdf(course, p, federalProgramManagerName, participantSubCourse, certLanguage);
-                                                        if (canvas) {
-                                                            const doc = new jsPDF('landscape', 'mm', 'a4');
-                                                            const imgWidth = 297;
-                                                            const imgHeight = 210;
-                                                            const imgData = canvas.toDataURL('image/png');
-                                                            doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-                                                            const fileName = `Certificate_${p.name.replace(/ /g, '_')}_${course.course_type}.pdf`;
-                                                            doc.save(fileName);
-                                                        }
-                                                    }}
-                                                    title="Generate Single Certificate"
-                                                    disabled={isCacheLoading.federalCoordinators}
-                                                >
-                                                    {isCacheLoading.federalCoordinators ? <Spinner size="sm" /> : 'Certificate'}
-                                                </Button>
-                                                
-                                                <Button 
-                                                    variant="secondary" 
-                                                    onClick={() => handleOpenSingleEmail(p)}
-                                                    title={p.email ? "Send Certificate to Email" : "No email address available"}
-                                                    disabled={!p.email} 
-                                                    className={!p.email ? "opacity-50 cursor-not-allowed" : ""}
-                                                >
-                                                    <Mail className="w-4 h-4" />
-                                                </Button>
-                                            </>
-                                        ) : (
-                                            <div className="flex items-center gap-1 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded border border-orange-200" title="Certificates must be approved by the Federal Program Manager in the Admin Dashboard before downloading.">
-                                                <Lock className="w-3 h-3" />
-                                                <span>Pending</span>
-                                            </div>
-                                        )}
-
-                                        {(course.course_type === 'ICCM' || course.course_type === 'EENC') && (
-                                            <Button variant="secondary" onClick={() => onOpenTestFormForParticipant(p.id)}>
-                                                Test Score
-                                            </Button>
-                                        )}
-
-                                        <Button variant="secondary" onClick={() => onEdit(p)} disabled={!canEdit} title={!canEdit ? "Permission denied" : "Edit Participant"}>Edit</Button>
-                                        <Button variant="danger" onClick={() => onDelete(p.id)} disabled={!canDelete} title={!canDelete ? "Permission denied" : "Delete Participant"}>Delete</Button>
-                                    </div>
-                                </td>
-                            </tr>
-                        );
-                    })}
-                </Table>
-            </div>
-
-            {/* Mobile View */}
-            <div className="md:hidden grid gap-4">
-                {filtered.length > 0 && filtered.map(p => {
+            {/* Participant Accordion List */}
+            <div className="grid gap-4">
+                {filtered.length > 0 ? filtered.map(p => {
                     const canEdit = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
                     const canDelete = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
                     const isCertApproved = localApprovalStatus === true;
-
-                    let participantSubCourse = p.imci_sub_type;
-                    if (!participantSubCourse) {
-                         const participantAssignment = course.facilitatorAssignments?.find(
-                            (a) => a.group === p.group
-                        );
-                        participantSubCourse = participantAssignment?.imci_sub_type;
-                    }
+                    const isExpanded = expandedParticipantId === p.id;
+                    let participantSubCourse = p.imci_sub_type || course.facilitatorAssignments?.find((a) => a.group === p.group)?.imci_sub_type;
 
                     return (
-                        <div key={p.id} className="bg-white rounded-lg shadow-md p-4 border border-gray-200">
-                            <div className="flex justify-between items-start">
+                        <div key={p.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                            {/* Accordion Header */}
+                            <div 
+                                className="flex justify-between items-center p-4 cursor-pointer hover:bg-gray-50"
+                                onClick={() => toggleExpandParticipant(p.id)}
+                            >
                                 <div>
                                     <h3 className="font-bold text-lg text-gray-800">{p.name}</h3>
-                                    <p className="text-gray-600">{p.job_title}</p>
-                                    <p className="text-gray-600 text-sm">{course.course_type === 'Program Management' ? (p.department || 'N/A') : p.center_name}
-                                        {p.locality && <span className="text-gray-500"> ({p.locality})</span>}
-                                    </p>
-                                    <p className="text-sm text-gray-500 mt-1">Group: <span className="font-medium text-gray-700">{p.group}</span></p>
+                                    <p className="text-gray-600 text-sm">{p.job_title} • {course.course_type === 'Program Management' ? (p.department || 'N/A') : p.center_name}</p>
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <span className="text-xs font-medium px-2 py-1 bg-gray-100 rounded text-gray-600">Group: {p.group}</span>
+                                        {!isCertApproved && <span className="text-[10px] text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-200 flex items-center gap-1"><Lock className="w-3 h-3"/> Pending Cert</span>}
+                                    </div>
+                                </div>
+                                <div className="text-gray-400">
+                                    <svg className={`w-6 h-6 transform transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                                 </div>
                             </div>
-                            <div className="mt-4 pt-4 border-t border-gray-200 flex flex-wrap gap-2 justify-end">
-                                <Button variant="secondary" onClick={() => onOpen(p.id)} disabled={!canAddMonitoring} title={!canAddMonitoring ? "You do not have permission to monitor" : "Monitor Participant"}>Monitor</Button>
-                                <Button variant="secondary" onClick={() => onOpenReport(p.id)}>Report</Button>
-                                
-                                {isCertApproved ? (
-                                    <>
-                                        <Button 
-                                            variant="secondary" 
-                                            onClick={() => handleShareClick(p)}
-                                            title="Share Public Download Link"
-                                        >
-                                            Share Cert.
-                                        </Button>
 
-                                        <Button 
-                                            variant="secondary" 
-                                            onClick={async () => {
-                                                const canvas = await generateCertificatePdf(course, p, federalProgramManagerName, participantSubCourse, certLanguage);
-                                                if (canvas) {
-                                                    const doc = new jsPDF('landscape', 'mm', 'a4');
-                                                    const imgWidth = 297;
-                                                    const imgHeight = 210;
-                                                    const imgData = canvas.toDataURL('image/png');
-                                                    doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-                                                    const fileName = `Certificate_${p.name.replace(/ /g, '_')}_${course.course_type}.pdf`;
-                                                    doc.save(fileName);
-                                                }
-                                            }}
-                                            title="Generate Single Certificate"
-                                            disabled={isCacheLoading.federalCoordinators}
-                                        >
-                                            {isCacheLoading.federalCoordinators ? <Spinner size="sm" /> : 'Certificate'}
-                                        </Button>
+                            {/* Collapsible Actions */}
+                            {isExpanded && (
+                                <div className="p-4 bg-gray-50 border-t border-gray-100">
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                                        <Button variant="primary" className="w-full justify-center" onClick={() => onOpen(p.id)} disabled={!canAddMonitoring || isProcessing}>Monitor</Button>
+                                        <Button variant="secondary" className="w-full justify-center" onClick={() => onOpenReport(p.id)} disabled={isProcessing}>Report</Button>
+                                        
+                                        {isCertApproved && (
+                                            <>
+                                                <Button variant="secondary" className="w-full justify-center" onClick={() => handleShareClick(p)} disabled={isProcessing}>Share Cert.</Button>
+                                                <Button variant="secondary" className="w-full justify-center" onClick={() => handleGenerateSingleCert(p, participantSubCourse)} disabled={isCacheLoading.federalCoordinators || isProcessing}>
+                                                    {(isCacheLoading.federalCoordinators || processingRowId === p.id) ? <Spinner size="sm" /> : 'Certificate'}
+                                                </Button>
+                                                <Button variant="secondary" className="w-full justify-center" onClick={() => handleOpenSingleEmail(p)} disabled={!p.email || isProcessing}><Mail className="w-4 h-4" /> Email</Button>
+                                            </>
+                                        )}
 
-                                        <Button 
-                                            variant="secondary" 
-                                            onClick={() => handleOpenSingleEmail(p)}
-                                            title={p.email ? "Send Certificate to Email" : "No email address available"}
-                                            disabled={!p.email} 
-                                            className={!p.email ? "opacity-50 cursor-not-allowed" : ""}
-                                        >
-                                            <Mail className="w-4 h-4" />
+                                        {(course.course_type === 'ICCM' || course.course_type === 'EENC') && (
+                                            <Button variant="secondary" className="w-full justify-center" onClick={() => onOpenTestFormForParticipant(p.id)} disabled={isProcessing}>Test Score</Button>
+                                        )}
+                                        
+                                        <Button variant="secondary" className="w-full justify-center" onClick={() => { setEditingParticipant(p); setActiveScreen('form'); }} disabled={!canEdit || isProcessing}>Edit</Button>
+                                        <Button variant="danger" className="w-full justify-center" onClick={() => handleDeleteParticipant(p.id)} disabled={!canDelete || isProcessing}>
+                                            {processingRowId === p.id ? <Spinner size="sm" /> : 'Delete'}
                                         </Button>
-                                    </>
-                                ) : (
-                                    <div className="flex items-center gap-1 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded border border-orange-200 w-full justify-center sm:w-auto" title="Certificates must be approved by the Federal Program Manager in the Admin Dashboard before downloading.">
-                                        <Lock className="w-3 h-3" />
-                                        <span>Pending</span>
                                     </div>
-                                )}
-
-                                {(course.course_type === 'ICCM' || course.course_type === 'EENC') && (
-                                    <Button variant="secondary" onClick={() => onOpenTestFormForParticipant(p.id)}>
-                                        Test Score
-                                    </Button>
-                                )}
-                                
-                                <Button variant="secondary" onClick={() => onEdit(p)} disabled={!canEdit} title={!canEdit ? "Permission denied" : "Edit Participant"}>Edit</Button>
-                                <Button variant="danger" onClick={() => onDelete(p.id)} disabled={!canDelete} title={!canDelete ? "Permission denied" : "Delete Participant"}>Delete</Button>
-                            </div>
+                                </div>
+                            )}
                         </div>
                     );
-                })}
-                 {filtered.length === 0 && (
+                }) : (
                     <div className="p-4 text-center text-gray-500 bg-white rounded-lg shadow-md border border-gray-200">
                         No participants found matching the current filters.
                     </div>
-                 )}
+                )}
             </div>
         </Card>
     );
@@ -2029,6 +1882,8 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
         if (isSsnc) return JOB_TITLES_SSNC;
         return ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
     }, [isIccm, isImnci, isEtat, isEenc, isSsnc]);
+
+    const [isSaving, setIsSaving] = useState(false);
 
     const [name, setName] = useState(String(initialData?.name || ''));
     const [email, setEmail] = useState(String(initialData?.email || ''));
@@ -2262,164 +2117,171 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
         if (!finalJobTitle) { setError('المسمى الوظيفي مطلوب.'); return; }
         if (!phone.trim()) { setError('رقم الهاتف مطلوب.'); return; }
 
-        // Background calculations for hidden fields
-        let finalImciSubType = initialData?.imci_sub_type || 'Standard 7 days course'; 
-        if (isImnci && course?.facilitatorAssignments) {
-            const assignment = course.facilitatorAssignments.find(a => a.group === group);
-            if (assignment?.imci_sub_type) {
-                finalImciSubType = assignment.imci_sub_type;
-            }
-        } else if (isIccm) {
-            finalImciSubType = 'ICCM Community Module';
-        }
-
-        const currentFacilityType = selectedFacility?.['نوع_المؤسسةالصحية'] || initialData?.facility_type || 'no data';
-
-        let p = {
-            ...(initialData || {}), 
-            name: name.trim(), group, state, locality,
-            center_name: isProgramManagement ? 'N/A' : center.trim(),
-            facilityId: (isIccm || isProgramManagement || selectedFacility?.id.startsWith('pending_')) ? null : selectedFacility?.id || null, 
-            job_title: finalJobTitle, phone: phone.trim(), email: email ? email.trim() : null,
-            department: isProgramManagement ? department.trim() : null
-        };
-
-        if (showTestScores) {
-            p = { ...p, pre_test_score: preTestScore || null, post_test_score: postTestScore || null };
-        }
-
-        if (isImnci || isIccm) {
-             p = { ...p, trained_before: parseBool(trainedIMNCI), last_imci_training: trainedIMNCI === 'yes' ? (lastTrainIMNCI || null) : null };
-            
-            if (isImnci) {
-                // Compute totals for backwards compatibility
-                const computedTotalProv = (Number(imnciDoctorsTotal) || 0) + (Number(imnciMedicalAssistantsTotal) || 0);
-                const computedTrainedProv = (Number(imnciDoctorsTrained) || 0) + (Number(imnciMedicalAssistantsTrained) || 0);
-
-                p = { 
-                    ...p, 
-                    imci_sub_type: finalImciSubType, 
-                    facility_type: currentFacilityType, 
-                    
-                    imnci_doctors_total: imnciDoctorsTotal !== '' ? Number(imnciDoctorsTotal) : null,
-                    imnci_doctors_trained: imnciDoctorsTrained !== '' ? Number(imnciDoctorsTrained) : null,
-                    imnci_medical_assistants_total: imnciMedicalAssistantsTotal !== '' ? Number(imnciMedicalAssistantsTotal) : null,
-                    imnci_medical_assistants_trained: imnciMedicalAssistantsTrained !== '' ? Number(imnciMedicalAssistantsTrained) : null,
-                    
-                    num_other_providers: computedTotalProv > 0 ? computedTotalProv : null, 
-                    num_other_providers_imci: computedTrainedProv > 0 ? computedTrainedProv : null, 
-                    
-                    has_nutrition_service: parseBool(hasNutri), 
-                    has_immunization_service: parseBool(hasImm), 
-                    has_ors_room: parseBool(hasORS), 
-                    nearest_nutrition_center: hasNutri === 'no' ? (nearestNutri || null) : null, 
-                    nearest_immunization_center: hasImm === 'no' ? (nearestImm || null) : null, 
-                    has_growth_monitoring: parseBool(hasGrowthMonitoring) 
-                };
+        setIsSaving(true);
+        try {
+            // Background calculations for hidden fields
+            let finalImciSubType = initialData?.imci_sub_type || 'Standard 7 days course'; 
+            if (isImnci && course?.facilitatorAssignments) {
+                const assignment = course.facilitatorAssignments.find(a => a.group === group);
+                if (assignment?.imci_sub_type) {
+                    finalImciSubType = assignment.imci_sub_type;
+                }
             } else if (isIccm) {
-                p = { ...p, imci_sub_type: finalImciSubType, nearest_health_facility: nearestHealthFacility || null, hours_to_facility: hoursToFacility !== '' ? Number(hoursToFacility) : null }; 
+                finalImciSubType = 'ICCM Community Module';
             }
-        } else if (isEtat) {
-            if (!hospitalTypeEtat) { setError('نوع المستشفى مطلوب لـ ETAT.'); return; }
-            p = { 
-                ...p, hospital_type: hospitalTypeEtat, 
-                trained_etat_before: parseBool(trainedEtat), 
-                last_etat_training: trainedEtat === 'yes' ? (lastTrainEtat || null) : null, 
-                has_triage_system: parseBool(hasTriageSystem), 
-                has_stabilization_center: parseBool(hasStabilizationCenter), 
-                has_hdu: parseBool(hasHdu), 
-                num_staff_in_er: numStaffInEr !== '' ? Number(numStaffInEr) : null, 
-                num_staff_trained_in_etat: numStaffTrainedInEtat !== '' ? Number(numStaffTrainedInEtat) : null 
+
+            const currentFacilityType = selectedFacility?.['نوع_المؤسسةالصحية'] || initialData?.facility_type || 'no data';
+
+            let p = {
+                ...(initialData || {}), 
+                name: name.trim(), group, state, locality,
+                center_name: isProgramManagement ? 'N/A' : center.trim(),
+                facilityId: (isIccm || isProgramManagement || selectedFacility?.id.startsWith('pending_')) ? null : selectedFacility?.id || null, 
+                job_title: finalJobTitle, phone: phone.trim(), email: email ? email.trim() : null,
+                department: isProgramManagement ? department.trim() : null
             };
-        } else if (isEenc || isSsnc) {
-            if (!hospitalTypeEenc) { setError(`نوع المستشفى مطلوب لـ ${isEenc ? 'EENC' : 'SSNC'}.`); return; }
-            if (hospitalTypeEenc === 'other' && !otherHospitalTypeEenc) { setError(`الرجاء تحديد نوع المستشفى لـ ${isEenc ? 'EENC' : 'SSNC'}.`); return; }
-            p = { 
-                ...p, hospital_type: hospitalTypeEenc === 'other' ? otherHospitalTypeEenc : hospitalTypeEenc, 
-                trained_eenc_before: parseBool(trainedEENC), 
-                last_eenc_training: trainedEENC === 'yes' ? (lastTrainEENC || null) : null, 
-                has_sncu: parseBool(hasSncu), 
-                has_iycf_center: parseBool(hasIycfCenter), 
-                num_staff_in_delivery: numStaffInDelivery !== '' ? Number(numStaffInDelivery) : null, 
-                num_staff_trained_in_eenc: numStaffTrainedInEenc !== '' ? Number(numStaffTrainedInEenc) : null, 
-                has_kangaroo_room: parseBool(hasKangaroo) 
-            };
-        }
 
-        let facilityUpdatePayload = null;
-        let oldFacilityUpdatePayload = null; 
+            if (showTestScores) {
+                p = { ...p, pre_test_score: preTestScore || null, post_test_score: postTestScore || null };
+            }
 
-        if (isImnci) {
-            if (selectedFacility && !selectedFacility.id.startsWith('pending_')) {
-                const staffMemberData = { name: name.trim(), job_title: finalJobTitle, phone: phone.trim(), is_trained: 'Yes', training_date: course.start_date || '' };
-                let existingStaff = [];
-                 try {
-                     existingStaff = selectedFacility.imnci_staff ? (typeof selectedFacility.imnci_staff === 'string' ? JSON.parse(selectedFacility.imnci_staff) : JSON.parse(JSON.stringify(selectedFacility.imnci_staff))) : [];
-                    if (!Array.isArray(existingStaff)) existingStaff = [];
-                } catch (e) { console.error("Error parsing staff list:", e); existingStaff = []; }
+            if (isImnci || isIccm) {
+                 p = { ...p, trained_before: parseBool(trainedIMNCI), last_imci_training: trainedIMNCI === 'yes' ? (lastTrainIMNCI || null) : null };
+                
+                if (isImnci) {
+                    // Compute totals for backwards compatibility
+                    const computedTotalProv = (Number(imnciDoctorsTotal) || 0) + (Number(imnciMedicalAssistantsTotal) || 0);
+                    const computedTrainedProv = (Number(imnciDoctorsTrained) || 0) + (Number(imnciMedicalAssistantsTrained) || 0);
 
-                let updatedStaffList = [...existingStaff];
-                const existingIndex = updatedStaffList.findIndex(staff => staff.name === staffMemberData.name || (staff.phone && staff.phone === staffMemberData.phone));
-                if (existingIndex > -1) updatedStaffList[existingIndex] = staffMemberData; else updatedStaffList.push(staffMemberData);
-
-                const facilityHadImnci = selectedFacility['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes';
-                if (!facilityHadImnci) {
-                    p.introduced_imci_to_facility = true;
+                    p = { 
+                        ...p, 
+                        imci_sub_type: finalImciSubType, 
+                        facility_type: currentFacilityType, 
+                        
+                        imnci_doctors_total: imnciDoctorsTotal !== '' ? Number(imnciDoctorsTotal) : null,
+                        imnci_doctors_trained: imnciDoctorsTrained !== '' ? Number(imnciDoctorsTrained) : null,
+                        imnci_medical_assistants_total: imnciMedicalAssistantsTotal !== '' ? Number(imnciMedicalAssistantsTotal) : null,
+                        imnci_medical_assistants_trained: imnciMedicalAssistantsTrained !== '' ? Number(imnciMedicalAssistantsTrained) : null,
+                        
+                        num_other_providers: computedTotalProv > 0 ? computedTotalProv : null, 
+                        num_other_providers_imci: computedTrainedProv > 0 ? computedTrainedProv : null, 
+                        
+                        has_nutrition_service: parseBool(hasNutri), 
+                        has_immunization_service: parseBool(hasImm), 
+                        has_ors_room: parseBool(hasORS), 
+                        nearest_nutrition_center: hasNutri === 'no' ? (nearestNutri || null) : null, 
+                        nearest_immunization_center: hasImm === 'no' ? (nearestImm || null) : null, 
+                        has_growth_monitoring: parseBool(hasGrowthMonitoring) 
+                    };
+                } else if (isIccm) {
+                    p = { ...p, imci_sub_type: finalImciSubType, nearest_health_facility: nearestHealthFacility || null, hours_to_facility: hoursToFacility !== '' ? Number(hoursToFacility) : null }; 
                 }
-
-                const baseFacilityPayload = {
-                    'هل_المؤسسة_تعمل': 'Yes', 
-                    'وجود_العلاج_المتكامل_لامراض_الطفولة': 'Yes', 
-                    'نوع_المؤسسةالصحية': currentFacilityType,
-                    
-                    'imnci_doctors_total': imnciDoctorsTotal !== '' ? Number(imnciDoctorsTotal) : (selectedFacility['imnci_doctors_total'] ?? null),
-                    'imnci_doctors_trained': imnciDoctorsTrained !== '' ? Number(imnciDoctorsTrained) : (selectedFacility['imnci_doctors_trained'] ?? null),
-                    'imnci_medical_assistants_total': imnciMedicalAssistantsTotal !== '' ? Number(imnciMedicalAssistantsTotal) : (selectedFacility['imnci_medical_assistants_total'] ?? null),
-                    'imnci_medical_assistants_trained': imnciMedicalAssistantsTrained !== '' ? Number(imnciMedicalAssistantsTrained) : (selectedFacility['imnci_medical_assistants_trained'] ?? null),
-                    
-                    'nutrition_center_exists': parseStr(hasNutri), 
-                    'nearest_nutrition_center': hasNutri === 'no' ? (nearestNutri || selectedFacility.nearest_nutrition_center || '') : '',
-                    'immunization_office_exists': parseStr(hasImm), 
-                    'nearest_immunization_center': hasImm === 'no' ? (nearestImm || selectedFacility.nearest_immunization_center || '') : '',
-                    'غرفة_إرواء': parseStr(hasORS), 
-                    'growth_monitoring_service_exists': parseStr(hasGrowthMonitoring),
-                    'ميزان_وزن': parseStr(hasWeightScale), 
-                    'ميزان_طول': parseStr(hasHeightScale), 
-                    'ميزان_حرارة': parseStr(hasThermometer), 
-                    'ساعة_ مؤقت': parseStr(hasTimer), 
-                    'وجود_سجل_علاج_متكامل': parseStr(hasImnciRegister), 
-                    'وجود_كتيب_لوحات': parseStr(hasChartBooklet), 
+            } else if (isEtat) {
+                if (!hospitalTypeEtat) { setError('نوع المستشفى مطلوب لـ ETAT.'); setIsSaving(false); return; }
+                p = { 
+                    ...p, hospital_type: hospitalTypeEtat, 
+                    trained_etat_before: parseBool(trainedEtat), 
+                    last_etat_training: trainedEtat === 'yes' ? (lastTrainEtat || null) : null, 
+                    has_triage_system: parseBool(hasTriageSystem), 
+                    has_stabilization_center: parseBool(hasStabilizationCenter), 
+                    has_hdu: parseBool(hasHdu), 
+                    num_staff_in_er: numStaffInEr !== '' ? Number(numStaffInEr) : null, 
+                    num_staff_trained_in_etat: numStaffTrainedInEtat !== '' ? Number(numStaffTrainedInEtat) : null 
                 };
-
-                facilityUpdatePayload = { ...selectedFacility, ...baseFacilityPayload, id: selectedFacility.id, date_of_visit: new Date().toISOString().split('T')[0], imnci_staff: updatedStaffList };
+            } else if (isEenc || isSsnc) {
+                if (!hospitalTypeEenc) { setError(`نوع المستشفى مطلوب لـ ${isEenc ? 'EENC' : 'SSNC'}.`); setIsSaving(false); return; }
+                if (hospitalTypeEenc === 'other' && !otherHospitalTypeEenc) { setError(`الرجاء تحديد نوع المستشفى لـ ${isEenc ? 'EENC' : 'SSNC'}.`); setIsSaving(false); return; }
+                p = { 
+                    ...p, hospital_type: hospitalTypeEenc === 'other' ? otherHospitalTypeEenc : hospitalTypeEenc, 
+                    trained_eenc_before: parseBool(trainedEENC), 
+                    last_eenc_training: trainedEENC === 'yes' ? (lastTrainEENC || null) : null, 
+                    has_sncu: parseBool(hasSncu), 
+                    has_iycf_center: parseBool(hasIycfCenter), 
+                    num_staff_in_delivery: numStaffInDelivery !== '' ? Number(numStaffInDelivery) : null, 
+                    num_staff_trained_in_eenc: numStaffTrainedInEenc !== '' ? Number(numStaffTrainedInEenc) : null, 
+                    has_kangaroo_room: parseBool(hasKangaroo) 
+                };
             }
 
-            if (initialData?.facilityId && selectedFacility?.id && initialData.facilityId !== selectedFacility.id) {
-                try {
-                    const oldFacility = await getHealthFacilityById(initialData.facilityId);
-                    if (oldFacility) {
-                        let existingOldStaff = [];
-                        try {
-                            existingOldStaff = oldFacility.imnci_staff ? (typeof oldFacility.imnci_staff === 'string' ? JSON.parse(oldFacility.imnci_staff) : JSON.parse(JSON.stringify(oldFacility.imnci_staff))) : [];
-                            if (!Array.isArray(existingOldStaff)) existingOldStaff = [];
-                        } catch (e) { existingOldStaff = []; }
+            let facilityUpdatePayload = null;
+            let oldFacilityUpdatePayload = null; 
 
-                        const updatedOldStaff = existingOldStaff.filter(
-                            staff => staff.name !== initialData.name && staff.phone !== initialData.phone
-                        );
+            if (isImnci) {
+                if (selectedFacility && !selectedFacility.id.startsWith('pending_')) {
+                    const staffMemberData = { name: name.trim(), job_title: finalJobTitle, phone: phone.trim(), is_trained: 'Yes', training_date: course.start_date || '' };
+                    let existingStaff = [];
+                     try {
+                         existingStaff = selectedFacility.imnci_staff ? (typeof selectedFacility.imnci_staff === 'string' ? JSON.parse(selectedFacility.imnci_staff) : JSON.parse(JSON.stringify(selectedFacility.imnci_staff))) : [];
+                        if (!Array.isArray(existingStaff)) existingStaff = [];
+                    } catch (e) { console.error("Error parsing staff list:", e); existingStaff = []; }
 
-                        oldFacilityUpdatePayload = {
-                            ...oldFacility,
-                            imnci_staff: updatedOldStaff
-                        };
+                    let updatedStaffList = [...existingStaff];
+                    const existingIndex = updatedStaffList.findIndex(staff => staff.name === staffMemberData.name || (staff.phone && staff.phone === staffMemberData.phone));
+                    if (existingIndex > -1) updatedStaffList[existingIndex] = staffMemberData; else updatedStaffList.push(staffMemberData);
+
+                    const facilityHadImnci = selectedFacility['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes';
+                    if (!facilityHadImnci) {
+                        p.introduced_imci_to_facility = true;
                     }
-                } catch (err) {
-                    console.error("Failed to fetch old facility for cleanup:", err);
+
+                    const baseFacilityPayload = {
+                        'هل_المؤسسة_تعمل': 'Yes', 
+                        'وجود_العلاج_المتكامل_لامراض_الطفولة': 'Yes', 
+                        'نوع_المؤسسةالصحية': currentFacilityType,
+                        
+                        'imnci_doctors_total': imnciDoctorsTotal !== '' ? Number(imnciDoctorsTotal) : (selectedFacility['imnci_doctors_total'] ?? null),
+                        'imnci_doctors_trained': imnciDoctorsTrained !== '' ? Number(imnciDoctorsTrained) : (selectedFacility['imnci_doctors_trained'] ?? null),
+                        'imnci_medical_assistants_total': imnciMedicalAssistantsTotal !== '' ? Number(imnciMedicalAssistantsTotal) : (selectedFacility['imnci_medical_assistants_total'] ?? null),
+                        'imnci_medical_assistants_trained': imnciMedicalAssistantsTrained !== '' ? Number(imnciMedicalAssistantsTrained) : (selectedFacility['imnci_medical_assistants_trained'] ?? null),
+                        
+                        'nutrition_center_exists': parseStr(hasNutri), 
+                        'nearest_nutrition_center': hasNutri === 'no' ? (nearestNutri || selectedFacility.nearest_nutrition_center || '') : '',
+                        'immunization_office_exists': parseStr(hasImm), 
+                        'nearest_immunization_center': hasImm === 'no' ? (nearestImm || selectedFacility.nearest_immunization_center || '') : '',
+                        'غرفة_إرواء': parseStr(hasORS), 
+                        'growth_monitoring_service_exists': parseStr(hasGrowthMonitoring),
+                        'ميزان_وزن': parseStr(hasWeightScale), 
+                        'ميزان_طول': parseStr(hasHeightScale), 
+                        'ميزان_حرارة': parseStr(hasThermometer), 
+                        'ساعة_ مؤقت': parseStr(hasTimer), 
+                        'وجود_سجل_علاج_متكامل': parseStr(hasImnciRegister), 
+                        'وجود_كتيب_لوحات': parseStr(hasChartBooklet), 
+                    };
+
+                    facilityUpdatePayload = { ...selectedFacility, ...baseFacilityPayload, id: selectedFacility.id, date_of_visit: new Date().toISOString().split('T')[0], imnci_staff: updatedStaffList };
+                }
+
+                if (initialData?.facilityId && selectedFacility?.id && initialData.facilityId !== selectedFacility.id) {
+                    try {
+                        const oldFacility = await getHealthFacilityById(initialData.facilityId);
+                        if (oldFacility) {
+                            let existingOldStaff = [];
+                            try {
+                                existingOldStaff = oldFacility.imnci_staff ? (typeof oldFacility.imnci_staff === 'string' ? JSON.parse(oldFacility.imnci_staff) : JSON.parse(JSON.stringify(oldFacility.imnci_staff))) : [];
+                                if (!Array.isArray(existingOldStaff)) existingOldStaff = [];
+                            } catch (e) { existingOldStaff = []; }
+
+                            const updatedOldStaff = existingOldStaff.filter(
+                                staff => staff.name !== initialData.name && staff.phone !== initialData.phone
+                            );
+
+                            oldFacilityUpdatePayload = {
+                                ...oldFacility,
+                                imnci_staff: updatedOldStaff
+                            };
+                        }
+                    } catch (err) {
+                        console.error("Failed to fetch old facility for cleanup:", err);
+                    }
                 }
             }
-        }
 
-        onSave(p, facilityUpdatePayload, oldFacilityUpdatePayload);
+            await onSave(p, facilityUpdatePayload, oldFacilityUpdatePayload);
+        } catch (error) {
+            setError(error.message || 'An error occurred while saving.');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -2437,6 +2299,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                     jobTitleOptions={jobTitleOptions}
                     onCancel={() => setShowNewParticipantForm(false)}
                     onSave={handleSaveNewParticipant}
+                    isSaving={isSaving}
                 />
              )}
 
@@ -2450,7 +2313,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                         <h3 className="text-lg font-bold mb-4 text-blue-700 border-b pb-2">البيانات الأساسية</h3>
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                             <FormGroup label="المجموعة (Group)">
-                                <Select value={group} onChange={(e) => setGroup(e.target.value)}>
+                                <Select disabled={isSaving} value={group} onChange={(e) => setGroup(e.target.value)}>
                                     <option value="Group A">المجموعة أ (Group A)</option>
                                     <option value="Group B">المجموعة ب (Group B)</option>
                                     <option value="Group C">المجموعة ج (Group C)</option>
@@ -2459,7 +2322,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                             </FormGroup>
 
                             <FormGroup label="الولاية">
-                                 <Select value={state} onChange={(e) => {
+                                 <Select disabled={isSaving} value={state} onChange={(e) => {
                                     setState(e.target.value);
                                     setLocality(''); 
                                     setCenter(''); 
@@ -2472,11 +2335,11 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                             </FormGroup>
 
                             <FormGroup label="المحلية">
-                                <Select value={locality} onChange={(e) => {
+                                <Select disabled={isSaving || !state} value={locality} onChange={(e) => {
                                     setLocality(e.target.value);
                                     setCenter(''); 
                                     setSelectedFacility(null); 
-                                }} disabled={!state}>
+                                }}>
                                     <option value="">— اختر المحلية —</option>
                                     {(STATE_LOCALITIES[state]?.localities || []).sort((a,b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
                                 </Select>
@@ -2485,10 +2348,10 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                             {isProgramManagement && (
                                 <FormGroup label="الإدارة (Department)">
                                     <Input
+                                        disabled={isSaving || !locality}
                                         value={department}
                                         onChange={(e) => setDepartment(e.target.value)}
                                         placeholder="أدخل اسم الإدارة"
-                                        disabled={!locality}
                                     />
                                 </FormGroup>
                             )}
@@ -2497,21 +2360,21 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                 isIccm ? (
                                     <FormGroup label="اسم القرية">
                                         <Input
+                                            disabled={isSaving || !locality}
                                             value={center}
                                             onChange={(e) => setCenter(e.target.value)}
                                             placeholder="أدخل اسم القرية"
-                                            disabled={!locality}
                                         />
                                     </FormGroup>
                                 ) : (
                                     <FormGroup label={isEtat ? "اسم المستشفى" : "اسم المؤسسة الصحية"}>
                                         <div 
                                             onClick={() => {
-                                                if (!isLoadingFacilities && locality) {
+                                                if (!isLoadingFacilities && locality && !isSaving) {
                                                     setIsFacilitySearchOpen(true);
                                                 }
                                             }}
-                                            className={`relative ${!locality ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+                                            className={`relative ${(!locality || isSaving) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
                                         >
                                             <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
                                                 <Search className="w-5 h-5 text-gray-400 mr-2" />
@@ -2521,7 +2384,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                                 readOnly
                                                 placeholder={isLoadingFacilities ? "جاري التحميل..." : (!locality ? "اختر المحلية أولاً" : "اضغط للبحث عن المؤسسة...")}
                                                 className="cursor-pointer bg-white pr-10" 
-                                                disabled={isLoadingFacilities || !locality}
+                                                disabled={isLoadingFacilities || !locality || isSaving}
                                             />
                                         </div>
                                     </FormGroup>
@@ -2531,10 +2394,10 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                             {(isIccm || isProgramManagement) ? (
                                  <FormGroup label="اسم المشارك">
                                     <Input
+                                        disabled={isSaving || !locality}
                                         value={name}
                                         onChange={(e) => setName(e.target.value)}
                                         placeholder="أدخل الاسم الرباعي للمشارك"
-                                        disabled={!locality}
                                     />
                                 </FormGroup>
                             ) : (
@@ -2552,7 +2415,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                                 return Array.isArray(staff) ? staff : [];
                                              } catch (e) { return []; }
                                          }, [selectedFacility?.imnci_staff])}
-                                        disabled={!selectedFacility || selectedFacility.id.startsWith('pending_')} 
+                                        disabled={!selectedFacility || selectedFacility.id.startsWith('pending_') || isSaving} 
                                     />
                                      {isEditingExistingWorker && <p className="text-sm text-blue-600 mt-1">تعديل بيانات الموظف الحالي.</p>}
                                      {!selectedFacility && !isLoadingFacilities && locality && <p className="text-sm text-orange-600 mt-1">اختر مؤسسة للبحث عن الكوادر الحالية.</p>}
@@ -2560,7 +2423,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                             )}
 
                             <FormGroup label="المسمى الوظيفي">
-                                 <Select value={job} onChange={(e) => setJob(e.target.value)} disabled={isEditingExistingWorker}>
+                                 <Select disabled={isEditingExistingWorker || isSaving} value={job} onChange={(e) => setJob(e.target.value)}>
                                     <option value="">— اختر المسمى الوظيفي —</option>
                                     {jobTitleOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                     <option value="Other">أخرى</option>
@@ -2568,12 +2431,12 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                             </FormGroup>
                             {job === 'Other' && (
                                 <FormGroup label="حدد المسمى الوظيفي">
-                                    <Input value={otherJobTitle} onChange={(e) => setOtherJobTitle(e.target.value)} placeholder="الرجاء التحديد" disabled={isEditingExistingWorker} />
+                                    <Input disabled={isEditingExistingWorker || isSaving} value={otherJobTitle} onChange={(e) => setOtherJobTitle(e.target.value)} placeholder="الرجاء التحديد" />
                                 </FormGroup>
                             )}
 
-                            <FormGroup label="رقم الهاتف"><Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} dir="ltr" className="text-left" /></FormGroup>
-                            <FormGroup label="البريد الإلكتروني (اختياري)"><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" className="text-left" /></FormGroup>
+                            <FormGroup label="رقم الهاتف"><Input disabled={isSaving} type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} dir="ltr" className="text-left" /></FormGroup>
+                            <FormGroup label="البريد الإلكتروني (اختياري)"><Input disabled={isSaving} type="email" value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" className="text-left" /></FormGroup>
                         </div>
                     </div>
 
@@ -2582,8 +2445,8 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                         <div className="mb-6 p-4 border rounded-md bg-gray-50/50">
                             <h3 className="text-lg font-bold mb-4 text-blue-700 border-b pb-2">التقييم والاختبارات</h3>
                             <div className="grid md:grid-cols-2 gap-6">
-                                <FormGroup label="درجة الاختبار القبلي (%)"><Input type="number" min="0" max="100" value={preTestScore} onChange={(e) => setPreTestScore(e.target.value)} /></FormGroup>
-                                <FormGroup label="درجة الاختبار البعدي (%)"><Input type="number" min="0" max="100" value={postTestScore} onChange={(e) => setPostTestScore(e.target.value)} /></FormGroup>
+                                <FormGroup label="درجة الاختبار القبلي (%)"><Input disabled={isSaving} type="number" min="0" max="100" value={preTestScore} onChange={(e) => setPreTestScore(e.target.value)} /></FormGroup>
+                                <FormGroup label="درجة الاختبار البعدي (%)"><Input disabled={isSaving} type="number" min="0" max="100" value={postTestScore} onChange={(e) => setPostTestScore(e.target.value)} /></FormGroup>
                             </div>
                         </div>
                     )}
@@ -2597,13 +2460,13 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                 {(isImnci || isIccm) && (
                                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                                         <FormGroup label={`هل تم التدريب مسبقاً في ${isIccm ? 'IMNCI/ICCM' : 'العلاج المتكامل (IMNCI)'}؟`}>
-                                            <Select value={trainedIMNCI} onChange={(e) => setTrainedIMNCI(e.target.value)} disabled={isEditingExistingWorker}>
+                                            <Select disabled={isEditingExistingWorker || isSaving} value={trainedIMNCI} onChange={(e) => setTrainedIMNCI(e.target.value)}>
                                                 <option value="">— اختر —</option>
                                                 <option value="no">لا</option>
                                                 <option value="yes">نعم</option>
                                             </Select>
                                         </FormGroup>
-                                        {trainedIMNCI === 'yes' && <FormGroup label="تاريخ آخر تدريب"><Input type="date" value={lastTrainIMNCI} onChange={(e) => setLastTrainIMNCI(e.target.value)} disabled={isEditingExistingWorker}/></FormGroup>}
+                                        {trainedIMNCI === 'yes' && <FormGroup label="تاريخ آخر تدريب"><Input disabled={isEditingExistingWorker || isSaving} type="date" value={lastTrainIMNCI} onChange={(e) => setLastTrainIMNCI(e.target.value)}/></FormGroup>}
                                     </div>
                                 )}
                                 
@@ -2623,19 +2486,19 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                                     <tr className="hover:bg-gray-50">
                                                         <td className="border p-3 font-medium text-gray-700 text-right">طبيب</td>
                                                         <td className="border p-2">
-                                                            <Input type="number" value={imnciDoctorsTotal} onChange={(e) => setImnciDoctorsTotal(e.target.value)} min="0" />
+                                                            <Input disabled={isSaving} type="number" value={imnciDoctorsTotal} onChange={(e) => setImnciDoctorsTotal(e.target.value)} min="0" />
                                                         </td>
                                                         <td className="border p-2">
-                                                            <Input type="number" value={imnciDoctorsTrained} onChange={(e) => setImnciDoctorsTrained(e.target.value)} min="0" />
+                                                            <Input disabled={isSaving} type="number" value={imnciDoctorsTrained} onChange={(e) => setImnciDoctorsTrained(e.target.value)} min="0" />
                                                         </td>
                                                     </tr>
                                                     <tr className="hover:bg-gray-50">
                                                         <td className="border p-3 font-medium text-gray-700 text-right">مساعد طبي</td>
                                                         <td className="border p-2">
-                                                            <Input type="number" value={imnciMedicalAssistantsTotal} onChange={(e) => setImnciMedicalAssistantsTotal(e.target.value)} min="0" />
+                                                            <Input disabled={isSaving} type="number" value={imnciMedicalAssistantsTotal} onChange={(e) => setImnciMedicalAssistantsTotal(e.target.value)} min="0" />
                                                         </td>
                                                         <td className="border p-2">
-                                                            <Input type="number" value={imnciMedicalAssistantsTrained} onChange={(e) => setImnciMedicalAssistantsTrained(e.target.value)} min="0" />
+                                                            <Input disabled={isSaving} type="number" value={imnciMedicalAssistantsTrained} onChange={(e) => setImnciMedicalAssistantsTrained(e.target.value)} min="0" />
                                                         </td>
                                                     </tr>
                                                 </tbody>
@@ -2647,10 +2510,10 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                 {isIccm && (
                                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                                         <FormGroup label="أقرب مؤسسة صحية">
-                                            <Input value={nearestHealthFacility} onChange={(e) => setNearestHealthFacility(e.target.value)} placeholder="اسم أقرب مؤسسة" />
+                                            <Input disabled={isSaving} value={nearestHealthFacility} onChange={(e) => setNearestHealthFacility(e.target.value)} placeholder="اسم أقرب مؤسسة" />
                                         </FormGroup>
                                         <FormGroup label="الساعات للوصول للمؤسسة (سيراً على الأقدام)">
-                                            <Input type="number" min="0" value={hoursToFacility} onChange={(e) => setHoursToFacility(e.target.value)} placeholder="مثال: 2.5" />
+                                            <Input disabled={isSaving} type="number" min="0" value={hoursToFacility} onChange={(e) => setHoursToFacility(e.target.value)} placeholder="مثال: 2.5" />
                                         </FormGroup>
                                     </div>
                                 )}
@@ -2658,7 +2521,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                 {isEtat && (
                                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                                         <FormGroup label="نوع المستشفى">
-                                            <Select value={hospitalTypeEtat} onChange={e => setHospitalTypeEtat(e.target.value)}>
+                                            <Select disabled={isSaving} value={hospitalTypeEtat} onChange={e => setHospitalTypeEtat(e.target.value)}>
                                                 <option value="">— اختر النوع —</option>
                                                 <option value="Pediatric Hospital">مستشفى أطفال</option>
                                                 <option value="Pediatric Department in General Hospital">قسم أطفال في مستشفى عام</option>
@@ -2667,66 +2530,66 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                            </Select>
                                         </FormGroup>
                                         <FormGroup label="هل تم التدريب مسبقاً على ETAT؟">
-                                            <Select value={trainedEtat} onChange={e => setTrainedEtat(e.target.value)}>
+                                            <Select disabled={isSaving} value={trainedEtat} onChange={e => setTrainedEtat(e.target.value)}>
                                                 <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
                                             </Select>
                                         </FormGroup>
-                                        {trainedEtat === 'yes' && <FormGroup label="تاريخ آخر تدريب (ETAT)"><Input type="date" value={lastTrainEtat} onChange={(e) => setLastTrainEtat(e.target.value)} /></FormGroup>}
+                                        {trainedEtat === 'yes' && <FormGroup label="تاريخ آخر تدريب (ETAT)"><Input disabled={isSaving} type="date" value={lastTrainEtat} onChange={(e) => setLastTrainEtat(e.target.value)} /></FormGroup>}
                                         <FormGroup label="هل يوجد نظام فرز (Triage)؟">
-                                            <Select value={hasTriageSystem} onChange={e => setHasTriageSystem(e.target.value)}>
+                                            <Select disabled={isSaving} value={hasTriageSystem} onChange={e => setHasTriageSystem(e.target.value)}>
                                                 <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
                                             </Select>
                                         </FormGroup>
                                         <FormGroup label="هل يوجد مركز استقرار سوء التغذية؟">
-                                            <Select value={hasStabilizationCenter} onChange={e => setHasStabilizationCenter(e.target.value)}>
+                                            <Select disabled={isSaving} value={hasStabilizationCenter} onChange={e => setHasStabilizationCenter(e.target.value)}>
                                                 <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
                                             </Select>
                                         </FormGroup>
                                         <FormGroup label="هل توجد وحدة العناية المتوسطة (HDU)؟">
-                                            <Select value={hasHdu} onChange={e => setHasHdu(e.target.value)}>
+                                            <Select disabled={isSaving} value={hasHdu} onChange={e => setHasHdu(e.target.value)}>
                                                 <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
                                             </Select>
                                         </FormGroup>
-                                        <FormGroup label={`عدد الـ (${professionalCategory}) في الطوارئ`}><Input type="number" min="0" value={numStaffInEr} onChange={e => setNumStaffInEr(e.target.value)} /></FormGroup>
-                                        <FormGroup label={`عدد الـ (${professionalCategory}) المدربين على ETAT`}><Input type="number" min="0" value={numStaffTrainedInEtat} onChange={e => setNumStaffTrainedInEtat(e.target.value)} /></FormGroup>
+                                        <FormGroup label={`عدد الـ (${professionalCategory}) في الطوارئ`}><Input disabled={isSaving} type="number" min="0" value={numStaffInEr} onChange={e => setNumStaffInEr(e.target.value)} /></FormGroup>
+                                        <FormGroup label={`عدد الـ (${professionalCategory}) المدربين على ETAT`}><Input disabled={isSaving} type="number" min="0" value={numStaffTrainedInEtat} onChange={e => setNumStaffTrainedInEtat(e.target.value)} /></FormGroup>
                                     </div>
                                 )}
 
                                 {(isEenc || isSsnc) && (
                                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                                         <FormGroup label="نوع المستشفى">
-                                            <Select value={hospitalTypeEenc} onChange={e => setHospitalTypeEenc(e.target.value)}>
+                                            <Select disabled={isSaving} value={hospitalTypeEenc} onChange={e => setHospitalTypeEenc(e.target.value)}>
                                                 <option value="">— اختر النوع —</option>
                                                 <option value="Comprehensive EmONC">طوارئ توليد شاملة (Comprehensive EmONC)</option>
                                                 <option value="Basic EmONC">طوارئ توليد أساسية (Basic EmONC)</option>
                                                 <option value="other">أخرى (حدد)</option>
                                             </Select>
                                         </FormGroup>
-                                        {hospitalTypeEenc === 'other' && <FormGroup label="حدد نوع المستشفى"><Input value={otherHospitalTypeEenc} onChange={e => setOtherHospitalTypeEenc(e.target.value)} /></FormGroup>}
+                                        {hospitalTypeEenc === 'other' && <FormGroup label="حدد نوع المستشفى"><Input disabled={isSaving} value={otherHospitalTypeEenc} onChange={e => setOtherHospitalTypeEenc(e.target.value)} /></FormGroup>}
                                         <FormGroup label={`هل تم التدريب مسبقاً على ${isEenc ? 'EENC' : 'SSNC'}؟`}>
-                                            <Select value={trainedEENC} onChange={e => setTrainedEENC(e.target.value)}>
+                                            <Select disabled={isSaving} value={trainedEENC} onChange={e => setTrainedEENC(e.target.value)}>
                                                 <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
                                             </Select>
                                         </FormGroup>
-                                        {trainedEENC === 'yes' && <FormGroup label={`تاريخ آخر تدريب (${isEenc ? 'EENC' : 'SSNC'})`}><Input type="date" value={lastTrainEENC} onChange={(e) => setLastTrainEENC(e.target.value)} /></FormGroup>}
+                                        {trainedEENC === 'yes' && <FormGroup label={`تاريخ آخر تدريب (${isEenc ? 'EENC' : 'SSNC'})`}><Input disabled={isSaving} type="date" value={lastTrainEENC} onChange={(e) => setLastTrainEENC(e.target.value)} /></FormGroup>}
                                         <FormGroup label="هل توجد وحدة رعاية حديثي الولادة الخاصة (SNCU)؟">
-                                            <Select value={hasSncu} onChange={e => setHasSncu(e.target.value)}>
+                                            <Select disabled={isSaving} value={hasSncu} onChange={e => setHasSncu(e.target.value)}>
                                                 <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
                                             </Select>
                                         </FormGroup>
                                         <FormGroup label="هل يوجد مركز تغذية الرضع (IYCF)؟">
-                                            <Select value={hasIycfCenter} onChange={e => setHasIycfCenter(e.target.value)}>
+                                            <Select disabled={isSaving} value={hasIycfCenter} onChange={e => setHasIycfCenter(e.target.value)}>
                                                 <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
                                             </Select>
                                         </FormGroup>
                                         <FormGroup label="هل توجد غرفة رعاية الكنغر؟">
-                                            <Select value={hasKangaroo} onChange={e => setHasKangaroo(e.target.value)}>
+                                            <Select disabled={isSaving} value={hasKangaroo} onChange={e => setHasKangaroo(e.target.value)}>
                                                 <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
                                             </Select>
                                         </FormGroup>
 
-                                        <FormGroup label={`عدد الـ (${professionalCategory}) في غرفة الولادة`}><Input type="number" min="0" value={numStaffInDelivery} onChange={e => setNumStaffInDelivery(e.target.value)} /></FormGroup>
-                                        <FormGroup label={`عدد الـ (${professionalCategory}) المدربين على ${isEenc ? 'EENC' : 'SSNC'}`}><Input type="number" min="0" value={numStaffTrainedInEenc} onChange={e => setNumStaffTrainedInEenc(e.target.value)} /></FormGroup>
+                                        <FormGroup label={`عدد الـ (${professionalCategory}) في غرفة الولادة`}><Input disabled={isSaving} type="number" min="0" value={numStaffInDelivery} onChange={e => setNumStaffInDelivery(e.target.value)} /></FormGroup>
+                                        <FormGroup label={`عدد الـ (${professionalCategory}) المدربين على ${isEenc ? 'EENC' : 'SSNC'}`}><Input disabled={isSaving} type="number" min="0" value={numStaffTrainedInEenc} onChange={e => setNumStaffTrainedInEenc(e.target.value)} /></FormGroup>
                                     </div>
                                 )}
                             </div>
@@ -2742,32 +2605,32 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                 <h3 className="text-lg font-bold mb-4 text-blue-700 border-b pb-2">المعدات وأدوات العمل</h3>
                                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     <FormGroup label="ميزان وزن">
-                                        <Select value={hasWeightScale} onChange={e => setHasWeightScale(e.target.value)}>
+                                        <Select disabled={isSaving} value={hasWeightScale} onChange={e => setHasWeightScale(e.target.value)}>
                                             <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
                                         </Select>
                                     </FormGroup>
                                     <FormGroup label="ميزان طول">
-                                        <Select value={hasHeightScale} onChange={e => setHasHeightScale(e.target.value)}>
+                                        <Select disabled={isSaving} value={hasHeightScale} onChange={e => setHasHeightScale(e.target.value)}>
                                             <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
                                         </Select>
                                     </FormGroup>
                                     <FormGroup label="ميزان حرارة">
-                                        <Select value={hasThermometer} onChange={e => setHasThermometer(e.target.value)}>
+                                        <Select disabled={isSaving} value={hasThermometer} onChange={e => setHasThermometer(e.target.value)}>
                                             <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
                                         </Select>
                                     </FormGroup>
                                     <FormGroup label="ساعة مؤقتة (Timer)">
-                                        <Select value={hasTimer} onChange={e => setHasTimer(e.target.value)}>
+                                        <Select disabled={isSaving} value={hasTimer} onChange={e => setHasTimer(e.target.value)}>
                                             <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
                                         </Select>
                                     </FormGroup>
                                     <FormGroup label="هل يوجد سجل العلاج المتكامل (IMNCI)؟">
-                                        <Select value={hasImnciRegister} onChange={e => setHasImnciRegister(e.target.value)}>
+                                        <Select disabled={isSaving} value={hasImnciRegister} onChange={e => setHasImnciRegister(e.target.value)}>
                                             <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
                                         </Select>
                                     </FormGroup>
                                     <FormGroup label="هل يوجد كتيب اللوحات؟">
-                                        <Select value={hasChartBooklet} onChange={e => setHasChartBooklet(e.target.value)}>
+                                        <Select disabled={isSaving} value={hasChartBooklet} onChange={e => setHasChartBooklet(e.target.value)}>
                                             <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
                                         </Select>
                                     </FormGroup>
@@ -2779,32 +2642,32 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                 <h3 className="text-lg font-bold mb-4 text-blue-700 border-b pb-2">الخدمات</h3>
                                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     <FormGroup label="هل يوجد ركن إرواء (ORS)؟">
-                                        <Select value={hasORS} onChange={e => setHasORS(e.target.value)}>
+                                        <Select disabled={isSaving} value={hasORS} onChange={e => setHasORS(e.target.value)}>
                                             <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
                                         </Select>
                                     </FormGroup>
                                     <FormGroup label="خدمة مراقبة النمو">
-                                        <Select value={hasGrowthMonitoring} onChange={e => setHasGrowthMonitoring(e.target.value)}>
+                                        <Select disabled={isSaving} value={hasGrowthMonitoring} onChange={e => setHasGrowthMonitoring(e.target.value)}>
                                             <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
                                         </Select>
                                     </FormGroup>
                                     
                                     <div>
                                         <FormGroup label="هل توجد خدمة التغذية العلاجية؟">
-                                            <Select value={hasNutri} onChange={e => setHasNutri(e.target.value)}>
+                                            <Select disabled={isSaving} value={hasNutri} onChange={e => setHasNutri(e.target.value)}>
                                                 <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
                                             </Select>
                                         </FormGroup>
-                                        {hasNutri === 'no' && <div className="mt-2"><FormGroup label="أقرب مركز تغذية علاجية؟"><Input value={nearestNutri} onChange={e => setNearestNutri(e.target.value)} /></FormGroup></div>}
+                                        {hasNutri === 'no' && <div className="mt-2"><FormGroup label="أقرب مركز تغذية علاجية؟"><Input disabled={isSaving} value={nearestNutri} onChange={e => setNearestNutri(e.target.value)} /></FormGroup></div>}
                                     </div>
 
                                     <div>
                                         <FormGroup label="هل توجد خدمة التحصين؟">
-                                            <Select value={hasImm} onChange={e => setHasImm(e.target.value)}>
+                                            <Select disabled={isSaving} value={hasImm} onChange={e => setHasImm(e.target.value)}>
                                                 <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
                                             </Select>
                                         </FormGroup>
-                                        {hasImm === 'no' && <div className="mt-2"><FormGroup label="أقرب مركز تحصين؟"><Input value={nearestImm} onChange={e => setNearestImm(e.target.value)} /></FormGroup></div>}
+                                        {hasImm === 'no' && <div className="mt-2"><FormGroup label="أقرب مركز تحصين؟"><Input disabled={isSaving} value={nearestImm} onChange={e => setNearestImm(e.target.value)} /></FormGroup></div>}
                                     </div>
                                 </div>
                             </div>
@@ -2814,8 +2677,10 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
 
                     {/* Submit Buttons */}
                     <div className="flex gap-2 justify-end mt-6 border-t pt-6">
-                        <Button variant="secondary" onClick={onCancel}>إلغاء</Button>
-                        <Button onClick={submit}>حفظ المشارك</Button>
+                        <Button variant="secondary" onClick={onCancel} disabled={isSaving}>إلغاء</Button>
+                        <Button onClick={submit} disabled={isSaving}>
+                            {isSaving ? <Spinner size="sm"/> : 'حفظ المشارك'}
+                        </Button>
                     </div>
                 </div>
             </Card>

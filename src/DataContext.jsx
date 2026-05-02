@@ -244,7 +244,7 @@ export const DataProvider = ({ children }) => {
             if (fetchingRef.current[key]) return currentCache;
             fetchingRef.current[key] = true;
             
-            // ONLY set loading to true if we DON'T have data in memory cache
+            // ONLY set loading to true if we DONT have data in memory cache
             if (!hasData) {
                 setIsLoading(prev => ({ ...prev, [key]: true }));
             }
