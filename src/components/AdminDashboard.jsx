@@ -116,8 +116,8 @@ const PermissionsEditor = ({ role, currentPermissions, allPermissions, onPermiss
                                 const isBoolean = typeof allPermissions[permission] === 'boolean';
                                 const formattedTitle = permission.replace(/([A-Z])/g, ' $1').trim();
                                 
-                                // View for Derived/Read-only Permissions
-                                if (['canViewDashboard', 'canViewAdmin', 'canApproveSubmissions'].includes(permission)) {
+                                // View for Derived/Read-only Permissions (canViewAdmin removed from this list so it renders as a checkbox)
+                                if (['canViewDashboard', 'canApproveSubmissions'].includes(permission)) {
                                     return (
                                         <div key={permission} className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gray-50/40">
                                             <div className="flex-1 pr-4">
@@ -517,6 +517,10 @@ export function AdminDashboard() {
     // --- STATE FOR ROLE PERMISSIONS MODAL ---
     const [editingPermissionRole, setEditingPermissionRole] = useState(null);
 
+    // --- STATE FOR INDIVIDUAL USER PERMISSIONS MODAL ---
+    const [editingUserPermissions, setEditingUserPermissions] = useState(null);
+    const [tempUserPermissions, setTempUserPermissions] = useState({});
+
     useEffect(() => {
         setLoading(true);
         const unsubscribe = onAuthStateChanged(auth, user => {
@@ -704,6 +708,32 @@ export function AdminDashboard() {
         });
     };
 
+    const handleIndividualPermissionChange = (userId, permission, value) => {
+        setTempUserPermissions(prev => {
+            let updated = { ...prev, [permission]: value };
+            return applyDerivedPermissions(updated);
+        });
+    };
+
+    const handleSaveIndividualPermissions = async () => {
+        if (!editingUserPermissions) return;
+        setLoading(true);
+        try {
+            const userRef = doc(db, "users", editingUserPermissions.id);
+            await updateDoc(userRef, { permissions: tempUserPermissions });
+            setUsers(users.map(u => 
+                u.id === editingUserPermissions.id ? { ...u, permissions: tempUserPermissions } : u
+            ));
+            setToast({ show: true, message: `Custom permissions updated for ${editingUserPermissions.displayName}.`, type: "success" });
+            setEditingUserPermissions(null);
+        } catch (error) {
+            console.error("Error updating individual permissions:", error);
+            setToast({ show: true, message: "Failed to update custom permissions.", type: "error" });
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleSaveAndSyncAllPermissions = async () => {
         if (!window.confirm("Are you sure you want to save these global permissions AND synchronize them with ALL users in the database?")) return;
         setLoading(true);
@@ -889,14 +919,27 @@ export function AdminDashboard() {
                                             </div>
                                         </td>
                                         <td className="py-3">
-                                            <Button 
-                                                size="sm" 
-                                                variant="secondary" 
-                                                onClick={() => { setEditingRolesUser(user); setTempSelectedRoles(userRoles); }}
-                                                className="text-xs py-1 px-3 bg-white border-gray-300 shadow-sm hover:bg-gray-50 hover:text-sky-600"
-                                            >
-                                                <Edit3 className="w-3 h-3 mr-1" /> Edit Roles
-                                            </Button>
+                                            <div className="flex flex-col gap-2 items-start max-w-[140px]">
+                                                <Button 
+                                                    size="sm" 
+                                                    variant="secondary" 
+                                                    onClick={() => { setEditingRolesUser(user); setTempSelectedRoles(userRoles); }}
+                                                    className="text-xs py-1 px-3 bg-white border-gray-300 shadow-sm hover:bg-gray-50 hover:text-sky-600 w-full justify-start"
+                                                >
+                                                    <Edit3 className="w-3 h-3 mr-2" /> Edit Roles
+                                                </Button>
+                                                <Button 
+                                                    size="sm" 
+                                                    variant="secondary" 
+                                                    onClick={() => { 
+                                                        setEditingUserPermissions(user); 
+                                                        setTempUserPermissions(user.permissions || mergeRolePermissions(userRoles, rolesAndPermissions)); 
+                                                    }}
+                                                    className="text-xs py-1 px-3 bg-white border-gray-300 shadow-sm hover:bg-gray-50 hover:text-purple-600 w-full justify-start"
+                                                >
+                                                    <Shield className="w-3 h-3 mr-2" /> Custom Perms
+                                                </Button>
+                                            </div>
                                         </td>
                                         <td className="py-3">
                                             <div className="flex flex-col gap-2 max-w-[200px]">
@@ -1141,6 +1184,40 @@ export function AdminDashboard() {
                     <div className="flex justify-end gap-3 w-full pt-1">
                         <Button variant="primary" onClick={() => setEditingPermissionRole(null)} className="px-8 shadow-sm">
                             Done
+                        </Button>
+                    </div>
+                </CardFooter>
+            </Modal>
+
+            {/* CONFIGURE INDIVIDUAL USER PERMISSIONS MODAL */}
+            <Modal isOpen={!!editingUserPermissions} onClose={() => setEditingUserPermissions(null)} title="Configure Custom User Permissions">
+                <CardBody className="p-0 bg-gray-50/50">
+                    <div className="p-6 border-b border-gray-200 bg-white">
+                        <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2">Editing Custom Permissions For:</p>
+                        <div className="font-black text-purple-900 flex items-center text-2xl">
+                            <Shield className="w-6 h-6 mr-3 text-purple-500"/> {editingUserPermissions?.displayName || editingUserPermissions?.email}
+                        </div>
+                        <p className="text-xs text-amber-600 mt-2 font-medium flex items-center">
+                            ⚠️ Changing this user's role later will reset these custom permissions back to the role defaults.
+                        </p>
+                    </div>
+                    {editingUserPermissions && (
+                        <div className="p-4 md:p-6 max-h-[60vh] overflow-y-auto">
+                            <PermissionsEditor 
+                                role={editingUserPermissions.id} 
+                                currentPermissions={tempUserPermissions} 
+                                allPermissions={ALL_PERMISSIONS} 
+                                onPermissionChange={(role, permission, value) => handleIndividualPermissionChange(editingUserPermissions.id, permission, value)} 
+                                disabled={!currentUserRoles.includes('super_user')} 
+                            />
+                        </div>
+                    )}
+                </CardBody>
+                <CardFooter className="bg-white border-t border-gray-100">
+                    <div className="flex justify-end gap-3 w-full pt-1">
+                        <Button variant="secondary" onClick={() => setEditingUserPermissions(null)} className="px-5">Cancel</Button>
+                        <Button variant="primary" onClick={handleSaveIndividualPermissions} className="px-8 shadow-sm">
+                            Save Custom Permissions
                         </Button>
                     </div>
                 </CardFooter>

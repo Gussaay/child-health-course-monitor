@@ -1343,8 +1343,8 @@ export function CourseManagementView({
                                 onBatchUpdate={onBatchUpdate} onBulkMigrate={onBulkMigrate} onOpenTestFormForParticipant={handleOpenTestFormForParticipant}
                                 isCourseActive={isCourseActive} canAddParticipant={canManageCourse} canImportParticipants={canUseSuperUserAdvancedFeatures}
                                 canCleanParticipantData={canUseSuperUserAdvancedFeatures} canBulkChangeParticipants={canUseSuperUserAdvancedFeatures}
-                                canBulkMigrateParticipants={canUseSuperUserAdvancedFeatures} canAddMonitoring={(canManageCourse && isCourseActive) || canUseFederalManagerAdvancedFeatures}
-                                canEditDeleteParticipantActiveCourse={canManageCourse} canEditDeleteParticipantInactiveCourse={canUseFederalManagerAdvancedFeatures}
+                                canBulkMigrateParticipants={canUseSuperUserAdvancedFeatures} canAddMonitoring={(canManageCourse && isCourseActive) || canUseFederalManagerAdvancedFeatures || canEditDeleteInactiveCourse}
+                                canEditDeleteParticipantActiveCourse={canManageCourse} canEditDeleteParticipantInactiveCourse={canEditDeleteInactiveCourse}
                             />
                         )}
                         {activeCoursesTab === 'participants' && !selectedCourse && activeCoursesTab !== 'courses' && <EmptyState message="Please select a course from the 'Courses' tab to view participants." />}

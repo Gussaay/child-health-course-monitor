@@ -8,7 +8,7 @@ import { Bar, Pie, Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, LineElement, PointElement } from 'chart.js';
 
 import {
-    Home, Book, Users, User, Hospital, Database, ClipboardCheck, ClipboardList, FolderKanban, TrendingUp, X, WifiOff, RefreshCw, Activity, Layers
+    Home, Book, Users, User, Hospital, Database, ClipboardCheck, ClipboardList, FolderKanban, TrendingUp, X, WifiOff, RefreshCw, Activity, Layers, Globe, LogOut
 } from 'lucide-react';
 
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
@@ -419,7 +419,7 @@ export default function App() {
     const [loading, setLoading] = useState(false);
     const [previousView, setPreviousView] = useState("landing");
     const [userRole, setUserRole] = useState(null);
-    const [userRoles, setUserRoles] = useState([]); // <-- ADD THIS LINE
+    const [userRoles, setUserRoles] = useState([]); 
     const [userPermissions, setUserPermissions] = useState({});
     const [permissionsLoading, setPermissionsLoading] = useState(true);
     const [toast, setToast] = useState({ show: false, message: '', type: '' });
@@ -477,6 +477,7 @@ export default function App() {
     const [isPublicMeetingView, setIsPublicMeetingView] = useState(false);
     const [publicMeetingId, setPublicMeetingId] = useState(null);
     const [publicMeetingData, setPublicMeetingData] = useState(null);
+    const [publicMeetingTargetDate, setPublicMeetingTargetDate] = useState(null); 
 
     const [operationCounts, setOperationCounts] = useState({ reads: 0, writes: 0 });
     const [isMonitorVisible, setIsMonitorVisible] = useState(true);
@@ -545,13 +546,18 @@ export default function App() {
 
             setIsBulkUpdateView(false); setPublicBulkUpdateParams({});
 
-            setIsPublicMeetingView(false); setPublicMeetingId(null); setPublicMeetingData(null);
+            setIsPublicMeetingView(false); setPublicMeetingId(null); setPublicMeetingData(null); setPublicMeetingTargetDate(null);
 
             // --- PUBLIC ROUTES EVALUATION ---
             
             const publicMeetingMatch = path.match(/^\/public\/meeting\/([a-zA-Z0-9_-]+)\/?$/);
             if (publicMeetingMatch && publicMeetingMatch[1]) {
                 setIsPublicMeetingView(true); setPublicMeetingId(publicMeetingMatch[1]); setPublicViewLoading(true);
+                
+                // Extract target date from URL
+                const searchParams = new URLSearchParams(window.location.search);
+                setPublicMeetingTargetDate(searchParams.get('date'));
+                
                 getUnitMeetingById(publicMeetingMatch[1], 'server')
                     .then(data => { if (!data) throw new Error("Meeting not found."); setPublicMeetingData(data); })
                     .catch(err => setSharedViewError(err.message))
@@ -772,12 +778,12 @@ export default function App() {
                         await setDoc(userRef, { email: user.email, role: role, roles: roles, permissions: permissionsData, lastLogin: new Date(), assignedState: '' }, { merge: true });
                     } else {
                         role = userSnap.data().role;
-                        roles = userSnap.data().roles || [role]; // <-- GRAB THE ROLES ARRAY
+                        roles = userSnap.data().roles || [role]; 
                         const ALL_PERMISSIONS_MINIMAL = ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
                         const rawPerms = { ...ALL_PERMISSIONS_MINIMAL, ...(userSnap.data().permissions || {}) };
                         permissionsData = applyDerivedPermissions(rawPerms);
                     }
-                    setUserRole(role); setUserRoles(roles); setUserPermissions(permissionsData); // <-- SET THE STATE
+                    setUserRole(role); setUserRoles(roles); setUserPermissions(permissionsData); 
                 } else { setUserRole(null); setUserRoles([]); setUserPermissions({}); }
             } catch (error) {
                 console.error("Error checking user role:", error);
@@ -897,8 +903,8 @@ export default function App() {
         const viewPermissions = {
             'landing': true, 'dashboard': true, 'admin': permissions.canViewAdmin, 'imciForm': permissions.canViewCourse, 'humanResources': permissions.canViewHumanResource,
             'courses': permissions.canViewCourse, 'courseDetails': permissions.canViewCourse, 'participants': permissions.canViewCourse, 'reports': permissions.canViewCourse,
-            'observe': (permissions.canManageCourse && isCourseActive) || permissions.canUseFederalManagerAdvancedFeatures,
-            'monitoring': (permissions.canManageCourse && isCourseActive) || permissions.canUseFederalManagerAdvancedFeatures,
+           'observe': (permissions.canManageCourse && isCourseActive) || permissions.canUseFederalManagerAdvancedFeatures || permissions.manageTimePeriod === 'anytime',
+           'monitoring': (permissions.canManageCourse && isCourseActive) || permissions.canUseFederalManagerAdvancedFeatures || permissions.manageTimePeriod === 'anytime',
             'courseForm': permissions.canManageCourse, 'participantForm': permissions.canManageCourse, 'facilitatorForm': permissions.canManageHumanResource,
             'courseReport': permissions.canViewCourse, 'participantReport': permissions.canViewCourse, 'facilitatorReport': permissions.canViewHumanResource,
             'finalReport': permissions.canViewCourse, 'participantMigration': permissions.canUseSuperUserAdvancedFeatures, 'childHealthServices': permissions.canViewFacilities,
@@ -1166,7 +1172,8 @@ export default function App() {
                 onBatchUpdate={() => { setCourseDetailsCache(prev => { const newCache = { ...prev }; delete newCache[selectedCourse.id]; return newCache; }); setSelectedCourseId(null); setSelectedCourseId(selectedCourse.id); }}
                 loadingDetails={loading || (selectedCourseId && courseDetailsLoading)} 
                 canManageCourse={permissions.canManageCourse} canUseSuperUserAdvancedFeatures={permissions.canUseSuperUserAdvancedFeatures}
-                canUseFederalManagerAdvancedFeatures={permissions.canUseFederalManagerAdvancedFeatures} canEditDeleteActiveCourse={permissions.canManageCourse} canEditDeleteInactiveCourse={permissions.canUseFederalManagerAdvancedFeatures}
+                canUseFederalManagerAdvancedFeatures={permissions.canUseFederalManagerAdvancedFeatures} canEditDeleteActiveCourse={permissions.canManageCourse} 
+                canEditDeleteInactiveCourse={permissions.canUseFederalManagerAdvancedFeatures || (permissions.canManageCourse && permissions.manageTimePeriod === 'anytime')}
                 onSaveParticipantTest={async (payload) => {
                     if (!payload.deleted) await upsertParticipantTest(payload);
                     setCourseDetailsCache(prev => { const newCache = { ...prev }; delete newCache[selectedCourse?.id]; return newCache; });
@@ -1206,7 +1213,7 @@ export default function App() {
                 return permissions.canViewLocalityPlan ? ( <Suspense fallback={<Spinner />}><LocalityPlanView permissions={permissions} userStates={userStates} userLocalities={userLocalities} /></Suspense> ) : null;
 
             case 'monitoring': case 'observe':
-                const canMonitor = (permissions.canManageCourse && isCourseActive) || permissions.canUseFederalManagerAdvancedFeatures;
+                const canMonitor = (permissions.canManageCourse && isCourseActive) || permissions.canUseFederalManagerAdvancedFeatures || permissions.manageTimePeriod === 'anytime';
                 return canMonitor ? (selectedCourse && currentParticipant && <ObservationView course={selectedCourse} participant={currentParticipant} participants={courseDetails.participants} onChangeParticipant={(id) => setSelectedParticipantId(id)} initialCaseToEdit={editingCaseFromReport} />) : null;
 
             case 'courseForm': 
@@ -1362,6 +1369,7 @@ export default function App() {
                 <Suspense fallback={<Card><Spinner /></Card>}>
                     <PublicMeetingAttendanceView
                         meeting={publicMeetingData}
+                        targetDate={publicMeetingTargetDate}
                         onSave={async (updatedMeeting) => {
                             await upsertUnitMeeting(updatedMeeting);
                             setPublicMeetingData(updatedMeeting);
@@ -1537,10 +1545,10 @@ export default function App() {
                                         const newLang = i18n.language?.startsWith('en') ? 'ar' : 'en';
                                         i18n.changeLanguage(newLang);
                                     }}
-                                    className="px-3 py-1.5 text-sm font-bold text-sky-100 bg-slate-700 border border-slate-600 rounded hover:bg-slate-600 hover:text-white transition-colors"
+                                    className="p-1.5 text-sky-400 bg-slate-700 border border-slate-600 rounded hover:bg-slate-600 hover:text-sky-300 transition-colors flex items-center justify-center min-w-[36px]"
                                     title={i18n.language?.startsWith('en') ? 'التبديل إلى العربية' : 'Switch to English'}
                                 >
-                                    {i18n.language?.startsWith('en') ? 'العربية' : 'English'}
+                                    <span className="font-bold text-sm">E/ع</span>
                                 </button>
                             )}
                         </div>
@@ -1549,44 +1557,48 @@ export default function App() {
             </header>
 
             {user && !isMinimalUILayout && (
-                <div className="bg-slate-700 text-slate-200 p-2 md:p-3 text-center flex items-center justify-center gap-4 flex-wrap">
+                <div className="bg-slate-700 text-slate-200 px-3 py-2 flex items-center justify-between gap-2 w-full overflow-hidden shadow-inner">
                     <div 
-                        className="flex items-center gap-2 cursor-pointer hover:bg-slate-600 px-3 py-1.5 rounded-md transition-colors duration-200"
+                        className="flex items-center gap-2 cursor-pointer hover:bg-slate-600 px-2 py-1 rounded-md transition-colors duration-200 min-w-0 flex-1"
                         onClick={() => setIsUserProfileModalOpen(true)}
                         title="View Profile Information"
                     >
-                        <span className="font-semibold">{user.displayName || user.email}</span>
+                        <span className="font-semibold text-sm truncate block">{user.displayName || user.email}</span>
                         
-                        {/* System Roles - NOW LOOPS THROUGH ALL ROLES */}
-                        {userRoles && userRoles.length > 0 && userRoles.map(r => (
-                            <span key={r} className="bg-sky-500 text-white text-xs px-2 py-1 rounded shadow-sm capitalize">
-                                {r.replace(/_/g, ' ')}
-                            </span>
-                        ))}
-
-                        {/* HR / Program Team Role (if available) */}
-                        {userHRProfile && userHRProfile.role && (
-                            <span className="bg-teal-500 text-white text-xs px-2 py-1 rounded shadow-sm capitalize">
-                                {userHRProfile.role}
-                            </span>
-                        )}
+                        {/* Hide roles on very small mobile to guarantee single line, show on sm up */}
+                        <div className="hidden sm:flex items-center gap-1 flex-nowrap">
+                            {userRoles && userRoles.length > 0 && userRoles.map(r => (
+                                <span key={r} className="bg-sky-500 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm capitalize whitespace-nowrap">
+                                    {r.replace(/_/g, ' ')}
+                                </span>
+                            ))}
+                            {userHRProfile && userHRProfile.role && (
+                                <span className="bg-teal-500 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm capitalize whitespace-nowrap">
+                                    {userHRProfile.role}
+                                </span>
+                            )}
+                        </div>
                     </div>
-                    {permissions.canViewAdmin && (<Button onClick={() => navigate('admin')} variant="primary">{t('landing.modules.admin', 'Admin Dashboard')}</Button>)}
                     
-                    <div className="flex items-center gap-2 ml-auto md:ml-0">
+                    <div className="flex items-center justify-end gap-2 shrink-0">
                         <button
                             onClick={() => {
                                 const newLang = i18n.language?.startsWith('en') ? 'ar' : 'en';
                                 i18n.changeLanguage(newLang);
                             }}
-                            className="px-3 py-1 text-sm font-bold text-sky-100 bg-slate-600 border border-slate-500 rounded hover:bg-slate-500 hover:text-white transition-colors h-full"
+                            className="p-1.5 text-sky-400 bg-slate-600 border border-slate-500 rounded hover:bg-slate-500 hover:text-sky-300 transition-colors flex items-center justify-center min-w-[36px]"
                             title={i18n.language?.startsWith('en') ? 'التبديل إلى العربية' : 'Switch to English'}
                         >
-                            {i18n.language?.startsWith('en') ? 'العربية' : 'English'}
+                            <span className="font-bold text-sm">E/ع</span>
                         </button>
-                        <Button onClick={handleLogout} className="px-3 py-1 text-sm font-semibold text-white bg-red-600 rounded-md hover:bg-red-700">
-                            {t('app.logout', 'Logout')}
-                        </Button>
+                        <button 
+                            onClick={handleLogout} 
+                            className="p-1.5 sm:px-3 sm:py-1 text-sm font-semibold text-white bg-red-600 rounded-md hover:bg-red-700 flex items-center justify-center gap-1 transition-colors" 
+                            title={t('app.logout', 'Logout')}
+                        >
+                            <LogOut size={18} className="sm:hidden" />
+                            <span className="hidden sm:inline">{t('app.logout', 'Logout')}</span>
+                        </button>
                     </div>
                 </div>
             )}
@@ -1725,11 +1737,11 @@ export default function App() {
                 <ResourceMonitor counts={operationCounts} onReset={handleResetMonitor} onDismiss={handleDismissMonitor} />
             )}
 
-            {isUpdateReady && updateBundle && (
+           {isUpdateReady && updateBundle && (
                 <div className="fixed inset-0 bg-slate-900 bg-opacity-80 flex flex-col items-center justify-center z-[100000] p-4 backdrop-blur-sm">
                     <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full text-center space-y-4">
                         <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-sky-100">
-                            <RefreshCw className="h-6 w-6 text-sky-600 animate-spin" />
+                            <RefreshCw className="h-6 w-6 text-sky-600 animate-spin"/>
                         </div>
                         <h3 className="text-xl font-bold text-slate-800">Update Ready!</h3>
                         <p className="text-sm text-slate-500">

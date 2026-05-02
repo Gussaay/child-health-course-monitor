@@ -1,5 +1,14 @@
 // src/components/ProjectTrackerView.jsx
 import React, { useState, useEffect, useMemo } from 'react';
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { Bar } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title as ChartTitle, Tooltip, Legend } from 'chart.js';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { FileOpener } from '@capacitor-community/file-opener';
+import { amiriFontBase64 } from './AmiriFont.js';
+
 import { Card, CardBody, Button, Modal, Input, FormGroup, Select, PageHeader, Table, EmptyState, Spinner } from './CommonComponents';
 import { upsertProject, deleteProject, upsertUnitMeeting, deleteUnitMeeting } from '../data';
 import { useDataCache } from '../DataContext';
@@ -8,8 +17,10 @@ import {
     Plus, Edit, Trash2, CheckCircle, Clock, PlayCircle, FolderKanban, 
     Calendar, Baby, Stethoscope, Users, Activity, Package, HeartPulse, ChevronLeft,
     BarChart2, AlertCircle, Target, ListTodo, AlertTriangle, ArrowRight, UserCheck, Layers,
-    Video, MapPin, FileText, CheckSquare, Eye, Share2, Link as LinkIcon, Search, UserPlus, Save
+    Video, MapPin, FileText, CheckSquare, Eye, Share2, Link as LinkIcon, Search, UserPlus, Save, Download
 } from 'lucide-react';
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, ChartTitle, Tooltip, Legend);
 
 const PROGRAM_UNITS_DATA = [
     { id: "Neonatal Health Unit", title: "Neonatal Health", icon: Baby, color: "text-blue-500", bg: "bg-blue-100", border: "border-blue-200" },
@@ -57,6 +68,132 @@ const groupInviteesByState = (inviteeNames, guests, allTeamMembers) => {
     }, {});
 };
 
+const getStatusDetails = (attended, totalSessions) => {
+    if (totalSessions === 0) return { text: '-', textAr: '-', class: 'bg-gray-100 text-gray-800 border-gray-200' };
+    const percentage = (attended / totalSessions) * 100;
+    if (percentage === 100) return { text: 'Excellent', textAr: 'ممتاز', class: 'bg-green-100 text-green-800 border-green-200' };
+    if (percentage >= 80) return { text: 'Adequate', textAr: 'جيد', class: 'bg-yellow-100 text-yellow-800 border-yellow-200' };
+    if (percentage >= 50) return { text: 'Poor', textAr: 'ضعيف', class: 'bg-orange-100 text-orange-800 border-orange-200' };
+    return { text: 'Not Accepted', textAr: 'غير مقبول', class: 'bg-red-100 text-red-800 border-red-200' };
+};
+
+// --- PDF GENERATOR ---
+const generateMeetingAttendancePdf = async (meeting, allInvitees, onSuccess, onError) => {
+    try {
+        const doc = new jsPDF('landscape'); 
+        doc.addFileToVFS('Amiri-Regular.ttf', amiriFontBase64);
+        doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
+        doc.setFont('Amiri');
+        
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const sessionDates = meeting.sessionDates || [];
+        
+        doc.setFontSize(18);
+        doc.setTextColor(40); 
+        doc.text(`سجل حضور الاجتماع: ${meeting.title}`, pageWidth / 2, 20, { align: 'center' });
+        
+        doc.setFontSize(11);
+        doc.setTextColor(100);
+        doc.text(`الجهة: ${meeting.unit} | التكرار: ${meeting.schedule || '-'}`, pageWidth / 2, 28, { align: 'center' });
+        
+        const dateHeaders = sessionDates.map((date, index) => `جلسة ${index + 1}\n${date}`);
+        const headRow = [['م', 'الاسم', 'الولاية / الجهة', 'الصفة', ...dateHeaders, 'المجموع', 'الحالة']];
+
+        const sortedInvitees = [...allInvitees].sort((a, b) => {
+            const countA = (meeting.attendance?.[a.name] || []).length;
+            const countB = (meeting.attendance?.[b.name] || []).length;
+            if (countB !== countA) return countB - countA;
+            return a.displayName.localeCompare(b.displayName);
+        });
+
+        const tableData = sortedInvitees.map((inv, index) => {
+            const row = [index + 1, inv.displayName, inv.state, inv.position];
+            
+            sessionDates.forEach(date => {
+                const isPresent = (meeting.attendance?.[inv.name] || []).includes(date);
+                row.push(isPresent ? 'PRESENT' : 'ABSENT');
+            });
+
+            const daysCount = (meeting.attendance?.[inv.name] || []).length;
+            const percentage = sessionDates.length > 0 ? Math.round((daysCount / sessionDates.length) * 100) : 0;
+            row.push(`${daysCount} (${percentage}%)`);
+            
+            const status = getStatusDetails(daysCount, sessionDates.length).textAr;
+            row.push(status);
+
+            return row;
+        });
+
+        autoTable(doc, {
+            head: headRow,
+            body: tableData,
+            startY: 34, 
+            theme: 'grid',
+            headStyles: { font: 'Amiri', fillColor: [79, 70, 229], textColor: 255, halign: 'center', fontSize: 9, cellPadding: 2 },
+            styles: { font: 'Amiri', fontSize: 8, cellPadding: 1.5, valign: 'middle', lineColor: [200, 200, 200], lineWidth: 0.1, overflow: 'ellipsize' },
+            columnStyles: {
+                0: { cellWidth: 8, halign: 'center', fontStyle: 'bold' },
+                1: { cellWidth: 45, halign: 'right', font: 'Amiri' },
+                2: { cellWidth: 35, halign: 'right', font: 'Amiri' },
+                3: { cellWidth: 35, halign: 'right', font: 'Amiri' }
+            },
+            didParseCell: function (data) {
+                data.cell.styles.font = 'Amiri'; 
+                const dateColumnStartIndex = 4; 
+                const dateColumnEndIndex = 4 + sessionDates.length; 
+
+                if (data.section === 'body' && data.column.index >= dateColumnStartIndex && data.column.index < dateColumnEndIndex) {
+                    data.cell.rawStatus = data.cell.raw; 
+                    data.cell.text = ''; 
+                }
+                
+                if (data.section === 'body' && data.column.index === dateColumnEndIndex) {
+                    data.cell.styles.halign = 'center'; data.cell.styles.fontStyle = 'bold';
+                }
+                
+                if (data.section === 'body' && data.column.index === dateColumnEndIndex + 1) {
+                    data.cell.styles.halign = 'center'; data.cell.styles.fontStyle = 'bold';
+                    const text = data.cell.raw;
+                    if (text === 'ممتاز') data.cell.styles.textColor = [22, 163, 74]; 
+                    else if (text === 'جيد') data.cell.styles.textColor = [202, 138, 4]; 
+                    else if (text === 'ضعيف') data.cell.styles.textColor = [234, 88, 12]; 
+                    else if (text === 'غير مقبول') data.cell.styles.textColor = [220, 38, 38]; 
+                }
+            },
+            didDrawCell: function (data) {
+                if (data.cell.rawStatus) {
+                    const cx = data.cell.x + data.cell.width / 2;
+                    const cy = data.cell.y + data.cell.height / 2;
+                    if (data.cell.rawStatus === 'PRESENT') {
+                        doc.setDrawColor(22, 163, 74); doc.setLineWidth(0.5);
+                        doc.line(cx - 1.5, cy, cx - 0.5, cy + 1.5); doc.line(cx - 0.5, cy + 1.5, cx + 2, cy - 1.5);
+                    } else if (data.cell.rawStatus === 'ABSENT') {
+                        doc.setDrawColor(220, 38, 38); doc.setLineWidth(0.5);
+                        const s = 1.2; 
+                        doc.line(cx - s, cy - s, cx + s, cy + s); doc.line(cx + s, cy - s, cx - s, cy + s);
+                    }
+                }
+            }
+        });
+
+        const sanitizeForFilename = (str) => (str || '').toString().replace(/[\/\\]/g, '-').replace(/\s+/g, '_');
+        const fileName = `Meeting_Attendance_${sanitizeForFilename(meeting.title)}_${new Date().toISOString().split('T')[0]}.pdf`;
+        
+        if (Capacitor.isNativePlatform()) {
+            const base64Data = doc.output('datauristring').split('base64,')[1];
+            const writeResult = await Filesystem.writeFile({ path: fileName, data: base64Data, directory: Directory.Downloads });
+            await FileOpener.open({ filePath: writeResult.uri, contentType: 'application/pdf' });
+            if (onSuccess) onSuccess(`PDF saved to Downloads folder: ${fileName}`);
+        } else {
+            doc.save(fileName);
+            if (onSuccess) onSuccess("PDF download initiated.");
+        }
+
+    } catch (error) {
+        console.error("Error generating attendance report:", error);
+        if (onError) onError("Failed to generate report: " + error.message);
+    }
+};
 
 // --- INVITEE SELECTION MODAL ---
 function InviteeSelectionModal({ isOpen, onClose, allMembers, selectedNames, onConfirm }) {
@@ -84,10 +221,8 @@ function InviteeSelectionModal({ isOpen, onClose, allMembers, selectedNames, onC
             const nameToMatch = (m.nameAr || m.name || '').toLowerCase();
             const matchesSearch = nameToMatch.includes(searchTerm.toLowerCase());
             const matchesLevel = levelFilter === 'all' || m._level === levelFilter;
-            
             const memberPos = m.role || (m.jobTitle === 'اخرى' ? m.jobTitleOther : m.jobTitle);
             const matchesPosition = positionFilter === 'all' || memberPos === positionFilter;
-
             return matchesSearch && matchesLevel && matchesPosition;
         });
     }, [allMembers, searchTerm, levelFilter, positionFilter]);
@@ -215,13 +350,15 @@ export default function ProjectTrackerView({ permissions }) {
     const [activeProjectId, setActiveProjectId] = useState(null);
     const [activeMeetingId, setActiveMeetingId] = useState(null);
     const [activeMeetingDate, setActiveMeetingDate] = useState(''); 
+    const [isPdfGenerating, setIsPdfGenerating] = useState(false);
     
     // --- Modal State ---
     const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
     const [isSubtaskModalOpen, setIsSubtaskModalOpen] = useState(false);
     const [isInviteeModalOpen, setIsInviteeModalOpen] = useState(false); 
     const [isAddGuestModalOpen, setIsAddGuestModalOpen] = useState(false);
-    const [shareMeetingId, setShareMeetingId] = useState(null);
+    const [shareMeeting, setShareMeeting] = useState(null);
+    const [shareSelectedDate, setShareSelectedDate] = useState('');
     
     const [currentProject, setCurrentProject] = useState(null);
     const [currentSubtask, setCurrentSubtask] = useState(null);
@@ -270,7 +407,6 @@ export default function ProjectTrackerView({ permissions }) {
         }
     }, [activeMeeting, activeMeetingDate]);
 
-    // Compute the full list of potential assignees for Action Points (Invitees + Guests)
     const actionPointAssignees = useMemo(() => {
         const invitees = (activeMeeting?.invitees || []).map(name => ({
             value: name,
@@ -281,6 +417,62 @@ export default function ProjectTrackerView({ permissions }) {
             label: `${g.name} (Guest)`
         }));
         return [...invitees, ...guests].sort((a, b) => a.label.localeCompare(b.label));
+    }, [activeMeeting, allTeamMembers]);
+
+    // Dashboard KPIs & Chart for active meeting attendance
+    const attendanceDashboard = useMemo(() => {
+        if (!activeMeeting) return null;
+        
+        const totalSessions = activeMeeting.sessionDates?.length || 0;
+        const regularDetails = (activeMeeting.invitees || []).map(name => getInviteeDetails(name, allTeamMembers));
+        const guestDetails = (activeMeeting.guests || []).map(g => ({
+            name: g.name, displayName: g.name, state: 'External / Guests', position: g.position, level: 'guest', isGuest: true
+        }));
+        
+        const allInvitees = [...regularDetails, ...guestDetails].sort((a, b) => {
+            const countA = (activeMeeting.attendance?.[a.name] || []).length;
+            const countB = (activeMeeting.attendance?.[b.name] || []).length;
+            if (countB !== countA) return countB - countA;
+            return a.displayName.localeCompare(b.displayName);
+        });
+        
+        let totalActual = 0;
+        const stateStats = {};
+        
+        allInvitees.forEach(inv => {
+            const attCount = (activeMeeting.attendance?.[inv.name] || []).length;
+            totalActual += attCount;
+            if (!stateStats[inv.state]) stateStats[inv.state] = { expected: 0, actual: 0 };
+            stateStats[inv.state].expected += totalSessions;
+            stateStats[inv.state].actual += attCount;
+        });
+        
+        const totalExpected = allInvitees.length * totalSessions;
+        const globalRate = totalExpected > 0 ? (totalActual / totalExpected) * 100 : 0;
+        
+        const stateChartData = {
+            labels: Object.keys(stateStats),
+            datasets: [{
+                label: 'Attendance Rate (%)',
+                data: Object.values(stateStats).map(s => s.expected > 0 ? Math.round((s.actual / s.expected) * 100) : 0),
+                backgroundColor: 'rgba(99, 102, 241, 0.6)',
+                borderColor: 'rgb(79, 70, 229)',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        };
+
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                title: { display: true, text: 'Attendance Rate by State / Region' }
+            },
+            scales: { y: { beginAtZero: true, max: 100 } }
+        };
+
+        return { allInvitees, totalSessions, globalRate, stateChartData, chartOptions };
     }, [activeMeeting, allTeamMembers]);
 
     // --- KPI Calculations ---
@@ -353,12 +545,7 @@ export default function ProjectTrackerView({ permissions }) {
     // --- Project Handlers ---
     const handleSaveProject = async (e) => {
         e.preventDefault();
-        const payload = {
-            id: currentProject?.id,
-            title: currentProject.title,
-            unit: activeUnit,
-            subtasks: currentProject.subtasks || []
-        };
+        const payload = { id: currentProject?.id, title: currentProject.title, unit: activeUnit, subtasks: currentProject.subtasks || [] };
         await upsertProject(payload);
         fetchProjects(true);
         setIsProjectModalOpen(false);
@@ -420,7 +607,6 @@ export default function ProjectTrackerView({ permissions }) {
     const handleSaveMeeting = async (e) => {
         e.preventDefault();
         try {
-            // Generate the name map for public links
             const map = currentMeeting.inviteeNamesMap || {};
             (currentMeeting.invitees || []).forEach(inv => {
                 if (!map[inv]) {
@@ -455,7 +641,6 @@ export default function ProjectTrackerView({ permissions }) {
 
     const handleUpdateActiveMeeting = async (updatedMeetingData) => {
         try {
-            // Ensure map stays updated
             const map = updatedMeetingData.inviteeNamesMap || {};
             (updatedMeetingData.invitees || []).forEach(inv => {
                 if (!map[inv]) {
@@ -554,6 +739,17 @@ export default function ProjectTrackerView({ permissions }) {
         if (activeMeeting) {
             setLocalActionPoints(activeMeeting.reports?.[newDate]?.actionPoints || []);
         }
+    };
+    
+    const handleGenerateMeetingPdf = async () => {
+        setIsPdfGenerating(true);
+        await new Promise(resolve => setTimeout(resolve, 100));
+        await generateMeetingAttendancePdf(
+            activeMeeting, 
+            attendanceDashboard.allInvitees,
+            (msg) => { alert(msg); setIsPdfGenerating(false); },
+            (msg) => { alert(msg); setIsPdfGenerating(false); }
+        );
     };
 
     // --- Helper Functions ---
@@ -955,7 +1151,10 @@ export default function ProjectTrackerView({ permissions }) {
                                                                     <Button size="sm" variant="secondary" className="flex items-center gap-1" onClick={() => { setCurrentMeeting(m); setViewMode('meeting-form'); }}>
                                                                         <Edit className="w-3.5 h-3.5" /> Edit
                                                                     </Button>
-                                                                    <Button size="sm" variant="secondary" className="flex items-center gap-1" onClick={() => setShareMeetingId(m.id)}>
+                                                                    <Button size="sm" variant="secondary" className="flex items-center gap-1" onClick={() => {
+                                                                        setShareMeeting(m);
+                                                                        setShareSelectedDate(m.sessionDates?.[m.sessionDates.length - 1] || '');
+                                                                    }}>
                                                                         <Share2 className="w-3.5 h-3.5" />
                                                                     </Button>
                                                                     <Button size="sm" variant="danger" onClick={() => handleDeleteMeeting(m.id)}>
@@ -1212,89 +1411,124 @@ export default function ProjectTrackerView({ permissions }) {
                                 </Card>
                             )}
 
-                            {/* Meeting Sub-Tab: ATTENDANCE */}
-                            {meetingSubTab === 'attendance' && (
-                                <Card>
-                                    <CardBody className="p-0">
-                                        <div className="p-4 border-b flex justify-between items-center bg-gray-50 flex-wrap gap-4">
-                                            <h4 className="font-bold text-gray-800 flex items-center gap-2"><Users className="w-5 h-5"/> Multi-Session Attendance</h4>
-                                            <div className="flex gap-2">
-                                                <Button size="sm" variant="secondary" onClick={(e) => { e.preventDefault(); setIsAddGuestModalOpen(true); }}>
-                                                    <UserPlus className="w-4 h-4 mr-1" /> Add Guest
-                                                </Button>
-                                                <Button size="sm" variant="secondary" onClick={(e) => { e.preventDefault(); setIsInviteeModalOpen(true); }}>
-                                                    <Users className="w-4 h-4 mr-1" /> Manage Invitees
-                                                </Button>
-                                                <Button size="sm" onClick={handleAddMeetingSession}>
-                                                    <Plus className="w-4 h-4 mr-1"/> Add Session Date
-                                                </Button>
-                                            </div>
+                            {/* Meeting Sub-Tab: ATTENDANCE DASHBOARD */}
+                            {meetingSubTab === 'attendance' && attendanceDashboard && (
+                                <div className="space-y-6">
+                                    {/* Dashboard KPI Header */}
+                                    <div className="p-4 border flex justify-between items-center bg-gray-50 flex-wrap gap-4 rounded-lg shadow-sm">
+                                        <h4 className="font-bold text-gray-800 flex items-center gap-2"><Users className="w-5 h-5"/> Multi-Session Attendance</h4>
+                                        <div className="flex gap-2">
+                                            <Button size="sm" variant="secondary" onClick={(e) => { e.preventDefault(); setIsAddGuestModalOpen(true); }}>
+                                                <UserPlus className="w-4 h-4 mr-1" /> Add Guest
+                                            </Button>
+                                            <Button size="sm" variant="secondary" onClick={(e) => { e.preventDefault(); setIsInviteeModalOpen(true); }}>
+                                                <Users className="w-4 h-4 mr-1" /> Manage Invitees
+                                            </Button>
+                                            <Button size="sm" variant="secondary" onClick={handleGenerateMeetingPdf} disabled={isPdfGenerating}>
+                                                {isPdfGenerating ? <Spinner size="sm" className="mr-1" /> : <Download className="w-4 h-4 mr-1" />}
+                                                {isPdfGenerating ? 'Generating...' : 'PDF'}
+                                            </Button>
+                                            <Button size="sm" onClick={handleAddMeetingSession}>
+                                                <Plus className="w-4 h-4 mr-1"/> Add Session Date
+                                            </Button>
                                         </div>
+                                    </div>
 
-                                        {!activeMeeting.sessionDates || activeMeeting.sessionDates.length === 0 ? (
-                                            <EmptyState message="No session dates added. Click 'Add Session Date' to begin tracking attendance." />
-                                        ) : (
-                                            <div className="overflow-x-auto">
-                                                <table className="w-full text-left text-sm border-collapse">
-                                                    <thead className="bg-gray-100 text-gray-600">
-                                                        <tr>
-                                                            <th className="p-3 border font-semibold">Invitee Name</th>
-                                                            <th className="p-3 border font-semibold">State / Level</th>
-                                                            <th className="p-3 border font-semibold">Position</th>
-                                                            {activeMeeting.sessionDates.map(date => (
-                                                                <th key={date} className="p-3 border font-semibold text-center whitespace-nowrap">{date}</th>
-                                                            ))}
-                                                            <th className="p-3 border font-semibold text-center">Total</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {(() => {
-                                                            const regularDetails = (activeMeeting.invitees || []).map(name => getInviteeDetails(name, allTeamMembers));
-                                                            const guestDetails = (activeMeeting.guests || []).map(g => ({
-                                                                name: g.name,
-                                                                displayName: g.name,
-                                                                state: 'External / Guest',
-                                                                position: g.position,
-                                                                level: 'guest',
-                                                                isGuest: true
-                                                            }));
-                                                            
-                                                            const sortedInvitees = [...regularDetails, ...guestDetails].sort((a, b) => a.state.localeCompare(b.state) || a.displayName.localeCompare(b.displayName));
-
-                                                            return sortedInvitees.map(inv => {
-                                                                const inviteeAtt = activeMeeting.attendance?.[inv.name] || [];
-                                                                return (
-                                                                    <tr key={inv.name} className="border-b hover:bg-gray-50">
-                                                                        <td className="p-3 border font-medium text-gray-800">
-                                                                            {inv.displayName} {inv.isGuest && <span className="text-xs text-indigo-500 ml-1">(Guest)</span>}
-                                                                        </td>
-                                                                        <td className="p-3 border text-gray-600 text-xs">
-                                                                            {inv.state}
-                                                                        </td>
-                                                                        <td className="p-3 border text-gray-600 text-xs">{inv.position}</td>
-                                                                        {activeMeeting.sessionDates.map(date => (
-                                                                            <td key={date} className="p-3 border text-center">
-                                                                                <input 
-                                                                                    type="checkbox" 
-                                                                                    checked={inviteeAtt.includes(date)} 
-                                                                                    onChange={() => handleToggleAttendance(inv.name, date)}
-                                                                                    className="h-4 w-4 text-indigo-600 rounded cursor-pointer"
-                                                                                />
-                                                                            </td>
-                                                                        ))}
-                                                                        <td className="p-3 border text-center font-bold text-gray-600 bg-gray-50">
-                                                                            {inviteeAtt.length} / {activeMeeting.sessionDates.length}
-                                                                        </td>
-                                                                    </tr>
-                                                                );
-                                                            });
-                                                        })()}
-                                                    </tbody>
-                                                </table>
+                                    {!activeMeeting.sessionDates || activeMeeting.sessionDates.length === 0 ? (
+                                        <EmptyState message="No session dates added. Click 'Add Session Date' to begin tracking attendance." />
+                                    ) : (
+                                        <>
+                                            {/* KPI Row */}
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-center">
+                                                    <div className="text-2xl font-bold text-blue-700">{attendanceDashboard.allInvitees.length}</div>
+                                                    <div className="text-xs text-blue-600 uppercase font-semibold leading-tight mt-1">Total Invitees</div>
+                                                </div>
+                                                <div className="bg-green-50 p-4 rounded-lg border border-green-100 text-center">
+                                                    <div className="text-2xl font-bold text-green-700">{attendanceDashboard.globalRate.toFixed(1)}%</div>
+                                                    <div className="text-xs text-green-600 uppercase font-semibold leading-tight mt-1">Global Avg. Rate</div>
+                                                </div>
+                                                <div className="bg-purple-50 p-4 rounded-lg border border-purple-100 text-center">
+                                                    <div className="text-2xl font-bold text-purple-700">{attendanceDashboard.totalSessions}</div>
+                                                    <div className="text-xs text-purple-600 uppercase font-semibold leading-tight mt-1">Total Sessions</div>
+                                                </div>
                                             </div>
-                                        )}
-                                    </CardBody>
-                                </Card>
+
+                                            {/* Disaggregated Chart */}
+                                            <Card>
+                                                <CardBody>
+                                                    <div className="h-64">
+                                                        <Bar data={attendanceDashboard.stateChartData} options={attendanceDashboard.chartOptions} />
+                                                    </div>
+                                                </CardBody>
+                                            </Card>
+
+                                            {/* Attendance Table */}
+                                            <Card>
+                                                <CardBody className="p-0">
+                                                    <div className="overflow-x-auto">
+                                                        <table className="w-full text-left text-sm border-collapse">
+                                                            <thead className="bg-gray-100 text-gray-600">
+                                                                <tr>
+                                                                    <th className="p-3 border font-semibold">Invitee Name</th>
+                                                                    <th className="p-3 border font-semibold">State / Level</th>
+                                                                    <th className="p-3 border font-semibold">Position</th>
+                                                                    {activeMeeting.sessionDates.map(date => (
+                                                                        <th key={date} className="p-3 border font-semibold text-center whitespace-nowrap text-xs">{date}</th>
+                                                                    ))}
+                                                                    <th className="p-3 border font-semibold text-center">Total</th>
+                                                                    <th className="p-3 border font-semibold text-center">Status</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {attendanceDashboard.allInvitees.map(inv => {
+                                                                    const inviteeAtt = activeMeeting.attendance?.[inv.name] || [];
+                                                                    const daysCount = inviteeAtt.length;
+                                                                    const totalSessions = activeMeeting.sessionDates.length;
+                                                                    const percentage = totalSessions > 0 ? Math.round((daysCount / totalSessions) * 100) : 0;
+                                                                    const status = getStatusDetails(daysCount, totalSessions);
+
+                                                                    return (
+                                                                        <tr key={inv.name} className="border-b hover:bg-gray-50 transition-colors">
+                                                                            <td className="p-3 border font-medium text-gray-800">
+                                                                                {inv.displayName} {inv.isGuest && <span className="text-xs text-indigo-500 ml-1">(Guest)</span>}
+                                                                            </td>
+                                                                            <td className="p-3 border text-gray-600 text-xs">
+                                                                                {inv.state}
+                                                                            </td>
+                                                                            <td className="p-3 border text-gray-600 text-xs">{inv.position}</td>
+                                                                            {activeMeeting.sessionDates.map(date => (
+                                                                                <td key={date} className="p-3 border text-center">
+                                                                                    <input 
+                                                                                        type="checkbox" 
+                                                                                        checked={inviteeAtt.includes(date)} 
+                                                                                        onChange={() => handleToggleAttendance(inv.name, date)}
+                                                                                        className="h-4 w-4 text-indigo-600 rounded cursor-pointer border-gray-300 focus:ring-indigo-500"
+                                                                                    />
+                                                                                </td>
+                                                                            ))}
+                                                                            <td className="p-3 border text-center font-bold text-gray-600 bg-gray-50 leading-tight">
+                                                                                <div className="flex flex-col items-center">
+                                                                                    <span>{daysCount}</span>
+                                                                                    <span className="text-[10px] font-normal text-gray-500">({percentage}%)</span>
+                                                                                </div>
+                                                                            </td>
+                                                                            <td className="p-3 border text-center font-bold bg-gray-50">
+                                                                                <span className={`px-2 py-1 rounded border text-xs inline-block text-center leading-tight whitespace-nowrap ${status.class}`}>
+                                                                                    {status.text}
+                                                                                </span>
+                                                                            </td>
+                                                                        </tr>
+                                                                    );
+                                                                })}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </CardBody>
+                                            </Card>
+                                        </>
+                                    )}
+                                </div>
                             )}
 
                             {/* Meeting Sub-Tab: MEETING MINUTES (No Auto-save Actions here anymore) */}
@@ -1537,17 +1771,32 @@ export default function ProjectTrackerView({ permissions }) {
             </Modal>
 
             {/* Share Modal */}
-            {shareMeetingId && (
-                <Modal isOpen={!!shareMeetingId} onClose={() => setShareMeetingId(null)} title="Share Meeting Link">
+            {shareMeeting && (
+                <Modal isOpen={!!shareMeeting} onClose={() => setShareMeeting(null)} title="Share Meeting Link">
                     <CardBody className="p-6 text-center space-y-4">
                         <Share2 className="w-12 h-12 text-sky-500 mx-auto" />
                         <h4 className="font-bold text-gray-800">Share Public Meeting Link</h4>
-                        <p className="text-sm text-gray-600">Send this link to invitees so they can log their own attendance or view minutes.</p>
-                        <div className="bg-gray-100 p-3 rounded border flex justify-between items-center">
-                            <span className="text-sm truncate text-gray-500 select-all">{`${window.location.origin}/public/meeting/${shareMeetingId}`}</span>
+                        <p className="text-sm text-gray-600">Select the date you want to track attendance for.</p>
+                        
+                        <div className="text-left bg-indigo-50 p-3 rounded-md border border-indigo-100">
+                            <label className="block text-sm font-bold text-indigo-900 mb-2">Target Session Date:</label>
+                            <Select value={shareSelectedDate} onChange={(e) => setShareSelectedDate(e.target.value)} className="bg-white w-full">
+                                <option value="">-- Select Date --</option>
+                                {shareMeeting.sessionDates?.map(d => <option key={d} value={d}>{d}</option>)}
+                            </Select>
+                        </div>
+
+                        <div className="bg-gray-100 p-3 rounded border flex justify-between items-center mt-4">
+                            <span className="text-sm truncate text-gray-500 select-all">
+                                {`${window.location.origin}/public/meeting/${shareMeeting.id}${shareSelectedDate ? `?date=${shareSelectedDate}` : ''}`}
+                            </span>
                             <Button size="sm" variant="secondary" className="flex items-center gap-1" onClick={(e) => {
                                 e.preventDefault();
-                                navigator.clipboard.writeText(`${window.location.origin}/public/meeting/${shareMeetingId}`);
+                                if (!shareSelectedDate) {
+                                    alert("Please select a date first.");
+                                    return;
+                                }
+                                navigator.clipboard.writeText(`${window.location.origin}/public/meeting/${shareMeeting.id}?date=${shareSelectedDate}`);
                                 alert('Link copied to clipboard!');
                             }}>
                                 <LinkIcon size={14} /> Copy
@@ -1555,7 +1804,7 @@ export default function ProjectTrackerView({ permissions }) {
                         </div>
                     </CardBody>
                     <div className="p-4 border-t flex justify-end bg-gray-50 rounded-b-lg">
-                        <Button type="button" variant="secondary" onClick={(e) => { e.preventDefault(); setShareMeetingId(null); }}>Close</Button>
+                        <Button type="button" variant="secondary" onClick={(e) => { e.preventDefault(); setShareMeeting(null); }}>Close</Button>
                     </div>
                 </Modal>
             )}
@@ -1564,7 +1813,7 @@ export default function ProjectTrackerView({ permissions }) {
 }
 
 // --- PUBLIC MEETING ATTENDANCE VIEW ---
-export function PublicMeetingAttendanceView({ meeting, onSave }) {
+export function PublicMeetingAttendanceView({ meeting, onSave, targetDate }) {
     const [selectedInvitee, setSelectedInvitee] = useState('');
     const [newGuestName, setNewGuestName] = useState('');
     const [newGuestPosition, setNewGuestPosition] = useState('');
@@ -1581,9 +1830,9 @@ export function PublicMeetingAttendanceView({ meeting, onSave }) {
 
             let newInviteeAtt;
             if (inviteeAtt.includes(date)) {
-                newInviteeAtt = inviteeAtt.filter(d => d !== date); // Unmark
+                newInviteeAtt = inviteeAtt.filter(d => d !== date); 
             } else {
-                newInviteeAtt = [...inviteeAtt, date]; // Mark
+                newInviteeAtt = [...inviteeAtt, date]; 
             }
 
             const updatedMeeting = {
@@ -1616,7 +1865,6 @@ export function PublicMeetingAttendanceView({ meeting, onSave }) {
             
             await onSave(updatedMeeting);
             
-            // Auto-select the newly added guest
             setSelectedInvitee(newGuest.name);
             setNewGuestName('');
             setNewGuestPosition('');
@@ -1625,13 +1873,16 @@ export function PublicMeetingAttendanceView({ meeting, onSave }) {
         }
     };
 
-    // Use the inviteeNamesMap injected when the manager built the list so we have Arabic names on the public end
     const inviteeNamesMap = meeting.inviteeNamesMap || {};
 
     const allOptions = [
         ...(meeting.invitees || []).map(name => ({ id: name, display: inviteeNamesMap[name] || name })),
         ...(meeting.guests || []).map(g => ({ id: g.name, display: g.name }))
     ].sort((a, b) => a.display.localeCompare(b.display));
+
+    const datesToShow = targetDate && (meeting.sessionDates || []).includes(targetDate) 
+        ? [targetDate] 
+        : [];
 
     return (
         <div className="max-w-3xl mx-auto mt-8" dir="rtl">
@@ -1669,11 +1920,13 @@ export function PublicMeetingAttendanceView({ meeting, onSave }) {
                     {selectedInvitee && selectedInvitee !== 'NEW_GUEST' && (
                         <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm animate-in fade-in slide-in-from-bottom-2">
                             <label className="block text-sm font-bold text-gray-800 mb-4">2. إثبات الحضور</label>
-                            {!meeting.sessionDates || meeting.sessionDates.length === 0 ? (
-                                <p className="text-gray-500 italic bg-gray-50 p-4 rounded text-center">لم يتم جدولة أي تواريخ للجلسات بعد.</p>
+                            {!datesToShow || datesToShow.length === 0 ? (
+                                <p className="text-gray-500 italic bg-gray-50 p-4 rounded text-center">
+                                    {targetDate ? "تاريخ الجلسة غير صالح." : "لم يتم تحديد تاريخ محدد للجلسة في الرابط."}
+                                </p>
                             ) : (
                                 <div className="space-y-3">
-                                    {meeting.sessionDates.map(date => {
+                                    {datesToShow.map(date => {
                                         const isPresent = (meeting.attendance?.[selectedInvitee] || []).includes(date);
                                         return (
                                             <div key={date} className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${isPresent ? 'bg-green-50 border-green-200' : 'bg-gray-50 hover:bg-gray-100 border-gray-200'}`}>
