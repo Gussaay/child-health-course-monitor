@@ -1,4 +1,4 @@
-// Participants.jsx
+// src/components/Participants.jsx
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import * as XLSX from 'xlsx'; 
 import jsPDF from "jspdf"; 
@@ -1350,8 +1350,14 @@ export function ParticipantsView({
 }) {
     const { user } = useAuth();
     const currentUserIdentifier = user?.displayName || user?.email || 'Unknown';
-    const { fetchParticipants } = useDataCache();
+    
+    // Combined the useDataCache calls here
+    const { fetchParticipants, federalCoordinators, fetchFederalCoordinators, isLoading: isCacheLoading } = useDataCache();
 
+    // ==========================================
+    // 1. ALL HOOKS MUST GO AT THE TOP
+    // ==========================================
+    
     const [activeScreen, setActiveScreen] = useState('list'); // 'list', 'form', 'migration'
     const [editingParticipant, setEditingParticipant] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -1362,12 +1368,72 @@ export function ParticipantsView({
     const [expandedParticipantId, setExpandedParticipantId] = useState(null);
     const [showTopActions, setShowTopActions] = useState(false); 
 
+    // LIST VIEW STATE
+    const [isBulkEditing, setIsBulkEditing] = useState(false); 
+    const [isBulkCertLoading, setIsBulkCertLoading] = useState(false);
+    const [isGeneratingTemplate, setIsGeneratingTemplate] = useState(false);
+    const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0 });
+    const [certLanguage, setCertLanguage] = useState('en'); 
+    const [localApprovalStatus, setLocalApprovalStatus] = useState(course.isCertificateApproved);
+    const [isRefreshingApproval, setIsRefreshingApproval] = useState(false);
+
+    const [groupFilter, setGroupFilter] = useState([]);
+    const [jobTitleFilter, setJobTitleFilter] = useState([]);
+    const [facilityFilter, setFacilityFilter] = useState([]);
+    const [localityFilter, setLocalityFilter] = useState([]);
+    const [subTypeFilter, setSubTypeFilter] = useState([]);
+
+    const [importModalOpen, setImportModalOpen] = useState(false);
+    const [isCleanupModalOpen, setIsCleanupModalOpen] = useState(false);
+    const [isBulkChangeModalOpen, setIsBulkChangeModalOpen] = useState(false);
+    const [shareModalOpen, setShareModalOpen] = useState(false);
+    const [shareTarget, setShareTarget] = useState({ id: '', name: '' });
+    const [sharePageModalOpen, setSharePageModalOpen] = useState(false); 
+    const [emailModalOpen, setEmailModalOpen] = useState(false);
+    const [emailTargets, setEmailTargets] = useState([]);
+    const [isBulkEmail, setIsBulkEmail] = useState(false);
+
+    useEffect(() => {
+        fetchFederalCoordinators();
+    }, [fetchFederalCoordinators]);
+
+    useEffect(() => {
+        setLocalApprovalStatus(course.isCertificateApproved);
+    }, [course.isCertificateApproved]);
+
+    const federalProgramManagerName = useMemo(() => {
+        if (!federalCoordinators || federalCoordinators.length === 0) return "Federal Program Manager"; 
+        const manager = federalCoordinators.find(c => c.role === 'مدير البرنامج');
+        return manager ? manager.name : "Federal Program Manager"; 
+    }, [federalCoordinators]);
+
+    const uniqueGroups = useMemo(() => [...new Set((participants || []).map(p => p.group).filter(Boolean))].sort(), [participants]);
+    const uniqueJobTitles = useMemo(() => [...new Set((participants || []).map(p => p.job_title).filter(Boolean))].sort(), [participants]);
+    const uniqueFacilities = useMemo(() => [...new Set((participants || []).map(p => p.center_name).filter(Boolean))].sort(), [participants]);
+    const uniqueLocalities = useMemo(() => [...new Set((participants || []).map(p => p.locality).filter(Boolean))].sort(), [participants]);
+    const uniqueSubTypes = useMemo(() => [...new Set((participants || []).map(p => p.imci_sub_type || course.facilitatorAssignments?.find(a => a.group === p.group)?.imci_sub_type).filter(Boolean))].sort(), [participants, course.facilitatorAssignments]);
+
+    const filtered = useMemo(() => {
+        return (participants || []).filter(p => {
+            const matchGroup = groupFilter.length === 0 || groupFilter.includes(p.group);
+            const matchJob = jobTitleFilter.length === 0 || jobTitleFilter.includes(p.job_title);
+            const matchFacility = facilityFilter.length === 0 || facilityFilter.includes(p.center_name);
+            const matchLocality = localityFilter.length === 0 || localityFilter.includes(p.locality);
+            const pSubType = p.imci_sub_type || course.facilitatorAssignments?.find(a => a.group === p.group)?.imci_sub_type;
+            const matchSubType = subTypeFilter.length === 0 || subTypeFilter.includes(pSubType);
+            return matchGroup && matchJob && matchFacility && matchLocality && matchSubType;
+        });
+    }, [participants, groupFilter, jobTitleFilter, facilityFilter, localityFilter, subTypeFilter, course.facilitatorAssignments]);
+
+
+    // ==========================================
+    // 2. HANDLERS AND FUNCTIONS
+    // ==========================================
+
     const toggleExpandParticipant = (id) => {
         setExpandedParticipantId(prev => (prev === id ? null : id));
     };
 
-    // --- Component-specific data operations ---
-    
     const handleDeleteParticipant = async (participantId) => {
         if (!canEditDeleteParticipantActiveCourse && !canEditDeleteParticipantInactiveCourse) return;
         if (window.confirm('Are you sure you want to delete this participant and all their data?')) {
@@ -1390,7 +1456,13 @@ export function ParticipantsView({
     const handleSaveParticipant = async (participantData, facilityUpdateData) => {
         setIsProcessing(true);
         try {
-            const fullPayload = { ...participantData, id: editingParticipant?.id, courseId: course.id };
+            const fullPayload = { 
+                ...participantData, 
+                id: editingParticipant?.id, 
+                courseId: course.id,
+                updatedBy: currentUserIdentifier,
+                ...(editingParticipant?.id ? {} : { createdBy: currentUserIdentifier })
+            };
             await saveParticipantAndSubmitFacilityUpdate(fullPayload, facilityUpdateData, currentUserIdentifier);
             await fetchParticipants(navigator.onLine);
             if (onBatchUpdate) onBatchUpdate();
@@ -1407,10 +1479,16 @@ export function ParticipantsView({
         if (!participantsData || participantsData.length === 0) return;
         setIsProcessing(true);
         try {
+            const annotatedData = participantsData.map(p => ({
+                ...p,
+                updatedBy: currentUserIdentifier,
+                ...(!p.id && !p.createdBy ? { createdBy: currentUserIdentifier } : {})
+            }));
+
             if (facilitiesData && facilitiesData.length > 0) {
-                await handleImportParticipants({ participantsToImport: participantsData, facilitiesToUpsert: facilitiesData }, false);
+                await handleImportParticipants({ participantsToImport: annotatedData, facilitiesToUpsert: facilitiesData }, false);
             } else {
-                await importParticipants(participantsData);
+                await importParticipants(annotatedData);
                 await fetchParticipants(navigator.onLine);
                 if (onBatchUpdate) onBatchUpdate();
                 setToast({ show: true, message: 'Data updated successfully.', type: 'success' });
@@ -1426,7 +1504,12 @@ export function ParticipantsView({
     const handleImportParticipants = async ({ participantsToImport, facilitiesToUpsert }, setLocalToast = true) => {
         setIsProcessing(true);
         try {
-            const participantsWithCourseId = participantsToImport.map(p => ({ ...p, courseId: course.id }));
+            const participantsWithCourseId = participantsToImport.map(p => ({ 
+                ...p, 
+                courseId: course.id,
+                updatedBy: currentUserIdentifier,
+                ...(!p.id && !p.createdBy ? { createdBy: currentUserIdentifier } : {})
+            }));
             await importParticipants(participantsWithCourseId);
             await fetchParticipants(navigator.onLine);
             if (onBatchUpdate) onBatchUpdate();
@@ -1461,90 +1544,6 @@ export function ParticipantsView({
             setIsProcessing(false);
         }
     };
-
-    // Sub-routes logic
-    if (activeScreen === 'form') {
-        return (
-            <ParticipantForm 
-                course={course} 
-                initialData={editingParticipant} 
-                onCancel={() => setActiveScreen('list')} 
-                onSave={handleSaveParticipant} 
-            />
-        );
-    }
-
-    if (activeScreen === 'migration' && canUseSuperUserAdvancedFeatures) {
-        // Assume ParticipantMigrationMappingView is in this file or imported properly in the environment
-        return (
-            <ParticipantMigrationMappingView 
-                course={course} 
-                participants={participants} 
-                onCancel={() => setActiveScreen('list')} 
-                onSave={handleExecuteBulkMigration} 
-                setToast={setToast} 
-            />
-        );
-    }
-
-    // LIST VIEW STATE
-    const [isBulkEditing, setIsBulkEditing] = useState(false); 
-    const [isBulkCertLoading, setIsBulkCertLoading] = useState(false);
-    const [isGeneratingTemplate, setIsGeneratingTemplate] = useState(false);
-    const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0 });
-    const [certLanguage, setCertLanguage] = useState('en'); 
-    const [localApprovalStatus, setLocalApprovalStatus] = useState(course.isCertificateApproved);
-    const [isRefreshingApproval, setIsRefreshingApproval] = useState(false);
-
-    const [groupFilter, setGroupFilter] = useState([]);
-    const [jobTitleFilter, setJobTitleFilter] = useState([]);
-    const [facilityFilter, setFacilityFilter] = useState([]);
-    const [localityFilter, setLocalityFilter] = useState([]);
-    const [subTypeFilter, setSubTypeFilter] = useState([]);
-
-    const [importModalOpen, setImportModalOpen] = useState(false);
-    const [isCleanupModalOpen, setIsCleanupModalOpen] = useState(false);
-    const [isBulkChangeModalOpen, setIsBulkChangeModalOpen] = useState(false);
-    const [shareModalOpen, setShareModalOpen] = useState(false);
-    const [shareTarget, setShareTarget] = useState({ id: '', name: '' });
-    const [sharePageModalOpen, setSharePageModalOpen] = useState(false); 
-    const [emailModalOpen, setEmailModalOpen] = useState(false);
-    const [emailTargets, setEmailTargets] = useState([]);
-    const [isBulkEmail, setIsBulkEmail] = useState(false);
-
-    const { federalCoordinators, fetchFederalCoordinators, isLoading: isCacheLoading } = useDataCache();
-
-    useEffect(() => {
-        fetchFederalCoordinators();
-    }, [fetchFederalCoordinators]);
-
-    useEffect(() => {
-        setLocalApprovalStatus(course.isCertificateApproved);
-    }, [course.isCertificateApproved]);
-
-    const federalProgramManagerName = useMemo(() => {
-        if (!federalCoordinators || federalCoordinators.length === 0) return "Federal Program Manager"; 
-        const manager = federalCoordinators.find(c => c.role === 'مدير البرنامج');
-        return manager ? manager.name : "Federal Program Manager"; 
-    }, [federalCoordinators]);
-
-    const uniqueGroups = useMemo(() => [...new Set((participants || []).map(p => p.group).filter(Boolean))].sort(), [participants]);
-    const uniqueJobTitles = useMemo(() => [...new Set((participants || []).map(p => p.job_title).filter(Boolean))].sort(), [participants]);
-    const uniqueFacilities = useMemo(() => [...new Set((participants || []).map(p => p.center_name).filter(Boolean))].sort(), [participants]);
-    const uniqueLocalities = useMemo(() => [...new Set((participants || []).map(p => p.locality).filter(Boolean))].sort(), [participants]);
-    const uniqueSubTypes = useMemo(() => [...new Set((participants || []).map(p => p.imci_sub_type || course.facilitatorAssignments?.find(a => a.group === p.group)?.imci_sub_type).filter(Boolean))].sort(), [participants, course.facilitatorAssignments]);
-
-    const filtered = useMemo(() => {
-        return (participants || []).filter(p => {
-            const matchGroup = groupFilter.length === 0 || groupFilter.includes(p.group);
-            const matchJob = jobTitleFilter.length === 0 || jobTitleFilter.includes(p.job_title);
-            const matchFacility = facilityFilter.length === 0 || facilityFilter.includes(p.center_name);
-            const matchLocality = localityFilter.length === 0 || localityFilter.includes(p.locality);
-            const pSubType = p.imci_sub_type || course.facilitatorAssignments?.find(a => a.group === p.group)?.imci_sub_type;
-            const matchSubType = subTypeFilter.length === 0 || subTypeFilter.includes(pSubType);
-            return matchGroup && matchJob && matchFacility && matchLocality && matchSubType;
-        });
-    }, [participants, groupFilter, jobTitleFilter, facilityFilter, localityFilter, subTypeFilter, course.facilitatorAssignments]);
 
     const handleRefreshApproval = async () => {
         if (!course.id) return;
@@ -1643,6 +1642,35 @@ export function ParticipantsView({
         setEmailModalOpen(true);
     };
 
+    // ==========================================
+    // 3. CONDITIONAL RENDERING (AFTER ALL HOOKS)
+    // ==========================================
+
+    if (activeScreen === 'form') {
+        return (
+            <ParticipantForm 
+                course={course} 
+                initialData={editingParticipant} 
+                onCancel={() => setActiveScreen('list')} 
+                onSave={handleSaveParticipant} 
+            />
+        );
+    }
+
+    // Assuming ParticipantMigrationMappingView is imported or available in your setup
+    if (activeScreen === 'migration' && canBulkMigrateParticipants) {
+        return (
+            <ParticipantMigrationMappingView 
+                course={course} 
+                participants={participants} 
+                onCancel={() => setActiveScreen('list')} 
+                onSave={handleExecuteBulkMigration} 
+                setToast={setToast} 
+            />
+        );
+    }
+
+    // Assuming BulkEditParticipantsView is imported or available in your setup
     if (isBulkEditing) {
         return (
             <BulkEditParticipantsView
@@ -1733,14 +1761,14 @@ export function ParticipantsView({
                             </select>
                         </div>
 
-                        <Button onClick={handleDesignCertificate} disabled={isProcessing || isGeneratingTemplate || isCacheLoading.federalCoordinators} className="bg-green-600 hover:bg-green-700 text-white border-transparent focus:ring-green-500" title="Download a blank certificate template for printing">
+                        <Button onClick={handleDesignCertificate} disabled={isProcessing || isGeneratingTemplate || isCacheLoading} className="bg-green-600 hover:bg-green-700 text-white border-transparent focus:ring-green-500" title="Download a blank certificate template for printing">
                             {isGeneratingTemplate ? <Spinner size="sm" /> : 'Design Certificate'}
                         </Button>
 
                         {localApprovalStatus ? (
                             <>
                                 <div className="flex items-center gap-2">
-                                    <Button variant="primary" onClick={handleBulkCertificateDownload} disabled={isProcessing || isBulkCertLoading || filtered.length === 0 || isCacheLoading.federalCoordinators} title="Download filtered certificates as one PDF">
+                                    <Button variant="primary" onClick={handleBulkCertificateDownload} disabled={isProcessing || isBulkCertLoading || filtered.length === 0 || isCacheLoading} title="Download filtered certificates as one PDF">
                                         Download Filtered Certificates
                                     </Button>
                                     {isBulkCertLoading && (
@@ -1788,14 +1816,83 @@ export function ParticipantsView({
                 </div>
             </div>
 
-            {/* Participant Accordion List */}
-            <div className="grid gap-4">
+            {/* Desktop View (Standard Table) */}
+            <div className="hidden md:block">
+                <Table headers={["Name", "Group", "Job / Facility", "Creation Info", "Last Edit", "Actions"]}>
+                    {filtered.length > 0 && filtered.map(p => {
+                        const canEdit = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
+                        const canDelete = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
+                        const isCertApproved = localApprovalStatus === true;
+
+                        let participantSubCourse = p.imci_sub_type || course.facilitatorAssignments?.find((a) => a.group === p.group)?.imci_sub_type;
+                        const createdDate = p.createdAt?.toDate ? p.createdAt.toDate().toLocaleString() : p.createdAt?.seconds ? new Date(p.createdAt.seconds * 1000).toLocaleString() : 'N/A';
+                        const lastEditDate = p.lastUpdatedAt?.toDate ? p.lastUpdatedAt.toDate().toLocaleString() : p.lastUpdatedAt?.seconds ? new Date(p.lastUpdatedAt.seconds * 1000).toLocaleString() : 'N/A';
+
+                        return (
+                            <tr key={p.id} className="hover:bg-gray-50">
+                                <td className="p-4 border border-gray-200 font-medium text-gray-800">{p.name}</td>
+                                <td className="p-4 border border-gray-200">{p.group}</td>
+                                <td className="p-4 border border-gray-200">
+                                    <div className="font-semibold text-sm">{p.job_title}</div>
+                                    <div className="text-xs text-gray-500 mt-1">
+                                        {course.course_type === 'Program Management' ? (p.department || 'N/A') : p.center_name}
+                                        {p.locality && <span> ({p.locality})</span>}
+                                    </div>
+                                </td>
+                                
+                                <td className="p-4 border border-gray-200">
+                                    <div className="text-sm whitespace-nowrap">{createdDate}</div>
+                                    <div className="text-xs text-gray-500 font-medium mt-1">By: {p.createdBy || 'Legacy Data'}</div>
+                                </td>
+                                <td className="p-4 border border-gray-200">
+                                    <div className="text-sm whitespace-nowrap">{lastEditDate}</div>
+                                    <div className="text-xs text-gray-500 font-medium mt-1">By: {p.updatedBy || 'Legacy Data'}</div>
+                                </td>
+
+                                <td className="p-4 border border-gray-200 text-right">
+                                    <div className="flex gap-2 flex-wrap justify-end">
+                                        <Button variant="primary" onClick={() => onOpen(p.id)} disabled={!canAddMonitoring || isProcessing} title={!canAddMonitoring ? "You do not have permission to monitor" : "Monitor Participant"}>Monitor</Button>
+                                        <Button variant="secondary" onClick={() => onOpenReport(p.id)} disabled={isProcessing}>Report</Button>
+                                        
+                                        {isCertApproved ? (
+                                            <>
+                                                <Button variant="secondary" onClick={() => handleShareClick(p)} disabled={isProcessing}>Share Cert.</Button>
+                                                <Button variant="secondary" onClick={() => handleGenerateSingleCert(p, participantSubCourse)} disabled={isCacheLoading || isProcessing}>
+                                                    {(isCacheLoading || processingRowId === p.id) ? <Spinner size="sm" /> : 'Certificate'}
+                                                </Button>
+                                                <Button variant="secondary" onClick={() => handleOpenSingleEmail(p)} disabled={!p.email || isProcessing} className={!p.email ? "opacity-50 cursor-not-allowed" : ""}><Mail className="w-4 h-4" /></Button>
+                                            </>
+                                        ) : (
+                                            <div className="flex items-center gap-1 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded border border-orange-200" title="Certificates must be approved by the Federal Program Manager in the Admin Dashboard before downloading."><Lock className="w-3 h-3" /><span>Pending</span></div>
+                                        )}
+
+                                        {(course.course_type === 'ICCM' || course.course_type === 'EENC') && (
+                                            <Button variant="secondary" onClick={() => onOpenTestFormForParticipant(p.id)} disabled={isProcessing}>Test Score</Button>
+                                        )}
+
+                                        <Button variant="secondary" onClick={() => { setEditingParticipant(p); setActiveScreen('form'); }} disabled={!canEdit || isProcessing}>Edit</Button>
+                                        <Button variant="danger" onClick={() => handleDeleteParticipant(p.id)} disabled={!canDelete || isProcessing}>
+                                            {processingRowId === p.id ? <Spinner size="sm" /> : 'Delete'}
+                                        </Button>
+                                    </div>
+                                </td>
+                            </tr>
+                        );
+                    })}
+                </Table>
+            </div>
+
+            {/* Mobile View (Collapsible Accordion Cards) */}
+            <div className="grid gap-4 md:hidden">
                 {filtered.length > 0 ? filtered.map(p => {
                     const canEdit = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
                     const canDelete = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
                     const isCertApproved = localApprovalStatus === true;
                     const isExpanded = expandedParticipantId === p.id;
                     let participantSubCourse = p.imci_sub_type || course.facilitatorAssignments?.find((a) => a.group === p.group)?.imci_sub_type;
+
+                    const createdDate = p.createdAt?.toDate ? p.createdAt.toDate().toLocaleString() : p.createdAt?.seconds ? new Date(p.createdAt.seconds * 1000).toLocaleString() : 'N/A';
+                    const lastEditDate = p.lastUpdatedAt?.toDate ? p.lastUpdatedAt.toDate().toLocaleString() : p.lastUpdatedAt?.seconds ? new Date(p.lastUpdatedAt.seconds * 1000).toLocaleString() : 'N/A';
 
                     return (
                         <div key={p.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -1820,6 +1917,13 @@ export function ParticipantsView({
                             {/* Collapsible Actions */}
                             {isExpanded && (
                                 <div className="p-4 bg-gray-50 border-t border-gray-100">
+                                    
+                                    {/* Edit / Creation Tracking Info inside the mobile drawer */}
+                                    <div className="mb-4 grid grid-cols-2 gap-2 text-xs text-gray-500 border-b border-gray-200 pb-3">
+                                        <div><span className="block font-semibold text-gray-700">Created:</span>{createdDate}<br/>By: {p.createdBy || 'Legacy'}</div>
+                                        <div><span className="block font-semibold text-gray-700">Last Edit:</span>{lastEditDate}<br/>By: {p.updatedBy || 'Legacy'}</div>
+                                    </div>
+
                                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                                         <Button variant="primary" className="w-full justify-center" onClick={() => onOpen(p.id)} disabled={!canAddMonitoring || isProcessing}>Monitor</Button>
                                         <Button variant="secondary" className="w-full justify-center" onClick={() => onOpenReport(p.id)} disabled={isProcessing}>Report</Button>
@@ -1827,8 +1931,8 @@ export function ParticipantsView({
                                         {isCertApproved && (
                                             <>
                                                 <Button variant="secondary" className="w-full justify-center" onClick={() => handleShareClick(p)} disabled={isProcessing}>Share Cert.</Button>
-                                                <Button variant="secondary" className="w-full justify-center" onClick={() => handleGenerateSingleCert(p, participantSubCourse)} disabled={isCacheLoading.federalCoordinators || isProcessing}>
-                                                    {(isCacheLoading.federalCoordinators || processingRowId === p.id) ? <Spinner size="sm" /> : 'Certificate'}
+                                                <Button variant="secondary" className="w-full justify-center" onClick={() => handleGenerateSingleCert(p, participantSubCourse)} disabled={isCacheLoading || isProcessing}>
+                                                    {(isCacheLoading || processingRowId === p.id) ? <Spinner size="sm" /> : 'Certificate'}
                                                 </Button>
                                                 <Button variant="secondary" className="w-full justify-center" onClick={() => handleOpenSingleEmail(p)} disabled={!p.email || isProcessing}><Mail className="w-4 h-4" /> Email</Button>
                                             </>

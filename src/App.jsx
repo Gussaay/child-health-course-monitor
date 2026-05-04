@@ -96,7 +96,7 @@ import { STATE_LOCALITIES } from './components/constants.js';
 import { Card, PageHeader, Button, Table, EmptyState, Spinner, PdfIcon, CourseIcon, Footer, Toast, Modal, Input } from './components/CommonComponents';
 import { auth, db } from './firebase';
 import { doc, getDoc, setDoc, waitForPendingWrites } from 'firebase/firestore';
-import { signOut } from 'firebase/auth';
+import { signOut, updateProfile } from 'firebase/auth'; 
 import { useDataCache } from './DataContext';
 import { useAuth } from './hooks/useAuth';
 import { SignInBox } from './auth-ui.jsx';
@@ -275,7 +275,7 @@ function Landing({ navigate, permissions }) {
         { label: t('landing.modules.mentorship', 'Skills Mentorship'), view: 'skillsMentorship', icon: ClipboardCheck, permission: permissions.canViewSkillsMentorship },
         { label: t('landing.modules.imci', 'IMCI Assessment'), view: 'imciForm', icon: Activity, permission: permissions.canViewCourse },
         { label: t('landing.modules.projects', 'Project Tracker'), view: 'projects', icon: FolderKanban, permission: permissions.canUseFederalManagerAdvancedFeatures },
-        { label: t('landing.modules.planning', 'Master Plan'), view: 'planning', icon: TrendingUp, permission: permissions.canUseFederalManagerAdvancedFeatures }, 
+        { label: t('landing.modules.planning', 'Master Plan'), view: 'planning', icon: TrendingUp, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.locality_plan', 'Bottom-up Planning'), view: 'localityPlan', icon: Layers, permission: permissions.canViewLocalityPlan },
         { label: t('landing.modules.admin', 'Admin'), view: 'admin', icon: User, permission: permissions.canViewAdmin },
     ];
@@ -309,7 +309,7 @@ function Landing({ navigate, permissions }) {
 const BottomNav = React.memo(function BottomNav({ navItems, navigate }) {
     const icons = { 
         'landing': Home, 'dashboard': Home, 'courses': Book, 'humanResources': Users, 'childHealthServices': Hospital, 
-        'skillsMentorship': ClipboardCheck, 'projects': FolderKanban, 'planning': TrendingUp, 'localityPlan': Layers, 'admin': User 
+        'skillsMentorship': ClipboardCheck, 'localityPlan': Layers, 'admin': User 
     };
     return (
         <nav className="md:hidden fixed bottom-0 inset-x-0 bg-slate-800 border-t border-slate-700 flex justify-around items-center z-20">
@@ -350,6 +350,10 @@ export default function App() {
     const [isSyncing, setIsSyncing] = useState(false);
 
     const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
+
+    // Profile Edit States
+    const [isEditingProfile, setIsEditingProfile] = useState(false);
+    const [editDisplayName, setEditDisplayName] = useState('');
 
     useEffect(() => {
         let networkListener;
@@ -397,6 +401,26 @@ export default function App() {
     useEffect(() => {
         if (isUserProfileModalOpen) { fetchFederalCoordinators(); fetchStateCoordinators(); fetchLocalityCoordinators(); }
     }, [isUserProfileModalOpen, fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators]);
+
+    // Handle initial profile edit population
+    useEffect(() => {
+        if (isUserProfileModalOpen && user) {
+            setEditDisplayName(user.displayName || '');
+            setIsEditingProfile(false);
+        }
+    }, [isUserProfileModalOpen, user]);
+
+    // Handle Profile Save
+    const handleSaveProfile = async () => {
+        try {
+            await updateProfile(auth.currentUser, { displayName: editDisplayName });
+            setToast({ show: true, message: 'Profile updated successfully!', type: 'success' });
+            setIsEditingProfile(false);
+            window.location.reload(); 
+        } catch (error) {
+            setToast({ show: true, message: `Failed to update profile: ${error.message}`, type: 'error' });
+        }
+    };
 
     const [view, setView] = useState("landing");
     const [activeCourseType, setActiveCourseType] = useState(null);
@@ -726,11 +750,15 @@ export default function App() {
 
     const permissions = useMemo(() => {
         let derivedPermissions = { ...userPermissions };
-        if (userRole?.toLowerCase() === 'super_user') return ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: true }), { role: userRole });
+        
+        if (userRole?.toLowerCase() === 'super_user') {
+            return ALL_PERMISSION_KEYS.reduce((acc, key) => {
+                acc[key] = key === 'canEditLocalityPlan' ? false : true;
+                return acc;
+            }, { role: userRole });
+        }
 
         if (userRole?.toLowerCase() === 'user') { derivedPermissions.canViewSkillsMentorship = false; derivedPermissions.canManageSkillsMentorship = false; }
-        if (userRole?.toLowerCase() === 'federal_manager') { derivedPermissions.canViewLocalityPlan = true; if (derivedPermissions.canUseFederalManagerAdvancedFeatures) derivedPermissions.canEditLocalityPlan = true; }
-        if (userRole?.toLowerCase() === 'state_manager') derivedPermissions.canViewLocalityPlan = true;
 
         const ALL_PERMISSIONS_MINIMAL = ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
         return { ...ALL_PERMISSIONS_MINIMAL, ...derivedPermissions, role: userRole };
@@ -900,8 +928,8 @@ export default function App() {
             'courseReport': permissions.canViewCourse, 'participantReport': permissions.canViewCourse, 'facilitatorReport': permissions.canViewHumanResource,
             'finalReport': permissions.canViewCourse, 'participantMigration': permissions.canUseSuperUserAdvancedFeatures, 'childHealthServices': permissions.canViewFacilities,
             'skillsMentorship': permissions.canViewSkillsMentorship, 'facilitators': permissions.canViewHumanResource, 'programTeams': permissions.canViewHumanResource,
-            'partnersPage': permissions.canViewHumanResource, 'attendanceManager': permissions.canManageCourse, 'projects': permissions.canUseFederalManagerAdvancedFeatures, 
-            'planning': permissions.canUseFederalManagerAdvancedFeatures, 'localityPlan': permissions.canViewLocalityPlan,
+            'partnersPage': permissions.canViewHumanResource, 'attendanceManager': permissions.canManageCourse, 
+            'projects': permissions.canUseFederalManagerAdvancedFeatures, 'planning': permissions.canUseFederalManagerAdvancedFeatures, 'localityPlan': permissions.canViewLocalityPlan,
         };
 
         if (user && !viewPermissions[newView]) {
@@ -1061,7 +1089,18 @@ export default function App() {
     }, [permissions, allCourses, navigate]);
 
     const handleDeletePdf = useCallback(async (courseId) => {  }, [permissions, courseDetails.finalReport]);
-    const handleLogout = useCallback(async () => { try { await signOut(auth); } catch (error) { console.error("Error signing out:", error); } }, []);
+
+    // Handle standard logout prompt
+    const handleLogout = useCallback(async () => { 
+        if (window.confirm('Are you sure you want to log out?')) {
+            try { 
+                await signOut(auth); 
+            } catch (error) { 
+                console.error("Error signing out:", error); 
+            } 
+        }
+    }, []);
+
     const handleLoginForSharedView = useCallback(async () => {  }, []);
 
     const handleResetMonitor = useCallback(() => { setOperationCounts({ reads: 0, writes: 0 }); }, []);
@@ -1177,9 +1216,7 @@ export default function App() {
         { label: t('landing.modules.human_resources', 'Human Resources'), view: 'humanResources', active: ['humanResources', 'facilitatorForm', 'facilitatorReport'].includes(view), disabled: !permissions.canViewHumanResource },
         { label: t('landing.modules.facilities', 'Child Health Services'), view: 'childHealthServices', active: view === 'childHealthServices', disabled: !permissions.canViewFacilities },
         { label: t('landing.modules.mentorship', 'Skills Mentorship'), view: 'skillsMentorship', active: view === 'skillsMentorship', disabled: !permissions.canViewSkillsMentorship },
-        { label: t('landing.modules.projects', 'Project Tracker'), view: 'projects', active: view === 'projects', disabled: !permissions.canUseFederalManagerAdvancedFeatures },
-        { label: t('landing.modules.planning', 'Master Plan'), view: 'planning', active: view === 'planning', disabled: !permissions.canUseFederalManagerAdvancedFeatures },
-        { label: t('landing.modules.locality_plan', 'Bottom-up Planning'), view: 'localityPlan', active: view === 'localityPlan', disabled: !permissions.canViewLocalityPlan },
+        // Locality plan and projects specifically omitted from top/bottom navigation as requested
     ], [view, permissions, t]);
 
     const visibleNavItems = useMemo(() => navItems.filter(item => !item.disabled), [navItems]);
@@ -1469,22 +1506,25 @@ export default function App() {
 
             {user && !isMinimalUILayout && (
                 <div className="bg-slate-700 text-slate-200 px-3 py-2 flex items-center justify-between gap-2 w-full overflow-hidden shadow-inner">
+                    
+                    {/* UPDATED: Flex-row, items-center, flex-nowrap to guarantee single line layout */}
                     <div 
-                        className="flex items-center gap-2 cursor-pointer hover:bg-slate-600 px-2 py-1 rounded-md transition-colors duration-200 min-w-0 flex-1"
+                        className="flex items-center gap-2 cursor-pointer hover:bg-slate-600 px-2 py-1.5 rounded-md transition-colors duration-200 min-w-0 flex-1 overflow-hidden"
                         onClick={() => setIsUserProfileModalOpen(true)}
                         title="View Profile Information"
                     >
-                        <span className="font-semibold text-sm truncate block">{user.displayName || user.email}</span>
+                        <span className="font-semibold text-sm truncate shrink-0">
+                            {user.displayName || user.email}
+                        </span>
                         
-                        {/* Hide roles on very small mobile to guarantee single line, show on sm up */}
-                        <div className="hidden sm:flex items-center gap-1 flex-nowrap">
+                        <div className="flex items-center gap-1 flex-nowrap overflow-hidden">
                             {userRoles && userRoles.length > 0 && userRoles.map(r => (
-                                <span key={r} className="bg-sky-500 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm capitalize whitespace-nowrap">
+                                <span key={r} className="bg-sky-500 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm capitalize whitespace-nowrap shrink-0">
                                     {r.replace(/_/g, ' ')}
                                 </span>
                             ))}
                             {userHRProfile && userHRProfile.role && (
-                                <span className="bg-teal-500 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm capitalize whitespace-nowrap">
+                                <span className="bg-teal-500 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm capitalize whitespace-nowrap shrink-0">
                                     {userHRProfile.role}
                                 </span>
                             )}
@@ -1539,15 +1579,40 @@ export default function App() {
                         title="My Profile Information"
                     >
                         <div className="p-6 space-y-6">
-                            <div className="flex items-start space-x-4 border-b border-gray-200 pb-6">
-                                <div className="h-16 w-16 bg-sky-100 rounded-full flex items-center justify-center text-sky-600 text-3xl font-bold shadow-inner shrink-0">
-                                    {(user.displayName || user.email || 'U')[0].toUpperCase()}
+                            <div className="flex items-start justify-between border-b border-gray-200 pb-6">
+                                <div className="flex items-start space-x-4">
+                                    <div className="h-16 w-16 bg-sky-100 rounded-full flex items-center justify-center text-sky-600 text-3xl font-bold shadow-inner shrink-0">
+                                        {(user.displayName || user.email || 'U')[0].toUpperCase()}
+                                    </div>
+                                    <div className="flex-1 mt-1">
+                                        {isEditingProfile ? (
+                                            <div className="mb-2">
+                                                <Input 
+                                                    value={editDisplayName} 
+                                                    onChange={(e) => setEditDisplayName(e.target.value)} 
+                                                    placeholder="Full Name" 
+                                                />
+                                            </div>
+                                        ) : (
+                                            <h3 className="text-xl font-bold text-gray-800 mb-1">{user.displayName || 'No Name Set'}</h3>
+                                        )}
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            Active Account
+                                        </span>
+                                    </div>
                                 </div>
-                                <div className="flex-1">
-                                    <h3 className="text-xl font-bold text-gray-800 mb-1">{user.displayName || 'No Name Set'}</h3>
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                        Active Account
-                                    </span>
+                                
+                                <div className="shrink-0 ml-4">
+                                    {isEditingProfile ? (
+                                        <div className="flex space-x-2">
+                                            <Button variant="secondary" onClick={() => setIsEditingProfile(false)}>Cancel</Button>
+                                            <Button onClick={handleSaveProfile}>Save</Button>
+                                        </div>
+                                    ) : (
+                                        <Button variant="secondary" onClick={() => setIsEditingProfile(true)}>
+                                            Edit Profile
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
                             

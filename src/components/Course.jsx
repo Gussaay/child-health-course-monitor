@@ -306,7 +306,7 @@ export function CoursesTable({
     const [deleteRequestCourse, setDeleteRequestCourse] = useState(null); 
     const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
 
-    // Accordion State
+    // Accordion State for Mobile View
     const [expandedId, setExpandedId] = useState(null);
 
     // Pagination State
@@ -369,11 +369,96 @@ export function CoursesTable({
 
     if (sortedCourses.length === 0) return <EmptyState message="No courses found matching the selected filters." />;
 
+    const courseType = sortedCourses.length > 0 ? sortedCourses[0].course_type : 'Courses';
+
     return (
         <div>
-            <h3 className="text-xl font-bold mb-4">{sortedCourses[0]?.course_type || 'Courses'} Courses</h3>
+            <h3 className="text-xl font-bold mb-4">{courseType} Courses</h3>
             
-            <div className="grid gap-4">
+            {/* Desktop View (Standard Table) */}
+            <div className="hidden md:block">
+                <Table headers={["State", "Subcourses", "Status", "Creation Info", "Last Edit", "Actions"]}>
+                    {paginatedCourses.map((c) => {
+                        const isPendingDeletion = c.deletionRequested === true;
+                        const active = isCourseActive(c);
+                        const canEdit = active ? canEditDeleteActiveCourse : canEditDeleteInactiveCourse;
+                        const canDelete = active ? canEditDeleteActiveCourse : canEditDeleteInactiveCourse;
+                        
+                        const subcourses = c.facilitatorAssignments && c.facilitatorAssignments.length > 0
+                            ? [...new Set(c.facilitatorAssignments.map(a => a.imci_sub_type))].join(', ')
+                            : 'N/A';
+
+                        const createdDate = c.createdAt?.toDate 
+                            ? c.createdAt.toDate().toLocaleString() 
+                            : c.createdAt?.seconds ? new Date(c.createdAt.seconds * 1000).toLocaleString() : 'N/A';
+                            
+                        const lastEditDate = c.lastUpdatedAt?.toDate 
+                            ? c.lastUpdatedAt.toDate().toLocaleString() 
+                            : c.lastUpdatedAt?.seconds ? new Date(c.lastUpdatedAt.seconds * 1000).toLocaleString() : 'N/A';
+
+                        return (
+                            <tr key={c.id} className={`hover:bg-gray-50 ${isPendingDeletion ? 'bg-red-50' : ''}`}>
+                                <td className="p-4 border">
+                                    {c.state} - {c.locality}
+                                    {isPendingDeletion && <span className="block text-xs text-red-600 font-bold mt-1">(Deletion Pending)</span>}
+                                </td>
+                                <td className="p-4 border">{subcourses}</td>
+                                <td className="p-4 border">
+                                    {c.approvalStatus === 'pending' ? (
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                                            Not Approved
+                                        </span>
+                                    ) : active ? (
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            Active
+                                        </span>
+                                    ) : (
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                            Inactive
+                                        </span>
+                                    )}
+                                </td>
+                                
+                                <td className="p-4 border">
+                                    <div className="text-sm whitespace-nowrap">{createdDate}</div>
+                                    <div className="text-xs text-gray-500 font-medium mt-1">
+                                        By: {c.createdBy || 'Legacy Data'}
+                                    </div>
+                                </td>
+                                <td className="p-4 border">
+                                    <div className="text-sm whitespace-nowrap">{lastEditDate}</div>
+                                    <div className="text-xs text-gray-500 font-medium mt-1">
+                                        By: {c.updatedBy || 'Legacy Data'}
+                                    </div>
+                                </td>
+
+                                <td className="p-2 border text-right whitespace-nowrap">
+                                    <div className="flex gap-2 justify-end items-center">
+                                        <Button variant="primary" className="px-3 py-1 text-sm flex items-center gap-1" onClick={() => onOpen(c.id)} disabled={isProcessing}>
+                                           <ExternalLink size={14} /> Open
+                                        </Button>
+                                        <Button variant="secondary" className="px-3 py-1 text-sm flex items-center gap-1" onClick={() => onEdit(c)} disabled={!canEdit || isPendingDeletion || isProcessing}>
+                                            <Edit size={14} /> Edit
+                                        </Button>
+                                        <Button variant="secondary" className="px-3 py-1 text-sm flex items-center gap-1" onClick={() => setReportModalCourse(c)} disabled={isProcessing}>
+                                            <FileText size={14} /> Reports
+                                        </Button>
+                                        <Button variant="secondary" className="px-3 py-1 text-sm flex items-center gap-1" onClick={() => setShareModalCourse(c)} disabled={isProcessing}>
+                                           <Share2 size={14} /> Share
+                                        </Button>
+                                        <Button variant="danger" className="px-3 py-1 text-sm flex items-center gap-1" onClick={() => setDeleteRequestCourse(c)} disabled={!canDelete || isPendingDeletion || isProcessing}>
+                                           <Trash2 size={14} /> Delete
+                                        </Button>
+                                    </div>
+                                </td>
+                            </tr>
+                        );
+                    })}
+                </Table>
+            </div>
+
+            {/* Mobile View (Collapsible Accordion Cards) */}
+            <div className="grid gap-4 md:hidden">
                 {paginatedCourses.map((c) => {
                     const isPendingDeletion = c.deletionRequested === true;
                     const active = isCourseActive(c);
