@@ -713,13 +713,13 @@ export function CourseTestForm({
     const [viewMode, setViewMode] = useState(isPublicView ? 'entry' : 'dashboard'); 
     
     // Check if course is Program Management
-    const isProgramManagement = course.course_type === 'Program Management';
+    const isProgramManagement = course?.course_type === 'Program Management';
 
     const { testQuestions, testTitle, isRtl, jobTitleOptions, isIccm } = useMemo(() => {
         let titles = [];
         let isIccm = false;
         
-        if (course.course_type === 'ETAT') {
+        if (course?.course_type === 'ETAT') {
              titles = JOB_TITLES_ETAT;
              return { 
                  testQuestions: ETAT_TEST_QUESTIONS, 
@@ -730,7 +730,7 @@ export function CourseTestForm({
              };
         }
         
-        if (course.course_type === 'Program Management') {
+        if (course?.course_type === 'Program Management') {
             titles = ["مدير", "منسق", "طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
             return { 
                 testQuestions: PROGRAM_MANAGEMENT_TEST_QUESTIONS, 
@@ -741,25 +741,25 @@ export function CourseTestForm({
             };
         }
 
-        if (course.course_type === 'ICCM') {
+        if (course?.course_type === 'ICCM') {
             titles = ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
             isIccm = true;
             return { testQuestions: ICCM_TEST_QUESTIONS, testTitle: 'ICCM Pre/Post Test Entry', isRtl: true, jobTitleOptions: titles, isIccm: isIccm };
         }
-        if (course.course_type === 'EENC') {
+        if (course?.course_type === 'EENC') {
             titles = JOB_TITLES_EENC;
             return { testQuestions: EENC_TEST_QUESTIONS, testTitle: 'EENC Pre/Post Test Entry', isRtl: false, jobTitleOptions: titles, isIccm: isIccm };
         }
-        if (course.course_type === 'Small & Sick Newborn') {
+        if (course?.course_type === 'Small & Sick Newborn') {
             titles = JOB_TITLES_EENC; // Using EENC titles as default for SSNB
             return { testQuestions: SSNB_WARMER_TEST_QUESTIONS, testTitle: 'SSNB Portable Warmer Test', isRtl: true, jobTitleOptions: titles, isIccm: false };
         }
-        if (course.course_type === 'IMNCI') {
+        if (course?.course_type === 'IMNCI') {
              titles = JOB_TITLES_EENC; // Use generic EENC titles (Doctor, Nurse, etc) for IMNCI
              return { testQuestions: IMNCI_TEST_QUESTIONS, testTitle: 'IMNCI Pre/Post Test Entry', isRtl: false, jobTitleOptions: titles, isIccm: false };
         }
         return { testQuestions: [], testTitle: 'Test Entry', isRtl: false, jobTitleOptions: [], isIccm: false }; 
-    }, [course.course_type]);
+    }, [course?.course_type]);
 
     const [selectedParticipantId, setSelectedParticipantId] = useState(initialParticipantId);
     
@@ -788,6 +788,25 @@ export function CourseTestForm({
     const [showTestSubmitSuccessModal, setShowTestSubmitSuccessModal] = useState(false);
     const [lastSubmissionStats, setLastSubmissionStats] = useState(null);
 
+    // Multi-state setup for Registration inside Test form
+    const courseStates = useMemo(() => course?.states || (course?.state ? course.state.split(',').map(s=>s.trim()) : []), [course]);
+    const courseLocalities = useMemo(() => course?.localities || (course?.locality ? course.locality.split(',').map(l=>l.trim()) : []), [course]);
+
+    const [newParticipantState, setNewParticipantState] = useState(courseStates.length === 1 ? courseStates[0] : '');
+    const [newParticipantLocality, setNewParticipantLocality] = useState(courseLocalities.length === 1 ? courseLocalities[0] : '');
+    const [newParticipantCenter, setNewParticipantCenter] = useState('');
+    const [newParticipantDepartment, setNewParticipantDepartment] = useState('');
+    const [selectedFacilityId, setSelectedFacilityId] = useState(null);
+    const [facilitiesInLocality, setFacilitiesInLocality] = useState([]);
+    const [isLoadingFacilities, setIsLoadingFacilities] = useState(false);
+    const [newParticipantName, setNewParticipantName] = useState('');
+    const [newParticipantPhone, setNewParticipantPhone] = useState('');
+    const [newParticipantGroup, setNewParticipantGroup] = useState('Group A');
+    const [newParticipantJob, setNewParticipantJob] = useState('');
+    const [newParticipantJobOther, setNewParticipantJobOther] = useState('');
+    const [isParticipantInfoSaved, setIsParticipantInfoSaved] = useState(false);
+    const [participantNameForDisplay, setParticipantNameForDisplay] = useState('');
+
     // --- UPDATED: Update testType if prop changes and normalize it ---
     useEffect(() => {
         if (initialTestType) {
@@ -814,21 +833,6 @@ export function CourseTestForm({
         if (selectedSetupGroup) filtered = filtered.filter(p => p.group === selectedSetupGroup);
         return filtered;
     }, [sortedParticipants, selectedSetupGroup]);
-
-    const [newParticipantState, setNewParticipantState] = useState(course.state || '');
-    const [newParticipantLocality, setNewParticipantLocality] = useState(course.locality || '');
-    const [newParticipantCenter, setNewParticipantCenter] = useState('');
-    const [newParticipantDepartment, setNewParticipantDepartment] = useState('');
-    const [selectedFacilityId, setSelectedFacilityId] = useState(null);
-    const [facilitiesInLocality, setFacilitiesInLocality] = useState([]);
-    const [isLoadingFacilities, setIsLoadingFacilities] = useState(false);
-    const [newParticipantName, setNewParticipantName] = useState('');
-    const [newParticipantPhone, setNewParticipantPhone] = useState('');
-    const [newParticipantGroup, setNewParticipantGroup] = useState('Group A');
-    const [newParticipantJob, setNewParticipantJob] = useState('');
-    const [newParticipantJobOther, setNewParticipantJobOther] = useState('');
-    const [isParticipantInfoSaved, setIsParticipantInfoSaved] = useState(false);
-    const [participantNameForDisplay, setParticipantNameForDisplay] = useState('');
     
     // Update existing results detection to safely handle `participantTests`
     const existingResults = useMemo(() => {
@@ -911,8 +915,8 @@ export function CourseTestForm({
         setParticipantNameForDisplay(''); 
         setNewParticipantName(''); 
         setNewParticipantPhone(''); 
-        setNewParticipantState(course.state || ''); 
-        setNewParticipantLocality(course.locality || ''); 
+        setNewParticipantState(courseStates.length === 1 ? courseStates[0] : ''); 
+        setNewParticipantLocality(courseLocalities.length === 1 ? courseLocalities[0] : ''); 
         setNewParticipantCenter(''); 
         setNewParticipantDepartment('');
         setSelectedFacilityId(null); 
@@ -920,7 +924,7 @@ export function CourseTestForm({
         setNewParticipantGroup('Group A'); 
         setNewParticipantJob(''); 
         setNewParticipantJobOther('');
-    }, [testType, isPublicView, course.state, course.locality]); 
+    }, [testType, isPublicView, courseStates, courseLocalities]); 
 
     useEffect(() => {
         const fetchFacilities = async () => {
@@ -1294,14 +1298,35 @@ export function CourseTestForm({
                             {!isProgramManagement && (
                                 <>
                                     <FormGroup label="State">
-                                        <Select value={newParticipantState} onChange={(e) => {
-                                            setNewParticipantState(e.target.value); setNewParticipantLocality(''); setNewParticipantCenter(''); setSelectedFacilityId(null); setFacilitiesInLocality([]); 
-                                        }}><option value="">— Select State —</option>{Object.keys(STATE_LOCALITIES).sort((a,b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar)).map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar}</option>)}</Select>
+                                        <Select value={newParticipantState} disabled={courseStates.length === 1} onChange={(e) => {
+                                            setNewParticipantState(e.target.value); 
+                                            setNewParticipantLocality(''); 
+                                            setNewParticipantCenter(''); 
+                                            setSelectedFacilityId(null); 
+                                            setFacilitiesInLocality([]); 
+                                        }}>
+                                            <option value="">— Select State —</option>
+                                            {courseStates.map(s => <option key={s} value={s}>{STATE_LOCALITIES[s]?.ar || s}</option>)}
+                                        </Select>
                                     </FormGroup>
+
                                     <FormGroup label="Locality">
-                                        <Select value={newParticipantLocality} onChange={(e) => { setNewParticipantLocality(e.target.value); setNewParticipantCenter(''); setSelectedFacilityId(null); }} disabled={!newParticipantState}>
-                                            <option value="">— Select Locality —</option>{(STATE_LOCALITIES[newParticipantState]?.localities || []).sort((a,b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}</Select>
+                                        <Select value={newParticipantLocality} disabled={!newParticipantState} onChange={(e) => { 
+                                            setNewParticipantLocality(e.target.value); 
+                                            setNewParticipantCenter(''); 
+                                            setSelectedFacilityId(null); 
+                                        }}>
+                                            <option value="">— Select Locality —</option>
+                                            {courseLocalities
+                                                .filter(l => STATE_LOCALITIES[newParticipantState]?.localities.some(loc => loc.en === l))
+                                                .map(l => {
+                                                    const locData = STATE_LOCALITIES[newParticipantState]?.localities.find(loc => loc.en === l);
+                                                    return <option key={l} value={l}>{locData?.ar || l}</option>;
+                                                })
+                                            }
+                                        </Select>
                                     </FormGroup>
+                                    
                                     <FormGroup label="Group">
                                         <Select value={newParticipantGroup} onChange={(e) => setNewParticipantGroup(e.target.value)}><option>Group A</option><option>Group B</option><option>Group C</option><option>Group D</option></Select>
                                     </FormGroup>

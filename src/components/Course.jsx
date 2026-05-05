@@ -5,14 +5,26 @@ import {
     Button, Card, EmptyState, FormGroup, Input, PageHeader, 
     Select, Spinner, Table, CourseIcon, Modal, CardBody, CardFooter, Toast 
 } from './CommonComponents'; 
+
+// --- Firebase Imports ---
+import { db } from '../firebase';
+import { doc, updateDoc } from 'firebase/firestore';
+
 import { 
     getCourseById, 
     listHealthFacilities,
     upsertCourse,   
     deleteCourse,
     saveParticipantAndSubmitFacilityUpdate,
-    upsertParticipantTest
+    upsertParticipantTest,
+    listAllCourses,
+    listFederalCoordinators,
+    unapproveCourseCertificates,
+    uploadFile,
+    getParticipantById, 
+    listAllParticipantsForCourse 
 } from '../data.js'; 
+
 import { ParticipantsView } from './Participants';
 import { CourseTestForm } from './CourseTestForm'; 
 import {
@@ -21,7 +33,8 @@ import {
 import { 
     Users, Share2, UserPlus, CheckCircle, 
     FileText, Edit, Trash2, ExternalLink, Link as LinkIcon, Eye, BarChart2,
-    AlertTriangle, Shield, Check, X, RefreshCw, Archive, ClipboardList
+    AlertTriangle, Shield, Check, X, RefreshCw, Archive, ClipboardList,
+    Award, FileSignature, Stamp, Upload, Lock, XCircle
 } from 'lucide-react'; 
 import { useDataCache } from '../DataContext'; 
 import { useAuth } from '../hooks/useAuth'; 
@@ -30,6 +43,9 @@ import { Capacitor } from '@capacitor/core';
 // NEW IMPORTS FOR MIGRATED DASHBOARDS
 import SudanMap from '../SudanMap';
 import CompiledReportView from './CompiledReportView.jsx';
+
+// Certificate generator import required for the public view components
+import { generateCertificatePdf, generateBlankCertificatePdf } from './CertificateGenerator';
 
 // Lazy load components that are not always visible to speed up initial load
 const ReportsView = React.lazy(() => import('./ReportsView').then(module => ({ default: module.ReportsView })));
@@ -40,6 +56,161 @@ const ObservationView = React.lazy(() => import('./MonitoringView').then(module 
 const IccmIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline><path d="M12 9v6"></path><path d="M9 12h6"></path></svg>;
 const IpcIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M12 11v4"></path><path d="M10 13h4"></path></svg>;
 const NewbornIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 9c0-2-1.5-3.5-4-3.5C7.5 5.5 6 7 6 9c0 1.5.5 2.5 1 3.5h0l-1 4.5h10L17 17l-1-4.5h0c.5-1 1-2.5 1-3.5z"></path><path d="M12 18h.01"></path><path d="M10.5 21v-1.5h3V21"></path></svg>;
+
+// ============================================================================
+// PUBLIC CERTIFICATE VIEWS (Fixes the App.jsx Crash)
+// ============================================================================
+
+export function CertificateVerificationView({ participant, course }) {
+    if (!participant || !course) return <EmptyState message="Invalid certificate data." />;
+    return (
+        <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-lg text-center border border-gray-100">
+            <div className="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-green-100 mb-6 shadow-inner">
+                <CheckCircle className="h-10 w-10 text-green-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Certificate Verified</h2>
+            <p className="text-gray-600 mb-4 font-medium">This certificate was authentically issued to:</p>
+            <h3 className="text-2xl font-black text-sky-700 mb-2">{participant.name}</h3>
+            <p className="text-sm text-gray-500 mb-6 font-semibold uppercase tracking-wider">For completing: {course.course_type}</p>
+            <div className="bg-gray-50 p-5 rounded-xl border border-gray-200 text-left text-sm text-gray-700 space-y-2">
+                <p className="flex justify-between border-b border-gray-200 pb-2"><strong className="text-gray-500 uppercase tracking-wide text-xs">Course Location:</strong> <span className="font-bold">{course.state} - {course.locality}</span></p>
+                <p className="flex justify-between"><strong className="text-gray-500 uppercase tracking-wide text-xs">Date:</strong> <span className="font-bold">{course.start_date}</span></p>
+            </div>
+        </div>
+    );
+}
+
+export function PublicCertificateDownloadView({ participantId }) {
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [downloading, setDownloading] = useState(false);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const p = await getParticipantById(participantId, 'server');
+                if (!p) throw new Error("Participant not found.");
+                const c = await getCourseById(p.courseId, 'server');
+                if (!c) throw new Error("Course not found.");
+                if (!c.isCertificateApproved) throw new Error("Certificates for this course are not yet approved or have been revoked.");
+                setData({ participant: p, course: c });
+            } catch(e) { setError(e.message); }
+            finally { setLoading(false); }
+        };
+        load();
+    }, [participantId]);
+
+    const handleDownload = async (lang) => {
+        setDownloading(true);
+        try {
+            const managerName = data.course.approvedByManagerName || "Federal Program Manager";
+            let subcourse = data.participant.imci_sub_type || data.course.director_imci_sub_type;
+            const canvas = await generateCertificatePdf(data.course, data.participant, managerName, subcourse, lang);
+            if (canvas) {
+                const doc = new jsPDF('landscape', 'mm', 'a4');
+                doc.addImage(canvas.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, 297, 210);
+                doc.save(`Certificate_${data.participant.name.replace(/\s+/g, '_')}_${lang}.pdf`);
+            }
+        } catch(e) { alert("Download failed: " + e.message); }
+        finally { setDownloading(false); }
+    };
+
+    if (loading) return <div className="flex justify-center p-10"><Spinner /></div>;
+    if (error) return <EmptyState message={error} />;
+
+    return (
+        <div className="max-w-md mx-auto mt-10 p-8 bg-white rounded-2xl shadow-xl text-center border border-gray-100">
+            <div className="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-sky-100 mb-6 shadow-inner">
+                <Award className="h-10 w-10 text-sky-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Download Certificate</h2>
+            <p className="text-gray-500 mb-6 text-sm">Participant:</p>
+            <h3 className="text-xl font-bold text-sky-700 mb-8">{data.participant.name}</h3>
+            <div className="flex flex-col gap-3">
+                <Button onClick={() => handleDownload('en')} disabled={downloading} className="w-full justify-center shadow-md">
+                    {downloading ? <Spinner size="sm" /> : 'Download (English)'}
+                </Button>
+                <Button onClick={() => handleDownload('ar')} disabled={downloading} variant="secondary" className="w-full justify-center">
+                    {downloading ? <Spinner size="sm" /> : 'Download (Arabic - عربي)'}
+                </Button>
+            </div>
+        </div>
+    );
+}
+
+export function PublicCourseCertificatesView({ courseId }) {
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [downloadingId, setDownloadingId] = useState(null);
+
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const c = await getCourseById(courseId, 'server');
+                if (!c) throw new Error("Course not found.");
+                if (!c.isCertificateApproved) throw new Error("Certificates for this course are not yet approved or have been revoked.");
+                const parts = await listAllParticipantsForCourse(courseId, { source: 'server' });
+                const activeParts = parts.filter(p => !p.isDeleted);
+                setData({ course: c, participants: activeParts });
+            } catch(e) { setError(e.message); }
+            finally { setLoading(false); }
+        };
+        load();
+    }, [courseId]);
+
+    const handleDownload = async (p, lang) => {
+        setDownloadingId(p.id);
+        try {
+            const managerName = data.course.approvedByManagerName || "Federal Program Manager";
+            let subcourse = p.imci_sub_type || data.course.director_imci_sub_type;
+            const canvas = await generateCertificatePdf(data.course, p, managerName, subcourse, lang);
+            if (canvas) {
+                const doc = new jsPDF('landscape', 'mm', 'a4');
+                doc.addImage(canvas.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, 297, 210);
+                doc.save(`Certificate_${p.name.replace(/\s+/g, '_')}_${lang}.pdf`);
+            }
+        } catch(e) { alert("Download failed: " + e.message); }
+        finally { setDownloadingId(null); }
+    };
+
+    if (loading) return <div className="flex justify-center p-10"><Spinner /></div>;
+    if (error) return <EmptyState message={error} />;
+
+    return (
+        <Card className="p-6">
+            <PageHeader title="Course Certificates" subtitle={`${data.course.course_type} - ${data.course.state} / ${data.course.locality}`} />
+            
+            <div className="bg-sky-50 text-sky-800 p-4 rounded-lg text-sm border border-sky-100 mb-6 flex items-start">
+                <Award className="w-5 h-5 mr-3 shrink-0" />
+                <p>Welcome. You can download certificates for any active participant from this course using the buttons below.</p>
+            </div>
+
+            <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
+                <Table headers={["Participant Name", "Job Title", "Download Action"]}>
+                    {data.participants.map(p => (
+                        <tr key={p.id} className="hover:bg-sky-50/50 transition-colors">
+                            <td className="p-4 font-bold text-gray-800">{p.name}</td>
+                            <td className="p-4 text-gray-600 font-medium">{p.job_title}</td>
+                            <td className="p-4 text-right flex justify-end gap-2">
+                                <Button size="sm" onClick={() => handleDownload(p, 'en')} disabled={!!downloadingId}>
+                                    {downloadingId === p.id ? <Spinner size="sm" /> : 'English'}
+                                </Button>
+                                <Button size="sm" variant="secondary" onClick={() => handleDownload(p, 'ar')} disabled={!!downloadingId}>
+                                    {downloadingId === p.id ? <Spinner size="sm" /> : 'عربي'}
+                                </Button>
+                            </td>
+                        </tr>
+                    ))}
+                </Table>
+            </div>
+        </Card>
+    );
+}
+
+// ============================================================================
+
 
 export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, onSuccess }) => {
     const [name, setName] = useState('');
@@ -892,6 +1063,309 @@ function CourseAdministrationView({ courses, onApproveDelete, onRejectDelete, is
     );
 }
 
+// -----------------------------------------------------------------------------
+// Certificate Approvals View
+// -----------------------------------------------------------------------------
+const CertificateApprovalsView = ({ setToast }) => {
+    const { fetchCourses } = useDataCache(); 
+    const [courses, setCourses] = useState([]);
+    const [managerName, setManagerName] = useState('');
+    const [loadingApprovals, setLoadingApprovals] = useState(false);
+    
+    const [approvalModalOpen, setApprovalModalOpen] = useState(false);
+    const [selectedCourse, setSelectedCourse] = useState(null);
+    const [isApproving, setIsApproving] = useState(false);
+    
+    const [managerSignatureFile, setManagerSignatureFile] = useState(null);
+    const [directorName, setDirectorName] = useState('');
+    const [directorSignatureFile, setDirectorSignatureFile] = useState(null);
+    const [programStampFile, setProgramStampFile] = useState(null);
+
+    const managerFileRef = useRef(null);
+    const directorFileRef = useRef(null);
+    const stampFileRef = useRef(null);
+
+    const loadData = async () => {
+        setLoadingApprovals(true);
+        try {
+            const allCourses = await listAllCourses({ source: 'server' });
+            const sorted = allCourses.sort((a, b) => {
+                if (a.isCertificateApproved === b.isCertificateApproved) {
+                    return new Date(b.start_date) - new Date(a.start_date);
+                }
+                return a.isCertificateApproved ? 1 : -1;
+            });
+            setCourses(sorted);
+
+            const coords = await listFederalCoordinators({ source: 'server' });
+            const manager = coords.find(c => c.role === 'مدير البرنامج' || c.role === 'Federal Program Manager');
+            if (manager) setManagerName(manager.name);
+        } catch (err) {
+            setToast({ show: true, message: "Error loading approval data", type: 'error' });
+        } finally {
+            setLoadingApprovals(false);
+        }
+    };
+
+    useEffect(() => { loadData(); }, [setToast]);
+
+    const handleOpenApprovalModal = (course) => {
+        if (!managerName) {
+            setToast({ show: true, message: "Program Manager Name is missing. Please check HR settings.", type: 'error' });
+            return;
+        }
+        setSelectedCourse(course);
+        setManagerSignatureFile(null);
+        setDirectorSignatureFile(null);
+        setProgramStampFile(null);
+        setDirectorName(course.director || '');
+        setApprovalModalOpen(true);
+    };
+
+    const handleConfirmApprove = async () => {
+        if (!selectedCourse || !managerName) return;
+        setIsApproving(true);
+        try {
+            let managerSigUrl = null; if (managerSignatureFile) managerSigUrl = await uploadFile(managerSignatureFile);
+            let directorSigUrl = null; if (directorSignatureFile) directorSigUrl = await uploadFile(directorSignatureFile);
+            let stampUrl = null; if (programStampFile) stampUrl = await uploadFile(programStampFile);
+
+            const courseRef = doc(db, 'courses', selectedCourse.id);
+            const approvalData = {
+                isCertificateApproved: true,
+                approvedByManagerName: managerName,
+                approvedByManagerSignatureUrl: managerSigUrl || selectedCourse.approvedByManagerSignatureUrl || null,
+                approvedDirectorName: directorName,
+                approvedDirectorSignatureUrl: directorSigUrl || selectedCourse.approvedDirectorSignatureUrl || null,
+                approvedProgramStampUrl: stampUrl || selectedCourse.approvedProgramStampUrl || null,
+                certificateApprovedAt: new Date()
+            };
+
+            await updateDoc(courseRef, approvalData);
+            setToast({ show: true, message: "Certificates Approved Successfully.", type: 'success' });
+            setApprovalModalOpen(false);
+            
+            // Instantly update local table view
+            setCourses(prevCourses => prevCourses.map(c => {
+                if (c.id === selectedCourse.id) {
+                    return { ...c, ...approvalData, certificateApprovedAt: { seconds: Math.floor(Date.now() / 1000) } };
+                }
+                return c;
+            }));
+
+            // Force Global Incremental Update: Costs exactly 1 read, perfectly syncs UI downstream.
+            await fetchCourses(true);
+
+        } catch (err) {
+            setToast({ show: true, message: `Error: ${err.message}`, type: 'error' });
+        } finally { setIsApproving(false); }
+    };
+
+    const handleUnapprove = async (course) => {
+        if (course.approvedByManagerName && course.approvedByManagerName !== managerName) {
+            setToast({ show: true, message: `Permission Denied. Only ${course.approvedByManagerName} can revoke this.`, type: 'error' });
+            return;
+        }
+
+        if (window.confirm(`Revoke approval for ${course.course_type}? \n\nThis will hide the download links for participants.`)) {
+            setLoadingApprovals(true);
+            try {
+                await unapproveCourseCertificates(course.id);
+                setToast({ show: true, message: "Approval Revoked.", type: 'info' });
+                
+                // Instantly update local table view
+                setCourses(prevCourses => prevCourses.map(c => {
+                    if (c.id === course.id) {
+                        return { ...c, isCertificateApproved: false, approvedByManagerName: null, approvedByManagerSignatureUrl: null, approvedDirectorName: null, approvedDirectorSignatureUrl: null, approvedProgramStampUrl: null, certificateApprovedAt: null };
+                    }
+                    return c;
+                }));
+
+                // Force Global Incremental Update: Costs exactly 1 read, perfectly syncs UI downstream.
+                await fetchCourses(true);
+
+            } catch (err) { setToast({ show: true, message: err.message, type: 'error' }); } 
+            finally { setLoadingApprovals(false); }
+        }
+    };
+
+    if (loadingApprovals && !approvalModalOpen) return <div className="flex justify-center p-8"><Spinner /></div>;
+
+    return (
+        <>
+            <Card>
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold text-gray-800 flex items-center">
+                        <Award className="w-5 h-5 mr-2 text-sky-500" /> Certificate Approvals
+                    </h3>
+                    <Button variant="secondary" onClick={loadData} size="sm" className="shadow-sm">
+                        <RefreshCw className="w-4 h-4 mr-2" /> Refresh
+                    </Button>
+                </div>
+                
+                <div className="bg-sky-50 border border-sky-100 p-5 rounded-xl mb-6 shadow-sm flex items-start">
+                    <div className="p-2 bg-sky-100 text-sky-600 rounded-full mr-4 shrink-0">
+                        <FileSignature className="w-6 h-6" />
+                    </div>
+                    <div>
+                        <p className="text-sm text-sky-900">
+                            <strong>Current Signing Authority:</strong> 
+                            <span className="font-bold text-lg ml-2 underline decoration-sky-300 underline-offset-4">{managerName || "Loading..."}</span>
+                        </p>
+                        <p className="text-xs text-sky-700 mt-2 leading-relaxed">
+                            Approving a course will permanently stamp your name on the generated certificates. Ensure you upload all necessary signatures and the transparent program stamp before confirming.
+                        </p>
+                    </div>
+                </div>
+
+                {courses.length === 0 ? (
+                    <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                        <div className="text-gray-400 mb-2"><Award className="w-8 h-8 mx-auto opacity-50" /></div>
+                        <div className="text-gray-500 font-medium">No courses found to approve.</div>
+                    </div>
+                ) : (
+                    <div className="overflow-hidden rounded-xl border border-gray-200 shadow-sm">
+                        <Table headers={["State", "Locality", "Course Type", "Sub Course", "Start Date", "Status", "Actions"]}>
+                            {courses.map(c => {
+                                const isApproved = c.isCertificateApproved === true;
+                                const canModify = isApproved && c.approvedByManagerName === managerName;
+
+                                const subCourses = c.facilitatorAssignments && c.facilitatorAssignments.length > 0
+                                    ? [...new Set(c.facilitatorAssignments.map(a => a.imci_sub_type).filter(Boolean))].join(', ')
+                                    : (c.director_imci_sub_type || '-');
+
+                                return (
+                                    <tr key={c.id} className={`transition-colors hover:bg-gray-50 ${isApproved ? "bg-gray-50/50" : "bg-white"}`}>
+                                        <td className="font-medium text-gray-800">{c.state}</td>
+                                        <td className="text-gray-600">{c.locality}</td>
+                                        <td className="font-medium text-sky-700">{c.course_type}</td>
+                                        <td className="text-sm text-gray-500 max-w-[150px] truncate" title={subCourses}>
+                                            {subCourses}
+                                        </td>
+                                        <td className="text-gray-600 font-mono text-sm">{c.start_date}</td>
+                                        <td>
+                                            {isApproved ? (
+                                                <div className="flex flex-col items-start">
+                                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-800 border border-green-200 shadow-sm">
+                                                        <CheckCircle className="w-3 h-3 mr-1" /> Approved
+                                                    </span>
+                                                    <span className="text-[10px] text-gray-500 mt-1 font-medium bg-gray-100 px-1.5 py-0.5 rounded">
+                                                        By: {c.approvedByManagerName}
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200 shadow-sm">
+                                                    Pending
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="text-right">
+                                            {isApproved ? (
+                                                <Button 
+                                                    onClick={() => handleUnapprove(c)} 
+                                                    disabled={!canModify}
+                                                    variant="secondary"
+                                                    size="sm"
+                                                    className={!canModify ? "opacity-50 cursor-not-allowed" : "text-red-600 hover:bg-red-50 hover:text-red-700 border-red-200"}
+                                                    title={!canModify ? `Only ${c.approvedByManagerName} can revoke this.` : "Revoke Approval"}
+                                                >
+                                                    {canModify ? "Revoke" : <Lock className="w-4 h-4" />}
+                                                </Button>
+                                            ) : (
+                                                <Button onClick={() => handleOpenApprovalModal(c)} disabled={!managerName} variant="primary" size="sm" className="shadow-sm">
+                                                    Review & Approve
+                                                </Button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </Table>
+                    </div>
+                )}
+            </Card>
+
+            <Modal isOpen={approvalModalOpen} onClose={() => !isApproving && setApprovalModalOpen(false)} title="Confirm & Sign Certificates">
+                <CardBody>
+                    <div className="space-y-6">
+                        <div className="bg-sky-50 text-sky-800 p-3 rounded-lg text-sm border border-sky-100 flex items-start">
+                            <Award className="w-5 h-5 mr-3 shrink-0 opacity-70" />
+                            <p>You are approving certificates for <strong>{selectedCourse?.course_type}</strong> in <strong>{selectedCourse?.locality}, {selectedCourse?.state}</strong>.</p>
+                        </div>
+                        
+                        <div className="border border-gray-200 rounded-xl p-5 bg-gray-50 shadow-sm">
+                            <h4 className="text-sm font-bold text-gray-800 uppercase mb-4 flex items-center tracking-wide">
+                                <FileSignature className="w-4 h-4 mr-2 text-sky-500" /> Program Manager (You)
+                            </h4>
+                            <div className="mb-4">
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Name on Certificate</label>
+                                <div className="text-sm font-bold bg-white px-3 py-2 border border-gray-200 rounded-lg text-gray-800 shadow-sm">{managerName}</div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Signature Image (Optional)</label>
+                                <div className="flex items-center gap-2">
+                                    <input type="file" accept="image/*" ref={managerFileRef} onChange={(e) => setManagerSignatureFile(e.target.files[0])} className="hidden" />
+                                    <Button type="button" variant="secondary" size="sm" onClick={() => managerFileRef.current?.click()} className="w-full justify-center bg-white">
+                                        <Upload className="w-4 h-4 mr-2 text-gray-400" /> {managerSignatureFile ? managerSignatureFile.name : "Upload Signature"}
+                                    </Button>
+                                    {managerSignatureFile && <Button type="button" variant="danger" size="sm" onClick={() => { setManagerSignatureFile(null); if(managerFileRef.current) managerFileRef.current.value = ''; }}><XCircle className="w-4 h-4" /></Button>}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="border border-gray-200 rounded-xl p-5 bg-white shadow-sm">
+                            <h4 className="text-sm font-bold text-gray-800 uppercase mb-4 flex items-center tracking-wide">
+                                <FileSignature className="w-4 h-4 mr-2 text-blue-500" /> Course Director
+                            </h4>
+                            <div className="mb-4">
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Director Name</label>
+                                <Input value={directorName} onChange={(e) => setDirectorName(e.target.value)} placeholder="Dr. Name..." className="text-sm font-medium" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Director Signature (Optional)</label>
+                                <div className="flex items-center gap-2">
+                                    <input type="file" accept="image/*" ref={directorFileRef} onChange={(e) => setDirectorSignatureFile(e.target.files[0])} className="hidden" />
+                                    <Button type="button" variant="secondary" size="sm" onClick={() => directorFileRef.current?.click()} className="w-full justify-center bg-gray-50">
+                                        <Upload className="w-4 h-4 mr-2 text-gray-400" /> {directorSignatureFile ? directorSignatureFile.name : "Upload Signature"}
+                                    </Button>
+                                    {directorSignatureFile && <Button type="button" variant="danger" size="sm" onClick={() => { setDirectorSignatureFile(null); if(directorFileRef.current) directorFileRef.current.value = ''; }}><XCircle className="w-4 h-4" /></Button>}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="border border-gray-200 rounded-xl p-5 bg-white shadow-sm">
+                            <h4 className="text-sm font-bold text-gray-800 uppercase mb-4 flex items-center tracking-wide">
+                                <Stamp className="w-4 h-4 mr-2 text-indigo-500" /> Program Stamp
+                            </h4>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Stamp Image</label>
+                                <div className="flex items-center gap-2">
+                                    <input type="file" accept="image/*" ref={stampFileRef} onChange={(e) => setProgramStampFile(e.target.files[0])} className="hidden" />
+                                    <Button type="button" variant="secondary" size="sm" onClick={() => stampFileRef.current?.click()} className="w-full justify-center bg-gray-50">
+                                        <Upload className="w-4 h-4 mr-2 text-gray-400" /> {programStampFile ? programStampFile.name : "Upload Stamp"}
+                                    </Button>
+                                    {programStampFile && <Button type="button" variant="danger" size="sm" onClick={() => { setProgramStampFile(null); if(stampFileRef.current) stampFileRef.current.value = ''; }}><XCircle className="w-4 h-4" /></Button>}
+                                </div>
+                                <p className="text-xs text-gray-400 mt-2 italic flex items-center"><CheckCircle className="w-3 h-3 mr-1" /> Recommended: Transparent PNG background.</p>
+                            </div>
+                        </div>
+                    </div>
+                </CardBody>
+                <CardFooter>
+                    <div className="flex justify-end gap-3 w-full pt-2">
+                        <Button variant="secondary" onClick={() => setApprovalModalOpen(false)} disabled={isApproving}>
+                            Cancel
+                        </Button>
+                        <Button variant="primary" onClick={handleConfirmApprove} disabled={isApproving} className="shadow-md">
+                            {isApproving ? <><Spinner size="sm" className="mr-2" /> Processing...</> : "Confirm & Approve"}
+                        </Button>
+                    </div>
+                </CardFooter>
+            </Modal>
+        </>
+    );
+};
+
 export function CourseManagementView({
     allCourses, onOpen, onOpenReport,
     onOpenTestForm,
@@ -1254,7 +1728,6 @@ export function CourseManagementView({
                 await upsertParticipantTest(payload);
             }
             if (onBatchUpdate) onBatchUpdate();
-            // Note: Toast is usually managed by the specific CourseTestForm internally as well
         } catch (error) {
             setToast({ show: true, message: `Failed to save test score: ${error.message}`, type: 'error' });
         } finally {
@@ -1262,8 +1735,7 @@ export function CourseManagementView({
         }
     };
 
-    // Group tabs logically to handle display visibility
-    const globalTabs = ['courses', 'add-course', 'edit-course', 'dashboard', 'compiled-reports', 'administration', 'approvals', 'recycle-bin'];
+    const globalTabs = ['courses', 'add-course', 'edit-course', 'dashboard', 'compiled-reports', 'administration', 'approvals', 'certificate-approvals', 'recycle-bin'];
     const isGlobalView = globalTabs.includes(activeCoursesTab);
 
     return (
@@ -1282,7 +1754,6 @@ export function CourseManagementView({
                     {isGlobalView ? 'Courses' : '← Back to Courses'}
                 </Button>
                 
-                {/* Global Management Tabs */}
                 {isGlobalView && (
                     <>
                         <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'dashboard'} onClick={() => { setActiveCoursesTab('dashboard'); onSetSelectedParticipantId(null); }}>Course Dashboard</Button>
@@ -1310,6 +1781,12 @@ export function CourseManagementView({
                             </Button>
                         )}
 
+                        {canUseSuperUserAdvancedFeatures && (
+                            <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'certificate-approvals'} onClick={() => { setActiveCoursesTab('certificate-approvals'); onSetSelectedParticipantId(null); }}>
+                                Certificate Approvals
+                            </Button>
+                        )}
+
                         {canAccessRecycleBin && (
                             <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'recycle-bin'} onClick={() => { setActiveCoursesTab('recycle-bin'); onSetSelectedParticipantId(null); }}>
                                 Recycle Bin
@@ -1321,7 +1798,6 @@ export function CourseManagementView({
                     </>
                 )}
 
-                {/* Course-Specific Tabs */}
                 {!isGlobalView && selectedCourse && (
                     <>
                         <Button disabled={isProcessing} variant="tab" isActive={['participants', 'participant-form', 'participant-migration'].includes(activeCoursesTab)} onClick={() => { setActiveCoursesTab('participants'); onSetSelectedParticipantId(null); }}>Participants</Button>
@@ -1371,7 +1847,6 @@ export function CourseManagementView({
                     </>
                 )}
 
-                {/* --- MIGRATED TABS --- */}
                 {activeCoursesTab === 'dashboard' && (
                     <div className="mt-4">
                         <h3 className="text-xl font-bold mb-4">Course KPIs</h3>
@@ -1426,6 +1901,10 @@ export function CourseManagementView({
                     />
                 )}
 
+                {activeCoursesTab === 'certificate-approvals' && (
+                    <CertificateApprovalsView setToast={setToast} />
+                )}
+
                 {activeCoursesTab === 'recycle-bin' && <RecycleBinView courses={allCourses.filter(c => c.inRecycleBin)} onRestore={handleRestoreCourse} onPermanentDelete={handlePermanentDelete} isProcessing={isProcessing} />}
                 
                 {(activeCoursesTab === 'add-course' || activeCoursesTab === 'edit-course') && (
@@ -1434,7 +1913,6 @@ export function CourseManagementView({
                 
                 {loadingDetails && (!globalTabs.includes(activeCoursesTab)) ? <div className="flex justify-center p-8"><Spinner /></div> : (
                     <>
-                        {/* DELEGATING ALL PARTICIPANT LOGIC TO ParticipantsView */}
                         {['participants', 'participant-form', 'participant-migration'].includes(activeCoursesTab) && selectedCourse && (
                             <ParticipantsView
                                 course={selectedCourse} 
@@ -1452,6 +1930,7 @@ export function CourseManagementView({
                                 canAddMonitoring={(canManageCourse && isCourseActive) || canUseFederalManagerAdvancedFeatures || canEditDeleteInactiveCourse}
                                 canEditDeleteParticipantActiveCourse={canManageCourse} 
                                 canEditDeleteParticipantInactiveCourse={canEditDeleteInactiveCourse}
+                                canManageCertificates={canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures}
                             />
                         )}
                         
@@ -1467,7 +1946,6 @@ export function CourseManagementView({
                                 onCancel={() => setActiveCoursesTab(selectedParticipantId ? 'participants' : 'courses')}
                                 onSave={() => { setActiveCoursesTab('participants'); onBatchUpdate(); }} 
                                 canManageTests={canManageCourse || canUseFederalManagerAdvancedFeatures} 
-                                // Test form needs to save new participants if created during test score entry
                                 onSaveParticipant={async (participantData, facilityUpdateData) => {
                                     const savedParticipant = await saveParticipantAndSubmitFacilityUpdate(participantData, facilityUpdateData, currentUserIdentifier);
                                     if (facilityUpdateData) setToast({ show: true, message: 'Facility update submitted for approval.', type: 'info' });
@@ -1481,6 +1959,57 @@ export function CourseManagementView({
         </Card>
     );
 }
+
+const MultiSelectDropdown = ({ options, selectedValues, onChange, placeholder, disabled }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const ref = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (ref.current && !ref.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [ref]);
+
+    const toggleSelection = (value) => {
+        if (selectedValues.includes(value)) {
+            onChange(selectedValues.filter(v => v !== value));
+        } else {
+            onChange([...selectedValues, value]);
+        }
+    };
+
+    const displayNames = selectedValues.map(val => {
+        const opt = options.find(o => o.value === val);
+        return opt ? opt.label : val;
+    }).join('، ');
+
+    return (
+        <div className="relative" ref={ref}>
+            <div 
+                className={`border border-gray-300 rounded-md p-2 text-sm w-full bg-white flex justify-between items-center min-h-[42px] cursor-pointer ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'hover:border-sky-400'}`}
+                onClick={() => !disabled && setIsOpen(!isOpen)}
+            >
+                <span className="truncate text-gray-700">{selectedValues.length > 0 ? displayNames : placeholder}</span>
+                <svg className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+            </div>
+            {isOpen && !disabled && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-xl max-h-60 overflow-y-auto">
+                    {options.map(opt => (
+                        <label key={opt.value} className="flex items-center p-2 hover:bg-sky-50 cursor-pointer border-b border-gray-100 last:border-0 m-0">
+                            <input type="checkbox" checked={selectedValues.includes(opt.value)} onChange={() => toggleSelection(opt.value)} className="ml-3 h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500 cursor-pointer" />
+                            <span className="text-sm text-gray-700 font-medium">{opt.label}</span>
+                        </label>
+                    ))}
+                    {options.length === 0 && <div className="p-3 text-gray-500 text-sm text-center">لا توجد خيارات</div>}
+                </div>
+            )}
+        </div>
+    );
+};
 
 const SearchableSelect = ({ label, options, value, onChange, onOpenNewForm, placeholder, disabled }) => {
      const [isOpen, setIsOpen] = useState(false);
@@ -1582,22 +2111,28 @@ export function CourseForm({
 
     const [isSaving, setIsSaving] = useState(false);
 
-    const [state, setState] = useState(initialData?.state || (userStates && userStates.length === 1 ? userStates[0] : ''));
+    const [states, setStates] = useState(initialData?.states || (initialData?.state ? initialData.state.split(',').map(s=>s.trim()) : (userStates && userStates.length === 1 ? [userStates[0]] : [])));
     
     const availableLocalities = useMemo(() => {
-        if (!state) return [];
-        const allLocalitiesForState = (STATE_LOCALITIES[state]?.localities || []).sort((a,b) => a.ar.localeCompare(b.ar));
+        if (!states || states.length === 0) return [];
+        let allLocalities = [];
+        states.forEach(s => {
+            if (STATE_LOCALITIES[s]) {
+                allLocalities = [...allLocalities, ...(STATE_LOCALITIES[s].localities || [])];
+            }
+        });
+        const uniqueLocalities = Array.from(new Map(allLocalities.map(item => [item.en, item])).values()).sort((a,b) => a.ar.localeCompare(b.ar));
         
         if (!userLocalities || userLocalities.length === 0) {
-            return allLocalitiesForState;
+            return uniqueLocalities;
         }
-        
-        return allLocalitiesForState.filter(l => userLocalities.includes(l.en) || userLocalities.includes(l.ar));
-    }, [state, userLocalities]);
+        return uniqueLocalities.filter(l => userLocalities.includes(l.en) || userLocalities.includes(l.ar));
+    }, [states, userLocalities]);
 
-    const [locality, setLocality] = useState(initialData?.locality || (userLocalities && userLocalities.length === 1 ? userLocalities[0] : ''));
+    const [localities, setLocalities] = useState(initialData?.localities || (initialData?.locality ? initialData.locality.split(',').map(l=>l.trim()) : (userLocalities && userLocalities.length === 1 ? [userLocalities[0]] : [])));
     
     const [hall, setHall] = useState(initialData?.hall || '');
+    const [hallEnglish, setHallEnglish] = useState(initialData?.hall_english || '');
     const [startDate, setStartDate] = useState(initialData?.start_date || '');
     const [courseDuration, setCourseDuration] = useState(initialData?.course_duration || 7);
     const [coordinator, setCoordinator] = useState(initialData?.coordinator || '');
@@ -1715,31 +2250,31 @@ export function CourseForm({
 
     const stateCoordinatorOptions = useMemo(() => {
         const sortedList = [...stateCoordinatorsList].sort((a, b) => {
-            const aIsMatch = a.state === state;
-            const bIsMatch = b.state === state;
+            const aIsMatch = states.includes(a.state);
+            const bIsMatch = states.includes(b.state);
             if (aIsMatch && !bIsMatch) return -1;
             if (!aIsMatch && bIsMatch) return 1;
             return a.name.localeCompare(b.name);
         });
         return sortedList.map(c => ({ id: c.id, name: `${c.name} (${c.state})` }));
-    }, [stateCoordinatorsList, state]);
+    }, [stateCoordinatorsList, states]);
 
     const localityCoordinatorOptions = useMemo(() => {
         const sortedList = [...localityCoordinatorsList].sort((a, b) => {
-            const aIsExact = a.state === state && a.locality === locality;
-            const bIsExact = b.state === state && b.locality === locality;
+            const aIsExact = states.includes(a.state) && localities.includes(a.locality);
+            const bIsExact = states.includes(b.state) && localities.includes(b.locality);
             if (aIsExact && !bIsExact) return -1;
             if (!aIsExact && bIsExact) return 1;
 
-            const aIsStateMatch = a.state === state;
-            const bIsStateMatch = b.state === state;
+            const aIsStateMatch = states.includes(a.state);
+            const bIsStateMatch = states.includes(b.state);
             if (aIsStateMatch && !bIsStateMatch) return -1;
             if (!aIsStateMatch && bIsStateMatch) return 1;
 
             return a.name.localeCompare(b.name);
         });
         return sortedList.map(c => ({ id: c.id, name: `${c.name} (${c.locality}, ${c.state})` }));
-    }, [localityCoordinatorsList, state, locality]);
+    }, [localityCoordinatorsList, states, localities]);
 
     const funderOptions = useMemo(() => {
         return (fundersList || []).map(f => ({ id: f.id, name: f.orgName }));
@@ -1810,7 +2345,7 @@ export function CourseForm({
             return [...acc, ...groupAssignments];
         }, []);
 
-        if (!state || !locality || !hall || !coordinator || !participantsCount || !supporter || !startDate || !implementedBy) {
+        if (states.length === 0 || localities.length === 0 || !hall || !coordinator || !participantsCount || !supporter || !startDate || !implementedBy) {
             setError('الرجاء إكمال جميع الحقول المطلوبة.');
             return;
         }
@@ -1832,7 +2367,11 @@ export function CourseForm({
 
         const payload = {
             ...(initialData?.id && { id: initialData.id }),
-            state, locality, hall, coordinator, start_date: startDate,
+            state: states.join(', '), 
+            locality: localities.join(', '),
+            states: states,
+            localities: localities,
+            hall, hall_english: hallEnglish, coordinator, start_date: startDate,
             course_duration: courseDuration,
             participants_count: participantsCount, director,
             funded_by: supporter,
@@ -1871,19 +2410,30 @@ export function CourseForm({
                 <div className="mb-8">
                     <h3 className="text-lg font-bold bg-sky-100 text-sky-800 p-3 rounded-md mb-4 border-r-4 border-sky-500">معلومات الدورة الأساسية</h3>
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <FormGroup label="الولاية">
-                            <Select disabled={isSaving} value={state} onChange={(e) => { setState(e.target.value); setLocality(''); }}>
-                                <option value="">— اختر الولاية —</option>
-                                {availableStates.map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar}</option>)}
-                            </Select>
+                        <FormGroup label="الولايات (يمكن اختيار أكثر من ولاية)">
+                            <MultiSelectDropdown 
+                                disabled={isSaving} 
+                                selectedValues={states} 
+                                onChange={setStates} 
+                                placeholder="— اختر الولايات —"
+                                options={availableStates.map(s => ({ value: s, label: STATE_LOCALITIES[s].ar }))} 
+                            />
                         </FormGroup>
-                        <FormGroup label="المحلية">
-                            <Select disabled={isSaving || !state} value={locality} onChange={(e) => setLocality(e.target.value)}>
-                                <option value="">— اختر المحلية —</option>
-                                {availableLocalities.map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
-                            </Select>
+                        <FormGroup label="المحليات (يمكن اختيار أكثر من محلية)">
+                            <MultiSelectDropdown 
+                                disabled={isSaving || states.length === 0} 
+                                selectedValues={localities} 
+                                onChange={setLocalities} 
+                                placeholder="— اختر المحليات —"
+                                options={availableLocalities.map(l => ({ value: l.en, label: l.ar }))} 
+                            />
                         </FormGroup>
-                        <FormGroup label="قاعة الدورة"><Input disabled={isSaving} value={hall} onChange={(e) => setHall(e.target.value)} /></FormGroup>
+                        <FormGroup label="قاعة الدورة">
+                            <Input disabled={isSaving} value={hall} onChange={(e) => setHall(e.target.value)} />
+                        </FormGroup>
+                        <FormGroup label="قاعة الدورة (باللغة الإنجليزية - للشهادات)">
+                            <Input disabled={isSaving} value={hallEnglish} onChange={(e) => setHallEnglish(e.target.value)} dir="ltr" placeholder="Course Hall Name in English" />
+                        </FormGroup>
                         <FormGroup label="تاريخ بداية الدورة"><Input disabled={isSaving} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></FormGroup>
                         <FormGroup label="مدة الدورة بالأيام"><Input disabled={isSaving} type="number" value={courseDuration} onChange={(e) => setCourseDuration(Number(e.target.value))} /></FormGroup>
                         <FormGroup label="عدد المشاركين"><Input disabled={isSaving} type="number" value={participantsCount} onChange={(e) => setParticipantsCount(Number(e.target.value))} /></FormGroup>

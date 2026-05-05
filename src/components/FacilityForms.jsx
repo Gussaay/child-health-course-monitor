@@ -286,11 +286,23 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
 
                     allFacilities.forEach(f => {
                         let hasService = false;
+                        const facilityType = f['نوع_المؤسسةالصحية'];
+                        const isPHC = facilityType === 'مركز صحة الاسرة' || facilityType === 'وحدة صحة الاسرة';
+                        const isHospital = facilityType === 'مستشفى' || facilityType === 'مستشفى ريفي';
+
                         switch (formTypeKey) {
-                            case 'imnci': hasService = f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes'; break;
-                            case 'eenc': hasService = f.eenc_provides_essential_care === 'Yes'; break;
-                            case 'neonatal': hasService = f.neonatal_level_primary === 'Yes' || f.neonatal_level_secondary === 'Yes' || f.neonatal_level_tertiary === 'Yes'; break;
-                            case 'critical': hasService = f.etat_has_service === 'Yes' || f.hdu_has_service === 'Yes' || f.picu_has_service === 'Yes'; break;
+                            case 'imnci': 
+                                hasService = f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes' || isPHC; 
+                                break;
+                            case 'eenc': 
+                                hasService = f.eenc_provides_essential_care === 'Yes' || isHospital; 
+                                break;
+                            case 'neonatal': 
+                                hasService = f.neonatal_level_primary === 'Yes' || f.neonatal_level_secondary === 'Yes' || f.neonatal_level_tertiary === 'Yes' || isHospital; 
+                                break;
+                            case 'critical': 
+                                hasService = f.etat_has_service === 'Yes' || f.hdu_has_service === 'Yes' || f.picu_has_service === 'Yes' || isHospital; 
+                                break;
                         }
                         if (hasService) withService.push(f);
                         else withoutService.push(f);

@@ -104,6 +104,31 @@ const MultiSelectDropdown = ({ options, selected, onChange, label, placeholder }
 // ===== 2. MODAL COMPONENTS (Nested) =================================
 // ====================================================================
 
+const CertificateLanguageModal = ({ isOpen, onClose, onConfirm, title }) => {
+    const [language, setLanguage] = useState('en');
+    
+    useEffect(() => {
+        if (isOpen) setLanguage('en');
+    }, [isOpen]);
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={title || "Select Certificate Language"}>
+            <div className="p-4 space-y-4">
+                <FormGroup label="Select Language">
+                    <Select value={language} onChange={(e) => setLanguage(e.target.value)}>
+                        <option value="en">English</option>
+                        <option value="ar">Arabic (عربي)</option>
+                    </Select>
+                </FormGroup>
+                <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
+                    <Button variant="secondary" onClick={onClose}>Cancel</Button>
+                    <Button variant="primary" onClick={() => onConfirm(language)}>Continue</Button>
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
 const EmailCertificateModal = ({ isOpen, onClose, participants = [], isBulk = false, setToast }) => {
     const [language, setLanguage] = useState('en');
     const [isSending, setIsSending] = useState(false);
@@ -1346,13 +1371,32 @@ export function ParticipantsView({
     course, participants, onOpen, onOpenReport, onBatchUpdate, onOpenTestFormForParticipant, 
     isCourseActive, canAddParticipant, canImportParticipants, canCleanParticipantData,
     canBulkChangeParticipants, canBulkMigrateParticipants, canAddMonitoring,
-    canEditDeleteParticipantActiveCourse, canEditDeleteParticipantInactiveCourse
+    canEditDeleteParticipantActiveCourse, canEditDeleteParticipantInactiveCourse,
+    canManageCertificates
 }) {
     const { user } = useAuth();
     const currentUserIdentifier = user?.displayName || user?.email || 'Unknown';
     
-    // Combined the useDataCache calls here
-    const { fetchParticipants, federalCoordinators, fetchFederalCoordinators, isLoading: isCacheLoading } = useDataCache();
+    // Fallback: Manually check if user is admin incase props are strictly mapped and drop new ones
+    const [isCertAdmin, setIsCertAdmin] = useState(false);
+    useEffect(() => {
+        if (user && user.uid) {
+            getDoc(doc(db, 'users', user.uid)).then(snap => {
+                if (snap.exists()) {
+                    const roles = snap.data().roles || [snap.data().role];
+                    if (roles.includes('super_user') || roles.includes('federal_manager')) {
+                        setIsCertAdmin(true);
+                    }
+                }
+            }).catch(err => console.error(err));
+        }
+    }, [user]);
+
+    const showCertActions = canManageCertificates || isCertAdmin;
+
+    // FIX: Using robust truthy evaluation instead of raw object validation for the global loader
+    const { fetchParticipants, federalCoordinators, fetchFederalCoordinators, isLoading } = useDataCache();
+    const isCacheLoading = isLoading?.federalCoordinators === true || isLoading?.courses === true;
 
     // ==========================================
     // 1. ALL HOOKS MUST GO AT THE TOP
@@ -1373,7 +1417,11 @@ export function ParticipantsView({
     const [isBulkCertLoading, setIsBulkCertLoading] = useState(false);
     const [isGeneratingTemplate, setIsGeneratingTemplate] = useState(false);
     const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0 });
-    const [certLanguage, setCertLanguage] = useState('en'); 
+    
+    // Certificate Language Modal State
+    const [certLangModal, setCertLangModal] = useState({ isOpen: false, actionType: null, data: null });
+    
+    // Automatically reflects the global course object state
     const [localApprovalStatus, setLocalApprovalStatus] = useState(course.isCertificateApproved);
     const [isRefreshingApproval, setIsRefreshingApproval] = useState(false);
 
@@ -1397,6 +1445,7 @@ export function ParticipantsView({
         fetchFederalCoordinators();
     }, [fetchFederalCoordinators]);
 
+    // Keep the local state completely synced with the parent course prop automatically
     useEffect(() => {
         setLocalApprovalStatus(course.isCertificateApproved);
     }, [course.isCertificateApproved]);
@@ -1563,11 +1612,11 @@ export function ParticipantsView({
         }
     };
 
-    const handleGenerateSingleCert = async (p, participantSubCourse) => {
+    const handleGenerateSingleCert = async (p, participantSubCourse, language) => {
         setProcessingRowId(p.id);
         setIsProcessing(true);
         try {
-            const canvas = await generateCertificatePdf(course, p, federalProgramManagerName, participantSubCourse, certLanguage);
+            const canvas = await generateCertificatePdf(course, p, federalProgramManagerName, participantSubCourse, language);
             if (canvas) {
                 const doc = new jsPDF('landscape', 'mm', 'a4');
                 const imgWidth = 297;
@@ -1585,7 +1634,7 @@ export function ParticipantsView({
         }
     };
 
-    const handleBulkCertificateDownload = async () => {
+    const handleBulkCertificateDownload = async (language) => {
         if (filtered.length === 0) {
             setToast({ show: true, message: "No participants available for bulk certificate download.", type: 'warning' });
             return;
@@ -1595,7 +1644,7 @@ export function ParticipantsView({
         setDownloadProgress({ current: 0, total: filtered.length }); 
 
         try {
-             await generateAllCertificatesPdf(course, filtered, federalProgramManagerName, certLanguage, (current, total) => setDownloadProgress({ current, total }));
+             await generateAllCertificatesPdf(course, filtered, federalProgramManagerName, language, (current, total) => setDownloadProgress({ current, total }));
              setToast({ show: true, message: "Bulk certificates downloaded successfully!", type: 'success' });
         } catch(error) {
             setToast({ show: true, message: "Failed to generate bulk certificates. See console.", type: 'error' });
@@ -1606,11 +1655,11 @@ export function ParticipantsView({
         }
     };
 
-    const handleDesignCertificate = async () => {
+    const handleDesignCertificate = async (language) => {
         setIsGeneratingTemplate(true);
         setIsProcessing(true);
         try {
-            const canvas = await generateBlankCertificatePdf(course, federalProgramManagerName, certLanguage);
+            const canvas = await generateBlankCertificatePdf(course, federalProgramManagerName, language);
             if (canvas) {
                 const doc = new jsPDF('landscape', 'mm', 'a4');
                 doc.addImage(canvas.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, 297, 210);
@@ -1657,7 +1706,6 @@ export function ParticipantsView({
         );
     }
 
-    // Assuming ParticipantMigrationMappingView is imported or available in your setup
     if (activeScreen === 'migration' && canBulkMigrateParticipants) {
         return (
             <ParticipantMigrationMappingView 
@@ -1670,7 +1718,6 @@ export function ParticipantsView({
         );
     }
 
-    // Assuming BulkEditParticipantsView is imported or available in your setup
     if (isBulkEditing) {
         return (
             <BulkEditParticipantsView
@@ -1693,6 +1740,23 @@ export function ParticipantsView({
             {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ show: false, message: '', type: '' })} />}
 
             <PageHeader title="Course Participants" subtitle={`${course.state} / ${course.locality}`} />
+
+            <CertificateLanguageModal 
+                isOpen={certLangModal.isOpen}
+                onClose={() => setCertLangModal({ isOpen: false, actionType: null, data: null })}
+                onConfirm={(lang) => {
+                    const { actionType, data } = certLangModal;
+                    setCertLangModal({ isOpen: false, actionType: null, data: null });
+                    if (actionType === 'single') handleGenerateSingleCert(data.p, data.participantSubCourse, lang);
+                    else if (actionType === 'bulk') handleBulkCertificateDownload(lang);
+                    else if (actionType === 'template') handleDesignCertificate(lang);
+                }}
+                title={
+                    certLangModal.actionType === 'single' ? "Download Certificate" :
+                    certLangModal.actionType === 'bulk' ? "Download Bulk Certificates" :
+                    "Design Certificate Template"
+                }
+            />
 
             <ExcelImportModal
                 isOpen={importModalOpen}
@@ -1753,38 +1817,35 @@ export function ParticipantsView({
                                 Bulk Migrate to Facilities
                             </Button>
                         )}
-                        
-                        <div className="flex items-center bg-white border border-gray-300 rounded px-2 h-10">
-                            <span className="text-xs font-bold text-gray-600 mr-2 uppercase">Cert. Lang:</span>
-                            <select value={certLanguage} onChange={(e) => setCertLanguage(e.target.value)} className="border-none text-sm focus:ring-0 py-1 cursor-pointer bg-transparent" style={{ outline: 'none' }} disabled={isProcessing}>
-                                <option value="en">English</option><option value="ar">Arabic (عربي)</option>
-                            </select>
-                        </div>
 
-                        <Button onClick={handleDesignCertificate} disabled={isProcessing || isGeneratingTemplate || isCacheLoading} className="bg-green-600 hover:bg-green-700 text-white border-transparent focus:ring-green-500" title="Download a blank certificate template for printing">
-                            {isGeneratingTemplate ? <Spinner size="sm" /> : 'Design Certificate'}
-                        </Button>
+                        {showCertActions && (
+                            <Button onClick={() => setCertLangModal({ isOpen: true, actionType: 'template' })} disabled={isProcessing || isGeneratingTemplate || isCacheLoading} className="bg-green-600 hover:bg-green-700 text-white border-transparent focus:ring-green-500" title="Download a blank certificate template for printing">
+                                {isGeneratingTemplate ? <Spinner size="sm" /> : 'Design Certificate'}
+                            </Button>
+                        )}
 
                         {localApprovalStatus ? (
-                            <>
-                                <div className="flex items-center gap-2">
-                                    <Button variant="primary" onClick={handleBulkCertificateDownload} disabled={isProcessing || isBulkCertLoading || filtered.length === 0 || isCacheLoading} title="Download filtered certificates as one PDF">
-                                        Download Filtered Certificates
+                            showCertActions && (
+                                <>
+                                    <div className="flex items-center gap-2">
+                                        <Button variant="primary" onClick={() => setCertLangModal({ isOpen: true, actionType: 'bulk' })} disabled={isProcessing || isBulkCertLoading || filtered.length === 0 || isCacheLoading} title="Download filtered certificates as one PDF">
+                                            Download Filtered Certificates
+                                        </Button>
+                                        {isBulkCertLoading && (
+                                            <div className="flex items-center gap-2 px-2 py-1 bg-blue-50 text-blue-700 rounded text-sm border border-blue-200">
+                                                <Spinner size="sm" />
+                                                <span className="font-medium whitespace-nowrap">Generating {downloadProgress.current} / {downloadProgress.total}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <Button variant="secondary" onClick={() => setSharePageModalOpen(true)} title="Share a public link where all participants can download their certificates" className="border-sky-600 text-sky-700 hover:bg-sky-50" disabled={isProcessing}>
+                                        Share Public Page
                                     </Button>
-                                    {isBulkCertLoading && (
-                                        <div className="flex items-center gap-2 px-2 py-1 bg-blue-50 text-blue-700 rounded text-sm border border-blue-200">
-                                            <Spinner size="sm" />
-                                            <span className="font-medium whitespace-nowrap">Generating {downloadProgress.current} / {downloadProgress.total}</span>
-                                        </div>
-                                    )}
-                                </div>
-                                <Button variant="secondary" onClick={() => setSharePageModalOpen(true)} title="Share a public link where all participants can download their certificates" className="border-sky-600 text-sky-700 hover:bg-sky-50" disabled={isProcessing}>
-                                    Share Public Page
-                                </Button>
-                                <Button variant="secondary" onClick={handleOpenBulkEmail} disabled={!filtered || filtered.length === 0 || isProcessing} title="Send certificate emails to all visible participants" className="border-green-600 text-green-700 hover:bg-green-50 flex items-center gap-1">
-                                    <Mail className="w-4 h-4" /> Email All Certs
-                                </Button>
-                            </>
+                                    <Button variant="secondary" onClick={handleOpenBulkEmail} disabled={!filtered || filtered.length === 0 || isProcessing} title="Send certificate emails to all visible participants" className="border-green-600 text-green-700 hover:bg-green-50 flex items-center gap-1">
+                                        <Mail className="w-4 h-4" /> Email All Certs
+                                    </Button>
+                                </>
+                            )
                         ) : (
                             <div className="flex items-center gap-2">
                                 <div className="flex items-center gap-1 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded border border-orange-200" title="Certificates must be approved by the Federal Program Manager in the Admin Dashboard before downloading.">
@@ -1855,13 +1916,15 @@ export function ParticipantsView({
                                         <Button variant="secondary" onClick={() => onOpenReport(p.id)} disabled={isProcessing}>Report</Button>
                                         
                                         {isCertApproved ? (
-                                            <>
-                                                <Button variant="secondary" onClick={() => handleShareClick(p)} disabled={isProcessing}>Share Cert.</Button>
-                                                <Button variant="secondary" onClick={() => handleGenerateSingleCert(p, participantSubCourse)} disabled={isCacheLoading || isProcessing}>
-                                                    {(isCacheLoading || processingRowId === p.id) ? <Spinner size="sm" /> : 'Certificate'}
-                                                </Button>
-                                                <Button variant="secondary" onClick={() => handleOpenSingleEmail(p)} disabled={!p.email || isProcessing} className={!p.email ? "opacity-50 cursor-not-allowed" : ""}><Mail className="w-4 h-4" /></Button>
-                                            </>
+                                            showCertActions && (
+                                                <>
+                                                    <Button variant="secondary" onClick={() => handleShareClick(p)} disabled={isProcessing}>Share Cert.</Button>
+                                                    <Button variant="secondary" onClick={() => setCertLangModal({ isOpen: true, actionType: 'single', data: { p, participantSubCourse } })} disabled={isCacheLoading || isProcessing || processingRowId === p.id}>
+                                                        {processingRowId === p.id ? <Spinner size="sm" /> : 'Certificate'}
+                                                    </Button>
+                                                    <Button variant="secondary" onClick={() => handleOpenSingleEmail(p)} disabled={!p.email || isProcessing} className={!p.email ? "opacity-50 cursor-not-allowed" : ""}><Mail className="w-4 h-4" /></Button>
+                                                </>
+                                            )
                                         ) : (
                                             <div className="flex items-center gap-1 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded border border-orange-200" title="Certificates must be approved by the Federal Program Manager in the Admin Dashboard before downloading."><Lock className="w-3 h-3" /><span>Pending</span></div>
                                         )}
@@ -1928,11 +1991,11 @@ export function ParticipantsView({
                                         <Button variant="primary" className="w-full justify-center" onClick={() => onOpen(p.id)} disabled={!canAddMonitoring || isProcessing}>Monitor</Button>
                                         <Button variant="secondary" className="w-full justify-center" onClick={() => onOpenReport(p.id)} disabled={isProcessing}>Report</Button>
                                         
-                                        {isCertApproved && (
+                                        {isCertApproved && showCertActions && (
                                             <>
                                                 <Button variant="secondary" className="w-full justify-center" onClick={() => handleShareClick(p)} disabled={isProcessing}>Share Cert.</Button>
-                                                <Button variant="secondary" className="w-full justify-center" onClick={() => handleGenerateSingleCert(p, participantSubCourse)} disabled={isCacheLoading || isProcessing}>
-                                                    {(isCacheLoading || processingRowId === p.id) ? <Spinner size="sm" /> : 'Certificate'}
+                                                <Button variant="secondary" className="w-full justify-center" onClick={() => setCertLangModal({ isOpen: true, actionType: 'single', data: { p, participantSubCourse } })} disabled={isCacheLoading || isProcessing || processingRowId === p.id}>
+                                                    {processingRowId === p.id ? <Spinner size="sm" /> : 'Certificate'}
                                                 </Button>
                                                 <Button variant="secondary" className="w-full justify-center" onClick={() => handleOpenSingleEmail(p)} disabled={!p.email || isProcessing}><Mail className="w-4 h-4" /> Email</Button>
                                             </>

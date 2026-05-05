@@ -372,6 +372,7 @@ const generateFullCourseReportPdf = async (course, quality, onSuccess, onError, 
         y = await addCanvasImageToPdf('course-info-card', y);
         if (document.getElementById('kpi-card')) y = await addCanvasImageToPdf('kpi-card', y);
         if (document.getElementById('new-imci-facilities-card')) y = await addCanvasImageToPdf('new-imci-facilities-card', y);
+        if (document.getElementById('investment-card')) y = await addCanvasImageToPdf('investment-card', y);
         if (document.getElementById('coverage-card')) y = await addCanvasImageToPdf('coverage-card', y);
         if (document.getElementById('test-scores-card')) y = await addCanvasImageToPdf('test-scores-card', y);
 
@@ -620,19 +621,37 @@ export function CourseReportView({
         const newImciFacilityNames = new Set(newImciFacilities.map(f => f.name));
 
         let coverageData = null;
-        if (allHealthFacilities && course.locality && course.state) {
-            const facilitiesInLocality = allHealthFacilities.filter(f => f['المحلية'] === course.locality && f['الولاية'] === course.state);
-            const totalFacilitiesInLocality = facilitiesInLocality.length;
-            if (totalFacilitiesInLocality > 0) {
-                const currentImciFacilities = facilitiesInLocality.filter(f => f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes');
-                const totalImciCount = currentImciFacilities.length;
-                const newImciCount = currentImciFacilities.filter(f => newImciFacilityNames.has(f['اسم_المؤسسة'])).length;
-                const originalImciCount = totalImciCount - newImciCount;
-                coverageData = {
-                    locality: course.locality, totalFacilities: totalFacilitiesInLocality, originalImciCount: originalImciCount, newImciCount: newImciCount,
-                    totalImciCount: totalImciCount, originalCoverage: calcPct(originalImciCount, totalFacilitiesInLocality), newCoverage: calcPct(totalImciCount, totalFacilitiesInLocality),
-                };
-            }
+        if (allHealthFacilities) {
+            const totalFacsNational = allHealthFacilities.length;
+            const newImciCount = newImciFacilities.length;
+            const natCovInc = totalFacsNational > 0 ? (newImciCount / totalFacsNational) * 100 : 0;
+
+            const courseStates = course.states || (course.state ? course.state.split(',').map(s=>s.trim()) : []);
+            const courseLocalities = course.localities || (course.locality ? course.locality.split(',').map(l=>l.trim()) : []);
+            
+            const combinedStates = [...new Set([...courseStates, ...newImciFacilities.map(f => f.state)])].filter(Boolean);
+            const combinedLocalities = [...new Set([...courseLocalities, ...newImciFacilities.map(f => f.locality)])].filter(Boolean);
+
+            const stateCoverage = combinedStates.map(s => {
+                const totalInState = allHealthFacilities.filter(f => f['الولاية'] === s).length;
+                const newInState = newImciFacilities.filter(f => f.state === s).length;
+                return { name: s, total: totalInState, newCount: newInState, increase: totalInState > 0 ? (newInState/totalInState)*100 : 0 };
+            });
+
+            const localityCoverage = combinedLocalities.map(l => {
+                const totalInLocality = allHealthFacilities.filter(f => f['المحلية'] === l).length;
+                const newInLocality = newImciFacilities.filter(f => f.locality === l).length;
+                return { name: l, total: totalInLocality, newCount: newInLocality, increase: totalInLocality > 0 ? (newInLocality/totalInLocality)*100 : 0 };
+            });
+
+            const totalBudget = Number(course.course_budget) || 0;
+            const costPerParticipant = participants.length > 0 ? totalBudget / participants.length : 0;
+            const costPerNewFacility = newImciCount > 0 ? totalBudget / newImciCount : 0;
+
+            coverageData = {
+                totalBudget, costPerParticipant, costPerNewFacility, totalNewFacilities: newImciCount,
+                nationalIncrease: natCovInc, stateCoverage, localityCoverage
+            };
         }
         return { groupPerformance, overall, dailyPerformance, preTestStats, postTestStats, totalImprovement, hasTestScores: hasAnyScores, hasCases, participantsWithStats, caseCorrectnessDistribution, avgImprovementDistribution, newImciFacilities, coverageData };
     }, [participants, allObs, allCases, isLoading, allHealthFacilities, course.locality, course.state]);
@@ -939,17 +958,68 @@ export function CourseReportView({
                     </Card>
                 )}
 
-                {course.course_type === 'IMNCI' && coverageData && (
+                {coverageData && (
+                    <>
                     <Card>
-                        <div id="coverage-card" className="relative p-2">
-                             {!isSharedView && <button onClick={() => handleCopyAsImage('coverage-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
-                            <h3 className="text-xl font-bold mb-4">IMNCI Coverage for {coverageData.locality} Locality</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
-                                <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm font-semibold text-gray-600">Coverage Before Course</div><div className="text-2xl font-bold">{coverageData.originalImciCount} / {coverageData.totalFacilities} ({fmtPct(coverageData.originalCoverage)})</div></div>
-                                <div className="p-4 bg-green-100 text-green-800 rounded-lg"><div className="text-sm font-semibold">New Coverage After Course</div><div className="text-2xl font-bold">{coverageData.totalImciCount} / {coverageData.totalFacilities} ({fmtPct(coverageData.newCoverage)})</div></div>
+                        <div id="investment-card" className="relative p-2">
+                            {!isSharedView && <button onClick={() => handleCopyAsImage('investment-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
+                            <h3 className="text-xl font-bold mb-4">Investment KPIs</h3>
+                            
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                                <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                                    <div className="text-sm font-semibold text-blue-700">Total Investment</div>
+                                    <div className="text-2xl font-bold text-blue-800">${coverageData.totalBudget.toLocaleString()}</div>
+                                </div>
+                                <div className="p-4 bg-green-50 rounded-lg border border-green-100">
+                                    <div className="text-sm font-semibold text-green-700">New Facilities Reached</div>
+                                    <div className="text-2xl font-bold text-green-800">{coverageData.totalNewFacilities}</div>
+                                </div>
+                                <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-100">
+                                    <div className="text-sm font-semibold text-yellow-700">Cost / Participant</div>
+                                    <div className="text-2xl font-bold text-yellow-800">${Math.round(coverageData.costPerParticipant).toLocaleString()}</div>
+                                </div>
+                                <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
+                                    <div className="text-sm font-semibold text-purple-700">Cost / New Center</div>
+                                    <div className="text-2xl font-bold text-purple-800">${Math.round(coverageData.costPerNewFacility).toLocaleString()}</div>
+                                </div>
                             </div>
                         </div>
                     </Card>
+
+                    <Card>
+                        <div id="coverage-card" className="relative p-2">
+                            {!isSharedView && <button onClick={() => handleCopyAsImage('coverage-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
+                            <h3 className="text-xl font-bold mb-4">Coverage KPIs</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="bg-gray-50 p-4 rounded border">
+                                    <h4 className="font-bold text-gray-700 mb-2">Locality Coverage Increase</h4>
+                                    {coverageData.localityCoverage.map(l => (
+                                        <div key={l.name} className="flex justify-between items-center mb-1">
+                                            <span className="text-sm">{l.name}</span>
+                                            <span className="font-bold text-green-600">+{l.increase.toFixed(2)}%</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="bg-gray-50 p-4 rounded border">
+                                    <h4 className="font-bold text-gray-700 mb-2">State Coverage Increase</h4>
+                                    {coverageData.stateCoverage.map(s => (
+                                        <div key={s.name} className="flex justify-between items-center mb-1">
+                                            <span className="text-sm">{s.name}</span>
+                                            <span className="font-bold text-green-600">+{s.increase.toFixed(2)}%</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="bg-gray-50 p-4 rounded border">
+                                    <h4 className="font-bold text-gray-700 mb-2">National Coverage Increase</h4>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm">Sudan (Overall)</span>
+                                        <span className="font-bold text-green-600">+{coverageData.nationalIncrease.toFixed(4)}%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </Card>
+                    </>
                 )}
 
                 {showTestScoresOnScreen && hasTestScoreDataForKpis && (

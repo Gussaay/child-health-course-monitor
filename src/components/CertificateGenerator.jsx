@@ -171,12 +171,26 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
         }
     }
 
-    let stateDisplay = course.state;
-    if (isArabic && STATE_LOCALITIES[course.state]) {
-        stateDisplay = STATE_LOCALITIES[course.state].ar;
+    let stateDisplay = course.state || '';
+    // Handle multiple states gracefully if they exist from the enhanced CourseForm
+    if (isArabic) {
+        if (course.states && Array.isArray(course.states)) {
+            stateDisplay = course.states.map(s => STATE_LOCALITIES[s] ? STATE_LOCALITIES[s].ar : s).join('، ');
+        } else if (STATE_LOCALITIES[course.state]) {
+            stateDisplay = STATE_LOCALITIES[course.state].ar;
+        }
+    } else {
+        // For English certificates, ensure states are separated by commas
+        if (course.states && Array.isArray(course.states)) {
+            stateDisplay = course.states.join(', ');
+        }
     }
 
-    const location = `${stateDisplay} - ${course.hall}`;
+    // Use English hall name if language is English and the field exists, otherwise fallback to Arabic hall
+    const hallDisplay = (!isArabic && course.hall_english) ? course.hall_english : (course.hall || '');
+    
+    // Combine state(s) and hall, avoiding trailing hyphens if hall is missing
+    const location = hallDisplay ? `${stateDisplay} - ${hallDisplay}` : stateDisplay;
 
     let courseDate = '';
     const courseDuration = course.course_duration;

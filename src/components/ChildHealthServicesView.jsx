@@ -6,11 +6,11 @@ import { writeBatch } from "firebase/firestore";
 import { db } from "../firebase";
 import { useDataCache } from '../DataContext';
 import { amiriFontBase64 } from './AmiriFont.js';
-import { Capacitor } from '@capacitor/core'; // <--- ADDED CAPACITOR IMPORT
+import { Capacitor } from '@capacitor/core';
 
 // --- ICONS ---
 import { PdfIcon } from './CommonComponents';
-import { List, FileText, Users, Building, PlusCircle, ArrowLeft } from 'lucide-react';
+import { List, FileText, Users, Building, PlusCircle, ArrowLeft, Search } from 'lucide-react';
 
 import LocationMapModal from './ChildHealthServicesMap.jsx';
 
@@ -865,6 +865,7 @@ const ChildHealthServicesView = ({
     // States for Update Facility Flow via Pop-up
     const [updateSelectionService, setUpdateSelectionService] = useState(null);
     const [updateSelectionData, setUpdateSelectionData] = useState({ state: '', locality: '', facilityId: '' });
+    const [updateSelectionSearch, setUpdateSelectionSearch] = useState(''); // NEW SEARCH STATE
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     
     // --- ADDED: State for Status Modal ---
@@ -899,6 +900,7 @@ const ChildHealthServicesView = ({
                 locality: userLocalities?.length === 1 ? userLocalities[0] : '',
                 facilityId: ''
             });
+            setUpdateSelectionSearch(''); // Reset Search
         }
     };
 
@@ -1414,19 +1416,42 @@ const ChildHealthServicesView = ({
         shareViaWhatsApp(textToCopy, 'تم نسخ الرابط مع الوصف بنجاح!');
     };
 
+    // --- MODIFIED LINK COPY LOGIC TO SUPPORT GENERIC / BULK SERVICE LINKS ---
     const handleCopySingleUpdateLink = () => {
-        if (!updateSelectionData.facilityId) return;
-        const facility = facilitiesToDisplay.find(fac => fac.id === updateSelectionData.facilityId);
-        const facilityName = facility ? facility['اسم_المؤسسة'] : 'المنشأة';
-        
-        let url = `${getBaseUrl()}/facilities/data-entry/${updateSelectionData.facilityId}`;
-        if (updateSelectionService) { 
-            url += `?service=${encodeURIComponent(updateSelectionService)}`; 
+        let url;
+        let textToCopy;
+
+        if (updateSelectionData.facilityId) {
+            // A specific facility is selected
+            const facility = facilitiesToDisplay.find(fac => fac.id === updateSelectionData.facilityId);
+            const facilityName = facility ? facility['اسم_المؤسسة'] : 'المنشأة';
+            
+            url = `${getBaseUrl()}/facilities/data-entry/${updateSelectionData.facilityId}`;
+            if (updateSelectionService) { 
+                url += `?service=${encodeURIComponent(updateSelectionService)}`; 
+            }
+            
+            textToCopy = `الرجاء تحديث بيانات المنشأة "${facilityName}" لخدمة "${updateSelectionService}" عبر الرابط التالي:\n\n${url}`;
+        } else {
+            // NO facility selected: Copy a generic bulk-update link for the service
+            const params = new URLSearchParams();
+            if (updateSelectionService) params.append('service', updateSelectionService);
+            if (updateSelectionData.state) params.append('state', updateSelectionData.state);
+            if (updateSelectionData.locality) params.append('locality', updateSelectionData.locality);
+            
+            url = `${getBaseUrl()}/public/bulk-update?${params.toString()}`;
+            
+            let locationDesc = '';
+            if (updateSelectionData.locality) {
+                locationDesc = ` في محلية ${LOCALITY_EN_TO_AR_MAP[updateSelectionData.locality] || updateSelectionData.locality}`;
+            } else if (updateSelectionData.state) {
+                locationDesc = ` في ولاية ${STATE_LOCALITIES[updateSelectionData.state]?.ar || updateSelectionData.state}`;
+            }
+
+            textToCopy = `الرجاء تحديث بيانات المنشآت الصحية${locationDesc} لخدمة "${updateSelectionService}" عبر الرابط التالي:\n\n${url}`;
         }
         
-        const textToCopy = `الرجاء تحديث بيانات المنشأة "${facilityName}" لخدمة "${updateSelectionService}" عبر الرابط التالي:\n\n${url}`;
-        
-        shareViaWhatsApp(textToCopy, 'تم نسخ رابط التحديث مع الوصف بنجاح!');
+        shareViaWhatsApp(textToCopy, 'تم نسخ الرابط بنجاح!');
     };
 
     const handleExportExcel = () => {
@@ -1705,15 +1730,27 @@ const ChildHealthServicesView = ({
     const facilitiesWithService = useMemo(() => {
          if (!updateSelectionService) return [];
          return facilitiesInLocality.filter(f => {
-              if (updateSelectionService === 'IMNCI') return f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes';
-              if (updateSelectionService === 'EENC') return f.eenc_provides_essential_care === 'Yes';
-              if (updateSelectionService === 'Neonatal') return !!(f.neonatal_level_of_care?.primary || f.neonatal_level_of_care?.secondary || f.neonatal_level_of_care?.tertiary);
-              if (updateSelectionService === 'Critical Care') return f.etat_has_service === 'Yes' || f.hdu_has_service === 'Yes' || f.picu_has_service === 'Yes';
+              const facilityType = f['نوع_المؤسسةالصحية'];
+              const isPHC = facilityType === 'مركز صحة الاسرة' || facilityType === 'وحدة صحة الاسرة';
+              const isHospital = facilityType === 'مستشفى' || facilityType === 'مستشفى ريفي';
+
+              if (updateSelectionService === 'IMNCI') return f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes' || isPHC;
+              if (updateSelectionService === 'EENC') return f.eenc_provides_essential_care === 'Yes' || isHospital;
+              if (updateSelectionService === 'Neonatal') return !!(f.neonatal_level_of_care?.primary || f.neonatal_level_of_care?.secondary || f.neonatal_level_of_care?.tertiary) || isHospital;
+              if (updateSelectionService === 'Critical Care') return f.etat_has_service === 'Yes' || f.hdu_has_service === 'Yes' || f.picu_has_service === 'Yes' || isHospital;
               return true;
          });
     }, [facilitiesInLocality, updateSelectionService]);
 
     const facilitiesToDisplay = facilitiesWithService.length > 0 ? facilitiesWithService : facilitiesInLocality;
+    
+    // Filter facilities based on the live search input
+    const searchedFacilitiesToDisplay = useMemo(() => {
+        if (!updateSelectionSearch) return facilitiesToDisplay;
+        const lowerQuery = updateSelectionSearch.toLowerCase();
+        return facilitiesToDisplay.filter(f => (f['اسم_المؤسسة'] || '').toLowerCase().includes(lowerQuery));
+    }, [facilitiesToDisplay, updateSelectionSearch]);
+
     const isShowingAll = facilitiesWithService.length === 0 && facilitiesInLocality.length > 0;
     
     return (
@@ -1731,7 +1768,10 @@ const ChildHealthServicesView = ({
                         <FormGroup label="الولاية">
                              <Select 
                                 value={updateSelectionData.state} 
-                                onChange={(e) => setUpdateSelectionData({ state: e.target.value, locality: '', facilityId: '' })}
+                                onChange={(e) => {
+                                    setUpdateSelectionData({ state: e.target.value, locality: '', facilityId: '' });
+                                    setUpdateSelectionSearch(''); // Reset Search
+                                }}
                                 disabled={userStates && userStates.length === 1}
                              >
                                   <option value="">اختر الولاية</option>
@@ -1743,7 +1783,10 @@ const ChildHealthServicesView = ({
                         <FormGroup label="المحلية">
                              <Select 
                                 value={updateSelectionData.locality} 
-                                onChange={(e) => setUpdateSelectionData({ ...updateSelectionData, locality: e.target.value, facilityId: '' })} 
+                                onChange={(e) => {
+                                    setUpdateSelectionData({ ...updateSelectionData, locality: e.target.value, facilityId: '' });
+                                    setUpdateSelectionSearch(''); // Reset Search
+                                }} 
                                 disabled={!updateSelectionData.state || (userLocalities && userLocalities.length === 1)}
                              >
                                   <option value="">اختر المحلية</option>
@@ -1763,14 +1806,45 @@ const ChildHealthServicesView = ({
                                  </div>
                              ) : (
                                  <>
-                                     <FormGroup label="المنشأة الصحية">
-                                         <Select value={updateSelectionData.facilityId} onChange={(e) => setUpdateSelectionData({ ...updateSelectionData, facilityId: e.target.value })}>
-                                              <option value="">اختر المنشأة...</option>
-                                              {facilitiesToDisplay.map(f => <option key={f.id} value={f.id}>{f['اسم_المؤسسة']}</option>)}
-                                         </Select>
+                                     <FormGroup label="بحث وتحديد المنشأة">
+                                         <div className="relative mb-3">
+                                             <Search className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+                                             <Input 
+                                                 type="search" 
+                                                 placeholder="أدخل اسم المنشأة للبحث المباشر..." 
+                                                 value={updateSelectionSearch} 
+                                                 onChange={(e) => setUpdateSelectionSearch(e.target.value)}
+                                                 className="pr-10 bg-white"
+                                             />
+                                         </div>
                                      </FormGroup>
-                                     {isShowingAll && <p className="text-amber-600 font-medium text-xs mt-2 bg-amber-50 p-2 rounded border border-amber-100">لا توجد منشآت مسجلة بهذه الخدمة. يتم عرض جميع المنشآت في المحلية.</p>}
-                                     {facilitiesInLocality.length === 0 && <p className="text-red-600 font-bold text-sm mt-2 bg-red-50 p-2 rounded border border-red-100">لا توجد مؤسسات مطابقة للبحث. (No facilities match these filters)</p>}
+
+                                     <div className="mt-2">
+                                         <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                             المنشآت المتاحة ({searchedFacilitiesToDisplay.length})
+                                         </label>
+                                         <div className="max-h-56 overflow-y-auto border border-gray-200 rounded-xl bg-white shadow-inner">
+                                             {searchedFacilitiesToDisplay.length > 0 ? (
+                                                 <ul className="divide-y divide-gray-100">
+                                                     {searchedFacilitiesToDisplay.map(f => (
+                                                         <li 
+                                                             key={f.id}
+                                                             onClick={() => setUpdateSelectionData({ ...updateSelectionData, facilityId: f.id })}
+                                                             className={`p-3 cursor-pointer transition-colors ${updateSelectionData.facilityId === f.id ? 'bg-sky-100 border-r-4 border-r-sky-500 text-sky-800 font-bold' : 'hover:bg-gray-50 text-gray-700 font-medium'}`}
+                                                         >
+                                                             {f['اسم_المؤسسة']}
+                                                         </li>
+                                                     ))}
+                                                 </ul>
+                                             ) : (
+                                                 <div className="p-6 text-center text-sm text-gray-500">
+                                                     لا توجد مؤسسات مطابقة للبحث
+                                                 </div>
+                                             )}
+                                         </div>
+                                     </div>
+
+                                     {isShowingAll && <p className="text-amber-600 font-medium text-xs mt-3 bg-amber-50 p-2 rounded border border-amber-100">لا توجد منشآت مسجلة بهذه الخدمة. يتم عرض جميع المنشآت في المحلية.</p>}
                                  </>
                              )}
                         </div>
@@ -1778,13 +1852,16 @@ const ChildHealthServicesView = ({
                     
                     <div className="flex justify-end gap-2 mt-6 border-t pt-4">
                         <Button variant="secondary" onClick={() => setUpdateSelectionService(null)}>إلغاء</Button>
+                        
+                        {/* Modified Link Copy Button - Enabled immediately */}
                         <Button 
                             variant="info" 
                             onClick={handleCopySingleUpdateLink} 
-                            disabled={!updateSelectionData.facilityId || isFacilitiesLoading}
+                            disabled={isFacilitiesLoading} 
                         >
                             نسخ الرابط
                         </Button>
+                        
                         <Button 
                             onClick={() => {
                                 const f = facilitiesToDisplay.find(fac => fac.id === updateSelectionData.facilityId);

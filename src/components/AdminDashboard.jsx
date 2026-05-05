@@ -1,4 +1,4 @@
-// AdminDashboard.jsx
+// src/components/AdminDashboard.jsx
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Card, PageHeader, Button, Table, Spinner, Select, Checkbox, Toast, Input, FormGroup, Modal, CardBody, CardFooter } from './CommonComponents';
 import { db, auth } from '../firebase';
@@ -7,13 +7,8 @@ import { onAuthStateChanged, sendPasswordResetEmail } from 'firebase/auth';
 import { STATE_LOCALITIES } from './constants'; 
 
 // --- Icons & Data Imports ---
-import { CheckCircle, XCircle, RefreshCw, Lock, Upload, FileSignature, Stamp, Users, Shield, Activity, Award, Filter, Database, Edit3, Clock, Settings } from 'lucide-react';
-import { 
-    listAllCourses, 
-    listFederalCoordinators, 
-    unapproveCourseCertificates,
-    uploadFile
-} from '../data';
+import { CheckCircle, XCircle, RefreshCw, Lock, Users, Shield, Activity, Filter, Database, Edit3, Clock, Settings } from 'lucide-react';
+import { listFederalCoordinators } from '../data';
 
 // --- PERMISSIONS IMPORT ---
 import {
@@ -21,7 +16,6 @@ import {
     applyDerivedPermissions,
     mergeRolePermissions,
     DEFAULT_ROLE_PERMISSIONS,
-    ALL_PERMISSION_KEYS,
     ROLES,
     PERMISSION_DESCRIPTIONS
 } from './permissions';
@@ -48,10 +42,6 @@ const AdminTabs = ({ activeTab, setActiveTab, currentUserRoles = [] }) => {
         { key: 'roles', label: 'Manage User Roles', icon: Users },
         { key: 'permissions', label: 'Manage Role Permissions', icon: Shield },
     ];
-
-    if (currentUserRoles.includes('super_user') || currentUserRoles.includes('federal_manager')) {
-        tabs.push({ key: 'approvals', label: 'Certificate Approvals', icon: Award });
-    }
 
     if (currentUserRoles.includes('super_user')) {
         tabs.push({ key: 'usage', label: 'Resource Usage', icon: Activity });
@@ -83,7 +73,7 @@ const AdminTabs = ({ activeTab, setActiveTab, currentUserRoles = [] }) => {
 
 const PermissionsEditor = ({ role, currentPermissions, allPermissions, onPermissionChange, disabled }) => {
     const PERMISSION_CATEGORIES = useMemo(() => [
-        { title: 'A. Course Management', keys: ['canViewCourse', 'canManageCourse'] },
+        { title: 'A. Course Management', keys: ['canViewCourse', 'canManageCourse', 'canManageCertificates'] },
         { title: 'B. Child Health Service Facility Management', keys: ['canViewFacilities', 'canManageFacilities'] },
         { title: 'C. Human Resource (HR) Management', keys: ['canViewHumanResource', 'canManageHumanResource'] },
         { title: 'D. Skills Mentorship', keys: ['canViewSkillsMentorship', 'canManageSkillsMentorship', 'canAddMentorshipVisit'] },
@@ -197,298 +187,6 @@ const formatDuration = (milliseconds) => {
 };
 
 // -----------------------------------------------------------------------------
-// Certificate Approvals Tab
-// -----------------------------------------------------------------------------
-const CertificateApprovalsTab = ({ setToast }) => {
-    const [courses, setCourses] = useState([]);
-    const [managerName, setManagerName] = useState('');
-    const [loadingApprovals, setLoadingApprovals] = useState(false);
-    
-    const [approvalModalOpen, setApprovalModalOpen] = useState(false);
-    const [selectedCourse, setSelectedCourse] = useState(null);
-    const [isApproving, setIsApproving] = useState(false);
-    
-    const [managerSignatureFile, setManagerSignatureFile] = useState(null);
-    const [directorName, setDirectorName] = useState('');
-    const [directorSignatureFile, setDirectorSignatureFile] = useState(null);
-    const [programStampFile, setProgramStampFile] = useState(null);
-
-    const managerFileRef = useRef(null);
-    const directorFileRef = useRef(null);
-    const stampFileRef = useRef(null);
-
-    const loadData = async () => {
-        setLoadingApprovals(true);
-        try {
-            const allCourses = await listAllCourses({ source: 'server' });
-            const sorted = allCourses.sort((a, b) => {
-                if (a.isCertificateApproved === b.isCertificateApproved) {
-                    return new Date(b.start_date) - new Date(a.start_date);
-                }
-                return a.isCertificateApproved ? 1 : -1;
-            });
-            setCourses(sorted);
-
-            const coords = await listFederalCoordinators({ source: 'server' });
-            const manager = coords.find(c => c.role === 'مدير البرنامج' || c.role === 'Federal Program Manager');
-            if (manager) setManagerName(manager.name);
-        } catch (err) {
-            setToast({ show: true, message: "Error loading approval data", type: 'error' });
-        } finally {
-            setLoadingApprovals(false);
-        }
-    };
-
-    useEffect(() => { loadData(); }, [setToast]);
-
-    const handleOpenApprovalModal = (course) => {
-        if (!managerName) {
-            setToast({ show: true, message: "Program Manager Name is missing. Please check HR settings.", type: 'error' });
-            return;
-        }
-        setSelectedCourse(course);
-        setManagerSignatureFile(null);
-        setDirectorSignatureFile(null);
-        setProgramStampFile(null);
-        setDirectorName(course.director || '');
-        setApprovalModalOpen(true);
-    };
-
-    const handleConfirmApprove = async () => {
-        if (!selectedCourse || !managerName) return;
-        setIsApproving(true);
-        try {
-            let managerSigUrl = null; if (managerSignatureFile) managerSigUrl = await uploadFile(managerSignatureFile);
-            let directorSigUrl = null; if (directorSignatureFile) directorSigUrl = await uploadFile(directorSignatureFile);
-            let stampUrl = null; if (programStampFile) stampUrl = await uploadFile(programStampFile);
-
-            const courseRef = doc(db, 'courses', selectedCourse.id);
-            const approvalData = {
-                isCertificateApproved: true,
-                approvedByManagerName: managerName,
-                approvedByManagerSignatureUrl: managerSigUrl || selectedCourse.approvedByManagerSignatureUrl || null,
-                approvedDirectorName: directorName,
-                approvedDirectorSignatureUrl: directorSigUrl || selectedCourse.approvedDirectorSignatureUrl || null,
-                approvedProgramStampUrl: stampUrl || selectedCourse.approvedProgramStampUrl || null,
-                certificateApprovedAt: new Date()
-            };
-
-            await updateDoc(courseRef, approvalData);
-            setToast({ show: true, message: "Certificates Approved Successfully.", type: 'success' });
-            setApprovalModalOpen(false);
-            
-            setCourses(prevCourses => prevCourses.map(c => {
-                if (c.id === selectedCourse.id) {
-                    return { ...c, ...approvalData, certificateApprovedAt: { seconds: Math.floor(Date.now() / 1000) } };
-                }
-                return c;
-            }));
-
-        } catch (err) {
-            setToast({ show: true, message: `Error: ${err.message}`, type: 'error' });
-        } finally { setIsApproving(false); }
-    };
-
-    const handleUnapprove = async (course) => {
-        if (course.approvedByManagerName && course.approvedByManagerName !== managerName) {
-            setToast({ show: true, message: `Permission Denied. Only ${course.approvedByManagerName} can revoke this.`, type: 'error' });
-            return;
-        }
-
-        if (window.confirm(`Revoke approval for ${course.course_type}? \n\nThis will hide the download links for participants.`)) {
-            setLoadingApprovals(true);
-            try {
-                await unapproveCourseCertificates(course.id);
-                setToast({ show: true, message: "Approval Revoked.", type: 'info' });
-                setCourses(prevCourses => prevCourses.map(c => {
-                    if (c.id === course.id) {
-                        return { ...c, isCertificateApproved: false, approvedByManagerName: null, approvedByManagerSignatureUrl: null, approvedDirectorName: null, approvedDirectorSignatureUrl: null, approvedProgramStampUrl: null, certificateApprovedAt: null };
-                    }
-                    return c;
-                }));
-            } catch (err) { setToast({ show: true, message: err.message, type: 'error' }); } 
-            finally { setLoadingApprovals(false); }
-        }
-    };
-
-    if (loadingApprovals && !approvalModalOpen) return <div className="flex justify-center p-8"><Spinner /></div>;
-
-    return (
-        <>
-            <Card>
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-bold text-gray-800 flex items-center">
-                        <Award className="w-5 h-5 mr-2 text-sky-500" /> Certificate Approvals
-                    </h3>
-                    <Button variant="secondary" onClick={loadData} size="sm" className="shadow-sm">
-                        <RefreshCw className="w-4 h-4 mr-2" /> Refresh
-                    </Button>
-                </div>
-                
-                <div className="bg-sky-50 border border-sky-100 p-5 rounded-xl mb-6 shadow-sm flex items-start">
-                    <div className="p-2 bg-sky-100 text-sky-600 rounded-full mr-4 shrink-0">
-                        <FileSignature className="w-6 h-6" />
-                    </div>
-                    <div>
-                        <p className="text-sm text-sky-900">
-                            <strong>Current Signing Authority:</strong> 
-                            <span className="font-bold text-lg ml-2 underline decoration-sky-300 underline-offset-4">{managerName || "Loading..."}</span>
-                        </p>
-                        <p className="text-xs text-sky-700 mt-2 leading-relaxed">
-                            Approving a course will permanently stamp your name on the generated certificates. Ensure you upload all necessary signatures and the transparent program stamp before confirming.
-                        </p>
-                    </div>
-                </div>
-
-                {courses.length === 0 ? (
-                    <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                        <div className="text-gray-400 mb-2"><Award className="w-8 h-8 mx-auto opacity-50" /></div>
-                        <div className="text-gray-500 font-medium">No courses found to approve.</div>
-                    </div>
-                ) : (
-                    <div className="overflow-hidden rounded-xl border border-gray-200 shadow-sm">
-                        <Table headers={["State", "Locality", "Course Type", "Sub Course", "Start Date", "Status", "Actions"]}>
-                            {courses.map(c => {
-                                const isApproved = c.isCertificateApproved === true;
-                                const canModify = isApproved && c.approvedByManagerName === managerName;
-
-                                const subCourses = c.facilitatorAssignments && c.facilitatorAssignments.length > 0
-                                    ? [...new Set(c.facilitatorAssignments.map(a => a.imci_sub_type).filter(Boolean))].join(', ')
-                                    : (c.director_imci_sub_type || '-');
-
-                                return (
-                                    <tr key={c.id} className={`transition-colors hover:bg-gray-50 ${isApproved ? "bg-gray-50/50" : "bg-white"}`}>
-                                        <td className="font-medium text-gray-800">{c.state}</td>
-                                        <td className="text-gray-600">{c.locality}</td>
-                                        <td className="font-medium text-sky-700">{c.course_type}</td>
-                                        <td className="text-sm text-gray-500 max-w-[150px] truncate" title={subCourses}>
-                                            {subCourses}
-                                        </td>
-                                        <td className="text-gray-600 font-mono text-sm">{c.start_date}</td>
-                                        <td>
-                                            {isApproved ? (
-                                                <div className="flex flex-col items-start">
-                                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-800 border border-green-200 shadow-sm">
-                                                        <CheckCircle className="w-3 h-3 mr-1" /> Approved
-                                                    </span>
-                                                    <span className="text-[10px] text-gray-500 mt-1 font-medium bg-gray-100 px-1.5 py-0.5 rounded">
-                                                        By: {c.approvedByManagerName}
-                                                    </span>
-                                                </div>
-                                            ) : (
-                                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200 shadow-sm">
-                                                    Pending
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="text-right">
-                                            {isApproved ? (
-                                                <Button 
-                                                    onClick={() => handleUnapprove(c)} 
-                                                    disabled={!canModify}
-                                                    variant="secondary"
-                                                    size="sm"
-                                                    className={!canModify ? "opacity-50 cursor-not-allowed" : "text-red-600 hover:bg-red-50 hover:text-red-700 border-red-200"}
-                                                    title={!canModify ? `Only ${c.approvedByManagerName} can revoke this.` : "Revoke Approval"}
-                                                >
-                                                    {canModify ? "Revoke" : <Lock className="w-4 h-4" />}
-                                                </Button>
-                                            ) : (
-                                                <Button onClick={() => handleOpenApprovalModal(c)} disabled={!managerName} variant="primary" size="sm" className="shadow-sm">
-                                                    Review & Approve
-                                                </Button>
-                                            )}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </Table>
-                    </div>
-                )}
-            </Card>
-
-            <Modal isOpen={approvalModalOpen} onClose={() => !isApproving && setApprovalModalOpen(false)} title="Confirm & Sign Certificates">
-                <CardBody>
-                    <div className="space-y-6">
-                        <div className="bg-sky-50 text-sky-800 p-3 rounded-lg text-sm border border-sky-100 flex items-start">
-                            <Award className="w-5 h-5 mr-3 shrink-0 opacity-70" />
-                            <p>You are approving certificates for <strong>{selectedCourse?.course_type}</strong> in <strong>{selectedCourse?.locality}, {selectedCourse?.state}</strong>.</p>
-                        </div>
-                        
-                        <div className="border border-gray-200 rounded-xl p-5 bg-gray-50 shadow-sm">
-                            <h4 className="text-sm font-bold text-gray-800 uppercase mb-4 flex items-center tracking-wide">
-                                <FileSignature className="w-4 h-4 mr-2 text-sky-500" /> Program Manager (You)
-                            </h4>
-                            <div className="mb-4">
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Name on Certificate</label>
-                                <div className="text-sm font-bold bg-white px-3 py-2 border border-gray-200 rounded-lg text-gray-800 shadow-sm">{managerName}</div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Signature Image (Optional)</label>
-                                <div className="flex items-center gap-2">
-                                    <input type="file" accept="image/*" ref={managerFileRef} onChange={(e) => setManagerSignatureFile(e.target.files[0])} className="hidden" />
-                                    <Button type="button" variant="secondary" size="sm" onClick={() => managerFileRef.current?.click()} className="w-full justify-center bg-white">
-                                        <Upload className="w-4 h-4 mr-2 text-gray-400" /> {managerSignatureFile ? managerSignatureFile.name : "Upload Signature"}
-                                    </Button>
-                                    {managerSignatureFile && <Button type="button" variant="danger" size="sm" onClick={() => { setManagerSignatureFile(null); if(managerFileRef.current) managerFileRef.current.value = ''; }}><XCircle className="w-4 h-4" /></Button>}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="border border-gray-200 rounded-xl p-5 bg-white shadow-sm">
-                            <h4 className="text-sm font-bold text-gray-800 uppercase mb-4 flex items-center tracking-wide">
-                                <FileSignature className="w-4 h-4 mr-2 text-blue-500" /> Course Director
-                            </h4>
-                            <div className="mb-4">
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Director Name</label>
-                                <Input value={directorName} onChange={(e) => setDirectorName(e.target.value)} placeholder="Dr. Name..." className="text-sm font-medium" />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Director Signature (Optional)</label>
-                                <div className="flex items-center gap-2">
-                                    <input type="file" accept="image/*" ref={directorFileRef} onChange={(e) => setDirectorSignatureFile(e.target.files[0])} className="hidden" />
-                                    <Button type="button" variant="secondary" size="sm" onClick={() => directorFileRef.current?.click()} className="w-full justify-center bg-gray-50">
-                                        <Upload className="w-4 h-4 mr-2 text-gray-400" /> {directorSignatureFile ? directorSignatureFile.name : "Upload Signature"}
-                                    </Button>
-                                    {directorSignatureFile && <Button type="button" variant="danger" size="sm" onClick={() => { setDirectorSignatureFile(null); if(directorFileRef.current) directorFileRef.current.value = ''; }}><XCircle className="w-4 h-4" /></Button>}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="border border-gray-200 rounded-xl p-5 bg-white shadow-sm">
-                            <h4 className="text-sm font-bold text-gray-800 uppercase mb-4 flex items-center tracking-wide">
-                                <Stamp className="w-4 h-4 mr-2 text-indigo-500" /> Program Stamp
-                            </h4>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Stamp Image</label>
-                                <div className="flex items-center gap-2">
-                                    <input type="file" accept="image/*" ref={stampFileRef} onChange={(e) => setProgramStampFile(e.target.files[0])} className="hidden" />
-                                    <Button type="button" variant="secondary" size="sm" onClick={() => stampFileRef.current?.click()} className="w-full justify-center bg-gray-50">
-                                        <Upload className="w-4 h-4 mr-2 text-gray-400" /> {programStampFile ? programStampFile.name : "Upload Stamp"}
-                                    </Button>
-                                    {programStampFile && <Button type="button" variant="danger" size="sm" onClick={() => { setProgramStampFile(null); if(stampFileRef.current) stampFileRef.current.value = ''; }}><XCircle className="w-4 h-4" /></Button>}
-                                </div>
-                                <p className="text-xs text-gray-400 mt-2 italic flex items-center"><CheckCircle className="w-3 h-3 mr-1" /> Recommended: Transparent PNG background.</p>
-                            </div>
-                        </div>
-                    </div>
-                </CardBody>
-                <CardFooter>
-                    <div className="flex justify-end gap-3 w-full pt-2">
-                        <Button variant="secondary" onClick={() => setApprovalModalOpen(false)} disabled={isApproving}>
-                            Cancel
-                        </Button>
-                        <Button variant="primary" onClick={handleConfirmApprove} disabled={isApproving} className="shadow-md">
-                            {isApproving ? <><Spinner size="sm" className="mr-2" /> Processing...</> : "Confirm & Approve"}
-                        </Button>
-                    </div>
-                </CardFooter>
-            </Modal>
-        </>
-    );
-};
-
-// -----------------------------------------------------------------------------
 // Main AdminDashboard Component
 // -----------------------------------------------------------------------------
 export function AdminDashboard() {
@@ -500,8 +198,8 @@ export function AdminDashboard() {
     const [toast, setToast] = useState({ show: false, message: '', type: '' });
     
     const [currentUserRole, setCurrentUserRole] = useState(null);
-    const [currentUserRoles, setCurrentUserRoles] = useState([]); // NEW STATE
-    const [currentUserPermissions, setCurrentUserPermissions] = useState({}); // NEW STATE
+    const [currentUserRoles, setCurrentUserRoles] = useState([]); 
+    const [currentUserPermissions, setCurrentUserPermissions] = useState({}); 
     
     const [activeTab, setActiveTab] = useState('roles');
 
@@ -1101,7 +799,6 @@ export function AdminDashboard() {
                 {activeTab === 'roles' && renderUserRolesTab()}
                 {activeTab === 'permissions' && renderRolePermissionsTab()}
                 {activeTab === 'usage' && currentUserRoles.includes('super_user') && renderUsageTab()}
-                {activeTab === 'approvals' && <CertificateApprovalsTab setToast={setToast} />}
             </div>
 
             {/* EDIT ROLES MODAL */}
