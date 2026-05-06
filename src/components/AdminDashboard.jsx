@@ -73,7 +73,7 @@ const AdminTabs = ({ activeTab, setActiveTab, currentUserRoles = [] }) => {
 
 const PermissionsEditor = ({ role, currentPermissions, allPermissions, onPermissionChange, disabled }) => {
     const PERMISSION_CATEGORIES = useMemo(() => [
-        { title: 'A. Course Management', keys: ['canViewCourse', 'canManageCourse', 'canManageCertificates'] },
+        { title: 'A. Course Management', keys: ['canViewCourse', 'canAddCourse', 'canManageCourse', 'canManageCertificates'] },
         { title: 'B. Child Health Service Facility Management', keys: ['canViewFacilities', 'canManageFacilities'] },
         { title: 'C. Human Resource (HR) Management', keys: ['canViewHumanResource', 'canManageHumanResource'] },
         { title: 'D. Skills Mentorship', keys: ['canViewSkillsMentorship', 'canManageSkillsMentorship', 'canAddMentorshipVisit'] },
@@ -211,6 +211,8 @@ export function AdminDashboard() {
     const [viewingUser, setViewingUser] = useState(null);
     const [editingRolesUser, setEditingRolesUser] = useState(null);
     const [tempSelectedRoles, setTempSelectedRoles] = useState([]);
+    const [tempSelectedState, setTempSelectedState] = useState('');
+    const [tempSelectedLocality, setTempSelectedLocality] = useState('');
     
     // --- STATE FOR ROLE PERMISSIONS MODAL ---
     const [editingPermissionRole, setEditingPermissionRole] = useState(null);
@@ -305,7 +307,7 @@ export function AdminDashboard() {
         setLoading(false);
     };
 
-    const handleUserRolesChange = async (userId, selectedRoles) => {
+    const handleUserRolesChange = async (userId, selectedRoles, assignedState, assignedLocality) => {
         const userToUpdate = users.find(u => u.id === userId);
         
         if (selectedRoles.length === 0) {
@@ -333,13 +335,20 @@ export function AdminDashboard() {
         if (!needsLocation) {
             updatePayload.assignedState = '';
             updatePayload.assignedLocality = '';
+        } else {
+            updatePayload.assignedState = assignedState || '';
+            if (selectedRoles.includes('locality_manager')) {
+                updatePayload.assignedLocality = assignedLocality || '';
+            } else {
+                updatePayload.assignedLocality = '';
+            }
         }
 
         try {
             const userRef = doc(db, "users", userId);
             await updateDoc(userRef, updatePayload);
             setUsers(users.map(user => user.id === userId ? { ...user, ...updatePayload } : user));
-            setToast({ show: true, message: `Successfully updated user roles.`, type: "success" });
+            setToast({ show: true, message: `Successfully updated user roles and boundaries.`, type: "success" });
         } catch (error) {
             setToast({ show: true, message: "Failed to update user roles.", type: "error" });
         }
@@ -387,8 +396,11 @@ export function AdminDashboard() {
         setRolesAndPermissions(prev => {
             let baseRole = { ...ALL_PERMISSIONS, ...prev[role] };
             baseRole[permission] = value;
+            
+            // Maintain derivations manually here
             baseRole.canApproveSubmissions = ALL_PERMISSIONS.canApproveSubmissions;
             baseRole.canViewDashboard = ALL_PERMISSIONS.canViewDashboard; 
+            
             if (permission !== 'canViewHumanResource') {
                 baseRole.canViewHumanResource = prev[role].canViewHumanResource;
             }
@@ -398,9 +410,18 @@ export function AdminDashboard() {
             if (permission !== 'canViewSkillsMentorship') {
                 baseRole.canViewSkillsMentorship = prev[role].canViewSkillsMentorship;
             }
+            if (permission !== 'canViewCourse') {
+                 baseRole.canViewCourse = prev[role].canViewCourse;
+            }
+
             if (baseRole.canManageFacilities) {
                  baseRole.canViewFacilities = true;
             }
+            // Ensure derived rules trigger correctly for courses
+            if (baseRole.canAddCourse || baseRole.canManageCourse) {
+                 baseRole.canViewCourse = true;
+            }
+            
             const updatedRole = applyDerivedPermissions(baseRole);
             return { ...prev, [role]: updatedRole };
         });
@@ -432,42 +453,62 @@ export function AdminDashboard() {
         }
     };
 
-    const handleSaveAndSyncAllPermissions = async () => {
-        if (!window.confirm("Are you sure you want to save these global permissions AND synchronize them with ALL users in the database?")) return;
+    // --- INCREMENTAL PERMISSION SYNC ---
+    const handleCloseAndSyncBlueprint = async () => {
+        if (!editingPermissionRole) return;
+        const roleToSync = editingPermissionRole;
+
         setLoading(true);
         try {
+            // 1. Calculate the derived permissions for the global blueprint
             const rolesAndPermissionsWithDerived = Object.keys(rolesAndPermissions).reduce((acc, role) => {
                 const currentRolePerms = { ...ALL_PERMISSIONS, ...(rolesAndPermissions[role] || {}) };
                 acc[role] = applyDerivedPermissions(currentRolePerms);
                 return acc;
             }, {});
+
+            // 2. Save the updated blueprint to the global meta document
             const rolesDocRef = doc(db, "meta", "roles");
             await setDoc(rolesDocRef, rolesAndPermissionsWithDerived);
             
+            // 3. Incrementally update ONLY the users who hold the role being edited
             const batch = writeBatch(db);
-            const allUsersQuery = query(collection(db, "users"));
-            const allUsersSnapshot = await getDocs(allUsersQuery);
-            
-            allUsersSnapshot.docs.forEach(userDoc => {
-                const userData = userDoc.data();
-                const userRoles = userData.roles || [userData.role || 'user'];
-                const mergedPermissions = mergeRolePermissions(userRoles, rolesAndPermissionsWithDerived);
-                const userRef = doc(db, "users", userDoc.id);
-                batch.update(userRef, { permissions: { ...ALL_PERMISSIONS, ...mergedPermissions } });
+            let updateCount = 0;
+
+            const updatedUsers = users.map(user => {
+                const userRoles = user.roles || [user.role || 'user'];
+                
+                if (userRoles.includes(roleToSync)) {
+                    const mergedPermissions = mergeRolePermissions(userRoles, rolesAndPermissionsWithDerived);
+                    const userRef = doc(db, "users", user.id);
+                    batch.update(userRef, { permissions: { ...ALL_PERMISSIONS, ...mergedPermissions } });
+                    updateCount++;
+                    
+                    return { ...user, permissions: { ...ALL_PERMISSIONS, ...mergedPermissions } };
+                }
+                return user;
             });
             
-            await batch.commit();
+            // 4. Commit batch if there are affected users
+            if (updateCount > 0) {
+                await batch.commit();
+            }
+            
+            // 5. Update local state
             setRolesAndPermissions(rolesAndPermissionsWithDerived);
-            await loadData(currentUserRoles.includes('super_user') ? 'super_user' : currentUserRole); 
-            setToast({ show: true, message: "Permissions saved and synchronized with all users successfully!", type: "success" });
+            setUsers(updatedUsers); 
+            
+            setToast({ show: true, message: `Permissions saved and incrementally synced to ${updateCount} users!`, type: "success" });
         } catch (error) {
+            console.error("Error saving and syncing permissions:", error);
             setToast({ show: true, message: "Failed to save and sync permissions. Please try again.", type: "error" });
+        } finally {
+            setLoading(false);
+            setEditingPermissionRole(null); 
         }
-        setLoading(false);
     };
 
     // --- NEW HANDLERS FOR ACCOUNT MANAGEMENT ---
-
     const handleSendPasswordReset = async (email) => {
         if (!email) return;
         if (window.confirm(`Send a password reset email to ${email}?`)) {
@@ -489,15 +530,9 @@ export function AdminDashboard() {
         if (window.confirm(confirmMessage)) {
             setLoading(true);
             try {
-                // Delete user from Firestore
                 await deleteDoc(doc(db, "users", userId));
-                
-                // Update local state to remove the user from the table
                 setUsers(users.filter(u => u.id !== userId));
-                
                 setToast({ show: true, message: `User profile for ${userEmail} deleted successfully.`, type: 'success' });
-                
-                // Close the modal if the deleted user is currently being viewed
                 if (viewingUser && viewingUser.id === userId) {
                     setViewingUser(null);
                 }
@@ -621,7 +656,12 @@ export function AdminDashboard() {
                                                 <Button 
                                                     size="sm" 
                                                     variant="secondary" 
-                                                    onClick={() => { setEditingRolesUser(user); setTempSelectedRoles(userRoles); }}
+                                                    onClick={() => { 
+                                                        setEditingRolesUser(user); 
+                                                        setTempSelectedRoles(userRoles); 
+                                                        setTempSelectedState(user.assignedState || '');
+                                                        setTempSelectedLocality(user.assignedLocality || '');
+                                                    }}
                                                     className="text-xs py-1 px-3 bg-white border-gray-300 shadow-sm hover:bg-gray-50 hover:text-sky-600 w-full justify-start"
                                                 >
                                                     <Edit3 className="w-3 h-3 mr-2" /> Edit Roles
@@ -681,12 +721,9 @@ export function AdminDashboard() {
                         <Shield className="w-5 h-5 mr-2 text-sky-500" /> Global Role Definitions
                     </h3>
                     <p className="text-sm text-sky-700 mt-1 max-w-2xl">
-                        Adjusting permissions here defines the default blueprint for each role. Clicking <strong>Save and Sync</strong> will permanently overwrite the permissions for all users to match their assigned roles.
+                        Adjusting permissions here defines the default blueprint for each role. Changes are <strong>automatically saved and incrementally synced</strong> to affected users when you close the configuration menu.
                     </p>
                 </div>
-                <Button onClick={handleSaveAndSyncAllPermissions} disabled={loading || !currentUserRoles.includes('super_user')} className="shrink-0 shadow-md">
-                    {loading ? <><Spinner size="sm" className="mr-2" /> Syncing Data...</> : <><RefreshCw className="w-4 h-4 mr-2" /> Save & Sync Globally</>}
-                </Button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
@@ -840,6 +877,42 @@ export function AdminDashboard() {
                                 })}
                             </div>
                         </div>
+
+                        {/* DYNAMIC LOCATION ASSIGNMENT UI */}
+                        {(() => {
+                            const LOCATION_ASSIGNMENT_ROLES = ['states_manager', 'state_coordinator', 'locality_manager'];
+                            const needsLocation = tempSelectedRoles.some(r => LOCATION_ASSIGNMENT_ROLES.includes(r));
+                            const needsLocality = tempSelectedRoles.includes('locality_manager');
+                            const availableLocalities = tempSelectedState ? (STATE_LOCALITIES[tempSelectedState]?.localities || []) : [];
+
+                            if (!needsLocation) return null;
+
+                            return (
+                                <div className="mt-4 p-4 bg-sky-50 border border-sky-200 rounded-xl shadow-inner space-y-3 animate-in fade-in zoom-in duration-200">
+                                    <h4 className="text-sm font-bold text-sky-900 flex items-center"><Filter className="w-4 h-4 mr-2"/> Required Geographic Assignment</h4>
+                                    <p className="text-xs text-sky-700 font-medium">The selected roles require you to assign a specific geographic boundary.</p>
+                                    
+                                    <div className="pt-2 space-y-3">
+                                        <FormGroup>
+                                            <Select value={tempSelectedState} onChange={(e) => { setTempSelectedState(e.target.value); setTempSelectedLocality(''); }} className="w-full bg-white font-bold text-sm shadow-sm">
+                                                <option value="">-- Select Required State --</option>
+                                                {STATES.map(state => (<option key={state} value={state}>{state}</option>))}
+                                            </Select>
+                                        </FormGroup>
+
+                                        {needsLocality && (
+                                            <FormGroup>
+                                                <Select value={tempSelectedLocality} onChange={(e) => setTempSelectedLocality(e.target.value)} disabled={!tempSelectedState} className="w-full bg-white font-bold text-sm shadow-sm disabled:opacity-50">
+                                                    <option value="">-- Select Required Locality --</option>
+                                                    {availableLocalities.map(loc => (<option key={loc.en} value={loc.en}>{loc.ar}</option>))}
+                                                </Select>
+                                            </FormGroup>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
                         <p className="text-xs text-gray-500 mt-4 flex items-start px-1"><Shield className="w-3.5 h-3.5 mr-1.5 mt-0.5 shrink-0"/> Assigning multiple roles will automatically grant the highest level of permissions derived from all selected blueprints.</p>
                     </div>
                 </CardBody>
@@ -847,7 +920,22 @@ export function AdminDashboard() {
                     <div className="flex justify-end gap-3 w-full pt-1">
                         <Button variant="secondary" onClick={() => setEditingRolesUser(null)} className="px-5">Cancel</Button>
                         <Button variant="primary" onClick={() => {
-                            handleUserRolesChange(editingRolesUser.id, tempSelectedRoles);
+                            // Validation checks before saving
+                            const LOCATION_ASSIGNMENT_ROLES = ['states_manager', 'state_coordinator', 'locality_manager'];
+                            const needsLocation = tempSelectedRoles.some(r => LOCATION_ASSIGNMENT_ROLES.includes(r));
+                            const needsLocality = tempSelectedRoles.includes('locality_manager');
+                            
+                            if (needsLocation && !tempSelectedState) {
+                                setToast({ show: true, message: "You must select a State for this role configuration.", type: "error" });
+                                return;
+                            }
+                            if (needsLocality && !tempSelectedLocality) {
+                                setToast({ show: true, message: "You must select a Locality for this role configuration.", type: "error" });
+                                return;
+                            }
+
+                            // Proceed with save
+                            handleUserRolesChange(editingRolesUser.id, tempSelectedRoles, tempSelectedState, tempSelectedLocality);
                             setEditingRolesUser(null);
                         }} className="px-6 shadow-md">
                             Confirm & Apply Roles
@@ -857,12 +945,12 @@ export function AdminDashboard() {
             </Modal>
 
             {/* CONFIGURE ROLE PERMISSIONS MODAL */}
-            <Modal isOpen={!!editingPermissionRole} onClose={() => setEditingPermissionRole(null)} title="Configure Blueprint Permissions">
+            <Modal isOpen={!!editingPermissionRole} onClose={() => {}} title="Configure Blueprint Permissions">
                 <CardBody className="p-0 bg-gray-50/50">
                     <div className="p-6 border-b border-gray-200 bg-white">
                         <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2">Editing Permissions Blueprint for:</p>
                         <div className="font-black text-sky-900 flex items-center text-3xl">
-                            <Shield className="w-8 h-8 mr-3 text-sky-500"/> {ROLES[editingPermissionRole]}
+                            <Shield className="w-8 h-8 mr-3 text-sky-500"/> {editingPermissionRole && ROLES[editingPermissionRole]}
                         </div>
                     </div>
                     {editingPermissionRole && (
@@ -879,8 +967,8 @@ export function AdminDashboard() {
                 </CardBody>
                 <CardFooter className="bg-white border-t border-gray-100">
                     <div className="flex justify-end gap-3 w-full pt-1">
-                        <Button variant="primary" onClick={() => setEditingPermissionRole(null)} className="px-8 shadow-sm">
-                            Done
+                        <Button variant="primary" onClick={handleCloseAndSyncBlueprint} disabled={loading} className="px-8 shadow-sm">
+                            {loading ? <><Spinner size="sm" className="mr-2" /> Saving...</> : "Done & Sync"}
                         </Button>
                     </div>
                 </CardFooter>

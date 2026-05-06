@@ -58,7 +58,7 @@ const IpcIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" wi
 const NewbornIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 9c0-2-1.5-3.5-4-3.5C7.5 5.5 6 7 6 9c0 1.5.5 2.5 1 3.5h0l-1 4.5h10L17 17l-1-4.5h0c.5-1 1-2.5 1-3.5z"></path><path d="M12 18h.01"></path><path d="M10.5 21v-1.5h3V21"></path></svg>;
 
 // ============================================================================
-// PUBLIC CERTIFICATE VIEWS (Fixes the App.jsx Crash)
+// PUBLIC CERTIFICATE VIEWS
 // ============================================================================
 
 export function CertificateVerificationView({ participant, course }) {
@@ -81,6 +81,8 @@ export function CertificateVerificationView({ participant, course }) {
 }
 
 export function PublicCertificateDownloadView({ participantId }) {
+    const { facilitators, federalCoordinators, fetchFacilitators, fetchFederalCoordinators } = useDataCache();
+    useEffect(() => { fetchFacilitators(); fetchFederalCoordinators(); }, []);
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [downloading, setDownloading] = useState(false);
@@ -106,7 +108,7 @@ export function PublicCertificateDownloadView({ participantId }) {
         try {
             const managerName = data.course.approvedByManagerName || "Federal Program Manager";
             let subcourse = data.participant.imci_sub_type || data.course.director_imci_sub_type;
-            const canvas = await generateCertificatePdf(data.course, data.participant, managerName, subcourse, lang);
+            const canvas = await generateCertificatePdf(data.course, data.participant, managerName, subcourse, lang, facilitators, federalCoordinators);
             if (canvas) {
                 const doc = new jsPDF('landscape', 'mm', 'a4');
                 doc.addImage(canvas.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, 297, 210);
@@ -140,6 +142,8 @@ export function PublicCertificateDownloadView({ participantId }) {
 }
 
 export function PublicCourseCertificatesView({ courseId }) {
+    const { facilitators, federalCoordinators, fetchFacilitators, fetchFederalCoordinators } = useDataCache();
+    useEffect(() => { fetchFacilitators(); fetchFederalCoordinators(); }, []);
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -165,7 +169,7 @@ export function PublicCourseCertificatesView({ courseId }) {
         try {
             const managerName = data.course.approvedByManagerName || "Federal Program Manager";
             let subcourse = p.imci_sub_type || data.course.director_imci_sub_type;
-            const canvas = await generateCertificatePdf(data.course, p, managerName, subcourse, lang);
+            const canvas = await generateCertificatePdf(data.course, p, managerName, subcourse, lang, facilitators, federalCoordinators);
             if (canvas) {
                 const doc = new jsPDF('landscape', 'mm', 'a4');
                 doc.addImage(canvas.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, 297, 210);
@@ -474,7 +478,7 @@ export function CoursesTable({
 }) {
     const [shareModalCourse, setShareModalCourse] = useState(null);
     const [reportModalCourse, setReportModalCourse] = useState(null);
-    const [deleteRequestCourse, setDeleteRequestCourse] = useState(null); 
+     
     const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
 
     // Accordion State for Mobile View
@@ -538,7 +542,7 @@ export function CoursesTable({
         setExpandedId(prev => (prev === id ? null : id));
     };
 
-    if (sortedCourses.length === 0) return <EmptyState message="No courses found matching the selected filters." />;
+    if (sortedCourses.length === 0) return <div className="text-center p-8 text-gray-500 bg-gray-50 border border-gray-200 rounded-lg">No courses found matching the selected filters.</div>;
 
     const courseType = sortedCourses.length > 0 ? sortedCourses[0].course_type : 'Courses';
 
@@ -617,7 +621,7 @@ export function CoursesTable({
                                         <Button variant="secondary" className="px-3 py-1 text-sm flex items-center gap-1" onClick={() => setShareModalCourse(c)} disabled={isProcessing}>
                                            <Share2 size={14} /> Share
                                         </Button>
-                                        <Button variant="danger" className="px-3 py-1 text-sm flex items-center gap-1" onClick={() => setDeleteRequestCourse(c)} disabled={!canDelete || isPendingDeletion || isProcessing}>
+                                        <Button variant="danger" className="px-3 py-1 text-sm flex items-center gap-1" onClick={() => { if(window.confirm(`Are you sure you want to delete ${c.course_type} (${c.state})? It will be moved to Deleted Courses.`)) onDelete(c.id); }} disabled={!canDelete || isPendingDeletion || isProcessing}>
                                            <Trash2 size={14} /> Delete
                                         </Button>
                                     </div>
@@ -683,7 +687,7 @@ export function CoursesTable({
                                     <Button variant="secondary" className="w-full flex justify-center items-center gap-2" onClick={() => setShareModalCourse(c)} disabled={isProcessing}>
                                         <Share2 size={16} /> Share
                                     </Button>
-                                    <Button variant="danger" className="w-full flex justify-center items-center gap-2 sm:col-span-2 md:col-span-1" onClick={() => setDeleteRequestCourse(c)} disabled={!canDelete || isPendingDeletion || isProcessing}>
+                                    <Button variant="danger" className="w-full flex justify-center items-center gap-2 sm:col-span-2 md:col-span-1" onClick={() => { if(window.confirm(`Are you sure you want to delete ${c.course_type} (${c.state})? It will be moved to Deleted Courses.`)) onDelete(c.id); }} disabled={!canDelete || isPendingDeletion || isProcessing}>
                                         <Trash2 size={16} /> Delete
                                     </Button>
                                 </div>
@@ -886,55 +890,27 @@ export function CoursesTable({
             )}
 
             {/* --- Deletion Request Confirmation Modal --- */}
-            {deleteRequestCourse && (
-                <Modal isOpen={!!deleteRequestCourse} onClose={isProcessing ? null : () => setDeleteRequestCourse(null)} title="Request Course Deletion">
-                    <CardBody className="p-6">
-                        <div className="flex flex-col items-center text-center gap-4">
-                            <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
-                                <AlertTriangle className="h-6 w-6 text-red-600" />
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-medium text-gray-900">Confirm Deletion Request</h3>
-                                <p className="text-sm text-gray-500 mt-2">
-                                    Are you sure you want to delete the course <strong>{deleteRequestCourse.course_type} ({deleteRequestCourse.state})</strong>?
-                                </p>
-                                <p className="text-sm text-gray-600 mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded text-left">
-                                    <strong>Note:</strong> This action will not delete the course immediately. It will be marked for deletion and sent to the <strong>Course Administration</strong> tab for approval. Approved courses will be moved to the <strong>Recycle Bin</strong>.
-                                </p>
-                            </div>
-                        </div>
-                    </CardBody>
-                    <CardFooter className="flex justify-end gap-2">
-                        <Button variant="secondary" onClick={() => setDeleteRequestCourse(null)} disabled={isProcessing}>Cancel</Button>
-                        <Button variant="danger" disabled={isProcessing} onClick={async () => {
-                            await onDelete(deleteRequestCourse.id, true); 
-                            setDeleteRequestCourse(null);
-                        }}>
-                            {isProcessing ? <Spinner size="sm" /> : 'Request Deletion'}
-                        </Button>
-                    </CardFooter>
-                </Modal>
-            )}
+            
         </div>
     );
 }
 
 export { PublicAttendanceView, AttendanceManagerView } from './CourseAttendanceView';
 
-// --- Recycle Bin View ---
-function RecycleBinView({ courses, onRestore, onPermanentDelete, isProcessing }) {
+// --- Deleted Courses View ---
+function DeletedCoursesView({ courses, onRestore, onPermanentDelete, isProcessing }) {
     if (courses.length === 0) {
-        return <EmptyState message="The recycle bin is empty." />;
+        return <div className="text-center p-8 text-gray-500 bg-gray-50 border border-gray-200 rounded-lg">No deleted courses found.</div>;
     }
 
     return (
         <div>
             <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <Archive className="text-gray-600" /> Recycle Bin
+                <Trash2 className="text-red-600" /> Deleted Courses
             </h3>
             <div className="bg-gray-50 border-l-4 border-gray-400 p-4 mb-4">
                 <p className="text-sm text-gray-700">
-                    Courses in the recycle bin are hidden from the main list. You can restore them or permanently delete them.
+                    Courses here are hidden from the main list. You can restore them or permanently delete them.
                 </p>
             </div>
 
@@ -977,7 +953,7 @@ function CourseApprovalsView({ courses, onApproveCourse, isProcessing }) {
     const pendingApprovalCourses = useMemo(() => courses.filter(c => c.approvalStatus === 'pending' && !c.deletionRequested && !c.inRecycleBin), [courses]);
 
     if (pendingApprovalCourses.length === 0) {
-        return <EmptyState message="No courses are currently pending federal approval." />;
+        return <div className="text-center p-8 text-gray-500 bg-gray-50 border border-gray-200 rounded-lg">No courses are currently pending federal approval.</div>;
     }
 
     return (
@@ -1017,58 +993,12 @@ function CourseApprovalsView({ courses, onApproveCourse, isProcessing }) {
     );
 }
 
-// --- Course Administration View (Deletions Only Now) ---
-function CourseAdministrationView({ courses, onApproveDelete, onRejectDelete, isProcessing }) {
-    const pendingDeletionCourses = useMemo(() => courses.filter(c => c.deletionRequested === true && !c.inRecycleBin), [courses]);
-
-    if (pendingDeletionCourses.length === 0) {
-        return <EmptyState message="No pending administrative deletion requests at this time." />;
-    }
-
-    return (
-        <div className="space-y-8">
-            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <Shield className="text-sky-600" /> Course Administration
-            </h3>
-
-            <div>
-                <h4 className="text-lg font-semibold text-gray-800 mb-3 border-b pb-2">Pending Deletion Requests</h4>
-                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
-                    <p className="text-sm text-yellow-700">
-                        The following courses have been requested for deletion. Approving will move them to the <strong>Recycle Bin</strong>.
-                    </p>
-                </div>
-                <Table headers={["Course Type", "Location", "Start Date", "Coordinator", "Actions"]}>
-                    {pendingDeletionCourses.map(c => (
-                        <tr key={c.id} className="bg-white hover:bg-gray-50">
-                            <td className="p-4 border font-medium">{c.course_type}</td>
-                            <td className="p-4 border">{c.state} - {c.locality}</td>
-                            <td className="p-4 border">{c.start_date}</td>
-                            <td className="p-4 border">{c.coordinator || 'N/A'}</td>
-                            <td className="p-4 border text-right">
-                                <div className="flex justify-end gap-2">
-                                    <Button variant="secondary" className="text-green-700 border-green-200 hover:bg-green-50 flex items-center gap-1" onClick={() => onRejectDelete(c)} disabled={isProcessing}>
-                                        <X size={14} /> Reject
-                                    </Button>
-                                    <Button variant="danger" className="flex items-center gap-1" onClick={() => onApproveDelete(c.id)} disabled={isProcessing}>
-                                        <Check size={14} /> Approve (Move to Bin)
-                                    </Button>
-                                </div>
-                            </td>
-                        </tr>
-                    ))}
-                </Table>
-            </div>
-        </div>
-    );
-}
 
 // -----------------------------------------------------------------------------
 // Certificate Approvals View
 // -----------------------------------------------------------------------------
-const CertificateApprovalsView = ({ setToast }) => {
+const CertificateApprovalsView = ({ allCourses, setToast }) => {
     const { fetchCourses } = useDataCache(); 
-    const [courses, setCourses] = useState([]);
     const [managerName, setManagerName] = useState('');
     const [loadingApprovals, setLoadingApprovals] = useState(false);
     
@@ -1085,19 +1015,48 @@ const CertificateApprovalsView = ({ setToast }) => {
     const directorFileRef = useRef(null);
     const stampFileRef = useRef(null);
 
+    const [filterState, setFilterState] = useState('All');
+    const [filterLocality, setFilterLocality] = useState('All');
+    const [filterCourseType, setFilterCourseType] = useState('All');
+    const [filterStatus, setFilterStatus] = useState('All');
+
+    const states = useMemo(() => ['All', ...new Set(allCourses.map(c => c.state).filter(Boolean))].sort(), [allCourses]);
+    const localities = useMemo(() => {
+        const locs = new Set();
+        allCourses.forEach(c => {
+            if (filterState === 'All' || c.state === filterState) {
+                if (c.locality) locs.add(c.locality);
+            }
+        });
+        return ['All', ...Array.from(locs).sort()];
+    }, [allCourses, filterState]);
+    const courseTypes = useMemo(() => ['All', ...new Set(allCourses.map(c => c.course_type).filter(Boolean))].sort(), [allCourses]);
+
+    const courses = useMemo(() => {
+        let filtered = [...allCourses];
+        if (filterState !== 'All') filtered = filtered.filter(c => c.state === filterState);
+        if (filterLocality !== 'All') filtered = filtered.filter(c => c.locality === filterLocality);
+        if (filterCourseType !== 'All') filtered = filtered.filter(c => c.course_type === filterCourseType);
+        if (filterStatus !== 'All') {
+            const isApproved = filterStatus === 'Approved';
+            filtered = filtered.filter(c => !!c.isCertificateApproved === isApproved);
+        }
+        return filtered.sort((a, b) => {
+            if (a.isCertificateApproved === b.isCertificateApproved) {
+                return new Date(b.start_date) - new Date(a.start_date);
+            }
+            return a.isCertificateApproved ? 1 : -1;
+        });
+    }, [allCourses, filterState, filterLocality, filterCourseType, filterStatus]);
+
     const loadData = async () => {
         setLoadingApprovals(true);
         try {
-            const allCourses = await listAllCourses({ source: 'server' });
-            const sorted = allCourses.sort((a, b) => {
-                if (a.isCertificateApproved === b.isCertificateApproved) {
-                    return new Date(b.start_date) - new Date(a.start_date);
-                }
-                return a.isCertificateApproved ? 1 : -1;
-            });
-            setCourses(sorted);
-
-            const coords = await listFederalCoordinators({ source: 'server' });
+            // Force incremental update of courses
+            await fetchCourses(true);
+            
+            // Just need the manager name
+            const coords = await listFederalCoordinators({ source: 'cache' });
             const manager = coords.find(c => c.role === 'مدير البرنامج' || c.role === 'Federal Program Manager');
             if (manager) setManagerName(manager.name);
         } catch (err) {
@@ -1107,7 +1066,16 @@ const CertificateApprovalsView = ({ setToast }) => {
         }
     };
 
-    useEffect(() => { loadData(); }, [setToast]);
+    useEffect(() => {
+        const fetchManager = async () => {
+            try {
+                const coords = await listFederalCoordinators({ source: 'cache' });
+                const manager = coords.find(c => c.role === 'مدير البرنامج' || c.role === 'Federal Program Manager');
+                if (manager) setManagerName(manager.name);
+            } catch (e) {}
+        };
+        fetchManager();
+    }, []);
 
     const handleOpenApprovalModal = (course) => {
         if (!managerName) {
@@ -1145,14 +1113,6 @@ const CertificateApprovalsView = ({ setToast }) => {
             setToast({ show: true, message: "Certificates Approved Successfully.", type: 'success' });
             setApprovalModalOpen(false);
             
-            // Instantly update local table view
-            setCourses(prevCourses => prevCourses.map(c => {
-                if (c.id === selectedCourse.id) {
-                    return { ...c, ...approvalData, certificateApprovedAt: { seconds: Math.floor(Date.now() / 1000) } };
-                }
-                return c;
-            }));
-
             // Force Global Incremental Update: Costs exactly 1 read, perfectly syncs UI downstream.
             await fetchCourses(true);
 
@@ -1173,14 +1133,6 @@ const CertificateApprovalsView = ({ setToast }) => {
                 await unapproveCourseCertificates(course.id);
                 setToast({ show: true, message: "Approval Revoked.", type: 'info' });
                 
-                // Instantly update local table view
-                setCourses(prevCourses => prevCourses.map(c => {
-                    if (c.id === course.id) {
-                        return { ...c, isCertificateApproved: false, approvedByManagerName: null, approvedByManagerSignatureUrl: null, approvedDirectorName: null, approvedDirectorSignatureUrl: null, approvedProgramStampUrl: null, certificateApprovedAt: null };
-                    }
-                    return c;
-                }));
-
                 // Force Global Incremental Update: Costs exactly 1 read, perfectly syncs UI downstream.
                 await fetchCourses(true);
 
@@ -1216,6 +1168,31 @@ const CertificateApprovalsView = ({ setToast }) => {
                             Approving a course will permanently stamp your name on the generated certificates. Ensure you upload all necessary signatures and the transparent program stamp before confirming.
                         </p>
                     </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <FormGroup label="State">
+                        <Select value={filterState} onChange={e => { setFilterState(e.target.value); setFilterLocality('All'); }}>
+                            {states.map(s => <option key={s} value={s}>{s}</option>)}
+                        </Select>
+                    </FormGroup>
+                    <FormGroup label="Locality">
+                        <Select value={filterLocality} onChange={e => setFilterLocality(e.target.value)} disabled={localities.length <= 1}>
+                            {localities.map(l => <option key={l} value={l}>{l}</option>)}
+                        </Select>
+                    </FormGroup>
+                    <FormGroup label="Course Type">
+                        <Select value={filterCourseType} onChange={e => setFilterCourseType(e.target.value)}>
+                            {courseTypes.map(c => <option key={c} value={c}>{c}</option>)}
+                        </Select>
+                    </FormGroup>
+                    <FormGroup label="Status">
+                        <Select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+                            <option value="All">All Statuses</option>
+                            <option value="Approved">Approved</option>
+                            <option value="Pending">Pending</option>
+                        </Select>
+                    </FormGroup>
                 </div>
 
                 {courses.length === 0 ? (
@@ -1377,8 +1354,10 @@ export function CourseManagementView({
     selectedParticipantId, onSetSelectedParticipantId, onBatchUpdate,
     loadingDetails,
     canManageCourse,
+    canAddCourse, 
     canUseSuperUserAdvancedFeatures,
     canUseFederalManagerAdvancedFeatures,
+    manageLocation,
     activeCourseType,
     setActiveCourseType,
     facilitatorsList,
@@ -1391,7 +1370,8 @@ export function CourseManagementView({
         funders, fetchFunders,
         fetchCourses,
         participants: globalParticipants, 
-        fetchParticipants
+        fetchParticipants,
+        healthFacilities, fetchHealthFacilities, isLoading
     } = useDataCache();
 
     // Get current user data for capturing "who edited" and "who created"
@@ -1399,8 +1379,6 @@ export function CourseManagementView({
     const currentUserIdentifier = user?.displayName || user?.email || 'Unknown';
 
     const [isRefreshing, setIsRefreshing] = useState(false);
-    const [allHealthFacilities, setAllHealthFacilities] = useState([]);
-    const [loadingFacilities, setLoadingFacilities] = useState(false);
     
     // UI Locking and Toast state
     const [isProcessing, setIsProcessing] = useState(false);
@@ -1416,14 +1394,10 @@ export function CourseManagementView({
 
     // Fetch all health facilities only when the compiled reports tab is opened and not already loaded
     useEffect(() => {
-        if (activeCoursesTab === 'compiled-reports' && allHealthFacilities.length === 0) {
-            setLoadingFacilities(true);
-            listHealthFacilities({}, 'server')
-                .then(data => setAllHealthFacilities(data || []))
-                .catch(err => console.error("Failed to load all health facilities:", err))
-                .finally(() => setLoadingFacilities(false));
+        if (activeCoursesTab === 'dashboard' && (!healthFacilities || healthFacilities.length === 0)) {
+            fetchHealthFacilities();
         }
-    }, [activeCoursesTab, allHealthFacilities.length]);
+    }, [activeCoursesTab, healthFacilities, fetchHealthFacilities]);
 
     const currentParticipant = participants.find(p => p.id === selectedParticipantId);
     const [courseToEdit, setCourseToEdit] = useState(null);
@@ -1496,9 +1470,13 @@ export function CourseManagementView({
         return coursesForActiveType.filter(c => {
             if (c.inRecycleBin) return false;
             
-            // Permissions checks
-            if (userStates && userStates.length > 0 && !userStates.includes(c.state)) return false;
-            if (userLocalities && userLocalities.length > 0 && !userLocalities.includes(c.locality)) return false;
+            // Explicit manageLocation permissions checks
+            if (manageLocation === 'user_state' || manageLocation === 'user_locality') {
+                if (!userStates || userStates.length === 0 || !userStates.includes(c.state)) return false;
+            }
+            if (manageLocation === 'user_locality') {
+                if (!userLocalities || userLocalities.length === 0 || !userLocalities.includes(c.locality)) return false;
+            }
 
             // Form filter checks
             const stateMatch = filterState === 'All' || c.state === filterState;
@@ -1509,25 +1487,37 @@ export function CourseManagementView({
 
             return stateMatch && localityMatch && subCourseMatch && projectMatch;
         });
-    }, [coursesForActiveType, filterState, filterLocality, filterSubCourse, filterProject, userStates, userLocalities]);
+    }, [coursesForActiveType, filterState, filterLocality, filterSubCourse, filterProject, userStates, userLocalities, manageLocation]);
 
     const dashboardCourses = useMemo(() => {
         return (allCourses || []).filter(c => {
             if (c.inRecycleBin || c.isDeleted === true || c.isDeleted === "true") return false;
-            if (userStates && userStates.length > 0 && !userStates.includes(c.state)) return false;
-            if (userLocalities && userLocalities.length > 0 && !userLocalities.includes(c.locality)) return false;
+            
+            // Strict check for caching global courses correctly in dashboards
+            if (manageLocation === 'user_state' || manageLocation === 'user_locality') {
+                if (!userStates || userStates.length === 0 || !userStates.includes(c.state)) return false;
+            }
+            if (manageLocation === 'user_locality') {
+                if (!userLocalities || userLocalities.length === 0 || !userLocalities.includes(c.locality)) return false;
+            }
             return true;
         });
-    }, [allCourses, userStates, userLocalities]);
+    }, [allCourses, userStates, userLocalities, manageLocation]);
 
     const dashboardParticipants = useMemo(() => {
         return (globalParticipants || []).filter(p => {
             if (p.isDeleted === true || p.isDeleted === "true") return false;
-            if (userStates && userStates.length > 0 && !userStates.includes(p.state)) return false;
-            if (userLocalities && userLocalities.length > 0 && !userLocalities.includes(p.locality)) return false;
+            
+            // Strict check for caching global participants correctly in dashboards
+            if (manageLocation === 'user_state' || manageLocation === 'user_locality') {
+                if (!userStates || userStates.length === 0 || !userStates.includes(p.state)) return false;
+            }
+            if (manageLocation === 'user_locality') {
+                if (!userLocalities || userLocalities.length === 0 || !userLocalities.includes(p.locality)) return false;
+            }
             return true;
         });
-    }, [globalParticipants, userStates, userLocalities]);
+    }, [globalParticipants, userStates, userLocalities, manageLocation]);
 
     const courseKPIs = useMemo(() => {
         return { 
@@ -1641,19 +1631,14 @@ export function CourseManagementView({
         }
     };
 
-    const handleCourseDeleteAction = async (courseId, isRequest = false) => {
+    const handleCourseDeleteAction = async (courseId) => {
         const courseToUpdate = allCourses.find(c => c.id === courseId);
         if (!courseToUpdate) return;
         
         setIsProcessing(true);
         try {
-            if (isRequest) {
-                await upsertCourse({ ...courseToUpdate, deletionRequested: true }, currentUserIdentifier);
-                setToast({ show: true, message: 'Deletion requested. Please wait for approval.', type: 'info' });
-            } else {
-                await upsertCourse({ ...courseToUpdate, deletionRequested: false, inRecycleBin: true }, currentUserIdentifier);
-                setToast({ show: true, message: 'Course moved to Recycle Bin.', type: 'success' });
-            }
+            await upsertCourse({ ...courseToUpdate, deletionRequested: false, inRecycleBin: true }, currentUserIdentifier);
+            setToast({ show: true, message: 'Course moved to Deleted Courses.', type: 'success' });
             await fetchCourses(navigator.onLine);
         } catch (error) {
             setToast({ show: true, message: `Failed to process deletion: ${error.message}`, type: 'error' });
@@ -1735,7 +1720,7 @@ export function CourseManagementView({
         }
     };
 
-    const globalTabs = ['courses', 'add-course', 'edit-course', 'dashboard', 'compiled-reports', 'administration', 'approvals', 'certificate-approvals', 'recycle-bin'];
+    const globalTabs = ['courses', 'add-course', 'edit-course', 'dashboard', 'deleted-courses', 'course-approvals', 'certificate-approvals'];
     const isGlobalView = globalTabs.includes(activeCoursesTab);
 
     return (
@@ -1756,23 +1741,11 @@ export function CourseManagementView({
                 
                 {isGlobalView && (
                     <>
-                        <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'dashboard'} onClick={() => { setActiveCoursesTab('dashboard'); onSetSelectedParticipantId(null); }}>Course Dashboard</Button>
-                        <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'compiled-reports'} onClick={() => { setActiveCoursesTab('compiled-reports'); onSetSelectedParticipantId(null); }}>Compiled Reports</Button>
-
-                        {canAccessAdminTab && (
-                            <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'administration'} onClick={() => { setActiveCoursesTab('administration'); onSetSelectedParticipantId(null); }}>
-                                Administration
-                                 {allCourses.filter(c => c.deletionRequested && !c.inRecycleBin).length > 0 && (
-                                     <span className="ml-2 bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded-full">
-                                         {allCourses.filter(c => c.deletionRequested && !c.inRecycleBin).length}
-                                     </span>
-                                 )}
-                            </Button>
-                        )}
+                        <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'dashboard'} onClick={() => { setActiveCoursesTab('dashboard'); onSetSelectedParticipantId(null); }}>Courses Dashboard</Button>
 
                         {canUseFederalManagerAdvancedFeatures && (
-                            <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'approvals'} onClick={() => { setActiveCoursesTab('approvals'); onSetSelectedParticipantId(null); }}>
-                                Approvals
+                            <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'course-approvals'} onClick={() => { setActiveCoursesTab('course-approvals'); onSetSelectedParticipantId(null); }}>
+                                Course Approvals
                                  {allCourses.filter(c => c.approvalStatus === 'pending' && !c.inRecycleBin).length > 0 && (
                                      <span className="ml-2 bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full">
                                          {allCourses.filter(c => c.approvalStatus === 'pending' && !c.inRecycleBin).length}
@@ -1788,10 +1761,10 @@ export function CourseManagementView({
                         )}
 
                         {canAccessRecycleBin && (
-                            <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'recycle-bin'} onClick={() => { setActiveCoursesTab('recycle-bin'); onSetSelectedParticipantId(null); }}>
-                                Recycle Bin
-                                 {allCourses.filter(c => c.inRecycleBin).length > 0 && (
-                                     <span className="ml-2 bg-gray-200 text-gray-800 text-xs px-2 py-0.5 rounded-full">{allCourses.filter(c => c.inRecycleBin).length}</span>
+                            <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'deleted-courses'} onClick={() => { setActiveCoursesTab('deleted-courses'); onSetSelectedParticipantId(null); }}>
+                                Deleted Courses
+                                 {allCourses.filter(c => c.inRecycleBin || c.deletionRequested).length > 0 && (
+                                     <span className="ml-2 bg-gray-200 text-gray-800 text-xs px-2 py-0.5 rounded-full">{allCourses.filter(c => c.inRecycleBin || c.deletionRequested).length}</span>
                                  )}
                             </Button>
                         )}
@@ -1819,7 +1792,7 @@ export function CourseManagementView({
                             <div>
                                 <div className="mb-4 flex flex-wrap justify-between items-center gap-2">
                                     <div className="flex gap-2">
-                                        {canManageCourse && <Button disabled={isProcessing} onClick={handleOpenAddForm} className="bg-sky-600 text-white hover:bg-sky-700">Add New Course</Button>}
+                                        {canAddCourse && <Button disabled={isProcessing} onClick={handleOpenAddForm} className="bg-sky-600 text-white hover:bg-sky-700">Add New Course</Button>}
                                         <Button variant="secondary" onClick={handleRefresh} disabled={isRefreshing || isProcessing}>{isRefreshing ? <Spinner size="sm" /> : <><RefreshCw size={14} className="mr-1"/> Refresh Data</>}</Button>
                                     </div>
                                     <Button disabled={isProcessing} variant="secondary" onClick={() => setActiveCourseType(null)}>Change Course Package</Button>
@@ -1849,51 +1822,19 @@ export function CourseManagementView({
 
                 {activeCoursesTab === 'dashboard' && (
                     <div className="mt-4">
-                        <h3 className="text-xl font-bold mb-4">Course KPIs</h3>
-                        <div className="grid md:grid-cols-4 gap-4 mb-8">
-                            <div className="p-4 bg-sky-100 rounded-lg text-center"><div className="text-sm font-semibold text-sky-700">Total Courses</div><div className="text-3xl font-bold">{courseKPIs.totalCourses}</div></div>
-                            <div className="p-4 bg-sky-100 rounded-lg text-center"><div className="text-sm font-semibold text-sky-700">Total IMNCI Courses</div><div className="text-3xl font-bold">{courseKPIs.totalImnciCourses}</div></div>
-                            <div className="p-4 bg-sky-100 rounded-lg text-center"><div className="text-sm font-semibold text-sky-700">Total ETAT Courses</div><div className="text-3xl font-bold">{courseKPIs.totalEtatCourses}</div></div>
-                            <div className="p-4 bg-sky-100 rounded-lg text-center"><div className="text-sm font-semibold text-sky-700">Total EENC Courses</div><div className="text-3xl font-bold">{courseKPIs.totalEencCourses}</div></div>
-                        </div>
-                        <div className="grid md:grid-cols-2 gap-6">
-                            <Card className="p-0">
-                                <h4 className="font-semibold text-xl pl-4 pt-4 mb-0">Number of Courses by State</h4>
-                                <Table headers={coursesByState.headers}>
-                                    {coursesByState.body.map((row, index) => (<tr key={index}>{row.map((cell, cellIndex) => (<td key={cellIndex} className="p-2 border">{cell}</td>))}</tr>))}
-                                    <tr className="font-bold bg-gray-100">{coursesByState.totals.map((cell, index) => (<td key={index} className="p-2 border">{cell}</td>))}</tr>
-                                </Table>
-                            </Card>
-                            <Card className="p-0">
-                                <h4 className="font-semibold text-xl pl-4 pt-4 mb-0">Course Locations on Map</h4>
-                                <SudanMap data={localMapData} center={[30, 15.5]} scale={2000} isMovable={false} pannable={false} />
-                            </Card>
-                        </div>
+                        {isLoading?.healthFacilities ? (
+                            <div className="flex justify-center p-8"><Spinner /></div>
+                        ) : (
+                            <CompiledReportView 
+                                allCourses={dashboardCourses} 
+                                allParticipants={dashboardParticipants} 
+                                allHealthFacilities={healthFacilities || []} 
+                            />
+                        )}
                     </div>
                 )}
 
-                {activeCoursesTab === 'compiled-reports' && (
-                    loadingFacilities ? (
-                        <div className="flex justify-center p-8"><Spinner /></div>
-                    ) : (
-                        <CompiledReportView 
-                            allCourses={dashboardCourses} 
-                            allParticipants={dashboardParticipants} 
-                            allHealthFacilities={allHealthFacilities} 
-                        />
-                    )
-                )}
-
-                {activeCoursesTab === 'administration' && (
-                    <CourseAdministrationView 
-                        courses={allCourses} 
-                        onApproveDelete={(id) => handleCourseDeleteAction(id, false)} 
-                        onRejectDelete={handleRejectDelete} 
-                        isProcessing={isProcessing}
-                    />
-                )}
-
-                {activeCoursesTab === 'approvals' && (
+                {activeCoursesTab === 'course-approvals' && (
                     <CourseApprovalsView 
                         courses={allCourses} 
                         onApproveCourse={handleApproveCourse}
@@ -1902,10 +1843,10 @@ export function CourseManagementView({
                 )}
 
                 {activeCoursesTab === 'certificate-approvals' && (
-                    <CertificateApprovalsView setToast={setToast} />
+                    <CertificateApprovalsView allCourses={allCourses} setToast={setToast} />
                 )}
 
-                {activeCoursesTab === 'recycle-bin' && <RecycleBinView courses={allCourses.filter(c => c.inRecycleBin)} onRestore={handleRestoreCourse} onPermanentDelete={handlePermanentDelete} isProcessing={isProcessing} />}
+                {activeCoursesTab === 'deleted-courses' && <DeletedCoursesView courses={allCourses.filter(c => c.inRecycleBin || c.deletionRequested)} onRestore={handleRestoreCourse} onPermanentDelete={handlePermanentDelete} isProcessing={isProcessing} />}
                 
                 {(activeCoursesTab === 'add-course' || activeCoursesTab === 'edit-course') && (
                     <CourseForm courseType={activeCourseType} initialData={courseToEdit} onCancel={handleCancelCourseForm} onSave={handleSaveCourseAndReturn} facilitatorsList={facilitatorsList} fundersList={funders || []} federalCoordinatorsList={federalCoordinators || []} stateCoordinatorsList={stateCoordinators || []} localityCoordinatorsList={localityCoordinators || []} userStates={userStates} userLocalities={userLocalities} />

@@ -81,19 +81,25 @@ const getSmallAndSickSubCourseArabic = (subCourse) => {
     }
 };
 
-const fetchArabicName = async (collectionName, englishName, fieldName) => {
+const fetchArabicNameHelper = async (cachedList, collectionName, englishName, fieldName) => {
     if (!englishName) return null;
-    
-    // Normalize string to avoid mismatches due to spaces
-    const searchName = englishName.trim();
+    const searchName = englishName.trim().toLowerCase();
 
+    if (cachedList && cachedList.length > 0) {
+        const match = cachedList.find(item => {
+            const itemName = (item.name || '').trim().toLowerCase();
+            return itemName === searchName || itemName.replace(/^dr\.?\s*/i, '').trim() === searchName.replace(/^dr\.?\s*/i, '').trim();
+        });
+        if (match && match[fieldName]) return match[fieldName];
+    }
+
+    const cleanSearchName = englishName.trim();
     try {
-        let q = query(collection(db, collectionName), where("name", "==", searchName));
+        let q = query(collection(db, collectionName), where("name", "==", cleanSearchName));
         let snapshot = await getDocs(q);
 
-        if (snapshot.empty && searchName.includes("Dr.")) {
-            // Try stripping "Dr." or "Dr" case-insensitive
-            const cleanName = searchName.replace(/^Dr\.?\s*/i, '').trim();
+        if (snapshot.empty && cleanSearchName.includes("Dr.")) {
+            const cleanName = cleanSearchName.replace(/^Dr\.?\s*/i, '').trim();
             q = query(collection(db, collectionName), where("name", "==", cleanName));
             snapshot = await getDocs(q);
         }
@@ -604,7 +610,7 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
 // GENERATION FUNCTIONS
 // -----------------------------------------------------------------------------
 
-export const generateCertificatePdf = async (course, participant, federalProgramManagerName, participantSubCourse, language = 'en') => {
+export const generateCertificatePdf = async (course, participant, federalProgramManagerName, participantSubCourse, language = 'en', cachedFacilitators = null, cachedCoordinators = null) => {
     
     // --- Logic to prioritize the approved name & signature ---
     // Ensure names are trimmed to match database records effectively
@@ -626,8 +632,8 @@ export const generateCertificatePdf = async (course, participant, federalProgram
 
     if (language === 'ar') {
         // Fetch Arabic names from the collections
-        directorNameAr = await fetchArabicName('facilitators', finalDirectorName, 'arabicName');
-        programManagerNameAr = await fetchArabicName('federalCoordinators', finalManagerName, 'nameAr');
+        directorNameAr = await fetchArabicNameHelper(cachedFacilitators, 'facilitators', finalDirectorName, 'arabicName');
+        programManagerNameAr = await fetchArabicNameHelper(cachedCoordinators, 'federalCoordinators', finalManagerName, 'nameAr');
     }
 
     try {
@@ -700,7 +706,7 @@ export const generateCertificatePdf = async (course, participant, federalProgram
 };
 
 // NEW FUNCTION: Generate Blank Template
-export const generateBlankCertificatePdf = async (course, federalProgramManagerName, language = 'en') => {
+export const generateBlankCertificatePdf = async (course, federalProgramManagerName, language = 'en', cachedFacilitators = null, cachedCoordinators = null) => {
     // --- Logic to prioritize the approved name & signature ---
     const finalManagerName = (course.approvedByManagerName || federalProgramManagerName || '').trim();
     const rawManagerSignature = course.approvedByManagerSignatureUrl || null;
@@ -719,8 +725,8 @@ export const generateBlankCertificatePdf = async (course, federalProgramManagerN
     let programManagerNameAr = null;
 
     if (language === 'ar') {
-        directorNameAr = await fetchArabicName('facilitators', finalDirectorName, 'arabicName');
-        programManagerNameAr = await fetchArabicName('federalCoordinators', finalManagerName, 'nameAr');
+        directorNameAr = await fetchArabicNameHelper(cachedFacilitators, 'facilitators', finalDirectorName, 'arabicName');
+        programManagerNameAr = await fetchArabicNameHelper(cachedCoordinators, 'federalCoordinators', finalManagerName, 'nameAr');
     }
 
     try {
@@ -808,7 +814,7 @@ export const generateBlankCertificatePdf = async (course, federalProgramManagerN
     }
 };
 
-export const generateAllCertificatesPdf = async (course, participants, federalProgramManagerName, language = 'en', onProgress = null) => {
+export const generateAllCertificatesPdf = async (course, participants, federalProgramManagerName, language = 'en', onProgress = null, cachedFacilitators = null, cachedCoordinators = null) => {
     if (!participants || participants.length === 0) {
         alert("No participants found to generate certificates.");
         return;
@@ -842,7 +848,9 @@ export const generateAllCertificatesPdf = async (course, participants, federalPr
             participant, 
             federalProgramManagerName, 
             participantSubCourse,
-            language
+            language,
+            cachedFacilitators,
+            cachedCoordinators
         );
 
         if (canvas) {

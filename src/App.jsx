@@ -880,21 +880,62 @@ export default function App() {
 
     const filteredCourses = useMemo(() => {
         if (!allCourses) return [];
-        if (canSeeAllData || !userStates || userStates.length === 0) return allCourses;
-        const userStateSet = new Set(userStates);
-        let filtered = allCourses.filter(c => userStateSet.has(c.state));
-        if (userLocalities && userLocalities.length > 0) filtered = filtered.filter(c => userLocalities.includes(c.locality));
-        return filtered;
-    }, [allCourses, userStates, userLocalities, canSeeAllData]);
+        const locPerm = permissions.manageLocation;
+
+        // Strict Location Permission Enforcement
+        if (locPerm === 'user_state' || locPerm === 'user_locality') {
+            let filtered = allCourses;
+
+            // Restrict by State
+            if (userStates && userStates.length > 0) {
+                const userStateSet = new Set(userStates);
+                filtered = filtered.filter(c => userStateSet.has(c.state));
+            } else {
+                return []; // Block access if they should be restricted but have no state assigned
+            }
+
+            // Further restrict by Locality
+            if (locPerm === 'user_locality') {
+                if (userLocalities && userLocalities.length > 0) {
+                    filtered = filtered.filter(c => userLocalities.includes(c.locality));
+                } else {
+                    return []; // Block access if they should be restricted but have no locality assigned
+                }
+            }
+            return filtered;
+        }
+
+        // Default: federal, empty, none -> sees everything
+        return allCourses;
+    }, [allCourses, userStates, userLocalities, permissions.manageLocation]);
 
     const filteredFacilitators = useMemo(() => {
         if (!allFacilitators) return [];
-        if (canSeeAllData || !userStates || userStates.length === 0) return allFacilitators;
-        const userStateSet = new Set(userStates);
-        let filtered = allFacilitators.filter(f => userStateSet.has(f.currentState));
-        if (userLocalities && userLocalities.length > 0) filtered = filtered.filter(f => userLocalities.includes(f.currentLocality));
-        return filtered;
-    }, [allFacilitators, userStates, userLocalities, canSeeAllData]);
+        const locPerm = permissions.manageLocation;
+
+        if (locPerm === 'user_state' || locPerm === 'user_locality') {
+            let filtered = allFacilitators;
+
+            if (userStates && userStates.length > 0) {
+                const userStateSet = new Set(userStates);
+                filtered = filtered.filter(f => userStateSet.has(f.currentState));
+            } else {
+                return [];
+            }
+
+            if (locPerm === 'user_locality') {
+                if (userLocalities && userLocalities.length > 0) {
+                    filtered = filtered.filter(f => userLocalities.includes(f.currentLocality));
+                } else {
+                    return [];
+                }
+            }
+            return filtered;
+        }
+
+        return allFacilitators;
+    }, [allFacilitators, userStates, userLocalities, permissions.manageLocation]);
+
 
     const fetchPendingSubmissions = useCallback(async () => {
         if (!permissions.canApproveSubmissions) return;
@@ -924,7 +965,7 @@ export default function App() {
             'courses': permissions.canViewCourse, 'courseDetails': permissions.canViewCourse, 'participants': permissions.canViewCourse, 'reports': permissions.canViewCourse,
            'observe': (permissions.canManageCourse && isCourseActive) || permissions.canUseFederalManagerAdvancedFeatures || permissions.manageTimePeriod === 'anytime',
            'monitoring': (permissions.canManageCourse && isCourseActive) || permissions.canUseFederalManagerAdvancedFeatures || permissions.manageTimePeriod === 'anytime',
-            'courseForm': permissions.canManageCourse, 'participantForm': permissions.canManageCourse, 'facilitatorForm': permissions.canManageHumanResource,
+            'courseForm': permissions.canManageCourse || permissions.canAddCourse, 'participantForm': permissions.canManageCourse, 'facilitatorForm': permissions.canManageHumanResource,
             'courseReport': permissions.canViewCourse, 'participantReport': permissions.canViewCourse, 'facilitatorReport': permissions.canViewHumanResource,
             'finalReport': permissions.canViewCourse, 'participantMigration': permissions.canUseSuperUserAdvancedFeatures, 'childHealthServices': permissions.canViewFacilities,
             'skillsMentorship': permissions.canViewSkillsMentorship, 'facilitators': permissions.canViewHumanResource, 'programTeams': permissions.canViewHumanResource,
@@ -1137,9 +1178,12 @@ export default function App() {
                 selectedParticipantId={selectedParticipantId} onSetSelectedParticipantId={setSelectedParticipantId}
                 onBatchUpdate={() => { setCourseDetailsCache(prev => { const newCache = { ...prev }; delete newCache[selectedCourse.id]; return newCache; }); setSelectedCourseId(null); setSelectedCourseId(selectedCourse.id); }}
                 loadingDetails={loading || (selectedCourseId && courseDetailsLoading)} 
-                canManageCourse={permissions.canManageCourse} canUseSuperUserAdvancedFeatures={permissions.canUseSuperUserAdvancedFeatures}
+                canManageCourse={permissions.canManageCourse} 
+                canAddCourse={permissions.canAddCourse} /* PASSED PERMISSION DOWN HERE */
+                canUseSuperUserAdvancedFeatures={permissions.canUseSuperUserAdvancedFeatures}
                 canUseFederalManagerAdvancedFeatures={permissions.canUseFederalManagerAdvancedFeatures} canEditDeleteActiveCourse={permissions.canManageCourse} 
                 canEditDeleteInactiveCourse={permissions.canUseFederalManagerAdvancedFeatures || (permissions.canManageCourse && permissions.manageTimePeriod === 'anytime')}
+                manageLocation={permissions.manageLocation} /* PASSED STRICT LOCATION ENFORCEMENT DOWN HERE */
                 facilitatorsList={allFacilitators || []} 
             />;
 

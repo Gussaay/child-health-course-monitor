@@ -26,6 +26,7 @@ import {
 } from '../data.js';
 import { useDataCache } from '../DataContext';
 import { useAuth } from '../hooks/useAuth'; 
+import { DEFAULT_ROLE_PERMISSIONS } from './permissions.js';
 
 // --- Import Certificate Generators ---
 import { generateCertificatePdf, generateAllCertificatesPdf, generateBlankCertificatePdf } from './CertificateGenerator';
@@ -1369,30 +1370,38 @@ const FacilitySearchModal = ({ isOpen, onClose, facilities, onSelect }) => {
 // --- Participant Master Manager Component ---
 export function ParticipantsView({
     course, participants, onOpen, onOpenReport, onBatchUpdate, onOpenTestFormForParticipant, 
-    isCourseActive, canAddParticipant, canImportParticipants, canCleanParticipantData,
-    canBulkChangeParticipants, canBulkMigrateParticipants, canAddMonitoring,
+    isCourseActive, canAddParticipant, canAddMonitoring,
     canEditDeleteParticipantActiveCourse, canEditDeleteParticipantInactiveCourse,
-    canManageCertificates
+    // Note: We keep these as props but the actual decision comes from the DB directly now
+    canImportParticipants, canCleanParticipantData, canBulkChangeParticipants, canBulkMigrateParticipants,
+    canManageCertificates, canUseSuperUserAdvancedFeatures
 }) {
     const { user } = useAuth();
     const currentUserIdentifier = user?.displayName || user?.email || 'Unknown';
     
-    // Fallback: Manually check if user is admin incase props are strictly mapped and drop new ones
-    const [isCertAdmin, setIsCertAdmin] = useState(false);
+    // --- NEW ROBUST PERMISSION STATES ---
+    const [finalAdvancedPerm, setFinalAdvancedPerm] = useState(false);
+    const [finalCertPerm, setFinalCertPerm] = useState(false);
+    
+    // Synchronize deeply with the database and central roles
     useEffect(() => {
         if (user && user.uid) {
             getDoc(doc(db, 'users', user.uid)).then(snap => {
                 if (snap.exists()) {
-                    const roles = snap.data().roles || [snap.data().role];
-                    if (roles.includes('super_user') || roles.includes('federal_manager')) {
-                        setIsCertAdmin(true);
-                    }
+                    const data = snap.data();
+                    
+                    // STRICT PERMISSION CHECK: 
+                    // Directly verify the exact boolean flags in the user's permissions object.
+                    // This ensures default roles (like Federal Manager) do not accidentally bypass 
+                    // the strict requirement for canManageCertificates and canUseSuperUserAdvancedFeatures.
+                    const userPerms = data.permissions || {};
+                    
+                    setFinalAdvancedPerm(!!userPerms.canUseSuperUserAdvancedFeatures);
+                    setFinalCertPerm(!!userPerms.canManageCertificates);
                 }
             }).catch(err => console.error(err));
         }
     }, [user]);
-
-    const showCertActions = canManageCertificates || isCertAdmin;
 
     // FIX: Using robust truthy evaluation instead of raw object validation for the global loader
     const { fetchParticipants, federalCoordinators, fetchFederalCoordinators, isLoading } = useDataCache();
@@ -1440,6 +1449,10 @@ export function ParticipantsView({
     const [emailModalOpen, setEmailModalOpen] = useState(false);
     const [emailTargets, setEmailTargets] = useState([]);
     const [isBulkEmail, setIsBulkEmail] = useState(false);
+
+    // New grouping modals
+    const [isAdvancedActionsModalOpen, setIsAdvancedActionsModalOpen] = useState(false);
+    const [isCertManagementModalOpen, setIsCertManagementModalOpen] = useState(false);
 
     useEffect(() => {
         fetchFederalCoordinators();
@@ -1706,7 +1719,7 @@ export function ParticipantsView({
         );
     }
 
-    if (activeScreen === 'migration' && canBulkMigrateParticipants) {
+    if (activeScreen === 'migration' && finalAdvancedPerm) {
         return (
             <ParticipantMigrationMappingView 
                 course={course} 
@@ -1789,6 +1802,65 @@ export function ParticipantsView({
             <ShareCoursePageModal isOpen={sharePageModalOpen} onClose={() => setSharePageModalOpen(false)} courseId={course.id} courseName={course.course_type} />
             <EmailCertificateModal isOpen={emailModalOpen} onClose={() => setEmailModalOpen(false)} participants={emailTargets} isBulk={isBulkEmail} setToast={setToast} />
 
+            {/* --- NEW ADVANCED ACTIONS MODAL --- */}
+            <Modal isOpen={isAdvancedActionsModalOpen} onClose={() => setIsAdvancedActionsModalOpen(false)} title="Advanced User Actions">
+                <div className="p-4 flex flex-col gap-3">
+                    <p className="text-sm text-gray-600 mb-2">Select an advanced action to perform on this course's data.</p>
+                    {finalAdvancedPerm && (
+                        <>
+                            <Button variant="secondary" className="w-full justify-start" onClick={() => { setIsAdvancedActionsModalOpen(false); setImportModalOpen(true); }} disabled={isProcessing}>
+                                Import from Excel
+                            </Button>
+                            <Button variant="secondary" className="w-full justify-start" onClick={() => { setIsAdvancedActionsModalOpen(false); setIsCleanupModalOpen(true); }} disabled={isProcessing}>
+                                Clean Data
+                            </Button>
+                            <Button variant="secondary" className="w-full justify-start" onClick={() => { setIsAdvancedActionsModalOpen(false); setIsBulkChangeModalOpen(true); }} disabled={isProcessing}>
+                                Bulk Change
+                            </Button>
+                            <Button variant="secondary" className="w-full justify-start" onClick={() => { setIsAdvancedActionsModalOpen(false); setIsBulkEditing(true); }} disabled={isProcessing}>
+                                Bulk Edit Table
+                            </Button>
+                            <Button variant="secondary" className="w-full justify-start" onClick={() => { setIsAdvancedActionsModalOpen(false); setActiveScreen('migration'); }} disabled={!participants || participants.length === 0 || isProcessing}>
+                                Bulk Migrate to Facilities
+                            </Button>
+                        </>
+                    )}
+                </div>
+            </Modal>
+
+            {/* --- NEW CERTIFICATE MANAGEMENT MODAL --- */}
+            <Modal isOpen={isCertManagementModalOpen} onClose={() => setIsCertManagementModalOpen(false)} title="Certificate Management">
+                <div className="p-4 flex flex-col gap-3">
+                    <Button onClick={() => { setIsCertManagementModalOpen(false); setCertLangModal({ isOpen: true, actionType: 'template' }); }} disabled={isProcessing || isGeneratingTemplate || isCacheLoading} className="w-full justify-start bg-green-600 hover:bg-green-700 text-white border-transparent focus:ring-green-500">
+                        {isGeneratingTemplate ? <Spinner size="sm" /> : 'Design Certificate Template'}
+                    </Button>
+
+                    {localApprovalStatus ? (
+                        <>
+                            <Button variant="primary" className="w-full justify-start" onClick={() => { setIsCertManagementModalOpen(false); setCertLangModal({ isOpen: true, actionType: 'bulk' }); }} disabled={isProcessing || isBulkCertLoading || filtered.length === 0 || isCacheLoading}>
+                                Download Filtered Certificates
+                            </Button>
+                            <Button variant="secondary" className="w-full justify-start border-sky-600 text-sky-700 hover:bg-sky-50" onClick={() => { setIsCertManagementModalOpen(false); setSharePageModalOpen(true); }} disabled={isProcessing}>
+                                Share Public Page
+                            </Button>
+                            <Button variant="secondary" className="w-full justify-start border-green-600 text-green-700 hover:bg-green-50" onClick={() => { setIsCertManagementModalOpen(false); handleOpenBulkEmail(); }} disabled={!filtered || filtered.length === 0 || isProcessing}>
+                                <Mail className="w-4 h-4 mr-2" /> Email All Certs
+                            </Button>
+                        </>
+                    ) : (
+                        <div className="p-3 bg-orange-50 border border-orange-200 rounded text-sm flex flex-col gap-3">
+                            <div className="flex items-center gap-2 text-orange-800 font-semibold">
+                                <Lock className="w-4 h-4" /> Certificates Pending Approval
+                            </div>
+                            <p className="text-orange-700 text-xs">Certificates must be approved by the Federal Program Manager in the Admin Dashboard before downloading.</p>
+                            <Button variant="secondary" onClick={handleRefreshApproval} disabled={isRefreshingApproval || isProcessing} className="w-full justify-center bg-white">
+                                {isRefreshingApproval ? <Spinner size="sm" /> : 'Check Status Update'}
+                            </Button>
+                        </div>
+                    )}
+                </div>
+            </Modal>
+
             {/* Mobile Toggle for Top Functions */}
             <div className="mb-4 block md:hidden">
                 <Button 
@@ -1803,57 +1875,32 @@ export function ParticipantsView({
             <div className={`${showTopActions ? 'block' : 'hidden'} md:block flex flex-col gap-4 mb-4`}>
                 <div className="flex flex-wrap justify-between items-center gap-4">
                     <div className="flex flex-wrap gap-2 items-center">
-                        {canAddParticipant && <Button onClick={() => { setEditingParticipant(null); setActiveScreen('form'); }} disabled={isProcessing}>Add Participant</Button>}
-                        {canImportParticipants && <Button variant="secondary" onClick={() => setImportModalOpen(true)} disabled={isProcessing}>Import from Excel</Button>}
-                        {canCleanParticipantData && <Button variant="secondary" onClick={() => setIsCleanupModalOpen(true)} disabled={isProcessing}>Clean Data</Button>}
-                        {canBulkChangeParticipants && (
-                            <>
-                                <Button variant="secondary" onClick={() => setIsBulkChangeModalOpen(true)} disabled={isProcessing}>Bulk Change</Button>
-                                <Button variant="secondary" onClick={() => setIsBulkEditing(true)} disabled={isProcessing}>Bulk Edit Table</Button>
-                            </>
-                        )}
-                        {canBulkMigrateParticipants && (
-                            <Button variant="secondary" onClick={() => setActiveScreen('migration')} disabled={!participants || participants.length === 0 || isProcessing} title="Update facility records based on these participants">
-                                Bulk Migrate to Facilities
+                        {/* Standard Add Button remains visible for quick access */}
+                        {canAddParticipant && (
+                            <Button onClick={() => { setEditingParticipant(null); setActiveScreen('form'); }} disabled={isProcessing}>
+                                Add Participant
                             </Button>
                         )}
 
-                        {showCertActions && (
-                            <Button onClick={() => setCertLangModal({ isOpen: true, actionType: 'template' })} disabled={isProcessing || isGeneratingTemplate || isCacheLoading} className="bg-green-600 hover:bg-green-700 text-white border-transparent focus:ring-green-500" title="Download a blank certificate template for printing">
-                                {isGeneratingTemplate ? <Spinner size="sm" /> : 'Design Certificate'}
+                        {/* Advanced Actions Popup Button */}
+                        {finalAdvancedPerm && (
+                            <Button variant="secondary" onClick={() => setIsAdvancedActionsModalOpen(true)} disabled={isProcessing}>
+                                Advanced User Actions
                             </Button>
                         )}
 
-                        {localApprovalStatus ? (
-                            showCertActions && (
-                                <>
-                                    <div className="flex items-center gap-2">
-                                        <Button variant="primary" onClick={() => setCertLangModal({ isOpen: true, actionType: 'bulk' })} disabled={isProcessing || isBulkCertLoading || filtered.length === 0 || isCacheLoading} title="Download filtered certificates as one PDF">
-                                            Download Filtered Certificates
-                                        </Button>
-                                        {isBulkCertLoading && (
-                                            <div className="flex items-center gap-2 px-2 py-1 bg-blue-50 text-blue-700 rounded text-sm border border-blue-200">
-                                                <Spinner size="sm" />
-                                                <span className="font-medium whitespace-nowrap">Generating {downloadProgress.current} / {downloadProgress.total}</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <Button variant="secondary" onClick={() => setSharePageModalOpen(true)} title="Share a public link where all participants can download their certificates" className="border-sky-600 text-sky-700 hover:bg-sky-50" disabled={isProcessing}>
-                                        Share Public Page
-                                    </Button>
-                                    <Button variant="secondary" onClick={handleOpenBulkEmail} disabled={!filtered || filtered.length === 0 || isProcessing} title="Send certificate emails to all visible participants" className="border-green-600 text-green-700 hover:bg-green-50 flex items-center gap-1">
-                                        <Mail className="w-4 h-4" /> Email All Certs
-                                    </Button>
-                                </>
-                            )
-                        ) : (
-                            <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-1 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded border border-orange-200" title="Certificates must be approved by the Federal Program Manager in the Admin Dashboard before downloading.">
-                                    <Lock className="w-3 h-3" /><span>Pending</span>
-                                </div>
-                                <button onClick={handleRefreshApproval} disabled={isRefreshingApproval || isProcessing} className="p-2 bg-white border border-gray-300 rounded hover:bg-gray-100 text-gray-600 transition-colors" title="Check for approval status update">
-                                    {isRefreshingApproval ? <Spinner size="sm" /> : <RefreshCw className="w-4 h-4" />}
-                                </button>
+                        {/* Certificate Management Popup Button */}
+                        {finalCertPerm && (
+                            <Button variant="secondary" onClick={() => setIsCertManagementModalOpen(true)} disabled={isProcessing} className="bg-slate-800 text-white hover:bg-slate-700 border-transparent">
+                                Certificate Management
+                            </Button>
+                        )}
+                        
+                        {/* Inline loading indicator for bulk certs if running in background */}
+                        {isBulkCertLoading && (
+                            <div className="flex items-center gap-2 px-2 py-1 bg-blue-50 text-blue-700 rounded text-sm border border-blue-200">
+                                <Spinner size="sm" />
+                                <span className="font-medium whitespace-nowrap">Generating {downloadProgress.current} / {downloadProgress.total}</span>
                             </div>
                         )}
                     </div>
@@ -1916,7 +1963,7 @@ export function ParticipantsView({
                                         <Button variant="secondary" onClick={() => onOpenReport(p.id)} disabled={isProcessing}>Report</Button>
                                         
                                         {isCertApproved ? (
-                                            showCertActions && (
+                                            finalCertPerm && (
                                                 <>
                                                     <Button variant="secondary" onClick={() => handleShareClick(p)} disabled={isProcessing}>Share Cert.</Button>
                                                     <Button variant="secondary" onClick={() => setCertLangModal({ isOpen: true, actionType: 'single', data: { p, participantSubCourse } })} disabled={isCacheLoading || isProcessing || processingRowId === p.id}>
@@ -1991,7 +2038,7 @@ export function ParticipantsView({
                                         <Button variant="primary" className="w-full justify-center" onClick={() => onOpen(p.id)} disabled={!canAddMonitoring || isProcessing}>Monitor</Button>
                                         <Button variant="secondary" className="w-full justify-center" onClick={() => onOpenReport(p.id)} disabled={isProcessing}>Report</Button>
                                         
-                                        {isCertApproved && showCertActions && (
+                                        {isCertApproved && finalCertPerm && (
                                             <>
                                                 <Button variant="secondary" className="w-full justify-center" onClick={() => handleShareClick(p)} disabled={isProcessing}>Share Cert.</Button>
                                                 <Button variant="secondary" className="w-full justify-center" onClick={() => setCertLangModal({ isOpen: true, actionType: 'single', data: { p, participantSubCourse } })} disabled={isCacheLoading || isProcessing || processingRowId === p.id}>
@@ -2024,13 +2071,12 @@ export function ParticipantsView({
     );
 }
 
-// --- Helpers for parsing empty state booleans ---
+// ... [The rest of the file: Form Component and Helpers remain exactly the same] ...
 const getBoolState = (val) => val === undefined || val === null ? '' : (val ? 'yes' : 'no');
 const getStrState = (val) => val === 'Yes' ? 'yes' : (val === 'No' ? 'no' : '');
 const parseBool = (val) => val === 'yes' ? true : (val === 'no' ? false : null);
 const parseStr = (val) => val === 'yes' ? 'Yes' : (val === 'no' ? 'No' : '');
 
-// --- Participant Form Component (Main logic) ---
 export function ParticipantForm({ course, initialData, onCancel, onSave }) {
     const { fetchHealthFacilities } = useDataCache();
     const isImnci = course.course_type === 'IMNCI';

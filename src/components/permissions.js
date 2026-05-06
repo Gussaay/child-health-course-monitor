@@ -2,8 +2,9 @@
 
 export const ALL_PERMISSIONS = {
     canViewCourse: false,
+    canAddCourse: false, // NEW PERMISSION
     canManageCourse: false,
-    canManageCertificates: false, // <-- Added
+    canManageCertificates: false,
     canViewFacilities: false,
     canManageFacilities: false,
     canViewHumanResource: false,
@@ -41,6 +42,10 @@ export const applyDerivedPermissions = (basePermissions) => {
     if (basePermissions.canUseFederalManagerAdvancedFeatures) {
         basePermissions.canApproveSubmissions = true;
     }
+    // NEW RULE: If a user can add or manage courses, they must inherently be able to view them
+    if (basePermissions.canAddCourse || basePermissions.canManageCourse) {
+        basePermissions.canViewCourse = true;
+    }
     return basePermissions;
 };
 
@@ -75,6 +80,8 @@ export const mergeRolePermissions = (rolesArray, globalPermissionsMap) => {
 
 const BASE_PERMS = { ...ALL_PERMISSIONS };
 const COURSE_MGMT_STANDARD = { canViewCourse: true, canManageCourse: true };
+const COURSE_ADD_STANDARD = { canAddCourse: true }; // NEW PRESET
+
 const FACILITY_MGMT_VIEW_ONLY = { canViewFacilities: true, canManageFacilities: false };
 const FACILITY_MGMT_STANDARD = { canViewFacilities: true, canManageFacilities: true };
 const HR_MGMT_VIEW_ONLY = { canViewHumanResource: true, canManageHumanResource: false };
@@ -84,12 +91,52 @@ const HR_MGMT_STANDARD = { canViewHumanResource: true, canManageHumanResource: t
 const MENTORSHIP_MGMT_VIEW_ONLY = { canViewSkillsMentorship: true, canManageSkillsMentorship: false, canAddMentorshipVisit: false };
 const MENTORSHIP_MGMT_STANDARD = { canViewSkillsMentorship: true, canManageSkillsMentorship: true, canAddMentorshipVisit: true };
 
-const ADVANCED_PERMS_NONE = { canApproveSubmissions: false, canUseSuperUserAdvancedFeatures: false, canUseFederalManagerAdvancedFeatures: false, canViewAdmin: false };
+const ADVANCED_PERMS_NONE = { 
+    canApproveSubmissions: false, 
+    canUseSuperUserAdvancedFeatures: false, 
+    canUseFederalManagerAdvancedFeatures: false, 
+    canViewAdmin: false 
+};
 
-const SUPER_USER_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_STANDARD, ...HR_MGMT_STANDARD, ...MENTORSHIP_MGMT_STANDARD, ...ADVANCED_PERMS_NONE, canViewAdmin: true, canUseSuperUserAdvancedFeatures: true, canUseFederalManagerAdvancedFeatures: true, canManageCertificates: true, manageScope: 'federal', manageTimePeriod: 'anytime', canViewLocalityPlan: true }; // <-- Added
-const FEDERAL_MANAGER_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_STANDARD, ...HR_MGMT_STANDARD, ...MENTORSHIP_MGMT_STANDARD, ...ADVANCED_PERMS_NONE, canUseFederalManagerAdvancedFeatures: true, canManageCertificates: true, manageScope: 'federal', manageTimePeriod: 'anytime' }; // <-- Added
-const STATES_MANAGER_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_STANDARD, ...HR_MGMT_STANDARD, ...MENTORSHIP_MGMT_STANDARD, ...ADVANCED_PERMS_NONE, manageScope: 'state', manageLocation: 'user_state', manageTimePeriod: 'course_period_only' };
-const LOCALITY_MANAGER_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_STANDARD, ...HR_MGMT_STANDARD, ...MENTORSHIP_MGMT_STANDARD, ...ADVANCED_PERMS_NONE, manageScope: 'locality', manageLocation: 'user_locality', manageTimePeriod: 'course_period_only', canViewLocalityPlan: true, canEditLocalityPlan: true };
+// ==========================================
+// ROLE DEFINITIONS
+// ==========================================
+
+const SUPER_USER_PERMS = { 
+    ...BASE_PERMS, 
+    ...COURSE_MGMT_STANDARD, 
+    ...COURSE_ADD_STANDARD, // Granted
+    ...FACILITY_MGMT_STANDARD, 
+    ...HR_MGMT_STANDARD, 
+    ...MENTORSHIP_MGMT_STANDARD, 
+    ...ADVANCED_PERMS_NONE, 
+    canViewAdmin: true, 
+    canUseSuperUserAdvancedFeatures: true,          
+    canUseFederalManagerAdvancedFeatures: true, 
+    canManageCertificates: true, 
+    canViewLocalityPlan: true,
+    manageScope: 'federal', 
+    manageTimePeriod: 'anytime' 
+};
+
+const FEDERAL_MANAGER_PERMS = { 
+    ...BASE_PERMS, 
+    ...COURSE_MGMT_STANDARD, 
+    ...COURSE_ADD_STANDARD, // Granted
+    ...FACILITY_MGMT_STANDARD, 
+    ...HR_MGMT_STANDARD, 
+    ...MENTORSHIP_MGMT_STANDARD, 
+    ...ADVANCED_PERMS_NONE, 
+    canUseFederalManagerAdvancedFeatures: true, 
+    canManageCertificates: true, 
+    manageScope: 'federal', 
+    manageTimePeriod: 'anytime' 
+};
+
+const STATES_MANAGER_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...COURSE_ADD_STANDARD, ...FACILITY_MGMT_STANDARD, ...HR_MGMT_STANDARD, ...MENTORSHIP_MGMT_STANDARD, ...ADVANCED_PERMS_NONE, manageScope: 'state', manageLocation: 'user_state', manageTimePeriod: 'course_period_only' };
+const LOCALITY_MANAGER_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...COURSE_ADD_STANDARD, ...FACILITY_MGMT_STANDARD, ...HR_MGMT_STANDARD, ...MENTORSHIP_MGMT_STANDARD, ...ADVANCED_PERMS_NONE, manageScope: 'locality', manageLocation: 'user_locality', manageTimePeriod: 'course_period_only', canViewLocalityPlan: true, canEditLocalityPlan: true };
+
+// Lower-level roles do NOT get COURSE_ADD_STANDARD by default (they can only manage assigned courses)
 const FEDERAL_COORDINATOR_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_VIEW_ONLY, ...HR_MGMT_VIEW_ONLY, ...MENTORSHIP_MGMT_VIEW_ONLY, ...ADVANCED_PERMS_NONE, manageScope: 'course', manageLocation: 'federal_level', manageTimePeriod: 'course_period_plus_3_days' };
 const FACILITATOR_PERMS = { ...FEDERAL_COORDINATOR_PERMS };
 const STATE_COORDINATOR_PERMS = { ...BASE_PERMS, ...COURSE_MGMT_STANDARD, ...FACILITY_MGMT_VIEW_ONLY, ...HR_MGMT_VIEW_ONLY, ...MENTORSHIP_MGMT_VIEW_ONLY, ...ADVANCED_PERMS_NONE, manageScope: 'course', manageLocation: 'user_state', manageTimePeriod: 'course_period_only' };
@@ -122,8 +169,9 @@ export const ROLES = {
 
 export const PERMISSION_DESCRIPTIONS = {
     canViewCourse: "Allow user to view course list, details, and reports.",
-    canManageCourse: "Allow user to add/edit/delete active courses, participants, and monitoring observations.",
-    canManageCertificates: "Allow generating, downloading, and sharing certificates.", // <-- Added
+    canAddCourse: "Allow user to create and add new courses to the system.", // NEW DESC
+    canManageCourse: "Allow user to edit/delete active courses, participants, and monitoring observations.",
+    canManageCertificates: "Allow generating, downloading, and sharing certificates.",
     canViewFacilities: "View the Child Health Services facilities list.",
     canManageFacilities: "Add, Edit, and Delete facility records within assigned scope.",
     canViewHumanResource: "Allow viewing lists for Facilitators, Program Teams, and Partners.",
