@@ -4,11 +4,11 @@ import * as XLSX from 'xlsx';
 import jsPDF from "jspdf"; 
 
 // --- Icons ---
-import { Mail, Lock, RefreshCw, Search, Printer, ArrowLeft, Save } from 'lucide-react'; 
+import { Mail, Lock, RefreshCw, Search, Printer, ArrowLeft, Save, X } from 'lucide-react'; 
 
 // --- Firebase Imports ---
 import { db } from '../firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 import {
     Card, PageHeader, Button, FormGroup, Input, Select, Textarea, Table, EmptyState, Modal, Spinner, Toast
@@ -26,7 +26,6 @@ import {
 } from '../data.js';
 import { useDataCache } from '../DataContext';
 import { useAuth } from '../hooks/useAuth'; 
-import { DEFAULT_ROLE_PERMISSIONS } from './permissions.js';
 
 // --- Import Certificate Generators ---
 import { generateCertificatePdf, generateAllCertificatesPdf, generateBlankCertificatePdf } from './CertificateGenerator';
@@ -102,7 +101,7 @@ const MultiSelectDropdown = ({ options, selected, onChange, label, placeholder }
 };
 
 // ====================================================================
-// ===== 2. MODAL COMPONENTS (Nested) =================================
+// ===== 2. MODAL & HELPER COMPONENTS =================================
 // ====================================================================
 
 const CertificateLanguageModal = ({ isOpen, onClose, onConfirm, title }) => {
@@ -124,6 +123,39 @@ const CertificateLanguageModal = ({ isOpen, onClose, onConfirm, title }) => {
                 <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
                     <Button variant="secondary" onClick={onClose}>Cancel</Button>
                     <Button variant="primary" onClick={() => onConfirm(language)}>Continue</Button>
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
+const DownloadProgressModal = ({ isOpen, progress, isSingle, onCancel }) => {
+    if (!isOpen) return null;
+    const percent = isSingle ? 100 : (progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0);
+
+    return (
+        <Modal isOpen={isOpen} onClose={null} title={isSingle ? "Generating Certificate" : "Generating Bulk Certificates"}>
+            <div className="p-6 text-center space-y-4">
+                <Spinner size="lg" className="mx-auto" />
+                <h4 className="text-lg font-semibold text-gray-800">
+                    {isSingle ? "Please wait, rendering PDF..." : `Processing ${progress.current} of ${progress.total} certificates`}
+                </h4>
+                
+                {!isSingle && progress.total > 0 && (
+                    <div className="w-full bg-gray-200 rounded-full h-2.5 mt-4 overflow-hidden">
+                        <div 
+                            className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-out" 
+                            style={{ width: `${percent}%` }}
+                        ></div>
+                    </div>
+                )}
+                
+                {!isSingle && <p className="text-sm font-medium text-gray-500">{percent}% Complete</p>}
+                
+                <div className="mt-8 pt-4 border-t flex justify-center">
+                    <Button variant="secondary" onClick={onCancel} className="text-red-600 hover:bg-red-50 border-red-200">
+                        <X className="w-4 h-4 mr-2" /> Cancel Download
+                    </Button>
                 </div>
             </div>
         </Modal>
@@ -331,6 +363,26 @@ const ShareCertificateModal = ({ isOpen, onClose, participantName, participantId
     );
 };
 
+const ParticipantCertificateActionModal = ({ isOpen, onClose, participant, onDownload, onEmail, onShare }) => {
+    if (!isOpen || !participant) return null;
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={`Certificate: ${participant.name}`}>
+            <div className="p-4 flex flex-col gap-3">
+                <p className="text-sm text-gray-600 mb-4">Choose an action for this participant's certificate.</p>
+                <Button variant="primary" className="w-full justify-start bg-emerald-600 hover:bg-emerald-700 border-transparent focus:ring-emerald-500" onClick={() => { onClose(); onDownload(); }}>
+                    <Printer className="w-4 h-4 mr-3" /> Download as PDF
+                </Button>
+                <Button variant="secondary" className="w-full justify-start text-gray-700" onClick={() => { onClose(); onEmail(); }} disabled={!participant.email}>
+                    <Mail className="w-4 h-4 mr-3" /> Share by Email {!participant.email && <span className="text-xs text-red-500 ml-1">(No email saved)</span>}
+                </Button>
+                <Button variant="secondary" className="w-full justify-start text-gray-700" onClick={() => { onClose(); onShare(); }}>
+                    <RefreshCw className="w-4 h-4 mr-3" /> Share Direct Link
+                </Button>
+            </div>
+        </Modal>
+    );
+};
+
 const SearchableSelect = ({ options, value, onChange, placeholder, disabled }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [inputValue, setInputValue] = useState('');
@@ -409,7 +461,6 @@ const SearchableSelect = ({ options, value, onChange, placeholder, disabled }) =
 const NewParticipantForm = ({ initialName, jobTitleOptions, onCancel, onSave, isSaving }) => {
     const [name, setName] = useState(initialName || '');
     const [phone, setPhone] = useState('');
-
     const [job, setJob] = useState('');
     const [otherJobTitle, setOtherJobTitle] = useState('');
     const [error, setError] = useState('');
@@ -1367,35 +1418,286 @@ const FacilitySearchModal = ({ isOpen, onClose, facilities, onSelect }) => {
 // ===== 3. EXPORTED COMPONENTS (Top Level) ===========================
 // ====================================================================
 
-// --- Participant Master Manager Component ---
+export function ParticipantMigrationMappingView({ course, participants, onCancel, onSave, setToast }) {
+    const { healthFacilities } = useDataCache();
+    const [facilitiesInLocation, setFacilitiesInLocation] = useState([]);
+    const [mappings, setMappings] = useState({});
+    const [isSaving, setIsSaving] = useState(false);
+    const [filterState, setFilterState] = useState(course.state || '');
+    const [filterLocality, setFilterLocality] = useState(course.locality || '');
+
+    const unmappedParticipants = useMemo(() => {
+        return participants.filter(p => !p.facilityId && !p.id.startsWith('pending_'));
+    }, [participants]);
+
+    useEffect(() => {
+        if (healthFacilities && filterState && filterLocality) {
+            const facs = healthFacilities.filter(f => f['الولاية'] === filterState && f['المحلية'] === filterLocality);
+            setFacilitiesInLocation(facs);
+        } else {
+            setFacilitiesInLocation([]);
+        }
+    }, [healthFacilities, filterState, filterLocality]);
+
+    const handleMappingChange = (participantId, facilityId) => {
+        setMappings(prev => ({
+            ...prev,
+            [participantId]: facilityId
+        }));
+    };
+
+    const handleAutoMap = () => {
+        const newMappings = { ...mappings };
+        let matchCount = 0;
+
+        unmappedParticipants.forEach(p => {
+            if (!newMappings[p.id]) {
+                const match = facilitiesInLocation.find(f => 
+                    f['اسم_المؤسسة'] && p.center_name && 
+                    f['اسم_المؤسسة'].trim().toLowerCase() === p.center_name.trim().toLowerCase()
+                );
+                if (match) {
+                    newMappings[p.id] = match.id;
+                    matchCount++;
+                }
+            }
+        });
+
+        setMappings(newMappings);
+        setToast({ show: true, message: `Auto-mapped ${matchCount} participants based on name match.`, type: 'info' });
+    };
+
+    const handleSubmit = async () => {
+        const mappedEntries = Object.entries(mappings).filter(([_, facId]) => facId !== '');
+        if (mappedEntries.length === 0) {
+            setToast({ show: true, message: 'No mappings selected.', type: 'warning' });
+            return;
+        }
+
+        const formattedMappings = mappedEntries.map(([participantId, facilityId]) => ({
+            participantId,
+            facilityId
+        }));
+
+        setIsSaving(true);
+        try {
+            await onSave(formattedMappings);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <Card>
+            <div className="p-6">
+                <PageHeader title="Bulk Migrate Participants to Facilities" subtitle="Link legacy participants to official Health Facility records." />
+                
+                <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg mb-6">
+                    <p className="text-sm text-blue-800">
+                        This tool connects existing participants to the central Health Facilities database. 
+                        <strong> {unmappedParticipants.length}</strong> participants in this course are currently unlinked.
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 bg-gray-50 rounded border">
+                    <FormGroup label="Target State">
+                        <Select value={filterState} onChange={(e) => { setFilterState(e.target.value); setFilterLocality(''); }}>
+                            <option value="">-- Select State --</option>
+                            {Object.keys(STATE_LOCALITIES).map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar}</option>)}
+                        </Select>
+                    </FormGroup>
+                    <FormGroup label="Target Locality">
+                        <Select value={filterLocality} onChange={(e) => setFilterLocality(e.target.value)} disabled={!filterState}>
+                            <option value="">-- Select Locality --</option>
+                            {filterState && STATE_LOCALITIES[filterState]?.localities.map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
+                        </Select>
+                    </FormGroup>
+                </div>
+
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-bold text-gray-800">Unmapped Participants</h3>
+                    <Button variant="secondary" onClick={handleAutoMap} disabled={facilitiesInLocation.length === 0}>
+                        Auto-Map by Name
+                    </Button>
+                </div>
+
+                <div className="max-h-[500px] overflow-y-auto border rounded">
+                    <Table headers={['Participant Name', 'Current Text Name', 'Map to Official Facility']}>
+                        {unmappedParticipants.map(p => (
+                            <tr key={p.id} className="hover:bg-gray-50">
+                                <td className="p-3 font-medium">{p.name}</td>
+                                <td className="p-3 text-gray-500 text-sm">{p.center_name}</td>
+                                <td className="p-3">
+                                    <Select 
+                                        value={mappings[p.id] || ''} 
+                                        onChange={(e) => handleMappingChange(p.id, e.target.value)}
+                                        disabled={facilitiesInLocation.length === 0}
+                                        className={mappings[p.id] ? 'border-green-400 bg-green-50' : ''}
+                                    >
+                                        <option value="">-- Do not map --</option>
+                                        {facilitiesInLocation.map(f => (
+                                            <option key={f.id} value={f.id}>{f['اسم_المؤسسة']}</option>
+                                        ))}
+                                    </Select>
+                                </td>
+                            </tr>
+                        ))}
+                        {unmappedParticipants.length === 0 && (
+                            <tr><td colSpan="3" className="p-8 text-center text-gray-500">All participants are currently mapped to a facility!</td></tr>
+                        )}
+                    </Table>
+                </div>
+
+                <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
+                    <Button variant="secondary" onClick={onCancel} disabled={isSaving}>Cancel</Button>
+                    <Button onClick={handleSubmit} disabled={isSaving || Object.keys(mappings).length === 0}>
+                        {isSaving ? <Spinner size="sm" /> : `Migrate ${Object.values(mappings).filter(Boolean).length} Participants`}
+                    </Button>
+                </div>
+            </div>
+        </Card>
+    );
+}
+
+export function BulkEditParticipantsView({ participants, course, onCancel, onSave }) {
+    const [editedData, setEditedData] = useState({});
+    const [isSaving, setIsSaving] = useState(false);
+
+    const editableFields = [
+        { key: 'name', label: 'Name', type: 'text' },
+        { key: 'phone', label: 'Phone', type: 'text' },
+        { key: 'email', label: 'Email', type: 'email' },
+        { key: 'job_title', label: 'Job Title', type: 'text' },
+        { key: 'group', label: 'Group', type: 'select', options: ['Group A', 'Group B', 'Group C', 'Group D'] },
+        { key: 'pre_test_score', label: 'Pre-Test', type: 'number' },
+        { key: 'post_test_score', label: 'Post-Test', type: 'number' }
+    ];
+
+    const handleCellChange = (participantId, fieldKey, value) => {
+        setEditedData(prev => ({
+            ...prev,
+            [participantId]: {
+                ...(prev[participantId] || {}),
+                [fieldKey]: value
+            }
+        }));
+    };
+
+    const handleSave = async () => {
+        if (Object.keys(editedData).length === 0) {
+            onCancel();
+            return;
+        }
+
+        setIsSaving(true);
+        const participantsToUpdate = [];
+
+        Object.keys(editedData).forEach(participantId => {
+            const originalParticipant = participants.find(p => p.id === participantId);
+            if (originalParticipant) {
+                participantsToUpdate.push({
+                    ...originalParticipant,
+                    ...editedData[participantId]
+                });
+            }
+        });
+
+        try {
+            await onSave(participantsToUpdate, []); 
+        } catch (error) {
+            console.error("Bulk edit save failed:", error);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <Card>
+            <div className="p-4 sm:p-6">
+                <PageHeader title="Bulk Edit Participants" subtitle={`Edit multiple records at once for ${course.course_type}`} />
+                
+                <div className="bg-yellow-50 border border-yellow-200 p-3 rounded text-sm text-yellow-800 mb-4">
+                    <strong>Note:</strong> Facility mappings and complex IMNCI statistics cannot be edited here. Use the standard edit form for those fields.
+                </div>
+
+                <div className="overflow-x-auto border border-gray-200 rounded max-h-[60vh]">
+                    <table className="w-full text-sm text-left whitespace-nowrap">
+                        <thead className="bg-gray-100 sticky top-0 z-10 shadow-sm">
+                            <tr>
+                                {editableFields.map(f => (
+                                    <th key={f.key} className="p-2 border font-semibold text-gray-700">{f.label}</th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {participants.map(p => {
+                                const rowEdits = editedData[p.id] || {};
+                                return (
+                                    <tr key={p.id} className="hover:bg-gray-50 border-b">
+                                        {editableFields.map(f => {
+                                            const val = rowEdits[f.key] !== undefined ? rowEdits[f.key] : (p[f.key] || '');
+                                            const isEdited = rowEdits[f.key] !== undefined && rowEdits[f.key] !== p[f.key];
+
+                                            return (
+                                                <td key={f.key} className={`p-1 border ${isEdited ? 'bg-green-50' : ''}`}>
+                                                    {f.type === 'select' ? (
+                                                        <select 
+                                                            className={`w-full p-1 border-gray-300 rounded text-sm ${isEdited ? 'border-green-400 focus:ring-green-500' : 'focus:ring-blue-500'}`}
+                                                            value={val}
+                                                            onChange={(e) => handleCellChange(p.id, f.key, e.target.value)}
+                                                        >
+                                                            <option value="">-</option>
+                                                            {f.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                        </select>
+                                                    ) : (
+                                                        <input 
+                                                            type={f.type} 
+                                                            className={`w-full p-1 border-gray-300 rounded text-sm ${isEdited ? 'border-green-400 bg-green-50 focus:ring-green-500' : 'focus:ring-blue-500'}`}
+                                                            value={val}
+                                                            onChange={(e) => handleCellChange(p.id, f.key, e.target.value)}
+                                                        />
+                                                    )}
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
+                    <Button variant="secondary" onClick={onCancel} disabled={isSaving}>Cancel</Button>
+                    <Button onClick={handleSave} disabled={isSaving || Object.keys(editedData).length === 0}>
+                        {isSaving ? <Spinner size="sm" /> : `Save ${Object.keys(editedData).length} Edited Rows`}
+                    </Button>
+                </div>
+            </div>
+        </Card>
+    );
+}
+
 export function ParticipantsView({
     course, participants, onOpen, onOpenReport, onBatchUpdate, onOpenTestFormForParticipant, 
     isCourseActive, canAddParticipant, canAddMonitoring,
     canEditDeleteParticipantActiveCourse, canEditDeleteParticipantInactiveCourse,
-    // Note: We keep these as props but the actual decision comes from the DB directly now
     canImportParticipants, canCleanParticipantData, canBulkChangeParticipants, canBulkMigrateParticipants,
     canManageCertificates, canUseSuperUserAdvancedFeatures
 }) {
     const { user } = useAuth();
     const currentUserIdentifier = user?.displayName || user?.email || 'Unknown';
     
-    // --- NEW ROBUST PERMISSION STATES ---
+    // --- PERMISSION STATES ---
     const [finalAdvancedPerm, setFinalAdvancedPerm] = useState(false);
     const [finalCertPerm, setFinalCertPerm] = useState(false);
     
-    // Synchronize deeply with the database and central roles
     useEffect(() => {
         if (user && user.uid) {
             getDoc(doc(db, 'users', user.uid)).then(snap => {
                 if (snap.exists()) {
                     const data = snap.data();
-                    
-                    // STRICT PERMISSION CHECK: 
-                    // Directly verify the exact boolean flags in the user's permissions object.
-                    // This ensures default roles (like Federal Manager) do not accidentally bypass 
-                    // the strict requirement for canManageCertificates and canUseSuperUserAdvancedFeatures.
                     const userPerms = data.permissions || {};
-                    
                     setFinalAdvancedPerm(!!userPerms.canUseSuperUserAdvancedFeatures);
                     setFinalCertPerm(!!userPerms.canManageCertificates);
                 }
@@ -1403,34 +1705,34 @@ export function ParticipantsView({
         }
     }, [user]);
 
-    // FIX: Using robust truthy evaluation instead of raw object validation for the global loader
-    const { fetchParticipants, federalCoordinators, fetchFederalCoordinators, isLoading } = useDataCache();
+    const { fetchParticipants, federalCoordinators, fetchFederalCoordinators, isLoading, healthFacilities, fetchHealthFacilities } = useDataCache();
     const isCacheLoading = isLoading?.federalCoordinators === true || isLoading?.courses === true;
 
-    // ==========================================
-    // 1. ALL HOOKS MUST GO AT THE TOP
-    // ==========================================
-    
-    const [activeScreen, setActiveScreen] = useState('list'); // 'list', 'form', 'migration'
+    // Load HealthFacilities immediately if we are viewing an IMNCI course, to ensure baseline generation works.
+    useEffect(() => {
+        if (course?.course_type === 'IMNCI' && (!healthFacilities || healthFacilities.length === 0)) {
+            fetchHealthFacilities();
+        }
+    }, [course?.course_type, healthFacilities, fetchHealthFacilities]);
+
+    const [activeScreen, setActiveScreen] = useState('list'); 
     const [editingParticipant, setEditingParticipant] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [processingRowId, setProcessingRowId] = useState(null);
     const [toast, setToast] = useState({ show: false, message: '', type: '' });
     
-    // UI Accordion & Mobile Toggles
     const [expandedParticipantId, setExpandedParticipantId] = useState(null);
-    const [showTopActions, setShowTopActions] = useState(false); 
 
-    // LIST VIEW STATE
     const [isBulkEditing, setIsBulkEditing] = useState(false); 
     const [isBulkCertLoading, setIsBulkCertLoading] = useState(false);
+    const [isGeneratingCert, setIsGeneratingCert] = useState(false); 
     const [isGeneratingTemplate, setIsGeneratingTemplate] = useState(false);
     const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0 });
+    const cancelDownloadRef = useRef(false);
     
-    // Certificate Language Modal State
     const [certLangModal, setCertLangModal] = useState({ isOpen: false, actionType: null, data: null });
+    const [certActionModal, setCertActionModal] = useState({ isOpen: false, data: null });
     
-    // Automatically reflects the global course object state
     const [localApprovalStatus, setLocalApprovalStatus] = useState(course.isCertificateApproved);
     const [isRefreshingApproval, setIsRefreshingApproval] = useState(false);
 
@@ -1450,18 +1752,132 @@ export function ParticipantsView({
     const [emailTargets, setEmailTargets] = useState([]);
     const [isBulkEmail, setIsBulkEmail] = useState(false);
 
-    // New grouping modals
     const [isAdvancedActionsModalOpen, setIsAdvancedActionsModalOpen] = useState(false);
     const [isCertManagementModalOpen, setIsCertManagementModalOpen] = useState(false);
 
-    useEffect(() => {
-        fetchFederalCoordinators();
-    }, [fetchFederalCoordinators]);
+    useEffect(() => { fetchFederalCoordinators(); }, [fetchFederalCoordinators]);
 
-    // Keep the local state completely synced with the parent course prop automatically
+    useEffect(() => { setLocalApprovalStatus(course.isCertificateApproved); }, [course.isCertificateApproved]);
+
+
+    // --- CRITICAL ADDITION: AUTO-SNAPSHOTTING THE BASELINE ---
+    const lastSavedSnapshotStr = useRef(null);
+
     useEffect(() => {
-        setLocalApprovalStatus(course.isCertificateApproved);
-    }, [course.isCertificateApproved]);
+        const autoUpdateBaseline = async () => {
+            if (!course || course.course_type !== 'IMNCI' || !participants || !healthFacilities || healthFacilities.length === 0) return;
+            
+            // Map out the newly introduced facilities for this course
+            const newImciFacilityMap = new Map();
+            participants.filter(p => p.introduced_imci_to_facility === true).forEach(p => {
+                const key = `${p.center_name}|${p.locality}|${p.state}`;
+                if (!newImciFacilityMap.has(key)) {
+                    const matchedFacility = healthFacilities.find(f => 
+                        f['اسم_المؤسسة'] === p.center_name && 
+                        f['المحلية'] === p.locality && 
+                        f['الولاية'] === p.state
+                    );
+                    let isHospital = false;
+                    if (matchedFacility && matchedFacility['نوع_المؤسسةالصحية']) {
+                        isHospital = ['مستشفى', 'مستشفى ريفي'].includes(matchedFacility['نوع_المؤسسةالصحية']);
+                    } else {
+                        isHospital = (typeof p.center_name === 'string') && (p.center_name.includes('مستشفى') || p.center_name.toLowerCase().includes('hospital'));
+                    }
+                    newImciFacilityMap.set(key, { 
+                        name: p.center_name, locality: p.locality, state: p.state, isHospital 
+                    });
+                }
+            });
+            const newImciFacilities = Array.from(newImciFacilityMap.values());
+
+            const existingSnapshot = course.coverageSnapshot || null;
+
+            const calculateCoverageInfo = (facilitiesFilter, newImciFilter, levelName, levelType) => {
+                const phcFacilities = healthFacilities
+                    .filter(facilitiesFilter)
+                    .filter(f => f['هل_المؤسسة_تعمل'] === 'Yes')
+                    .filter(f => ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(f['نوع_المؤسسةالصحية']));
+                
+                const totalPhc = phcFacilities.length;
+                const newPhcImciFacilities = newImciFacilities.filter(f => !f.isHospital);
+                const courseNewPhcs = newPhcImciFacilities.filter(newImciFilter);
+                const newPhc = courseNewPhcs.length;
+                const newPhcNames = new Set(courseNewPhcs.map(f => f.name));
+
+                let currentImnciPhcs = 0;
+                let newPhcsAlreadyUpdatedInDb = 0;
+
+                phcFacilities.forEach(f => {
+                    if (f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes') {
+                        currentImnciPhcs++;
+                        if (newPhcNames.has(f['اسم_المؤسسة']) || newPhcNames.has(f['name'])) {
+                            newPhcsAlreadyUpdatedInDb++;
+                        }
+                    }
+                });
+
+                // Crucial logic: Lock the "Before" metrics if they already exist in the snapshot!
+                let phcWithImnciBefore = currentImnciPhcs - newPhcsAlreadyUpdatedInDb;
+                let covBefore = totalPhc > 0 ? (phcWithImnciBefore / totalPhc) * 100 : 0;
+                let lockedTotalPhc = totalPhc;
+
+                if (existingSnapshot) {
+                    let existingNode = null;
+                    if (levelType === 'national' && existingSnapshot.nationalCov) existingNode = existingSnapshot.nationalCov;
+                    else if (levelType === 'state' && existingSnapshot.stateCoverage) existingNode = existingSnapshot.stateCoverage.find(s => s.name === levelName);
+                    else if (levelType === 'locality' && existingSnapshot.localityCoverage) existingNode = existingSnapshot.localityCoverage.find(l => l.name === levelName);
+
+                    if (existingNode && existingNode.phcWithImnciBefore !== undefined) {
+                        phcWithImnciBefore = existingNode.phcWithImnciBefore;
+                        covBefore = existingNode.covBefore;
+                        lockedTotalPhc = existingNode.totalPhc; 
+                    }
+                }
+                
+                const covAfter = lockedTotalPhc > 0 ? ((phcWithImnciBefore + newPhc) / lockedTotalPhc) * 100 : 0;
+                const increase = covAfter - covBefore; 
+                
+                return { totalPhc: lockedTotalPhc, phcWithImnciBefore, newPhc, covBefore, covAfter, increase, name: levelName };
+            };
+
+            const nationalCov = calculateCoverageInfo(f => f['الولاية'] !== 'إتحادي', () => true, 'National', 'national');
+            const courseStates = course.states || (course.state ? course.state.split(',').map(s=>s.trim()) : []);
+            const courseLocalities = course.localities || (course.locality ? course.locality.split(',').map(l=>l.trim()) : []);
+            const combinedStates = [...new Set([...courseStates, ...newImciFacilities.map(f => f.state)])].filter(Boolean);
+            const combinedLocalities = [...new Set([...courseLocalities, ...newImciFacilities.map(f => f.locality)])].filter(Boolean);
+
+            const stateCoverage = combinedStates.map(s => calculateCoverageInfo(f => f['الولاية'] === s, f => f.state === s, s, 'state'));
+            const localityCoverage = combinedLocalities.map(l => calculateCoverageInfo(f => f['المحلية'] === l, f => f.locality === l, l, 'locality'));
+
+            const totalBudget = Number(course.course_budget) || 0;
+            const costPerParticipant = participants.length > 0 ? totalBudget / participants.length : 0;
+            const costPerNewFacility = nationalCov.newPhc > 0 ? totalBudget / nationalCov.newPhc : 0;
+
+            const newCoverageData = {
+                totalBudget, costPerParticipant, costPerNewFacility, totalNewFacilities: newImciFacilities.length,
+                nationalCov, stateCoverage, localityCoverage
+            };
+
+            const cleanStr = JSON.stringify(newCoverageData);
+            const oldStr = JSON.stringify(existingSnapshot || {});
+
+            if (cleanStr !== oldStr && cleanStr !== lastSavedSnapshotStr.current) {
+                lastSavedSnapshotStr.current = cleanStr;
+                try {
+                    const courseRef = doc(db, 'courses', course.id);
+                    await updateDoc(courseRef, { 
+                        coverageSnapshot: newCoverageData, 
+                        baselineLockedAt: existingSnapshot?.baselineLockedAt || new Date().toISOString() 
+                    });
+                } catch (e) {
+                    console.error("Failed to auto-update baseline:", e);
+                }
+            }
+        };
+
+        autoUpdateBaseline();
+    }, [participants, healthFacilities, course]);
+
 
     const federalProgramManagerName = useMemo(() => {
         if (!federalCoordinators || federalCoordinators.length === 0) return "Federal Program Manager"; 
@@ -1487,11 +1903,7 @@ export function ParticipantsView({
         });
     }, [participants, groupFilter, jobTitleFilter, facilityFilter, localityFilter, subTypeFilter, course.facilitatorAssignments]);
 
-
-    // ==========================================
-    // 2. HANDLERS AND FUNCTIONS
-    // ==========================================
-
+    // Handlers
     const toggleExpandParticipant = (id) => {
         setExpandedParticipantId(prev => (prev === id ? null : id));
     };
@@ -1626,10 +2038,17 @@ export function ParticipantsView({
     };
 
     const handleGenerateSingleCert = async (p, participantSubCourse, language) => {
+        cancelDownloadRef.current = false;
         setProcessingRowId(p.id);
         setIsProcessing(true);
+        setIsGeneratingCert(true);
+        setDownloadProgress({ current: 0, total: 1 });
+        
         try {
             const canvas = await generateCertificatePdf(course, p, federalProgramManagerName, participantSubCourse, language);
+            
+            if (cancelDownloadRef.current) throw new Error("CANCELLED_BY_USER");
+            
             if (canvas) {
                 const doc = new jsPDF('landscape', 'mm', 'a4');
                 const imgWidth = 297;
@@ -1640,10 +2059,15 @@ export function ParticipantsView({
                 setToast({ show: true, message: 'Certificate downloaded successfully!', type: 'success' });
             }
         } catch (err) {
-            setToast({ show: true, message: `Failed to generate certificate: ${err.message}`, type: 'error' });
+            if (err.message === "CANCELLED_BY_USER") {
+                setToast({ show: true, message: "Download cancelled.", type: 'info' });
+            } else {
+                setToast({ show: true, message: `Failed to generate certificate: ${err.message}`, type: 'error' });
+            }
         } finally {
             setProcessingRowId(null);
             setIsProcessing(false);
+            setIsGeneratingCert(false);
         }
     };
 
@@ -1652,15 +2076,24 @@ export function ParticipantsView({
             setToast({ show: true, message: "No participants available for bulk certificate download.", type: 'warning' });
             return;
         }
+        
+        cancelDownloadRef.current = false;
         setIsBulkCertLoading(true);
         setIsProcessing(true);
         setDownloadProgress({ current: 0, total: filtered.length }); 
 
         try {
-             await generateAllCertificatesPdf(course, filtered, federalProgramManagerName, language, (current, total) => setDownloadProgress({ current, total }));
+             await generateAllCertificatesPdf(course, filtered, federalProgramManagerName, language, (current, total) => {
+                 if (cancelDownloadRef.current) throw new Error("CANCELLED_BY_USER");
+                 setDownloadProgress({ current, total });
+             });
              setToast({ show: true, message: "Bulk certificates downloaded successfully!", type: 'success' });
         } catch(error) {
-            setToast({ show: true, message: "Failed to generate bulk certificates. See console.", type: 'error' });
+            if (error.message === "CANCELLED_BY_USER") {
+                setToast({ show: true, message: "Bulk download cancelled.", type: 'info' });
+            } else {
+                setToast({ show: true, message: "Failed to generate bulk certificates. See console.", type: 'error' });
+            }
         } finally {
             setIsBulkCertLoading(false);
             setIsProcessing(false);
@@ -1704,10 +2137,7 @@ export function ParticipantsView({
         setEmailModalOpen(true);
     };
 
-    // ==========================================
-    // 3. CONDITIONAL RENDERING (AFTER ALL HOOKS)
-    // ==========================================
-
+    // Render logic
     if (activeScreen === 'form') {
         return (
             <ParticipantForm 
@@ -1770,6 +2200,26 @@ export function ParticipantsView({
                     "Design Certificate Template"
                 }
             />
+            
+            <DownloadProgressModal 
+                isOpen={isGeneratingCert || isBulkCertLoading}
+                isSingle={isGeneratingCert}
+                progress={downloadProgress}
+                onCancel={() => { 
+                    cancelDownloadRef.current = true; 
+                    setIsGeneratingCert(false); 
+                    setIsBulkCertLoading(false); 
+                }}
+            />
+            
+            <ParticipantCertificateActionModal
+                isOpen={certActionModal.isOpen}
+                onClose={() => setCertActionModal({ isOpen: false, data: null })}
+                participant={certActionModal.data?.p}
+                onDownload={() => setCertLangModal({ isOpen: true, actionType: 'single', data: certActionModal.data })}
+                onEmail={() => handleOpenSingleEmail(certActionModal.data?.p)}
+                onShare={() => handleShareClick(certActionModal.data?.p)}
+            />
 
             <ExcelImportModal
                 isOpen={importModalOpen}
@@ -1802,7 +2252,6 @@ export function ParticipantsView({
             <ShareCoursePageModal isOpen={sharePageModalOpen} onClose={() => setSharePageModalOpen(false)} courseId={course.id} courseName={course.course_type} />
             <EmailCertificateModal isOpen={emailModalOpen} onClose={() => setEmailModalOpen(false)} participants={emailTargets} isBulk={isBulkEmail} setToast={setToast} />
 
-            {/* --- NEW ADVANCED ACTIONS MODAL --- */}
             <Modal isOpen={isAdvancedActionsModalOpen} onClose={() => setIsAdvancedActionsModalOpen(false)} title="Advanced User Actions">
                 <div className="p-4 flex flex-col gap-3">
                     <p className="text-sm text-gray-600 mb-2">Select an advanced action to perform on this course's data.</p>
@@ -1828,7 +2277,6 @@ export function ParticipantsView({
                 </div>
             </Modal>
 
-            {/* --- NEW CERTIFICATE MANAGEMENT MODAL --- */}
             <Modal isOpen={isCertManagementModalOpen} onClose={() => setIsCertManagementModalOpen(false)} title="Certificate Management">
                 <div className="p-4 flex flex-col gap-3">
                     <Button onClick={() => { setIsCertManagementModalOpen(false); setCertLangModal({ isOpen: true, actionType: 'template' }); }} disabled={isProcessing || isGeneratingTemplate || isCacheLoading} className="w-full justify-start bg-green-600 hover:bg-green-700 text-white border-transparent focus:ring-green-500">
@@ -1861,18 +2309,8 @@ export function ParticipantsView({
                 </div>
             </Modal>
 
-            {/* Mobile Toggle for Top Functions */}
-            <div className="mb-4 block md:hidden">
-                <Button 
-                    className="w-full justify-center bg-slate-100 text-slate-800 hover:bg-slate-200 border border-slate-300"
-                    onClick={() => setShowTopActions(!showTopActions)}
-                >
-                    {showTopActions ? 'Hide Actions & Filters' : 'Show Actions & Filters'}
-                </Button>
-            </div>
-
-            {/* Collapsible Top Functions */}
-            <div className={`${showTopActions ? 'block' : 'hidden'} md:block flex flex-col gap-4 mb-4`}>
+            {/* Top Functions & Filters (Always Visible) */}
+            <div className="flex flex-col gap-4 mb-4">
                 <div className="flex flex-wrap justify-between items-center gap-4">
                     <div className="flex flex-wrap gap-2 items-center">
                         {/* Standard Add Button remains visible for quick access */}
@@ -1895,14 +2333,6 @@ export function ParticipantsView({
                                 Certificate Management
                             </Button>
                         )}
-                        
-                        {/* Inline loading indicator for bulk certs if running in background */}
-                        {isBulkCertLoading && (
-                            <div className="flex items-center gap-2 px-2 py-1 bg-blue-50 text-blue-700 rounded text-sm border border-blue-200">
-                                <Spinner size="sm" />
-                                <span className="font-medium whitespace-nowrap">Generating {downloadProgress.current} / {downloadProgress.total}</span>
-                            </div>
-                        )}
                     </div>
                 </div>
 
@@ -1924,75 +2354,107 @@ export function ParticipantsView({
                 </div>
             </div>
 
-            {/* Desktop View (Standard Table) */}
-            <div className="hidden md:block">
-                <Table headers={["Name", "Group", "Job / Facility", "Creation Info", "Last Edit", "Actions"]}>
-                    {filtered.length > 0 && filtered.map(p => {
-                        const canEdit = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
-                        const canDelete = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
-                        const isCertApproved = localApprovalStatus === true;
+            {/* Desktop View (Compact, Single-Row Layout with Borders) */}
+            <div className="hidden md:block overflow-hidden bg-white rounded-xl shadow-sm">
+                <table className="w-full text-left border-collapse border border-slate-300 text-sm">
+                    <thead>
+                        <tr className="bg-slate-100 text-[11px] uppercase tracking-wider text-slate-600 whitespace-nowrap">
+                            <th className="p-3 font-semibold border border-slate-300 w-1/3">Participant & Role</th>
+                            <th className="p-3 font-semibold border border-slate-300 w-1/3">Facility & Location</th>
+                            <th className="p-3 font-semibold border border-slate-300 hidden lg:table-cell w-24">Activity</th>
+                            <th className="p-3 font-semibold border border-slate-300 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filtered.length > 0 ? filtered.map(p => {
+                            const canEdit = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
+                            const canDelete = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
+                            const isCertApproved = localApprovalStatus === true;
 
-                        let participantSubCourse = p.imci_sub_type || course.facilitatorAssignments?.find((a) => a.group === p.group)?.imci_sub_type;
-                        const createdDate = p.createdAt?.toDate ? p.createdAt.toDate().toLocaleString() : p.createdAt?.seconds ? new Date(p.createdAt.seconds * 1000).toLocaleString() : 'N/A';
-                        const lastEditDate = p.lastUpdatedAt?.toDate ? p.lastUpdatedAt.toDate().toLocaleString() : p.lastUpdatedAt?.seconds ? new Date(p.lastUpdatedAt.seconds * 1000).toLocaleString() : 'N/A';
+                            let participantSubCourse = p.imci_sub_type || course.facilitatorAssignments?.find((a) => a.group === p.group)?.imci_sub_type;
+                            const createdDate = p.createdAt?.toDate ? p.createdAt.toDate().toLocaleDateString() : p.createdAt?.seconds ? new Date(p.createdAt.seconds * 1000).toLocaleDateString() : 'N/A';
 
-                        return (
-                            <tr key={p.id} className="hover:bg-gray-50">
-                                <td className="p-4 border border-gray-200 font-medium text-gray-800">{p.name}</td>
-                                <td className="p-4 border border-gray-200">{p.group}</td>
-                                <td className="p-4 border border-gray-200">
-                                    <div className="font-semibold text-sm">{p.job_title}</div>
-                                    <div className="text-xs text-gray-500 mt-1">
-                                        {course.course_type === 'Program Management' ? (p.department || 'N/A') : p.center_name}
-                                        {p.locality && <span> ({p.locality})</span>}
-                                    </div>
-                                </td>
-                                
-                                <td className="p-4 border border-gray-200">
-                                    <div className="text-sm whitespace-nowrap">{createdDate}</div>
-                                    <div className="text-xs text-gray-500 font-medium mt-1">By: {p.createdBy || 'Legacy Data'}</div>
-                                </td>
-                                <td className="p-4 border border-gray-200">
-                                    <div className="text-sm whitespace-nowrap">{lastEditDate}</div>
-                                    <div className="text-xs text-gray-500 font-medium mt-1">By: {p.updatedBy || 'Legacy Data'}</div>
-                                </td>
+                            return (
+                                <tr key={p.id} className="hover:bg-blue-50/50 transition-colors group">
+                                    {/* Participant Info & Role */}
+                                    <td className="p-3 align-middle border border-slate-200">
+                                        <div className="flex flex-col gap-0.5">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-bold text-gray-900 text-[13px] whitespace-nowrap">{p.name}</span>
+                                            </div>
+                                            <span className="text-[11px] font-medium text-slate-500">{p.job_title}</span>
+                                        </div>
+                                    </td>
 
-                                <td className="p-4 border border-gray-200 text-right">
-                                    <div className="flex gap-2 flex-wrap justify-end">
-                                        <Button variant="primary" onClick={() => onOpen(p.id)} disabled={!canAddMonitoring || isProcessing} title={!canAddMonitoring ? "You do not have permission to monitor" : "Monitor Participant"}>Monitor</Button>
-                                        <Button variant="secondary" onClick={() => onOpenReport(p.id)} disabled={isProcessing}>Report</Button>
-                                        
-                                        {isCertApproved ? (
-                                            finalCertPerm && (
-                                                <>
-                                                    <Button variant="secondary" onClick={() => handleShareClick(p)} disabled={isProcessing}>Share Cert.</Button>
-                                                    <Button variant="secondary" onClick={() => setCertLangModal({ isOpen: true, actionType: 'single', data: { p, participantSubCourse } })} disabled={isCacheLoading || isProcessing || processingRowId === p.id}>
-                                                        {processingRowId === p.id ? <Spinner size="sm" /> : 'Certificate'}
-                                                    </Button>
-                                                    <Button variant="secondary" onClick={() => handleOpenSingleEmail(p)} disabled={!p.email || isProcessing} className={!p.email ? "opacity-50 cursor-not-allowed" : ""}><Mail className="w-4 h-4" /></Button>
-                                                </>
-                                            )
-                                        ) : (
-                                            <div className="flex items-center gap-1 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded border border-orange-200" title="Certificates must be approved by the Federal Program Manager in the Admin Dashboard before downloading."><Lock className="w-3 h-3" /><span>Pending</span></div>
-                                        )}
+                                    {/* Facility & Location */}
+                                    <td className="p-3 align-middle border border-slate-200">
+                                        <div className="text-[12px] font-semibold text-gray-700 whitespace-nowrap truncate max-w-[220px]">
+                                            {course.course_type === 'Program Management' ? (p.department || 'N/A') : p.center_name}
+                                        </div>
+                                        {p.locality && <div className="text-[11px] text-gray-500 whitespace-nowrap">Locality: {p.locality}</div>}
+                                    </td>
+                                    
+                                    {/* Activity (Compact) */}
+                                    <td className="p-3 align-middle border border-slate-200 hidden lg:table-cell text-[11px] text-gray-500 whitespace-nowrap">
+                                        <div>{createdDate}</div>
+                                        <div className="truncate max-w-[90px]" title={p.createdBy || 'Legacy'}>By: {p.createdBy || 'Legacy'}</div>
+                                    </td>
 
-                                        {(course.course_type === 'ICCM' || course.course_type === 'EENC') && (
-                                            <Button variant="secondary" onClick={() => onOpenTestFormForParticipant(p.id)} disabled={isProcessing}>Test Score</Button>
-                                        )}
+                                    {/* Actions */}
+                                    <td className="p-3 align-middle border border-slate-200 text-right">
+                                        <div className="flex flex-nowrap gap-1.5 justify-end opacity-95 group-hover:opacity-100 transition-opacity">
+                                            
+                                            <Button variant="primary" className="px-2.5 py-1 text-[11px]" onClick={() => onOpen(p.id)} disabled={!canAddMonitoring || isProcessing}>
+                                                Monitor
+                                            </Button>
 
-                                        <Button variant="secondary" onClick={() => { setEditingParticipant(p); setActiveScreen('form'); }} disabled={!canEdit || isProcessing}>Edit</Button>
-                                        <Button variant="danger" onClick={() => handleDeleteParticipant(p.id)} disabled={!canDelete || isProcessing}>
-                                            {processingRowId === p.id ? <Spinner size="sm" /> : 'Delete'}
-                                        </Button>
-                                    </div>
+                                            <Button variant="secondary" className="px-2.5 py-1 text-[11px]" onClick={() => onOpenReport(p.id)} disabled={isProcessing}>
+                                                Report
+                                            </Button>
+
+                                            {(course.course_type === 'ICCM' || course.course_type === 'EENC') && (
+                                                <Button variant="secondary" className="px-2.5 py-1 text-[11px]" onClick={() => onOpenTestFormForParticipant(p.id)} disabled={isProcessing}>
+                                                    Test
+                                                </Button>
+                                            )}
+
+                                            {/* Consolidated Certificate Button */}
+                                            {isCertApproved && finalCertPerm && (
+                                                <Button 
+                                                    variant="secondary" 
+                                                    className="px-2.5 py-1 text-[11px] border-emerald-200 text-emerald-700 hover:bg-emerald-50" 
+                                                    onClick={() => setCertActionModal({ isOpen: true, data: { p, participantSubCourse } })}
+                                                    disabled={isCacheLoading || isProcessing || processingRowId === p.id}
+                                                    title="Manage Certificate"
+                                                >
+                                                    {processingRowId === p.id ? <Spinner size="sm" /> : 'Certificate'}
+                                                </Button>
+                                            )}
+
+                                            <Button variant="secondary" className="px-2.5 py-1 text-[11px] text-gray-600" onClick={() => { setEditingParticipant(p); setActiveScreen('form'); }} disabled={!canEdit || isProcessing}>
+                                                Edit
+                                            </Button>
+                                            
+                                            <Button variant="danger" className="px-2.5 py-1 text-[11px] bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border-transparent" onClick={() => handleDeleteParticipant(p.id)} disabled={!canDelete || isProcessing}>
+                                                {processingRowId === p.id ? <Spinner size="sm" /> : 'Delete'}
+                                            </Button>
+                                            
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        }) : (
+                            <tr>
+                                <td colSpan="4" className="p-6 text-center text-[13px] text-gray-500 border border-slate-200">
+                                    No participants found matching the current filters.
                                 </td>
                             </tr>
-                        );
-                    })}
-                </Table>
+                        )}
+                    </tbody>
+                </table>
             </div>
 
-            {/* Mobile View (Collapsible Accordion Cards) */}
+            {/* Mobile View */}
             <div className="grid gap-4 md:hidden">
                 {filtered.length > 0 ? filtered.map(p => {
                     const canEdit = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
@@ -2006,7 +2468,6 @@ export function ParticipantsView({
 
                     return (
                         <div key={p.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                            {/* Accordion Header */}
                             <div 
                                 className="flex justify-between items-center p-4 cursor-pointer hover:bg-gray-50"
                                 onClick={() => toggleExpandParticipant(p.id)}
@@ -2016,7 +2477,6 @@ export function ParticipantsView({
                                     <p className="text-gray-600 text-sm">{p.job_title} • {course.course_type === 'Program Management' ? (p.department || 'N/A') : p.center_name}</p>
                                     <div className="flex items-center gap-2 mt-2">
                                         <span className="text-xs font-medium px-2 py-1 bg-gray-100 rounded text-gray-600">Group: {p.group}</span>
-                                        {!isCertApproved && <span className="text-[10px] text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-200 flex items-center gap-1"><Lock className="w-3 h-3"/> Pending Cert</span>}
                                     </div>
                                 </div>
                                 <div className="text-gray-400">
@@ -2024,11 +2484,8 @@ export function ParticipantsView({
                                 </div>
                             </div>
 
-                            {/* Collapsible Actions */}
                             {isExpanded && (
                                 <div className="p-4 bg-gray-50 border-t border-gray-100">
-                                    
-                                    {/* Edit / Creation Tracking Info inside the mobile drawer */}
                                     <div className="mb-4 grid grid-cols-2 gap-2 text-xs text-gray-500 border-b border-gray-200 pb-3">
                                         <div><span className="block font-semibold text-gray-700">Created:</span>{createdDate}<br/>By: {p.createdBy || 'Legacy'}</div>
                                         <div><span className="block font-semibold text-gray-700">Last Edit:</span>{lastEditDate}<br/>By: {p.updatedBy || 'Legacy'}</div>
@@ -2039,13 +2496,9 @@ export function ParticipantsView({
                                         <Button variant="secondary" className="w-full justify-center" onClick={() => onOpenReport(p.id)} disabled={isProcessing}>Report</Button>
                                         
                                         {isCertApproved && finalCertPerm && (
-                                            <>
-                                                <Button variant="secondary" className="w-full justify-center" onClick={() => handleShareClick(p)} disabled={isProcessing}>Share Cert.</Button>
-                                                <Button variant="secondary" className="w-full justify-center" onClick={() => setCertLangModal({ isOpen: true, actionType: 'single', data: { p, participantSubCourse } })} disabled={isCacheLoading || isProcessing || processingRowId === p.id}>
-                                                    {processingRowId === p.id ? <Spinner size="sm" /> : 'Certificate'}
-                                                </Button>
-                                                <Button variant="secondary" className="w-full justify-center" onClick={() => handleOpenSingleEmail(p)} disabled={!p.email || isProcessing}><Mail className="w-4 h-4" /> Email</Button>
-                                            </>
+                                            <Button variant="secondary" className="w-full justify-center border-emerald-200 text-emerald-700 hover:bg-emerald-50" onClick={() => setCertActionModal({ isOpen: true, data: { p, participantSubCourse } })} disabled={isCacheLoading || isProcessing || processingRowId === p.id}>
+                                                {processingRowId === p.id ? <Spinner size="sm" /> : 'Certificate'}
+                                            </Button>
                                         )}
 
                                         {(course.course_type === 'ICCM' || course.course_type === 'EENC') && (
@@ -2071,7 +2524,6 @@ export function ParticipantsView({
     );
 }
 
-// ... [The rest of the file: Form Component and Helpers remain exactly the same] ...
 const getBoolState = (val) => val === undefined || val === null ? '' : (val ? 'yes' : 'no');
 const getStrState = (val) => val === 'Yes' ? 'yes' : (val === 'No' ? 'no' : '');
 const parseBool = (val) => val === 'yes' ? true : (val === 'no' ? false : null);
@@ -2242,7 +2694,6 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                  setNearestImm(facility.nearest_immunization_center || '');
                  setHasORS(getStrState(facility['غرفة_إرواء']));
                  
-                 // Pre-fill Table Data from Facility Profile
                  setImnciDoctorsTotal(facility.imnci_doctors_total ?? '');
                  setImnciDoctorsTrained(facility.imnci_doctors_trained ?? '');
                  setImnciMedicalAssistantsTotal(facility.imnci_medical_assistants_total ?? '');
@@ -2332,7 +2783,6 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
 
         setIsSaving(true);
         try {
-            // Background calculations for hidden fields
             let finalImciSubType = initialData?.imci_sub_type || 'Standard 7 days course'; 
             if (isImnci && course?.facilitatorAssignments) {
                 const assignment = course.facilitatorAssignments.find(a => a.group === group);
@@ -2362,7 +2812,24 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                  p = { ...p, trained_before: parseBool(trainedIMNCI), last_imci_training: trainedIMNCI === 'yes' ? (lastTrainIMNCI || null) : null };
                 
                 if (isImnci) {
-                    // Compute totals for backwards compatibility
+                    let isIntroducingImnci = false;
+                    
+                    const isSameFacility = (initialData?.facilityId && selectedFacility && initialData.facilityId === selectedFacility.id) || 
+                                           (!initialData?.facilityId && initialData?.center_name === center.trim());
+                                           
+                    if (isSameFacility && initialData?.introduced_imci_to_facility) {
+                        isIntroducingImnci = true;
+                    } else if (selectedFacility && !selectedFacility.id.startsWith('pending_')) {
+                        const facilityAlreadyHasImnci = selectedFacility['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes';
+                        if (!facilityAlreadyHasImnci) {
+                            isIntroducingImnci = true;
+                        }
+                    } else if (!selectedFacility || selectedFacility.id.startsWith('pending_')) {
+                        isIntroducingImnci = true;
+                    }
+                    
+                    p.introduced_imci_to_facility = isIntroducingImnci;
+
                     const computedTotalProv = (Number(imnciDoctorsTotal) || 0) + (Number(imnciMedicalAssistantsTotal) || 0);
                     const computedTrainedProv = (Number(imnciDoctorsTrained) || 0) + (Number(imnciMedicalAssistantsTrained) || 0);
 
@@ -2431,11 +2898,6 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                     let updatedStaffList = [...existingStaff];
                     const existingIndex = updatedStaffList.findIndex(staff => staff.name === staffMemberData.name || (staff.phone && staff.phone === staffMemberData.phone));
                     if (existingIndex > -1) updatedStaffList[existingIndex] = staffMemberData; else updatedStaffList.push(staffMemberData);
-
-                    const facilityHadImnci = selectedFacility['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes';
-                    if (!facilityHadImnci) {
-                        p.introduced_imci_to_facility = true;
-                    }
 
                     const baseFacilityPayload = {
                         'هل_المؤسسة_تعمل': 'Yes', 

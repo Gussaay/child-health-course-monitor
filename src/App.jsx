@@ -49,9 +49,11 @@ const TeamMemberApplicationForm = lazy(() => import('./components/ProgramTeamVie
 
 const IMNCIRecordingForm = lazy(() => import('./components/IMNCIRecordingForm'));
 
-const CertificateVerificationView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.CertificateVerificationView })));
-const PublicCertificateDownloadView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicCertificateDownloadView })));
-const PublicCourseCertificatesView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicCourseCertificatesView }))); 
+// --- FIXED LAZY IMPORTS HERE ---
+const CertificateVerificationView = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.CertificateVerificationView })));
+const PublicCertificateDownloadView = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.PublicCertificateDownloadView })));
+const PublicCourseCertificatesView = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.PublicCourseCertificatesView }))); 
+
 const PublicAttendanceView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicAttendanceView })));
 const AttendanceManagerView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.AttendanceManagerView })));
 const PublicParticipantRegistrationView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicParticipantRegistrationView })));
@@ -1185,6 +1187,7 @@ export default function App() {
                 canEditDeleteInactiveCourse={permissions.canUseFederalManagerAdvancedFeatures || (permissions.canManageCourse && permissions.manageTimePeriod === 'anytime')}
                 manageLocation={permissions.manageLocation} /* PASSED STRICT LOCATION ENFORCEMENT DOWN HERE */
                 facilitatorsList={allFacilitators || []} 
+                currentUserRole={userRole} /* PASSED CURRENT ROLE FOR CREATOR RECORD */
             />;
 
             case 'childHealthServices':

@@ -2048,3 +2048,76 @@ export async function deleteIMNCIPatientRecord(recordId) {
     await updateDoc(recordRef, { isDeleted: true, lastUpdatedAt: serverTimestamp() }); 
     return true;
 }
+
+// --- HISTORICAL BASELINE COVERAGE HELPER ---
+export async function fetchFacilitiesHistoryAtDate(states, targetDateStr) {
+    if (!states || states.length === 0 || !targetDateStr) return [];
+
+    const targetDate = new Date(targetDateStr);
+    
+    try {
+        const snapshotsRef = collection(db, "facilitySnapshots");
+        let allSnapshots = [];
+
+        // Loop through states to avoid complex composite index limits in Firestore
+        for (const state of states) {
+            const q = query(snapshotsRef, where("الولاية", "==", state));
+            const querySnapshot = await getDocs(q);
+            querySnapshot.docs.forEach(doc => allSnapshots.push({ id: doc.id, ...doc.data() }));
+        }
+
+        // Filter snapshots that happened ON or BEFORE the course start date
+        const validSnapshots = allSnapshots.filter(snap => {
+            const snapDate = snap.effectiveDate?.toDate ? snap.effectiveDate.toDate() : new Date(0);
+            return snapDate <= targetDate;
+        });
+
+        // Group by facilityId to find the LATEST snapshot right before the course
+        const latestSnapshotsMap = new Map();
+
+        validSnapshots.forEach(snap => {
+            const facilityId = snap.facilityId;
+            const snapDate = snap.effectiveDate?.toDate ? snap.effectiveDate.toDate().getTime() : 0;
+
+            if (!latestSnapshotsMap.has(facilityId)) {
+                latestSnapshotsMap.set(facilityId, { ...snap, _time: snapDate });
+            } else {
+                const existing = latestSnapshotsMap.get(facilityId);
+                if (snapDate > existing._time) {
+                    latestSnapshotsMap.set(facilityId, { ...snap, _time: snapDate });
+                }
+            }
+        });
+
+        // Fallback for facilities that existed but had no snapshots recorded before the date.
+        // We will fetch current facilities and merge the historical snapshot if it exists.
+        const currentFacilitiesQ = query(collection(db, "healthFacilities"), where("الولاية", "in", states));
+        const currentFacilitiesSnap = await getDocs(currentFacilitiesQ);
+
+        const historicalState = [];
+
+        currentFacilitiesSnap.docs.forEach(doc => {
+            const facilityId = doc.id;
+            const currentData = doc.data();
+
+            if (latestSnapshotsMap.has(facilityId)) {
+                // Facility has a valid historical snapshot, use it
+                historicalState.push(latestSnapshotsMap.get(facilityId));
+            } else {
+                // Facility existed but had no snapshots before the date.
+                // We default it to 'No' IMNCI to ensure a clean baseline assumption.
+                historicalState.push({
+                    ...currentData,
+                    facilityId: facilityId,
+                    'وجود_العلاج_المتكامل_لامراض_الطفولة': 'No' 
+                });
+            }
+        });
+
+        return historicalState;
+
+    } catch (error) {
+        console.error("Error fetching historical facilities:", error);
+        return []; 
+    }
+}

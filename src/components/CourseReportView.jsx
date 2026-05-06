@@ -4,7 +4,6 @@ import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import { Bar, Line } from 'react-chartjs-2';
-// Updated imports to include Modal and Input
 import { Button, Card, EmptyState, PageHeader, PdfIcon, Table, Spinner, Modal, Input } from './CommonComponents';
 import {
     Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend,
@@ -12,11 +11,14 @@ import {
 } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { amiriFontBase64 } from './AmiriFont.js';
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, PointElement, LineElement, ChartDataLabels);
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
+
+// Import the historical fetcher and upsert function
+import { fetchFacilitiesHistoryAtDate, upsertCourse } from '../data.js'; 
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, PointElement, LineElement, ChartDataLabels);
 
 // --- Icon Components ---
 const CopyIcon = () => (
@@ -369,12 +371,13 @@ const generateFullCourseReportPdf = async (course, quality, onSuccess, onError, 
         doc.text(`Full Course Report: ${course.course_type} - ${course.state}`, margin, y, { align: 'left' });
         y += 10;
 
+        // Sequence matches UI flow
         y = await addCanvasImageToPdf('course-info-card', y);
         if (document.getElementById('kpi-card')) y = await addCanvasImageToPdf('kpi-card', y);
-        if (document.getElementById('new-imci-facilities-card')) y = await addCanvasImageToPdf('new-imci-facilities-card', y);
+        if (document.getElementById('test-scores-card')) y = await addCanvasImageToPdf('test-scores-card', y);
         if (document.getElementById('investment-card')) y = await addCanvasImageToPdf('investment-card', y);
         if (document.getElementById('coverage-card')) y = await addCanvasImageToPdf('coverage-card', y);
-        if (document.getElementById('test-scores-card')) y = await addCanvasImageToPdf('test-scores-card', y);
+        if (document.getElementById('new-imci-facilities-card')) y = await addCanvasImageToPdf('new-imci-facilities-card', y);
 
         if (document.getElementById('charts-grid')) {
              y = addTitle('Performance Charts', y);
@@ -479,6 +482,13 @@ export function CourseReportView({
     const [caseCorrectnessFilter, setCaseCorrectnessFilter] = useState('All');
     const [isPdfGenerating, setIsPdfGenerating] = useState(false);
     
+    // State for historical coverage tracking
+    const [coverageData, setCoverageData] = useState(null);
+    const [isCoverageModalOpen, setIsCoverageModalOpen] = useState(false);
+    const [historicalCoveragePreview, setHistoricalCoveragePreview] = useState(null);
+    const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+    const [isSavingCoverage, setIsSavingCoverage] = useState(false);
+
     // Internal state for local ShareModal
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     
@@ -492,26 +502,27 @@ export function CourseReportView({
 
     const isLoading = !course || !participants || !allObs || !allCases;
 
+    // Synchronize local coverageData state with course snapshot when available
+    useEffect(() => {
+        if (course?.coverageSnapshot) {
+            setCoverageData(course.coverageSnapshot);
+        } else {
+            setCoverageData(null);
+        }
+    }, [course]);
+
     const { 
         groupPerformance, overall, dailyPerformance, hasTestScores, hasCases, participantsWithStats, 
         preTestStats, postTestStats, totalImprovement, caseCorrectnessDistribution, 
-        newImciFacilities, coverageData, avgImprovementDistribution
+        newImciFacilities, avgImprovementDistribution
     } = useMemo(() => {
         if (isLoading) { 
             return {
-                groupPerformance: {},
-                overall: { totalCases: 0, correctCases: 0, avgCasesPerParticipant: 0, caseCorrectnessPercentage: 0, totalSkills: 0, correctSkills: 0, avgSkillsPerParticipant: 0, skillCorrectnessPercentage: 0 },
-                dailyPerformance: {},
-                preTestStats: { avg: 0, median: 0, min: 0, max: 0, range: 'N/A', distribution: {} },
-                postTestStats: { avg: 0, median: 0, min: 0, max: 0, range: 'N/A', distribution: {} },
-                totalImprovement: 0,
-                hasTestScores: false,
-                hasCases: false,
-                participantsWithStats: [],
-                caseCorrectnessDistribution: {},
-                avgImprovementDistribution: {},
-                newImciFacilities: [],
-                coverageData: null,
+                groupPerformance: {}, overall: { totalCases: 0, correctCases: 0, avgCasesPerParticipant: 0, caseCorrectnessPercentage: 0, totalSkills: 0, correctSkills: 0, avgSkillsPerParticipant: 0, skillCorrectnessPercentage: 0 },
+                dailyPerformance: {}, preTestStats: { avg: 0, median: 0, min: 0, max: 0, range: 'N/A', distribution: {} },
+                postTestStats: { avg: 0, median: 0, min: 0, max: 0, range: 'N/A', distribution: {} }, totalImprovement: 0,
+                hasTestScores: false, hasCases: false, participantsWithStats: [], caseCorrectnessDistribution: {},
+                avgImprovementDistribution: {}, newImciFacilities: []
             };
         }
 
@@ -588,10 +599,7 @@ export function CourseReportView({
             const correctSkills = participantObs.filter(o => o.item_correct > 0).length;
             const totalSkills = participantObs.length;
             return {
-                ...p,
-                total_cases_seen: participantCases.length,
-                total_skills_recorded: totalSkills,
-                correctness_percentage: calcPct(correctSkills, totalSkills)
+                ...p, total_cases_seen: participantCases.length, total_skills_recorded: totalSkills, correctness_percentage: calcPct(correctSkills, totalSkills)
             };
         });
         
@@ -615,46 +623,126 @@ export function CourseReportView({
         const newImciFacilityMap = new Map();
         participantsWithStats.filter(p => p.introduced_imci_to_facility === true).forEach(p => {
             const key = `${p.center_name}|${p.locality}|${p.state}`;
-            if (!newImciFacilityMap.has(key)) newImciFacilityMap.set(key, { name: p.center_name, locality: p.locality, state: p.state });
+            if (!newImciFacilityMap.has(key)) {
+                const matchedFacility = allHealthFacilities?.find(f => 
+                    f['اسم_المؤسسة'] === p.center_name && 
+                    f['المحلية'] === p.locality && 
+                    f['الولاية'] === p.state
+                );
+                
+                let isHospital = false;
+                if (matchedFacility && matchedFacility['نوع_المؤسسةالصحية']) {
+                    isHospital = ['مستشفى', 'مستشفى ريفي'].includes(matchedFacility['نوع_المؤسسةالصحية']);
+                } else {
+                    const name = p.center_name;
+                    isHospital = (typeof name === 'string') && (name.includes('مستشفى') || name.toLowerCase().includes('hospital'));
+                }
+
+                newImciFacilityMap.set(key, { 
+                    name: p.center_name, 
+                    locality: p.locality, 
+                    state: p.state,
+                    isHospital: isHospital
+                });
+            }
         });
         const newImciFacilities = Array.from(newImciFacilityMap.values());
-        const newImciFacilityNames = new Set(newImciFacilities.map(f => f.name));
 
-        let coverageData = null;
-        if (allHealthFacilities) {
-            const totalFacsNational = allHealthFacilities.length;
-            const newImciCount = newImciFacilities.length;
-            const natCovInc = totalFacsNational > 0 ? (newImciCount / totalFacsNational) * 100 : 0;
+        return { 
+            groupPerformance, overall, dailyPerformance, preTestStats, postTestStats, totalImprovement, 
+            hasTestScores: hasAnyScores, hasCases, participantsWithStats, caseCorrectnessDistribution, 
+            avgImprovementDistribution, newImciFacilities
+        };
+    }, [participants, allObs, allCases, isLoading, allHealthFacilities, course]); 
 
+    // Handle Historical Coverage Retrieval via Explicit Action
+    const handleRetrieveCoverageHistory = async () => {
+        setIsCoverageModalOpen(true);
+        setIsPreviewLoading(true);
+        setHistoricalCoveragePreview(null);
+
+        try {
             const courseStates = course.states || (course.state ? course.state.split(',').map(s=>s.trim()) : []);
             const courseLocalities = course.localities || (course.locality ? course.locality.split(',').map(l=>l.trim()) : []);
-            
             const combinedStates = [...new Set([...courseStates, ...newImciFacilities.map(f => f.state)])].filter(Boolean);
             const combinedLocalities = [...new Set([...courseLocalities, ...newImciFacilities.map(f => f.locality)])].filter(Boolean);
 
+            const historicalFacilities = await fetchFacilitiesHistoryAtDate(combinedStates, course.start_date);
+
+            const calculateCoverageInfo = (facilitiesFilter, newImciFilter) => {
+                const phcFacilities = historicalFacilities
+                    .filter(facilitiesFilter)
+                    .filter(f => f['هل_المؤسسة_تعمل'] === 'Yes')
+                    .filter(f => ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(f['نوع_المؤسسةالصحية']));
+                
+                const totalPhc = phcFacilities.length;
+                
+                const newPhcImciFacilities = newImciFacilities.filter(f => !f.isHospital);
+                const courseNewPhcs = newPhcImciFacilities.filter(newImciFilter);
+                const newPhc = courseNewPhcs.length;
+                const newPhcNames = new Set(courseNewPhcs.map(f => f.name));
+
+                let phcWithImnciBefore = 0;
+
+                phcFacilities.forEach(f => {
+                    if (f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes') {
+                        if (!newPhcNames.has(f['اسم_المؤسسة']) && !newPhcNames.has(f['name'])) {
+                            phcWithImnciBefore++;
+                        }
+                    }
+                });
+
+                const covBefore = totalPhc > 0 ? (phcWithImnciBefore / totalPhc) * 100 : 0;
+                const covAfter = totalPhc > 0 ? ((phcWithImnciBefore + newPhc) / totalPhc) * 100 : 0;
+                const increase = covAfter - covBefore; 
+                
+                return { totalPhc, phcWithImnciBefore, newPhc, covBefore, covAfter, increase };
+            };
+
+            const nationalCov = calculateCoverageInfo(f => f['الولاية'] !== 'إتحادي', () => true);
+            
             const stateCoverage = combinedStates.map(s => {
-                const totalInState = allHealthFacilities.filter(f => f['الولاية'] === s).length;
-                const newInState = newImciFacilities.filter(f => f.state === s).length;
-                return { name: s, total: totalInState, newCount: newInState, increase: totalInState > 0 ? (newInState/totalInState)*100 : 0 };
+                const info = calculateCoverageInfo(f => f['الولاية'] === s, f => f.state === s);
+                return { name: s, ...info };
             });
 
             const localityCoverage = combinedLocalities.map(l => {
-                const totalInLocality = allHealthFacilities.filter(f => f['المحلية'] === l).length;
-                const newInLocality = newImciFacilities.filter(f => f.locality === l).length;
-                return { name: l, total: totalInLocality, newCount: newInLocality, increase: totalInLocality > 0 ? (newInLocality/totalInLocality)*100 : 0 };
+                const info = calculateCoverageInfo(f => f['المحلية'] === l, f => f.locality === l);
+                return { name: l, ...info };
             });
 
             const totalBudget = Number(course.course_budget) || 0;
             const costPerParticipant = participants.length > 0 ? totalBudget / participants.length : 0;
-            const costPerNewFacility = newImciCount > 0 ? totalBudget / newImciCount : 0;
+            const costPerNewFacility = nationalCov.newPhc > 0 ? totalBudget / nationalCov.newPhc : 0;
 
-            coverageData = {
-                totalBudget, costPerParticipant, costPerNewFacility, totalNewFacilities: newImciCount,
-                nationalIncrease: natCovInc, stateCoverage, localityCoverage
-            };
+            setHistoricalCoveragePreview({
+                totalBudget, costPerParticipant, costPerNewFacility, totalNewFacilities: newImciFacilities.length,
+                nationalCov, stateCoverage, localityCoverage,
+                retrievedAt: new Date().toISOString()
+            });
+
+        } catch (error) {
+            console.error("Error calculating historical coverage:", error);
+            notify("Failed to load historical coverage baseline.", "error");
+        } finally {
+            setIsPreviewLoading(false);
         }
-        return { groupPerformance, overall, dailyPerformance, preTestStats, postTestStats, totalImprovement, hasTestScores: hasAnyScores, hasCases, participantsWithStats, caseCorrectnessDistribution, avgImprovementDistribution, newImciFacilities, coverageData };
-    }, [participants, allObs, allCases, isLoading, allHealthFacilities, course.locality, course.state]);
+    };
+
+    const handleConfirmCoverage = async () => {
+        setIsSavingCoverage(true);
+        try {
+            const updatedCourse = { ...course, coverageSnapshot: historicalCoveragePreview };
+            await upsertCourse(updatedCourse); // Updates firestore
+            setCoverageData(historicalCoveragePreview); // Updates UI instantly
+            setIsCoverageModalOpen(false);
+            notify("Baseline coverage saved successfully.", "success");
+        } catch (error) {
+            notify("Failed to save coverage.", "error");
+        } finally {
+            setIsSavingCoverage(false);
+        }
+    };
 
     const groupsWithData = Object.keys(groupPerformance).sort();
     const dailyChartLabels = Object.keys(dailyPerformance).sort((a, b) => {
@@ -863,7 +951,6 @@ export function CourseReportView({
                     ) : (
                         <>
                             <div className="flex items-center gap-2">
-                                {/* Button triggers local state for ShareModal */}
                                 <Button onClick={() => setIsShareModalOpen(true)} variant="secondary" disabled={isPdfGenerating}>
                                     <ShareIcon /> Share
                                 </Button>
@@ -932,94 +1019,9 @@ export function CourseReportView({
                                         <div className={`p-4 rounded-lg ${getScoreColorClass(overall.skillCorrectnessPercentage)}`}><div className="text-sm font-semibold">Overall Correctness</div><div className="text-3xl font-bold">{fmtPct(overall.skillCorrectnessPercentage)}</div></div>
                                     </div>
                                 </div>
-                                {course.course_type === 'IMNCI' && newImciFacilities.length > 0 && (
-                                    <div>
-                                        <h4 className="text-lg font-semibold mb-2 text-gray-700">IMNCI Introduction</h4>
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                                            <div className="p-4 bg-blue-100 text-blue-800 rounded-lg col-span-1"><div className="text-sm font-semibold">Facilities w/ New IMNCI</div><div className="text-3xl font-bold">{newImciFacilities.length}</div></div>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                         </div>
                     </Card>
-                )}
-
-                {course.course_type === 'IMNCI' && newImciFacilities && newImciFacilities.length > 0 && (
-                    <Card>
-                        <div id="new-imci-facilities-card" className="relative p-2">
-                            {!isSharedView && <button onClick={() => handleCopyAsImage('new-imci-facilities-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
-                            <h3 className="text-xl font-bold mb-4">Facilities with New IMNCI Service Introduction</h3>
-                            <p className="text-sm text-gray-600 mb-4">The following facilities did not provide IMCI services before this course. Adding participants from these facilities has triggered an update to mark them as IMNCI-providing sites.</p>
-                            <Table headers={['Facility Name', 'Locality', 'State']}>
-                                {newImciFacilities.map((facility, index) => (<tr key={index} className="hover:bg-gray-50"><td className="p-2 border font-semibold">{facility.name}</td><td className="p-2 border">{facility.locality}</td><td className="p-2 border">{facility.state}</td></tr>))}
-                            </Table>
-                        </div>
-                    </Card>
-                )}
-
-                {coverageData && (
-                    <>
-                    <Card>
-                        <div id="investment-card" className="relative p-2">
-                            {!isSharedView && <button onClick={() => handleCopyAsImage('investment-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
-                            <h3 className="text-xl font-bold mb-4">Investment KPIs</h3>
-                            
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                                <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
-                                    <div className="text-sm font-semibold text-blue-700">Total Investment</div>
-                                    <div className="text-2xl font-bold text-blue-800">${coverageData.totalBudget.toLocaleString()}</div>
-                                </div>
-                                <div className="p-4 bg-green-50 rounded-lg border border-green-100">
-                                    <div className="text-sm font-semibold text-green-700">New Facilities Reached</div>
-                                    <div className="text-2xl font-bold text-green-800">{coverageData.totalNewFacilities}</div>
-                                </div>
-                                <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-100">
-                                    <div className="text-sm font-semibold text-yellow-700">Cost / Participant</div>
-                                    <div className="text-2xl font-bold text-yellow-800">${Math.round(coverageData.costPerParticipant).toLocaleString()}</div>
-                                </div>
-                                <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
-                                    <div className="text-sm font-semibold text-purple-700">Cost / New Center</div>
-                                    <div className="text-2xl font-bold text-purple-800">${Math.round(coverageData.costPerNewFacility).toLocaleString()}</div>
-                                </div>
-                            </div>
-                        </div>
-                    </Card>
-
-                    <Card>
-                        <div id="coverage-card" className="relative p-2">
-                            {!isSharedView && <button onClick={() => handleCopyAsImage('coverage-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
-                            <h3 className="text-xl font-bold mb-4">Coverage KPIs</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div className="bg-gray-50 p-4 rounded border">
-                                    <h4 className="font-bold text-gray-700 mb-2">Locality Coverage Increase</h4>
-                                    {coverageData.localityCoverage.map(l => (
-                                        <div key={l.name} className="flex justify-between items-center mb-1">
-                                            <span className="text-sm">{l.name}</span>
-                                            <span className="font-bold text-green-600">+{l.increase.toFixed(2)}%</span>
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="bg-gray-50 p-4 rounded border">
-                                    <h4 className="font-bold text-gray-700 mb-2">State Coverage Increase</h4>
-                                    {coverageData.stateCoverage.map(s => (
-                                        <div key={s.name} className="flex justify-between items-center mb-1">
-                                            <span className="text-sm">{s.name}</span>
-                                            <span className="font-bold text-green-600">+{s.increase.toFixed(2)}%</span>
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="bg-gray-50 p-4 rounded border">
-                                    <h4 className="font-bold text-gray-700 mb-2">National Coverage Increase</h4>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm">Sudan (Overall)</span>
-                                        <span className="font-bold text-green-600">+{coverageData.nationalIncrease.toFixed(4)}%</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </Card>
-                    </>
                 )}
 
                 {showTestScoresOnScreen && hasTestScoreDataForKpis && (
@@ -1032,7 +1034,170 @@ export function CourseReportView({
                                 <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm font-semibold text-gray-600">Avg. Post-Test</div><div className="text-2xl font-bold">{fmtPct(postTestStats.avg)}</div></div>
                                 <div className={`p-4 rounded-lg ${getScoreColorClass(totalImprovement, 'improvement')}`}><div className="text-sm font-semibold">Avg. Improvement</div><div className="text-2xl font-bold">{fmtPct(totalImprovement)}</div></div>
                             </div>
-                            {hasChartParticipants ? <div style={{ height: '350px' }}><Line ref={prePostDistributionChartRef} data={testScoreChartData} options={testScoreChartOptions} /></div> : <EmptyState message="No valid pre- and post-test data available for charting." />}
+                            {hasChartParticipants ? (
+                                <div style={{ height: '350px' }}>
+                                    <Line ref={prePostDistributionChartRef} data={testScoreChartData} options={testScoreChartOptions} />
+                                </div>
+                            ) : (
+                                <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
+                                    No valid pre- and post-test data available for charting.
+                                </div>
+                            )}
+                        </div>
+                    </Card>
+                )}
+
+                {/* Show Retrieval Button if no coverage data exists for an IMNCI course */}
+                {!coverageData && course?.course_type === 'IMNCI' && !isSharedView && (
+                    <Card>
+                        <div className="p-6 flex flex-col justify-center items-center text-center">
+                            <h3 className="text-lg font-bold text-gray-700 mb-2">No Baseline Coverage Data</h3>
+                            <p className="text-sm text-gray-500 mb-4">Historical baseline coverage has not been calculated for this course yet.</p>
+                            <Button onClick={handleRetrieveCoverageHistory} variant="primary">
+                                Retrieve Coverage History
+                            </Button>
+                        </div>
+                    </Card>
+                )}
+
+                {coverageData && (
+                    <>
+                    <Card>
+                        <div id="investment-card" className="relative p-2">
+                            {!isSharedView && <button onClick={() => handleCopyAsImage('investment-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
+                            <h3 className="text-xl font-bold mb-4">Investment KPIs</h3>
+                            
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
+                                <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                                    <div className="text-sm font-semibold text-blue-700">Total Investment</div>
+                                    <div className="text-2xl font-bold text-blue-800">${coverageData.totalBudget.toLocaleString()}</div>
+                                </div>
+                                <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-100">
+                                    <div className="text-sm font-semibold text-yellow-700">Cost / Participant</div>
+                                    <div className="text-2xl font-bold text-yellow-800">${Math.round(coverageData.costPerParticipant).toLocaleString()}</div>
+                                </div>
+                                <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
+                                    <div className="text-sm font-semibold text-purple-700">Cost/New Facility introduce IMNCI</div>
+                                    <div className="text-2xl font-bold text-purple-800">${Math.round(coverageData.costPerNewFacility).toLocaleString()}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </Card>
+
+                    <Card>
+                        <div id="coverage-card" className="relative p-2">
+                            {!isSharedView && <button onClick={() => handleCopyAsImage('coverage-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
+                            
+                            <h3 className="text-xl font-bold mb-4">Coverage KPIs (PHC Facilities Only)</h3>
+                            
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center mb-6">
+                                <div className="p-4 bg-green-50 rounded-lg border border-green-100">
+                                    <div className="text-sm font-semibold text-green-700">Total new PHC facility Introduce IMNCI</div>
+                                    <div className="text-2xl font-bold text-green-800">{coverageData.nationalCov.newPhc}</div>
+                                </div>
+                                {coverageData.localityCoverage.map(l => (
+                                    <div key={`card-loc-${l.name}`} className="p-4 bg-sky-50 rounded-lg border border-sky-100">
+                                        <div className="text-sm font-semibold text-sky-700">Locality Increase ({l.name})</div>
+                                        <div className="text-2xl font-bold text-sky-800">{l.newPhc} <span className="text-sm text-green-600 block sm:inline">(+{l.increase.toFixed(2)}%)</span></div>
+                                    </div>
+                                ))}
+                                {coverageData.stateCoverage.map(s => (
+                                    <div key={`card-state-${s.name}`} className="p-4 bg-indigo-50 rounded-lg border border-indigo-100">
+                                        <div className="text-sm font-semibold text-indigo-700">State Increase ({s.name})</div>
+                                        <div className="text-2xl font-bold text-indigo-800">{s.newPhc} <span className="text-sm text-green-600 block sm:inline">(+{s.increase.toFixed(2)}%)</span></div>
+                                    </div>
+                                ))}
+                                <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
+                                    <div className="text-sm font-semibold text-purple-700">National Increase (Sudan Overall)</div>
+                                    <div className="text-2xl font-bold text-purple-800">{coverageData.nationalCov.newPhc} <span className="text-sm text-green-600 block sm:inline">(+{coverageData.nationalCov.increase.toFixed(4)}%)</span></div>
+                                </div>
+                            </div>
+
+                            <div className="overflow-x-auto">
+                                <Table headers={['Level / Name', 'Total Functioning PHCs', 'PHCs w/ IMNCI (Before)', 'Coverage Before', 'New PHCs w/ IMNCI', 'Coverage After', 'Increase']}>
+                                    {coverageData.localityCoverage.map(l => (
+                                        <tr key={`loc-${l.name}`} className="hover:bg-gray-50">
+                                            <td className="p-2 border font-semibold text-gray-700">Locality: {l.name}</td>
+                                            <td className="p-2 border text-center">{l.totalPhc}</td>
+                                            <td className="p-2 border text-center">{l.phcWithImnciBefore}</td>
+                                            <td className="p-2 border text-center font-semibold text-gray-600">{fmtPct(l.covBefore)}</td>
+                                            <td className="p-2 border text-center">{l.newPhc}</td>
+                                            <td className="p-2 border text-center font-bold text-sky-700">{fmtPct(l.covAfter)}</td>
+                                            <td className="p-2 border text-center font-bold text-green-600">+{l.increase.toFixed(2)}%</td>
+                                        </tr>
+                                    ))}
+                                    {coverageData.stateCoverage.map(s => (
+                                        <tr key={`state-${s.name}`} className="hover:bg-gray-50 bg-gray-50/50">
+                                            <td className="p-2 border font-semibold text-gray-800">State: {s.name}</td>
+                                            <td className="p-2 border text-center">{s.totalPhc}</td>
+                                            <td className="p-2 border text-center">{s.phcWithImnciBefore}</td>
+                                            <td className="p-2 border text-center font-semibold text-gray-600">{fmtPct(s.covBefore)}</td>
+                                            <td className="p-2 border text-center">{s.newPhc}</td>
+                                            <td className="p-2 border text-center font-bold text-sky-700">{fmtPct(s.covAfter)}</td>
+                                            <td className="p-2 border text-center font-bold text-green-600">+{s.increase.toFixed(2)}%</td>
+                                        </tr>
+                                    ))}
+                                    <tr className="hover:bg-gray-50 bg-sky-50">
+                                        <td className="p-2 border font-bold text-gray-900">National (Sudan Overall)</td>
+                                        <td className="p-2 border text-center font-bold">{coverageData.nationalCov.totalPhc}</td>
+                                        <td className="p-2 border text-center font-bold">{coverageData.nationalCov.phcWithImnciBefore}</td>
+                                        <td className="p-2 border text-center font-bold text-gray-700">{fmtPct(coverageData.nationalCov.covBefore)}</td>
+                                        <td className="p-2 border text-center font-bold">{coverageData.nationalCov.newPhc}</td>
+                                        <td className="p-2 border text-center font-bold text-sky-800">{fmtPct(coverageData.nationalCov.covAfter)}</td>
+                                        <td className="p-2 border text-center font-bold text-green-700">+{coverageData.nationalCov.increase.toFixed(4)}%</td>
+                                    </tr>
+                                </Table>
+                            </div>
+                        </div>
+                    </Card>
+                    </>
+                )}
+
+                {course.course_type === 'IMNCI' && newImciFacilities && newImciFacilities.length > 0 && (
+                    <Card>
+                        <div id="new-imci-facilities-card" className="relative p-2">
+                            {!isSharedView && <button onClick={() => handleCopyAsImage('new-imci-facilities-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
+                            <h3 className="text-xl font-bold mb-4">Facilities with New IMNCI Service Introduction</h3>
+                            <p className="text-sm text-gray-600 mb-2">The following facilities did not provide IMCI services before this course. Adding participants from these facilities has triggered an update to mark them as IMNCI-providing sites.</p>
+                            
+                            <h4 className="text-lg font-semibold text-sky-800 mt-4 mb-2">PHC Facilities (Included in Coverage)</h4>
+                            {newImciFacilities.filter(f => !f.isHospital).length > 0 ? (
+                                <div className="overflow-x-auto">
+                                    <Table headers={['Facility Name', 'Locality', 'State', 'Type']}>
+                                        {newImciFacilities.filter(f => !f.isHospital).map((facility, index) => (
+                                            <tr key={`phc-${index}`} className="hover:bg-gray-50">
+                                                <td className="p-2 border font-semibold">{facility.name}</td>
+                                                <td className="p-2 border">{facility.locality}</td>
+                                                <td className="p-2 border">{facility.state}</td>
+                                                <td className="p-2 border text-gray-600 text-sm">PHC</td>
+                                            </tr>
+                                        ))}
+                                    </Table>
+                                </div>
+                            ) : (
+                                <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 text-center text-sm mb-4">No new PHC facilities introduced.</div>
+                            )}
+
+                            {newImciFacilities.filter(f => f.isHospital).length > 0 && (
+                                <div className="mt-6">
+                                    <h4 className="text-lg font-semibold text-amber-800 mb-2">Hospitals</h4>
+                                    <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded border border-gray-200 mb-3 font-medium">
+                                        * Note: Hospitals are listed below for reference but are NOT calculated in the PHC coverage increase metrics.
+                                    </p>
+                                    <div className="overflow-x-auto">
+                                        <Table headers={['Facility Name', 'Locality', 'State', 'Type']}>
+                                            {newImciFacilities.filter(f => f.isHospital).map((facility, index) => (
+                                                <tr key={`hosp-${index}`} className="hover:bg-gray-50">
+                                                    <td className="p-2 border font-semibold">{facility.name}</td>
+                                                    <td className="p-2 border">{facility.locality}</td>
+                                                    <td className="p-2 border">{facility.state}</td>
+                                                    <td className="p-2 border text-gray-600 text-sm">Hospital</td>
+                                                </tr>
+                                            ))}
+                                        </Table>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </Card>
                 )}
@@ -1052,9 +1217,45 @@ export function CourseReportView({
                                 <div id="daily-case-table-card" className="relative p-2">
                                     {!isSharedView && <button onClick={() => handleCopyAsImage('daily-case-table-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
                                     <h3 className="text-xl font-bold mb-4">Daily Case Performance</h3>
-                                    <Table headers={['Day', ...groupsWithData, 'Total']}>
-                                        {dailyCaseTableData.length > 0 ? (<>{dailyCaseTableData.map((row) => (<tr key={row.day} className="hover:bg-gray-50"><td className="p-2 border font-bold">{row.day}</td>{groupsWithData.map(group => (<td key={group} className={`p-2 border text-center ${getScoreColorClass(row[group].pct)}`}>{row[group].display}</td>))}<td className={`p-2 border text-center font-bold ${getScoreColorClass(row.totalDayPct)}`}>{row.totalDisplay}</td></tr>))}<tr className="hover:bg-gray-50 font-bold"><td className="p-2 border">Total</td>{groupsWithData.map(group => { const tCorrect = groupCaseTotals[group].totalCases.correct; const tTotal = groupCaseTotals[group].totalCases.total; const pct = calcPct(tCorrect, tTotal); return (<td key={group} className={`p-2 border text-center ${getScoreColorClass(pct)}`}>{tTotal} ({fmtPct(pct)})</td>); })}<td className={`p-2 border text-center ${getScoreColorClass(calcPct(grandTotalCasesCorrect, grandTotalCasesTotal))}`}>{grandTotalCasesTotal} ({fmtPct(calcPct(grandTotalCasesCorrect, grandTotalCasesTotal))})</td></tr></>) : (<tr><td colSpan={groupsWithData.length + 2}><EmptyState message="No daily case data available." /></td></tr>)}
-                                    </Table>
+                                    <div className="overflow-x-auto">
+                                        <Table headers={['Day', ...groupsWithData, 'Total']}>
+                                            {dailyCaseTableData.length > 0 ? (
+                                                <>
+                                                    {dailyCaseTableData.map((row) => (
+                                                        <tr key={row.day} className="hover:bg-gray-50">
+                                                            <td className="p-2 border font-bold">{row.day}</td>
+                                                            {groupsWithData.map(group => (
+                                                                <td key={group} className={`p-2 border text-center ${getScoreColorClass(row[group].pct)}`}>{row[group].display}</td>
+                                                            ))}
+                                                            <td className={`p-2 border text-center font-bold ${getScoreColorClass(row.totalDayPct)}`}>{row.totalDisplay}</td>
+                                                        </tr>
+                                                    ))}
+                                                    <tr className="hover:bg-gray-50 font-bold">
+                                                        <td className="p-2 border">Total</td>
+                                                        {groupsWithData.map(group => { 
+                                                            const tCorrect = groupCaseTotals[group].totalCases.correct; 
+                                                            const tTotal = groupCaseTotals[group].totalCases.total; 
+                                                            const pct = calcPct(tCorrect, tTotal); 
+                                                            return (
+                                                                <td key={group} className={`p-2 border text-center ${getScoreColorClass(pct)}`}>
+                                                                    {tTotal} ({fmtPct(pct)})
+                                                                </td>
+                                                            ); 
+                                                        })}
+                                                        <td className={`p-2 border text-center ${getScoreColorClass(calcPct(grandTotalCasesCorrect, grandTotalCasesTotal))}`}>
+                                                            {grandTotalCasesTotal} ({fmtPct(calcPct(grandTotalCasesCorrect, grandTotalCasesTotal))})
+                                                        </td>
+                                                    </tr>
+                                                </>
+                                            ) : (
+                                                <tr>
+                                                    <td colSpan={groupsWithData.length + 2} className="p-8 text-center text-gray-500 bg-gray-50">
+                                                        No daily case data available.
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </Table>
+                                    </div>
                                 </div>
                             </Card>
                         )}
@@ -1063,9 +1264,45 @@ export function CourseReportView({
                                 <div id="daily-skill-table-card" className="relative p-2">
                                     {!isSharedView && <button onClick={() => handleCopyAsImage('daily-skill-table-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
                                     <h3 className="text-xl font-bold mb-4">Daily Skill Performance</h3>
-                                    <Table headers={['Day', ...groupsWithData, 'Total']}>
-                                        {dailySkillTableData.length > 0 ? (<>{dailySkillTableData.map((row) => (<tr key={row.day} className="hover:bg-gray-50"><td className="p-2 border font-bold">{row.day}</td>{groupsWithData.map(group => (<td key={group} className={`p-2 border text-center ${getScoreColorClass(row[group].pct)}`}>{row[group].display}</td>))}<td className={`p-2 border text-center font-bold ${getScoreColorClass(row.totalDayPct)}`}>{row.totalDisplay}</td></tr>))}<tr className="hover:bg-gray-50 font-bold"><td className="p-2 border">Total</td>{groupsWithData.map(group => { const tCorrect = groupSkillTotals[group].totalSkills.correct; const tTotal = groupSkillTotals[group].totalSkills.total; const pct = calcPct(tCorrect, tTotal); return (<td key={group} className={`p-2 border text-center ${getScoreColorClass(pct)}`}>{tTotal} ({fmtPct(pct)})</td>); })}<td className={`p-2 border text-center ${getScoreColorClass(calcPct(grandTotalSkillsCorrect, grandTotalSkillsTotal))}`}>{grandTotalSkillsCorrect} ({fmtPct(calcPct(grandTotalSkillsCorrect, grandTotalSkillsTotal))})</td></tr></>) : (<tr><td colSpan={groupsWithData.length + 2}><EmptyState message="No daily skill performance data available." /></td></tr>)}
-                                    </Table>
+                                    <div className="overflow-x-auto">
+                                        <Table headers={['Day', ...groupsWithData, 'Total']}>
+                                            {dailySkillTableData.length > 0 ? (
+                                                <>
+                                                    {dailySkillTableData.map((row) => (
+                                                        <tr key={row.day} className="hover:bg-gray-50">
+                                                            <td className="p-2 border font-bold">{row.day}</td>
+                                                            {groupsWithData.map(group => (
+                                                                <td key={group} className={`p-2 border text-center ${getScoreColorClass(row[group].pct)}`}>{row[group].display}</td>
+                                                            ))}
+                                                            <td className={`p-2 border text-center font-bold ${getScoreColorClass(row.totalDayPct)}`}>{row.totalDisplay}</td>
+                                                        </tr>
+                                                    ))}
+                                                    <tr className="hover:bg-gray-50 font-bold">
+                                                        <td className="p-2 border">Total</td>
+                                                        {groupsWithData.map(group => { 
+                                                            const tCorrect = groupSkillTotals[group].totalSkills.correct; 
+                                                            const tTotal = groupSkillTotals[group].totalSkills.total; 
+                                                            const pct = calcPct(tCorrect, tTotal); 
+                                                            return (
+                                                                <td key={group} className={`p-2 border text-center ${getScoreColorClass(pct)}`}>
+                                                                    {tTotal} ({fmtPct(pct)})
+                                                                </td>
+                                                            ); 
+                                                        })}
+                                                        <td className={`p-2 border text-center ${getScoreColorClass(calcPct(grandTotalSkillsCorrect, grandTotalSkillsTotal))}`}>
+                                                            {grandTotalSkillsCorrect} ({fmtPct(calcPct(grandTotalSkillsCorrect, grandTotalSkillsTotal))})
+                                                        </td>
+                                                    </tr>
+                                                </>
+                                            ) : (
+                                                <tr>
+                                                    <td colSpan={groupsWithData.length + 2} className="p-8 text-center text-gray-500 bg-gray-50">
+                                                        No daily skill performance data available.
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </Table>
+                                    </div>
                                 </div>
                             </Card>
                         )}
@@ -1080,13 +1317,15 @@ export function CourseReportView({
                             {showCaseColumns && (
                                 <div id="participant-summary-table" className="mb-6">
                                     <h4 className="text-md font-semibold mb-2 text-gray-700">Participant Score Summary</h4>
-                                    <table className="w-full border-collapse border border-gray-300 text-center">
-                                        <thead><tr><th className="p-2 border font-semibold bg-gray-100 text-left">Score Type</th>{practicalScoreCategories.map(cat => (<th key={cat.key} className={`p-2 border font-semibold ${cat.colorClass}`}>{cat.name}</th>))}</tr></thead>
-                                        <tbody>
-                                            <tr><td className="p-2 border font-semibold text-left">Practical Case Score</td>{practicalScoreCategories.map(cat => (<td key={cat.key} className="p-2 border text-2xl font-bold">{caseCorrectnessDistribution[cat.key] || 0}</td>))}</tr>
-                                            {showTestScoreColumns && <tr><td className="p-2 border font-semibold text-left">Written Test Score (average improvement)</td>{correctnessCategories.map(cat => (<td key={cat.key} className="p-2 border text-2xl font-bold">{avgImprovementDistribution[cat.key] || 0}</td>))}</tr>}
-                                        </tbody>
-                                    </table>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full border-collapse border border-gray-300 text-center">
+                                            <thead><tr><th className="p-2 border font-semibold bg-gray-100 text-left">Score Type</th>{practicalScoreCategories.map(cat => (<th key={cat.key} className={`p-2 border font-semibold ${cat.colorClass}`}>{cat.name}</th>))}</tr></thead>
+                                            <tbody>
+                                                <tr><td className="p-2 border font-semibold text-left">Practical Case Score</td>{practicalScoreCategories.map(cat => (<td key={cat.key} className="p-2 border text-2xl font-bold">{caseCorrectnessDistribution[cat.key] || 0}</td>))}</tr>
+                                                {showTestScoreColumns && <tr><td className="p-2 border font-semibold text-left">Written Test Score (average improvement)</td>{correctnessCategories.map(cat => (<td key={cat.key} className="p-2 border text-2xl font-bold">{avgImprovementDistribution[cat.key] || 0}</td>))}</tr>}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             )}
 
@@ -1097,26 +1336,75 @@ export function CourseReportView({
                                 </div>
                             )}
 
-                            <Table headers={tableHeaders}>
-                                {filteredParticipants.length === 0 ? (<tr><td colSpan={tableHeaders.length}><EmptyState message="No participants match the selected filter(s)." /></td></tr>) : (filteredParticipants.map((p, index) => {
-                                        const preScore = Number(p.pre_test_score); const postScore = Number(p.post_test_score);
-                                        const increase = (!isNaN(preScore) && preScore > 0 && !isNaN(postScore) && postScore > 0) ? ((postScore - preScore) / preScore) * 100 : null;
-                                        const category = getAvgImprovementCategory(p.pre_test_score, p.post_test_score);
-                                        const increaseDisplay = isNaN(increase) || increase === null ? 'N/A' : `${increase.toFixed(1)}%`;
-                                        return (
-                                            <tr key={p.id} className={`transition-colors duration-150 ${!isSharedView ? 'cursor-pointer hover:bg-gray-200' : ''}`} onClick={!isSharedView ? () => onViewParticipantReport(p.id) : undefined}>
-                                                <td className="p-2 border text-center">{index + 1}</td><td className="p-2 border font-semibold">{p.name}</td>
-                                                {showCaseColumns && (<><td className={`p-2 border text-center`}>{p.total_cases_seen}</td>{!isSharedView && <td className={`p-2 border text-center font-bold ${getScoreColorClass(p.correctness_percentage)}`}>{getCaseCorrectnessName(p.correctness_percentage)}</td>}</>)}
-                                                {showTestScoreColumns && (<><td className="p-2 border text-center">{fmtDecimal(preScore)}</td><td className="p-2 border text-center">{fmtDecimal(postScore)}</td><td className={`p-2 border text-center`}>{increaseDisplay}</td><td className={`p-2 border text-center ${category.className}`}>{category.name}</td></>)}
-                                            </tr>
-                                        );
-                                    })
-                                )}
-                            </Table>
+                            <div className="overflow-x-auto">
+                                <Table headers={tableHeaders}>
+                                    {filteredParticipants.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={tableHeaders.length} className="p-8 text-center text-gray-500 bg-gray-50">
+                                                No participants match the selected filter(s).
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        filteredParticipants.map((p, index) => {
+                                            const preScore = Number(p.pre_test_score); const postScore = Number(p.post_test_score);
+                                            const increase = (!isNaN(preScore) && preScore > 0 && !isNaN(postScore) && postScore > 0) ? ((postScore - preScore) / preScore) * 100 : null;
+                                            const category = getAvgImprovementCategory(p.pre_test_score, p.post_test_score);
+                                            const increaseDisplay = isNaN(increase) || increase === null ? 'N/A' : `${increase.toFixed(1)}%`;
+                                            return (
+                                                <tr key={p.id} className={`transition-colors duration-150 ${!isSharedView ? 'cursor-pointer hover:bg-gray-200' : ''}`} onClick={!isSharedView ? () => onViewParticipantReport(p.id) : undefined}>
+                                                    <td className="p-2 border text-center">{index + 1}</td><td className="p-2 border font-semibold">{p.name}</td>
+                                                    {showCaseColumns && (<><td className={`p-2 border text-center`}>{p.total_cases_seen}</td>{!isSharedView && <td className={`p-2 border text-center font-bold ${getScoreColorClass(p.correctness_percentage)}`}>{getCaseCorrectnessName(p.correctness_percentage)}</td>}</>)}
+                                                    {showTestScoreColumns && (<><td className="p-2 border text-center">{fmtDecimal(preScore)}</td><td className="p-2 border text-center">{fmtDecimal(postScore)}</td><td className={`p-2 border text-center`}>{increaseDisplay}</td><td className={`p-2 border text-center ${category.className}`}>{category.name}</td></>)}
+                                                </tr>
+                                            );
+                                        })
+                                    )}
+                                </Table>
+                            </div>
                         </div>
                     </Card>
                 )}
             </div>
+
+            {/* Modal for Historical Coverage Preview */}
+            <Modal isOpen={isCoverageModalOpen} onClose={() => setIsCoverageModalOpen(false)} title="Historical Coverage Baseline" size="lg">
+                <div className="p-6 space-y-4">
+                    {isPreviewLoading ? (
+                        <div className="flex flex-col items-center justify-center p-8">
+                            <Spinner size="lg" />
+                            <p className="mt-4 text-sky-700 font-semibold">Calculating historical baseline coverage from facility snapshots...</p>
+                        </div>
+                    ) : historicalCoveragePreview ? (
+                        <div>
+                            <div className="bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-lg mb-6 text-sm">
+                                <strong>Retrieved At:</strong> {new Date(historicalCoveragePreview.retrievedAt).toLocaleString()}
+                                <br /><br />
+                                Please review the calculated baseline coverage below. Confirming will permanently save this snapshot to the course.
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4 mb-4">
+                                <div className="p-4 bg-gray-50 rounded border text-center">
+                                    <div className="text-sm font-semibold text-gray-600 mb-1">National Coverage Before</div>
+                                    <div className="text-3xl font-bold text-gray-800">{fmtPct(historicalCoveragePreview.nationalCov.covBefore)}</div>
+                                </div>
+                                <div className="p-4 bg-sky-50 rounded border text-center">
+                                    <div className="text-sm font-semibold text-sky-700 mb-1">National Coverage After</div>
+                                    <div className="text-3xl font-bold text-sky-900">{fmtPct(historicalCoveragePreview.nationalCov.covAfter)}</div>
+                                </div>
+                            </div>
+                            
+                            <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+                                <Button variant="secondary" onClick={() => setIsCoverageModalOpen(false)} disabled={isSavingCoverage}>Cancel</Button>
+                                <Button onClick={handleConfirmCoverage} disabled={isSavingCoverage}>
+                                    {isSavingCoverage ? <Spinner size="sm" /> : "Confirm & Save"}
+                                </Button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="text-center p-4 text-red-500">Failed to load preview.</div>
+                    )}
+                </div>
+            </Modal>
 
             {/* Embedded ShareModal controlled by local state */}
             {!isSharedView && (
