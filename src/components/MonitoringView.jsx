@@ -84,6 +84,10 @@ export function ObservationView({ course, participant, participants, onChangePar
     const [eencScenario, setEencScenario] = useState('breathing');
     const [isSaving, setIsSaving] = useState(false);
     
+    // --- MODIFICATION: Added states for gating flow ---
+    const [showSetupModal, setShowSetupModal] = useState(true);
+    const [showGrid, setShowGrid] = useState(false);
+    
     // --- MODIFICATION: Changed to modal state ---
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     
@@ -105,6 +109,8 @@ export function ObservationView({ course, participant, participants, onChangePar
         const newBuffer = {};
         caseObs.forEach(o => { newBuffer[`${o.domain}|${o.item_recorded}`] = o.item_correct; });
         setBuffer(newBuffer);
+        setShowSetupModal(false);
+        setShowGrid(true);
         window.scrollTo(0, 0);
     };
 
@@ -298,65 +304,111 @@ export function ObservationView({ course, participant, participants, onChangePar
                     </div>
                     <h3 className="text-xl font-bold text-gray-800 mb-2">Case Saved Successfully!</h3>
                     <p className="text-gray-600 mb-6">The clinical observation has been recorded.</p>
-                    <Button onClick={() => setShowSuccessModal(false)} className="w-full bg-green-600 hover:bg-green-700 border-green-600">
+                    <Button onClick={() => { setShowSuccessModal(false); setShowGrid(false); setShowSetupModal(true); }} className="w-full bg-green-600 hover:bg-green-700 border-green-600">
                         Continue to Next Case
                     </Button>
                 </div>
             </Modal>
             {/* --- END MODIFICATION --- */}
 
-            <Card className="-mt-3 p-4">
-                {/* --- MODIFICATION: Changed grid columns for mobile-first layout --- */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                    
-                    {/* --- MODIFICATION: Conditionally hide participant selector --- */}
-                    {!isPublicView && (
-                        <FormGroup label="Select participant" className="sm:col-span-2 md:col-span-2 lg:col-span-3 xl:col-span-2">
-                            <Select value={participant.id} onChange={(e) => onChangeParticipant(e.target.value)}>
-                                {participants.map(p => <option key={p.id} value={p.id}>{p.name} — {p.group}</option>)}
+            {/* --- NEW SETUP MODAL --- */}
+            <Modal isOpen={showSetupModal} onClose={() => setShowSetupModal(false)} title="Case Setup Configuration" size="lg">
+                <div className="p-4">
+                    <div className="bg-sky-50 p-4 rounded border border-sky-100 mb-5">
+                        <h4 className="font-semibold text-sky-800 mb-2">Previous Cases for {participant?.name}</h4>
+                        {cases.length === 0 ? (
+                            <p className="text-sm text-sky-700">No cases submitted yet.</p>
+                        ) : (
+                            <div className="text-sm text-sky-700 max-h-32 overflow-y-auto">
+                                <ul className="list-disc pl-5">
+                                    {cases.slice().sort((a,b) => (b.day_of_course - a.day_of_course) || (b.case_serial - a.case_serial)).map(c => (
+                                        <li key={c.id}>
+                                            <span className="font-semibold">Day {c.day_of_course}</span> (Serial: {c.case_serial}) - {c.encounter_date}
+                                            {isImnci && ` - ${c.setting} (${c.age_group === 'LT2M' ? '0-59d' : '2-59m'})`}
+                                            {isEenc && ` - ${c.age_group.replace('EENC_', '')}`}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {!isPublicView && (
+                            <FormGroup label="Select participant" className="sm:col-span-2">
+                                <Select value={participant.id} onChange={(e) => onChangeParticipant(e.target.value)}>
+                                    {participants.map(p => <option key={p.id} value={p.id}>{p.name} — {p.group}</option>)}
+                                </Select>
+                            </FormGroup>
+                        )}
+                        {isImnci && <FormGroup label="Setting"><Select value={setting} onChange={(e) => setSetting(e.target.value)}><option value="OPD">Out-patient</option><option value="IPD">In-patient</option></Select></FormGroup>}
+                        {isImnci && <FormGroup label="Age Band">
+                            <Select value={age} onChange={(e) => { setAge(e.target.value); if (editingCase) { setBuffer({}); } }}>
+                                <option value="GE2M_LE5Y">Sick Child (2-59 mos)</option>
+                                <option value="LT2M">Young Infant (0-59 days)</option>
                             </Select>
+                        </FormGroup>}
+                        {isEenc && <FormGroup label="EENC Scenario"><Select value={eencScenario} onChange={(e) => setEencScenario(e.target.value)} disabled={!!editingCase}><option value="breathing">Breathing Baby</option><option value="not_breathing">Not Breathing Baby</option></Select></FormGroup>}
+                        <FormGroup label="Encounter Date"><Input type="date" value={encounterDate} onChange={(e) => setEncounterDate(e.target.value)} /></FormGroup>
+                        <FormGroup label="Course Day"><Select value={dayOfCourse} onChange={(e) => setDayOfCourse(Number(e.target.value))}>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>{d}</option>)}</Select></FormGroup>
+                        <FormGroup label={isImnci && age === 'LT2M' ? "Age (wks)" : "Age (mos)"}>
+                            <Input type="number" value={caseAgeMonths} onChange={(e) => setCaseAgeMonths(e.target.value === '' ? '' : Number(e.target.value))} placeholder="Optional" />
                         </FormGroup>
-                    )}
-                    {/* --- END MODIFICATION --- */}
-
-                    {isImnci && <FormGroup label="Setting"><Select value={setting} onChange={(e) => setSetting(e.target.value)}><option value="OPD">Out-patient</option><option value="IPD">In-patient</option></Select></FormGroup>}
-                    {/* --- MODIFICATION: Adjusted col-span for clarity, though not strictly needed --- */}
-                    {isImnci && <FormGroup label="Age Band" className="col-span-1">
-                        <Select value={age} onChange={(e) => { setAge(e.target.value); if (editingCase) { setBuffer({}); } }}>
-                            <option value="GE2M_LE5Y">Sick Child (2-59 mos)</option>
-                            <option value="LT2M">Young Infant (0-59 days)</option>
-                        </Select>
-                    </FormGroup>}
-                    {isEenc && <FormGroup label="EENC Scenario"><Select value={eencScenario} onChange={(e) => setEencScenario(e.target.value)} disabled={!!editingCase}><option value="breathing">Breathing Baby</option><option value="not_breathing">Not Breathing Baby</option></Select></FormGroup>}
-                    <FormGroup label="Encounter Date"><Input type="date" value={encounterDate} onChange={(e) => setEncounterDate(e.target.value)} /></FormGroup>
-                    <FormGroup label="Course Day"><Select value={dayOfCourse} onChange={(e) => setDayOfCourse(Number(e.target.value))}>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>{d}</option>)}</Select></FormGroup>
-                    <FormGroup label={isImnci && age === 'LT2M' ? "Age (wks)" : "Age (mos)"}>
-                        <Input type="number" value={caseAgeMonths} onChange={(e) => setCaseAgeMonths(e.target.value === '' ? '' : Number(e.target.value))} placeholder="Optional" />
-                    </FormGroup>
+                    </div>
                 </div>
-            </Card>
+                <div className="p-4 border-t border-gray-200 flex justify-end gap-2 bg-gray-50 rounded-b-lg">
+                    <Button variant="secondary" onClick={() => { setShowSetupModal(false); setShowGrid(false); }}>Close</Button>
+                    <Button onClick={() => { setShowSetupModal(false); setShowGrid(true); }}>Confirm & Start</Button>
+                </div>
+            </Modal>
 
-            <Card className="p-4">
-                <h3 className="text-lg font-semibold mb-2">{editingCase ? `Editing Case #${editingCase.case_serial}` : 'New Case Observation'}</h3>
+            {/* Main Action Bar (when grid is not shown) */}
+            {!showGrid && !loading && (
+                <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-slate-200 mb-4">
+                    <div>
+                        <h3 className="text-lg font-bold text-slate-800">Ready to monitor?</h3>
+                        <p className="text-sm text-slate-500">Start a new observation case for {participant.name}.</p>
+                    </div>
+                    <Button onClick={() => { setBuffer({}); setEditingCase(null); setShowSetupModal(true); }}>
+                        + Start New Case
+                    </Button>
+                </div>
+            )}
+
+            {showGrid && (
+            <Card className="p-4 mb-4">
+                <div className="flex justify-between items-start mb-4 bg-slate-50 p-3 rounded-md border border-slate-200">
+                    <div>
+                        <h3 className="text-lg font-semibold">{editingCase ? `Editing Case #${editingCase.case_serial}` : 'New Case Observation'}</h3>
+                        <p className="text-sm text-slate-600 mt-1">
+                            <span className="font-semibold">Day:</span> {dayOfCourse} &bull; 
+                            <span className="font-semibold ml-2">Date:</span> {encounterDate}
+                            {isImnci && <>&bull; <span className="font-semibold ml-2">Setting:</span> {setting} &bull; <span className="font-semibold ml-2">Age:</span> {age === 'LT2M' ? '0-59d' : '2-59m'}</>}
+                            {isEenc && <>&bull; <span className="font-semibold ml-2">Scenario:</span> {eencScenario === 'breathing' ? 'Breathing' : 'Not Breathing'}</>}
+                        </p>
+                    </div>
+                    <Button variant="secondary" size="sm" onClick={() => setShowSetupModal(true)}>
+                        Edit Setup
+                    </Button>
+                </div>
+
                 <p className="text-sm text-gray-600 mb-3">Click a domain title to expand/collapse. Select an action for each item.</p>
-                {/* --- MODIFICATION: Removed overflow-x-auto from this wrapper. It will be added inside the grid components. --- */}
                 <div className="rounded-lg border border-slate-300">
                     {isImnci && <ImnciMonitoringGrid age={age} buffer={buffer} toggle={toggle} />}
                     {isEenc && <EencMonitoringGrid scenario={eencScenario} buffer={buffer} toggle={toggle} />}
                     {isEtat && <EtatMonitoringGrid buffer={buffer} toggle={toggle} />}
-                    {/* --- MODIFICATION: Add ICCM monitoring grid --- */}
                     {isIccm && <IccmMonitoringGrid buffer={buffer} toggle={toggle} />}
                 </div>
-                {/* This button layout is already mobile-friendly (flex-col -> sm:flex-row) */}
                 <div className="flex flex-col sm:flex-row gap-3 justify-end mt-4 border-t pt-4">
                     <Button onClick={submitCase} className="w-full sm:w-auto" disabled={isSaving}>
                         {isSaving ? 'Saving...' : (editingCase ? 'Update Case' : 'Submit Case')}
                     </Button>
-                    <Button variant="secondary" onClick={() => { setBuffer({}); setEditingCase(null); setCaseAgeMonths(''); }} className="w-full sm:w-auto" disabled={isSaving}>
-                        {editingCase ? 'Cancel Edit' : 'Start New Case'}
+                    <Button variant="secondary" onClick={() => { setBuffer({}); setEditingCase(null); setCaseAgeMonths(''); setShowGrid(false); }} className="w-full sm:w-auto" disabled={isSaving}>
+                        {editingCase ? 'Cancel Edit' : 'Discard Case'}
                     </Button>
                 </div>
             </Card>
+            )}
             
             {/* --- MODIFICATION: Show submitted cases list (unconditionally) --- */}
             {loading ? <Card><Spinner /></Card> : <SubmittedCases course={course} participant={participant} observations={observations} cases={cases} onEditCase={(caseToEdit) => handleEditCase(caseToEdit, observations)} onDeleteCase={handleDeleteCase} />}
@@ -365,17 +417,15 @@ export function ObservationView({ course, participant, participants, onChangePar
     );
 }
 
+
 function ImnciMonitoringGrid({ age, buffer, toggle }) {
-    // --- MODIFICATION: Use useEffect to set default expanded domains and update on age change ---
     const [expandedDomains, setExpandedDomains] = useState(new Set());
     const allDomains = DOMAINS_BY_AGE_IMNCI[age]; 
 
     useEffect(() => {
         const defaultDomains = DOMAINS_BY_AGE_IMNCI[age] || [];
-        // Expand the first two domains
         setExpandedDomains(new Set(defaultDomains.slice(0, 2)));
-    }, [age]); // Re-run when age changes
-    // --- END MODIFICATION ---
+    }, [age]);
 
     const toggleDomain = (domain) => {
         setExpandedDomains(prev => {
@@ -385,83 +435,69 @@ function ImnciMonitoringGrid({ age, buffer, toggle }) {
             return newSet;
         });
     };
-    
-    // Define the options for the toggle
+
     const toggleOptions = [
         ['Correct', 1, 'bg-green-600 border-green-600'],
         ['Incorrect', 0, 'bg-red-600 border-red-600']
     ];
 
     return (
-        <>
-            {/* This header is now outside the scrollable area */}
-            <div className="flex gap-2 p-2 bg-slate-50 border-b border-slate-300">
-                <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set(allDomains))}>Expand All</Button>
-                <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set())}>Collapse All</Button>
+        <div className="space-y-4">
+            <div className="flex gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg shadow-sm justify-between items-center">
+                <span className="text-sm font-medium text-slate-600 hidden sm:inline-block">Click domains to expand/collapse</span>
+                <div className="flex gap-2">
+                    <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set(allDomains))}>Expand All</Button>
+                    <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set())}>Collapse All</Button>
+                </div>
             </div>
 
-            {/* --- MODIFICATION: Added wrapper with overflow-x-auto to make only the table scroll --- */}
-            <div className="overflow-x-auto">
-                {/* --- MODIFICATION: Added w-full to ensure table fills container or overflows --- */}
-                <table className="text-sm border-collapse mx-auto w-full">
-                    <thead className="bg-slate-50 text-slate-800">
-                        {/* --- MODIFICATION: Changed to a single column header --- */}
-                        <tr>
-                            <th className="p-1 text-left font-semibold border border-slate-300">Domain / Classification / Action</th>
-                        </tr>
-                    </thead>
-                    {allDomains.map(d => {
-                        const isExpanded = expandedDomains.has(d);
-                        const list = getClassListImnci(age, d) || [];
-                        const title = DOMAIN_LABEL_IMNCI[d] || d;
+            <div className="space-y-3">
+                {allDomains.map(d => {
+                    const isExpanded = expandedDomains.has(d);
+                    const list = getClassListImnci(age, d) || [];
+                    const title = DOMAIN_LABEL_IMNCI[d] || d;
 
-                        return (
-                            // --- MODIFICATION: Removed domain separation border ---
-                            <tbody key={d}>
-                                {/* --- MODIFICATION: Changed bg/hover back to sky blue --- */}
-                                <tr onClick={() => toggleDomain(d)} className="cursor-pointer hover:bg-sky-200 bg-sky-100">
-                                    {/* --- MODIFICATION: Changed text back to sky blue --- */}
-                                    <td className="p-2 text-base font-bold text-sky-900 border border-slate-300">
-                                        {/* --- MODIFICATION: Removed text-white --- */}
-                                        <span className="inline-block w-5 text-center">{isExpanded ? '▼' : '►'}</span>
-                                        {title}
-                                    </td>
-                                </tr>
-                                {isExpanded && (list.length > 0 ? list : ["(no items)"]).map((cls, i) => {
-                                    const k = `${d}|${cls}`;
-                                    const mark = buffer[k];
-                                    return (
-                                        <tr key={`${d}-${i}`} className="hover:bg-sky-50">
-                                            {/* --- MODIFICATION: Combined text and action into one <td> using flex --- */}
-                                            <td className="p-1 pl-6 border border-slate-300">
-                                                {/* --- MODIFICATION: Changed to flex-col/sm:flex-row for mobile responsiveness --- */}
-                                                <div className="flex flex-col sm:flex-row justify-between sm:items-center w-full gap-2">
-                                                    {/* --- MODIFICATION: Made classification text bold --- */}
-                                                    <span className="break-words font-bold">{cls}</span>
-                                                    <ActionToggle
-                                                        options={toggleOptions}
-                                                        currentValue={mark}
-                                                        onClick={(value) => toggle(d, cls, value)}
-                                                    />
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        );
-                    })}
-                </table>
+                    return (
+                        <div key={d} className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden transition-all duration-200">
+                            <button 
+                                type="button"
+                                onClick={() => toggleDomain(d)} 
+                                className={`w-full flex items-center justify-between p-4 transition-colors ${isExpanded ? 'bg-sky-50 border-b border-sky-100' : 'bg-white hover:bg-slate-50'}`}
+                            >
+                                <h4 className="text-base font-bold text-slate-800 text-left">{title}</h4>
+                                <svg className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </button>
+                            
+                            {isExpanded && (
+                                <div className="divide-y divide-slate-100 bg-white">
+                                    {(list.length > 0 ? list : ["(no items)"]).map((item, i) => {
+                                        const k = `${d}|${item}`;
+                                        const mark = buffer[k];
+                                        return (
+                                            <div key={`${d}-${i}`} className="flex flex-col sm:flex-row justify-between sm:items-center p-3 sm:px-5 hover:bg-sky-50/50 transition-colors gap-3 group">
+                                                <span className="font-medium text-slate-700 break-words group-hover:text-slate-900">{item}</span>
+                                                <ActionToggle
+                                                    options={toggleOptions}
+                                                    currentValue={mark}
+                                                    onClick={(value) => toggle(d, item, value)}
+                                                />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
             </div>
-        </>
+        </div>
     );
 }
+
 
 function EtatMonitoringGrid({ buffer, toggle }) {
     const allDomains = ETAT_DOMAINS; 
-    // --- MODIFICATION: Changed initial state to expand first two domains ---
     const [expandedDomains, setExpandedDomains] = useState(new Set(allDomains.slice(0, 2)));
-    // --- END MODIFICATION ---
 
     const toggleDomain = (domain) => {
         setExpandedDomains(prev => {
@@ -472,77 +508,64 @@ function EtatMonitoringGrid({ buffer, toggle }) {
         });
     };
 
-    // Define the options for the toggle
     const toggleOptions = [
         ['Correct', 1, 'bg-green-600 border-green-600'],
         ['Incorrect', 0, 'bg-red-600 border-red-600']
     ];
 
     return (
-        <>
-            {/* This header is now outside the scrollable area */}
-            <div className="flex gap-2 p-2 bg-slate-50 border-b border-slate-300">
-                <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set(allDomains))}>Expand All</Button>
-                <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set())}>Collapse All</Button>
+        <div className="space-y-4">
+            <div className="flex gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg shadow-sm justify-between items-center">
+                <span className="text-sm font-medium text-slate-600 hidden sm:inline-block">Click domains to expand/collapse</span>
+                <div className="flex gap-2">
+                    <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set(allDomains))}>Expand All</Button>
+                    <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set())}>Collapse All</Button>
+                </div>
             </div>
 
-            {/* --- MODIFICATION: Added wrapper with overflow-x-auto to make only the table scroll --- */}
-            <div className="overflow-x-auto">
-                {/* --- MODIFICATION: Added w-full to ensure table fills container or overflows --- */}
-                <table className="text-sm border-collapse mx-auto w-full">
-                    <thead className="bg-slate-50 text-slate-800">
-                        {/* --- MODIFICATION: Changed to a single column header --- */}
-                        <tr>
-                            <th className="p-1 text-left font-semibold border border-slate-300">Domain / Skill / Action</th>
-                        </tr>
-                    </thead>
-                    {allDomains.map(d => {
-                        const isExpanded = expandedDomains.has(d);
-                        const skills = SKILLS_ETAT[d];
-                        const title = ETAT_DOMAIN_LABEL[d] || d;
+            <div className="space-y-3">
+                {allDomains.map(d => {
+                    const isExpanded = expandedDomains.has(d);
+                    const skills = SKILLS_ETAT[d];
+                    const title = ETAT_DOMAIN_LABEL[d] || d;
 
-                        return (
-                            // --- MODIFICATION: Removed domain separation border ---
-                            <tbody key={d}>
-                                {/* --- MODIFICATION: Changed bg/hover back to sky blue --- */}
-                                <tr onClick={() => toggleDomain(d)} className="cursor-pointer hover:bg-sky-200 bg-sky-100">
-                                    {/* --- MODIFICATION: Changed text back to sky blue --- */}
-                                    <td className="p-2 text-base font-bold text-sky-900 border border-slate-300">
-                                       {/* --- MODIFICATION: Removed text-white --- */}
-                                        <span className="inline-block w-5 text-center">{isExpanded ? '▼' : '►'}</span>
-                                        {title}
-                                    </td>
-                                </tr>
-                                {isExpanded && skills.map((skill, i) => {
-                                    const k = `${d}|${skill}`;
-                                    const mark = buffer[k];
-                                    return (
-                                        <tr key={`${d}-${i}`} className="hover:bg-sky-50">
-                                            {/* --- MODIFICATION: Combined text and action into one <td> using flex --- */}
-                                            <td className="p-1 pl-6 border border-slate-300">
-                                                {/* --- MODIFICATION: Changed to flex-col/sm:flex-row for mobile responsiveness --- */}
-                                                <div className="flex flex-col sm:flex-row justify-between sm:items-center w-full gap-2">
-                                                    {/* --- MODIFICATION: Made skill text bold --- */}
-                                                    <span className="break-words font-bold">{skill}</span>
-                                                    <ActionToggle
-                                                        options={toggleOptions}
-                                                        currentValue={mark}
-                                                        onClick={(value) => toggle(d, skill, value)}
-                                                    />
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-
-                                })}
-                            </tbody>
-                        );
-                    })}
-                </table>
+                    return (
+                        <div key={d} className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden transition-all duration-200">
+                            <button 
+                                type="button"
+                                onClick={() => toggleDomain(d)} 
+                                className={`w-full flex items-center justify-between p-4 transition-colors ${isExpanded ? 'bg-sky-50 border-b border-sky-100' : 'bg-white hover:bg-slate-50'}`}
+                            >
+                                <h4 className="text-base font-bold text-slate-800 text-left">{title}</h4>
+                                <svg className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </button>
+                            
+                            {isExpanded && (
+                                <div className="divide-y divide-slate-100 bg-white">
+                                    {skills.map((item, i) => {
+                                        const k = `${d}|${item}`;
+                                        const mark = buffer[k];
+                                        return (
+                                            <div key={`${d}-${i}`} className="flex flex-col sm:flex-row justify-between sm:items-center p-3 sm:px-5 hover:bg-sky-50/50 transition-colors gap-3 group">
+                                                <span className="font-medium text-slate-700 break-words group-hover:text-slate-900">{item}</span>
+                                                <ActionToggle
+                                                    options={toggleOptions}
+                                                    currentValue={mark}
+                                                    onClick={(value) => toggle(d, item, value)}
+                                                />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
             </div>
-        </>
+        </div>
     );
 }
+
 
 function EencMonitoringGrid({ scenario, buffer, toggle }) {
     const isBreathing = scenario === 'breathing';
@@ -550,15 +573,12 @@ function EencMonitoringGrid({ scenario, buffer, toggle }) {
     const skillsMap = isBreathing ? SKILLS_EENC_BREATHING : SKILLS_EENC_NOT_BREATHING;
     const labelsMap = isBreathing ? EENC_DOMAIN_LABEL_BREATHING : EENC_DOMAIN_LABEL_NOT_BREATHING;
     
-    // --- MODIFICATION: Use useEffect to set default expanded domains and update on scenario change ---
     const [expandedDomains, setExpandedDomains] = useState(new Set());
     const allDomains = domains; 
 
     useEffect(() => {
-        // Expand the first two domains based on the current scenario
         setExpandedDomains(new Set(allDomains.slice(0, 2)));
-    }, [allDomains]); // Re-run when allDomains changes (which it will when scenario changes)
-    // --- END MODIFICATION ---
+    }, [allDomains]);
 
     const toggleDomain = (domain) => {
         setExpandedDomains(prev => {
@@ -569,7 +589,6 @@ function EencMonitoringGrid({ scenario, buffer, toggle }) {
         });
     };
 
-    // Define the options for the EENC toggle
     const toggleOptions = [
         ['Yes', 2, 'bg-green-600 border-green-600'],
         ['Partial', 1, 'bg-yellow-500 border-yellow-500'],
@@ -577,71 +596,59 @@ function EencMonitoringGrid({ scenario, buffer, toggle }) {
     ];
 
     return (
-        <>
-            {/* This header is now outside the scrollable area */}
-            <div className="flex gap-2 p-2 bg-slate-50 border-b border-slate-300">
-                <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set(allDomains))}>Expand All</Button>
-                <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set())}>Collapse All</Button>
+        <div className="space-y-4">
+            <div className="flex gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg shadow-sm justify-between items-center">
+                <span className="text-sm font-medium text-slate-600 hidden sm:inline-block">Click domains to expand/collapse</span>
+                <div className="flex gap-2">
+                    <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set(allDomains))}>Expand All</Button>
+                    <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set())}>Collapse All</Button>
+                </div>
             </div>
 
-            {/* --- MODIFICATION: Added wrapper with overflow-x-auto to make only the table scroll --- */}
-            <div className="overflow-x-auto">
-                {/* --- MODIFICATION: Added w-full to ensure table fills container or overflows --- */}
-                <table className="text-sm border-collapse mx-auto w-full">
-                    <thead className="bg-slate-50 text-slate-800">
-                        {/* --- MODIFICATION: Changed to a single column header --- */}
-                        <tr>
-                            <th className="p-1 text-left font-semibold border border-slate-300">Domain / Skill / Action</th>
-                        </tr>
-                    </thead>
-                    {allDomains.map(d => {
-                        const isExpanded = expandedDomains.has(d);
-                        const skills = skillsMap[d];
-                        const title = labelsMap[d] || d;
+            <div className="space-y-3">
+                {allDomains.map(d => {
+                    const isExpanded = expandedDomains.has(d);
+                    const skills = skillsMap[d];
+                    const title = labelsMap[d] || d;
 
-                        return (
-                            // --- MODIFICATION: Removed domain separation border ---
-                            <tbody key={d}>
-                                {/* --- MODIFICATION: Changed bg/hover back to sky blue --- */}
-                                <tr onClick={() => toggleDomain(d)} className="cursor-pointer hover:bg-sky-200 bg-sky-100">
-                                    {/* --- MODIFICATION: Changed text back to sky blue --- */}
-                                    <td className="p-2 text-base font-bold text-sky-900 border border-slate-300">
-                                        {/* --- MODIFICATION: Removed text-white --- */}
-                                        <span className="inline-block w-5 text-center">{isExpanded ? '▼' : '►'}</span>
-                                        {title}
-                                    </td>
-                                </tr>
-                                {isExpanded && skills.map((skill, i) => {
-                                    const k = `${d}|${skill.text}`;
-                                    const mark = buffer[k];
-                                    return (
-                                        <tr key={`${d}-${i}`} className="hover:bg-sky-50">
-                                            {/* --- MODIFICATION: Combined text and action into one <td> using flex --- */}
-                                            <td className="p-1 pl-6 border border-slate-300">
-                                                {/* --- MODIFICATION: Combined text and action into one <td> using flex --- */}
-                                                <div className="flex flex-col sm:flex-row justify-between sm:items-center w-full gap-2">
-                                                    {/* --- MODIFICATION: Made skill text bold --- */}
-                                                    <span className="break-words font-bold">{skill.text}</span>
-                                                    <ActionToggle
-                                                        options={toggleOptions}
-                                                        currentValue={mark}
-                                                        onClick={(value) => toggle(d, skill.text, value)}
-                                                    />
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        );
-                    })}
-                </table>
+                    return (
+                        <div key={d} className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden transition-all duration-200">
+                            <button 
+                                type="button"
+                                onClick={() => toggleDomain(d)} 
+                                className={`w-full flex items-center justify-between p-4 transition-colors ${isExpanded ? 'bg-sky-50 border-b border-sky-100' : 'bg-white hover:bg-slate-50'}`}
+                            >
+                                <h4 className="text-base font-bold text-slate-800 text-left">{title}</h4>
+                                <svg className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </button>
+                            
+                            {isExpanded && (
+                                <div className="divide-y divide-slate-100 bg-white">
+                                    {skills.map((item, i) => {
+                                        const k = `${d}|${item.text}`;
+                                        const mark = buffer[k];
+                                        return (
+                                            <div key={`${d}-${i}`} className="flex flex-col sm:flex-row justify-between sm:items-center p-3 sm:px-5 hover:bg-sky-50/50 transition-colors gap-3 group">
+                                                <span className="font-medium text-slate-700 break-words group-hover:text-slate-900">{item.text}</span>
+                                                <ActionToggle
+                                                    options={toggleOptions}
+                                                    currentValue={mark}
+                                                    onClick={(value) => toggle(d, item.text, value)}
+                                                />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
             </div>
-        </>
+        </div>
     );
 }
 
-// --- NEW COMPONENT: IccmMonitoringGrid (copied from EtatMonitoringGrid) ---
+
 function IccmMonitoringGrid({ buffer, toggle }) {
     const allDomains = ICCM_DOMAINS; 
     const [expandedDomains, setExpandedDomains] = useState(new Set(allDomains.slice(0, 2)));
@@ -655,73 +662,63 @@ function IccmMonitoringGrid({ buffer, toggle }) {
         });
     };
 
-    // Define the options for the toggle
     const toggleOptions = [
         ['Correct', 1, 'bg-green-600 border-green-600'],
         ['Incorrect', 0, 'bg-red-600 border-red-600']
     ];
 
     return (
-        <>
-            {/* This header is now outside the scrollable area */}
-            <div className="flex gap-2 p-2 bg-slate-50 border-b border-slate-300">
-                <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set(allDomains))}>Expand All</Button>
-                <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set())}>Collapse All</Button>
+        <div className="space-y-4">
+            <div className="flex gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg shadow-sm justify-between items-center">
+                <span className="text-sm font-medium text-slate-600 hidden sm:inline-block">Click domains to expand/collapse</span>
+                <div className="flex gap-2">
+                    <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set(allDomains))}>Expand All</Button>
+                    <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set())}>Collapse All</Button>
+                </div>
             </div>
 
-            {/* Added wrapper with overflow-x-auto to make only the table scroll */}
-            <div className="overflow-x-auto">
-                {/* Added w-full to ensure table fills container or overflows */}
-                <table className="text-sm border-collapse mx-auto w-full">
-                    <thead className="bg-slate-50 text-slate-800">
-                        {/* Changed to a single column header */}
-                        <tr>
-                            <th className="p-1 text-left font-semibold border border-slate-300">Domain / Skill / Action</th>
-                        </tr>
-                    </thead>
-                    {allDomains.map(d => {
-                        const isExpanded = expandedDomains.has(d);
-                        const skills = SKILLS_ICCM[d]; // <-- Use ICCM Skills
-                        const title = ICCM_DOMAIN_LABEL[d] || d; // <-- Use ICCM Labels
+            <div className="space-y-3">
+                {allDomains.map(d => {
+                    const isExpanded = expandedDomains.has(d);
+                    const skills = SKILLS_ICCM[d];
+                    const title = ICCM_DOMAIN_LABEL[d] || d;
 
-                        return (
-                            <tbody key={d}>
-                                <tr onClick={() => toggleDomain(d)} className="cursor-pointer hover:bg-sky-200 bg-sky-100">
-                                    <td className="p-2 text-base font-bold text-sky-900 border border-slate-300">
-                                        <span className="inline-block w-5 text-center">{isExpanded ? '▼' : '►'}</span>
-                                        {title}
-                                    </td>
-                                </tr>
-                                {isExpanded && skills.map((skill, i) => {
-                                    const k = `${d}|${skill}`;
-                                    const mark = buffer[k];
-                                    return (
-                                        <tr key={`${d}-${i}`} className="hover:bg-sky-50">
-                                            <td className="p-1 pl-6 border border-slate-300">
-                                                {/* Changed to flex-col/sm:flex-row for mobile responsiveness */}
-                                                <div className="flex flex-col sm:flex-row justify-between sm:items-center w-full gap-2">
-                                                    {/* Made skill text bold */}
-                                                    <span className="break-words font-bold">{skill}</span>
-                                                    <ActionToggle
-                                                        options={toggleOptions}
-                                                        currentValue={mark}
-                                                        onClick={(value) => toggle(d, skill, value)}
-                                                    />
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-
-                                })}
-                            </tbody>
-                        );
-                    })}
-                </table>
+                    return (
+                        <div key={d} className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden transition-all duration-200">
+                            <button 
+                                type="button"
+                                onClick={() => toggleDomain(d)} 
+                                className={`w-full flex items-center justify-between p-4 transition-colors ${isExpanded ? 'bg-sky-50 border-b border-sky-100' : 'bg-white hover:bg-slate-50'}`}
+                            >
+                                <h4 className="text-base font-bold text-slate-800 text-left">{title}</h4>
+                                <svg className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </button>
+                            
+                            {isExpanded && (
+                                <div className="divide-y divide-slate-100 bg-white">
+                                    {skills.map((item, i) => {
+                                        const k = `${d}|${item}`;
+                                        const mark = buffer[k];
+                                        return (
+                                            <div key={`${d}-${i}`} className="flex flex-col sm:flex-row justify-between sm:items-center p-3 sm:px-5 hover:bg-sky-50/50 transition-colors gap-3 group">
+                                                <span className="font-medium text-slate-700 break-words group-hover:text-slate-900">{item}</span>
+                                                <ActionToggle
+                                                    options={toggleOptions}
+                                                    currentValue={mark}
+                                                    onClick={(value) => toggle(d, item, value)}
+                                                />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
             </div>
-        </>
+        </div>
     );
 }
-// --- END NEW COMPONENT ---
 
 
 function SubmittedCases({ course, participant, observations, cases, onEditCase, onDeleteCase }) {

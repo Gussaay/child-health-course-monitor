@@ -23,7 +23,9 @@ import {
     listMasterPlans,
     listOperationalPlans,
     listUnitMeetings,
-    listIMNCIPatientRecords
+    listIMNCIPatientRecords,
+    fetchFacilitiesHistoryMultiDate, 
+    listSnapshotsForFacility      
 } from './data';
 import { useAuth } from './hooks/useAuth';
 
@@ -40,6 +42,56 @@ const getFilterKey = (filters) => {
 // --- 1-HOUR CACHE EXPIRATION CONSTANT ---
 const CACHE_TTL_MS = 1 * 60 * 60 * 1000; // 1 hour in milliseconds
 
+// --- STRICT TIMEOUT HELPER ---
+const fetchWithTimeout = async (promise, timeoutMs = 60000) => {
+    return Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Request timed out after " + timeoutMs + "ms")), timeoutMs))
+    ]);
+};
+
+// ============================================================================
+// --- NATIVE INDEXED-DB CACHE FOR STRICT INCREMENTAL UPDATES ---
+// ============================================================================
+const initDB = () => {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open('AppDataCache', 1);
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('apiData')) {
+                db.createObjectStore('apiData');
+            }
+        };
+        request.onsuccess = (event) => resolve(event.target.result);
+        request.onerror = (event) => reject(event.target.error);
+    });
+};
+
+const setLocalData = async (key, data) => {
+    try {
+        const db = await initDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction('apiData', 'readwrite');
+            tx.objectStore('apiData').put(data, key);
+            tx.oncomplete = () => resolve(true);
+            tx.onerror = () => reject(tx.error);
+        });
+    } catch (e) { console.warn('IDB put error', e); return false; }
+};
+
+const getLocalData = async (key) => {
+    try {
+        const db = await initDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction('apiData', 'readonly');
+            const req = tx.objectStore('apiData').get(key);
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+    } catch (e) { console.warn('IDB get error', e); return null; }
+};
+// ============================================================================
+
 export const DataProvider = ({ children }) => {
     const { user } = useAuth();
     const [cache, setCache] = useState({
@@ -54,7 +106,7 @@ export const DataProvider = ({ children }) => {
         skillMentorshipSubmissions: null,
         imnciVisitReports: null,
         eencVisitReports: null, 
-        imnciPatientRecords: null, // <--- ADDED
+        imnciPatientRecords: null, 
         participantTests: null,
         pendingFacilitatorSubmissions: null,
         facilitatorApplicationSettings: { isActive: false, openCount: 0 },
@@ -76,7 +128,7 @@ export const DataProvider = ({ children }) => {
         skillMentorshipSubmissions: true,
         imnciVisitReports: true,
         eencVisitReports: true, 
-        imnciPatientRecords: true, // <--- ADDED
+        imnciPatientRecords: true, 
         participantTests: true,
         pendingFacilitatorSubmissions: true,
         facilitatorApplicationSettings: true,
@@ -107,13 +159,12 @@ export const DataProvider = ({ children }) => {
                 const filterKey = getFilterKey(filters);
                 const internalCache = facilitiesFilterCacheRef.current;
                 
-                // Determine if cache is stale (> 1 hour)
                 const timeKey = `lastServerFetch_${key}_${filterKey}`;
                 const lastFetchTime = parseInt(localStorage.getItem(timeKey) || '0', 10);
                 const isStale = (Date.now() - lastFetchTime) > CACHE_TTL_MS;
                 const shouldForceServer = force || isStale;
                 
-                // 1. Memory Cache validation
+                // 1. Memory Cache
                 if (internalCache[filterKey] && !shouldForceServer) {
                     const cachedData = internalCache[filterKey];
                     if (filterKey !== currentFacilitiesFilterKeyRef.current) {
@@ -127,17 +178,16 @@ export const DataProvider = ({ children }) => {
                 if (fetchingRef.current[filterKey]) return cacheRef.current.healthFacilities; 
                 fetchingRef.current[filterKey] = true;
                 
-                // Only set global loading to true if we don't have it in memory already
                 if (!internalCache[filterKey]) {
                     setIsLoading(prev => ({ ...prev, healthFacilities: true }));
                 }
 
-                // 2. ALWAYS Try fetching from Firebase IndexedDB Cache first
+                // 2. Strict IndexedDB Base Cache
                 let localData = [];
                 if (!internalCache[filterKey]) {
                     try {
-                        const cachedData = await listHealthFacilities(filters, { source: 'cache' });
-                        if (cachedData !== undefined && cachedData !== null) {
+                        const cachedData = await getLocalData(`cache_${key}_${filterKey}`);
+                        if (cachedData && Array.isArray(cachedData) && cachedData.length > 0) {
                             localData = cachedData;
                             facilitiesFilterCacheRef.current[filterKey] = localData;
                             
@@ -146,41 +196,34 @@ export const DataProvider = ({ children }) => {
                                 currentFacilitiesFilterKeyRef.current = filterKey;
                             }
                             
-                            // STALE-WHILE-REVALIDATE: Instantly drop the loading flag if cache yielded data!
-                            if (localData.length > 0) {
-                                setIsLoading(prev => ({ ...prev, healthFacilities: false }));
-                            }
+                            setIsLoading(prev => ({ ...prev, healthFacilities: false }));
                             
-                            if (!shouldForceServer) {
-                                setIsLoading(prev => ({ ...prev, healthFacilities: false }));
+                            if (!shouldForceServer && navigator.onLine) {
                                 fetchingRef.current[filterKey] = false;
                                 return localData; 
                             }
                         }
                     } catch (e) {
-                        // Silent catch, fallback
+                        console.warn("Local IDB cache fetch failed:", e.message);
                     }
                 } else {
                     localData = internalCache[filterKey];
-                    // Drop flag immediately if memory cache exists
                     if (localData.length > 0) {
                         setIsLoading(prev => ({ ...prev, healthFacilities: false }));
                     }
                 }
 
-                // --- OFFLINE GUARD: Return local cache instantly if offline ---
                 if (!navigator.onLine) {
                     setIsLoading(prev => ({ ...prev, healthFacilities: false }));
                     fetchingRef.current[filterKey] = false;
                     return localData;
                 }
-                // --------------------------------------------------------------
 
-                // 3. Fetch ONLY Deltas from Server
+                // 3. Server Delta Fetch
                 try {
                     let effectiveLastFetchTime = lastFetchTime;
                     if (!localData || localData.length === 0) {
-                        effectiveLastFetchTime = 0;
+                        effectiveLastFetchTime = 0; // First time, full load needed
                     }
 
                     const activeFilters = { ...filters };
@@ -188,7 +231,8 @@ export const DataProvider = ({ children }) => {
                         activeFilters.lastUpdatedAfter = new Date(effectiveLastFetchTime);
                     }
                     
-                    const newOrUpdatedData = await listHealthFacilities(activeFilters, { source: 'server' }); 
+                    // High timeout (60s) to allow first-time full downloads to succeed
+                    const newOrUpdatedData = await fetchWithTimeout(listHealthFacilities(activeFilters, { source: 'server' }), 60000); 
                     
                     let finalMergedData = localData;
 
@@ -202,8 +246,12 @@ export const DataProvider = ({ children }) => {
                         });
                         
                         finalMergedData = Array.from(dataMap.values());
+                        
+                        // Save merged data securely back to IndexedDB
+                        await setLocalData(`cache_${key}_${filterKey}`, finalMergedData);
                     }
                     
+                    // Log success time
                     localStorage.setItem(timeKey, Date.now().toString());
 
                     facilitiesFilterCacheRef.current[filterKey] = finalMergedData;
@@ -226,6 +274,7 @@ export const DataProvider = ({ children }) => {
             };
         }
         
+        // General Data Fetchers
         return async (force = false) => {
             const currentCache = cacheRef.current[key];
             const hasData = currentCache !== null;
@@ -244,56 +293,48 @@ export const DataProvider = ({ children }) => {
             if (fetchingRef.current[key]) return currentCache;
             fetchingRef.current[key] = true;
             
-            // ONLY set loading to true if we DONT have data in memory cache
             if (!hasData) {
                 setIsLoading(prev => ({ ...prev, [key]: true }));
             }
             
-            // 2. ALWAYS Try Firebase Cache first to establish our "Base"
             let localData = hasData ? currentCache : [];
             if (!hasData) {
                 try {
-                    const cachedData = await fetchFn({ source: 'cache' });
+                    const cachedData = await getLocalData(`cache_${key}`);
                     if (cachedData !== undefined && cachedData !== null) {
                         localData = cachedData;
                         
                         setCache(prev => ({ ...prev, [key]: localData }));
                         
-                        // STALE-WHILE-REVALIDATE: Immediately disable loading if cache yielded data
                         if ((Array.isArray(localData) && localData.length > 0) || (!Array.isArray(localData) && localData && Object.keys(localData).length > 0)) {
                             setIsLoading(prev => ({ ...prev, [key]: false }));
                         }
                         
-                        if (!shouldForceServer) {
-                            setIsLoading(prev => ({ ...prev, [key]: false }));
+                        if (!shouldForceServer && navigator.onLine) {
                             fetchingRef.current[key] = false;
                             return localData;
                         }
                     }
                 } catch (e) {
-                    // Silent catch, fallback
+                    console.warn("IDB cache fetch failed for:", key);
                 }
             } else {
-                // Ensure loading is false if memory cache exists
                 setIsLoading(prev => ({ ...prev, [key]: false }));
             }
             
-            // --- OFFLINE GUARD: Return local cache instantly if offline ---
             if (!navigator.onLine) {
                 setIsLoading(prev => ({ ...prev, [key]: false }));
                 fetchingRef.current[key] = false;
                 return localData;
             }
-            // --------------------------------------------------------------
 
-            // 3. Fetch ONLY Deltas from Server
             try {
                 let effectiveLastFetchTime = lastFetchTime;
                 if ((!localData || (Array.isArray(localData) && localData.length === 0)) && !key.includes('Settings')) {
                     effectiveLastFetchTime = 0;
                 }
 
-                const newOrUpdatedData = await fetchFn({ source: 'server' }, effectiveLastFetchTime); 
+                const newOrUpdatedData = await fetchWithTimeout(fetchFn({ source: 'server' }, effectiveLastFetchTime), 60000); 
                 
                 let finalMergedData = localData;
 
@@ -305,8 +346,10 @@ export const DataProvider = ({ children }) => {
                         }
                     });
                     finalMergedData = Array.from(dataMap.values());
+                    await setLocalData(`cache_${key}`, finalMergedData);
                 } else if (!Array.isArray(newOrUpdatedData)) {
                     finalMergedData = newOrUpdatedData;
+                    await setLocalData(`cache_${key}`, finalMergedData);
                 } else if (newOrUpdatedData && newOrUpdatedData.length === 0) {
                      finalMergedData = localData;
                 }
@@ -340,7 +383,6 @@ export const DataProvider = ({ children }) => {
         fetchIMNCIVisitReports: createFetcher('imnciVisitReports', (opts, lastSync) => listIMNCIVisitReports(opts, lastSync)),
         fetchEENCVisitReports: createFetcher('eencVisitReports', (opts, lastSync) => listEENCVisitReports(opts, lastSync)), 
         
-        // <--- ADDED FETCHER --->
         fetchIMNCIPatientRecords: createFetcher('imnciPatientRecords', (opts, lastSync) => listIMNCIPatientRecords(opts, lastSync)), 
 
         fetchParticipantTests: createFetcher('participantTests', (opts) => listParticipantTestsForCourse(null, opts)),
@@ -370,6 +412,8 @@ export const DataProvider = ({ children }) => {
         ...cache, 
         ...fetchers, 
         isLoading,
+        fetchFacilitiesHistoryMultiDate, 
+        listSnapshotsForFacility
     };
 
     return (

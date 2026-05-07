@@ -1282,19 +1282,14 @@ export async function listAllParticipants(sourceOptions = {}, lastSync = 0) {
 
 export async function listAllParticipantsForCourse(courseId, sourceOptions = {}) {
     if (!courseId) return [];
-    let allParticipants = [];
-    let lastVisible = null;
-    let hasMore = true;
-
-    while(hasMore) {
-        const result = await listParticipants(courseId, lastVisible, sourceOptions); 
-        if (result.participants && result.participants.length > 0) {
-            allParticipants = allParticipants.concat(result.participants);
-        }
-        lastVisible = result.lastVisible;
-        if (!lastVisible) hasMore = false;
+    try {
+        const q = query(collection(db, "participants"), where("courseId", "==", courseId));
+        const documentSnapshots = await getDocs(q, sourceOptions);
+        return documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error fetching participants for course:", error);
+        throw error;
     }
-    return allParticipants;
 }
 
 export async function deleteParticipant(participantId) {
@@ -1398,7 +1393,7 @@ export async function bulkMigrateFromMappings(mappings, options = { dryRun: fals
                 "updated_by": `Migrated from Participant ${participantId}`,
                 'growth_monitoring_service_exists': participant.has_growth_monitoring ? 'Yes' : (facility.growth_monitoring_service_exists || 'No'),
                 nutrition_center_exists: participant.has_nutrition_service ? 'Yes' : (facility.nutrition_center_exists || 'No'),
-                nearest_nutrition_center: participant.nearest_nutrition_center || facility.nearest_nutrition_center || '',
+                nearest_nutrition_center: participant.nearest_immunization_center || facility.nearest_nutrition_center || '',
                 immunization_office_exists: participant.has_immunization_service ? 'Yes' : (facility.immunization_office_exists || 'No'),
                 nearest_immunization_center: participant.nearest_immunization_center || facility.nearest_immunization_center || '',
                 'غرفة_إرواء': participant.has_ors_room ? 'Yes' : (facility['غرفة_إرواء'] || 'No'),
@@ -2049,75 +2044,148 @@ export async function deleteIMNCIPatientRecord(recordId) {
     return true;
 }
 
-// --- HISTORICAL BASELINE COVERAGE HELPER ---
-export async function fetchFacilitiesHistoryAtDate(states, targetDateStr) {
-    if (!states || states.length === 0 || !targetDateStr) return [];
+// --- HISTORICAL BASELINE COVERAGE HELPER (INCREMENTALLY CACHED) ---
 
-    const targetDate = new Date(targetDateStr);
-    
+// Create memory caches to avoid pulling thousands of docs every time the tab switches
+let globalSnapshotCache = [];
+let lastGlobalSnapshotFetch = 0;
+
+export async function fetchFacilitiesHistoryMultiDate(states, targetDatesStrArray) {
+    if (!states || states.length === 0 || !targetDatesStrArray || targetDatesStrArray.length === 0) return [];
+
+    const targetDates = targetDatesStrArray.map(d => new Date(d));
+    // Find the latest date to set an upper bound on our database query (saves massive data reads)
+    const maxDate = new Date(Math.max(...targetDates.map(d => d.getTime())));
+
     try {
         const snapshotsRef = collection(db, "facilitySnapshots");
-        let allSnapshots = [];
 
-        // Loop through states to avoid complex composite index limits in Firestore
-        for (const state of states) {
-            const q = query(snapshotsRef, where("الولاية", "==", state));
-            const querySnapshot = await getDocs(q);
-            querySnapshot.docs.forEach(doc => allSnapshots.push({ id: doc.id, ...doc.data() }));
+        // INCREMENTAL UPDATE LOGIC:
+        let q;
+        if (lastGlobalSnapshotFetch > 0) {
+            // Only pull snapshots created AFTER the last time we checked
+            q = query(snapshotsRef, where("snapshotCreatedAt", ">", Timestamp.fromMillis(lastGlobalSnapshotFetch)));
+        } else {
+            // First load: pull everything bounded by the maximum date.
+            // Using query boundaries helps limit the initial fetch
+            q = query(snapshotsRef, where("effectiveDate", "<=", Timestamp.fromDate(maxDate)));
         }
 
-        // Filter snapshots that happened ON or BEFORE the course start date
-        const validSnapshots = allSnapshots.filter(snap => {
-            const snapDate = snap.effectiveDate?.toDate ? snap.effectiveDate.toDate() : new Date(0);
-            return snapDate <= targetDate;
-        });
+        const querySnapshot = await getDocs(q, { source: navigator.onLine ? 'default' : 'cache' });
 
-        // Group by facilityId to find the LATEST snapshot right before the course
-        const latestSnapshotsMap = new Map();
+        // If we found new snapshots, merge them into our global memory cache
+        if (!querySnapshot.empty) {
+            const newSnaps = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        validSnapshots.forEach(snap => {
-            const facilityId = snap.facilityId;
-            const snapDate = snap.effectiveDate?.toDate ? snap.effectiveDate.toDate().getTime() : 0;
+            // Map by ID to override/merge safely
+            const snapMap = new Map(globalSnapshotCache.map(s => [s.id, s]));
+            newSnaps.forEach(s => snapMap.set(s.id, s));
 
-            if (!latestSnapshotsMap.has(facilityId)) {
-                latestSnapshotsMap.set(facilityId, { ...snap, _time: snapDate });
-            } else {
-                const existing = latestSnapshotsMap.get(facilityId);
-                if (snapDate > existing._time) {
-                    latestSnapshotsMap.set(facilityId, { ...snap, _time: snapDate });
-                }
-            }
-        });
+            globalSnapshotCache = Array.from(snapMap.values());
+            lastGlobalSnapshotFetch = Date.now();
+        }
 
-        // Fallback for facilities that existed but had no snapshots recorded before the date.
-        // We will fetch current facilities and merge the historical snapshot if it exists.
+        // Get the current baseline facilities
         const currentFacilitiesQ = query(collection(db, "healthFacilities"), where("الولاية", "in", states));
-        const currentFacilitiesSnap = await getDocs(currentFacilitiesQ);
-
-        const historicalState = [];
-
+        const currentFacilitiesSnap = await getDocs(currentFacilitiesQ, { source: 'cache' });
+        const currentFacilitiesMap = new Map();
         currentFacilitiesSnap.docs.forEach(doc => {
-            const facilityId = doc.id;
-            const currentData = doc.data();
-
-            if (latestSnapshotsMap.has(facilityId)) {
-                // Facility has a valid historical snapshot, use it
-                historicalState.push(latestSnapshotsMap.get(facilityId));
-            } else {
-                // Facility existed but had no snapshots before the date.
-                // We default it to 'No' IMNCI to ensure a clean baseline assumption.
-                historicalState.push({
-                    ...currentData,
-                    facilityId: facilityId,
-                    'وجود_العلاج_المتكامل_لامراض_الطفولة': 'No' 
-                });
-            }
+            currentFacilitiesMap.set(doc.id, doc.data());
         });
 
-        return historicalState;
+        // Resolve states for all 6 target dates in memory (No extra DB calls)
+        const results = targetDates.map(targetDate => {
+            // 1. Filter snapshots that happened ON or BEFORE the target date AND belong to requested states
+            const validSnapshots = globalSnapshotCache.filter(snap => {
+                if (!states.includes(snap['الولاية'])) return false;
+                const snapDate = snap.effectiveDate?.toDate ? snap.effectiveDate.toDate() : new Date(0);
+                return snapDate <= targetDate;
+            });
+
+            // 2. Group by facilityId to find the LATEST snapshot right before the date
+            const latestSnapshotsMap = new Map();
+            validSnapshots.forEach(snap => {
+                const facilityId = snap.facilityId;
+                const snapDate = snap.effectiveDate?.toDate ? snap.effectiveDate.toDate().getTime() : 0;
+                
+                if (!latestSnapshotsMap.has(facilityId)) {
+                    latestSnapshotsMap.set(facilityId, { ...snap, _time: snapDate });
+                } else {
+                    if (snapDate > latestSnapshotsMap.get(facilityId)._time) {
+                        latestSnapshotsMap.set(facilityId, { ...snap, _time: snapDate });
+                    }
+                }
+            });
+
+            // 3. Rebuild the historical state
+            const historicalState = [];
+            currentFacilitiesMap.forEach((currentData, facilityId) => {
+                if (latestSnapshotsMap.has(facilityId)) {
+                    historicalState.push(latestSnapshotsMap.get(facilityId));
+                } else {
+                    // Fallback baseline: assume services weren't active if no snapshot exists yet
+                    historicalState.push({
+                        ...currentData,
+                        facilityId: facilityId,
+                        'وجود_العلاج_المتكامل_لامراض_الطفولة': 'No',
+                        'eenc_provides_essential_care': 'No',
+                        'etat_has_service': 'No',
+                        'hdu_has_service': 'No',
+                        'picu_has_service': 'No',
+                        'neonatal_level_primary': 'No',
+                        'neonatal_level_secondary': 'No',
+                        'neonatal_level_tertiary': 'No'
+                    });
+                }
+            });
+            return historicalState;
+        });
+
+        return results;
 
     } catch (error) {
-        console.error("Error fetching historical facilities:", error);
-        return []; 
+        console.error("Error fetching historical facilities multi-date:", error);
+        return targetDates.map(() => []); 
+    }
+}
+
+// ============================================================================
+// --- FACILITY HISTORY / SNAPSHOTS ---
+// ============================================================================
+
+export async function listSnapshotsForFacility(facilityId, sourceOptions = {}) {
+    if (!facilityId) return [];
+    
+    try {
+        const q = query(
+            collection(db, "facilitySnapshots"),
+            where("facilityId", "==", facilityId)
+        );
+        
+        let snapshot;
+        if (sourceOptions.source) {
+            snapshot = await getDocs(q, sourceOptions);
+        } else {
+            try {
+                // Try cache first for instant load
+                snapshot = await getDocs(q, { source: 'cache' });
+            } catch(e) {}
+            
+            // If cache is empty or fails, fallback to server
+            if (!snapshot || snapshot.empty) {
+                snapshot = await getDocs(q, { source: 'server' });
+            }
+        }
+
+        const results = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        return results.sort((a, b) => {
+            const timeA = a.effectiveDate?.toMillis ? a.effectiveDate.toMillis() : 0;
+            const timeB = b.effectiveDate?.toMillis ? b.effectiveDate.toMillis() : 0;
+            return timeB - timeA;
+        });
+    } catch (error) {
+        console.error("Error fetching snapshots for facility:", error);
+        throw error;
     }
 }

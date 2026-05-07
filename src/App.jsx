@@ -844,10 +844,12 @@ export default function App() {
             const fetchFullCourseDetails = async () => {
                 setCourseDetailsLoading(true);
                 try {
-                    let participantsData = await listAllParticipantsForCourse(selectedCourseId, { source: 'cache' }).catch(()=>[]);
-                    let allCourseData = await listAllDataForCourse(selectedCourseId, { source: 'cache' }).catch(()=>({allObs:[], allCases:[]}));
-                    let finalReport = await getFinalReportByCourseId(selectedCourseId, { source: 'cache' }).catch(()=>null);
-                    let testData = await listParticipantTestsForCourse(selectedCourseId, { source: 'cache' }).catch(()=>[]);
+                    const [participantsData, allCourseData, finalReport, testData] = await Promise.all([
+                        listAllParticipantsForCourse(selectedCourseId, { source: 'cache' }).catch(()=>[]),
+                        listAllDataForCourse(selectedCourseId, { source: 'cache' }).catch(()=>({allObs:[], allCases:[]})),
+                        getFinalReportByCourseId(selectedCourseId, { source: 'cache' }).catch(()=>null),
+                        listParticipantTestsForCourse(selectedCourseId, { source: 'cache' }).catch(()=>[])
+                    ]);
 
                     const hasData = participantsData.length > 0 || (allCourseData && allCourseData.allObs && allCourseData.allObs.length > 0);
 
@@ -864,13 +866,16 @@ export default function App() {
                         }));
                     };
 
-                    if (hasData) processAndSet(participantsData, allCourseData, finalReport, testData);
-                    if (!hasData) {
-                        participantsData = await listAllParticipantsForCourse(selectedCourseId, { source: 'server' }).catch(()=>[]);
-                        allCourseData = await listAllDataForCourse(selectedCourseId, { source: 'server' }).catch(()=>({allObs:[], allCases:[]}));
-                        finalReport = await getFinalReportByCourseId(selectedCourseId, { source: 'server' }).catch(()=>null);
-                        testData = await listParticipantTestsForCourse(selectedCourseId, { source: 'server' }).catch(()=>[]);
+                    if (hasData) {
                         processAndSet(participantsData, allCourseData, finalReport, testData);
+                    } else {
+                        const [serverParticipants, serverAllCourse, serverFinalReport, serverTestData] = await Promise.all([
+                            listAllParticipantsForCourse(selectedCourseId, { source: 'server' }).catch(()=>[]),
+                            listAllDataForCourse(selectedCourseId, { source: 'server' }).catch(()=>({allObs:[], allCases:[]})),
+                            getFinalReportByCourseId(selectedCourseId, { source: 'server' }).catch(()=>null),
+                            listParticipantTestsForCourse(selectedCourseId, { source: 'server' }).catch(()=>[])
+                        ]);
+                        processAndSet(serverParticipants, serverAllCourse, serverFinalReport, serverTestData);
                     }
                 } catch (error) { console.error("Background fetch of course details failed:", error); } finally { setCourseDetailsLoading(false); }
             };

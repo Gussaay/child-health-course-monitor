@@ -10,9 +10,11 @@ import { Capacitor } from '@capacitor/core';
 
 // --- ICONS ---
 import { PdfIcon } from './CommonComponents';
-import { List, FileText, Users, Building, PlusCircle, ArrowLeft, Search } from 'lucide-react';
+import { List, FileText, Users, Building, PlusCircle, ArrowLeft, Search, LineChart } from 'lucide-react';
 
 import LocationMapModal from './ChildHealthServicesMap.jsx';
+// Import BOTH the individual history modal and the aggregate dashboard
+import FacilityHistoryView, { AggregateHistoryDashboard } from './FacilityHistoryView.jsx'; 
 
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { point } from '@turf/helpers';
@@ -32,7 +34,8 @@ import {
     approveFacilitySubmission,
     rejectFacilitySubmission,
     submitFacilityDataForApproval,
-    listFacilitiesByLocality
+    listFacilitiesByLocality,
+    fetchFacilitiesHistoryMultiDate
 } from "../data.js"; 
 import {
     GenericFacilityForm,
@@ -138,9 +141,10 @@ const LOCALITY_EN_TO_AR_MAP = Object.values(STATE_LOCALITIES).flatMap(s => s.loc
 const getStateName = (stateKey) => STATE_LOCALITIES[stateKey]?.ar || stateKey || 'N/A';
 const getLocalityName = (stateKey, localityKey) => { if (!stateKey || !localityKey) return 'N/A'; const state = STATE_LOCALITIES[stateKey]; if (!state) return localityKey; const locality = state.localities.find(l => l.en === localityKey); return locality?.ar || localityKey; };
 
+
 // --- SUB-COMPONENTS ---
 
-const ActionMenu = ({ onAction }) => {
+const ActionMenu = ({ onAction, isSuperUserOrFed }) => {
     const items = [
         { id: 'show_list', label: 'عرض قائمة المنشآت', icon: List, color: 'text-blue-600', bg: 'bg-blue-100', border: 'hover:border-blue-400', shadow: 'hover:shadow-blue-100' },
         { id: 'share_imnci', label: 'تحديث معلومات العلاج المتكامل', icon: FileText, color: 'text-emerald-600', bg: 'bg-emerald-100', border: 'hover:border-emerald-400', shadow: 'hover:shadow-emerald-100' },
@@ -149,11 +153,23 @@ const ActionMenu = ({ onAction }) => {
         { id: 'share_etat', label: 'تحديث معلومات الرعاية الحرجة (الحوادث والعناية المكثفة)', icon: PlusCircle, color: 'text-red-600', bg: 'bg-red-100', border: 'hover:border-red-400', shadow: 'hover:shadow-red-100' },
     ];
 
+    if (isSuperUserOrFed) {
+        items.push({ 
+            id: 'show_history', 
+            label: 'مؤشرات التغطية التاريخية (KPI)', 
+            icon: LineChart, 
+            color: 'text-purple-600', 
+            bg: 'bg-purple-100', 
+            border: 'hover:border-purple-400', 
+            shadow: 'hover:shadow-purple-100' 
+        });
+    }
+
     return (
         <div className="max-w-7xl mx-auto mt-8 p-4 space-y-12" dir="rtl">
             <section>
                 <h3 className="text-xl font-bold text-gray-800 mb-6 border-b border-gray-200 pb-2">خدمات صحة الطفل</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
                     {items.map(item => {
                         const Icon = item.icon;
                         return (
@@ -177,7 +193,7 @@ const ActionMenu = ({ onAction }) => {
     );
 };
 
-const AllFacilitiesTab = ({ facilities, onEdit, onDelete, onGenerateLink, onOpenMap, emptyMessage, canApproveSubmissions, canManageFacilities }) => {
+const AllFacilitiesTab = ({ facilities, onEdit, onDelete, onGenerateLink, onOpenMap, onOpenHistory, emptyMessage, canApproveSubmissions, canManageFacilities }) => {
     const getServiceBadges = (f) => {
         const services = [];
         if (f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes') services.push({ name: 'IMNCI', color: 'bg-sky-100 text-sky-800' });
@@ -218,6 +234,7 @@ const AllFacilitiesTab = ({ facilities, onEdit, onDelete, onGenerateLink, onOpen
                                 )}
                                 <Button size="sm" onClick={() => onGenerateLink(f.id)}>Share Link</Button>
                                 <Button variant="secondary" size="sm" onClick={() => onOpenMap(f)}>Map</Button>
+                                <Button variant="secondary" size="sm" onClick={() => onOpenHistory(f)}>History</Button>
                             </div>
                         </td>
                     </tr>
@@ -865,11 +882,13 @@ const ChildHealthServicesView = ({
     // States for Update Facility Flow via Pop-up
     const [updateSelectionService, setUpdateSelectionService] = useState(null);
     const [updateSelectionData, setUpdateSelectionData] = useState({ state: '', locality: '', facilityId: '' });
-    const [updateSelectionSearch, setUpdateSelectionSearch] = useState(''); // NEW SEARCH STATE
+    const [updateSelectionSearch, setUpdateSelectionSearch] = useState(''); 
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     
-    // --- ADDED: State for Status Modal ---
     const [statusData, setStatusData] = useState(null);
+
+    // Explicit check to ensure super users / federal managers see the button
+    const isSuperUserOrFed = permissions?.canUseSuperUserAdvancedFeatures || permissions?.role === 'super_user' || permissions?.manageScope === 'federal' || permissions?.isAdmin;
 
     // --- Helper Functions ---
     const getBaseUrl = () => Capacitor.isNativePlatform() ? 'https://imnci-courses-monitor.web.app' : window.location.origin;
@@ -889,6 +908,8 @@ const ChildHealthServicesView = ({
     const handleActionMenuClick = (action) => {
         if (action === 'show_list') {
             setView('list');
+        } else if (action === 'show_history') {
+            setView('kpi_history');
         } else {
             if (action === 'share_imnci') setUpdateSelectionService('IMNCI');
             else if (action === 'share_eenc') setUpdateSelectionService('EENC');
@@ -900,7 +921,7 @@ const ChildHealthServicesView = ({
                 locality: userLocalities?.length === 1 ? userLocalities[0] : '',
                 facilityId: ''
             });
-            setUpdateSelectionSearch(''); // Reset Search
+            setUpdateSelectionSearch(''); 
         }
     };
 
@@ -987,6 +1008,16 @@ const ChildHealthServicesView = ({
     const [facilityForMap, setFacilityForMap] = useState(null);
     const [isMismatchModalOpen, setIsMismatchModalOpen] = useState(false);
     const [mismatchedFacilities, setMismatchedFacilities] = useState([]);
+    
+    // HISTORY STATES
+    const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+    const [facilityForHistory, setFacilityForHistory] = useState(null);
+
+    const handleOpenHistoryModal = (facility) => {
+        setFacilityForHistory(facility);
+        setIsHistoryModalOpen(true);
+    };
+
     const auth = getAuth();
     const [hasManuallySelected, setHasManuallySelected] = useState(!!(userStates?.length === 1 || userLocalities?.length === 1));
     const [currentPage, setCurrentPage] = useState(1);
@@ -1403,7 +1434,6 @@ const ChildHealthServicesView = ({
         }
     }, [activeHealthFacilities, setToast, permissions.manageScope, userStates]);
 
-
     const handleGenerateLink = (facilityId) => {
         const facility = (filteredFacilities || []).find(f => f.id === facilityId);
         const facilityName = facility ? facility['اسم_المؤسسة'] : 'المنشأة';
@@ -1416,13 +1446,11 @@ const ChildHealthServicesView = ({
         shareViaWhatsApp(textToCopy, 'تم نسخ الرابط مع الوصف بنجاح!');
     };
 
-    // --- MODIFIED LINK COPY LOGIC TO SUPPORT GENERIC / BULK SERVICE LINKS ---
     const handleCopySingleUpdateLink = () => {
         let url;
         let textToCopy;
 
         if (updateSelectionData.facilityId) {
-            // A specific facility is selected
             const facility = facilitiesToDisplay.find(fac => fac.id === updateSelectionData.facilityId);
             const facilityName = facility ? facility['اسم_المؤسسة'] : 'المنشأة';
             
@@ -1433,8 +1461,7 @@ const ChildHealthServicesView = ({
             
             textToCopy = `الرجاء تحديث بيانات المنشأة "${facilityName}" لخدمة "${updateSelectionService}" عبر الرابط التالي:\n\n${url}`;
         } else {
-            // NO facility selected: Copy a generic bulk-update link for the service
-            const params = new URLSearchParams();
+            const params = newSearchParams();
             if (updateSelectionService) params.append('service', updateSelectionService);
             if (updateSelectionData.state) params.append('state', updateSelectionData.state);
             if (updateSelectionData.locality) params.append('locality', updateSelectionData.locality);
@@ -1519,7 +1546,7 @@ const ChildHealthServicesView = ({
 
         const tabsContent = {
             [TABS.PENDING]: <PendingSubmissionsTab submissions={uniquePendingSubmissions || []} onApprove={handleReviewSubmission} onReject={handleReject} />,
-            [TABS.ALL]: <AllFacilitiesTab facilities={paginatedFacilities || []} onEdit={handleEditFacility} onDelete={handleDeleteFacility} onGenerateLink={handleGenerateLink} onOpenMap={handleOpenMapModal} emptyMessage={emptyStateMessage} canApproveSubmissions={permissions.canApproveSubmissions} canManageFacilities={permissions.canManageFacilities} />,
+            [TABS.ALL]: <AllFacilitiesTab facilities={paginatedFacilities || []} onEdit={handleEditFacility} onDelete={handleDeleteFacility} onGenerateLink={handleGenerateLink} onOpenMap={handleOpenMapModal} onOpenHistory={handleOpenHistoryModal} emptyMessage={emptyStateMessage} canApproveSubmissions={permissions.canApproveSubmissions} canManageFacilities={permissions.canManageFacilities} />,
         };
         const availableTabs = Object.values(TABS).filter(tab => tab === TABS.PENDING ? permissions.canManageFacilities : true);
         const showFiltersAndActions = activeTab !== TABS.PENDING;
@@ -1756,9 +1783,11 @@ const ChildHealthServicesView = ({
     return (
         <>
             {view === 'action_menu' ? (
-                <ActionMenu onAction={handleActionMenuClick} />
+                <ActionMenu onAction={handleActionMenuClick} isSuperUserOrFed={isSuperUserOrFed} />
             ) : view === 'list' ? (
                 renderListView()
+            ) : view === 'kpi_history' ? (
+                <AggregateHistoryDashboard userStates={userStates} onBack={() => setView('action_menu')} />
             ) : null}
 
             {/* Modal for selecting the facility to update */}
@@ -1942,6 +1971,11 @@ const ChildHealthServicesView = ({
                 onClose={() => setIsMismatchModalOpen(false)}
                 mismatches={mismatchedFacilities}
                 onFix={handleFixMismatch}
+            />
+            <FacilityHistoryView
+                isOpen={isHistoryModalOpen}
+                onClose={() => setIsHistoryModalOpen(false)}
+                facility={facilityForHistory}
             />
         </>
     );
