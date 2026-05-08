@@ -376,7 +376,10 @@ export function CoursesTable({
             const bActive = isCourseActive(b);
             if (aActive && !bActive) return -1;
             if (!aActive && bActive) return 1;
-            return 0;
+            
+            const dateA = a.start_date ? new Date(a.start_date).getTime() : 0;
+            const dateB = b.start_date ? new Date(b.start_date).getTime() : 0;
+            return dateB - dateA;
         });
     }, [filteredCourses]);
 
@@ -754,7 +757,15 @@ export { PublicAttendanceView, AttendanceManagerView } from './CourseAttendanceV
 
 // --- Deleted Courses View ---
 function DeletedCoursesView({ courses, onRestore, onPermanentDelete, isProcessing }) {
-    if (courses.length === 0) {
+    const sortedDeletedCourses = useMemo(() => {
+        return [...courses].sort((a, b) => {
+            const dateA = a.start_date ? new Date(a.start_date).getTime() : 0;
+            const dateB = b.start_date ? new Date(b.start_date).getTime() : 0;
+            return dateB - dateA;
+        });
+    }, [courses]);
+
+    if (sortedDeletedCourses.length === 0) {
         return <div className="text-center p-8 text-gray-500 bg-gray-50 border border-gray-200 rounded-lg">No deleted courses found.</div>;
     }
 
@@ -780,7 +791,7 @@ function DeletedCoursesView({ courses, onRestore, onPermanentDelete, isProcessin
                         </tr>
                     </thead>
                     <tbody>
-                        {courses.map(c => {
+                        {sortedDeletedCourses.map(c => {
                             const createdDate = c.createdAt?.toDate 
                                 ? c.createdAt.toDate().toLocaleDateString() 
                                 : c.createdAt?.seconds ? new Date(c.createdAt.seconds * 1000).toLocaleDateString() : 'N/A';
@@ -828,7 +839,14 @@ function DeletedCoursesView({ courses, onRestore, onPermanentDelete, isProcessin
 
 // --- Federal Approvals View ---
 function CourseApprovalsView({ courses, onApproveCourse, onRejectCourse, isProcessing }) {
-    const pendingApprovalCourses = useMemo(() => courses.filter(c => c.approvalStatus === 'pending' && !c.deletionRequested && !c.inRecycleBin), [courses]);
+    const pendingApprovalCourses = useMemo(() => {
+        return courses.filter(c => c.approvalStatus === 'pending' && !c.deletionRequested && !c.inRecycleBin)
+            .sort((a, b) => {
+                const dateA = a.start_date ? new Date(a.start_date).getTime() : 0;
+                const dateB = b.start_date ? new Date(b.start_date).getTime() : 0;
+                return dateB - dateA;
+            });
+    }, [courses]);
 
     if (pendingApprovalCourses.length === 0) {
         return <div className="text-center p-8 text-gray-500 bg-gray-50 border border-gray-200 rounded-lg">No courses are currently pending federal approval.</div>;

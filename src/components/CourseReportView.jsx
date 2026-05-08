@@ -4,7 +4,7 @@ import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import { Bar, Line } from 'react-chartjs-2';
-import { Button, Card, EmptyState, PageHeader, PdfIcon, Table, Spinner, Modal, Input } from './CommonComponents';
+import {Button, Card, EmptyState, PageHeader, PdfIcon, Table, Spinner, Modal, Input, FormGroup, Select} from './CommonComponents';
 import {
     Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend,
     PointElement, LineElement
@@ -16,7 +16,11 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 
 // Import the historical fetcher and upsert function
-import { fetchFacilitiesHistoryAtDate, upsertCourse } from '../data.js'; 
+import { fetchFacilitiesHistoryMultiDate, upsertCourse } from '../data.js';
+import { useAuth } from '../hooks/useAuth';
+import { useDataCache } from '../DataContext';
+import { db } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore'; 
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, PointElement, LineElement, ChartDataLabels);
 
@@ -475,6 +479,26 @@ export function CourseReportView({
     const allHealthFacilities = useMemo(() => (rawFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [rawFacilities]);
     const activeFinalReport = (finalReportData && finalReportData.isDeleted !== true && finalReportData.isDeleted !== "true") ? finalReportData : null;
 
+
+    const [subTypeFilter, setSubTypeFilter] = useState('All');
+    
+    const availableSubTypes = useMemo(() => {
+        const types = new Set();
+        participants.forEach(p => {
+            const subType = p.imci_sub_type || course.facilitatorAssignments?.find(a => a.group === p.group)?.imci_sub_type;
+            if (subType) types.add(subType);
+        });
+        return ['All', ...Array.from(types).sort()];
+    }, [participants, course]);
+
+    const reportParticipants = useMemo(() => {
+        if (subTypeFilter === 'All') return participants;
+        return participants.filter(p => {
+            const subType = p.imci_sub_type || course.facilitatorAssignments?.find(a => a.group === p.group)?.imci_sub_type;
+            return subType === subTypeFilter;
+        });
+    }, [participants, subTypeFilter, course]);
+
     const overallChartRef = useRef(null);
     const dailyChartRef = useRef(null);
     const prePostDistributionChartRef = useRef(null);
@@ -491,6 +515,70 @@ export function CourseReportView({
 
     // Internal state for local ShareModal
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+    
+    const { user } = useAuth();
+    const dataCache = useDataCache();
+    const fetchCourses = dataCache?.fetchCourses;
+    const [isSuperUser, setIsSuperUser] = useState(false);
+    useEffect(() => {
+        if (user && !isSharedView) {
+            getDoc(doc(db, 'users', user.uid)).then(snap => {
+                if (snap.exists() && snap.data().permissions?.canUseSuperUserAdvancedFeatures) {
+                    setIsSuperUser(true);
+                }
+            }).catch(e => console.error(e));
+        }
+    }, [user, isSharedView]);
+
+    const [isEditCoverageModalOpen, setIsEditCoverageModalOpen] = useState(false);
+    const [editableCoverageData, setEditableCoverageData] = useState(null);
+
+    const openEditCoverageModal = () => {
+        setEditableCoverageData(JSON.parse(JSON.stringify(coverageData)));
+        setIsEditCoverageModalOpen(true);
+    };
+
+    const handleCoverageEditChange = (level, index, field, value) => {
+        const val = Number(value);
+        setEditableCoverageData(prev => {
+            const newData = { ...prev };
+            let target;
+            if (level === 'national') target = newData.nationalCov;
+            else if (level === 'state') target = newData.stateCoverage[index];
+            else if (level === 'locality') target = newData.localityCoverage[index];
+
+            target[field] = val;
+            
+            target.covBefore = target.totalPhc > 0 ? (target.phcWithImnciBefore / target.totalPhc) * 100 : 0;
+            target.covAfter = target.totalPhc > 0 ? ((target.phcWithImnciBefore + target.newPhc) / target.totalPhc) * 100 : 0;
+            target.increase = target.covAfter - target.covBefore;
+
+            return newData;
+        });
+    };
+
+    const handleSaveEditedCoverage = async () => {
+        setIsSavingCoverage(true);
+        try {
+            const currentUserIdentifier = user?.displayName || user?.email || 'Unknown';
+            // INCREMENTAL UPDATE: Send only the ID and the snapshot field
+            await upsertCourse({ 
+                id: course.id, 
+                coverageSnapshot: editableCoverageData 
+            }, currentUserIdentifier);
+            
+            // FORCE FETCH: true tells the cache system to actually query the server for recent updates to ensure they exist locally
+            if (fetchCourses) await fetchCourses(true);
+            
+            setCoverageData(editableCoverageData);
+            setIsEditCoverageModalOpen(false);
+            notify("Baseline coverage updated successfully.", "success");
+        } catch (error) {
+            notify("Failed to update coverage.", "error");
+        } finally {
+            setIsSavingCoverage(false);
+        }
+    };
     
     const notify = (message, type = 'info') => {
         if (setToast) {
@@ -526,8 +614,8 @@ export function CourseReportView({
             };
         }
 
-        const preScoresForAvg = participants.map(p => Number(p.pre_test_score)).filter(score => !isNaN(score) && score > 0);
-        const postScoresForAvg = participants.map(p => Number(p.post_test_score)).filter(score => !isNaN(score) && score > 0);
+        const preScoresForAvg = reportParticipants.map(p => Number(p.pre_test_score)).filter(score => !isNaN(score) && score > 0);
+        const postScoresForAvg = reportParticipants.map(p => Number(p.post_test_score)).filter(score => !isNaN(score) && score > 0);
         const preTestStats = getStatsAndDistribution(preScoresForAvg);
         const postTestStats = getStatsAndDistribution(postScoresForAvg);
         const totalImprovement = preTestStats.avg > 0 ? ((postTestStats.avg - preTestStats.avg) / preTestStats.avg) * 100 : 0;
@@ -535,7 +623,7 @@ export function CourseReportView({
 
         const groupPerformance = {};
         const allGroups = new Set();
-        participants.forEach(p => {
+        reportParticipants.forEach(p => {
             if (p.group) {
                 if (!groupPerformance[p.group]) groupPerformance[p.group] = { pids: [], totalObs: 0, correctObs: 0, totalCases: 0, correctCases: 0, totalSkills: 0, correctSkills: 0 };
                 groupPerformance[p.group].pids.push(p.id);
@@ -545,7 +633,7 @@ export function CourseReportView({
 
         const dailyPerformance = {};
         allObs.forEach(o => {
-            const p = participants.find(p => p.id === o.participant_id);
+            const p = reportParticipants.find(p => p.id === o.participant_id);
             if (p && groupPerformance[p.group]) {
                 if (o.day_of_course) {
                     const day = `Day ${o.day_of_course}`;
@@ -563,7 +651,7 @@ export function CourseReportView({
 
         let hasCases = false;
         allCases.forEach(c => {
-            const p = participants.find(p => p.id === c.participant_id);
+            const p = reportParticipants.find(p => p.id === c.participant_id);
             if (p && groupPerformance[p.group]) {
                 groupPerformance[p.group].totalCases++;
                 if (c.is_correct) groupPerformance[p.group].correctCases++;
@@ -593,7 +681,7 @@ export function CourseReportView({
             totalObs += group.totalObs; correctObs += group.correctObs; totalCases += group.totalCases; correctCases += group.correctCases;
         });
         
-        const participantsWithStats = participants.map(p => {
+        const participantsWithStats = reportParticipants.map(p => {
             const participantCases = allCases.filter(c => c.participant_id === p.id);
             const participantObs = allObs.filter(o => o.participant_id === p.id);
             const correctSkills = participantObs.filter(o => o.item_correct > 0).length;
@@ -604,8 +692,8 @@ export function CourseReportView({
         });
         
         const overall = {
-            totalCases, correctCases, avgCasesPerParticipant: (totalCases / participants.length) || 0, caseCorrectnessPercentage: calcPct(correctCases, totalCases),
-            totalSkills: totalObs, correctSkills: correctObs, avgSkillsPerParticipant: (totalObs / participants.length) || 0, skillCorrectnessPercentage: calcPct(correctObs, totalObs)
+            totalCases, correctCases, avgCasesPerParticipant: (totalCases / reportParticipants.length) || 0, caseCorrectnessPercentage: calcPct(correctCases, totalCases),
+            totalSkills: totalObs, correctSkills: correctObs, avgSkillsPerParticipant: (totalObs / reportParticipants.length) || 0, skillCorrectnessPercentage: calcPct(correctObs, totalObs)
         };
 
         const caseCorrectnessDistribution = { 'Perfect': 0, 'Excellent': 0, 'Good': 0, 'Fair': 0, 'Fail': 0, 'Data Incomplete': 0 };
@@ -653,7 +741,7 @@ export function CourseReportView({
             hasTestScores: hasAnyScores, hasCases, participantsWithStats, caseCorrectnessDistribution, 
             avgImprovementDistribution, newImciFacilities
         };
-    }, [participants, allObs, allCases, isLoading, allHealthFacilities, course]); 
+    }, [reportParticipants, allObs, allCases, isLoading, allHealthFacilities, course]); 
 
     // Handle Historical Coverage Retrieval via Explicit Action
     const handleRetrieveCoverageHistory = async () => {
@@ -667,15 +755,23 @@ export function CourseReportView({
             const combinedStates = [...new Set([...courseStates, ...newImciFacilities.map(f => f.state)])].filter(Boolean);
             const combinedLocalities = [...new Set([...courseLocalities, ...newImciFacilities.map(f => f.locality)])].filter(Boolean);
 
-            const historicalFacilities = await fetchFacilitiesHistoryAtDate(combinedStates, course.start_date);
+            const historicalFacilitiesData = await fetchFacilitiesHistoryMultiDate(combinedStates, [course.start_date]);
+            const historicalFacilities = historicalFacilitiesData[0] || [];
 
-            const calculateCoverageInfo = (facilitiesFilter, newImciFilter) => {
-                const phcFacilities = historicalFacilities
+            const calculateCoverageInfo = (facilitiesFilter, newImciFilter, isNational = false) => {
+                const historicalPhcFacilities = historicalFacilities
                     .filter(facilitiesFilter)
                     .filter(f => f['هل_المؤسسة_تعمل'] === 'Yes')
                     .filter(f => ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(f['نوع_المؤسسةالصحية']));
                 
-                const totalPhc = phcFacilities.length;
+                let totalPhc = historicalPhcFacilities.length;
+                if (isNational) {
+                    totalPhc = (allHealthFacilities || [])
+                        .filter(facilitiesFilter)
+                        .filter(f => f['هل_المؤسسة_تعمل'] === 'Yes')
+                        .filter(f => ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(f['نوع_المؤسسةالصحية']))
+                        .length;
+                }
                 
                 const newPhcImciFacilities = newImciFacilities.filter(f => !f.isHospital);
                 const courseNewPhcs = newPhcImciFacilities.filter(newImciFilter);
@@ -684,7 +780,7 @@ export function CourseReportView({
 
                 let phcWithImnciBefore = 0;
 
-                phcFacilities.forEach(f => {
+                historicalPhcFacilities.forEach(f => {
                     if (f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes') {
                         if (!newPhcNames.has(f['اسم_المؤسسة']) && !newPhcNames.has(f['name'])) {
                             phcWithImnciBefore++;
@@ -699,15 +795,15 @@ export function CourseReportView({
                 return { totalPhc, phcWithImnciBefore, newPhc, covBefore, covAfter, increase };
             };
 
-            const nationalCov = calculateCoverageInfo(f => f['الولاية'] !== 'إتحادي', () => true);
+            const nationalCov = calculateCoverageInfo(f => f['الولاية'] !== 'إتحادي', () => true, true);
             
             const stateCoverage = combinedStates.map(s => {
-                const info = calculateCoverageInfo(f => f['الولاية'] === s, f => f.state === s);
+                const info = calculateCoverageInfo(f => f['الولاية'] === s, f => f.state === s, false);
                 return { name: s, ...info };
             });
 
             const localityCoverage = combinedLocalities.map(l => {
-                const info = calculateCoverageInfo(f => f['المحلية'] === l, f => f.locality === l);
+                const info = calculateCoverageInfo(f => f['المحلية'] === l, f => f.locality === l, false);
                 return { name: l, ...info };
             });
 
@@ -732,9 +828,17 @@ export function CourseReportView({
     const handleConfirmCoverage = async () => {
         setIsSavingCoverage(true);
         try {
-            const updatedCourse = { ...course, coverageSnapshot: historicalCoveragePreview };
-            await upsertCourse(updatedCourse); // Updates firestore
-            setCoverageData(historicalCoveragePreview); // Updates UI instantly
+            const currentUserIdentifier = user?.displayName || user?.email || 'Unknown';
+            // INCREMENTAL UPDATE: Send only the ID and the snapshot field
+            await upsertCourse({ 
+                id: course.id, 
+                coverageSnapshot: historicalCoveragePreview 
+            }, currentUserIdentifier); 
+            
+            // FORCE FETCH: true tells the cache system to actually query the server for recent updates to ensure they exist locally
+            if (fetchCourses) await fetchCourses(true); 
+            
+            setCoverageData(historicalCoveragePreview); 
             setIsCoverageModalOpen(false);
             notify("Baseline coverage saved successfully.", "success");
         } catch (error) {
@@ -888,7 +992,7 @@ export function CourseReportView({
         scales: { x: { title: { display: true, text: 'Day' } }, y: { type: 'linear', display: true, position: 'left', title: { display: true, text: 'Total Count' }, beginAtZero: true } }
     };
 
-    const chartParticipants = participants.filter(p => Number(p.pre_test_score) > 0 && Number(p.post_test_score) > 0);
+    const chartParticipants = reportParticipants.filter(p => Number(p.pre_test_score) > 0 && Number(p.post_test_score) > 0);
     const participantCount = chartParticipants.length;
     const showCompactLabels = participantCount > 24;
     const preScores = chartParticipants.map(p => Number(p.pre_test_score));
@@ -969,10 +1073,10 @@ export function CourseReportView({
                     <div id="course-info-card" className="relative p-2">
                         {!isSharedView && <button onClick={() => handleCopyAsImage('course-info-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
                         <h3 className="text-xl font-bold mb-4">Course Information</h3>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                             <div><strong>State:</strong> {course.state}</div> <div><strong>Locality:</strong> {course.locality}</div>
                             {course.course_type === 'IMNCI' && course.imci_sub_type && <div><strong>IMNCI Course Type:</strong> {course.imci_sub_type}</div>}
-                            <div><strong>Hall:</strong> {course.hall}</div> <div><strong>Start Date:</strong> {course.start_date}</div> <div><strong># Participants:</strong> {participants.length}</div>
+                            <div><strong>Hall:</strong> {course.hall}</div> <div><strong>Start Date:</strong> {course.start_date}</div> <div><strong># Participants:</strong> {reportParticipants.length}</div>
                             <div><strong>Coordinator:</strong> {course.coordinator}</div> <div><strong>Director:</strong> {course.director}</div>
                             {course.clinical_instructor && <div><strong>Clinical Instructor:</strong> {course.clinical_instructor}</div>}
                             <div><strong>Funded by:</strong> {course.funded_by}</div>
@@ -995,6 +1099,18 @@ export function CourseReportView({
                     </Card>
                 )}
                 
+                {availableSubTypes.length > 1 && (
+                    <Card>
+                        <div className="p-4 bg-gray-50 border-b border-gray-100">
+                            <FormGroup label="Filter Report by Course Sub-Type">
+                                <Select value={subTypeFilter} onChange={e => setSubTypeFilter(e.target.value)} className="w-full md:w-1/3">
+                                    {availableSubTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                                </Select>
+                            </FormGroup>
+                        </div>
+                    </Card>
+                )}
+
                 {hasAnyKpis && (
                     <Card>
                         <div id="kpi-card" className="relative p-2">
@@ -1003,7 +1119,7 @@ export function CourseReportView({
                             <div className="space-y-6">
                                 <div>
                                     <h4 className="text-lg font-semibold mb-2 text-gray-700">Case KPIs</h4>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-center">
                                         <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Total Cases</div><div className="text-3xl font-bold text-sky-700">{overall.totalCases}</div></div>
                                         <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Total Correct Cases</div><div className="text-3xl font-bold text-sky-700">{overall.correctCases}</div></div>
                                         <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Avg. Cases / Participant</div><div className="text-3xl font-bold text-sky-700">{overall.avgCasesPerParticipant.toFixed(1)}</div></div>
@@ -1012,7 +1128,7 @@ export function CourseReportView({
                                 </div>
                                 <div>
                                     <h4 className="text-lg font-semibold mb-2 text-gray-700">Skill/Classification KPIs</h4>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-center">
                                         <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Total Skills</div><div className="text-3xl font-bold text-sky-700">{overall.totalSkills}</div></div>
                                         <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Total Correct Skills</div><div className="text-3xl font-bold text-sky-700">{overall.correctSkills}</div></div>
                                         <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Avg. Skills / Participant</div><div className="text-3xl font-bold text-sky-700">{overall.avgSkillsPerParticipant.toFixed(1)}</div></div>
@@ -1029,14 +1145,16 @@ export function CourseReportView({
                         <div id="test-scores-card" className="relative p-2">
                             {!isSharedView && <button onClick={() => handleCopyAsImage('test-scores-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
                             <h3 className="text-xl font-bold mb-4">Participant Test Scores</h3>
-                            <div className="grid grid-cols-3 gap-4 text-center mb-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center mb-6">
                                 <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm font-semibold text-gray-600">Avg. Pre-Test</div><div className="text-2xl font-bold">{fmtPct(preTestStats.avg)}</div></div>
                                 <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm font-semibold text-gray-600">Avg. Post-Test</div><div className="text-2xl font-bold">{fmtPct(postTestStats.avg)}</div></div>
                                 <div className={`p-4 rounded-lg ${getScoreColorClass(totalImprovement, 'improvement')}`}><div className="text-sm font-semibold">Avg. Improvement</div><div className="text-2xl font-bold">{fmtPct(totalImprovement)}</div></div>
                             </div>
                             {hasChartParticipants ? (
-                                <div style={{ height: '350px' }}>
-                                    <Line ref={prePostDistributionChartRef} data={testScoreChartData} options={testScoreChartOptions} />
+                                <div className="w-full overflow-x-auto">
+                                    <div style={{ height: '350px', minWidth: '600px' }}>
+                                        <Line ref={prePostDistributionChartRef} data={testScoreChartData} options={testScoreChartOptions} />
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
@@ -1067,7 +1185,7 @@ export function CourseReportView({
                             {!isSharedView && <button onClick={() => handleCopyAsImage('investment-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
                             <h3 className="text-xl font-bold mb-4">Investment KPIs</h3>
                             
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-center">
                                 <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
                                     <div className="text-sm font-semibold text-blue-700">Total Investment</div>
                                     <div className="text-2xl font-bold text-blue-800">${coverageData.totalBudget.toLocaleString()}</div>
@@ -1088,9 +1206,17 @@ export function CourseReportView({
                         <div id="coverage-card" className="relative p-2">
                             {!isSharedView && <button onClick={() => handleCopyAsImage('coverage-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
                             
-                            <h3 className="text-xl font-bold mb-4">Coverage KPIs (PHC Facilities Only)</h3>
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-xl font-bold">Coverage KPIs (PHC Facilities Only)</h3>
+                                {isSuperUser && !isSharedView && (
+                                    <div className="flex gap-2 copy-button">
+                                        <Button size="sm" variant="secondary" onClick={handleRetrieveCoverageHistory}>Refetch Baseline</Button>
+                                        <Button size="sm" variant="secondary" onClick={openEditCoverageModal}>Edit Baseline</Button>
+                                    </div>
+                                )}
+                            </div>
                             
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center mb-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-center mb-6">
                                 <div className="p-4 bg-green-50 rounded-lg border border-green-100">
                                     <div className="text-sm font-semibold text-green-700">Total new PHC facility Introduce IMNCI</div>
                                     <div className="text-2xl font-bold text-green-800">{coverageData.nationalCov.newPhc}</div>
@@ -1203,9 +1329,9 @@ export function CourseReportView({
                 )}
 
                 {(hasAnyCaseDataForCharts || hasAnyDailyCaseDataForCharts) && (
-                    <div id="charts-grid" className="grid md:grid-cols-2 gap-6">
-                        {hasAnyCaseDataForCharts && <Card><div id="group-perf-chart-card" className="relative p-2">{!isSharedView && <button onClick={() => handleCopyAsImage('group-perf-chart-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}<h3 className="text-xl font-bold mb-4">Overall Performance by Group</h3><Bar ref={overallChartRef} options={combinedChartOptions} data={combinedChartData} /></div></Card>}
-                        {hasAnyDailyCaseDataForCharts && <Card><div id="day-perf-chart-card" className="relative p-2">{!isSharedView && <button onClick={() => handleCopyAsImage('day-perf-chart-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}<h3 className="text-xl font-bold mb-4">Overall Performance by Day</h3><Bar ref={dailyChartRef} options={dailyChartOptions} data={dailyChartData} /></div></Card>}
+                    <div id="charts-grid" className="grid md:grid-cols-1 lg:grid-cols-2 gap-6">
+                        {hasAnyCaseDataForCharts && <Card><div id="group-perf-chart-card" className="relative p-2">{!isSharedView && <button onClick={() => handleCopyAsImage('group-perf-chart-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}<h3 className="text-xl font-bold mb-4">Overall Performance by Group</h3><div className="w-full overflow-x-auto"><div style={{ minWidth: '500px' }}><Bar ref={overallChartRef} options={combinedChartOptions} data={combinedChartData} /></div></div></div></Card>}
+                        {hasAnyDailyCaseDataForCharts && <Card><div id="day-perf-chart-card" className="relative p-2">{!isSharedView && <button onClick={() => handleCopyAsImage('day-perf-chart-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}<h3 className="text-xl font-bold mb-4">Overall Performance by Day</h3><div className="w-full overflow-x-auto"><div style={{ minWidth: '500px' }}><Bar ref={dailyChartRef} options={dailyChartOptions} data={dailyChartData} /></div></div></div></Card>}
                     </div>
                 )}
 
@@ -1376,21 +1502,46 @@ export function CourseReportView({
                         </div>
                     ) : historicalCoveragePreview ? (
                         <div>
-                            <div className="bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-lg mb-6 text-sm">
+                            <div className="bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-lg mb-4 text-sm">
                                 <strong>Retrieved At:</strong> {new Date(historicalCoveragePreview.retrievedAt).toLocaleString()}
                                 <br /><br />
-                                Please review the calculated baseline coverage below. Confirming will permanently save this snapshot to the course.
+                                Please review the fully calculated baseline coverage below. Confirming will permanently save this snapshot to the course.
                             </div>
                             
-                            <div className="grid grid-cols-2 gap-4 mb-4">
-                                <div className="p-4 bg-gray-50 rounded border text-center">
-                                    <div className="text-sm font-semibold text-gray-600 mb-1">National Coverage Before</div>
-                                    <div className="text-3xl font-bold text-gray-800">{fmtPct(historicalCoveragePreview.nationalCov.covBefore)}</div>
-                                </div>
-                                <div className="p-4 bg-sky-50 rounded border text-center">
-                                    <div className="text-sm font-semibold text-sky-700 mb-1">National Coverage After</div>
-                                    <div className="text-3xl font-bold text-sky-900">{fmtPct(historicalCoveragePreview.nationalCov.covAfter)}</div>
-                                </div>
+                            <div className="overflow-x-auto max-h-[50vh] border rounded-lg shadow-sm">
+                                <Table headers={['Level / Name', 'Total Functioning PHCs', 'PHCs w/ IMNCI (Before)', 'Coverage Before', 'New PHCs w/ IMNCI', 'Coverage After', 'Increase']}>
+                                    {historicalCoveragePreview.localityCoverage.map(l => (
+                                        <tr key={`prev-loc-${l.name}`} className="hover:bg-gray-50">
+                                            <td className="p-2 border font-semibold text-gray-700">Locality: {l.name}</td>
+                                            <td className="p-2 border text-center">{l.totalPhc}</td>
+                                            <td className="p-2 border text-center">{l.phcWithImnciBefore}</td>
+                                            <td className="p-2 border text-center font-semibold text-gray-600">{fmtPct(l.covBefore)}</td>
+                                            <td className="p-2 border text-center">{l.newPhc}</td>
+                                            <td className="p-2 border text-center font-bold text-sky-700">{fmtPct(l.covAfter)}</td>
+                                            <td className="p-2 border text-center font-bold text-green-600">+{l.increase.toFixed(2)}%</td>
+                                        </tr>
+                                    ))}
+                                    {historicalCoveragePreview.stateCoverage.map(s => (
+                                        <tr key={`prev-state-${s.name}`} className="hover:bg-gray-50 bg-gray-50/50">
+                                            <td className="p-2 border font-semibold text-gray-800">State: {s.name}</td>
+                                            <td className="p-2 border text-center">{s.totalPhc}</td>
+                                            <td className="p-2 border text-center">{s.phcWithImnciBefore}</td>
+                                            <td className="p-2 border text-center font-semibold text-gray-600">{fmtPct(s.covBefore)}</td>
+                                            <td className="p-2 border text-center">{s.newPhc}</td>
+                                            <td className="p-2 border text-center font-bold text-sky-700">{fmtPct(s.covAfter)}</td>
+                                            <td className="p-2 border text-center font-bold text-green-600">+{s.increase.toFixed(2)}%</td>
+                                        </tr>
+                                    ))}
+                                    <tr className="hover:bg-gray-50 bg-sky-50">
+                                        <td className="p-2 border font-bold text-gray-900">National (Sudan Overall)</td>
+                                        <td className="p-2 border text-center font-bold">{historicalCoveragePreview.nationalCov.totalPhc}</td>
+                                        <td className="p-2 border text-center font-bold">{historicalCoveragePreview.nationalCov.phcWithImnciBefore}</td>
+                                        <td className="p-2 border text-center font-bold text-gray-700">{fmtPct(historicalCoveragePreview.nationalCov.covBefore)}</td>
+                                        <td className="p-2 border text-center font-bold">{historicalCoveragePreview.nationalCov.newPhc}</td>
+                                        <td className="p-2 border text-center font-bold text-sky-800">{fmtPct(historicalCoveragePreview.nationalCov.covAfter)}</td>
+                                        <td className="p-2 border text-center font-bold text-green-700">+{historicalCoveragePreview.nationalCov.increase.toFixed(4)}%</td>
+                                    </tr>
+                                </Table>
                             </div>
                             
                             <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
@@ -1403,6 +1554,51 @@ export function CourseReportView({
                     ) : (
                         <div className="text-center p-4 text-red-500">Failed to load preview.</div>
                     )}
+                </div>
+            </Modal>
+
+            
+            {/* Modal for Editing Coverage */}
+            <Modal isOpen={isEditCoverageModalOpen} onClose={() => setIsEditCoverageModalOpen(false)} title="Edit Baseline Coverage" size="lg">
+                <div className="p-4 max-h-[70vh] overflow-y-auto space-y-6">
+                    {editableCoverageData && (
+                        <>
+                            <div className="bg-white p-4 rounded shadow-sm border">
+                                <h4 className="font-bold text-lg border-b pb-2 mb-4 text-purple-800">National (Sudan Overall)</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <FormGroup label="Total Functioning PHCs"><Input type="number" value={editableCoverageData.nationalCov.totalPhc} onChange={(e) => handleCoverageEditChange('national', null, 'totalPhc', e.target.value)} /></FormGroup>
+                                    <FormGroup label="PHCs w/ IMNCI (Before)"><Input type="number" value={editableCoverageData.nationalCov.phcWithImnciBefore} onChange={(e) => handleCoverageEditChange('national', null, 'phcWithImnciBefore', e.target.value)} /></FormGroup>
+                                    <FormGroup label="New PHCs w/ IMNCI"><Input type="number" value={editableCoverageData.nationalCov.newPhc} onChange={(e) => handleCoverageEditChange('national', null, 'newPhc', e.target.value)} /></FormGroup>
+                                </div>
+                            </div>
+                            
+                            {editableCoverageData.stateCoverage.map((s, idx) => (
+                                <div key={s.name} className="bg-white p-4 rounded shadow-sm border">
+                                    <h4 className="font-bold text-lg border-b pb-2 mb-4 text-indigo-800">State: {s.name}</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <FormGroup label="Total Functioning PHCs"><Input type="number" value={s.totalPhc} onChange={(e) => handleCoverageEditChange('state', idx, 'totalPhc', e.target.value)} /></FormGroup>
+                                        <FormGroup label="PHCs w/ IMNCI (Before)"><Input type="number" value={s.phcWithImnciBefore} onChange={(e) => handleCoverageEditChange('state', idx, 'phcWithImnciBefore', e.target.value)} /></FormGroup>
+                                        <FormGroup label="New PHCs w/ IMNCI"><Input type="number" value={s.newPhc} onChange={(e) => handleCoverageEditChange('state', idx, 'newPhc', e.target.value)} /></FormGroup>
+                                    </div>
+                                </div>
+                            ))}
+
+                            {editableCoverageData.localityCoverage.map((l, idx) => (
+                                <div key={l.name} className="bg-white p-4 rounded shadow-sm border">
+                                    <h4 className="font-bold text-lg border-b pb-2 mb-4 text-sky-800">Locality: {l.name}</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <FormGroup label="Total Functioning PHCs"><Input type="number" value={l.totalPhc} onChange={(e) => handleCoverageEditChange('locality', idx, 'totalPhc', e.target.value)} /></FormGroup>
+                                        <FormGroup label="PHCs w/ IMNCI (Before)"><Input type="number" value={l.phcWithImnciBefore} onChange={(e) => handleCoverageEditChange('locality', idx, 'phcWithImnciBefore', e.target.value)} /></FormGroup>
+                                        <FormGroup label="New PHCs w/ IMNCI"><Input type="number" value={l.newPhc} onChange={(e) => handleCoverageEditChange('locality', idx, 'newPhc', e.target.value)} /></FormGroup>
+                                    </div>
+                                </div>
+                            ))}
+                        </>
+                    )}
+                </div>
+                <div className="p-4 border-t flex justify-end gap-2 bg-gray-50">
+                    <Button variant="secondary" onClick={() => setIsEditCoverageModalOpen(false)}>Cancel</Button>
+                    <Button onClick={handleSaveEditedCoverage} disabled={isSavingCoverage}>{isSavingCoverage ? <Spinner size="sm" /> : 'Save Changes'}</Button>
                 </div>
             </Modal>
 

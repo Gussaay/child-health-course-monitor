@@ -1021,13 +1021,30 @@ export default function App() {
         setLoading(true); setCourseDetailsLoading(true); 
         try {
             const [participantsData, allCourseData, finalReport, testData] = await Promise.all([
-                listAllParticipantsForCourse(courseId, { source: 'server' }), listAllDataForCourse(courseId, { source: 'server' }), getFinalReportByCourseId(courseId, { source: 'server' }), listParticipantTestsForCourse(courseId, { source: 'server' }) 
+                listAllParticipantsForCourse(courseId, { source: 'cache' }).catch(()=>[]), listAllDataForCourse(courseId, { source: 'cache' }).catch(()=>({allObs:[], allCases:[]})), getFinalReportByCourseId(courseId, { source: 'cache' }).catch(()=>null), listParticipantTestsForCourse(courseId, { source: 'cache' }).catch(()=>[]) 
             ]);
-            const activeParticipants = (participantsData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
-            const activeTests = (testData || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true");
-            const activeObs = (allCourseData.allObs || []).filter(o => o.isDeleted !== true && o.isDeleted !== "true");
-            const activeCases = (allCourseData.allCases || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true");
-            const activeFinalReport = (finalReport && finalReport.isDeleted !== true && finalReport.isDeleted !== "true") ? finalReport : null;
+            
+            let finalParticipants = participantsData;
+            let finalAllCourse = allCourseData;
+            let finalFinalReport = finalReport;
+            let finalTestData = testData;
+            
+            // If cache failed or is empty, fallback to server
+            if (!participantsData || participantsData.length === 0 || !allCourseData || !allCourseData.allObs || allCourseData.allObs.length === 0) {
+                 const [serverParticipants, serverAllCourse, serverFinalReport, serverTestData] = await Promise.all([
+                    listAllParticipantsForCourse(courseId, { source: 'server' }).catch(()=>[]), listAllDataForCourse(courseId, { source: 'server' }).catch(()=>({allObs:[], allCases:[]})), getFinalReportByCourseId(courseId, { source: 'server' }).catch(()=>null), listParticipantTestsForCourse(courseId, { source: 'server' }).catch(()=>[]) 
+                ]);
+                finalParticipants = serverParticipants;
+                finalAllCourse = serverAllCourse;
+                finalFinalReport = serverFinalReport;
+                finalTestData = serverTestData;
+            }
+
+            const activeParticipants = (finalParticipants || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
+            const activeTests = (finalTestData || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true");
+            const activeObs = (finalAllCourse.allObs || []).filter(o => o.isDeleted !== true && o.isDeleted !== "true");
+            const activeCases = (finalAllCourse.allCases || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true");
+            const activeFinalReport = (finalFinalReport && finalFinalReport.isDeleted !== true && finalFinalReport.isDeleted !== "true") ? finalFinalReport : null;
             setCourseDetailsCache(prev => ({ ...prev, [courseId]: { participants: activeParticipants, allObs: activeObs, allCases: activeCases, finalReport: activeFinalReport, participantTests: activeTests } }));
             navigate('courseReport', { courseId });
         } catch (error) { console.error("Error loading course report data:", error); setToast({ show: true, message: 'Failed to load course report data. Please try again.', type: 'error' }); } 

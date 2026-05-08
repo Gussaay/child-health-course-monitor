@@ -1028,11 +1028,15 @@ export async function upsertCourse(payload, userIdentifier = 'Unknown') {
     const timestamp = serverTimestamp();
     if (payload.id) {
         const courseRef = doc(db, "courses", payload.id);
-        const writePromise = setDoc(courseRef, { 
+        
+        // Ensure we don't accidentally wipe out an existing coverageSnapshot with a null/undefined payload if we aren't explicitly updating it
+        const payloadToUpdate = { 
             ...payload, 
             lastUpdatedAt: timestamp,
             updatedBy: userIdentifier
-        }, { merge: true });
+        };
+        
+        const writePromise = setDoc(courseRef, payloadToUpdate, { merge: true });
         await executeOfflineSafeWrite(writePromise);
         return payload.id;
     } else {

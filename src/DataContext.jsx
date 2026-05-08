@@ -334,6 +334,12 @@ export const DataProvider = ({ children }) => {
                     effectiveLastFetchTime = 0;
                 }
 
+                // FIX: Force effectiveLastFetchTime to 0 if we specifically asked for force=true
+                // This ensures we actually pull fresh data from the server if we explicitly requested a force refresh
+                if (force === true) {
+                    effectiveLastFetchTime = 0;
+                }
+
                 const newOrUpdatedData = await fetchWithTimeout(fetchFn({ source: 'server' }, effectiveLastFetchTime), 60000); 
                 
                 let finalMergedData = localData;
