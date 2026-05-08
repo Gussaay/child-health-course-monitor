@@ -345,6 +345,7 @@ function SplashScreen() {
 
 export default function App() {
     const { t, i18n } = useTranslation();
+    const appVersion = window.APP_VERSION || '1.0.2';
     const [isUpdateReady, setIsUpdateReady] = useState(false);
     const [updateBundle, setUpdateBundle] = useState(null);
 
@@ -506,8 +507,14 @@ export default function App() {
     useEffect(() => {
         if (Capacitor.isNativePlatform()) {
             const checkAndDownloadUpdate = async () => {
-                if (!navigator.onLine) return;
                 try {
+                    const status = await Network.getStatus();
+                    if (!status.connected) {
+                        console.log("Capgo Updater: Device is offline. Skipping update check.");
+                        return;
+                    }
+
+                    console.log("Capgo Updater: Checking for latest update...");
                     const response = await CapacitorHttp.request({
                         method: 'GET',
                         url: 'https://imnci-courses-monitor.web.app/latest/update.json?t=' + Date.now(),
@@ -515,19 +522,30 @@ export default function App() {
                         readTimeout: 5000
                     });
 
-                    if (response.status !== 200) throw new Error("Network response was not ok");
+                    if (response.status !== 200) throw new Error(`Network response was not ok: ${response.status}`);
+                    
                     const latestUpdate = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
                     const currentState = await CapacitorUpdater.current();
                     const currentVersion = currentState.bundle?.version || "builtin";
 
+                    console.log(`Capgo Updater: Current Version = ${currentVersion}, Latest Version = ${latestUpdate.version}`);
+
                     if (currentVersion !== latestUpdate.version) {
+                        console.log(`Capgo Updater: Downloading update bundle ${latestUpdate.version}...`);
                         const downloadedBundle = await CapacitorUpdater.download({ url: latestUpdate.url, version: latestUpdate.version });
+                        console.log("Capgo Updater: Download successful!", downloadedBundle);
                         setUpdateBundle(downloadedBundle); 
                         setIsUpdateReady(true);
+                    } else {
+                        console.log("Capgo Updater: App is already up to date.");
                     }
-                } catch (error) { console.warn("Self-hosted update check skipped or failed due to network conditions."); }
+                } catch (error) { 
+                    console.warn("Capgo Updater: Self-hosted update check failed:", error); 
+                }
             };
-            checkAndDownloadUpdate();
+            
+            // Add a small 2-second delay to ensure the app is fully ready before checking for updates
+            setTimeout(checkAndDownloadUpdate, 2000);
         }
     }, []);
 
@@ -788,7 +806,17 @@ export default function App() {
             try {
                 if (user) {
                     const userRef = doc(db, "users", user.uid);
-                    const userSnap = await getDoc(userRef);
+                    let userSnap;
+                    
+                    // Safe offline check to prevent app hanging on startup without internet
+                    try {
+                        const status = await Network.getStatus();
+                        const sourceOptions = status.connected ? {} : { source: 'cache' };
+                        userSnap = await getDoc(userRef, sourceOptions);
+                    } catch (e) {
+                        userSnap = await getDoc(userRef, { source: 'cache' });
+                    }
+                    
                     let role; let roles = []; let permissionsData = {};
 
                     if (!userSnap.exists() || !userSnap.data().role) {
@@ -845,13 +873,11 @@ export default function App() {
                 setCourseDetailsLoading(true);
                 try {
                     const [participantsData, allCourseData, finalReport, testData] = await Promise.all([
-                        listAllParticipantsForCourse(selectedCourseId, { source: 'cache' }).catch(()=>[]),
-                        listAllDataForCourse(selectedCourseId, { source: 'cache' }).catch(()=>({allObs:[], allCases:[]})),
+                        listAllParticipantsForCourse(selectedCourseId, { source: 'cache' }).catch(()=>null),
+                        listAllDataForCourse(selectedCourseId, { source: 'cache' }).catch(()=>null),
                         getFinalReportByCourseId(selectedCourseId, { source: 'cache' }).catch(()=>null),
-                        listParticipantTestsForCourse(selectedCourseId, { source: 'cache' }).catch(()=>[])
+                        listParticipantTestsForCourse(selectedCourseId, { source: 'cache' }).catch(()=>null)
                     ]);
-
-                    const hasData = participantsData.length > 0 || (allCourseData && allCourseData.allObs && allCourseData.allObs.length > 0);
 
                     const processAndSet = (pData, cData, fData, tData) => {
                         const activeParticipants = (pData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
@@ -866,7 +892,9 @@ export default function App() {
                         }));
                     };
 
-                    if (hasData) {
+                    const isCacheMiss = participantsData === null || allCourseData === null || testData === null;
+
+                    if (!isCacheMiss) {
                         processAndSet(participantsData, allCourseData, finalReport, testData);
                     } else {
                         const [serverParticipants, serverAllCourse, serverFinalReport, serverTestData] = await Promise.all([
@@ -877,7 +905,11 @@ export default function App() {
                         ]);
                         processAndSet(serverParticipants, serverAllCourse, serverFinalReport, serverTestData);
                     }
-                } catch (error) { console.error("Background fetch of course details failed:", error); } finally { setCourseDetailsLoading(false); }
+                } catch (error) { 
+                    console.error("Background fetch of course details failed:", error); 
+                } finally { 
+                    setCourseDetailsLoading(false); 
+                }
             };
             fetchFullCourseDetails();
         }
@@ -1021,18 +1053,25 @@ export default function App() {
         setLoading(true); setCourseDetailsLoading(true); 
         try {
             const [participantsData, allCourseData, finalReport, testData] = await Promise.all([
-                listAllParticipantsForCourse(courseId, { source: 'cache' }).catch(()=>[]), listAllDataForCourse(courseId, { source: 'cache' }).catch(()=>({allObs:[], allCases:[]})), getFinalReportByCourseId(courseId, { source: 'cache' }).catch(()=>null), listParticipantTestsForCourse(courseId, { source: 'cache' }).catch(()=>[]) 
+                listAllParticipantsForCourse(courseId, { source: 'cache' }).catch(()=>null), 
+                listAllDataForCourse(courseId, { source: 'cache' }).catch(()=>null), 
+                getFinalReportByCourseId(courseId, { source: 'cache' }).catch(()=>null), 
+                listParticipantTestsForCourse(courseId, { source: 'cache' }).catch(()=>null) 
             ]);
             
             let finalParticipants = participantsData;
-            let finalAllCourse = allCourseData;
+            let finalAllCourse = allCourseData || {allObs:[], allCases:[]};
             let finalFinalReport = finalReport;
             let finalTestData = testData;
             
-            // If cache failed or is empty, fallback to server
-            if (!participantsData || participantsData.length === 0 || !allCourseData || !allCourseData.allObs || allCourseData.allObs.length === 0) {
+            const isCacheMiss = participantsData === null || allCourseData === null || testData === null;
+
+            if (isCacheMiss) {
                  const [serverParticipants, serverAllCourse, serverFinalReport, serverTestData] = await Promise.all([
-                    listAllParticipantsForCourse(courseId, { source: 'server' }).catch(()=>[]), listAllDataForCourse(courseId, { source: 'server' }).catch(()=>({allObs:[], allCases:[]})), getFinalReportByCourseId(courseId, { source: 'server' }).catch(()=>null), listParticipantTestsForCourse(courseId, { source: 'server' }).catch(()=>[]) 
+                    listAllParticipantsForCourse(courseId, { source: 'server' }).catch(()=>[]), 
+                    listAllDataForCourse(courseId, { source: 'server' }).catch(()=>({allObs:[], allCases:[]})), 
+                    getFinalReportByCourseId(courseId, { source: 'server' }).catch(()=>null), 
+                    listParticipantTestsForCourse(courseId, { source: 'server' }).catch(()=>[]) 
                 ]);
                 finalParticipants = serverParticipants;
                 finalAllCourse = serverAllCourse;
@@ -1045,22 +1084,41 @@ export default function App() {
             const activeObs = (finalAllCourse.allObs || []).filter(o => o.isDeleted !== true && o.isDeleted !== "true");
             const activeCases = (finalAllCourse.allCases || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true");
             const activeFinalReport = (finalFinalReport && finalFinalReport.isDeleted !== true && finalFinalReport.isDeleted !== "true") ? finalFinalReport : null;
+            
             setCourseDetailsCache(prev => ({ ...prev, [courseId]: { participants: activeParticipants, allObs: activeObs, allCases: activeCases, finalReport: activeFinalReport, participantTests: activeTests } }));
             navigate('courseReport', { courseId });
-        } catch (error) { console.error("Error loading course report data:", error); setToast({ show: true, message: 'Failed to load course report data. Please try again.', type: 'error' }); } 
-        finally { setLoading(false); setCourseDetailsLoading(false); }
+        } catch (error) { 
+            console.error("Error loading course report data:", error); 
+            setToast({ show: true, message: 'Failed to load course report data. Please try again.', type: 'error' }); 
+        } finally { 
+            setLoading(false); setCourseDetailsLoading(false); 
+        }
     }, [navigate, courseDetailsCache, courseDetailsLoading]);
 
     const handleOpenCourseForTestForm = useCallback(async (courseId) => {
         setLoading(true); setSelectedCourseId(courseId); setSelectedParticipantId(null); 
         try {
-            const [participantsData, testData] = await Promise.all([ listAllParticipantsForCourse(courseId, { source: 'server' }), listParticipantTestsForCourse(courseId, { source: 'server' }) ]);
+            let participantsData = await listAllParticipantsForCourse(courseId, { source: 'cache' }).catch(()=>null);
+            let testData = await listParticipantTestsForCourse(courseId, { source: 'cache' }).catch(()=>null);
+
+            if (participantsData === null || testData === null) {
+                 [participantsData, testData] = await Promise.all([ 
+                     listAllParticipantsForCourse(courseId, { source: 'server' }), 
+                     listParticipantTestsForCourse(courseId, { source: 'server' }) 
+                 ]);
+            }
+
             const activeParticipants = (participantsData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
             const activeTests = (testData || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true");
             setCourseDetailsCache(prev => ({ ...prev, [courseId]: { ...(prev[courseId] || {}), participants: activeParticipants, participantTests: activeTests } }));
             setActiveCoursesTab('test-dashboard'); setView('courses');
-        } catch (error) { console.error("Error loading data for test form:", error); setToast({ show: true, message: 'Failed to load test form data. Please try again.', type: 'error' }); navigate('courses'); } 
-        finally { setLoading(false); }
+        } catch (error) { 
+            console.error("Error loading data for test form:", error); 
+            setToast({ show: true, message: 'Failed to load test form data.', type: 'error' }); 
+            navigate('courses'); 
+        } finally { 
+            setLoading(false); 
+        }
     }, [navigate]); 
 
     const handleApproveSubmission = useCallback(async (submission) => {
@@ -1068,7 +1126,7 @@ export default function App() {
             try {
                 await approveFacilitatorSubmission(submission, user.email);
                 setToast({ show: true, message: 'Facilitator approved.', type: 'success' });
-                await fetchPendingSubmissions(); await fetchFacilitators(navigator.onLine);
+                await fetchPendingSubmissions(); await fetchFacilitators();
             } catch (error) { setToast({ show: true, message: `Approval failed: ${error.message}`, type: 'error' }); }
         }
     }, [user, fetchPendingSubmissions, fetchFacilitators]);
@@ -1085,7 +1143,7 @@ export default function App() {
     const handleSaveSharingSettings = useCallback(async (itemId, settings) => {
         try {
             if (shareType === 'course') await updateCourseSharingSettings(itemId, settings); else if (shareType === 'participant') await updateParticipantSharingSettings(itemId, settings);
-            await fetchCourses(navigator.onLine); setToast({ show: true, message: "Sharing settings updated.", type: "success" });
+            await fetchCourses(); setToast({ show: true, message: "Sharing settings updated.", type: "success" });
         } catch (error) { setToast({ show: true, message: "Failed to update sharing settings.", type: "error" }); }
     }, [shareType, fetchCourses]);
 
@@ -1094,7 +1152,7 @@ export default function App() {
         if (window.confirm('Are you sure you want to delete this facilitator?')) {
             setLoading(true);
             try {
-                await deleteFacilitator(facilitatorId); await fetchFacilitators(navigator.onLine); 
+                await deleteFacilitator(facilitatorId); await fetchFacilitators(); 
                 if (selectedFacilitatorId === facilitatorId) { setSelectedFacilitatorId(null); navigate('humanResources'); }
                 setToast({ show: true, message: 'Facilitator deleted successfully.', type: 'success' });
             } catch (error) { console.error("Error deleting facilitator:", error); setToast({ show: true, message: `Failed to delete facilitator: ${error.message}`, type: 'error' }); } 
@@ -1108,13 +1166,25 @@ export default function App() {
         if (!courseToReport) return;
         setFinalReportCourse(courseToReport); setSelectedCourseId(courseId); setLoading(true);
         try {
-            const [participantsData, existingReport] = await Promise.all([ listAllParticipantsForCourse(courseId, { source: 'server' }), getFinalReportByCourseId(courseId, { source: 'server' }) ]);
+            let participantsData = await listAllParticipantsForCourse(courseId, { source: 'cache' }).catch(()=>null);
+            let existingReport = await getFinalReportByCourseId(courseId, { source: 'cache' }).catch(()=>null);
+
+            if (participantsData === null) {
+                [participantsData, existingReport] = await Promise.all([ 
+                    listAllParticipantsForCourse(courseId, { source: 'server' }), 
+                    getFinalReportByCourseId(courseId, { source: 'server' }) 
+                ]);
+            }
+
             const activeParticipants = (participantsData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
             const activeFinalReport = (existingReport && existingReport.isDeleted !== true && existingReport.isDeleted !== "true") ? existingReport : null;
             setCourseDetailsCache(prev => ({ ...prev, [courseId]: { ...prev[courseId], participants: activeParticipants, finalReport: activeFinalReport } }));
             navigate('finalReport');
-        } catch (error) { setToast({ show: true, message: 'Failed to load data for Final Report.', type: 'error' }); } 
-        finally { setLoading(false); }
+        } catch (error) { 
+            setToast({ show: true, message: 'Failed to load data for Final Report.', type: 'error' }); 
+        } finally { 
+            setLoading(false); 
+        }
     }, [permissions, allCourses, navigate]);
 
     const handleSaveFinalReport = useCallback(async (reportData) => {
@@ -1144,13 +1214,26 @@ export default function App() {
         if (!courseToEditReport) { setToast({ show: true, message: 'Course not found.', type: 'error' }); return; }
         setFinalReportCourse(courseToEditReport); setSelectedCourseId(courseId); setLoading(true);
         try {
-            const [participantsData, existingReport] = await Promise.all([ listAllParticipantsForCourse(courseId, { source: 'server' }), getFinalReportByCourseId(courseId, { source: 'server' }) ]);
+            let participantsData = await listAllParticipantsForCourse(courseId, { source: 'cache' }).catch(()=>null);
+            let existingReport = await getFinalReportByCourseId(courseId, { source: 'cache' }).catch(()=>null);
+
+            if (participantsData === null) {
+                [participantsData, existingReport] = await Promise.all([ 
+                    listAllParticipantsForCourse(courseId, { source: 'server' }), 
+                    getFinalReportByCourseId(courseId, { source: 'server' }) 
+                ]);
+            }
+
             const activeParticipants = (participantsData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
             const activeFinalReport = (existingReport && existingReport.isDeleted !== true && existingReport.isDeleted !== "true") ? existingReport : null;
             setCourseDetailsCache(prev => ({ ...prev, [courseId]: { ...prev[courseId], participants: activeParticipants, finalReport: activeFinalReport } }));
             navigate('finalReport');
-        } catch (error) { console.error("Error fetching final report for editing:", error); setToast({ show: true, message: 'Failed to load the final report.', type: 'error' }); }
-        finally { setLoading(false); }
+        } catch (error) { 
+            console.error("Error fetching final report for editing:", error); 
+            setToast({ show: true, message: 'Failed to load the final report.', type: 'error' }); 
+        } finally { 
+            setLoading(false); 
+        }
     }, [permissions, allCourses, navigate]);
 
     const handleDeletePdf = useCallback(async (courseId) => {  }, [permissions, courseDetails.finalReport]);
@@ -1256,7 +1339,7 @@ export default function App() {
             case 'facilitatorForm':
                 return permissions.canManageHumanResource ? (<FacilitatorForm 
                     initialData={editingFacilitator} onCancel={() => navigate(previousView)} 
-                    onSave={async () => { await fetchFacilitators(navigator.onLine); setToast({ show: true, message: 'Facilitator saved.', type: 'success' }); navigate('humanResources'); }}
+                    onSave={async () => { await fetchFacilitators(); setToast({ show: true, message: 'Facilitator saved.', type: 'success' }); navigate('humanResources'); }}
                     setToast={setToast} setLoading={setLoading}
                 />) : null;
 
@@ -1541,7 +1624,10 @@ export default function App() {
                             </div>
                             <div>
                                 <h1 className="text-xl sm:text-2xl font-bold text-white">{t('app.title', 'National Child Health Program')}</h1>
-                                <p className="text-sm text-slate-300 hidden sm:block">{t('app.subtitle', 'Program & Course Monitoring System')}</p>
+                                <p className="text-sm text-slate-300 hidden sm:block flex items-center">
+                                {t('app.subtitle', 'Program & Course Monitoring System')}
+                                <span className="ml-2 px-1.5 py-0.5 rounded bg-slate-700/50 text-[10px] font-mono border border-slate-600">v{appVersion}</span>
+                            </p>
                             </div>
                         </div>
                         
@@ -1631,7 +1717,10 @@ export default function App() {
                 </Suspense>
             </main>
 
-            <Footer />
+            <footer className="bg-slate-800 text-slate-400 py-4 text-center text-sm border-t border-slate-700 w-full z-10 relative">
+                <p>App developed by Dr Qusay Mohamed - <a href="mailto:Gussaay@gmail.com" className="text-sky-400 hover:text-sky-300 transition-colors">Gussaay@gmail.com</a></p>
+                <p className="mt-1 text-[11px] font-mono text-slate-500 md:hidden">Version {appVersion}</p>
+            </footer>
             { user && !isMinimalUILayout && <BottomNav navItems={visibleNavItems} navigate={navigate} /> }
 
             <Suspense fallback={null}>

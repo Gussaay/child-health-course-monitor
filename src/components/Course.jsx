@@ -955,7 +955,7 @@ export function CourseManagementView({
         fetchStateCoordinators();
         fetchLocalityCoordinators();
         fetchFunders();
-        fetchParticipants(true); 
+        fetchParticipants(); 
     }, [fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators, fetchFunders, fetchParticipants]); 
 
     useEffect(() => {
@@ -1252,7 +1252,7 @@ export function CourseManagementView({
             }
 
             await upsertCourse(payload, currentUserIdentifier);
-            await fetchCourses(navigator.onLine);
+            await fetchCourses();
             setActiveCoursesTab('courses'); 
             setCourseToEdit(null);
             setToast({ show: true, message: 'Course saved successfully!', type: 'success' });
@@ -1271,7 +1271,7 @@ export function CourseManagementView({
         try {
             await upsertCourse({ ...courseToUpdate, deletionRequested: false, inRecycleBin: true }, currentUserIdentifier);
             setToast({ show: true, message: 'Course moved to Deleted Courses.', type: 'success' });
-            await fetchCourses(navigator.onLine);
+            await fetchCourses();
         } catch (error) {
             setToast({ show: true, message: `Failed to process deletion: ${error.message}`, type: 'error' });
         } finally {
@@ -1284,7 +1284,7 @@ export function CourseManagementView({
             setIsProcessing(true);
             try {
                 await deleteCourse(courseId, currentUserIdentifier);
-                await fetchCourses(navigator.onLine);
+                await fetchCourses();
                 setToast({ show: true, message: 'Course permanently deleted.', type: 'success' });
             } catch (error) {
                 setToast({ show: true, message: `Deletion failed: ${error.message}`, type: 'error' });
@@ -1300,7 +1300,7 @@ export function CourseManagementView({
             setIsProcessing(true);
             try {
                 await upsertCourse({ ...courseToUpdate, approvalStatus: 'approved' }, currentUserIdentifier);
-                await fetchCourses(navigator.onLine);
+                await fetchCourses();
                 setToast({ show: true, message: 'Course approved successfully!', type: 'success' });
             } catch (error) {
                 setToast({ show: true, message: `Approval failed: ${error.message}`, type: 'error' });
@@ -1318,7 +1318,7 @@ export function CourseManagementView({
                 try {
                     // Update status to rejected AND move directly to recycle bin
                     await upsertCourse({ ...courseToUpdate, approvalStatus: 'rejected', inRecycleBin: true }, currentUserIdentifier);
-                    await fetchCourses(navigator.onLine);
+                    await fetchCourses();
                     setToast({ show: true, message: 'Course rejected and moved to Deleted Courses.', type: 'info' });
                 } catch (error) {
                     setToast({ show: true, message: `Rejection failed: ${error.message}`, type: 'error' });
@@ -1333,7 +1333,7 @@ export function CourseManagementView({
         setIsProcessing(true);
         try {
             await upsertCourse({ ...course, deletionRequested: false }, currentUserIdentifier);
-            await fetchCourses(navigator.onLine);
+            await fetchCourses();
             setToast({ show: true, message: 'Deletion request rejected.', type: 'success' });
         } catch (error) {
             setToast({ show: true, message: `Failed to reject deletion: ${error.message}`, type: 'error' });
@@ -1347,7 +1347,7 @@ export function CourseManagementView({
             setIsProcessing(true);
             try {
                 await upsertCourse({ ...course, inRecycleBin: false }, currentUserIdentifier); 
-                await fetchCourses(navigator.onLine);
+                await fetchCourses();
                 setToast({ show: true, message: 'Course restored successfully!', type: 'success' });
             } catch (error) {
                 setToast({ show: true, message: `Failed to restore course: ${error.message}`, type: 'error' });

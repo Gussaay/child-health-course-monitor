@@ -22,42 +22,41 @@ registerSW({ immediate: true });
 // =========================================================================
 // --- AGGRESSIVE VERSION-CONTROLLED CACHE BUSTER ---
 // =========================================================================
-// ⚠️ IMPORTANT: Change this version string whenever you deploy a new update
-// and want to force all users' devices to clear their cache.
-const APP_VERSION = '1.0.2'; 
+const APP_VERSION = '1.0.2';
+window.APP_VERSION = APP_VERSION; 
 
 const localVersion = localStorage.getItem('app_version');
 
 if (localVersion !== APP_VERSION) {
-  console.log(`🔄 New version detected! Upgrading from ${localVersion || 'unknown'} to ${APP_VERSION}. Clearing cache...`);
+  console.log(`🔄 New version detected! Upgrading from ${localVersion || 'unknown'} to ${APP_VERSION}.`);
   
-  if ('caches' in window) {
-    caches.keys().then((names) => {
-      // Delete ALL caches to ensure a completely fresh start
-      Promise.all(names.map(name => caches.delete(name)))
-        .then(() => {
-          console.log("✅ All caches successfully deleted.");
-          
-          // Unregister any old service workers directly
-          if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-              for(let registration of registrations) {
-                registration.unregister();
+  // CRITICAL FIX: Only wipe caches and force reload if the device is actually online.
+  // Doing this while offline will crash the PWA/Native Webview entirely.
+  if (navigator.onLine) {
+      console.log("Clearing cache to fetch fresh files...");
+      if ('caches' in window) {
+        caches.keys().then((names) => {
+          Promise.all(names.map(name => caches.delete(name)))
+            .then(() => {
+              console.log("✅ All caches successfully deleted.");
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                  for(let registration of registrations) {
+                    registration.unregister();
+                  }
+                });
               }
+              localStorage.setItem('app_version', APP_VERSION);
+              window.location.reload();
             });
-          }
-
-          // Update the version in local storage so it doesn't loop
-          localStorage.setItem('app_version', APP_VERSION);
-          
-          // Force a hard reload from the server to pull the new files
-          window.location.reload(true);
         });
-    });
+      } else {
+        localStorage.setItem('app_version', APP_VERSION);
+        window.location.reload();
+      }
   } else {
-    // If 'caches' API isn't supported, just update version and reload
-    localStorage.setItem('app_version', APP_VERSION);
-    window.location.reload(true);
+      console.log("📱 Offline mode. Skipping cache wipe until network is restored to prevent crash.");
+      localStorage.setItem('app_version', APP_VERSION);
   }
 }
 // =========================================================================

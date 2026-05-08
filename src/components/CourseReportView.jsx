@@ -114,8 +114,8 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={modalTitle}>
-            <div className="p-6 space-y-6">
-                <div className="flex items-center space-x-4">
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+                <div className="flex flex-col sm:flex-row items-center sm:space-x-4 space-y-3 sm:space-y-0 text-center sm:text-left">
                     <div className="flex-shrink-0 bg-sky-100 p-3 rounded-full">
                         <ShareIcon />
                     </div>
@@ -127,7 +127,7 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
 
                 <div className="space-y-2">
                     <label className="font-semibold text-gray-700">General Access</label>
-                    <div className="flex space-x-4">
+                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-0 sm:space-x-4">
                         <label className="flex items-center space-x-2">
                             <input
                                 type="radio"
@@ -156,15 +156,15 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
                 {accessLevel === 'private' && (
                     <div className="space-y-4">
                         <label className="font-semibold text-gray-700">Share with specific people</label>
-                        <div className="flex space-x-2">
+                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-0 sm:space-x-2 w-full">
                             <Input
                                 type="email"
                                 placeholder="Enter email address"
                                 value={emailInput}
                                 onChange={(e) => setEmailInput(e.target.value)}
-                                className="flex-grow"
+                                className="flex-grow w-full"
                             />
-                            <Button onClick={handleAddEmail}>Add</Button>
+                            <Button onClick={handleAddEmail} className="w-full sm:w-auto">Add</Button>
                         </div>
                         <div className="space-y-2 max-h-48 overflow-y-auto">
                             {sharedWith.map(email => (
@@ -179,13 +179,13 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
                 )}
                 
                 <div className="pt-4 border-t">
-                     <div className="flex items-center justify-between">
-                        <Button onClick={handleCopyLink} variant="secondary">
+                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 w-full">
+                        <Button onClick={handleCopyLink} variant="secondary" className="w-full sm:w-auto">
                             <LinkIcon /> {copySuccess ? copySuccess : "Copy Link"}
                         </Button>
-                        <div className="flex space-x-2">
-                            <Button variant="secondary" onClick={onClose}>Cancel</Button>
-                            <Button onClick={handleSave} disabled={isSaving}>
+                        <div className="flex flex-col-reverse sm:flex-row gap-3 w-full sm:w-auto">
+                            <Button variant="secondary" onClick={onClose} className="w-full sm:w-auto">Cancel</Button>
+                            <Button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto">
                                 {isSaving ? <Spinner /> : 'Save Changes'}
                             </Button>
                         </div>
@@ -567,8 +567,7 @@ export function CourseReportView({
                 coverageSnapshot: editableCoverageData 
             }, currentUserIdentifier);
             
-            // FORCE FETCH: true tells the cache system to actually query the server for recent updates to ensure they exist locally
-            if (fetchCourses) await fetchCourses(true);
+            if (fetchCourses) await fetchCourses();
             
             setCoverageData(editableCoverageData);
             setIsEditCoverageModalOpen(false);
@@ -835,8 +834,7 @@ export function CourseReportView({
                 coverageSnapshot: historicalCoveragePreview 
             }, currentUserIdentifier); 
             
-            // FORCE FETCH: true tells the cache system to actually query the server for recent updates to ensure they exist locally
-            if (fetchCourses) await fetchCourses(true); 
+            if (fetchCourses) await fetchCourses(); 
             
             setCoverageData(historicalCoveragePreview); 
             setIsCoverageModalOpen(false);
@@ -1041,36 +1039,34 @@ export function CourseReportView({
     const hasChartParticipants = chartParticipants.length > 0;
 
     return (
-        <div className="grid gap-6">
+        <div className="flex flex-col gap-6 pb-28 lg:pb-8 w-full max-w-full min-w-0">
             <PageHeader 
                 title="Full Course Report" 
                 subtitle={`${course.course_type} - ${course.state}`} 
                 actions={
                     isSharedView ? (
-                        <div className="flex items-center gap-2">
-                            <Button onClick={() => handlePdfGeneration('print')} variant="secondary" disabled={isPdfGenerating}><PdfIcon /> Export for Print</Button>
-                            <Button onClick={() => handlePdfGeneration('screen')} variant="secondary" disabled={isPdfGenerating}><PdfIcon /> Export for Sharing</Button>
-                            {isPdfGenerating && <div className="flex items-center gap-2 text-gray-500"><Spinner size="sm" /><span>Generating...</span></div>}
+                        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full sm:w-auto justify-start sm:justify-end">
+                            <Button onClick={() => handlePdfGeneration('print')} variant="secondary" disabled={isPdfGenerating} className="w-full sm:w-auto"><PdfIcon /> Export for Print</Button>
+                            <Button onClick={() => handlePdfGeneration('screen')} variant="secondary" disabled={isPdfGenerating} className="w-full sm:w-auto"><PdfIcon /> Export for Sharing</Button>
+                            {isPdfGenerating && <div className="flex items-center gap-2 text-gray-500 justify-center w-full sm:w-auto"><Spinner size="sm" /><span>Generating...</span></div>}
                         </div>
                     ) : (
-                        <>
-                            <div className="flex items-center gap-2">
-                                <Button onClick={() => setIsShareModalOpen(true)} variant="secondary" disabled={isPdfGenerating}>
-                                    <ShareIcon /> Share
-                                </Button>
-                                <Button onClick={() => handlePdfGeneration('print')} variant="secondary" disabled={isPdfGenerating}><PdfIcon /> Export for Print</Button>
-                                <Button onClick={() => handlePdfGeneration('screen')} variant="secondary" disabled={isPdfGenerating}><PdfIcon /> Export for Sharing</Button>
-                                {isPdfGenerating && <div className="flex items-center gap-2 text-gray-500"><Spinner size="sm" /><span>Generating...</span></div>}
-                            </div>
-                            <Button onClick={onBack} disabled={isPdfGenerating}>Back to List</Button>
-                        </>
+                        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full sm:w-auto justify-start sm:justify-end mt-4 sm:mt-0">
+                            <Button onClick={() => setIsShareModalOpen(true)} variant="secondary" disabled={isPdfGenerating} className="w-full sm:w-auto">
+                                <ShareIcon /> Share
+                            </Button>
+                            <Button onClick={() => handlePdfGeneration('print')} variant="secondary" disabled={isPdfGenerating} className="w-full sm:w-auto"><PdfIcon /> Export for Print</Button>
+                            <Button onClick={() => handlePdfGeneration('screen')} variant="secondary" disabled={isPdfGenerating} className="w-full sm:w-auto"><PdfIcon /> Export for Sharing</Button>
+                            {isPdfGenerating && <div className="flex items-center gap-2 text-gray-500 justify-center w-full sm:w-auto"><Spinner size="sm" /><span>Generating...</span></div>}
+                            <Button onClick={onBack} disabled={isPdfGenerating} className="w-full sm:w-auto mt-2 sm:mt-0">Back to List</Button>
+                        </div>
                     )
                 }
             />
             
-            <div id="full-course-report" className="space-y-6">
+            <div id="full-course-report" className="flex flex-col gap-6 w-full max-w-full min-w-0">
                 <Card>
-                    <div id="course-info-card" className="relative p-2">
+                    <div id="course-info-card" className="relative p-2 w-full max-w-full min-w-0">
                         {!isSharedView && <button onClick={() => handleCopyAsImage('course-info-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
                         <h3 className="text-xl font-bold mb-4">Course Information</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
@@ -1081,27 +1077,42 @@ export function CourseReportView({
                             {course.clinical_instructor && <div><strong>Clinical Instructor:</strong> {course.clinical_instructor}</div>}
                             <div><strong>Funded by:</strong> {course.funded_by}</div>
                             {course.course_budget && <div><strong>Course Budget (USD):</strong> ${course.course_budget}</div>}
-                            <div className="col-span-2"><strong>Facilitators:</strong> {(course.facilitators || []).join(', ')}</div>
+                            <div className="col-span-1 sm:col-span-2 md:col-span-4 break-words"><strong>Facilitators:</strong> {(course.facilitators || []).join(', ')}</div>
                         </div>
                     </div>
                 </Card>
 
                 {activeFinalReport && activeFinalReport.pdf_url && (
                     <Card>
-                        <h3 className="text-xl font-bold mb-4">Final Report Documents</h3>
-                        <Table headers={['Link', 'Actions']}>
-                            <tr>
-                                <td className="p-2 border"><a href={activeFinalReport.pdf_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-2"><PdfIcon className="text-blue-500" /> View Report PDF</a></td>
-                                <td className="p-2 border text-right"><div className="flex gap-2 justify-end"><a href={activeFinalReport.pdf_url} download={`Final_Report_${course.course_type}_${course.state}.pdf`} className="text-gray-600 hover:text-gray-900"><Button variant="secondary">Download</Button></a>
-                                {!isSharedView && <><Button variant="secondary" onClick={() => onEditFinalReport(course.id)}>Edit</Button><Button variant="danger" onClick={() => onDeletePdf(course.id)}>Delete PDF</Button></>}</div></td>
-                            </tr>
-                        </Table>
+                        <div className="w-full max-w-full min-w-0">
+                            <h3 className="text-xl font-bold mb-4">Final Report Documents</h3>
+                            <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2">
+                                <Table headers={['Link', 'Actions']}>
+                                    <tr>
+                                        <td className="p-2 border"><a href={activeFinalReport.pdf_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-2"><PdfIcon className="text-blue-500" /> View Report PDF</a></td>
+                                        <td className="p-2 border text-right">
+                                            <div className="flex flex-col sm:flex-row flex-wrap gap-2 justify-start sm:justify-end">
+                                                <a href={activeFinalReport.pdf_url} download={`Final_Report_${course.course_type}_${course.state}.pdf`} className="text-gray-600 hover:text-gray-900 w-full sm:w-auto">
+                                                    <Button variant="secondary" className="w-full sm:w-auto">Download</Button>
+                                                </a>
+                                                {!isSharedView && (
+                                                    <>
+                                                        <Button variant="secondary" onClick={() => onEditFinalReport(course.id)} className="w-full sm:w-auto">Edit</Button>
+                                                        <Button variant="danger" onClick={() => onDeletePdf(course.id)} className="w-full sm:w-auto">Delete PDF</Button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </Table>
+                            </div>
+                        </div>
                     </Card>
                 )}
                 
                 {availableSubTypes.length > 1 && (
                     <Card>
-                        <div className="p-4 bg-gray-50 border-b border-gray-100">
+                        <div className="p-4 bg-gray-50 border-b border-gray-100 w-full max-w-full min-w-0">
                             <FormGroup label="Filter Report by Course Sub-Type">
                                 <Select value={subTypeFilter} onChange={e => setSubTypeFilter(e.target.value)} className="w-full md:w-1/3">
                                     {availableSubTypes.map(t => <option key={t} value={t}>{t}</option>)}
@@ -1113,26 +1124,26 @@ export function CourseReportView({
 
                 {hasAnyKpis && (
                     <Card>
-                        <div id="kpi-card" className="relative p-2">
+                        <div id="kpi-card" className="relative p-2 w-full max-w-full min-w-0">
                             {!isSharedView && <button onClick={() => handleCopyAsImage('kpi-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
                             <h3 className="text-xl font-bold mb-4">Key Performance Indicators (KPIs)</h3>
-                            <div className="space-y-6">
+                            <div className="flex flex-col gap-6 w-full max-w-full min-w-0">
                                 <div>
                                     <h4 className="text-lg font-semibold mb-2 text-gray-700">Case KPIs</h4>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                                        <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Total Cases</div><div className="text-3xl font-bold text-sky-700">{overall.totalCases}</div></div>
-                                        <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Total Correct Cases</div><div className="text-3xl font-bold text-sky-700">{overall.correctCases}</div></div>
-                                        <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Avg. Cases / Participant</div><div className="text-3xl font-bold text-sky-700">{overall.avgCasesPerParticipant.toFixed(1)}</div></div>
-                                        <div className={`p-4 rounded-lg ${getScoreColorClass(overall.caseCorrectnessPercentage)}`}><div className="text-sm font-semibold">Overall Correctness</div><div className="text-3xl font-bold">{fmtPct(overall.caseCorrectnessPercentage)}</div></div>
+                                        <div className="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg text-center w-full"><div className="text-sm text-gray-600">Total Cases</div><div className="text-3xl font-bold text-sky-700">{overall.totalCases}</div></div>
+                                        <div className="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg text-center w-full"><div className="text-sm text-gray-600">Total Correct Cases</div><div className="text-3xl font-bold text-sky-700">{overall.correctCases}</div></div>
+                                        <div className="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg text-center w-full"><div className="text-sm text-gray-600">Avg. Cases / Participant</div><div className="text-3xl font-bold text-sky-700">{overall.avgCasesPerParticipant.toFixed(1)}</div></div>
+                                        <div className={`flex flex-col items-center justify-center p-4 rounded-lg text-center w-full ${getScoreColorClass(overall.caseCorrectnessPercentage)}`}><div className="text-sm font-semibold">Overall Correctness</div><div className="text-3xl font-bold">{fmtPct(overall.caseCorrectnessPercentage)}</div></div>
                                     </div>
                                 </div>
                                 <div>
                                     <h4 className="text-lg font-semibold mb-2 text-gray-700">Skill/Classification KPIs</h4>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                                        <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Total Skills</div><div className="text-3xl font-bold text-sky-700">{overall.totalSkills}</div></div>
-                                        <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Total Correct Skills</div><div className="text-3xl font-bold text-sky-700">{overall.correctSkills}</div></div>
-                                        <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm text-gray-600">Avg. Skills / Participant</div><div className="text-3xl font-bold text-sky-700">{overall.avgSkillsPerParticipant.toFixed(1)}</div></div>
-                                        <div className={`p-4 rounded-lg ${getScoreColorClass(overall.skillCorrectnessPercentage)}`}><div className="text-sm font-semibold">Overall Correctness</div><div className="text-3xl font-bold">{fmtPct(overall.skillCorrectnessPercentage)}</div></div>
+                                        <div className="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg text-center w-full"><div className="text-sm text-gray-600">Total Skills</div><div className="text-3xl font-bold text-sky-700">{overall.totalSkills}</div></div>
+                                        <div className="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg text-center w-full"><div className="text-sm text-gray-600">Total Correct Skills</div><div className="text-3xl font-bold text-sky-700">{overall.correctSkills}</div></div>
+                                        <div className="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg text-center w-full"><div className="text-sm text-gray-600">Avg. Skills / Participant</div><div className="text-3xl font-bold text-sky-700">{overall.avgSkillsPerParticipant.toFixed(1)}</div></div>
+                                        <div className={`flex flex-col items-center justify-center p-4 rounded-lg text-center w-full ${getScoreColorClass(overall.skillCorrectnessPercentage)}`}><div className="text-sm font-semibold">Overall Correctness</div><div className="text-3xl font-bold">{fmtPct(overall.skillCorrectnessPercentage)}</div></div>
                                     </div>
                                 </div>
                             </div>
@@ -1142,22 +1153,22 @@ export function CourseReportView({
 
                 {showTestScoresOnScreen && hasTestScoreDataForKpis && (
                     <Card>
-                        <div id="test-scores-card" className="relative p-2">
+                        <div id="test-scores-card" className="relative p-2 w-full max-w-full min-w-0">
                             {!isSharedView && <button onClick={() => handleCopyAsImage('test-scores-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
                             <h3 className="text-xl font-bold mb-4">Participant Test Scores</h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center mb-6">
-                                <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm font-semibold text-gray-600">Avg. Pre-Test</div><div className="text-2xl font-bold">{fmtPct(preTestStats.avg)}</div></div>
-                                <div className="p-4 bg-gray-100 rounded-lg"><div className="text-sm font-semibold text-gray-600">Avg. Post-Test</div><div className="text-2xl font-bold">{fmtPct(postTestStats.avg)}</div></div>
-                                <div className={`p-4 rounded-lg ${getScoreColorClass(totalImprovement, 'improvement')}`}><div className="text-sm font-semibold">Avg. Improvement</div><div className="text-2xl font-bold">{fmtPct(totalImprovement)}</div></div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-center mb-6">
+                                <div className="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg text-center w-full"><div className="text-sm font-semibold text-gray-600">Avg. Pre-Test</div><div className="text-2xl font-bold">{fmtPct(preTestStats.avg)}</div></div>
+                                <div className="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg text-center w-full"><div className="text-sm font-semibold text-gray-600">Avg. Post-Test</div><div className="text-2xl font-bold">{fmtPct(postTestStats.avg)}</div></div>
+                                <div className={`flex flex-col items-center justify-center p-4 rounded-lg text-center w-full ${getScoreColorClass(totalImprovement, 'improvement')}`}><div className="text-sm font-semibold">Avg. Improvement</div><div className="text-2xl font-bold">{fmtPct(totalImprovement)}</div></div>
                             </div>
                             {hasChartParticipants ? (
-                                <div className="w-full overflow-x-auto">
-                                    <div style={{ height: '350px', minWidth: '600px' }}>
+                                <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2">
+                                    <div style={{ height: '350px', minWidth: '600px' }} className="min-w-[600px]">
                                         <Line ref={prePostDistributionChartRef} data={testScoreChartData} options={testScoreChartOptions} />
                                     </div>
                                 </div>
                             ) : (
-                                <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
+                                <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-lg border border-gray-200 w-full">
                                     No valid pre- and post-test data available for charting.
                                 </div>
                             )}
@@ -1168,10 +1179,10 @@ export function CourseReportView({
                 {/* Show Retrieval Button if no coverage data exists for an IMNCI course */}
                 {!coverageData && course?.course_type === 'IMNCI' && !isSharedView && (
                     <Card>
-                        <div className="p-6 flex flex-col justify-center items-center text-center">
+                        <div className="p-6 flex flex-col justify-center items-center text-center w-full max-w-full min-w-0">
                             <h3 className="text-lg font-bold text-gray-700 mb-2">No Baseline Coverage Data</h3>
                             <p className="text-sm text-gray-500 mb-4">Historical baseline coverage has not been calculated for this course yet.</p>
-                            <Button onClick={handleRetrieveCoverageHistory} variant="primary">
+                            <Button onClick={handleRetrieveCoverageHistory} variant="primary" className="w-full sm:w-auto">
                                 Retrieve Coverage History
                             </Button>
                         </div>
@@ -1181,20 +1192,20 @@ export function CourseReportView({
                 {coverageData && (
                     <>
                     <Card>
-                        <div id="investment-card" className="relative p-2">
+                        <div id="investment-card" className="relative p-2 w-full max-w-full min-w-0">
                             {!isSharedView && <button onClick={() => handleCopyAsImage('investment-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
                             <h3 className="text-xl font-bold mb-4">Investment KPIs</h3>
                             
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-center">
-                                <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                                <div className="flex flex-col items-center justify-center p-4 bg-blue-50 rounded-lg border border-blue-100 text-center w-full">
                                     <div className="text-sm font-semibold text-blue-700">Total Investment</div>
                                     <div className="text-2xl font-bold text-blue-800">${coverageData.totalBudget.toLocaleString()}</div>
                                 </div>
-                                <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-100">
+                                <div className="flex flex-col items-center justify-center p-4 bg-yellow-50 rounded-lg border border-yellow-100 text-center w-full">
                                     <div className="text-sm font-semibold text-yellow-700">Cost / Participant</div>
                                     <div className="text-2xl font-bold text-yellow-800">${Math.round(coverageData.costPerParticipant).toLocaleString()}</div>
                                 </div>
-                                <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
+                                <div className="flex flex-col items-center justify-center p-4 bg-purple-50 rounded-lg border border-purple-100 text-center w-full">
                                     <div className="text-sm font-semibold text-purple-700">Cost/New Facility introduce IMNCI</div>
                                     <div className="text-2xl font-bold text-purple-800">${Math.round(coverageData.costPerNewFacility).toLocaleString()}</div>
                                 </div>
@@ -1203,74 +1214,74 @@ export function CourseReportView({
                     </Card>
 
                     <Card>
-                        <div id="coverage-card" className="relative p-2">
+                        <div id="coverage-card" className="relative p-2 w-full max-w-full min-w-0">
                             {!isSharedView && <button onClick={() => handleCopyAsImage('coverage-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
                             
-                            <div className="flex justify-between items-center mb-4">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
                                 <h3 className="text-xl font-bold">Coverage KPIs (PHC Facilities Only)</h3>
                                 {isSuperUser && !isSharedView && (
-                                    <div className="flex gap-2 copy-button">
-                                        <Button size="sm" variant="secondary" onClick={handleRetrieveCoverageHistory}>Refetch Baseline</Button>
-                                        <Button size="sm" variant="secondary" onClick={openEditCoverageModal}>Edit Baseline</Button>
+                                    <div className="flex flex-wrap gap-2 copy-button w-full sm:w-auto">
+                                        <Button size="sm" variant="secondary" onClick={handleRetrieveCoverageHistory} className="w-full sm:w-auto">Refetch Baseline</Button>
+                                        <Button size="sm" variant="secondary" onClick={openEditCoverageModal} className="w-full sm:w-auto">Edit Baseline</Button>
                                     </div>
                                 )}
                             </div>
                             
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-center mb-6">
-                                <div className="p-4 bg-green-50 rounded-lg border border-green-100">
+                                <div className="flex flex-col items-center justify-center p-4 bg-green-50 rounded-lg border border-green-100 text-center w-full">
                                     <div className="text-sm font-semibold text-green-700">Total new PHC facility Introduce IMNCI</div>
                                     <div className="text-2xl font-bold text-green-800">{coverageData.nationalCov.newPhc}</div>
                                 </div>
                                 {coverageData.localityCoverage.map(l => (
                                     <div key={`card-loc-${l.name}`} className="p-4 bg-sky-50 rounded-lg border border-sky-100">
                                         <div className="text-sm font-semibold text-sky-700">Locality Increase ({l.name})</div>
-                                        <div className="text-2xl font-bold text-sky-800">{l.newPhc} <span className="text-sm text-green-600 block sm:inline">(+{l.increase.toFixed(2)}%)</span></div>
+                                        <div className="text-2xl font-bold text-sky-800">{l.newPhc} <span className="text-sm text-green-600 block xl:inline">(+{l.increase.toFixed(2)}%)</span></div>
                                     </div>
                                 ))}
                                 {coverageData.stateCoverage.map(s => (
                                     <div key={`card-state-${s.name}`} className="p-4 bg-indigo-50 rounded-lg border border-indigo-100">
                                         <div className="text-sm font-semibold text-indigo-700">State Increase ({s.name})</div>
-                                        <div className="text-2xl font-bold text-indigo-800">{s.newPhc} <span className="text-sm text-green-600 block sm:inline">(+{s.increase.toFixed(2)}%)</span></div>
+                                        <div className="text-2xl font-bold text-indigo-800">{s.newPhc} <span className="text-sm text-green-600 block xl:inline">(+{s.increase.toFixed(2)}%)</span></div>
                                     </div>
                                 ))}
-                                <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
+                                <div className="flex flex-col items-center justify-center p-4 bg-purple-50 rounded-lg border border-purple-100 text-center w-full">
                                     <div className="text-sm font-semibold text-purple-700">National Increase (Sudan Overall)</div>
-                                    <div className="text-2xl font-bold text-purple-800">{coverageData.nationalCov.newPhc} <span className="text-sm text-green-600 block sm:inline">(+{coverageData.nationalCov.increase.toFixed(4)}%)</span></div>
+                                    <div className="text-2xl font-bold text-purple-800">{coverageData.nationalCov.newPhc} <span className="text-sm text-green-600 block xl:inline">(+{coverageData.nationalCov.increase.toFixed(4)}%)</span></div>
                                 </div>
                             </div>
 
-                            <div className="overflow-x-auto">
+                            <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2">
                                 <Table headers={['Level / Name', 'Total Functioning PHCs', 'PHCs w/ IMNCI (Before)', 'Coverage Before', 'New PHCs w/ IMNCI', 'Coverage After', 'Increase']}>
                                     {coverageData.localityCoverage.map(l => (
                                         <tr key={`loc-${l.name}`} className="hover:bg-gray-50">
-                                            <td className="p-2 border font-semibold text-gray-700">Locality: {l.name}</td>
+                                            <td className="p-2 border font-semibold text-gray-700 min-w-[120px]">Locality: {l.name}</td>
                                             <td className="p-2 border text-center">{l.totalPhc}</td>
                                             <td className="p-2 border text-center">{l.phcWithImnciBefore}</td>
                                             <td className="p-2 border text-center font-semibold text-gray-600">{fmtPct(l.covBefore)}</td>
                                             <td className="p-2 border text-center">{l.newPhc}</td>
                                             <td className="p-2 border text-center font-bold text-sky-700">{fmtPct(l.covAfter)}</td>
-                                            <td className="p-2 border text-center font-bold text-green-600">+{l.increase.toFixed(2)}%</td>
+                                            <td className="p-2 border text-center font-bold text-green-600 min-w-[80px]">+{l.increase.toFixed(2)}%</td>
                                         </tr>
                                     ))}
                                     {coverageData.stateCoverage.map(s => (
                                         <tr key={`state-${s.name}`} className="hover:bg-gray-50 bg-gray-50/50">
-                                            <td className="p-2 border font-semibold text-gray-800">State: {s.name}</td>
+                                            <td className="p-2 border font-semibold text-gray-800 min-w-[120px]">State: {s.name}</td>
                                             <td className="p-2 border text-center">{s.totalPhc}</td>
                                             <td className="p-2 border text-center">{s.phcWithImnciBefore}</td>
                                             <td className="p-2 border text-center font-semibold text-gray-600">{fmtPct(s.covBefore)}</td>
                                             <td className="p-2 border text-center">{s.newPhc}</td>
                                             <td className="p-2 border text-center font-bold text-sky-700">{fmtPct(s.covAfter)}</td>
-                                            <td className="p-2 border text-center font-bold text-green-600">+{s.increase.toFixed(2)}%</td>
+                                            <td className="p-2 border text-center font-bold text-green-600 min-w-[80px]">+{s.increase.toFixed(2)}%</td>
                                         </tr>
                                     ))}
                                     <tr className="hover:bg-gray-50 bg-sky-50">
-                                        <td className="p-2 border font-bold text-gray-900">National (Sudan Overall)</td>
+                                        <td className="p-2 border font-bold text-gray-900 min-w-[150px]">National (Sudan Overall)</td>
                                         <td className="p-2 border text-center font-bold">{coverageData.nationalCov.totalPhc}</td>
                                         <td className="p-2 border text-center font-bold">{coverageData.nationalCov.phcWithImnciBefore}</td>
                                         <td className="p-2 border text-center font-bold text-gray-700">{fmtPct(coverageData.nationalCov.covBefore)}</td>
                                         <td className="p-2 border text-center font-bold">{coverageData.nationalCov.newPhc}</td>
                                         <td className="p-2 border text-center font-bold text-sky-800">{fmtPct(coverageData.nationalCov.covAfter)}</td>
-                                        <td className="p-2 border text-center font-bold text-green-700">+{coverageData.nationalCov.increase.toFixed(4)}%</td>
+                                        <td className="p-2 border text-center font-bold text-green-700 min-w-[80px]">+{coverageData.nationalCov.increase.toFixed(4)}%</td>
                                     </tr>
                                 </Table>
                             </div>
@@ -1281,27 +1292,27 @@ export function CourseReportView({
 
                 {course.course_type === 'IMNCI' && newImciFacilities && newImciFacilities.length > 0 && (
                     <Card>
-                        <div id="new-imci-facilities-card" className="relative p-2">
+                        <div id="new-imci-facilities-card" className="relative p-2 w-full max-w-full min-w-0">
                             {!isSharedView && <button onClick={() => handleCopyAsImage('new-imci-facilities-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
                             <h3 className="text-xl font-bold mb-4">Facilities with New IMNCI Service Introduction</h3>
                             <p className="text-sm text-gray-600 mb-2">The following facilities did not provide IMCI services before this course. Adding participants from these facilities has triggered an update to mark them as IMNCI-providing sites.</p>
                             
                             <h4 className="text-lg font-semibold text-sky-800 mt-4 mb-2">PHC Facilities (Included in Coverage)</h4>
                             {newImciFacilities.filter(f => !f.isHospital).length > 0 ? (
-                                <div className="overflow-x-auto">
+                                <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2">
                                     <Table headers={['Facility Name', 'Locality', 'State', 'Type']}>
                                         {newImciFacilities.filter(f => !f.isHospital).map((facility, index) => (
                                             <tr key={`phc-${index}`} className="hover:bg-gray-50">
-                                                <td className="p-2 border font-semibold">{facility.name}</td>
-                                                <td className="p-2 border">{facility.locality}</td>
-                                                <td className="p-2 border">{facility.state}</td>
+                                                <td className="p-2 border font-semibold min-w-[150px]">{facility.name}</td>
+                                                <td className="p-2 border min-w-[100px]">{facility.locality}</td>
+                                                <td className="p-2 border min-w-[100px]">{facility.state}</td>
                                                 <td className="p-2 border text-gray-600 text-sm">PHC</td>
                                             </tr>
                                         ))}
                                     </Table>
                                 </div>
                             ) : (
-                                <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 text-center text-sm mb-4">No new PHC facilities introduced.</div>
+                                <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 text-center text-sm mb-4 w-full">No new PHC facilities introduced.</div>
                             )}
 
                             {newImciFacilities.filter(f => f.isHospital).length > 0 && (
@@ -1310,13 +1321,13 @@ export function CourseReportView({
                                     <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded border border-gray-200 mb-3 font-medium">
                                         * Note: Hospitals are listed below for reference but are NOT calculated in the PHC coverage increase metrics.
                                     </p>
-                                    <div className="overflow-x-auto">
+                                    <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2">
                                         <Table headers={['Facility Name', 'Locality', 'State', 'Type']}>
                                             {newImciFacilities.filter(f => f.isHospital).map((facility, index) => (
                                                 <tr key={`hosp-${index}`} className="hover:bg-gray-50">
-                                                    <td className="p-2 border font-semibold">{facility.name}</td>
-                                                    <td className="p-2 border">{facility.locality}</td>
-                                                    <td className="p-2 border">{facility.state}</td>
+                                                    <td className="p-2 border font-semibold min-w-[150px]">{facility.name}</td>
+                                                    <td className="p-2 border min-w-[100px]">{facility.locality}</td>
+                                                    <td className="p-2 border min-w-[100px]">{facility.state}</td>
                                                     <td className="p-2 border text-gray-600 text-sm">Hospital</td>
                                                 </tr>
                                             ))}
@@ -1329,123 +1340,155 @@ export function CourseReportView({
                 )}
 
                 {(hasAnyCaseDataForCharts || hasAnyDailyCaseDataForCharts) && (
-                    <div id="charts-grid" className="grid md:grid-cols-1 lg:grid-cols-2 gap-6">
-                        {hasAnyCaseDataForCharts && <Card><div id="group-perf-chart-card" className="relative p-2">{!isSharedView && <button onClick={() => handleCopyAsImage('group-perf-chart-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}<h3 className="text-xl font-bold mb-4">Overall Performance by Group</h3><div className="w-full overflow-x-auto"><div style={{ minWidth: '500px' }}><Bar ref={overallChartRef} options={combinedChartOptions} data={combinedChartData} /></div></div></div></Card>}
-                        {hasAnyDailyCaseDataForCharts && <Card><div id="day-perf-chart-card" className="relative p-2">{!isSharedView && <button onClick={() => handleCopyAsImage('day-perf-chart-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}<h3 className="text-xl font-bold mb-4">Overall Performance by Day</h3><div className="w-full overflow-x-auto"><div style={{ minWidth: '500px' }}><Bar ref={dailyChartRef} options={dailyChartOptions} data={dailyChartData} /></div></div></div></Card>}
+                    <div id="charts-grid" className="flex flex-col lg:flex-row gap-6 w-full max-w-full min-w-0">
+                        {hasAnyCaseDataForCharts && (
+                            <div className="w-full min-w-0 flex-1">
+                                <Card>
+                                    <div id="group-perf-chart-card" className="relative p-2 w-full max-w-full min-w-0">
+                                        {!isSharedView && <button onClick={() => handleCopyAsImage('group-perf-chart-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
+                                        <h3 className="text-xl font-bold mb-4">Overall Performance by Group</h3>
+                                        <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2">
+                                            <div style={{ minWidth: '500px' }} className="min-w-[500px]">
+                                                <Bar ref={overallChartRef} options={combinedChartOptions} data={combinedChartData} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Card>
+                            </div>
+                        )}
+                        {hasAnyDailyCaseDataForCharts && (
+                            <div className="w-full min-w-0 flex-1">
+                                <Card>
+                                    <div id="day-perf-chart-card" className="relative p-2 w-full max-w-full min-w-0">
+                                        {!isSharedView && <button onClick={() => handleCopyAsImage('day-perf-chart-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
+                                        <h3 className="text-xl font-bold mb-4">Overall Performance by Day</h3>
+                                        <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2">
+                                            <div style={{ minWidth: '500px' }} className="min-w-[500px]">
+                                                <Bar ref={dailyChartRef} options={dailyChartOptions} data={dailyChartData} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Card>
+                            </div>
+                        )}
                     </div>
                 )}
 
-                <div id="daily-tables-section">
+                <div id="daily-tables-section" className="w-full max-w-full min-w-0">
                     {(hasDailyCaseData || hasDailySkillData) && <h3 className="text-xl font-bold mb-4 px-2">Daily Performance Tables</h3>}
-                    <div id="daily-tables-grid" className="grid md:grid-cols-2 gap-6">
+                    <div id="daily-tables-grid" className="flex flex-col lg:flex-row gap-6 w-full max-w-full min-w-0">
                         {hasDailyCaseData && (
-                            <Card>
-                                <div id="daily-case-table-card" className="relative p-2">
-                                    {!isSharedView && <button onClick={() => handleCopyAsImage('daily-case-table-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
-                                    <h3 className="text-xl font-bold mb-4">Daily Case Performance</h3>
-                                    <div className="overflow-x-auto">
-                                        <Table headers={['Day', ...groupsWithData, 'Total']}>
-                                            {dailyCaseTableData.length > 0 ? (
-                                                <>
-                                                    {dailyCaseTableData.map((row) => (
-                                                        <tr key={row.day} className="hover:bg-gray-50">
-                                                            <td className="p-2 border font-bold">{row.day}</td>
-                                                            {groupsWithData.map(group => (
-                                                                <td key={group} className={`p-2 border text-center ${getScoreColorClass(row[group].pct)}`}>{row[group].display}</td>
-                                                            ))}
-                                                            <td className={`p-2 border text-center font-bold ${getScoreColorClass(row.totalDayPct)}`}>{row.totalDisplay}</td>
+                            <div className="w-full min-w-0 flex-1">
+                                <Card>
+                                    <div id="daily-case-table-card" className="relative p-2 w-full max-w-full min-w-0">
+                                        {!isSharedView && <button onClick={() => handleCopyAsImage('daily-case-table-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
+                                        <h3 className="text-xl font-bold mb-4">Daily Case Performance</h3>
+                                        <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2">
+                                            <Table headers={['Day', ...groupsWithData, 'Total']}>
+                                                {dailyCaseTableData.length > 0 ? (
+                                                    <>
+                                                        {dailyCaseTableData.map((row) => (
+                                                            <tr key={row.day} className="hover:bg-gray-50">
+                                                                <td className="p-2 border font-bold min-w-[80px]">{row.day}</td>
+                                                                {groupsWithData.map(group => (
+                                                                    <td key={group} className={`p-2 border text-center min-w-[80px] ${getScoreColorClass(row[group].pct)}`}>{row[group].display}</td>
+                                                                ))}
+                                                                <td className={`p-2 border text-center font-bold min-w-[80px] ${getScoreColorClass(row.totalDayPct)}`}>{row.totalDisplay}</td>
+                                                            </tr>
+                                                        ))}
+                                                        <tr className="hover:bg-gray-50 font-bold">
+                                                            <td className="p-2 border">Total</td>
+                                                            {groupsWithData.map(group => { 
+                                                                const tCorrect = groupCaseTotals[group].totalCases.correct; 
+                                                                const tTotal = groupCaseTotals[group].totalCases.total; 
+                                                                const pct = calcPct(tCorrect, tTotal); 
+                                                                return (
+                                                                    <td key={group} className={`p-2 border text-center ${getScoreColorClass(pct)}`}>
+                                                                        {tTotal} ({fmtPct(pct)})
+                                                                    </td>
+                                                                ); 
+                                                            })}
+                                                            <td className={`p-2 border text-center ${getScoreColorClass(calcPct(grandTotalCasesCorrect, grandTotalCasesTotal))}`}>
+                                                                {grandTotalCasesTotal} ({fmtPct(calcPct(grandTotalCasesCorrect, grandTotalCasesTotal))})
+                                                            </td>
                                                         </tr>
-                                                    ))}
-                                                    <tr className="hover:bg-gray-50 font-bold">
-                                                        <td className="p-2 border">Total</td>
-                                                        {groupsWithData.map(group => { 
-                                                            const tCorrect = groupCaseTotals[group].totalCases.correct; 
-                                                            const tTotal = groupCaseTotals[group].totalCases.total; 
-                                                            const pct = calcPct(tCorrect, tTotal); 
-                                                            return (
-                                                                <td key={group} className={`p-2 border text-center ${getScoreColorClass(pct)}`}>
-                                                                    {tTotal} ({fmtPct(pct)})
-                                                                </td>
-                                                            ); 
-                                                        })}
-                                                        <td className={`p-2 border text-center ${getScoreColorClass(calcPct(grandTotalCasesCorrect, grandTotalCasesTotal))}`}>
-                                                            {grandTotalCasesTotal} ({fmtPct(calcPct(grandTotalCasesCorrect, grandTotalCasesTotal))})
+                                                    </>
+                                                ) : (
+                                                    <tr>
+                                                        <td colSpan={groupsWithData.length + 2} className="p-8 text-center text-gray-500 bg-gray-50">
+                                                            No daily case data available.
                                                         </td>
                                                     </tr>
-                                                </>
-                                            ) : (
-                                                <tr>
-                                                    <td colSpan={groupsWithData.length + 2} className="p-8 text-center text-gray-500 bg-gray-50">
-                                                        No daily case data available.
-                                                    </td>
-                                                </tr>
-                                            )}
-                                        </Table>
+                                                )}
+                                            </Table>
+                                        </div>
                                     </div>
-                                </div>
-                            </Card>
+                                </Card>
+                            </div>
                         )}
                         {hasDailySkillData && (
-                            <Card>
-                                <div id="daily-skill-table-card" className="relative p-2">
-                                    {!isSharedView && <button onClick={() => handleCopyAsImage('daily-skill-table-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
-                                    <h3 className="text-xl font-bold mb-4">Daily Skill Performance</h3>
-                                    <div className="overflow-x-auto">
-                                        <Table headers={['Day', ...groupsWithData, 'Total']}>
-                                            {dailySkillTableData.length > 0 ? (
-                                                <>
-                                                    {dailySkillTableData.map((row) => (
-                                                        <tr key={row.day} className="hover:bg-gray-50">
-                                                            <td className="p-2 border font-bold">{row.day}</td>
-                                                            {groupsWithData.map(group => (
-                                                                <td key={group} className={`p-2 border text-center ${getScoreColorClass(row[group].pct)}`}>{row[group].display}</td>
-                                                            ))}
-                                                            <td className={`p-2 border text-center font-bold ${getScoreColorClass(row.totalDayPct)}`}>{row.totalDisplay}</td>
+                            <div className="w-full min-w-0 flex-1">
+                                <Card>
+                                    <div id="daily-skill-table-card" className="relative p-2 w-full max-w-full min-w-0">
+                                        {!isSharedView && <button onClick={() => handleCopyAsImage('daily-skill-table-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
+                                        <h3 className="text-xl font-bold mb-4">Daily Skill Performance</h3>
+                                        <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2">
+                                            <Table headers={['Day', ...groupsWithData, 'Total']}>
+                                                {dailySkillTableData.length > 0 ? (
+                                                    <>
+                                                        {dailySkillTableData.map((row) => (
+                                                            <tr key={row.day} className="hover:bg-gray-50">
+                                                                <td className="p-2 border font-bold min-w-[80px]">{row.day}</td>
+                                                                {groupsWithData.map(group => (
+                                                                    <td key={group} className={`p-2 border text-center min-w-[80px] ${getScoreColorClass(row[group].pct)}`}>{row[group].display}</td>
+                                                                ))}
+                                                                <td className={`p-2 border text-center font-bold min-w-[80px] ${getScoreColorClass(row.totalDayPct)}`}>{row.totalDisplay}</td>
+                                                            </tr>
+                                                        ))}
+                                                        <tr className="hover:bg-gray-50 font-bold">
+                                                            <td className="p-2 border">Total</td>
+                                                            {groupsWithData.map(group => { 
+                                                                const tCorrect = groupSkillTotals[group].totalSkills.correct; 
+                                                                const tTotal = groupSkillTotals[group].totalSkills.total; 
+                                                                const pct = calcPct(tCorrect, tTotal); 
+                                                                return (
+                                                                    <td key={group} className={`p-2 border text-center ${getScoreColorClass(pct)}`}>
+                                                                        {tTotal} ({fmtPct(pct)})
+                                                                    </td>
+                                                                ); 
+                                                            })}
+                                                            <td className={`p-2 border text-center ${getScoreColorClass(calcPct(grandTotalSkillsCorrect, grandTotalSkillsTotal))}`}>
+                                                                {grandTotalSkillsCorrect} ({fmtPct(calcPct(grandTotalSkillsCorrect, grandTotalSkillsTotal))})
+                                                            </td>
                                                         </tr>
-                                                    ))}
-                                                    <tr className="hover:bg-gray-50 font-bold">
-                                                        <td className="p-2 border">Total</td>
-                                                        {groupsWithData.map(group => { 
-                                                            const tCorrect = groupSkillTotals[group].totalSkills.correct; 
-                                                            const tTotal = groupSkillTotals[group].totalSkills.total; 
-                                                            const pct = calcPct(tCorrect, tTotal); 
-                                                            return (
-                                                                <td key={group} className={`p-2 border text-center ${getScoreColorClass(pct)}`}>
-                                                                    {tTotal} ({fmtPct(pct)})
-                                                                </td>
-                                                            ); 
-                                                        })}
-                                                        <td className={`p-2 border text-center ${getScoreColorClass(calcPct(grandTotalSkillsCorrect, grandTotalSkillsTotal))}`}>
-                                                            {grandTotalSkillsCorrect} ({fmtPct(calcPct(grandTotalSkillsCorrect, grandTotalSkillsTotal))})
+                                                    </>
+                                                ) : (
+                                                    <tr>
+                                                        <td colSpan={groupsWithData.length + 2} className="p-8 text-center text-gray-500 bg-gray-50">
+                                                            No daily skill performance data available.
                                                         </td>
                                                     </tr>
-                                                </>
-                                            ) : (
-                                                <tr>
-                                                    <td colSpan={groupsWithData.length + 2} className="p-8 text-center text-gray-500 bg-gray-50">
-                                                        No daily skill performance data available.
-                                                    </td>
-                                                </tr>
-                                            )}
-                                        </Table>
+                                                )}
+                                            </Table>
+                                        </div>
                                     </div>
-                                </div>
-                            </Card>
+                                </Card>
+                            </div>
                         )}
                     </div>
                 </div>
 
                 {(showTestScoreColumns || showCaseColumns) && (
                     <Card>
-                         <div id="participant-results-card" className="relative p-2">
+                         <div id="participant-results-card" className="relative p-2 w-full max-w-full min-w-0">
                             {!isSharedView && <button onClick={() => handleCopyAsImage('participant-results-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
                             <h3 className="text-xl font-bold mb-4">Participant Results</h3>
                             {showCaseColumns && (
-                                <div id="participant-summary-table" className="mb-6">
+                                <div id="participant-summary-table" className="mb-6 w-full max-w-full min-w-0">
                                     <h4 className="text-md font-semibold mb-2 text-gray-700">Participant Score Summary</h4>
-                                    <div className="overflow-x-auto">
+                                    <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2">
                                         <table className="w-full border-collapse border border-gray-300 text-center">
-                                            <thead><tr><th className="p-2 border font-semibold bg-gray-100 text-left">Score Type</th>{practicalScoreCategories.map(cat => (<th key={cat.key} className={`p-2 border font-semibold ${cat.colorClass}`}>{cat.name}</th>))}</tr></thead>
+                                            <thead><tr><th className="p-2 border font-semibold bg-gray-100 text-left min-w-[200px]">Score Type</th>{practicalScoreCategories.map(cat => (<th key={cat.key} className={`p-2 border font-semibold min-w-[80px] ${cat.colorClass}`}>{cat.name}</th>))}</tr></thead>
                                             <tbody>
                                                 <tr><td className="p-2 border font-semibold text-left">Practical Case Score</td>{practicalScoreCategories.map(cat => (<td key={cat.key} className="p-2 border text-2xl font-bold">{caseCorrectnessDistribution[cat.key] || 0}</td>))}</tr>
                                                 {showTestScoreColumns && <tr><td className="p-2 border font-semibold text-left">Written Test Score (average improvement)</td>{correctnessCategories.map(cat => (<td key={cat.key} className="p-2 border text-2xl font-bold">{avgImprovementDistribution[cat.key] || 0}</td>))}</tr>}
@@ -1456,13 +1499,13 @@ export function CourseReportView({
                             )}
 
                             {!isSharedView && (
-                                <div className="flex flex-col md:flex-row gap-4 mb-4">
-                                    {showTestScoreColumns && <div className="flex items-center gap-2"><label htmlFor="score-filter" className="text-sm font-semibold text-gray-700">Filter by Avg. Improvement:</label><select id="score-filter" value={scoreFilter} onChange={(e) => setScoreFilter(e.target.value)} className="border border-gray-300 rounded-md p-2 bg-white">{scoreFilterOptions.map(option => (<option key={option.name} value={option.name}>{option.name}</option>))}</select></div>}
-                                    {showCaseColumns && <div className="flex items-center gap-2"><label htmlFor="case-filter" className="text-sm font-semibold text-gray-700">Filter by Case Correctness:</label><select id="case-filter" value={caseCorrectnessFilter} onChange={(e) => setCaseCorrectnessFilter(e.target.value)} className="border border-gray-300 rounded-md p-2 bg-white">{caseFilterOptions.map(option => (<option key={option.name} value={option.name}>{option.name}</option>))}</select></div>}
+                                <div className="flex flex-col sm:flex-row flex-wrap gap-4 mb-4 w-full">
+                                    {showTestScoreColumns && <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto"><label htmlFor="score-filter" className="text-sm font-semibold text-gray-700">Filter by Avg. Improvement:</label><select id="score-filter" value={scoreFilter} onChange={(e) => setScoreFilter(e.target.value)} className="border border-gray-300 rounded-md p-2 bg-white w-full sm:w-auto">{scoreFilterOptions.map(option => (<option key={option.name} value={option.name}>{option.name}</option>))}</select></div>}
+                                    {showCaseColumns && <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto"><label htmlFor="case-filter" className="text-sm font-semibold text-gray-700">Filter by Case Correctness:</label><select id="case-filter" value={caseCorrectnessFilter} onChange={(e) => setCaseCorrectnessFilter(e.target.value)} className="border border-gray-300 rounded-md p-2 bg-white w-full sm:w-auto">{caseFilterOptions.map(option => (<option key={option.name} value={option.name}>{option.name}</option>))}</select></div>}
                                 </div>
                             )}
 
-                            <div className="overflow-x-auto">
+                            <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2">
                                 <Table headers={tableHeaders}>
                                     {filteredParticipants.length === 0 ? (
                                         <tr>
@@ -1478,9 +1521,9 @@ export function CourseReportView({
                                             const increaseDisplay = isNaN(increase) || increase === null ? 'N/A' : `${increase.toFixed(1)}%`;
                                             return (
                                                 <tr key={p.id} className={`transition-colors duration-150 ${!isSharedView ? 'cursor-pointer hover:bg-gray-200' : ''}`} onClick={!isSharedView ? () => onViewParticipantReport(p.id) : undefined}>
-                                                    <td className="p-2 border text-center">{index + 1}</td><td className="p-2 border font-semibold">{p.name}</td>
-                                                    {showCaseColumns && (<><td className={`p-2 border text-center`}>{p.total_cases_seen}</td>{!isSharedView && <td className={`p-2 border text-center font-bold ${getScoreColorClass(p.correctness_percentage)}`}>{getCaseCorrectnessName(p.correctness_percentage)}</td>}</>)}
-                                                    {showTestScoreColumns && (<><td className="p-2 border text-center">{fmtDecimal(preScore)}</td><td className="p-2 border text-center">{fmtDecimal(postScore)}</td><td className={`p-2 border text-center`}>{increaseDisplay}</td><td className={`p-2 border text-center ${category.className}`}>{category.name}</td></>)}
+                                                    <td className="p-2 border text-center">{index + 1}</td><td className="p-2 border font-semibold min-w-[150px]">{p.name}</td>
+                                                    {showCaseColumns && (<><td className={`p-2 border text-center`}>{p.total_cases_seen}</td>{!isSharedView && <td className={`p-2 border text-center font-bold min-w-[100px] ${getScoreColorClass(p.correctness_percentage)}`}>{getCaseCorrectnessName(p.correctness_percentage)}</td>}</>)}
+                                                    {showTestScoreColumns && (<><td className="p-2 border text-center">{fmtDecimal(preScore)}</td><td className="p-2 border text-center">{fmtDecimal(postScore)}</td><td className={`p-2 border text-center`}>{increaseDisplay}</td><td className={`p-2 border text-center min-w-[100px] ${category.className}`}>{category.name}</td></>)}
                                                 </tr>
                                             );
                                         })
@@ -1494,11 +1537,11 @@ export function CourseReportView({
 
             {/* Modal for Historical Coverage Preview */}
             <Modal isOpen={isCoverageModalOpen} onClose={() => setIsCoverageModalOpen(false)} title="Historical Coverage Baseline" size="lg">
-                <div className="p-6 space-y-4">
+                <div className="p-4 sm:p-6 space-y-4">
                     {isPreviewLoading ? (
                         <div className="flex flex-col items-center justify-center p-8">
                             <Spinner size="lg" />
-                            <p className="mt-4 text-sky-700 font-semibold">Calculating historical baseline coverage from facility snapshots...</p>
+                            <p className="mt-4 text-sky-700 font-semibold text-center">Calculating historical baseline coverage from facility snapshots...</p>
                         </div>
                     ) : historicalCoveragePreview ? (
                         <div>
@@ -1512,41 +1555,41 @@ export function CourseReportView({
                                 <Table headers={['Level / Name', 'Total Functioning PHCs', 'PHCs w/ IMNCI (Before)', 'Coverage Before', 'New PHCs w/ IMNCI', 'Coverage After', 'Increase']}>
                                     {historicalCoveragePreview.localityCoverage.map(l => (
                                         <tr key={`prev-loc-${l.name}`} className="hover:bg-gray-50">
-                                            <td className="p-2 border font-semibold text-gray-700">Locality: {l.name}</td>
+                                            <td className="p-2 border font-semibold text-gray-700 min-w-[120px]">Locality: {l.name}</td>
                                             <td className="p-2 border text-center">{l.totalPhc}</td>
                                             <td className="p-2 border text-center">{l.phcWithImnciBefore}</td>
                                             <td className="p-2 border text-center font-semibold text-gray-600">{fmtPct(l.covBefore)}</td>
                                             <td className="p-2 border text-center">{l.newPhc}</td>
                                             <td className="p-2 border text-center font-bold text-sky-700">{fmtPct(l.covAfter)}</td>
-                                            <td className="p-2 border text-center font-bold text-green-600">+{l.increase.toFixed(2)}%</td>
+                                            <td className="p-2 border text-center font-bold text-green-600 min-w-[80px]">+{l.increase.toFixed(2)}%</td>
                                         </tr>
                                     ))}
                                     {historicalCoveragePreview.stateCoverage.map(s => (
                                         <tr key={`prev-state-${s.name}`} className="hover:bg-gray-50 bg-gray-50/50">
-                                            <td className="p-2 border font-semibold text-gray-800">State: {s.name}</td>
+                                            <td className="p-2 border font-semibold text-gray-800 min-w-[120px]">State: {s.name}</td>
                                             <td className="p-2 border text-center">{s.totalPhc}</td>
                                             <td className="p-2 border text-center">{s.phcWithImnciBefore}</td>
                                             <td className="p-2 border text-center font-semibold text-gray-600">{fmtPct(s.covBefore)}</td>
                                             <td className="p-2 border text-center">{s.newPhc}</td>
                                             <td className="p-2 border text-center font-bold text-sky-700">{fmtPct(s.covAfter)}</td>
-                                            <td className="p-2 border text-center font-bold text-green-600">+{s.increase.toFixed(2)}%</td>
+                                            <td className="p-2 border text-center font-bold text-green-600 min-w-[80px]">+{s.increase.toFixed(2)}%</td>
                                         </tr>
                                     ))}
                                     <tr className="hover:bg-gray-50 bg-sky-50">
-                                        <td className="p-2 border font-bold text-gray-900">National (Sudan Overall)</td>
+                                        <td className="p-2 border font-bold text-gray-900 min-w-[150px]">National (Sudan Overall)</td>
                                         <td className="p-2 border text-center font-bold">{historicalCoveragePreview.nationalCov.totalPhc}</td>
                                         <td className="p-2 border text-center font-bold">{historicalCoveragePreview.nationalCov.phcWithImnciBefore}</td>
                                         <td className="p-2 border text-center font-bold text-gray-700">{fmtPct(historicalCoveragePreview.nationalCov.covBefore)}</td>
                                         <td className="p-2 border text-center font-bold">{historicalCoveragePreview.nationalCov.newPhc}</td>
                                         <td className="p-2 border text-center font-bold text-sky-800">{fmtPct(historicalCoveragePreview.nationalCov.covAfter)}</td>
-                                        <td className="p-2 border text-center font-bold text-green-700">+{historicalCoveragePreview.nationalCov.increase.toFixed(4)}%</td>
+                                        <td className="p-2 border text-center font-bold text-green-700 min-w-[80px]">+{historicalCoveragePreview.nationalCov.increase.toFixed(4)}%</td>
                                     </tr>
                                 </Table>
                             </div>
                             
-                            <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
-                                <Button variant="secondary" onClick={() => setIsCoverageModalOpen(false)} disabled={isSavingCoverage}>Cancel</Button>
-                                <Button onClick={handleConfirmCoverage} disabled={isSavingCoverage}>
+                            <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 mt-6 pt-4 border-t w-full">
+                                <Button variant="secondary" onClick={() => setIsCoverageModalOpen(false)} disabled={isSavingCoverage} className="w-full sm:w-auto">Cancel</Button>
+                                <Button onClick={handleConfirmCoverage} disabled={isSavingCoverage} className="w-full sm:w-auto">
                                     {isSavingCoverage ? <Spinner size="sm" /> : "Confirm & Save"}
                                 </Button>
                             </div>
@@ -1560,7 +1603,7 @@ export function CourseReportView({
             
             {/* Modal for Editing Coverage */}
             <Modal isOpen={isEditCoverageModalOpen} onClose={() => setIsEditCoverageModalOpen(false)} title="Edit Baseline Coverage" size="lg">
-                <div className="p-4 max-h-[70vh] overflow-y-auto space-y-6">
+                <div className="p-3 sm:p-4 max-h-[70vh] overflow-y-auto space-y-4 sm:space-y-6">
                     {editableCoverageData && (
                         <>
                             <div className="bg-white p-4 rounded shadow-sm border">
@@ -1596,9 +1639,9 @@ export function CourseReportView({
                         </>
                     )}
                 </div>
-                <div className="p-4 border-t flex justify-end gap-2 bg-gray-50">
-                    <Button variant="secondary" onClick={() => setIsEditCoverageModalOpen(false)}>Cancel</Button>
-                    <Button onClick={handleSaveEditedCoverage} disabled={isSavingCoverage}>{isSavingCoverage ? <Spinner size="sm" /> : 'Save Changes'}</Button>
+                <div className="p-3 sm:p-4 border-t flex flex-col-reverse sm:flex-row justify-end gap-2 bg-gray-50 w-full">
+                    <Button variant="secondary" onClick={() => setIsEditCoverageModalOpen(false)} className="w-full sm:w-auto">Cancel</Button>
+                    <Button onClick={handleSaveEditedCoverage} disabled={isSavingCoverage} className="w-full sm:w-auto">{isSavingCoverage ? <Spinner size="sm" /> : 'Save Changes'}</Button>
                 </div>
             </Modal>
 
