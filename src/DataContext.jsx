@@ -25,7 +25,8 @@ import {
     listUnitMeetings,
     listIMNCIPatientRecords,
     fetchFacilitiesHistoryMultiDate, 
-    listSnapshotsForFacility      
+    listSnapshotsForFacility,
+    getAboutTeamImages // <-- Added Import    
 } from './data';
 import { useAuth } from './hooks/useAuth';
 
@@ -118,6 +119,7 @@ export const DataProvider = ({ children }) => {
         masterPlans: null,
         operationalPlans: null,
         unitMeetings: null,
+        aboutTeamImages: null, // <-- Added State
     });
 
     const [isLoading, setIsLoading] = useState({
@@ -140,6 +142,7 @@ export const DataProvider = ({ children }) => {
         masterPlans: true,
         operationalPlans: true,
         unitMeetings: true,
+        aboutTeamImages: true, // <-- Added Loading State
     });
     
     const [lastFacilitiesFetchTime, setLastFacilitiesFetchTime] = useState({}); 
@@ -335,7 +338,6 @@ export const DataProvider = ({ children }) => {
                 }
 
                 // FIX: Force effectiveLastFetchTime to 0 if we specifically asked for force=true
-                // This ensures we actually pull fresh data from the server if we explicitly requested a force refresh
                 if (force === true) {
                     effectiveLastFetchTime = 0;
                 }
@@ -403,6 +405,8 @@ export const DataProvider = ({ children }) => {
         fetchMasterPlans: createFetcher('masterPlans', (opts, lastSync) => listMasterPlans(opts, lastSync)),
         fetchOperationalPlans: createFetcher('operationalPlans', (opts, lastSync) => listOperationalPlans(opts, lastSync)),
         fetchUnitMeetings: createFetcher('unitMeetings', (opts, lastSync) => listUnitMeetings(opts, lastSync)),
+        
+        fetchAboutTeamImages: createFetcher('aboutTeamImages', (opts) => getAboutTeamImages(opts)), // <-- Added Fetcher
     }), [createFetcher]);
 
     useEffect(() => {

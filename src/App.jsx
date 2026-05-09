@@ -8,7 +8,7 @@ import { Bar, Pie, Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, LineElement, PointElement } from 'chart.js';
 
 import {
-    Home, Book, Users, User, Hospital, Database, ClipboardCheck, ClipboardList, FolderKanban, TrendingUp, X, WifiOff, RefreshCw, Activity, Layers, Globe, LogOut
+    Home, Book, Users, User, Hospital, Database, ClipboardCheck, ClipboardList, FolderKanban, TrendingUp, X, WifiOff, RefreshCw, Activity, Layers, Globe, LogOut, Info
 } from 'lucide-react';
 
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
@@ -69,6 +69,9 @@ const ProjectTrackerView = lazy(() => import('./components/ProjectTrackerView'))
 const PublicMeetingAttendanceView = lazy(() => import('./components/ProjectTrackerView').then(module => ({ default: module.PublicMeetingAttendanceView })));
 const PlanningView = lazy(() => import('./components/PlanningView'));
 const LocalityPlanView = lazy(() => import('./components/LocalityPlanView'));
+
+// --- IMPORT THE ABOUT PAGE HERE ---
+const AboutDeveloperPage = lazy(() => import('./components/AboutDeveloperPage'));
 
 // --- PERMISSIONS IMPORT ---
 import { 
@@ -280,6 +283,7 @@ function Landing({ navigate, permissions }) {
         { label: t('landing.modules.planning', 'Master Plan'), view: 'planning', icon: TrendingUp, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.locality_plan', 'Bottom-up Planning'), view: 'localityPlan', icon: Layers, permission: permissions.canViewLocalityPlan },
         { label: t('landing.modules.admin', 'Admin'), view: 'admin', icon: User, permission: permissions.canViewAdmin },
+        { label: t('landing.modules.about', 'About Team'), view: 'about', icon: Info, permission: true }, // ADDED HERE FOR THE MAIN GRID
     ];
 
     const accessibleButtons = navButtons.filter(btn => btn.permission);
@@ -320,7 +324,7 @@ const BottomNav = React.memo(function BottomNav({ navItems, navigate }) {
                 return (
                     <button key={item.view} onClick={() => navigate(item.view)} className={`flex flex-col items-center justify-center p-2 w-full h-16 text-xs font-medium transition-colors ${item.active ? 'text-sky-400' : 'text-slate-400 hover:text-white'}`}>
                         {Icon && <Icon className="w-6 h-6 mb-1" />}
-                        <span>{item.label}</span>
+                        <span className="truncate w-full text-center">{item.label}</span>
                     </button>
                 )
             })}
@@ -1010,6 +1014,7 @@ export default function App() {
             'skillsMentorship': permissions.canViewSkillsMentorship, 'facilitators': permissions.canViewHumanResource, 'programTeams': permissions.canViewHumanResource,
             'partnersPage': permissions.canViewHumanResource, 'attendanceManager': permissions.canManageCourse, 
             'projects': permissions.canUseFederalManagerAdvancedFeatures, 'planning': permissions.canUseFederalManagerAdvancedFeatures, 'localityPlan': permissions.canViewLocalityPlan,
+            'about': true, 
         };
 
         if (user && !viewPermissions[newView]) {
@@ -1037,9 +1042,9 @@ export default function App() {
         if (state.openParticipantReport) { setSelectedParticipantId(state.openParticipantReport); setSelectedCourseId(state.openCourseReport); }
         if (state.caseToEdit) setEditingCaseFromReport(state.caseToEdit);
 
-        if (['courses', 'humanResources', 'dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan'].includes(newView)) {
+        if (['courses', 'humanResources', 'dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'about'].includes(newView)) {
             setSelectedCourseId(null); setSelectedParticipantId(null); setFinalReportCourse(null);
-            if (['dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan'].includes(newView)) setActiveCourseType(null);
+            if (['dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'about'].includes(newView)) setActiveCourseType(null);
         }
         if ((view === 'observe' || view === 'participantReport') && !['observe', 'participantReport'].includes(newView)) setSelectedParticipantId(null);
     }, [view, selectedCourseId, selectedParticipantId, permissions, user, isCourseActive]);
@@ -1261,6 +1266,7 @@ export default function App() {
         switch (viewToRender) {
             case 'landing': return <Landing navigate={navigate} permissions={permissions} />;
             case 'admin': return <AdminDashboard />;
+            case 'about': return <AboutDeveloperPage permissions={permissions} />;
             case 'imciForm': 
                 return permissions.canViewCourse ? ( <Suspense fallback={<Card><div className="flex justify-center p-8"><Spinner /></div></Card>}><IMNCIRecordingForm /></Suspense> ) : null;
 
@@ -1626,7 +1632,6 @@ export default function App() {
                                 <h1 className="text-xl sm:text-2xl font-bold text-white">{t('app.title', 'National Child Health Program')}</h1>
                                 <p className="text-xs sm:text-sm text-slate-300 flex items-center flex-wrap gap-2 mt-1 sm:mt-0">
                                     {t('app.subtitle', 'Program & Course Monitoring System')}
-                                    <span className="px-1.5 py-0.5 rounded bg-slate-700/50 text-[10px] font-mono border border-slate-600">v{appVersion}</span>
                                 </p>
                             </div>
                         </div>
@@ -1717,9 +1722,9 @@ export default function App() {
                 </Suspense>
             </main>
 
+            {/* REMOVED VERSION TAG FROM FOOTER */}
             <footer className="bg-slate-900 text-slate-500 flex flex-col items-center justify-center h-12 md:h-auto md:py-4 text-center text-[10px] sm:text-sm border-t border-slate-800 w-full z-[50] fixed bottom-0 md:relative">
                 <p className="truncate px-2 w-full">App developed by Dr Qusay Mohamed - <a href="mailto:Gussaay@gmail.com" className="text-sky-400 hover:text-sky-300 transition-colors">Gussaay@gmail.com</a></p>
-                <p className="mt-0.5 text-[9px] font-mono text-slate-600 md:hidden">Version {appVersion}</p>
             </footer>
             { user && !isMinimalUILayout && <BottomNav navItems={visibleNavItems} navigate={navigate} /> }
 

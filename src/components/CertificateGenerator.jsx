@@ -217,7 +217,20 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
     const location = hallDisplay ? `${stateDisplay} - ${hallDisplay}` : stateDisplay;
 
     let courseDate = '';
-    const courseDuration = course.course_duration;
+    let courseDuration = course.course_duration;
+    
+    // --- NEW LOGIC: Override duration based on IMNCI sub-course ---
+    if (courseType === 'IMNCI' && participantSubCourse) {
+        const subTypeLower = participantSubCourse.toLowerCase();
+        if (subTypeLower.includes('standard')) {
+            courseDuration = 7;
+        } else if (subTypeLower.includes('refreshment')) {
+            courseDuration = 3;
+        } else {
+            courseDuration = 4; // Default for other IMNCI sub-courses
+        }
+    }
+    // --------------------------------------------------------------
     
     if (courseDuration && course.start_date) {
         const [startYear, startMonth, startDay] = course.start_date.split('-').map(Number);

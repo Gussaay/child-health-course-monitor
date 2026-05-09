@@ -2193,3 +2193,22 @@ export async function listSnapshotsForFacility(facilityId, sourceOptions = {}) {
         throw error;
     }
 }
+
+// ============================================================================
+// --- ABOUT TEAM PROFILES ---
+// ============================================================================
+
+export async function getAboutTeamImages(sourceOptions = {}) {
+    const docRef = doc(db, "settings", "aboutTeamImages");
+    const docSnap = await getDoc(docRef, sourceOptions);
+    if (docSnap.exists()) return docSnap.data();
+    return {}; // Return empty object if no images saved yet
+}
+
+export async function updateAboutTeamImage(memberId, imageUrl) {
+    const docRef = doc(db, "settings", "aboutTeamImages");
+    // Use merge: true so we don't accidentally delete other team members' images
+    const writePromise = setDoc(docRef, { [memberId]: imageUrl }, { merge: true });
+    await executeOfflineSafeWrite(writePromise);
+    return true;
+}

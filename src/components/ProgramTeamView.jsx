@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { QRCodeCanvas } from 'qrcode.react'; 
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
+import html2canvas from 'html2canvas';
 import {
     upsertStateCoordinator,
     deleteStateCoordinator,
@@ -159,13 +160,39 @@ function DynamicExperienceFields({ experiences, onChange }) {
 }
 
 // A single, reusable component for displaying form fields with DEDICATED BORDERS AND STYLED BLUE HEADERS
-function MemberFormFieldset({ level, formData, onFormChange, onDynamicFieldChange }) {
+function MemberFormFieldset({ level, formData, onFormChange, onDynamicFieldChange, onImageUpload, isUploadingImage }) {
     const states = Object.keys(STATE_LOCALITIES);
     const localities = formData.state ? (STATE_LOCALITIES[formData.state]?.localities || []) : [];
     const joinDateLabels = { state: 'تاريخ الانضمام لبرنامج صحة الطفل بالولاية', federal: 'تاريخ الانضمام لبرنامج صحة الطفل بالاتحادية' };
 
     return (
         <div className="space-y-6">
+            
+            {/* NEW IMAGE UPLOAD SECTION */}
+            <div className="p-5 border border-gray-200 shadow-sm rounded-lg bg-white space-y-4">
+                <h3 className="text-lg font-semibold text-blue-800 bg-blue-100 px-4 py-2 rounded-md mb-4">الصورة الشخصية (Profile Photo)</h3>
+                <div className="flex items-center gap-6">
+                    <div className="w-24 h-24 bg-gray-100 rounded-full border-4 border-gray-200 shadow-sm flex items-center justify-center overflow-hidden shrink-0 relative">
+                        {isUploadingImage ? (
+                            <Spinner size="sm" />
+                        ) : formData.imageUrl ? (
+                            <img src={formData.imageUrl} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                            <span className="text-gray-400 text-xs">No Photo</span>
+                        )}
+                    </div>
+                    <div className="flex-grow">
+                        <input 
+                            type="file" 
+                            accept="image/*" 
+                            onChange={onImageUpload} 
+                            disabled={isUploadingImage}
+                            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" 
+                        />
+                    </div>
+                </div>
+            </div>
+
             <div className="p-5 border border-gray-200 shadow-sm rounded-lg bg-white space-y-4">
                 <h3 className="text-lg font-semibold text-blue-800 bg-blue-100 px-4 py-2 rounded-md mb-4">البيانات الأساسية</h3>
                 {level !== 'federal' && ( <Select label="الولاية" name="state" value={formData.state} onChange={onFormChange} required><option value="">اختر ولاية</option>{states.map(s => <option key={s} value={s}>{STATE_LOCALITIES[s]?.ar || s}</option>)}</Select> )}
@@ -174,7 +201,6 @@ function MemberFormFieldset({ level, formData, onFormChange, onDynamicFieldChang
                 <Input label="الإسم (باللغة العربية)" name="nameAr" value={formData.nameAr || ''} onChange={onFormChange} required />
                 <Input label="رقم الهاتف" name="phone" type="tel" value={formData.phone} onChange={onFormChange} required />
                 
-                {/* Email now features anti-autofill and is optional if skipRoleUpdate is true */}
                 <Input 
                     label="الايميل" 
                     name="email" 
@@ -232,11 +258,14 @@ function MemberFormFieldset({ level, formData, onFormChange, onDynamicFieldChang
 // A single, configurable form for all team levels (internal use)
 function TeamMemberForm({ member, onSave, onCancel, isSaving }) {
     const [selectedLevel, setSelectedLevel] = useState(member?.level || (member ? (member.locality ? 'locality' : member.state ? 'state' : 'federal') : ''));
+    const [isUploadingImage, setIsUploadingImage] = useState(false);
+    
     const [formData, setFormData] = useState(() => {
         const initialData = member ? { ...member, state: normalizeState(member.state), skipRoleUpdate: false } : { 
             name: '', nameAr: '', phone: '', email: '', state: '', locality: '', 
             jobTitle: '', jobTitleOther: '', role: '', directorDate: '', unit: '', 
-            joinDate: '', bankAccount: '', bankName: '', bankBranch: '', accountHolder: '', comments: '', skipRoleUpdate: false
+            joinDate: '', bankAccount: '', bankName: '', bankBranch: '', accountHolder: '', comments: '', skipRoleUpdate: false,
+            imageUrl: ''
         };
         if (!initialData.previousRoles || !Array.isArray(initialData.previousRoles) || initialData.previousRoles.length === 0) {
             initialData.previousRoles = [{ role: '', duration: '' }];
@@ -250,14 +279,54 @@ function TeamMemberForm({ member, onSave, onCancel, isSaving }) {
         if (name === 'state') newFormData.locality = '';
         setFormData(newFormData);
     };
+
     const handlePreviousRolesChange = (newRoles) => setFormData(prev => ({ ...prev, previousRoles: newRoles }));
+    
+    const handleImageUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setIsUploadingImage(true);
+        try {
+            const downloadUrl = await uploadFile(file);
+            setFormData(prev => ({ ...prev, imageUrl: downloadUrl }));
+        } catch (error) {
+            console.error("Upload failed:", error);
+            alert("Failed to upload image. Please try again.");
+        } finally {
+            setIsUploadingImage(false);
+        }
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
         let payload = { ...formData };
         if (payload.jobTitle !== 'اخرى') payload.jobTitleOther = '';
-        if (payload.role !== 'مدير البرنامج') payload.directorDate = '';
-        if (payload.role !== 'رئيس وحدة' && payload.role !== 'عضو في وحدة') payload.unit = '';
+        
+        if (selectedLevel === 'federal') {
+             payload.state = '';
+             payload.locality = '';
+             if (payload.role !== 'مدير البرنامج') payload.directorDate = '';
+             if (payload.role !== 'رئيس وحدة' && payload.role !== 'عضو في وحدة') payload.unit = '';
+        } else if (selectedLevel === 'state') {
+             payload.locality = '';
+             if (payload.role !== 'مدير البرنامج') payload.directorDate = '';
+             if (payload.role !== 'رئيس وحدة' && payload.role !== 'عضو في وحدة') payload.unit = '';
+        } else if (selectedLevel === 'locality') {
+            payload.role = '';
+            payload.directorDate = '';
+            payload.unit = '';
+            payload.joinDate = ''; 
+        }
+
         payload.previousRoles = payload.previousRoles.filter(exp => exp.role && exp.role.trim() !== '');
+
+        // 🔥 FIRESTORE FIX: Remove any undefined values to prevent crashes
+        Object.keys(payload).forEach(key => {
+            if (payload[key] === undefined) {
+                delete payload[key];
+            }
+        });
+
         onSave(selectedLevel, payload);
     };
 
@@ -267,7 +336,16 @@ function TeamMemberForm({ member, onSave, onCancel, isSaving }) {
                 <h2 className="text-xl font-bold text-gray-800 text-center border-b pb-4 mb-6">{member?.id ? `تعديل بيانات العضو` : `إضافة عضو جديد`}</h2>
                 {!member?.id && ( <Select label="اختر المستوى" value={selectedLevel} onChange={(e) => setSelectedLevel(e.target.value)} required disabled={isSaving}><option value="">-- Select Level --</option><option value="federal">Federal</option><option value="state">State</option><option value="locality">Locality</option></Select> )}
                 
-                {selectedLevel && <MemberFormFieldset level={selectedLevel} formData={formData} onFormChange={handleChange} onDynamicFieldChange={handlePreviousRolesChange} />}
+                {selectedLevel && (
+                    <MemberFormFieldset 
+                        level={selectedLevel} 
+                        formData={formData} 
+                        onFormChange={handleChange} 
+                        onDynamicFieldChange={handlePreviousRolesChange} 
+                        onImageUpload={handleImageUpload}
+                        isUploadingImage={isUploadingImage}
+                    />
+                )}
                 
                 {selectedLevel && (
                     <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
@@ -304,11 +382,10 @@ function TeamMemberForm({ member, onSave, onCancel, isSaving }) {
     );
 }
 
-// Internal View Component with dedicated bordered sections and BLUE styled headers (Includes Diff logic for pending approvals)
+// Internal View Component
 function TeamMemberView({ level, member, originalMember, onBack }) {
     const renderDetail = (label, newValue, fieldKey) => {
         const originalValue = originalMember ? originalMember[fieldKey] : undefined;
-        // Check if value changed, but treat null/undefined/empty string equally
         const hasChanged = originalMember && String(originalValue || '').trim() !== String(newValue || '').trim();
 
         if (!newValue && !originalValue) return null;
@@ -347,7 +424,6 @@ function TeamMemberView({ level, member, originalMember, onBack }) {
         return loc ? loc.ar : member.locality;
     }, [normalizedState, member.locality]);
 
-    // Check if experiences changed
     const prevRolesStr = JSON.stringify(member.previousRoles || []);
     const origPrevRolesStr = originalMember ? JSON.stringify(originalMember.previousRoles || []) : null;
     const experiencesChanged = originalMember && prevRolesStr !== origPrevRolesStr;
@@ -360,6 +436,15 @@ function TeamMemberView({ level, member, originalMember, onBack }) {
                     subtitle={originalMember ? "Yellow highlights indicate changed fields waiting for approval." : ""}
                 />
                 <div className="mt-6">
+                    {/* Display Photo if available */}
+                    {member.imageUrl && (
+                        <div className="flex justify-center mb-6">
+                            <div className="w-32 h-32 bg-gray-100 rounded-full border-4 border-gray-200 shadow-sm overflow-hidden">
+                                <img src={member.imageUrl} alt="Profile" className="w-full h-full object-cover" />
+                            </div>
+                        </div>
+                    )}
+
                     {renderSection("البيانات الأساسية",
                         <>
                             {level !== 'federal' && renderDetail('الولاية', STATE_LOCALITIES[normalizedState]?.ar || member.state, 'state')}
@@ -1577,6 +1662,200 @@ const updateUserRoleByEmail = async (email, newRole, state, locality) => {
     }
 };
 
+// --- NEW COMPONENT: Program Structure Chart ---
+function ProgramStructureChart({ filters, federalCoordinators, stateCoordinators, localityCoordinators }) {
+    const isFederal = filters.level === 'federal';
+    const selectedState = filters.state;
+
+    // Filter and prepare the data based on the current level
+    const buildHierarchy = () => {
+        let manager = null;
+        let units = [];
+        let localities = [];
+
+        if (isFederal) {
+            const feds = federalCoordinators || [];
+            manager = feds.find(m => m.role === 'مدير البرنامج');
+            
+            const unitNames = [...new Set(feds.map(m => m.unit).filter(Boolean))];
+            units = unitNames.map(unitName => ({
+                name: unitName,
+                head: feds.find(m => m.unit === unitName && m.role === 'رئيس وحدة'),
+                members: feds.filter(m => m.unit === unitName && m.role === 'عضو في وحدة')
+            }));
+        } else if (filters.level === 'state' && selectedState) {
+            const states = (stateCoordinators || []).filter(m => normalizeState(m.state) === selectedState);
+            manager = states.find(m => m.role === 'مدير البرنامج');
+            
+            const unitNames = [...new Set(states.map(m => m.unit).filter(Boolean))];
+            units = unitNames.map(unitName => ({
+                name: unitName,
+                head: states.find(m => m.unit === unitName && m.role === 'رئيس وحدة'),
+                members: states.filter(m => m.unit === unitName && m.role === 'عضو في وحدة')
+            }));
+
+            localities = (localityCoordinators || []).filter(m => normalizeState(m.state) === selectedState);
+        }
+
+        return { manager, units, localities };
+    };
+
+    const { manager, units, localities } = buildHierarchy();
+
+    // Export Handlers
+    const exportChart = async (type) => {
+        const element = document.getElementById('org-chart-container');
+        if (!element) return;
+
+        // Temporarily adjust styles for better screenshot quality
+        element.style.transform = 'scale(1)';
+        const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#f9fafb' });
+        const imgData = canvas.toDataURL('image/jpeg', 1.0);
+
+        if (type === 'jpg') {
+            const link = document.createElement('a');
+            link.download = `${isFederal ? 'Federal' : selectedState}_Program_Structure.jpg`;
+            link.href = imgData;
+            link.click();
+        } else if (type === 'pdf') {
+            const pdf = new jsPDF('landscape', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+            pdf.save(`${isFederal ? 'Federal' : selectedState}_Program_Structure.pdf`);
+        }
+    };
+
+    // Sub-component for an individual Node (More Compact)
+    const OrgNode = ({ member, titleOverride, bgClass = 'bg-white' }) => {
+        if (!member) return (
+            <div className={`w-36 p-2 rounded-md border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center text-gray-400 text-xs text-center h-full min-h-[4rem]`}>
+                وظيفة شاغرة
+            </div>
+        );
+
+        return (
+            <div className={`w-40 p-3 rounded-xl border border-gray-200 shadow-sm ${bgClass} flex flex-col items-center text-center z-10 hover:shadow-md transition-shadow`}>
+                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-blue-100 shadow-sm mb-2 bg-gray-100 flex items-center justify-center shrink-0">
+                    {member.imageUrl ? (
+                        <img src={member.imageUrl} alt="Profile" className="w-full h-full object-cover" crossOrigin="anonymous" />
+                    ) : (
+                        <span className="text-gray-400 text-[9px]">No Photo</span>
+                    )}
+                </div>
+                {/* Full name logic: break-words so it wraps naturally instead of truncating */}
+                <h4 className="font-bold text-xs text-gray-800 break-words w-full leading-snug">{member.nameAr || member.name}</h4>
+                <p className="text-[11px] font-bold text-blue-600 mt-1">{titleOverride || member.role}</p>
+                <p className="text-[10px] text-gray-500 mt-1 bg-gray-100 px-2 py-1 rounded-md w-full break-words leading-tight">
+                    {member.jobTitle === 'اخرى' ? member.jobTitleOther : member.jobTitle}
+                </p>
+            </div>
+        );
+    };
+
+    if (!isFederal && !selectedState) {
+        return (
+            <Card>
+                <CardBody className="text-center py-12">
+                    <h3 className="text-xl font-medium text-gray-500">الرجاء اختيار الولاية من الفلاتر في الأعلى لعرض الهيكل التنظيمي.</h3>
+                </CardBody>
+            </Card>
+        );
+    }
+
+    return (
+        <Card>
+            <CardBody>
+                {/* Header and Export Tools */}
+                <div className="flex justify-between items-center mb-6 border-b pb-4">
+                    <h3 className="text-lg font-bold text-gray-800">
+                        {isFederal ? 'الهيكل التنظيمي الاتحادي (Federal Structure)' : `الهيكل التنظيمي - ${STATE_LOCALITIES[selectedState]?.ar || selectedState}`}
+                    </h3>
+                    <div className="flex gap-2">
+                        <Button size="sm" variant="secondary" onClick={() => exportChart('jpg')}>Export as JPG</Button>
+                        <Button size="sm" variant="secondary" onClick={() => exportChart('pdf')}><PdfIcon /> Export as PDF</Button>
+                    </div>
+                </div>
+
+                {/* Organizational Chart Container */}
+                <div className="overflow-x-auto pb-12 bg-gray-50 rounded-xl border border-gray-100" dir="rtl">
+                    <div id="org-chart-container" className="min-w-max p-8 flex flex-col items-center">
+                        
+                        {/* 1. Program Manager Level */}
+                        <div className="flex flex-col items-center relative">
+                            <OrgNode member={manager} titleOverride="مدير البرنامج" bgClass="bg-blue-50 border-blue-300" />
+                            {/* Vertical Line down from Manager */}
+                            <div className="w-0.5 h-6 bg-blue-300"></div>
+                        </div>
+
+                        {/* 2. Units and Localities Level */}
+                        <div className="relative flex justify-center items-start pt-4 border-t-2 border-blue-300" style={{ gap: '1.5rem' }}>
+                            
+                            {/* Render Each Unit */}
+                            {units.map((unit, idx) => (
+                                <div key={idx} className="flex flex-col items-center relative">
+                                    {/* Connector up to the main horizontal line */}
+                                    <div className="absolute -top-4 w-0.5 h-4 bg-blue-300"></div>
+                                    
+                                    {/* Unit Head */}
+                                    <div className="mb-3 flex flex-col items-center">
+                                        {/* Unit Title wrapping without truncation */}
+                                        <div className="text-[11px] font-bold text-gray-600 mb-1 text-center break-words leading-tight max-w-[10rem]">
+                                            {unit.name}
+                                        </div>
+                                        <OrgNode member={unit.head} titleOverride="رئيس وحدة" />
+                                    </div>
+
+                                    {/* Unit Members (Strict Vertical Stacking) */}
+                                    {unit.members.length > 0 && (
+                                        <div className="flex flex-col items-center relative w-full mt-1">
+                                            <div className="w-0.5 h-4 bg-gray-300"></div>
+                                            {/* Compact padding and vertical stacking (flex-col) */}
+                                            <div className="flex flex-col gap-3 p-3 border border-dashed border-gray-300 rounded-xl bg-white w-full items-center relative">
+                                                <span className="text-[10px] text-gray-400 font-bold bg-white px-2 absolute -top-2">الأعضاء</span>
+                                                {unit.members.map(member => (
+                                                    <OrgNode key={member.id} member={member} titleOverride="عضو في وحدة" />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+
+                            {/* Render Locality Managers (Only for State Level) */}
+                            {localities.length > 0 && (
+                                <div className="flex flex-col items-center relative mr-6">
+                                    <div className="absolute -top-4 w-0.5 h-4 bg-blue-300"></div>
+                                    <div className="bg-emerald-100 text-emerald-800 px-3 py-1.5 rounded-lg font-bold text-[11px] mb-4 border border-emerald-200 shadow-sm">
+                                        مدراء المحليات
+                                    </div>
+                                    {/* Vertical layout for Locality Managers too */}
+                                    <div className="flex flex-col gap-3 p-3 border-2 border-dashed border-emerald-200 rounded-xl bg-emerald-50/30 items-center">
+                                        {localities.map(loc => {
+                                            // Find Locality Arabic Name
+                                            const stateData = STATE_LOCALITIES[normalizeState(loc.state)];
+                                            const locData = stateData?.localities?.find(l => l.en === loc.locality);
+                                            return (
+                                                <OrgNode 
+                                                    key={loc.id} 
+                                                    member={loc} 
+                                                    titleOverride={locData ? locData.ar : loc.locality} 
+                                                    bgClass="bg-white border-emerald-200"
+                                                />
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                        </div>
+                    </div>
+                </div>
+            </CardBody>
+        </Card>
+    );
+}
+
 export function ProgramTeamView({ permissions, userStates }) {
     const {
         federalCoordinators: rawFederalCoordinators,
@@ -1680,7 +1959,7 @@ export function ProgramTeamView({ permissions, userStates }) {
     ]);
     
     useEffect(() => {
-        if (activeTab === 'dashboard') {
+        if (activeTab === 'dashboard' || activeTab === 'structure') {
             fetchFederalCoordinators(false);
             fetchStateCoordinators(false);
             fetchLocalityCoordinators(false);
@@ -1785,7 +2064,19 @@ export function ProgramTeamView({ permissions, userStates }) {
             const dataToSave = { ...payload };
             delete dataToSave.skipRoleUpdate; // Do not save the flag boolean to DB
 
-            await upsertFn({ ...dataToSave, id: editingMember?.id });
+            // Clean undefineds just in case
+            const finalPayload = { ...dataToSave };
+            if (editingMember?.id) {
+                finalPayload.id = editingMember.id;
+            }
+            
+            Object.keys(finalPayload).forEach(key => {
+                if (finalPayload[key] === undefined) {
+                    delete finalPayload[key];
+                }
+            });
+
+            await upsertFn(finalPayload);
             
             // Only update system/database permissions if the user did NOT opt-out
             if (!skipRoleUpdate) {
@@ -2103,6 +2394,8 @@ export function ProgramTeamView({ permissions, userStates }) {
                         )}
                         <Button variant="tab" isActive={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')}>Dashboard</Button>
                         
+                        <Button variant="tab" isActive={activeTab === 'structure'} onClick={() => setActiveTab('structure')}>Program Structure</Button>
+
                         {permissions?.canApproveSubmissions && (
                             <Button variant="secondary" size="sm" onClick={handleOpenLinkModal}>Manage Submission Link</Button>
                         )}
@@ -2124,7 +2417,7 @@ export function ProgramTeamView({ permissions, userStates }) {
                     </FormGroup>
                 )}
                 <div className="flex flex-wrap items-end gap-4 flex-grow">
-                    {activeTab !== 'dashboard' && (
+                    {activeTab !== 'dashboard' && activeTab !== 'structure' && (
                         <FormGroup label="Filter by Level">
                             <Select value={filters.level} onChange={(e) => handleFilterChange('level', e.target.value)}>
                                 {isFederal && <option value="federal">Federal</option>}
@@ -2133,7 +2426,7 @@ export function ProgramTeamView({ permissions, userStates }) {
                             </Select>
                         </FormGroup>
                     )}
-                    {(activeTab === 'dashboard' || filters.level === 'state' || filters.level === 'locality') && (
+                    {(activeTab === 'dashboard' || activeTab === 'structure' || filters.level === 'state' || filters.level === 'locality') && (
                         <FormGroup label="State">
                             <Select value={filters.state} onChange={(e) => handleFilterChange('state', e.target.value)} disabled={!isFederal}>
                                 <option value="">كل الولايات (All States)</option>
@@ -2141,7 +2434,7 @@ export function ProgramTeamView({ permissions, userStates }) {
                             </Select>
                         </FormGroup>
                     )}
-                    {(activeTab === 'dashboard' || filters.level === 'locality') && (
+                    {(activeTab === 'dashboard' || filters.level === 'locality') && activeTab !== 'structure' && (
                         <FormGroup label="Locality">
                             <Select value={filters.locality} onChange={(e) => handleFilterChange('locality', e.target.value)} disabled={!filters.state}>
                                 <option value="">كل المحليات (All Localities)</option>
@@ -2149,14 +2442,17 @@ export function ProgramTeamView({ permissions, userStates }) {
                             </Select>
                         </FormGroup>
                     )}
-                    <FormGroup label="Job Description">
-                        <Select value={filters.jobTitle} onChange={(e) => handleFilterChange('jobTitle', e.target.value)}>
-                            <option value="">كل المسميات الوظيفية</option>
-                            {allJobTitles.map(job => <option key={job} value={job}>{job}</option>)}
-                        </Select>
-                    </FormGroup>
+                    
+                    {activeTab !== 'structure' && (
+                        <FormGroup label="Job Description">
+                            <Select value={filters.jobTitle} onChange={(e) => handleFilterChange('jobTitle', e.target.value)}>
+                                <option value="">كل المسميات الوظيفية</option>
+                                {allJobTitles.map(job => <option key={job} value={job}>{job}</option>)}
+                            </Select>
+                        </FormGroup>
+                    )}
 
-                    {filters.level !== 'locality' && (
+                    {filters.level !== 'locality' && activeTab !== 'structure' && (
                         <>
                             <FormGroup label="Job Responsibilities (الصفة)">
                                 <Select value={filters.role} onChange={(e) => handleFilterChange('role', e.target.value)}>
@@ -2184,7 +2480,14 @@ export function ProgramTeamView({ permissions, userStates }) {
                 </div>
             </div>
             
-            {activeTab === 'dashboard' ? (
+            {activeTab === 'structure' ? (
+                <ProgramStructureChart 
+                    filters={filters}
+                    federalCoordinators={federalCoordinators}
+                    stateCoordinators={stateCoordinators}
+                    localityCoordinators={localityCoordinators}
+                />
+            ) : activeTab === 'dashboard' ? (
                 <ProgramTeamDashboard 
                     federalCoordinators={federalCoordinators}
                     stateCoordinators={stateCoordinators}
@@ -2364,6 +2667,7 @@ export function TeamMemberApplicationForm() {
         joinDate: '', bankAccount: '', bankName: '', bankBranch: '', accountHolder: '', comments: '',
         previousRoles: [{ role: '', duration: '' }],
         isUserEmail: false,
+        imageUrl: '' // New Field
     });
     
     const [selectedLevel, setSelectedLevel] = useState(() => {
@@ -2383,6 +2687,7 @@ export function TeamMemberApplicationForm() {
     const [isLinkActive, setIsLinkActive] = useState(false);
     const [isLoadingStatus, setIsLoadingStatus] = useState(true);
     const [isUpdate, setIsUpdate] = useState(false);
+    const [isUploadingImage, setIsUploadingImage] = useState(false);
 
     // Helper function to find existing profiles or pending submissions
     const checkUserRecords = async (email) => {
@@ -2480,6 +2785,21 @@ export function TeamMemberApplicationForm() {
 
     const handlePreviousRolesChange = (newRoles) => setFormData(prev => ({ ...prev, previousRoles: newRoles }));
 
+    const handleImageUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setIsUploadingImage(true);
+        try {
+            const downloadUrl = await uploadFile(file);
+            setFormData(prev => ({ ...prev, imageUrl: downloadUrl }));
+        } catch (error) {
+            console.error("Upload failed:", error);
+            alert("Failed to upload image. Please try again.");
+        } finally {
+            setIsUploadingImage(false);
+        }
+    };
+
     const showFeedback = (type, message) => {
         setFeedbackModal({ isOpen: true, type, message });
     };
@@ -2527,20 +2847,27 @@ export function TeamMemberApplicationForm() {
             if (payload.jobTitle !== 'اخرى') payload.jobTitleOther = '';
             
             if (selectedLevel === 'federal') {
-                 delete payload.state;
-                 delete payload.locality;
+                 payload.state = '';
+                 payload.locality = '';
                  if (payload.role !== 'مدير البرنامج') payload.directorDate = '';
                  if (payload.role !== 'رئيس وحدة' && payload.role !== 'عضو في وحدة') payload.unit = '';
             } else if (selectedLevel === 'state') {
-                 delete payload.locality;
+                 payload.locality = '';
                  if (payload.role !== 'مدير البرنامج') payload.directorDate = '';
                  if (payload.role !== 'رئيس وحدة' && payload.role !== 'عضو في وحدة') payload.unit = '';
             } else if (selectedLevel === 'locality') {
-                delete payload.role;
-                delete payload.directorDate;
-                delete payload.unit;
-                delete payload.joinDate; 
+                payload.role = '';
+                payload.directorDate = '';
+                payload.unit = '';
+                payload.joinDate = ''; 
             }
+
+            // 🔥 FIRESTORE FIX: Remove any undefined values
+            Object.keys(payload).forEach(key => {
+                if (payload[key] === undefined) {
+                    delete payload[key];
+                }
+            });
 
             const submitFnMap = {
                 federal: submitFederalApplication,
@@ -2657,6 +2984,8 @@ export function TeamMemberApplicationForm() {
                                 formData={formData} 
                                 onFormChange={handleChange} 
                                 onDynamicFieldChange={handlePreviousRolesChange} 
+                                onImageUpload={handleImageUpload}
+                                isUploadingImage={isUploadingImage}
                             />
                         </div>
                     )}
@@ -2720,6 +3049,16 @@ export function PublicTeamMemberProfileView({ member, level }) {
             />
             <CardBody dir="rtl">
                 <div className="mt-4">
+                    
+                    {/* Display Photo if available */}
+                    {member.imageUrl && (
+                        <div className="flex justify-center mb-6">
+                            <div className="w-32 h-32 bg-gray-100 rounded-full border-4 border-gray-200 shadow-sm overflow-hidden">
+                                <img src={member.imageUrl} alt="Profile" className="w-full h-full object-cover" />
+                            </div>
+                        </div>
+                    )}
+
                     {renderSection("البيانات الأساسية",
                         <>
                             {level !== 'federal' && renderDetail('الولاية', STATE_LOCALITIES[normalizeState(member.state)]?.ar || member.state)}
