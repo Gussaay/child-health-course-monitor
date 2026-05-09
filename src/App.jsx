@@ -314,7 +314,7 @@ const BottomNav = React.memo(function BottomNav({ navItems, navigate }) {
         'skillsMentorship': ClipboardCheck, 'localityPlan': Layers, 'admin': User 
     };
     return (
-        <nav className="md:hidden fixed bottom-0 inset-x-0 bg-slate-800 border-t border-slate-700 flex justify-around items-center z-20">
+        <nav className="md:hidden fixed bottom-12 inset-x-0 bg-slate-800 border-t border-slate-700 flex justify-around items-center z-[40] shadow-[0_-4px_10px_rgba(0,0,0,0.2)]">
             {navItems.map(item => {
                 const Icon = icons[item.view] || Activity;
                 return (
@@ -1624,10 +1624,10 @@ export default function App() {
                             </div>
                             <div>
                                 <h1 className="text-xl sm:text-2xl font-bold text-white">{t('app.title', 'National Child Health Program')}</h1>
-                                <p className="text-sm text-slate-300 hidden sm:block flex items-center">
-                                {t('app.subtitle', 'Program & Course Monitoring System')}
-                                <span className="ml-2 px-1.5 py-0.5 rounded bg-slate-700/50 text-[10px] font-mono border border-slate-600">v{appVersion}</span>
-                            </p>
+                                <p className="text-xs sm:text-sm text-slate-300 flex items-center flex-wrap gap-2 mt-1 sm:mt-0">
+                                    {t('app.subtitle', 'Program & Course Monitoring System')}
+                                    <span className="px-1.5 py-0.5 rounded bg-slate-700/50 text-[10px] font-mono border border-slate-600">v{appVersion}</span>
+                                </p>
                             </div>
                         </div>
                         
@@ -1711,15 +1711,15 @@ export default function App() {
             
             {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ show: false, message: '', type: '' })} />}
 
-            <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 w-full flex-grow mb-16 md:mb-0 overflow-x-hidden">
+            <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 w-full flex-grow pb-32 md:pb-8 overflow-x-hidden">
                 <Suspense fallback={<Card><Spinner /></Card>}>
                     {mainContent}
                 </Suspense>
             </main>
 
-            <footer className="bg-slate-800 text-slate-400 py-4 text-center text-sm border-t border-slate-700 w-full z-10 relative">
-                <p>App developed by Dr Qusay Mohamed - <a href="mailto:Gussaay@gmail.com" className="text-sky-400 hover:text-sky-300 transition-colors">Gussaay@gmail.com</a></p>
-                <p className="mt-1 text-[11px] font-mono text-slate-500 md:hidden">Version {appVersion}</p>
+            <footer className="bg-slate-900 text-slate-500 flex flex-col items-center justify-center h-12 md:h-auto md:py-4 text-center text-[10px] sm:text-sm border-t border-slate-800 w-full z-[50] fixed bottom-0 md:relative">
+                <p className="truncate px-2 w-full">App developed by Dr Qusay Mohamed - <a href="mailto:Gussaay@gmail.com" className="text-sky-400 hover:text-sky-300 transition-colors">Gussaay@gmail.com</a></p>
+                <p className="mt-0.5 text-[9px] font-mono text-slate-600 md:hidden">Version {appVersion}</p>
             </footer>
             { user && !isMinimalUILayout && <BottomNav navItems={visibleNavItems} navigate={navigate} /> }
 
