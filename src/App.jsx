@@ -283,7 +283,7 @@ function Landing({ navigate, permissions }) {
         { label: t('landing.modules.planning', 'Master Plan'), view: 'planning', icon: TrendingUp, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.locality_plan', 'Bottom-up Planning'), view: 'localityPlan', icon: Layers, permission: permissions.canViewLocalityPlan },
         { label: t('landing.modules.admin', 'Admin'), view: 'admin', icon: User, permission: permissions.canViewAdmin },
-        { label: t('landing.modules.about', 'About Team'), view: 'about', icon: Info, permission: true }, // ADDED HERE FOR THE MAIN GRID
+        { label: t('landing.modules.about', 'About Team'), view: 'about', icon: Info, permission: true },
     ];
 
     const accessibleButtons = navButtons.filter(btn => btn.permission);
@@ -315,16 +315,24 @@ function Landing({ navigate, permissions }) {
 const BottomNav = React.memo(function BottomNav({ navItems, navigate }) {
     const icons = { 
         'landing': Home, 'dashboard': Home, 'courses': Book, 'humanResources': Users, 'childHealthServices': Hospital, 
-        'skillsMentorship': ClipboardCheck, 'localityPlan': Layers, 'admin': User 
+        'skillsMentorship': ClipboardCheck 
     };
+    
     return (
-        <nav className="md:hidden fixed bottom-12 inset-x-0 bg-slate-800 border-t border-slate-700 flex justify-around items-center z-[40] shadow-[0_-4px_10px_rgba(0,0,0,0.2)]">
+        <nav className="md:hidden fixed bottom-0 inset-x-0 bg-slate-800 border-t border-slate-700 flex justify-between items-center z-[60] shadow-[0_-4px_10px_rgba(0,0,0,0.2)] px-2">
             {navItems.map(item => {
                 const Icon = icons[item.view] || Activity;
                 return (
-                    <button key={item.view} onClick={() => navigate(item.view)} className={`flex flex-col items-center justify-center p-2 w-full h-16 text-xs font-medium transition-colors ${item.active ? 'text-sky-400' : 'text-slate-400 hover:text-white'}`}>
-                        {Icon && <Icon className="w-6 h-6 mb-1" />}
-                        <span className="truncate w-full text-center">{item.label}</span>
+                    <button 
+                        key={item.view} 
+                        onClick={() => navigate(item.view)} 
+                        className={`flex flex-col items-center justify-center p-1 w-full h-16 flex-1 min-w-0 transition-colors ${item.active ? 'text-sky-400' : 'text-slate-400 hover:text-white'}`}
+                        title={item.label} 
+                    >
+                        {Icon && <Icon className="w-6 h-6 mb-1 shrink-0" />}
+                        <span className="w-full text-center text-[10px] sm:text-[11px] leading-tight truncate px-0.5 block">
+                            {item.label}
+                        </span>
                     </button>
                 )
             })}
@@ -1373,8 +1381,8 @@ export default function App() {
         { label: t('landing.modules.courses', 'Courses'), view: 'courses', active: ['courses', 'courseForm', 'courseReport', 'participants', 'participantForm', 'participantReport', 'observe', 'monitoring', 'reports', 'finalReport', 'participantMigration', 'courseDetails', 'test-dashboard', 'enter-test-scores', 'attendanceManager', 'imciForm'].includes(view), disabled: !permissions.canViewCourse }, 
         { label: t('landing.modules.human_resources', 'Human Resources'), view: 'humanResources', active: ['humanResources', 'facilitatorForm', 'facilitatorReport'].includes(view), disabled: !permissions.canViewHumanResource },
         { label: t('landing.modules.facilities', 'Child Health Services'), view: 'childHealthServices', active: view === 'childHealthServices', disabled: !permissions.canViewFacilities },
-        { label: t('landing.modules.mentorship', 'Skills Mentorship'), view: 'skillsMentorship', active: view === 'skillsMentorship', disabled: !permissions.canViewSkillsMentorship },
-        // Locality plan and projects specifically omitted from top/bottom navigation as requested
+        { label: t('landing.modules.mentorship', 'Skills Mentorship'), view: 'skillsMentorship', active: view === 'skillsMentorship', disabled: !permissions.canViewSkillsMentorship }
+        // Locality plan, planning, projects, and admin specifically omitted from top/bottom navigation as requested
     ], [view, permissions, t]);
 
     const visibleNavItems = useMemo(() => navItems.filter(item => !item.disabled), [navItems]);
@@ -1665,33 +1673,39 @@ export default function App() {
             </header>
 
             {user && !isMinimalUILayout && (
-                <div className="bg-slate-700 text-slate-200 px-3 py-2 flex items-center justify-between gap-2 w-full overflow-hidden shadow-inner">
-                    
-                    {/* UPDATED: Flex-row, items-center, flex-nowrap to guarantee single line layout */}
-                    <div 
-                        className="flex items-center gap-2 cursor-pointer hover:bg-slate-600 px-2 py-1.5 rounded-md transition-colors duration-200 min-w-0 flex-1 overflow-hidden"
-                        onClick={() => setIsUserProfileModalOpen(true)}
-                        title="View Profile Information"
-                    >
-                        <span className="font-semibold text-sm truncate shrink-0">
-                            {user.displayName || user.email}
-                        </span>
-                        
-                        <div className="flex items-center gap-1 flex-nowrap overflow-hidden">
-                            {userRoles && userRoles.length > 0 && userRoles.map(r => (
-                                <span key={r} className="bg-sky-500 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm capitalize whitespace-nowrap shrink-0">
-                                    {r.replace(/_/g, ' ')}
-                                </span>
-                            ))}
-                            {userHRProfile && userHRProfile.role && (
-                                <span className="bg-teal-500 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm capitalize whitespace-nowrap shrink-0">
-                                    {userHRProfile.role}
-                                </span>
-                            )}
+                <div className="bg-slate-700 text-slate-200 px-3 py-2 flex items-center w-full shadow-inner relative min-h-[48px]">
+
+                    {/* Centered Profile Info Container */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+                        <div
+                            className="flex items-center justify-center gap-1.5 cursor-pointer hover:bg-slate-600 px-2 py-1 rounded-md transition-colors duration-200 pointer-events-auto max-w-[65%] sm:max-w-xl mx-auto"
+                            onClick={() => setIsUserProfileModalOpen(true)}
+                            title="View Profile Information"
+                        >
+                            <span className="font-semibold text-sm truncate shrink-0">
+                                {user.displayName || user.email}
+                            </span>
+
+                            <div className="flex items-center gap-1 flex-nowrap overflow-hidden">
+                                {userRoles && userRoles.length > 0 && userRoles.map((r, idx) => (
+                                    idx === 0 && <span key={r} className="bg-sky-500 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm capitalize whitespace-nowrap shrink-0">
+                                        {r.replace(/_/g, ' ')}
+                                    </span>
+                                ))}
+                                {userHRProfile && userHRProfile.role && (
+                                    <span className="bg-teal-500 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm capitalize whitespace-nowrap shrink-0 hidden sm:inline-flex">
+                                        {userHRProfile.role}
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     </div>
-                    
-                    <div className="flex items-center justify-end gap-2 shrink-0">
+
+                    {/* Left Spacer for symmetry */}
+                    <div className="flex-1 z-10 pointer-events-none"></div>
+
+                    {/* Right Action Buttons */}
+                    <div className="flex items-center justify-end gap-2 shrink-0 z-10 pointer-events-auto">
                         <button
                             onClick={() => {
                                 const newLang = i18n.language?.startsWith('en') ? 'ar' : 'en';
@@ -1702,9 +1716,9 @@ export default function App() {
                         >
                             <span className="font-bold text-sm">E/ع</span>
                         </button>
-                        <button 
-                            onClick={handleLogout} 
-                            className="p-1.5 sm:px-3 sm:py-1 text-sm font-semibold text-white bg-red-600 rounded-md hover:bg-red-700 flex items-center justify-center gap-1 transition-colors" 
+                        <button
+                            onClick={handleLogout}
+                            className="p-1.5 sm:px-3 sm:py-1 text-sm font-semibold text-white bg-red-600 rounded-md hover:bg-red-700 flex items-center justify-center gap-1 transition-colors"
                             title={t('app.logout', 'Logout')}
                         >
                             <LogOut size={18} className="sm:hidden" />
@@ -1716,14 +1730,14 @@ export default function App() {
             
             {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ show: false, message: '', type: '' })} />}
 
-            <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 w-full flex-grow pb-32 md:pb-8 overflow-x-hidden">
+            <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 w-full flex-grow pb-8 md:pb-8 overflow-x-hidden">
                 <Suspense fallback={<Card><Spinner /></Card>}>
                     {mainContent}
                 </Suspense>
             </main>
 
             {/* REMOVED VERSION TAG FROM FOOTER */}
-            <footer className="bg-slate-900 text-slate-500 flex flex-col items-center justify-center h-12 md:h-auto md:py-4 text-center text-[10px] sm:text-sm border-t border-slate-800 w-full z-[50] fixed bottom-0 md:relative">
+            <footer className="bg-slate-900 text-slate-500 flex flex-col items-center justify-center py-2 md:py-4 text-center text-[10px] sm:text-sm border-t border-slate-800 w-full z-[30] mt-auto pb-[76px] md:pb-4">
                 <p className="truncate px-2 w-full">App developed by Dr Qusay Mohamed - <a href="mailto:Gussaay@gmail.com" className="text-sky-400 hover:text-sky-300 transition-colors">Gussaay@gmail.com</a></p>
             </footer>
             { user && !isMinimalUILayout && <BottomNav navItems={visibleNavItems} navigate={navigate} /> }

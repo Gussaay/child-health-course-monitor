@@ -26,7 +26,7 @@ import {
     listIMNCIPatientRecords,
     fetchFacilitiesHistoryMultiDate, 
     listSnapshotsForFacility,
-    getAboutTeamImages // <-- Added Import    
+    getAboutTeamImages 
 } from './data';
 import { useAuth } from './hooks/useAuth';
 
@@ -119,7 +119,7 @@ export const DataProvider = ({ children }) => {
         masterPlans: null,
         operationalPlans: null,
         unitMeetings: null,
-        aboutTeamImages: null, // <-- Added State
+        aboutTeamImages: null, 
     });
 
     const [isLoading, setIsLoading] = useState({
@@ -142,7 +142,7 @@ export const DataProvider = ({ children }) => {
         masterPlans: true,
         operationalPlans: true,
         unitMeetings: true,
-        aboutTeamImages: true, // <-- Added Loading State
+        aboutTeamImages: true, 
     });
     
     const [lastFacilitiesFetchTime, setLastFacilitiesFetchTime] = useState({}); 
@@ -333,14 +333,13 @@ export const DataProvider = ({ children }) => {
 
             try {
                 let effectiveLastFetchTime = lastFetchTime;
+                
+                // If localDB is empty, we must do a full download to reconstruct it.
                 if ((!localData || (Array.isArray(localData) && localData.length === 0)) && !key.includes('Settings')) {
                     effectiveLastFetchTime = 0;
                 }
 
-                // FIX: Force effectiveLastFetchTime to 0 if we specifically asked for force=true
-                if (force === true) {
-                    effectiveLastFetchTime = 0;
-                }
+                // REMOVED THE FAULTY "force === true" BLOCK THAT WIPED OUT THE INCREMENTAL DELTA
 
                 const newOrUpdatedData = await fetchWithTimeout(fetchFn({ source: 'server' }, effectiveLastFetchTime), 60000); 
                 
@@ -406,7 +405,7 @@ export const DataProvider = ({ children }) => {
         fetchOperationalPlans: createFetcher('operationalPlans', (opts, lastSync) => listOperationalPlans(opts, lastSync)),
         fetchUnitMeetings: createFetcher('unitMeetings', (opts, lastSync) => listUnitMeetings(opts, lastSync)),
         
-        fetchAboutTeamImages: createFetcher('aboutTeamImages', (opts) => getAboutTeamImages(opts)), // <-- Added Fetcher
+        fetchAboutTeamImages: createFetcher('aboutTeamImages', (opts) => getAboutTeamImages(opts)),
     }), [createFetcher]);
 
     useEffect(() => {

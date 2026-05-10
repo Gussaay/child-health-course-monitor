@@ -4170,16 +4170,11 @@ const SkillsMentorshipView = ({
 
         return (
             <>
-                <Card dir="rtl">
-                    <div className="p-6">
-                        <div className="mx-auto text-center mb-6 max-w-lg"> 
-                            <PageHeader
-                                title={setupTitle}
-                                subtitle={setupSubtitle}
-                            />
-                        </div>
+                <Modal isOpen={true} onClose={handleBackToMainMenu} title={setupTitle} size="xl">
+                    <div className="p-6 text-right bg-white" dir="rtl">
+                        <p className="text-sm text-gray-500 mb-6">{setupSubtitle}</p>
 
-                        <div className="space-y-6 mt-6">
+                        <div className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border p-4 rounded-lg bg-gray-50 flex flex-row-reverse">
                                 <FormGroup label="الولاية" className="text-right">
                                     <Select value={selectedState} onChange={handleStateChange} disabled={isStateFilterDisabled || !!editingSubmission}>
@@ -4232,88 +4227,47 @@ const SkillsMentorshipView = ({
                                 )}
                             </div>
 
-                                {isSkillsAssessmentSetup && selectedFacilityId && (
-                                    <div className="border p-4 rounded-lg bg-gray-50 space-y-4">
-                                        <FormGroup label="العامل الصحي" className="text-right">
-                                            <Select
-                                                value={selectedHealthWorkerName}
-                                                onChange={(e) => {
-                                                    if (e.target.value === 'ADD_NEW_WORKER') {
-                                                        setIsAddWorkerModalOpen(true);
-                                                        setSelectedHealthWorkerName('');
-                                                        setSelectedWorkerOriginalData(null); setWorkerJobTitle(''); setWorkerTrainingDate(''); setWorkerPhone(''); setIsWorkerInfoChanged(false);
-                                                    } else {
-                                                        setSelectedHealthWorkerName(e.target.value);
-                                                    }
-                                                    setIsReadyToStart(false);
-                                                }}
-                                                disabled={!selectedFacilityId || !!editingSubmission}
-                                            >
-                                                <option value="">-- اختر العامل الصحي --</option>
-                                                {!editingSubmission && (
-                                                    <option value="ADD_NEW_WORKER" className="font-bold text-blue-600 bg-blue-50">
-                                                        + إضافة عامل صحي جديد...
-                                                    </option>
-                                                )}
-                                                {healthWorkers.map(w => (
-                                                    <option key={w.id} value={w.name}>
-                                                        {w.name}
-                                                    </option>
-                                                ))}
-                                            </Select>
-                                            {healthWorkers.length === 0 && !editingSubmission && (
-                                                <p className="text-xs text-red-600 mt-1">
-                                                    لا يوجد كوادر مسجلين. أضف واحداً.
-                                                </p>
+                            {isSkillsAssessmentSetup && selectedFacilityId && (
+                                <div className="border p-4 rounded-lg bg-gray-50 space-y-4">
+                                    <FormGroup label="العامل الصحي" className="text-right">
+                                        <Select
+                                            value={selectedHealthWorkerName}
+                                            onChange={(e) => {
+                                                if (e.target.value === 'ADD_NEW_WORKER') {
+                                                    setIsAddWorkerModalOpen(true);
+                                                    setSelectedHealthWorkerName('');
+                                                    setSelectedWorkerOriginalData(null); setWorkerJobTitle(''); setWorkerTrainingDate(''); setWorkerPhone(''); setIsWorkerInfoChanged(false);
+                                                } else {
+                                                    setSelectedHealthWorkerName(e.target.value);
+                                                }
+                                                setIsReadyToStart(false);
+                                            }}
+                                            disabled={!selectedFacilityId || !!editingSubmission}
+                                        >
+                                            <option value="">-- اختر العامل الصحي --</option>
+                                            {!editingSubmission && (
+                                                <option value="ADD_NEW_WORKER" className="font-bold text-blue-600 bg-blue-50">
+                                                    + إضافة عامل صحي جديد...
+                                                </option>
                                             )}
-                                        </FormGroup>
-
-                                        {selectedHealthWorkerName && (
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t items-end">
-                                                <FormGroup label="الوصف الوظيفي" className="text-right">
-                                                    <Select value={workerJobTitle} onChange={(e) => setWorkerJobTitle(e.target.value)}>
-                                                         <option value="">-- اختر الوصف الوظيفي --</option>
-                                                        {IMNCI_JOB_TITLES.map(title => (
-                                                            <option key={title} value={title}>{title}</option>
-                                                        ))}
-                                                    </Select>
-                                                </FormGroup>
-                                                <FormGroup label="اخر تاريخ تدريب" className="text-right">
-                                                    <Input type="date" value={workerTrainingDate} onChange={(e) => setWorkerTrainingDate(e.target.value)} />
-                                                </FormGroup>
-                                                <FormGroup label="رقم الهاتف" className="text-right">
-                                                    <Input type="tel" value={workerPhone} onChange={(e) => setWorkerPhone(e.target.value)} />
-                                                </FormGroup>
-
-                                                {isWorkerInfoChanged && (
-                                                     <div className="md:col-span-3 flex justify-end">
-                                                         <Button
-                                                            type="button"
-                                                            onClick={handleUpdateHealthWorkerInfo}
-                                                            disabled={isUpdatingWorker}
-                                                            variant="success"
-                                                            size="sm"
-                                                        >
-                                                            {isUpdatingWorker ? 'جاري التحديث...' : 'حفظ تعديلات بيانات العامل'}
-                                                        </Button>
-                                                    </div>
-                                                )}
-                                            </div>
+                                            {healthWorkers.map(w => (
+                                                <option key={w.id} value={w.name}>
+                                                    {w.name}
+                                                </option>
+                                            ))}
+                                        </Select>
+                                        {healthWorkers.length === 0 && !editingSubmission && (
+                                            <p className="text-xs text-red-600 mt-1">
+                                                لا يوجد كوادر مسجلين. أضف واحداً.
+                                            </p>
                                         )}
-                                    </div>
-                                )}
+                                    </FormGroup>
+                                </div>
+                            )}
                         </div>
                         
-                        <div className="hidden sm:flex flex-col gap-2 items-end mt-6 pt-4 border-t">
-                            <div className="flex gap-2 flex-wrap justify-end w-full">
-                                <Button 
-                                    onClick={handleBackToMainMenu}
-                                    variant="secondary"
-                                    disabled={isFacilitiesLoading}
-                                >
-                                    إلغاء والعودة
-                                </Button>
-                                
+                        <div className="flex flex-col sm:flex-row justify-between items-center mt-8 pt-4 border-t gap-4">
+                            <div className="flex gap-2">
                                 {isSkillsAssessmentSetup && selectedHealthWorkerName && (
                                     <Button 
                                         type="button" 
@@ -4324,78 +4278,28 @@ const SkillsMentorshipView = ({
                                         }}
                                         disabled={isFacilitiesLoading || workerHistory.length === 0}
                                         title={workerHistory.length === 0 ? "لا توجد جلسات سابقة لعرض الأولويات" : "عرض أولويات التدريب للعامل بناءً على التقييمات السابقة"}
-                                        className="ml-auto"
                                     >
-                                        أولويات التدريب (للعامل الصحي)
+                                        أولويات التدريب
                                     </Button>
                                 )}
+                            </div>
 
+                            <div className="flex gap-2 w-full sm:w-auto justify-end">
+                                <Button onClick={handleBackToMainMenu} variant="secondary" disabled={isFacilitiesLoading}>إلغاء</Button>
                                 <Button
                                     onClick={handleProceedToForm}
-                                    disabled={!selectedFacilityId || (isSkillsAssessmentSetup && !selectedHealthWorkerName) || isFacilitiesLoading || isWorkerInfoChanged}
+                                    disabled={!selectedFacilityId || (isSkillsAssessmentSetup && !selectedHealthWorkerName) || isFacilitiesLoading}
                                     variant="primary"
+                                    className="px-8"
                                 >
-                                    {isSkillsAssessmentSetup ? 'بدء جلسة الاشراف' : 
-                                     (isVisitReportSetup ? (activeService === 'EENC' ? 'بدء تقرير زيارة EENC' : 'بدء تقرير زيارة') : 
-                                     (isFacilityUpdateSetup ? 'تحديث بيانات المنشأة' : 'بدء استبيان الأم'))}
+                                    {isSkillsAssessmentSetup ? 'بدء الجلسة' : 
+                                     (isVisitReportSetup ? (activeService === 'EENC' ? 'بدء تقرير EENC' : 'بدء تقرير زيارة') : 
+                                     (isFacilityUpdateSetup ? 'تحديث بيانات المنشأة' : 'بدء الاستبيان'))}
                                 </Button>
                             </div>
-                            <div className="flex gap-2 flex-wrap justify-end">
-                                <Button 
-                                    type="button" 
-                                    variant="info"
-                                    onClick={() => setIsMothersFormModalOpen(true)} 
-                                    disabled={isFacilitiesLoading || !selectedFacility}
-                                    title={selectedFacility ? "Open Mother's Survey" : "Select a facility first"}
-                                >
-                                    استبيان الأم
-                                </Button>
-                                <Button 
-                                    type="button" 
-                                    variant="info"
-                                    onClick={() => setIsVisitReportModalOpen(true)} 
-                                    disabled={isFacilitiesLoading || !selectedFacility}
-                                    title={selectedFacility ? (activeService === 'EENC' ? "Open EENC Visit Report" : "Open IMNCI Visit Report") : "Select a facility first"}
-                                >
-                                    {activeService === 'EENC' ? 'تقرير زيارة EENC' : 'تقرير زيارة'}
-                                </Button>
-                                <Button 
-                                    type="button" 
-                                    variant="info"
-                                    onClick={() => {
-                                        setActiveDashboardState(selectedState);
-                                        setActiveDashboardLocality(selectedLocality);
-                                        setActiveDashboardFacilityId(selectedFacilityId);
-                                        setActiveDashboardWorkerName(selectedHealthWorkerName);
-                                        setIsDashboardModalOpen(true);
-                                    }} 
-                                    disabled={isFacilitiesLoading}
-                                    title="Open Dashboard"
-                                >
-                                    لوحة المتابعة
-                                </Button>
-                            </div>
-                        </div>
-
-                        <div className="flex sm:hidden fixed bottom-16 left-0 right-0 z-20 h-16 justify-around items-center bg-gray-900 text-white border-t border-gray-700 shadow-lg" dir="rtl">
-                            <Button type="button" variant="secondary" onClick={handleBackToMainMenu} disabled={isFacilitiesLoading} size="sm">
-                                إلغاء
-                            </Button>
-                            
-                            <Button 
-                                type="button" 
-                                onClick={handleProceedToForm}
-                                disabled={!selectedFacilityId || (isSkillsAssessmentSetup && !selectedHealthWorkerName) || isFacilitiesLoading || isWorkerInfoChanged}
-                                title={!selectedFacilityId ? "Select facility" : (isSkillsAssessmentSetup && !selectedHealthWorkerName ? "Select health worker" : "Start Session")}
-                                size="sm"
-                            >
-                                {isSkillsAssessmentSetup ? 'بدء الجلسة' : 
-                                 (isVisitReportSetup ? (activeService === 'EENC' ? 'بدء تقرير EENC' : 'بدء التقرير') : 
-                                 (isFacilityUpdateSetup ? 'تحديث منشأة' : 'بدء الاستبيان'))}
-                            </Button>
                         </div>
                     </div>
-                </Card>
+                </Modal>
 
                  {isAddWorkerModalOpen && (
                     <AddHealthWorkerModal
@@ -4614,12 +4518,6 @@ const SkillsMentorshipView = ({
                         </div>
                     </Modal>
                 )}
-
-                <MobileFormNavBar
-                    activeFormType={activeFormType}
-                    draftCount={currentUserDrafts.length}
-                    onNavClick={handleMobileNavClick}
-                 />
 
                  <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
             </>
