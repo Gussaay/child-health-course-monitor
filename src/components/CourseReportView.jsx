@@ -45,15 +45,15 @@ const LinkIcon = () => (
 
 // --- LEGEND COMPONENTS ---
 const LegendBadge = ({ colorClass, label, range }) => (
-    <div className="flex items-center space-x-2 text-sm whitespace-nowrap">
-        <span className={`px-2 py-1 rounded font-semibold ${colorClass} border border-black/10`}>{label}</span>
-        <span className="text-gray-600 font-medium">{range}</span>
+    <div className="flex items-center space-x-1.5 text-[11px] whitespace-nowrap">
+        <span className={`px-1.5 py-0.5 rounded font-bold ${colorClass} border border-black/10`}>{label}</span>
+        <span className="text-gray-500 font-medium">{range}</span>
     </div>
 );
 
 const RawScoreLegend = () => (
-    <div className="flex flex-wrap gap-4 p-3 bg-gray-50 border border-gray-200 rounded-lg mb-4 text-sm print-hide">
-        <span className="font-bold text-gray-700 self-center mr-2">Practical / Daily Score Legend:</span>
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2 border-y border-gray-100 mb-3 text-xs print-hide">
+        
         <LegendBadge colorClass="bg-green-200 text-green-800" label="Perfect" range="100%" />
         <LegendBadge colorClass="bg-yellow-200 text-yellow-800" label="Excellent" range="95% - 99.9%" />
         <LegendBadge colorClass="bg-orange-200 text-orange-800" label="Good" range="90% - 94.9%" />
@@ -63,8 +63,8 @@ const RawScoreLegend = () => (
 );
 
 const ImprovementScoreLegend = () => (
-    <div className="flex flex-wrap gap-4 p-3 bg-gray-50 border border-gray-200 rounded-lg mb-4 text-sm print-hide">
-        <span className="font-bold text-gray-700 self-center mr-2">Test Improvement Legend:</span>
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2 border-y border-gray-100 mb-3 text-xs print-hide">
+        
         <LegendBadge colorClass="bg-green-200 text-green-800" label="Perfect" range="> 50%" />
         <LegendBadge colorClass="bg-yellow-200 text-yellow-800" label="Excellent" range="30% - 50%" />
         <LegendBadge colorClass="bg-gray-200 text-gray-800" label="Good" range="15% - 29.9%" />
@@ -345,7 +345,7 @@ const getPdfImprovementStyles = (preScore, postScore) => {
 
 // --- PDF EXPORT HELPER ---
 const generateFullCourseReportPdf = async (course, quality, onSuccess, onError, tableData) => {
-    const { filteredParticipants, tableHeaders, showCaseColumns, showTestScoreColumns, isSharedView } = tableData;
+    const { filteredPracticalParticipants, filteredWrittenParticipants, practicalTableHeaders, writtenTableHeaders, showCaseColumns, showTestScoreColumns, isSharedView } = tableData;
     const qualityProfiles = {
         print: { scale: 2, fileSuffix: '', imageType: 'image/jpeg', imageQuality: 0.95, imageFormat: 'JPEG', compression: 'MEDIUM' },
         screen: { scale: 1.5, fileSuffix: '', imageType: 'image/png', imageQuality: 1.0, imageFormat: 'PNG', compression: 'FAST' }
@@ -423,30 +423,22 @@ const generateFullCourseReportPdf = async (course, quality, onSuccess, onError, 
 
         if (document.getElementById('daily-tables-section')) y = await addCanvasImageToPdf('daily-tables-section', y);
         
-        if (document.getElementById('participant-summary-table')) {
-            y = addTitle('Participant Score Summary', y);
-            y = await addCanvasImageToPdf('participant-summary-table', y);
+        if (document.getElementById('practical-summary-table')) {
+            y = addTitle('Practical Case Score Summary', y);
+            y = await addCanvasImageToPdf('practical-summary-table', y);
         }
 
-        if (filteredParticipants.length > 0) {
-            y = addTitle('Participant Results', y);
-            const head = [tableHeaders];
-            const body = filteredParticipants.map((p, index) => {
-                const row = [index + 1, p.name];
-                if (showCaseColumns) {
-                    row.push(p.total_cases_seen);
-                    if (!isSharedView) row.push(getCaseCorrectnessName(p.correctness_percentage));
-                }
-                if (showTestScoreColumns) {
-                    const preScore = Number(p.pre_test_score);
-                    const postScore = Number(p.post_test_score);
-                    const increase = (!isNaN(preScore) && preScore > 0 && !isNaN(postScore) && postScore > 0) ? ((postScore - preScore) / preScore) * 100 : null;
-                    const category = getAvgImprovementCategory(p.pre_test_score, p.post_test_score);
-                    row.push(fmtDecimal(preScore));
-                    row.push(fmtDecimal(postScore));
-                    row.push(isNaN(increase) || increase === null ? 'N/A' : `${increase.toFixed(1)}%`);
-                    row.push(category.name);
-                }
+        if (document.getElementById('written-summary-table')) {
+            y = addTitle('Written Test Score Summary', y);
+            y = await addCanvasImageToPdf('written-summary-table', y);
+        }
+
+        if (showCaseColumns && filteredPracticalParticipants.length > 0) {
+            y = addTitle('Detailed Practical Case Results', y);
+            const head = [practicalTableHeaders];
+            const body = filteredPracticalParticipants.map((p, index) => {
+                const row = [index + 1, p.name, p.total_cases_seen];
+                if (!isSharedView) row.push(getCaseCorrectnessName(p.correctness_percentage));
                 return row;
             });
 
@@ -461,11 +453,44 @@ const generateFullCourseReportPdf = async (course, quality, onSuccess, onError, 
                     else { data.cell.styles.overflow = 'linebreak'; }
                     if (data.section === 'head') { data.cell.styles.halign = 'center'; data.cell.styles.fontStyle = 'bold'; return; }
                     if (data.section === 'body') {
-                        const participant = filteredParticipants[data.row.index];
+                        const participant = filteredPracticalParticipants[data.row.index];
                         if (!participant) return;
                         let styles = null;
                         if (colKey === 'Practical Case Score') styles = getPdfScoreStyles(participant.correctness_percentage);
-                        else if (colKey === 'average improvemt score') styles = getPdfImprovementStyles(participant.pre_test_score, participant.post_test_score);
+                        if (styles) { data.cell.styles.fillColor = styles.fillColor; data.cell.styles.textColor = styles.textColor; }
+                        if (colKey === 'Participant Name') data.cell.styles.halign = 'right'; else data.cell.styles.halign = 'center';
+                    }
+                }
+            });
+            y = doc.lastAutoTable.finalY + 10;
+        }
+
+        if (showTestScoreColumns && filteredWrittenParticipants.length > 0) {
+            y = addTitle('Detailed Written Test Results', y);
+            const head = [writtenTableHeaders];
+            const body = filteredWrittenParticipants.map((p, index) => {
+                const preScore = Number(p.pre_test_score);
+                const postScore = Number(p.post_test_score);
+                const increase = (!isNaN(preScore) && preScore > 0 && !isNaN(postScore) && postScore > 0) ? ((postScore - preScore) / preScore) * 100 : null;
+                const category = getAvgImprovementCategory(p.pre_test_score, p.post_test_score);
+                return [index + 1, p.name, fmtDecimal(preScore), fmtDecimal(postScore), isNaN(increase) || increase === null ? 'N/A' : `${increase.toFixed(1)}%`, category.name];
+            });
+
+            doc.setFont('Amiri');
+            autoTable(doc, {
+                ...autoTableStyles, head: head, body: body, startY: y,
+                didDrawPage: (data) => { y = data.cursor.y; doc.setFont('Amiri'); },
+                didParseCell: (data) => {
+                    data.cell.styles.font = 'Amiri';
+                    const colKey = head[0][data.column.index];
+                    if (colKey === 'Participant Name') { data.cell.styles.overflow = 'ellipsis'; data.cell.styles.cellWidth = 'auto'; }
+                    else { data.cell.styles.overflow = 'linebreak'; }
+                    if (data.section === 'head') { data.cell.styles.halign = 'center'; data.cell.styles.fontStyle = 'bold'; return; }
+                    if (data.section === 'body') {
+                        const participant = filteredWrittenParticipants[data.row.index];
+                        if (!participant) return;
+                        let styles = null;
+                        if (colKey === 'Average Improvement') styles = getPdfImprovementStyles(participant.pre_test_score, participant.post_test_score);
                         if (styles) { data.cell.styles.fillColor = styles.fillColor; data.cell.styles.textColor = styles.textColor; }
                         if (colKey === 'Participant Name') data.cell.styles.halign = 'right'; else data.cell.styles.halign = 'center';
                     }
@@ -900,13 +925,13 @@ export function CourseReportView({
         const row = { day, totalSkills: { correct: 0, total: 0 } };
         groupsWithData.forEach(group => {
             const dayData = dailyPerformance[day] && dailyPerformance[day][group] ? dailyPerformance[day][group] : { correct: 0, total: 0, cases: 0 };
-            const pct = calcPct(dayData.correct, dayData.total);
-            row[group] = { pct, display: `${dayData.total} (${fmtPct(pct)})` };
+            const pct = dayData.total > 0 ? calcPct(dayData.correct, dayData.total) : NaN;
+            row[group] = { pct, display: dayData.total > 0 ? `${dayData.total} (${fmtPct(pct)})` : '-' };
             row.totalSkills.correct += dayData.correct;
             row.totalSkills.total += dayData.total;
         });
-        const totalDayPct = calcPct(row.totalSkills.correct, row.totalSkills.total);
-        row.totalDisplay = `${row.totalSkills.total} (${fmtPct(totalDayPct)})`;
+        const totalDayPct = row.totalSkills.total > 0 ? calcPct(row.totalSkills.correct, row.totalSkills.total) : NaN;
+        row.totalDisplay = row.totalSkills.total > 0 ? `${row.totalSkills.total} (${fmtPct(totalDayPct)})` : '-';
         row.totalDayPct = totalDayPct;
         return row;
     });
@@ -926,12 +951,12 @@ export function CourseReportView({
         const row = { day, totalCases: { correct: 0, total: 0 } };
         groupsWithData.forEach(group => {
             const dayData = dailyPerformance[day] && dailyPerformance[day][group] ? dailyPerformance[day][group] : { cases: 0, correctCases: 0 };
-            const pct = calcPct(dayData.correctCases, dayData.cases);
-            row[group] = { pct, display: `${dayData.cases} (${fmtPct(pct)})` };
+            const pct = dayData.cases > 0 ? calcPct(dayData.correctCases, dayData.cases) : NaN;
+            row[group] = { pct, display: dayData.cases > 0 ? `${dayData.cases} (${fmtPct(pct)})` : '-' };
             row.totalCases.correct += dayData.correctCases; row.totalCases.total += dayData.cases;
         });
-        const totalDayPct = calcPct(row.totalCases.correct, row.totalCases.total);
-        row.totalDisplay = `${row.totalCases.total} (${fmtPct(totalDayPct)})`;
+        const totalDayPct = row.totalCases.total > 0 ? calcPct(row.totalCases.correct, row.totalCases.total) : NaN;
+        row.totalDisplay = row.totalCases.total > 0 ? `${row.totalCases.total} (${fmtPct(totalDayPct)})` : '-';
         row.totalDayPct = totalDayPct;
         return row;
     });
@@ -947,34 +972,42 @@ export function CourseReportView({
         grandTotalCasesCorrect += row.totalCases.correct; grandTotalCasesTotal += row.totalCases.total;
     });
 
-    const filteredParticipants = useMemo(() => {
+    const filteredPracticalParticipants = useMemo(() => {
         let ps = [...participantsWithStats];
-        if (scoreFilter !== 'All') {
-             ps = ps.filter(p => getAvgImprovementCategory(p.pre_test_score, p.post_test_score).name === scoreFilter);
-        }
         if (caseCorrectnessFilter !== 'All') {
             ps = ps.filter(p => getCaseCorrectnessName(p.correctness_percentage) === caseCorrectnessFilter);
         }
         ps.sort((a, b) => (b.correctness_percentage ?? -1) - (a.correctness_percentage ?? -1));
         return ps;
-    }, [participantsWithStats, scoreFilter, caseCorrectnessFilter]);
+    }, [participantsWithStats, caseCorrectnessFilter]);
+
+    const filteredWrittenParticipants = useMemo(() => {
+        let ps = [...participantsWithStats];
+        if (scoreFilter !== 'All') {
+             ps = ps.filter(p => getAvgImprovementCategory(p.pre_test_score, p.post_test_score).name === scoreFilter);
+        }
+        ps.sort((a, b) => {
+            const getInc = p => {
+                const pre = Number(p.pre_test_score); const post = Number(p.post_test_score);
+                if (!isNaN(pre) && pre > 0 && !isNaN(post) && post > 0) return ((post - pre) / pre) * 100;
+                return -1000;
+            };
+            return getInc(b) - getInc(a);
+        });
+        return ps;
+    }, [participantsWithStats, scoreFilter]);
 
     const showTestScoreColumns = hasTestScores;
     const showCaseColumns = hasCases;
-    const tableHeaders = ['#', 'Participant Name'];
-    if (showCaseColumns) {
-        tableHeaders.push('Total Cases');
-        if (!isSharedView) tableHeaders.push('Practical Case Score');
-    }
-    if (showTestScoreColumns) {
-        tableHeaders.push('Pre-Test Result'); tableHeaders.push('Post-Test Result'); tableHeaders.push('% Increase'); tableHeaders.push('average improvemt score');
-    }
+    const practicalTableHeaders = ['#', 'Participant Name', 'Total Cases'];
+    if (!isSharedView) practicalTableHeaders.push('Practical Case Score');
+    const writtenTableHeaders = ['#', 'Participant Name', 'Pre-Test Result', 'Post-Test Result', '% Increase', 'Average Improvement'];
 
     const handlePdfGeneration = async (quality) => {
         setIsPdfGenerating(true);
         await new Promise(resolve => setTimeout(resolve, 100));
         const pdfTableData = {
-            filteredParticipants, tableHeaders, showCaseColumns, showTestScoreColumns, isSharedView, dailyCaseTableData, dailySkillTableData,
+            filteredPracticalParticipants, filteredWrittenParticipants, practicalTableHeaders, writtenTableHeaders, showCaseColumns, showTestScoreColumns, isSharedView, dailyCaseTableData, dailySkillTableData,
             groupsWithData, groupCaseTotals, grandTotalCasesCorrect, grandTotalCasesTotal, groupSkillTotals, grandTotalSkillsCorrect, grandTotalSkillsTotal
         };
         try {
@@ -992,7 +1025,10 @@ export function CourseReportView({
         try {
             const canvas = await html2canvas(element, {
                 scale: 2, useCORS: true, backgroundColor: '#ffffff',
-                onclone: (document) => { const button = document.querySelector(`#${elementId} .copy-button`); if (button) button.style.visibility = 'hidden'; }
+                onclone: (document) => { 
+                    const buttons = document.querySelectorAll(`#${elementId} .copy-button`); 
+                    buttons.forEach(btn => btn.style.visibility = 'hidden'); 
+                }
             });
             canvas.toBlob(async (blob) => {
                 if (navigator.clipboard && navigator.clipboard.write) {
@@ -1063,14 +1099,14 @@ export function CourseReportView({
     const scoreFilterOptions = [ { name: 'All' }, { name: 'Perfect' }, { name: 'Excellent' }, { name: 'Good' }, { name: 'Fair' }, { name: 'Fail' }, { name: 'Data Incomplete' } ];
     const caseFilterOptions = [ { name: 'All' }, { name: 'Perfect' }, { name: 'Excellent' }, { name: 'Good' }, { name: 'Fail' }, { name: 'Data Incomplete' } ];
     const correctnessCategories = [
-        { name: 'Perfect', colorClass: 'bg-green-200 text-green-800', key: 'Perfect' }, { name: 'Excellent', colorClass: 'bg-yellow-200 text-yellow-800', key: 'Excellent' },
-        { name: 'Good', colorClass: 'bg-gray-200 text-gray-800', key: 'Good' }, { name: 'Fair', colorClass: 'bg-orange-200 text-orange-800', key: 'Fair' },
-        { name: 'Fail', colorClass: 'bg-red-200 text-red-800', key: 'Fail' }, { name: 'Data Incomplete', colorClass: 'bg-gray-700 text-white', key: 'Data Incomplete' }
+        { name: 'Perfect', colorClass: 'bg-green-200 text-green-800', key: 'Perfect', range: '> 50%' }, { name: 'Excellent', colorClass: 'bg-yellow-200 text-yellow-800', key: 'Excellent', range: '30% - 50%' },
+        { name: 'Good', colorClass: 'bg-gray-200 text-gray-800', key: 'Good', range: '15% - 29.9%' }, { name: 'Fair', colorClass: 'bg-orange-200 text-orange-800', key: 'Fair', range: '0% - 14.9%' },
+        { name: 'Fail', colorClass: 'bg-red-200 text-red-800', key: 'Fail', range: '< 0%' }, { name: 'Data Incomplete', colorClass: 'bg-gray-700 text-white', key: 'Data Incomplete', range: 'N/A' }
     ];
     const practicalScoreCategories = [
-        { name: 'Perfect', colorClass: getScoreColorClass(100), key: 'Perfect' }, { name: 'Excellent', colorClass: getScoreColorClass(95), key: 'Excellent' },
-        { name: 'Good', colorClass: getScoreColorClass(90), key: 'Good' }, { name: 'Fair', colorClass: 'bg-orange-200 text-orange-800', key: 'Fair' },
-        { name: 'Fail', colorClass: getScoreColorClass(89), key: 'Fail' }, { name: 'Data Incomplete', colorClass: getScoreColorClass(NaN), key: 'Data Incomplete' }
+        { name: 'Perfect', colorClass: getScoreColorClass(100), key: 'Perfect', range: '100%' }, { name: 'Excellent', colorClass: getScoreColorClass(95), key: 'Excellent', range: '95% - 99.9%' },
+        { name: 'Good', colorClass: getScoreColorClass(90), key: 'Good', range: '90% - 94.9%' }, { name: 'Fail', colorClass: getScoreColorClass(89), key: 'Fail', range: '< 90%' },
+        { name: 'Data Incomplete', colorClass: getScoreColorClass(NaN), key: 'Data Incomplete', range: 'N/A' }
     ];
 
     const hasAnyKpis = overall.totalCases > 0 || overall.totalSkills > 0;
@@ -1352,8 +1388,8 @@ export function CourseReportView({
                                         {newImciFacilities.filter(f => !f.isHospital).map((facility, index) => (
                                             <tr key={`phc-${index}`} className="hover:bg-gray-50">
                                                 <td className="p-2 border font-semibold min-w-[150px]">{facility.name}</td>
-                                                <td className="p-2 border min-w-[100px]">{facility.locality}</td>
-                                                <td className="p-2 border min-w-[100px]">{facility.state}</td>
+                                                <td className="p-2 border min-w-[120px]">{facility.locality}</td>
+                                                <td className="p-2 border min-w-[120px]">{facility.state}</td>
                                                 <td className="p-2 border text-gray-600 text-sm">PHC</td>
                                             </tr>
                                         ))}
@@ -1374,8 +1410,8 @@ export function CourseReportView({
                                             {newImciFacilities.filter(f => f.isHospital).map((facility, index) => (
                                                 <tr key={`hosp-${index}`} className="hover:bg-gray-50">
                                                     <td className="p-2 border font-semibold min-w-[150px]">{facility.name}</td>
-                                                    <td className="p-2 border min-w-[100px]">{facility.locality}</td>
-                                                    <td className="p-2 border min-w-[100px]">{facility.state}</td>
+                                                    <td className="p-2 border min-w-[120px]">{facility.locality}</td>
+                                                    <td className="p-2 border min-w-[120px]">{facility.state}</td>
                                                     <td className="p-2 border text-gray-600 text-sm">Hospital</td>
                                                 </tr>
                                             ))}
@@ -1422,12 +1458,9 @@ export function CourseReportView({
                     </div>
                 )}
 
-                <div id="daily-tables-section" className="w-full max-w-full min-w-0">
+                <div id="daily-tables-section" className="w-full max-w-full min-w-0 mb-4">
                     {(hasDailyCaseData || hasDailySkillData) && (
-                        <>
-                            <h3 className="text-xl font-bold mb-4 px-2">Daily Performance Tables</h3>
-                            <RawScoreLegend />
-                        </>
+                        <h3 className="text-xl font-bold mb-4 px-2">Daily Performance Tables</h3>
                     )}
                     <div id="daily-tables-grid" className="flex flex-col lg:flex-row gap-6 w-full max-w-full min-w-0">
                         {hasDailyCaseData && (
@@ -1435,7 +1468,10 @@ export function CourseReportView({
                                 <Card>
                                     <div id="daily-case-table-card" className="relative p-2 w-full max-w-full min-w-0">
                                         {!isSharedView && <button onClick={() => handleCopyAsImage('daily-case-table-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
-                                        <h3 className="text-xl font-bold mb-4">Daily Case Performance</h3>
+                                        <h3 className="text-xl font-bold mb-4 pr-10">Daily Case Performance</h3>
+                                        <div className="mb-4">
+                                            <RawScoreLegend />
+                                        </div>
                                         <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2">
                                             <Table headers={['Day', ...groupsWithData, 'Total']}>
                                                 {dailyCaseTableData.length > 0 ? (
@@ -1454,15 +1490,15 @@ export function CourseReportView({
                                                             {groupsWithData.map(group => { 
                                                                 const tCorrect = groupCaseTotals[group].totalCases.correct; 
                                                                 const tTotal = groupCaseTotals[group].totalCases.total; 
-                                                                const pct = calcPct(tCorrect, tTotal); 
+                                                                const pct = tTotal > 0 ? calcPct(tCorrect, tTotal) : NaN; 
                                                                 return (
                                                                     <td key={group} className={`p-2 border text-center ${getScoreColorClass(pct)}`}>
-                                                                        {tTotal} ({fmtPct(pct)})
+                                                                        {tTotal > 0 ? `${tTotal} (${fmtPct(pct)})` : '-'}
                                                                     </td>
                                                                 ); 
                                                             })}
-                                                            <td className={`p-2 border text-center ${getScoreColorClass(calcPct(grandTotalCasesCorrect, grandTotalCasesTotal))}`}>
-                                                                {grandTotalCasesTotal} ({fmtPct(calcPct(grandTotalCasesCorrect, grandTotalCasesTotal))})
+                                                            <td className={`p-2 border text-center font-bold ${getScoreColorClass(grandTotalCasesTotal > 0 ? calcPct(grandTotalCasesCorrect, grandTotalCasesTotal) : NaN)}`}>
+                                                                {grandTotalCasesTotal > 0 ? `${grandTotalCasesTotal} (${fmtPct(calcPct(grandTotalCasesCorrect, grandTotalCasesTotal))})` : '-'}
                                                             </td>
                                                         </tr>
                                                     </>
@@ -1484,7 +1520,10 @@ export function CourseReportView({
                                 <Card>
                                     <div id="daily-skill-table-card" className="relative p-2 w-full max-w-full min-w-0">
                                         {!isSharedView && <button onClick={() => handleCopyAsImage('daily-skill-table-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
-                                        <h3 className="text-xl font-bold mb-4">Daily Skill Performance</h3>
+                                        <h3 className="text-xl font-bold mb-4 pr-10">Daily Skill Performance</h3>
+                                        <div className="mb-4">
+                                            <RawScoreLegend />
+                                        </div>
                                         <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2">
                                             <Table headers={['Day', ...groupsWithData, 'Total']}>
                                                 {dailySkillTableData.length > 0 ? (
@@ -1503,15 +1542,15 @@ export function CourseReportView({
                                                             {groupsWithData.map(group => { 
                                                                 const tCorrect = groupSkillTotals[group].totalSkills.correct; 
                                                                 const tTotal = groupSkillTotals[group].totalSkills.total; 
-                                                                const pct = calcPct(tCorrect, tTotal); 
+                                                                const pct = tTotal > 0 ? calcPct(tCorrect, tTotal) : NaN; 
                                                                 return (
                                                                     <td key={group} className={`p-2 border text-center ${getScoreColorClass(pct)}`}>
-                                                                        {tTotal} ({fmtPct(pct)})
+                                                                        {tTotal > 0 ? `${tTotal} (${fmtPct(pct)})` : '-'}
                                                                     </td>
                                                                 ); 
                                                             })}
-                                                            <td className={`p-2 border text-center ${getScoreColorClass(calcPct(grandTotalSkillsCorrect, grandTotalSkillsTotal))}`}>
-                                                                {grandTotalSkillsCorrect} ({fmtPct(calcPct(grandTotalSkillsCorrect, grandTotalSkillsTotal))})
+                                                            <td className={`p-2 border text-center font-bold ${getScoreColorClass(grandTotalSkillsTotal > 0 ? calcPct(grandTotalSkillsCorrect, grandTotalSkillsTotal) : NaN)}`}>
+                                                                {grandTotalSkillsTotal > 0 ? `${grandTotalSkillsTotal} (${fmtPct(calcPct(grandTotalSkillsCorrect, grandTotalSkillsTotal))})` : '-'}
                                                             </td>
                                                         </tr>
                                                     </>
@@ -1534,62 +1573,174 @@ export function CourseReportView({
                 {(showTestScoreColumns || showCaseColumns) && (
                     <Card>
                          <div id="participant-results-card" className="relative p-2 w-full max-w-full min-w-0">
-                            {!isSharedView && <button onClick={() => handleCopyAsImage('participant-results-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
-                            <h3 className="text-xl font-bold mb-4">Participant Results</h3>
                             
-                            {/* Insert Legends Here */}
-                            <div className="flex flex-col gap-2 mb-6">
-                                {showCaseColumns && <RawScoreLegend />}
-                                {showTestScoreColumns && <ImprovementScoreLegend />}
-                            </div>
+                            <h3 className="text-xl font-bold mb-4">Participant Results</h3>
 
                             {showCaseColumns && (
-                                <div id="participant-summary-table" className="mb-6 w-full max-w-full min-w-0">
-                                    <h4 className="text-md font-semibold mb-2 text-gray-700">Participant Score Summary</h4>
-                                    <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2">
-                                        <table className="w-full border-collapse border border-gray-300 text-center">
-                                            <thead><tr><th className="p-2 border font-semibold bg-gray-100 text-left min-w-[200px]">Score Type</th>{practicalScoreCategories.map(cat => (<th key={cat.key} className={`p-2 border font-semibold min-w-[80px] ${cat.colorClass}`}>{cat.name}</th>))}</tr></thead>
-                                            <tbody>
-                                                <tr><td className="p-2 border font-semibold text-left">Practical Case Score</td>{practicalScoreCategories.map(cat => (<td key={cat.key} className="p-2 border text-2xl font-bold">{caseCorrectnessDistribution[cat.key] || 0}</td>))}</tr>
-                                                {showTestScoreColumns && <tr><td className="p-2 border font-semibold text-left">Written Test Score (average improvement)</td>{correctnessCategories.map(cat => (<td key={cat.key} className="p-2 border text-2xl font-bold">{avgImprovementDistribution[cat.key] || 0}</td>))}</tr>}
-                                            </tbody>
-                                        </table>
+                                <div id="practical-full-section" className="relative mb-10 w-full bg-white rounded-lg p-2">
+                                    {!isSharedView && <button onClick={() => handleCopyAsImage('practical-full-section')} className="copy-button absolute top-0 right-0 z-10 m-1 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy Section as Image"><CopyIcon /></button>}
+                                    <div id="practical-summary-table" className="relative mb-4 w-full max-w-full min-w-0">
+                                        
+                                        <h4 className="text-[1.05rem] font-bold mb-2 text-sky-800 pr-8">Practical Case Performance Summary</h4>
+                                        <div className="w-full max-w-full overflow-hidden rounded-lg border border-gray-200 shadow-sm mb-2">
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full text-center text-sm whitespace-nowrap">
+                                                    <thead>
+                                                        <tr>
+                                                            <th className="px-4 py-3 bg-white text-left text-sm font-semibold text-gray-800 border-b border-r border-gray-200 min-w-[160px]">Practical Score Category</th>
+                                                            {practicalScoreCategories.map((cat, i) => (
+                                                                <th key={cat.key} className={`px-3 py-2 font-bold border-b border-gray-200 ${cat.colorClass} ${i !== practicalScoreCategories.length - 1 ? 'border-r border-black/5' : ''} min-w-[120px]`}>
+                                                                    <div className="flex flex-col items-center justify-center">
+                                                                        <span className="text-sm">{cat.name}</span>
+                                                                        {cat.range && cat.range !== 'N/A' && <span className="text-[11px] font-medium opacity-75 mt-0.5">{cat.range}</span>}
+                                                                    </div>
+                                                                </th>
+                                                            ))}
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="bg-white">
+                                                        <tr>
+                                                            <td className="px-4 py-3 text-left text-sm font-bold text-gray-700 border-r border-gray-200 bg-gray-50/30">Participant Count</td>
+                                                            {practicalScoreCategories.map((cat, i) => (
+                                                                <td key={cat.key} className={`px-3 py-3 text-2xl font-black text-sky-900 ${i !== practicalScoreCategories.length - 1 ? 'border-r border-gray-200' : ''}`}>
+                                                                    {caseCorrectnessDistribution[cat.key] || 0}
+                                                                </td>
+                                                            ))}
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {!isSharedView && (
+                                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-4 w-full sm:w-auto">
+                                            <label htmlFor="case-filter" className="text-sm font-semibold text-gray-700">Filter by Case Correctness:</label>
+                                            <select id="case-filter" value={caseCorrectnessFilter} onChange={(e) => setCaseCorrectnessFilter(e.target.value)} className="border border-gray-300 rounded-md p-2 bg-white w-full sm:w-auto">
+                                                {caseFilterOptions.map(option => (<option key={option.name} value={option.name}>{option.name}</option>))}
+                                            </select>
+                                        </div>
+                                    )}
+
+                                    <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2" id="practical-details-table">
+                                        <div className="overflow-hidden rounded-xl border border-gray-200 shadow-sm">
+                                            <table className="w-full text-left border-collapse bg-white">
+                                                <thead className="bg-gray-50 border-b border-gray-200">
+                                                    <tr>
+                                                        {practicalTableHeaders.map(h => <th key={h} className="p-3 text-sm font-semibold text-gray-700 text-center">{h}</th>)}
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-100">
+                                                    {filteredPracticalParticipants.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={practicalTableHeaders.length} className="p-8 text-center text-gray-500 bg-gray-50">
+                                                        No participants match the selected filter.
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                filteredPracticalParticipants.map((p, index) => (
+                                                    <tr key={`prac-${p.id}`} className={`transition-colors duration-150 border-b border-gray-100 ${!isSharedView ? 'cursor-pointer hover:bg-sky-50' : ''}`} onClick={!isSharedView ? () => onViewParticipantReport(p.id) : undefined}>
+                                                        <td className="p-3 text-center text-gray-600">{index + 1}</td>
+                                                        <td className="p-3 font-semibold text-gray-800 min-w-[200px] whitespace-normal break-words">{p.name}</td>
+                                                        <td className="p-3 text-center text-gray-700">{p.total_cases_seen}</td>
+                                                        {!isSharedView && <td className="p-3 text-center"><span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${getScoreColorClass(p.correctness_percentage)}`}>{getCaseCorrectnessName(p.correctness_percentage)}</span></td>}
+                                                    </tr>
+                                                ))
+                                            )}
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
                                 </div>
                             )}
 
-                            {!isSharedView && (
-                                <div className="flex flex-col sm:flex-row flex-wrap gap-4 mb-4 w-full">
-                                    {showTestScoreColumns && <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto"><label htmlFor="score-filter" className="text-sm font-semibold text-gray-700">Filter by Avg. Improvement:</label><select id="score-filter" value={scoreFilter} onChange={(e) => setScoreFilter(e.target.value)} className="border border-gray-300 rounded-md p-2 bg-white w-full sm:w-auto">{scoreFilterOptions.map(option => (<option key={option.name} value={option.name}>{option.name}</option>))}</select></div>}
-                                    {showCaseColumns && <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto"><label htmlFor="case-filter" className="text-sm font-semibold text-gray-700">Filter by Case Correctness:</label><select id="case-filter" value={caseCorrectnessFilter} onChange={(e) => setCaseCorrectnessFilter(e.target.value)} className="border border-gray-300 rounded-md p-2 bg-white w-full sm:w-auto">{caseFilterOptions.map(option => (<option key={option.name} value={option.name}>{option.name}</option>))}</select></div>}
+                            {showTestScoreColumns && (
+                                <div id="written-full-section" className="relative mb-10 w-full bg-white rounded-lg p-2">
+                                    {!isSharedView && <button onClick={() => handleCopyAsImage('written-full-section')} className="copy-button absolute top-0 right-0 z-10 m-1 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy Section as Image"><CopyIcon /></button>}
+                                    <div id="written-summary-table" className="relative mb-4 w-full max-w-full min-w-0">
+                                        
+                                        <h4 className="text-[1.05rem] font-bold mb-2 text-indigo-800 pr-8">Written Test Improvement Summary</h4>
+                                        <div className="w-full max-w-full overflow-hidden rounded-lg border border-gray-200 shadow-sm mb-2">
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full text-center text-sm whitespace-nowrap">
+                                                    <thead>
+                                                        <tr>
+                                                            <th className="px-4 py-3 bg-white text-left text-sm font-semibold text-gray-800 border-b border-r border-gray-200 min-w-[160px]">Improvement Level</th>
+                                                            {correctnessCategories.map((cat, i) => (
+                                                                <th key={cat.key} className={`px-3 py-2 font-bold border-b border-gray-200 ${cat.colorClass} ${i !== correctnessCategories.length - 1 ? 'border-r border-black/5' : ''} min-w-[120px]`}>
+                                                                    <div className="flex flex-col items-center justify-center">
+                                                                        <span className="text-sm">{cat.name}</span>
+                                                                        {cat.range && cat.range !== 'N/A' && <span className="text-[11px] font-medium opacity-75 mt-0.5">{cat.range}</span>}
+                                                                    </div>
+                                                                </th>
+                                                            ))}
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="bg-white">
+                                                        <tr>
+                                                            <td className="px-4 py-3 text-left text-sm font-bold text-gray-700 border-r border-gray-200 bg-gray-50/30">Participant Count</td>
+                                                            {correctnessCategories.map((cat, i) => (
+                                                                <td key={cat.key} className={`px-3 py-3 text-2xl font-black text-indigo-900 ${i !== correctnessCategories.length - 1 ? 'border-r border-gray-200' : ''}`}>
+                                                                    {avgImprovementDistribution[cat.key] || 0}
+                                                                </td>
+                                                            ))}
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {!isSharedView && (
+                                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-4 w-full sm:w-auto">
+                                            <label htmlFor="score-filter" className="text-sm font-semibold text-gray-700">Filter by Avg. Improvement:</label>
+                                            <select id="score-filter" value={scoreFilter} onChange={(e) => setScoreFilter(e.target.value)} className="border border-gray-300 rounded-md p-2 bg-white w-full sm:w-auto">
+                                                {scoreFilterOptions.map(option => (<option key={option.name} value={option.name}>{option.name}</option>))}
+                                            </select>
+                                        </div>
+                                    )}
+
+                                    <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2" id="written-details-table">
+                                        <div className="overflow-hidden rounded-xl border border-gray-200 shadow-sm">
+                                            <table className="w-full text-left border-collapse bg-white">
+                                                <thead className="bg-gray-50 border-b border-gray-200">
+                                                    <tr>
+                                                        {writtenTableHeaders.map(h => <th key={h} className="p-3 text-sm font-semibold text-gray-700 text-center">{h}</th>)}
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-100">
+                                                    {filteredWrittenParticipants.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={writtenTableHeaders.length} className="p-8 text-center text-gray-500 bg-gray-50">
+                                                        No participants match the selected filter.
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                filteredWrittenParticipants.map((p, index) => {
+                                                    const preScore = Number(p.pre_test_score);
+                                                    const postScore = Number(p.post_test_score);
+                                                    const increase = (!isNaN(preScore) && preScore > 0 && !isNaN(postScore) && postScore > 0) ? ((postScore - preScore) / preScore) * 100 : null;
+                                                    const category = getAvgImprovementCategory(p.pre_test_score, p.post_test_score);
+                                                    const increaseDisplay = isNaN(increase) || increase === null ? 'N/A' : `${increase.toFixed(1)}%`;
+                                                    
+                                                    return (
+                                                        <tr key={`writ-${p.id}`} className={`transition-colors duration-150 border-b border-gray-100 ${!isSharedView ? 'cursor-pointer hover:bg-indigo-50' : ''}`} onClick={!isSharedView ? () => onViewParticipantReport(p.id) : undefined}>
+                                                            <td className="p-3 text-center text-gray-600">{index + 1}</td>
+                                                            <td className="p-3 font-semibold text-gray-800 min-w-[200px] whitespace-normal break-words">{p.name}</td>
+                                                            <td className="p-3 text-center text-gray-700">{fmtDecimal(preScore)}</td>
+                                                            <td className="p-3 text-center text-gray-700">{fmtDecimal(postScore)}</td>
+                                                            <td className="p-3 text-center font-medium text-gray-800">{increaseDisplay}</td>
+                                                            <td className="p-3 text-center min-w-[120px]"><span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${category.className}`}>{category.name}</span></td>
+                                                        </tr>
+                                                    );
+                                                })
+                                            )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
-
-                            <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2">
-                                <Table headers={tableHeaders}>
-                                    {filteredParticipants.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={tableHeaders.length} className="p-8 text-center text-gray-500 bg-gray-50">
-                                                No participants match the selected filter(s).
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        filteredParticipants.map((p, index) => {
-                                            const preScore = Number(p.pre_test_score); const postScore = Number(p.post_test_score);
-                                            const increase = (!isNaN(preScore) && preScore > 0 && !isNaN(postScore) && postScore > 0) ? ((postScore - preScore) / preScore) * 100 : null;
-                                            const category = getAvgImprovementCategory(p.pre_test_score, p.post_test_score);
-                                            const increaseDisplay = isNaN(increase) || increase === null ? 'N/A' : `${increase.toFixed(1)}%`;
-                                            return (
-                                                <tr key={p.id} className={`transition-colors duration-150 ${!isSharedView ? 'cursor-pointer hover:bg-gray-200' : ''}`} onClick={!isSharedView ? () => onViewParticipantReport(p.id) : undefined}>
-                                                    <td className="p-2 border text-center">{index + 1}</td><td className="p-2 border font-semibold min-w-[150px]">{p.name}</td>
-                                                    {showCaseColumns && (<><td className={`p-2 border text-center`}>{p.total_cases_seen}</td>{!isSharedView && <td className={`p-2 border text-center font-bold min-w-[100px] ${getScoreColorClass(p.correctness_percentage)}`}>{getCaseCorrectnessName(p.correctness_percentage)}</td>}</>)}
-                                                    {showTestScoreColumns && (<><td className="p-2 border text-center">{fmtDecimal(preScore)}</td><td className="p-2 border text-center">{fmtDecimal(postScore)}</td><td className={`p-2 border text-center`}>{increaseDisplay}</td><td className={`p-2 border text-center min-w-[100px] ${category.className}`}>{category.name}</td></>)}
-                                                </tr>
-                                            );
-                                        })
-                                    )}
-                                </Table>
-                            </div>
                         </div>
                     </Card>
                 )}

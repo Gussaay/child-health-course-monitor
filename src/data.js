@@ -17,9 +17,10 @@ import {
     orderBy,
     limit,
     Timestamp,
-    startAfter
+    startAfter,
+    deleteField,
+    arrayUnion // <-- Added arrayUnion here
 } from "firebase/firestore";
-import { deleteField } from "firebase/firestore";
 import { onAuthStateChanged } from 'firebase/auth'; 
 import { storage } from './firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -508,7 +509,7 @@ export async function listHealthFacilities(filters = {}, sourceOptions = {}) {
 
     try {
         const querySnapshot = await getData(q, sourceOptions);
-        let facilities = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        let facilities = querySnapshot.docs.map(d => ({ id: d.id, ...doc.data() }));
 
         if (filters.state === 'NOT_ASSIGNED') facilities = facilities.filter(f => !f['الولاية']);
         if (filters.functioningStatus === 'NOT_SET') facilities = facilities.filter(f => f['هل_المؤسسة_تعمل'] == null || f['هل_المؤسسة_تعمل'] === '');
@@ -1488,20 +1489,48 @@ export async function listAllDataForCourse(courseId, sourceOptions = {}) {
     return { allObs, allCases: allCasesWithCorrectness };
 }
 
-export async function upsertFinalReport(payload) {
+// --- UPDATED: FINAL REPORT WITH AUDIT TRAIL ---
+export async function upsertFinalReport(payload, userIdentifier = 'Unknown User') {
+    const timestamp = serverTimestamp();
+    const currentDateISO = new Date().toISOString();
+
     if (payload.id) {
+        // --- THIS IS AN EDIT ---
         const finalReportRef = doc(db, "finalReports", payload.id);
-        const writePromise = setDoc(finalReportRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
+        const { id, ...dataToUpdate } = payload;
+        
+        // Create the log entry for this specific edit
+        const editLog = {
+            editedBy: userIdentifier,
+            editedAt: currentDateISO
+        };
+
+        const writePromise = setDoc(finalReportRef, { 
+            ...dataToUpdate, 
+            lastUpdatedAt: timestamp,
+            editHistory: arrayUnion(editLog) // Safely appends the edit log
+        }, { merge: true });
+        
         await executeOfflineSafeWrite(writePromise);
         return payload.id;
     } else {
+        // --- THIS IS A BRAND NEW REPORT ---
         const { id, ...dataToSave } = payload;
         const newRef = doc(collection(db, "finalReports"));
-        const writePromise = setDoc(newRef, { ...dataToSave, lastUpdatedAt: serverTimestamp() });
+        
+        const writePromise = setDoc(newRef, { 
+            ...dataToSave, 
+            createdBy: userIdentifier,
+            createdAt: currentDateISO,
+            lastUpdatedAt: timestamp,
+            editHistory: [] // Initialize empty history array
+        });
+        
         await executeOfflineSafeWrite(writePromise);
         return newRef.id;
     }
 }
+
 export async function getFinalReportByCourseId(courseId, sourceOptions = {}) {
     if (!courseId) return null;
     const q = query(collection(db, "finalReports"), where("courseId", "==", courseId));

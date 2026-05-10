@@ -509,6 +509,35 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
 
 // ... SharedFacilityFields ...
 export const SharedFacilityFields = ({ formData, handleChange, handleStateChange, isPublicForm = false, isReadOnly = false }) => {
+    
+    // --- LOCATION FETCHING STATE & HANDLER ---
+    const [isFetchingLocation, setIsFetchingLocation] = useState(false);
+    const [locationError, setLocationError] = useState('');
+
+    const handleFetchLocation = () => {
+        if (!navigator.geolocation) {
+            setLocationError('الجهاز أو المتصفح لا يدعم تحديد الموقع.');
+            return;
+        }
+        setIsFetchingLocation(true);
+        setLocationError('');
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                handleChange({ target: { name: '_الإحداثيات_latitude', value: latitude, type: 'number' } });
+                handleChange({ target: { name: '_الإحداثيات_longitude', value: longitude, type: 'number' } });
+                setIsFetchingLocation(false);
+            },
+            (error) => {
+                console.error("Error fetching location", error);
+                setLocationError('فشل في جلب الموقع. يرجى التأكد من تفعيل الـ GPS وصلاحيات المتصفح.');
+                setIsFetchingLocation(false);
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
+    };
+
     return (
         <div className="space-y-8">
             <div className="border-2 border-sky-100 rounded-2xl overflow-hidden bg-white shadow-sm">
@@ -618,7 +647,33 @@ export const SharedFacilityFields = ({ formData, handleChange, handleStateChange
                         <MapPin className="w-5 h-5 text-sky-600" />
                         <h3 className="text-lg font-bold text-sky-800">الإحداثيات الجغرافية</h3>
                     </div>
-                    <div className="p-6">
+                    
+                    <div className="p-6 space-y-4">
+                        {!isReadOnly && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                    <div className="flex-1">
+                                        <h4 className="text-amber-800 font-bold mb-1 flex items-center gap-2">
+                                            <span>تحديث الموقع التلقائي</span>
+                                        </h4>
+                                        <p className="text-sm text-amber-700 font-medium leading-relaxed">
+                                            ⚠️ الرجاء استخدام هذا الزر <span className="font-bold underline">فقط</span> إذا كنت متواجداً حالياً داخل المنشأة الصحية لمنع تسجيل إحداثيات خاطئة.
+                                        </p>
+                                        {locationError && <p className="text-sm text-red-600 mt-2 font-semibold">{locationError}</p>}
+                                    </div>
+                                    <Button 
+                                        type="button" 
+                                        onClick={handleFetchLocation} 
+                                        disabled={isFetchingLocation}
+                                        className="flex items-center gap-2 whitespace-nowrap bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2"
+                                    >
+                                        {isFetchingLocation ? <Spinner size="sm" /> : <MapPin className="w-4 h-4" />}
+                                        {isFetchingLocation ? 'جاري الجلب...' : 'جلب الإحداثيات الحالية'}
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+                        
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             <FormGroup label="خط العرض (Latitude)">
                                 <Input type="number" step="any" name="_الإحداثيات_latitude" value={formData['_الإحداثيات_latitude'] || ''} onChange={handleChange} disabled={isReadOnly} />

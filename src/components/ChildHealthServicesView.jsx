@@ -668,7 +668,31 @@ const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, f
 
 const DuplicateFinderModal = ({ isOpen, onClose, facilities, onDuplicatesDeleted }) => {
      const [isLoading, setIsLoading] = useState(false); const [duplicateGroups, setDuplicateGroups] = useState([]); const [selectedGroups, setSelectedGroups] = useState({});
-    const findDuplicates = useCallback(() => { setIsLoading(true); const groups = new Map(); facilities.forEach(facility => { const key = `${facility['الولاية'] || 'N/A'}-${facility['المحلية'] || 'N/A'}-${facility['اسم_المؤسسة'] || 'N/A'}`.toLowerCase(); if (!groups.has(key)) groups.set(key, []); groups.get(key).push(facility); }); const foundDuplicates = []; groups.forEach((group, key) => { if (group.length > 1) { group.sort((a, b) => (b.lastSnapshotAt?.toMillis() || 0) - (a.lastSnapshotAt?.toMillis() || 0)); foundDuplicates.push({ key, original: group[0], duplicates: group.slice(1) }); } }); setDuplicateGroups(foundDuplicates); const initialSelection = {}; foundDuplicates.forEach(group => { initialSelection[group.key] = true; }); setSelectedGroups(initialSelection); setIsLoading(false); }, [facilities]);
+    const findDuplicates = useCallback(() => { 
+        setIsLoading(true); 
+        const groups = new Map(); 
+        facilities.forEach(facility => { 
+            const key = `${facility['الولاية'] || 'N/A'}-${facility['المحلية'] || 'N/A'}-${facility['اسم_المؤسسة'] || 'N/A'}`.toLowerCase(); 
+            if (!groups.has(key)) groups.set(key, []); 
+            groups.get(key).push(facility); 
+        }); 
+        const foundDuplicates = []; 
+        groups.forEach((group, key) => { 
+            if (group.length > 1) { 
+                group.sort((a, b) => {
+                    const getTime = (t) => t?.toMillis ? t.toMillis() : (t?.toDate ? t.toDate().getTime() : (t ? new Date(t).getTime() : 0));
+                    return getTime(b.lastSnapshotAt) - getTime(a.lastSnapshotAt);
+                }); 
+                foundDuplicates.push({ key, original: group[0], duplicates: group.slice(1) }); 
+            } 
+        }); 
+        setDuplicateGroups(foundDuplicates); 
+        const initialSelection = {}; 
+        foundDuplicates.forEach(group => { initialSelection[group.key] = true; }); 
+        setSelectedGroups(initialSelection); 
+        setIsLoading(false); 
+    }, [facilities]);
+    
     useEffect(() => { if (isOpen) findDuplicates(); else { setDuplicateGroups([]); setSelectedGroups({}); } }, [isOpen, findDuplicates]);
     const handleSelectionChange = (key) => { setSelectedGroups(prev => ({ ...prev, [key]: !prev[key] })); };
     const handleDeleteSelected = async () => {
@@ -680,7 +704,7 @@ const DuplicateFinderModal = ({ isOpen, onClose, facilities, onDuplicatesDeleted
     return (<Modal isOpen={isOpen} onClose={onClose} title="Find & Fix Duplicates"><div className="p-4">{isLoading && <div className="text-center"><Spinner /></div>}{!isLoading && duplicateGroups.length === 0 && <div className="text-center p-4"><EmptyState message="No duplicate facilities found." /></div>}{!isLoading && duplicateGroups.length > 0 && (<div><p className="mb-4 text-sm text-gray-700">Found <strong>{totalDuplicates}</strong> duplicate records across <strong>{duplicateGroups.length}</strong> groups. Uncheck any group you do not want to clean up.</p><div className="space-y-4 max-h-96 overflow-y-auto p-2 border rounded">{duplicateGroups.map(group => (<div key={group.key} className="p-3 border rounded-md bg-gray-50"><div className="flex items-center justify-between mb-2"><h4 className="font-bold text-gray-800">{group.original['اسم_المؤسسة']}<span className="text-sm font-normal text-gray-500 ml-2">({group.original['الولاية']} / {group.original['المحلية']})</span></h4><label className="flex items-center gap-2 cursor-pointer">
         <Checkbox label="" checked={!!selectedGroups[group.key]} onChange={() => handleSelectionChange(group.key)}/>
         <span>Clean up</span>
-    </label></div><div className="text-xs space-y-1"><p className="p-1 rounded bg-green-100 text-green-800"><strong>Keep (Original):</strong> ID {group.original.id} <span className="text-gray-600 italic ml-2"> (Last updated: {group.original.lastSnapshotAt?.toDate().toLocaleString() || 'N/A'})</span></p>{group.duplicates.map(dup => <p key={dup.id} className="p-1 rounded bg-red-100 text-red-800"><strong>Delete (Duplicate):</strong> ID {dup.id}<span className="text-gray-600 italic ml-2"> (Last updated: {dup.lastSnapshotAt?.toDate().toLocaleString() || 'N/A'})</span></p>)}</div></div>))}</div><div className="flex justify-end mt-6"><Button variant="danger" onClick={handleDeleteSelected}>Delete Selected ({Object.values(selectedGroups).filter(Boolean).length})</Button></div></div>)}</div></Modal>);
+    </label></div><div className="text-xs space-y-1"><p className="p-1 rounded bg-green-100 text-green-800"><strong>Keep (Original):</strong> ID {group.original.id} <span className="text-gray-600 italic ml-2"> (Last updated: {group.original.lastSnapshotAt?.toDate ? group.original.lastSnapshotAt.toDate().toLocaleString() : (group.original.lastSnapshotAt ? new Date(group.original.lastSnapshotAt).toLocaleString() : 'N/A')})</span></p>{group.duplicates.map(dup => <p key={dup.id} className="p-1 rounded bg-red-100 text-red-800"><strong>Delete (Duplicate):</strong> ID {dup.id}<span className="text-gray-600 italic ml-2"> (Last updated: {dup.lastSnapshotAt?.toDate ? dup.lastSnapshotAt.toDate().toLocaleString() : (dup.lastSnapshotAt ? new Date(dup.lastSnapshotAt).toLocaleString() : 'N/A')})</span></p>)}</div></div>))}</div><div className="flex justify-end mt-6"><Button variant="danger" onClick={handleDeleteSelected}>Delete Selected ({Object.values(selectedGroups).filter(Boolean).length})</Button></div></div>)}</div></Modal>);
 };
 
 const DataCleanupModal = ({ isOpen, onClose, facilities, onCleanupComplete, setToast, cleanupConfig }) => {
@@ -1257,7 +1281,12 @@ const ChildHealthServicesView = ({
             }
             return true;
         });
-        filtered.sort((a, b) => (b.lastSnapshotAt?.toMillis() || 0) - (a.lastSnapshotAt?.toMillis() || 0));
+        
+        filtered.sort((a, b) => {
+            const getTime = (t) => t?.toMillis ? t.toMillis() : (t?.toDate ? t.toDate().getTime() : (t ? new Date(t).getTime() : 0));
+            return getTime(b.lastSnapshotAt) - getTime(a.lastSnapshotAt);
+        });
+
         return filtered;
     }, [ activeHealthFacilities, stateFilter, localityFilter, facilityTypeFilter, functioningFilter, projectFilter, searchQuery, serviceTypeFilter, userStates, userLocalities, permissions.manageScope, hasManuallySelected ]);
 
