@@ -270,6 +270,7 @@ const ResourceMonitor = ({ counts, onReset, onDismiss }) => {
     );
 };
 
+// --- Landing Page ---
 function Landing({ navigate, permissions }) {
     const { t } = useTranslation();
     const navButtons = [
@@ -289,53 +290,72 @@ function Landing({ navigate, permissions }) {
     const accessibleButtons = navButtons.filter(btn => btn.permission);
 
     return (
-        <Card>
-            <PageHeader title={t('landing.welcome', 'Welcome')} subtitle={t('landing.subtitle', 'Select a module to get started')} />
-            <div className="p-4">
-                {accessibleButtons.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {accessibleButtons.map(btn => {
-                            const Icon = btn.icon; 
-                            return (
-                                <button key={btn.view} onClick={() => navigate(btn.view)} className="flex flex-col items-center justify-center gap-3 p-6 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md hover:bg-slate-50 transition-all duration-150 text-slate-700 hover:text-sky-600">
-                                    <Icon className="w-12 h-12 text-sky-500" />
-                                    <span className="text-lg font-semibold">{btn.label}</span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                ) : (
-                    <EmptyState message={t('landing.no_permissions', 'You do not have permissions to view any modules. Please contact an administrator.')} />
-                )}
+        <div className="flex flex-col min-h-full">
+            <Card>
+                <PageHeader title={t('landing.welcome', 'Welcome')} subtitle={t('landing.subtitle', 'Select a module to get started')} />
+                <div className="p-4">
+                    {accessibleButtons.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {accessibleButtons.map(btn => {
+                                const Icon = btn.icon; 
+                                return (
+                                    <button key={btn.view} onClick={() => navigate(btn.view)} className="flex flex-col items-center justify-center gap-3 p-6 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md hover:bg-slate-50 transition-all duration-150 text-slate-700 hover:text-sky-600">
+                                        <Icon className="w-12 h-12 text-sky-500" />
+                                        <span className="text-lg font-semibold">{btn.label}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <EmptyState message={t('landing.no_permissions', 'You do not have permissions to view any modules. Please contact an administrator.')} />
+                    )}
+                </div>
+            </Card>
+            
+            {/* Desktop footer (hidden on mobile, as mobile has it inside the BottomNav) */}
+            <div className="hidden md:block mt-8 mb-4 text-center text-slate-400 text-xs font-medium w-full">
+                <p>App developed by Dr Qusay Mohamed - <a href="mailto:Gussaay@gmail.com" className="text-sky-500 hover:text-sky-400 transition-colors">Gussaay@gmail.com</a></p>
             </div>
-        </Card>
+        </div>
     );
 }
 
-const BottomNav = React.memo(function BottomNav({ navItems, navigate }) {
+// --- UPDATED BOTTOM NAV COMPONENT ---
+// Re-ordered to stack vertically inside the fixed container: Navigation Buttons FIRST, then Footer Text
+const BottomNav = React.memo(function BottomNav({ navItems, navigate, currentView }) {
     const icons = { 
         'landing': Home, 'dashboard': Home, 'courses': Book, 'humanResources': Users, 'childHealthServices': Hospital, 
         'skillsMentorship': ClipboardCheck 
     };
     
     return (
-        <nav className="md:hidden fixed bottom-0 inset-x-0 bg-slate-800 border-t border-slate-700 flex justify-between items-center z-[60] shadow-[0_-4px_10px_rgba(0,0,0,0.2)] px-2">
-            {navItems.map(item => {
-                const Icon = icons[item.view] || Activity;
-                return (
-                    <button 
-                        key={item.view} 
-                        onClick={() => navigate(item.view)} 
-                        className={`flex flex-col items-center justify-center p-1 w-full h-16 flex-1 min-w-0 transition-colors ${item.active ? 'text-sky-400' : 'text-slate-400 hover:text-white'}`}
-                        title={item.label} 
-                    >
-                        {Icon && <Icon className="w-6 h-6 mb-1 shrink-0" />}
-                        <span className="w-full text-center text-[10px] sm:text-[11px] leading-tight truncate px-0.5 block">
-                            {item.label}
-                        </span>
-                    </button>
-                )
-            })}
+        <nav className="md:hidden fixed bottom-0 inset-x-0 bg-slate-800 border-t border-slate-700 flex flex-col z-[60] shadow-[0_-4px_10px_rgba(0,0,0,0.2)]">
+            {/* 1. Main Bottom Nav Icons Row */}
+            <div className="flex justify-between items-center px-2 w-full">
+                {navItems.map(item => {
+                    const Icon = icons[item.view] || Activity;
+                    return (
+                        <button 
+                            key={item.view} 
+                            onClick={() => navigate(item.view)} 
+                            className={`flex flex-col items-center justify-center p-1 w-full h-16 flex-1 min-w-0 transition-colors ${item.active ? 'text-sky-400' : 'text-slate-400 hover:text-white'}`}
+                            title={item.label} 
+                        >
+                            {Icon && <Icon className="w-6 h-6 mb-1 shrink-0" />}
+                            <span className="w-full text-center text-[10px] sm:text-[11px] leading-tight truncate px-0.5 block">
+                                {item.label}
+                            </span>
+                        </button>
+                    )
+                })}
+            </div>
+            
+            {/* 2. Footer Text below the icons (Only on landing page) */}
+            {currentView === 'landing' && (
+                <div className="bg-slate-900 text-slate-500 text-center text-[8px] py-1.5 w-full border-t border-slate-800">
+                    App developed by Dr Qusay Mohamed - <a href="mailto:Gussaay@gmail.com" className="text-sky-400 hover:text-sky-300">Gussaay@gmail.com</a>
+                </div>
+            )}
         </nav>
     );
 });
@@ -1730,17 +1750,14 @@ export default function App() {
             
             {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ show: false, message: '', type: '' })} />}
 
-            <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 w-full flex-grow pb-8 md:pb-8 overflow-x-hidden">
+            {/* Adjusted padding to ensure BottomNav doesn't cover anything */}
+            <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 w-full flex-grow pb-24 md:pb-8 overflow-x-hidden">
                 <Suspense fallback={<Card><Spinner /></Card>}>
                     {mainContent}
                 </Suspense>
             </main>
 
-            {/* REMOVED VERSION TAG FROM FOOTER */}
-            <footer className="bg-slate-900 text-slate-500 flex flex-col items-center justify-center py-2 md:py-4 text-center text-[10px] sm:text-sm border-t border-slate-800 w-full z-[30] mt-auto pb-[76px] md:pb-4">
-                <p className="truncate px-2 w-full">App developed by Dr Qusay Mohamed - <a href="mailto:Gussaay@gmail.com" className="text-sky-400 hover:text-sky-300 transition-colors">Gussaay@gmail.com</a></p>
-            </footer>
-            { user && !isMinimalUILayout && <BottomNav navItems={visibleNavItems} navigate={navigate} /> }
+            { user && !isMinimalUILayout && <BottomNav navItems={visibleNavItems} navigate={navigate} currentView={view} /> }
 
             <Suspense fallback={null}>
                 {isShareModalOpen && user && (

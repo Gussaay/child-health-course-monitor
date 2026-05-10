@@ -77,6 +77,8 @@ const getInitialFormData = () => {
     return {
         session_date: new Date().toISOString().split('T')[0],
         eenc_breathing_status: 'na', 
+        eenc_resus_breathed_normally: 'na',
+        eenc_resus_has_pulse: 'na',
         skills: skills,
         notes: '',
     };
@@ -92,6 +94,8 @@ const rehydrateDraftData = (draftData) => {
     return {
         session_date: dataToLoad.session_date || initial.session_date,
         eenc_breathing_status: dataToLoad.eenc_breathing_status || (dataToLoad.formType === 'breathing' ? 'yes' : (dataToLoad.formType === 'not_breathing' ? 'no' : 'na')),
+        eenc_resus_breathed_normally: dataToLoad.eenc_resus_breathed_normally || 'na',
+        eenc_resus_has_pulse: dataToLoad.eenc_resus_has_pulse || 'na',
         skills: skills,
         notes: dataToLoad.notes || '',
     };
@@ -143,22 +147,46 @@ const calculateScores = (formData) => {
 };
 
 const checkFormCompletion = (formData) => {
-    const { eenc_breathing_status, skills } = formData;
-    if (eenc_breathing_status === 'na') return false; 
-
-    const itemsToCheck = [...PREPARATION_ITEMS, ...DRYING_STIMULATION_ITEMS];
+    const { eenc_breathing_status, eenc_resus_breathed_normally, eenc_resus_has_pulse, skills } = formData;
     
-    if (eenc_breathing_status === 'yes') {
-        itemsToCheck.push(...NORMAL_BREATHING_ITEMS);
-    } else if (eenc_breathing_status === 'no') {
-        itemsToCheck.push(...RESUSCITATION_ITEMS);
-    }
-    
-    for (const item of itemsToCheck) {
+    // First check Prep & Drying
+    const initialItemsToCheck = [...PREPARATION_ITEMS, ...DRYING_STIMULATION_ITEMS];
+    for (const item of initialItemsToCheck) {
         if (skills[item.key] === 'na' || skills[item.key] === '') {
             return false;
         }
     }
+
+    // Then check breathing status
+    if (eenc_breathing_status === 'na') return false; 
+    
+    // Then check respective branch
+    if (eenc_breathing_status === 'yes') {
+        for (const item of NORMAL_BREATHING_ITEMS) {
+            if (skills[item.key] === 'na' || skills[item.key] === '') return false;
+        }
+    } else if (eenc_breathing_status === 'no') {
+        // Check base resuscitation items (up to resus_no_chest_rise_steps)
+        for (let i = 0; i < 10; i++) {
+            if (skills[RESUSCITATION_ITEMS[i].key] === 'na' || skills[RESUSCITATION_ITEMS[i].key] === '') return false;
+        }
+        
+        // Check branching logic completion
+        if (eenc_resus_breathed_normally === 'na') return false;
+        
+        if (eenc_resus_breathed_normally === 'yes') {
+            if (skills[RESUSCITATION_ITEMS[10].key] === 'na' || skills[RESUSCITATION_ITEMS[10].key] === '') return false;
+        } else if (eenc_resus_breathed_normally === 'no') {
+            if (eenc_resus_has_pulse === 'na') return false;
+            
+            if (eenc_resus_has_pulse === 'yes') {
+                if (skills[RESUSCITATION_ITEMS[11].key] === 'na' || skills[RESUSCITATION_ITEMS[11].key] === '') return false;
+            } else if (eenc_resus_has_pulse === 'no') {
+                if (skills[RESUSCITATION_ITEMS[12].key] === 'na' || skills[RESUSCITATION_ITEMS[12].key] === '') return false;
+            }
+        }
+    }
+    
     return true;
 };
 
@@ -212,9 +240,13 @@ const SkillChecklistItem = ({ label, itemKey, value, onChange }) => {
         onChange('skills', itemKey, e.target.value);
     };
 
+    // Specific keys that are allowed to have the "partial" option
+    const allowPartialKeys = ['dry_start_5sec', 'resus_check_chest_rise', 'normal_breastfeeding_guidance'];
+    const showPartial = allowPartialKeys.includes(itemKey);
+
     return (
         <div 
-            className="p-3 border rounded-lg bg-white flex flex-col md:flex-row justify-between items-center gap-4"
+            className="p-3 border rounded-lg bg-white flex flex-col md:flex-row justify-between items-center gap-4 animate-fade-in transition-all duration-300"
             dir="rtl" 
         >
             <span className="font-medium text-gray-700 text-right w-full md:flex-1">
@@ -232,17 +264,21 @@ const SkillChecklistItem = ({ label, itemKey, value, onChange }) => {
                     />
                     <span className="text-sm">لا</span>
                 </label>
-                <label className="flex items-center gap-1 cursor-pointer">
-                    <input
-                        type="radio"
-                        name={itemKey}
-                        value="partial"
-                        checked={value === 'partial'}
-                        onChange={handleChange}
-                        className="form-radio text-yellow-500"
-                    />
-                    <span className="text-sm">جزئياً</span>
-                </label>
+                
+                {showPartial && (
+                    <label className="flex items-center gap-1 cursor-pointer">
+                        <input
+                            type="radio"
+                            name={itemKey}
+                            value="partial"
+                            checked={value === 'partial'}
+                            onChange={handleChange}
+                            className="form-radio text-yellow-500"
+                        />
+                        <span className="text-sm">جزئياً</span>
+                    </label>
+                )}
+
                 <label className="flex items-center gap-1 cursor-pointer">
                     <input
                         type="radio"
@@ -259,15 +295,54 @@ const SkillChecklistItem = ({ label, itemKey, value, onChange }) => {
     );
 };
 
-const SectionRenderer = ({ title, items, formData, handleSkillChange, score, maxScore }) => {
+const SectionRenderer = ({ title, items, formData, handleSkillChange, score, maxScore, visibleItemIndex }) => {
+    if (visibleItemIndex === -2) return null; // Entirely hidden section
+
     return (
-        <div className="mt-6 animate-fade-in">
-            <h3 className="text-xl font-semibold mb-4 p-3 bg-sky-100 text-sky-800 rounded-md sticky top-0 z-10 text-right flex items-center" dir="rtl">
+        <div className="mt-6 animate-fade-in transition-all duration-500">
+            <h3 className="text-xl font-semibold mb-4 p-3 bg-sky-100 text-sky-800 rounded-md sticky top-0 z-10 text-right flex items-center shadow-sm" dir="rtl">
                 <ScoreCircle score={score} maxScore={maxScore} />
                 <span>{title}</span>
             </h3>
             <div className="space-y-3">
-                {items.map(item => (
+                {items.map((item, idx) => {
+                    const isVisible = visibleItemIndex === -1 || idx <= visibleItemIndex;
+                    if (!isVisible) return null;
+                    
+                    return (
+                        <SkillChecklistItem
+                            key={item.key}
+                            label={item.label}
+                            itemKey={item.key}
+                            value={formData.skills[item.key]}
+                            onChange={handleSkillChange}
+                        />
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
+// Specialized Renderer for Resuscitation Section to handle branch questions elegantly
+const ResuscitationSectionRenderer = ({ formData, handleFormChange, handleSkillChange, score, maxScore }) => {
+    const baseItems = RESUSCITATION_ITEMS.slice(0, 10);
+    const firstUnanswered = baseItems.findIndex(item => formData.skills[item.key] === 'na' || formData.skills[item.key] === '');
+    const visibleBaseCount = firstUnanswered === -1 ? baseItems.length : firstUnanswered + 1;
+    const visibleBaseItems = baseItems.slice(0, visibleBaseCount);
+
+    const isBaseComplete = firstUnanswered === -1;
+    const showBreathedNormally = isBaseComplete;
+    const showHasPulse = isBaseComplete && formData.eenc_resus_breathed_normally === 'no';
+
+    return (
+        <div className="mt-6 animate-fade-in transition-all duration-500">
+            <h3 className="text-xl font-semibold mb-4 p-3 bg-sky-100 text-sky-800 rounded-md sticky top-0 z-10 text-right flex items-center shadow-sm" dir="rtl">
+                <ScoreCircle score={score} maxScore={maxScore} />
+                <span>4. إنعاش الوليد (الدقيقة الذهبية)</span>
+            </h3>
+            <div className="space-y-3">
+                {visibleBaseItems.map((item) => (
                     <SkillChecklistItem
                         key={item.key}
                         label={item.label}
@@ -276,6 +351,73 @@ const SectionRenderer = ({ title, items, formData, handleSkillChange, score, max
                         onChange={handleSkillChange}
                     />
                 ))}
+
+                {/* Branching Question 1 - Right-to-Left Inline Layout */}
+                {showBreathedNormally && (
+                    <div className="p-4 border rounded-lg bg-sky-50 border-sky-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4 animate-fade-in transition-all duration-300 mt-4" dir="rtl">
+                        <span className="font-bold text-sky-900 text-right w-full md:flex-1">
+                            هل تنفس الطفل طبيعيا؟
+                        </span>
+                        <div className="flex gap-4 flex-shrink-0" dir="ltr">
+                            <label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 rounded-md border hover:border-red-300 transition-colors">
+                                <input type="radio" name="eenc_resus_breathed_normally" value="no" checked={formData.eenc_resus_breathed_normally === 'no'} onChange={handleFormChange} className="form-radio text-red-600 h-4 w-4"/>
+                                <span className="font-bold text-gray-800">لا</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 rounded-md border hover:border-green-300 transition-colors">
+                                <input type="radio" name="eenc_resus_breathed_normally" value="yes" checked={formData.eenc_resus_breathed_normally === 'yes'} onChange={handleFormChange} className="form-radio text-green-600 h-4 w-4"/>
+                                <span className="font-bold text-gray-800">نعم</span>
+                            </label>
+                        </div>
+                    </div>
+                )}
+
+                {/* Branch 1 Outcome */}
+                {showBreathedNormally && formData.eenc_resus_breathed_normally === 'yes' && (
+                    <SkillChecklistItem
+                        label={RESUSCITATION_ITEMS[10].label}
+                        itemKey={RESUSCITATION_ITEMS[10].key}
+                        value={formData.skills[RESUSCITATION_ITEMS[10].key]}
+                        onChange={handleSkillChange}
+                    />
+                )}
+
+                {/* Branching Question 2 - Right-to-Left Inline Layout */}
+                {showHasPulse && (
+                    <div className="p-4 border rounded-lg bg-sky-50 border-sky-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4 animate-fade-in transition-all duration-300 mt-4" dir="rtl">
+                        <span className="font-bold text-sky-900 text-right w-full md:flex-1">
+                            هل يوجد نبضات قلب؟
+                        </span>
+                        <div className="flex gap-4 flex-shrink-0" dir="ltr">
+                            <label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 rounded-md border hover:border-red-300 transition-colors">
+                                <input type="radio" name="eenc_resus_has_pulse" value="no" checked={formData.eenc_resus_has_pulse === 'no'} onChange={handleFormChange} className="form-radio text-red-600 h-4 w-4"/>
+                                <span className="font-bold text-gray-800">لا</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 rounded-md border hover:border-green-300 transition-colors">
+                                <input type="radio" name="eenc_resus_has_pulse" value="yes" checked={formData.eenc_resus_has_pulse === 'yes'} onChange={handleFormChange} className="form-radio text-green-600 h-4 w-4"/>
+                                <span className="font-bold text-gray-800">نعم</span>
+                            </label>
+                        </div>
+                    </div>
+                )}
+
+                {/* Branch 2 Outcomes */}
+                {showHasPulse && formData.eenc_resus_has_pulse === 'yes' && (
+                    <SkillChecklistItem
+                        label={RESUSCITATION_ITEMS[11].label}
+                        itemKey={RESUSCITATION_ITEMS[11].key}
+                        value={formData.skills[RESUSCITATION_ITEMS[11].key]}
+                        onChange={handleSkillChange}
+                    />
+                )}
+
+                {showHasPulse && formData.eenc_resus_has_pulse === 'no' && (
+                    <SkillChecklistItem
+                        label={RESUSCITATION_ITEMS[12].label}
+                        itemKey={RESUSCITATION_ITEMS[12].key}
+                        value={formData.skills[RESUSCITATION_ITEMS[12].key]}
+                        onChange={handleSkillChange}
+                    />
+                )}
             </div>
         </div>
     );
@@ -385,7 +527,7 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
     useEffect(() => {
         let needsUpdate = false;
         const newFormData = JSON.parse(JSON.stringify(formData));
-        const { eenc_breathing_status, skills } = newFormData;
+        const { eenc_breathing_status, eenc_resus_breathed_normally, eenc_resus_has_pulse, skills } = newFormData;
 
         const updateRelevance = (items, isRelevant) => {
             items.forEach(item => {
@@ -403,7 +545,44 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
         updateRelevance(PREPARATION_ITEMS, true);
         updateRelevance(DRYING_STIMULATION_ITEMS, true);
         updateRelevance(NORMAL_BREATHING_ITEMS, eenc_breathing_status === 'yes');
-        updateRelevance(RESUSCITATION_ITEMS, eenc_breathing_status === 'no');
+        
+        const isResus = eenc_breathing_status === 'no';
+        updateRelevance(RESUSCITATION_ITEMS.slice(0, 10), isResus);
+
+        if (!isResus) {
+            if (eenc_resus_breathed_normally !== 'na') { newFormData.eenc_resus_breathed_normally = 'na'; needsUpdate = true; }
+            if (eenc_resus_has_pulse !== 'na') { newFormData.eenc_resus_has_pulse = 'na'; needsUpdate = true; }
+            updateRelevance(RESUSCITATION_ITEMS.slice(10), false);
+        } else {
+            const resusBaseUnanswered = RESUSCITATION_ITEMS.slice(0, 10).findIndex(item => skills[item.key] === 'na' || skills[item.key] === '');
+            const baseComplete = resusBaseUnanswered === -1;
+
+            if (!baseComplete) {
+                if (eenc_resus_breathed_normally !== 'na') { newFormData.eenc_resus_breathed_normally = 'na'; needsUpdate = true; }
+                if (eenc_resus_has_pulse !== 'na') { newFormData.eenc_resus_has_pulse = 'na'; needsUpdate = true; }
+                updateRelevance(RESUSCITATION_ITEMS.slice(10), false);
+            } else {
+                if (eenc_resus_breathed_normally === 'yes') {
+                    updateRelevance([RESUSCITATION_ITEMS[10]], true);
+                    updateRelevance(RESUSCITATION_ITEMS.slice(11), false);
+                    if (eenc_resus_has_pulse !== 'na') { newFormData.eenc_resus_has_pulse = 'na'; needsUpdate = true; }
+                } else if (eenc_resus_breathed_normally === 'no') {
+                    updateRelevance([RESUSCITATION_ITEMS[10]], false);
+                    if (eenc_resus_has_pulse === 'yes') {
+                        updateRelevance([RESUSCITATION_ITEMS[11]], true);
+                        updateRelevance([RESUSCITATION_ITEMS[12]], false);
+                    } else if (eenc_resus_has_pulse === 'no') {
+                        updateRelevance([RESUSCITATION_ITEMS[11]], false);
+                        updateRelevance([RESUSCITATION_ITEMS[12]], true);
+                    } else {
+                        updateRelevance(RESUSCITATION_ITEMS.slice(11), false);
+                    }
+                } else {
+                    updateRelevance(RESUSCITATION_ITEMS.slice(10), false);
+                    if (eenc_resus_has_pulse !== 'na') { newFormData.eenc_resus_has_pulse = 'na'; needsUpdate = true; }
+                }
+            }
+        }
 
         if (needsUpdate) {
             setFormData(newFormData);
@@ -453,6 +632,8 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                 status: 'draft',
                 visitNumber: Number(currentVisitNumber),
                 eenc_breathing_status: currentFormData.eenc_breathing_status,
+                eenc_resus_breathed_normally: currentFormData.eenc_resus_breathed_normally,
+                eenc_resus_has_pulse: currentFormData.eenc_resus_has_pulse,
                 skills: currentFormData.skills,
             };
 
@@ -558,6 +739,8 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                 status: status,
                 visitNumber: Number(currentVisitNumber),
                 eenc_breathing_status: formData.eenc_breathing_status,
+                eenc_resus_breathed_normally: formData.eenc_resus_breathed_normally,
+                eenc_resus_has_pulse: formData.eenc_resus_has_pulse,
                 skills: formData.skills,
             };
 
@@ -589,6 +772,25 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
             setIsSavingDraft(false);
         }
     };
+
+    // Sequential Visibility Calculation Logic
+    const getFirstUnansweredIndex = (items) => {
+        return items.findIndex(item => formData.skills[item.key] === 'na' || formData.skills[item.key] === '');
+    };
+
+    const prepUnanswered = getFirstUnansweredIndex(PREPARATION_ITEMS);
+    const prepVisibleIndex = prepUnanswered !== -1 ? prepUnanswered : -1;
+    const isPrepComplete = prepUnanswered === -1;
+
+    const dryingUnanswered = getFirstUnansweredIndex(DRYING_STIMULATION_ITEMS);
+    // If Prep isn't complete, hide Drying entirely (-2). Else calc index.
+    const dryingVisibleIndex = isPrepComplete ? (dryingUnanswered !== -1 ? dryingUnanswered : -1) : -2;
+    const isDryingComplete = isPrepComplete && dryingUnanswered === -1;
+
+    const isBreathingStatusAnswered = formData.eenc_breathing_status !== 'na';
+
+    const normalUnanswered = getFirstUnansweredIndex(NORMAL_BREATHING_ITEMS);
+    const normalVisibleIndex = isBreathingStatusAnswered ? (normalUnanswered !== -1 ? normalUnanswered : -1) : -2;
 
     return (
         <Card dir="rtl">
@@ -630,39 +832,68 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                         </div>
                     </div>
 
-                    <div className="mt-6 p-4 border rounded-lg bg-gray-50">
-                        <h3 className="text-lg font-semibold mb-3 text-right">1. تحديد حالة الوليد</h3>
-                        <FormGroup label="الرجاء تحديد حالة الوليد لبدء التقييم:" className="text-right">
-                            <div className="flex gap-4 justify-start" dir="rtl">
-                                <label className="flex items-center gap-2 p-2 border rounded-md bg-white cursor-pointer">
-                                    <input type="radio" name="eenc_breathing_status" value="yes" checked={formData.eenc_breathing_status === 'yes'} onChange={handleFormChange} className="form-radio text-green-600"/>
-                                    <span className="font-semibold">طفل يتنفس طبيعياً</span>
-                                </label>
-                                <label className="flex items-center gap-2 p-2 border rounded-md bg-white cursor-pointer">
-                                    <input type="radio" name="eenc_breathing_status" value="no" checked={formData.eenc_breathing_status === 'no'} onChange={handleFormChange} className="form-radio text-red-600"/>
-                                    <span className="font-semibold">طفل لا يتنفس طبيعياً (يحتاج إنعاش)</span>
-                                </label>
-                            </div>
-                        </FormGroup>
-                    </div>
+                    <SectionRenderer 
+                        title="1. تحضيرات ما قبل الولادة" 
+                        items={PREPARATION_ITEMS} 
+                        formData={formData} 
+                        handleSkillChange={handleSkillChange} 
+                        score={scores.preparation?.score} 
+                        maxScore={scores.preparation?.maxScore}
+                        visibleItemIndex={prepVisibleIndex}
+                    />
+                    
+                    <SectionRenderer 
+                        title="2. التجفيف، التحفيز، التدفئة والشفط" 
+                        items={DRYING_STIMULATION_ITEMS} 
+                        formData={formData} 
+                        handleSkillChange={handleSkillChange} 
+                        score={scores.drying?.score} 
+                        maxScore={scores.drying?.maxScore}
+                        visibleItemIndex={dryingVisibleIndex}
+                    />
 
-                    {formData.eenc_breathing_status !== 'na' && (
-                        <>
-                            <SectionRenderer title="2. تحضيرات ما قبل الولادة" items={PREPARATION_ITEMS} formData={formData} handleSkillChange={handleSkillChange} score={scores.preparation?.score} maxScore={scores.preparation?.maxScore}/>
-                            <SectionRenderer title="3. التجفيف، التحفيز، التدفئة والشفط" items={DRYING_STIMULATION_ITEMS} formData={formData} handleSkillChange={handleSkillChange} score={scores.drying?.score} maxScore={scores.drying?.maxScore}/>
-                        </>
+                    {isDryingComplete && (
+                        <div className="mt-6 p-4 border rounded-lg bg-sky-50 shadow-sm animate-fade-in transition-all duration-500">
+                            <h3 className="text-lg font-semibold mb-3 text-right text-sky-900">3. تحديد حالة الوليد</h3>
+                            <FormGroup label="الرجاء تحديد حالة الوليد لبدء التقييم التالي:" className="text-right">
+                                <div className="flex gap-4 justify-start" dir="rtl">
+                                    <label className="flex items-center gap-2 p-3 border rounded-md bg-white cursor-pointer hover:bg-sky-50 hover:border-sky-300 transition-colors">
+                                        <input type="radio" name="eenc_breathing_status" value="yes" checked={formData.eenc_breathing_status === 'yes'} onChange={handleFormChange} className="form-radio text-green-600 h-5 w-5"/>
+                                        <span className="font-semibold text-gray-800">طفل يتنفس طبيعياً</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 p-3 border rounded-md bg-white cursor-pointer hover:bg-red-50 hover:border-red-300 transition-colors">
+                                        <input type="radio" name="eenc_breathing_status" value="no" checked={formData.eenc_breathing_status === 'no'} onChange={handleFormChange} className="form-radio text-red-600 h-5 w-5"/>
+                                        <span className="font-semibold text-gray-800">طفل لا يتنفس طبيعياً (يحتاج إنعاش)</span>
+                                    </label>
+                                </div>
+                            </FormGroup>
+                        </div>
                     )}
 
-                    {formData.eenc_breathing_status === 'yes' && (
-                        <SectionRenderer title="4. متابعة طفل يتنفس طبيعياً" items={NORMAL_BREATHING_ITEMS} formData={formData} handleSkillChange={handleSkillChange} score={scores.normal_breathing?.score} maxScore={scores.normal_breathing?.maxScore}/>
+                    {isDryingComplete && formData.eenc_breathing_status === 'yes' && (
+                        <SectionRenderer 
+                            title="4. متابعة طفل يتنفس طبيعياً" 
+                            items={NORMAL_BREATHING_ITEMS} 
+                            formData={formData} 
+                            handleSkillChange={handleSkillChange} 
+                            score={scores.normal_breathing?.score} 
+                            maxScore={scores.normal_breathing?.maxScore}
+                            visibleItemIndex={normalVisibleIndex}
+                        />
                     )}
 
-                    {formData.eenc_breathing_status === 'no' && (
-                        <SectionRenderer title="4. إنعاش الوليد (الدقيقة الذهبية)" items={RESUSCITATION_ITEMS} formData={formData} handleSkillChange={handleSkillChange} score={scores.resuscitation?.score} maxScore={scores.resuscitation?.maxScore}/>
+                    {isDryingComplete && formData.eenc_breathing_status === 'no' && (
+                        <ResuscitationSectionRenderer 
+                            formData={formData} 
+                            handleFormChange={handleFormChange}
+                            handleSkillChange={handleSkillChange} 
+                            score={scores.resuscitation?.score} 
+                            maxScore={scores.resuscitation?.maxScore}
+                        />
                     )}
                     
-                    {formData.eenc_breathing_status !== 'na' && (
-                        <FormGroup label="ملاحظات عامة" className="text-right mt-6">
+                    {isFormComplete && (
+                        <FormGroup label="ملاحظات عامة" className="text-right mt-6 animate-fade-in">
                             <Textarea name="notes" value={formData.notes} onChange={handleFormChange} rows={4} placeholder="أضف أي ملاحظات إضافية..." className="text-right placeholder:text-right"/>
                         </FormGroup>
                     )}
@@ -675,6 +906,20 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                         <Button type="submit" disabled={isSaving || isSavingDraft || !isFormComplete}> {isSaving ? 'جاري الحفظ...' : 'حفظ وإكمال الجلسة'} </Button>
                      </div>
                  </div>
+
+                 {/* --- Mobile Bar --- */}
+                 <div className="flex sm:hidden fixed bottom-16 left-0 right-0 z-20 h-16 justify-around items-center bg-gray-900 text-white border-t border-gray-700 shadow-lg" dir="rtl">
+                    <Button type="button" variant="secondary" onClick={onExit} disabled={isSaving || isSavingDraft} size="sm">
+                        إلغاء
+                    </Button>
+                    <Button type="button" variant="outline" onClick={(e) => handleSubmit(e, 'draft')} disabled={isSaving || isSavingDraft || formData.eenc_breathing_status === 'na'} size="sm">
+                        {isSavingDraft ? 'جاري...' : 'حفظ مسودة'}
+                    </Button>
+                    <Button type="submit" disabled={isSaving || isSavingDraft || !isFormComplete} size="sm"> 
+                        {isSaving ? 'جاري...' : 'حفظ وإكمال'} 
+                    </Button>
+                 </div>
+
             </form>
         </Card>
     );
