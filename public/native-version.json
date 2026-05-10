@@ -1,0 +1,7 @@
+{
+  "latestNativeBuild": 2,
+  "versionString": "1.1.0",
+  "downloadUrl": "https://imnci-courses-monitor.web.app/app-release.apk",
+  "mandatory": true,
+  "releaseNotes": "تمت إضافة ميزة جلب إحداثيات الموقع (GPS) للمنشآت الصحية."
+}

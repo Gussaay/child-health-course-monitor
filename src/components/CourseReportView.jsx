@@ -15,8 +15,8 @@ import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 
-// Import the historical fetcher and upsert function
-import { fetchFacilitiesHistoryMultiDate, upsertCourse } from '../data.js';
+// 🟢 FIX: Added upsertFinalReport to imports
+import { fetchFacilitiesHistoryMultiDate, upsertCourse, upsertFinalReport } from '../data.js';
 import { useAuth } from '../hooks/useAuth';
 import { useDataCache } from '../DataContext';
 import { db } from '../firebase';
@@ -1160,13 +1160,25 @@ export function CourseReportView({
             {/* TAB CONTENT: FINAL REPORT MANAGER */}
             {activeTab === 'final-report' && isFederalManager && !isSharedView && (
                 <div className="w-full max-w-full min-w-0 mt-4">
+                    {/* 🟢 FIX: Added try/catch and fallback for onSaveFinalReport */}
                     <FinalReportManager 
                         course={course} 
                         participants={participants} 
                         onCancel={() => setActiveTab('full-course-report')} 
                         onSave={async (data) => {
-                            if (onSaveFinalReport) {
-                                await onSaveFinalReport(data);
+                            try {
+                                if (onSaveFinalReport) {
+                                    await onSaveFinalReport(data);
+                                } else {
+                                    // Fallback: Save directly if the prop wasn't passed down properly
+                                    const currentUserIdentifier = user?.displayName || user?.email || 'Unknown';
+                                    await upsertFinalReport(data, currentUserIdentifier);
+                                    notify("Final report saved successfully.", "success");
+                                    setActiveTab('full-course-report'); // Return to main tab
+                                }
+                            } catch (error) {
+                                console.error("Error saving final report:", error);
+                                notify(`Failed to save final report: ${error.message}`, "error");
                             }
                         }} 
                         initialData={activeFinalReport} 

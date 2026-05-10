@@ -8,12 +8,15 @@ import { Bar, Pie, Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, LineElement, PointElement } from 'chart.js';
 
 import {
-    Home, Book, Users, User, Hospital, Database, ClipboardCheck, ClipboardList, FolderKanban, TrendingUp, X, WifiOff, RefreshCw, Activity, Layers, Globe, LogOut, Info
+    Home, Book, Users, User, Hospital, Database, ClipboardCheck, ClipboardList, FolderKanban, TrendingUp, X, WifiOff, RefreshCw, Activity, Layers, Globe, LogOut, Info, Download
 } from 'lucide-react';
 
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { Network } from '@capacitor/network';
+import { App as CapacitorApp } from '@capacitor/app';
+import { Browser } from '@capacitor/browser';
+import { LocalNotifications } from '@capacitor/local-notifications'; // <-- NEW IMPORT
 
 // --- PRE-FLIGHT LANGUAGE CHECK ---
 if (typeof window !== 'undefined') {
@@ -312,16 +315,15 @@ function Landing({ navigate, permissions }) {
                 </div>
             </Card>
             
-            {/* Desktop footer (hidden on mobile, as mobile has it inside the BottomNav) */}
-            <div className="hidden md:block mt-8 mb-4 text-center text-slate-400 text-xs font-medium w-full">
-                <p>App developed by Dr Qusay Mohamed - <a href="mailto:Gussaay@gmail.com" className="text-sky-500 hover:text-sky-400 transition-colors">Gussaay@gmail.com</a></p>
+            {/* Desktop footer */}
+            <div className="hidden md:block mt-8 mb-4 text-center text-slate-600 text-xs font-medium w-full">
+                <p>App developed by Dr Qusay Mohamed - <a href="mailto:Gussaay@gmail.com" className="text-sky-600 hover:text-sky-500 transition-colors font-bold">Gussaay@gmail.com</a></p>
             </div>
         </div>
     );
 }
 
 // --- UPDATED BOTTOM NAV COMPONENT ---
-// Re-ordered to stack vertically inside the fixed container: Navigation Buttons FIRST, then Footer Text
 const BottomNav = React.memo(function BottomNav({ navItems, navigate, currentView }) {
     const icons = { 
         'landing': Home, 'dashboard': Home, 'courses': Book, 'humanResources': Users, 'childHealthServices': Hospital, 
@@ -330,7 +332,6 @@ const BottomNav = React.memo(function BottomNav({ navItems, navigate, currentVie
     
     return (
         <nav className="md:hidden fixed bottom-0 inset-x-0 bg-slate-800 border-t border-slate-700 flex flex-col z-[60] shadow-[0_-4px_10px_rgba(0,0,0,0.2)]">
-            {/* 1. Main Bottom Nav Icons Row */}
             <div className="flex justify-between items-center px-2 w-full">
                 {navItems.map(item => {
                     const Icon = icons[item.view] || Activity;
@@ -350,9 +351,8 @@ const BottomNav = React.memo(function BottomNav({ navItems, navigate, currentVie
                 })}
             </div>
             
-            {/* 2. Footer Text below the icons (Only on landing page) */}
             {currentView === 'landing' && (
-                <div className="bg-slate-900 text-slate-500 text-center text-[8px] py-1.5 w-full border-t border-slate-800">
+                <div className="bg-slate-900 text-slate-400 text-center text-[8px] py-1.5 w-full border-t border-slate-800">
                     App developed by Dr Qusay Mohamed - <a href="mailto:Gussaay@gmail.com" className="text-sky-400 hover:text-sky-300">Gussaay@gmail.com</a>
                 </div>
             )}
@@ -378,8 +378,17 @@ function SplashScreen() {
 export default function App() {
     const { t, i18n } = useTranslation();
     const appVersion = window.APP_VERSION || '1.0.2';
+    
+    // Web Update State (Capgo)
     const [isUpdateReady, setIsUpdateReady] = useState(false);
     const [updateBundle, setUpdateBundle] = useState(null);
+    
+    // --- NEW: Internal Update Download Progress States ---
+    const [isDownloadingUpdate, setIsDownloadingUpdate] = useState(false);
+    const [updateProgress, setUpdateProgress] = useState(0);
+
+    // --- NEW: Native APK Update State (Direct Download) ---
+    const [nativeUpdatePrompt, setNativeUpdatePrompt] = useState(null);
 
     const [isOffline, setIsOffline] = useState(!navigator.onLine);
     const [isSyncing, setIsSyncing] = useState(false);
@@ -536,17 +545,72 @@ export default function App() {
     const isPopStateNavigation = useRef(false);
     const initialViewIsSet = useRef(false);
 
+    // --- EFFECT: CHECK FOR WEB UPDATES & NATIVE APK UPDATES WITH NOTIFICATIONS ---
     useEffect(() => {
+        let downloadListenerHandle;
+
         if (Capacitor.isNativePlatform()) {
-            const checkAndDownloadUpdate = async () => {
+            
+            // 1. Request Notification Permissions on load
+            const setupNotifications = async () => {
+                const permStatus = await LocalNotifications.checkPermissions();
+                if (permStatus.display !== 'granted') {
+                    await LocalNotifications.requestPermissions();
+                }
+            };
+            setupNotifications();
+
+            // 2. Register download listener for Capgo background updates
+            CapacitorUpdater.addListener('download', (info) => {
+                setUpdateProgress(info.percent); 
+            }).then(handle => {
+                downloadListenerHandle = handle;
+            });
+
+            const checkUpdates = async () => {
                 try {
                     const status = await Network.getStatus();
-                    if (!status.connected) {
-                        console.log("Capgo Updater: Device is offline. Skipping update check.");
-                        return;
+                    if (!status.connected) return;
+
+                    // --- CHECK FOR NATIVE APK UPDATES (External) ---
+                    try {
+                        const nativeRes = await fetch('https://imnci-courses-monitor.web.app/native-version.json?t=' + Date.now());
+                        if (nativeRes.ok) {
+                            const serverConfig = await nativeRes.json();
+                            const appInfo = await CapacitorApp.getInfo();
+                            
+                            const currentBuild = parseInt(appInfo.build, 10);
+                            const serverBuild = parseInt(serverConfig.latestNativeBuild, 10);
+
+                            if (serverBuild > currentBuild) {
+                                console.log(`Native update required. Current: ${currentBuild}, Server: ${serverBuild}`);
+                                
+                                // Show in-app toast
+                                setToast({ show: true, message: 'A new external app update is available!', type: 'info' });
+                                setNativeUpdatePrompt(serverConfig);
+
+                                // Trigger System Notification
+                                await LocalNotifications.schedule({
+                                    notifications: [
+                                        {
+                                            title: "App Update Required",
+                                            body: `Version ${serverConfig.versionString} is available. Tap to download.`,
+                                            id: 1,
+                                            schedule: { at: new Date(Date.now() + 1000) }, // Trigger almost immediately
+                                            actionTypeId: "",
+                                            extra: null
+                                        }
+                                    ]
+                                });
+                                return; // Stop here, Native update takes priority
+                            }
+                        }
+                    } catch (e) {
+                        console.warn("Native update check failed:", e);
                     }
 
-                    console.log("Capgo Updater: Checking for latest update...");
+                    // --- CHECK FOR WEB ASSET UPDATES (Internal Capgo) ---
+                    console.log("Capgo Updater: Checking for latest web update...");
                     const response = await CapacitorHttp.request({
                         method: 'GET',
                         url: 'https://imnci-courses-monitor.web.app/latest/update.json?t=' + Date.now(),
@@ -560,25 +624,52 @@ export default function App() {
                     const currentState = await CapacitorUpdater.current();
                     const currentVersion = currentState.bundle?.version || "builtin";
 
-                    console.log(`Capgo Updater: Current Version = ${currentVersion}, Latest Version = ${latestUpdate.version}`);
-
                     if (currentVersion !== latestUpdate.version) {
-                        console.log(`Capgo Updater: Downloading update bundle ${latestUpdate.version}...`);
-                        const downloadedBundle = await CapacitorUpdater.download({ url: latestUpdate.url, version: latestUpdate.version });
-                        console.log("Capgo Updater: Download successful!", downloadedBundle);
-                        setUpdateBundle(downloadedBundle); 
-                        setIsUpdateReady(true);
-                    } else {
-                        console.log("Capgo Updater: App is already up to date.");
+                        console.log(`Capgo Updater: Downloading bundle ${latestUpdate.version}...`);
+                        setToast({ show: true, message: 'Downloading internal application update...', type: 'info' });
+                        setIsDownloadingUpdate(true);
+                        setUpdateProgress(0);
+
+                        try {
+                            const downloadedBundle = await CapacitorUpdater.download({ url: latestUpdate.url, version: latestUpdate.version });
+                            setUpdateBundle(downloadedBundle); 
+                            setIsUpdateReady(true);
+                            
+                            // Show in-app toast
+                            setToast({ show: true, message: 'Update ready to install!', type: 'success' });
+
+                            // Trigger System Notification so they know to open the app if it was minimized
+                            await LocalNotifications.schedule({
+                                notifications: [
+                                    {
+                                        title: "Update Ready!",
+                                        body: "The new version has been downloaded. Tap here to restart and apply.",
+                                        id: 2,
+                                        schedule: { at: new Date(Date.now() + 1000) },
+                                        actionTypeId: "",
+                                        extra: null
+                                    }
+                                ]
+                            });
+
+                        } catch (err) {
+                            console.error("Failed to download Capgo update", err);
+                        } finally {
+                            setIsDownloadingUpdate(false);
+                        }
                     }
                 } catch (error) { 
-                    console.warn("Capgo Updater: Self-hosted update check failed:", error); 
+                    console.warn("Update check failed:", error); 
                 }
             };
             
-            // Add a small 2-second delay to ensure the app is fully ready before checking for updates
-            setTimeout(checkAndDownloadUpdate, 2000);
+            setTimeout(checkUpdates, 2000);
         }
+
+        // Cleanup listener on unmount
+        return () => {
+            if (downloadListenerHandle) downloadListenerHandle.remove();
+        };
     }, []);
 
     useEffect(() => { if (!authLoading && user) initializeUsageTracking(); }, [authLoading, user]);
@@ -1273,7 +1364,7 @@ export default function App() {
             const finalUrlsToSave = []; const originalUrls = reportData.originalGalleryUrls || []; const finalUrlsFromEditor = reportData.finalGalleryUrls || []; const filesToUpload = reportData.galleryImageFiles || {};
             for (let i = 0; i < 3; i++) {
                 const originalUrl = originalUrls[i]; const finalUrl = finalUrlsFromEditor[i]; const newFile = filesToUpload[i];
-                if (newFile) { if (originalUrl) await deleteFile(originalUrl); const uploadedUrl = await uploadFile(newFile); finalUrlsToSave.push(uploadedUrl); }
+                if (newFile) { if (originalUrl) await deleteFile(originalUrl); const uploadedUrl = await uploadFile(newFile); finalUrlsToSave.push(finalUrl); }
                 else if (finalUrl) { finalUrlsToSave.push(finalUrl); } else if (originalUrl && !finalUrl) { await deleteFile(originalUrl); }
             }
             const payload = { id: reportData.id, courseId: reportData.courseId, summary: reportData.summary, recommendations: reportData.recommendations, potentialFacilitators: reportData.participantsForFollowUp, pdfUrl: pdfUrl, galleryImageUrls: finalUrlsToSave, participantsForFollowUp: reportData.participantsForFollowUp };
@@ -1691,9 +1782,20 @@ export default function App() {
                         <RefreshCw className="w-5 h-5 animate-spin" /> {t('app.syncing', 'Syncing offline data to the cloud...')}
                     </div>
                 )}
+                {isDownloadingUpdate && (
+                    <div className="bg-sky-700 text-white text-center py-2 px-4 text-sm font-bold flex justify-center items-center gap-2 shadow-md relative overflow-hidden">
+                        {/* Dynamic Progress Bar Background */}
+                        <div 
+                            className="absolute top-0 left-0 h-full bg-sky-500 z-0 transition-all duration-300" 
+                            style={{ width: `${updateProgress}%` }}
+                        ></div>
+                        <RefreshCw className="w-4 h-4 animate-spin z-10" /> 
+                        <span className="z-10">{t('app.downloading_update', 'Downloading update...')} {Math.round(updateProgress)}%</span>
+                    </div>
+                )}
             </div>
 
-            <header className={`bg-slate-800 shadow-lg sticky z-40 transition-all ${isOffline || isSyncing ? 'top-10' : 'top-0'}`}>
+            <header className={`bg-slate-800 shadow-lg sticky z-40 transition-all ${isOffline || isSyncing || isDownloadingUpdate ? 'top-10' : 'top-0'}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4 cursor-pointer" onClick={() => !isSharedView && navigate('landing')}>
@@ -1703,7 +1805,11 @@ export default function App() {
                             <div>
                                 <h1 className="text-xl sm:text-2xl font-bold text-white">{t('app.title', 'National Child Health Program')}</h1>
                                 <p className="text-xs sm:text-sm text-slate-300 flex items-center flex-wrap gap-2 mt-1 sm:mt-0">
-                                    {t('app.subtitle', 'Program & Course Monitoring System')}
+                                    <span>{t('app.subtitle', 'Program & Course Monitoring System')}</span>
+                                    {/* App Version Pill */}
+                                    <span className="bg-slate-700 text-sky-300 text-[10px] px-1.5 py-0.5 rounded border border-slate-600 font-mono shadow-sm">
+                                        v{appVersion}
+                                    </span>
                                 </p>
                             </div>
                         </div>
@@ -1951,7 +2057,41 @@ export default function App() {
                 <ResourceMonitor counts={operationCounts} onReset={handleResetMonitor} onDismiss={handleDismissMonitor} />
             )}
 
-           {isUpdateReady && updateBundle && (
+            {/* --- NATIVE DIRECT DOWNLOAD MODAL (OPTION B) --- */}
+            {nativeUpdatePrompt && (
+                <div className="fixed inset-0 bg-slate-900 bg-opacity-90 flex flex-col items-center justify-center z-[100000] p-4 backdrop-blur-sm" dir="rtl">
+                    <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center space-y-4">
+                        <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100">
+                            <Download className="h-8 w-8 text-red-600 animate-bounce"/>
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-800">تحديث هام مطلوب</h3>
+                        <p className="text-sm text-slate-600 font-medium">
+                            يتوفر إصدار جديد من التطبيق ({nativeUpdatePrompt.versionString}). يجب عليك تحميل هذا التحديث للاستمرار في استخدام التطبيق.
+                        </p>
+                        {nativeUpdatePrompt.releaseNotes && (
+                            <div className="bg-gray-50 p-3 rounded-lg text-xs text-gray-700 text-right border border-gray-200">
+                                <strong>ميزات التحديث:</strong><br/>
+                                {nativeUpdatePrompt.releaseNotes}
+                            </div>
+                        )}
+                        <button 
+                            onClick={async () => {
+                                await Browser.open({ url: nativeUpdatePrompt.downloadUrl });
+                            }}
+                            className="w-full justify-center rounded-xl bg-red-600 px-4 py-3 text-base font-bold text-white shadow-sm hover:bg-red-700 transition-colors"
+                        >
+                            تحميل التحديث الآن
+                        </button>
+                        {!nativeUpdatePrompt.mandatory && (
+                            <button onClick={() => setNativeUpdatePrompt(null)} className="text-sm text-gray-500 hover:text-gray-700 mt-2">
+                                تخطي في الوقت الحالي
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
+
+           {isUpdateReady && updateBundle && !nativeUpdatePrompt && (
                 <div className="fixed inset-0 bg-slate-900 bg-opacity-80 flex flex-col items-center justify-center z-[100000] p-4 backdrop-blur-sm">
                     <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full text-center space-y-4">
                         <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-sky-100">

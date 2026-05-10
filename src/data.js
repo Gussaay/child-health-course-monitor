@@ -509,7 +509,9 @@ export async function listHealthFacilities(filters = {}, sourceOptions = {}) {
 
     try {
         const querySnapshot = await getData(q, sourceOptions);
-        let facilities = querySnapshot.docs.map(d => ({ id: d.id, ...doc.data() }));
+        
+        // --- 🟢 FIX: d.data() not doc.data() ---
+        let facilities = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
         if (filters.state === 'NOT_ASSIGNED') facilities = facilities.filter(f => !f['الولاية']);
         if (filters.functioningStatus === 'NOT_SET') facilities = facilities.filter(f => f['هل_المؤسسة_تعمل'] == null || f['هل_المؤسسة_تعمل'] === '');
@@ -1489,7 +1491,7 @@ export async function listAllDataForCourse(courseId, sourceOptions = {}) {
     return { allObs, allCases: allCasesWithCorrectness };
 }
 
-// --- UPDATED: FINAL REPORT WITH AUDIT TRAIL ---
+// --- 🟢 UPDATED: FINAL REPORT WITH AUDIT TRAIL 🟢 ---
 export async function upsertFinalReport(payload, userIdentifier = 'Unknown User') {
     const timestamp = serverTimestamp();
     const currentDateISO = new Date().toISOString();
@@ -1501,13 +1503,16 @@ export async function upsertFinalReport(payload, userIdentifier = 'Unknown User'
         
         // Create the log entry for this specific edit
         const editLog = {
-            editedBy: userIdentifier,
+            editor: userIdentifier, // Explicitly tracking the editor
             editedAt: currentDateISO
         };
 
         const writePromise = setDoc(finalReportRef, { 
             ...dataToUpdate, 
             lastUpdatedAt: timestamp,
+            editor: userIdentifier, // Root level storage for quick querying
+            lastEditedBy: userIdentifier,
+            lastEditedAt: currentDateISO,
             editHistory: arrayUnion(editLog) // Safely appends the edit log
         }, { merge: true });
         
@@ -1523,6 +1528,9 @@ export async function upsertFinalReport(payload, userIdentifier = 'Unknown User'
             createdBy: userIdentifier,
             createdAt: currentDateISO,
             lastUpdatedAt: timestamp,
+            editor: userIdentifier,
+            lastEditedBy: userIdentifier,
+            lastEditedAt: currentDateISO,
             editHistory: [] // Initialize empty history array
         });
         

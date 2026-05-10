@@ -1,10 +1,10 @@
 // src/components/FinalReportManager.jsx
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Button, Card, FormGroup, Input, PageHeader, PdfIcon, Select, Table, Textarea, Spinner } from './CommonComponents';
-import { Copy, Image as ImageIcon, Users, BookOpen, Clock } from 'lucide-react'; // <-- Added Clock icon
+import { Copy, Image as ImageIcon, Users, BookOpen } from 'lucide-react';
 import { useDataCache } from '../DataContext';
 import { STATE_LOCALITIES } from './constants';
-import html2canvas from 'html2canvas'; 
+import html2canvas from 'html2canvas'; // <-- Added proper import
 
 // --- Shared Utility: Copy as Image ---
 const copyAsImage = async (ref) => {
@@ -12,10 +12,11 @@ const copyAsImage = async (ref) => {
         const node = ref.current;
         if (!node) return;
         
+        // Use the imported html2canvas directly
         const canvas = await html2canvas(node, {
-            backgroundColor: '#ffffff', 
-            scale: 2, 
-            useCORS: true 
+            backgroundColor: '#ffffff', // Ensure white background
+            scale: 2, // Better resolution
+            useCORS: true // Help load external images/fonts
         });
 
         canvas.toBlob(async (blob) => {
@@ -24,6 +25,7 @@ const copyAsImage = async (ref) => {
                 return;
             }
             try {
+                // Modern Clipboard API requires secure context (HTTPS)
                 const item = new window.ClipboardItem({ 'image/png': blob });
                 await navigator.clipboard.write([item]);
                 alert("Image copied to clipboard!");
@@ -93,6 +95,7 @@ const ParticipantGroupTable = ({ subCourse, group, participantHeaders }) => {
                     </Button>
                 </div>
             </div>
+            {/* Added styling to tableRef container so it copies cleanly */}
             <div ref={tableRef} className="bg-white overflow-x-auto p-4" dir={isArabic ? "rtl" : "ltr"}>
                 <table className="min-w-full divide-y divide-blue-200">
                     <thead className="bg-blue-600">
@@ -123,7 +126,7 @@ const ParticipantGroupTable = ({ subCourse, group, participantHeaders }) => {
     );
 };
 
-// --- Annex Section Component ---
+// --- Annex Section Component (Refactored to accept pre-calculated arrays) ---
 const AnnexSection = ({ groupedParticipants, annexFacilitators }) => {
     const facilitatorTableRef = useRef(null);
 
@@ -142,6 +145,7 @@ const AnnexSection = ({ groupedParticipants, annexFacilitators }) => {
         <div className="mt-10 pt-8 border-t-2 border-blue-200">
             <h2 className="text-2xl font-extrabold mb-6 text-blue-900">Annex: Detailed Rosters</h2>
 
+            {/* Facilitators Table */}
             <div className="mb-10">
                 <div className="bg-white rounded-xl shadow-md border border-blue-200 overflow-hidden">
                     <div className="flex justify-between items-center p-4 bg-blue-50 border-b border-blue-200">
@@ -164,7 +168,9 @@ const AnnexSection = ({ groupedParticipants, annexFacilitators }) => {
                             <thead className="bg-blue-600">
                                 <tr>
                                     {facilitatorHeaders.map((h, i) => (
-                                        <th key={i} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">{h}</th>
+                                        <th key={i} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">
+                                            {h}
+                                        </th>
                                     ))}
                                 </tr>
                             </thead>
@@ -177,7 +183,9 @@ const AnnexSection = ({ groupedParticipants, annexFacilitators }) => {
                                         <td className="px-4 py-3 whitespace-nowrap text-sm text-blue-800 bg-blue-50/50">{f.qualification}</td>
                                     </tr>
                                 )) : (
-                                    <tr><td colSpan="4" className="px-4 py-8 text-center text-sm text-gray-500 italic">No facilitators found.</td></tr>
+                                    <tr>
+                                        <td colSpan="4" className="px-4 py-8 text-center text-sm text-gray-500 italic">No facilitators found.</td>
+                                    </tr>
                                 )}
                             </tbody>
                         </table>
@@ -185,6 +193,7 @@ const AnnexSection = ({ groupedParticipants, annexFacilitators }) => {
                 </div>
             </div>
 
+            {/* Participants Tables by Sub-course */}
             <div>
                 <h3 className="text-xl font-bold text-blue-900 mb-6 flex items-center gap-2">
                     <Users className="w-6 h-6 text-blue-600" />
@@ -195,7 +204,10 @@ const AnnexSection = ({ groupedParticipants, annexFacilitators }) => {
                     {Object.keys(groupedParticipants).length > 0 ? (
                         Object.entries(groupedParticipants).map(([subCourse, group]) => (
                             <ParticipantGroupTable 
-                                key={subCourse} subCourse={subCourse} group={group} participantHeaders={participantHeaders}
+                                key={subCourse}
+                                subCourse={subCourse}
+                                group={group}
+                                participantHeaders={participantHeaders}
                             />
                         ))
                     ) : (
@@ -219,6 +231,7 @@ export function FinalReportManager({
     const [isEditing, setIsEditing] = useState(!initialData);
     const [isDownloading, setIsDownloading] = useState(false);
 
+    // State for all form fields
     const [summary, setSummary] = useState('');
     const [recommendations, setRecommendations] = useState([{ recommendation: '', responsible: '', status: '' }]);
     const [potentialFacilitators, setPotentialFacilitators] = useState([]);
@@ -229,6 +242,8 @@ export function FinalReportManager({
     const [galleryImageUrls, setGalleryImageUrls] = useState(Array(3).fill(null));
     const [participantsForFollowUp, setParticipantsForFollowUp] = useState([{ participant_id: '', phone: '', comment: '' }]);
 
+    // --- SNAPSHOT CALCULATION LOGIC ---
+    // We calculate these based on current state so we can save them as a snapshot
     const currentAnnexFacilitators = useMemo(() => {
         const names = new Set();
         if (course.director) names.add(course.director);
@@ -240,7 +255,9 @@ export function FinalReportManager({
             return {
                 name,
                 phone: details.phone || 'N/A',
-                qualification: details.backgroundQualification === 'Other' ? details.backgroundQualificationOther : (details.backgroundQualification || 'N/A')
+                qualification: details.backgroundQualification === 'Other' 
+                    ? details.backgroundQualificationOther 
+                    : (details.backgroundQualification || 'N/A')
             };
         });
     }, [course, facilitatorsList]);
@@ -255,8 +272,10 @@ export function FinalReportManager({
         return groups;
     }, [participants, course]);
 
+    // Use saved snapshot if viewing, otherwise use currently calculated data
     const finalAnnexFacilitators = initialData?.annexFacilitators || currentAnnexFacilitators;
     const finalGroupedParticipants = initialData?.groupedParticipants || currentGroupedParticipants;
+    // ----------------------------------
 
     useEffect(() => {
         if (initialData) {
@@ -340,6 +359,7 @@ export function FinalReportManager({
             finalGalleryUrls: galleryImageUrls,
             galleryImageFiles: galleryImageFiles,
             participantsForFollowUp: participantsForFollowUp.filter(p => p.participant_id),
+            // INCLUDE TABLES IN SAVE PAYLOAD AS SNAPSHOTS
             annexFacilitators: currentAnnexFacilitators,
             groupedParticipants: currentGroupedParticipants
         };
@@ -508,24 +528,21 @@ export function FinalReportManager({
                         </tbody>
                     </Table>
 
-                    <AnnexSection groupedParticipants={currentGroupedParticipants} annexFacilitators={currentAnnexFacilitators} />
+                    <AnnexSection 
+                        groupedParticipants={currentGroupedParticipants} 
+                        annexFacilitators={currentAnnexFacilitators} 
+                    />
                 </div>
                 <div className="flex gap-2 justify-end mt-6 border-t pt-6 px-6 pb-6"><Button variant="secondary" onClick={handleCancelEdit}>Cancel</Button><Button onClick={handleSave}>Save Final Report</Button></div>
             </Card>
         );
     }
 
-    // --- VARIABLES FOR VIEW MODE ---
     const finalGalleryUrls = initialData?.galleryImageUrls?.filter(url => url) || [];
     const finalFollowUpList = initialData?.participantsForFollowUp?.filter(p => p.participant_id) || [];
     const finalSummary = initialData?.summary || 'No summary provided.';
     const finalRecommendations = initialData?.recommendations?.filter(r => r.recommendation) || [];
     const finalFacilitatorList = initialData?.potentialFacilitators?.filter(f => f.participant_id) || [];
-
-    // --- EXTRACT METADATA FOR AUDIT LOG ---
-    const createdBy = initialData?.createdBy || 'Unknown User';
-    const createdAt = initialData?.createdAt ? new Date(initialData.createdAt).toLocaleString() : 'Unknown Date';
-    const editHistory = initialData?.editHistory || [];
 
     return (
         <Card>
@@ -534,40 +551,7 @@ export function FinalReportManager({
                 subtitle="Review the summary, recommendations, and documents for this course." 
                 actions={canUseFederalManagerAdvancedFeatures && <Button onClick={() => setIsEditing(true)}>Edit Report</Button>} 
             />
-            
             <div className="space-y-8 mt-6 p-6">
-
-                {/* --- HISTORY & AUDIT LOG SECTION --- */}
-                {initialData && (
-                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                        <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
-                            <Clock className="w-5 h-5 text-gray-600" />
-                            Report History & Audit Log
-                        </h3>
-                        <div className="text-sm text-gray-700">
-                            <p className="mb-2">
-                                <span className="font-semibold text-gray-900">Initially Created By:</span> {createdBy} on <span className="font-mono">{createdAt}</span>
-                            </p>
-                            
-                            {editHistory.length > 0 && (
-                                <div className="mt-4 border-t border-gray-200 pt-3">
-                                    <p className="font-semibold text-gray-900 mb-2">Edit History:</p>
-                                    <ul className="space-y-2">
-                                        {editHistory.map((edit, index) => (
-                                            <li key={index} className="flex items-center gap-2 before:content-['•'] before:text-blue-500 before:font-bold">
-                                                <span>
-                                                    Edited by <span className="font-medium">{edit.editedBy}</span> on <span className="font-mono">{new Date(edit.editedAt).toLocaleString()}</span>
-                                                </span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-                {/* ----------------------------------- */}
-
                 <div><h3 className="text-xl font-bold mb-2 text-gray-800">Course Summary</h3><p className="text-gray-700 whitespace-pre-wrap">{finalSummary}</p></div>
                 
                 <div><h3 className="text-xl font-bold mb-2 text-gray-800">Course Recommendations</h3><Table headers={['#', 'Recommendation', 'Responsible', 'Status']}>{finalRecommendations.length > 0 ? (finalRecommendations.map((rec, index) => (<tr key={index}><td className="p-2 border">{index + 1}</td><td className="p-2 border">{rec.recommendation}</td><td className="p-2 border">{rec.responsible}</td><td className="p-2 border capitalize">{rec.status}</td></tr>))) : (<tr><td colSpan="4" className="p-4 text-center text-gray-500">No recommendations were made.</td></tr>)}</Table></div>
@@ -579,6 +563,7 @@ export function FinalReportManager({
                             finalFacilitatorList.map((fac, index) => {
                                 const participant = participants.find(p => p.id === fac.participant_id);
                                 const responsibleFacilitator = course.facilitatorAssignments?.find(f => f.group === participant?.group);
+                                
                                 return (
                                     <tr key={index}>
                                         <td className="p-2 border">{index + 1}</td>
@@ -602,7 +587,10 @@ export function FinalReportManager({
                 </div>
                 {existingPdfUrl && (<div><h3 className="text-xl font-bold mb-2 text-gray-800">Final Report Document</h3><div className="border rounded-lg p-4 flex items-center justify-between"><a href={existingPdfUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-2 font-semibold"><PdfIcon className="text-blue-500 w-6 h-6" /><span>View Uploaded PDF</span></a><Button variant="secondary" onClick={() => handleForceDownload(existingPdfUrl, `Final_Report_${course.course_type}_${course.state}.pdf`)} disabled={isDownloading}>{isDownloading ? <Spinner/> : 'Download'}</Button></div></div>)}
                 
-                <AnnexSection groupedParticipants={finalGroupedParticipants} annexFacilitators={finalAnnexFacilitators} />
+                <AnnexSection 
+                    groupedParticipants={finalGroupedParticipants} 
+                    annexFacilitators={finalAnnexFacilitators} 
+                />
             </div>
             <div className="flex justify-end mt-6 border-t pt-6 px-6 pb-6"><Button variant="secondary" onClick={onCancel}>Back</Button></div>
         </Card>
