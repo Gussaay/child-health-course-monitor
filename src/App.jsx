@@ -832,18 +832,21 @@ export default function App() {
         }
     }, [user, permissionsLoading]);
 
+    // UPDATED AND SECURED checkUserRoleAndPermissions logic
     useEffect(() => {
         const checkUserRoleAndPermissions = async () => {
             setPermissionsLoading(true);
             try {
                 if (user) {
+                    const status = await Network.getStatus();
+                    const isOffline = !status.connected;
+                    
                     const userRef = doc(db, "users", user.uid);
                     let userSnap;
                     
-                    // Safe offline check to prevent app hanging on startup without internet
+                    // Safe offline check
                     try {
-                        const status = await Network.getStatus();
-                        const sourceOptions = status.connected ? {} : { source: 'cache' };
+                        const sourceOptions = isOffline ? { source: 'cache' } : {};
                         userSnap = await getDoc(userRef, sourceOptions);
                     } catch (e) {
                         userSnap = await getDoc(userRef, { source: 'cache' });
@@ -851,26 +854,67 @@ export default function App() {
                     
                     let role; let roles = []; let permissionsData = {};
 
+                    // IF THE DOCUMENT IS MISSING (Either a brand new user, OR offline with a cleared cache)
                     if (!userSnap.exists() || !userSnap.data().role) {
-                        role = 'user';
-                        roles = ['user'];
-                        const rawPerms = DEFAULT_ROLE_PERMISSIONS.user;
-                        permissionsData = applyDerivedPermissions(rawPerms);
-                        await setDoc(userRef, { email: user.email, role: role, roles: roles, permissions: permissionsData, lastLogin: new Date(), assignedState: '' }, { merge: true });
+                        
+                        // 1. Check Local Storage backup first
+                        const backupRole = localStorage.getItem(`backup_role_${user.uid}`);
+                        
+                        if (isOffline && backupRole) {
+                            // Restore from our secondary backup
+                            role = backupRole;
+                            roles = JSON.parse(localStorage.getItem(`backup_roles_${user.uid}`) || `["${role}"]`);
+                            permissionsData = JSON.parse(localStorage.getItem(`backup_perms_${user.uid}`) || "{}");
+                            console.log("Restored user role from localStorage fallback.");
+                        } else {
+                            // Truly no role found
+                            role = 'user';
+                            roles = ['user'];
+                            const rawPerms = DEFAULT_ROLE_PERMISSIONS.user;
+                            permissionsData = applyDerivedPermissions(rawPerms);
+                            
+                            // CRITICAL: ONLY SAVE TO FIREBASE IF ONLINE
+                            // If offline, we give them basic access locally but DO NOT queue a write that overwrites their cloud role later.
+                            if (!isOffline) {
+                                setDoc(userRef, { 
+                                    email: user.email, 
+                                    role: role, 
+                                    roles: roles, 
+                                    permissions: permissionsData, 
+                                    lastLogin: new Date(), 
+                                    assignedState: '' 
+                                }, { merge: true }).catch(err => console.warn("Failed to set default role:", err));
+                            }
+                        }
                     } else {
+                        // USER EXISTS IN FIRESTORE/CACHE - Load Normally
                         role = userSnap.data().role;
                         roles = userSnap.data().roles || [role]; 
                         const ALL_PERMISSIONS_MINIMAL = ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
                         const rawPerms = { ...ALL_PERMISSIONS_MINIMAL, ...(userSnap.data().permissions || {}) };
                         permissionsData = applyDerivedPermissions(rawPerms);
+                        
+                        // 2. Update Local Storage Backup (Secondary Fail-safe)
+                        localStorage.setItem(`backup_role_${user.uid}`, role);
+                        localStorage.setItem(`backup_roles_${user.uid}`, JSON.stringify(roles));
+                        localStorage.setItem(`backup_perms_${user.uid}`, JSON.stringify(permissionsData));
                     }
-                    setUserRole(role); setUserRoles(roles); setUserPermissions(permissionsData); 
-                } else { setUserRole(null); setUserRoles([]); setUserPermissions({}); }
+                    
+                    setUserRole(role); 
+                    setUserRoles(roles); 
+                    setUserPermissions(permissionsData); 
+                } else { 
+                    setUserRole(null); setUserRoles([]); setUserPermissions({}); 
+                }
             } catch (error) {
                 console.error("Error checking user role:", error);
+                // Emergency fallback
                 setUserRole('user'); setUserRoles(['user']); setUserPermissions(applyDerivedPermissions(DEFAULT_ROLE_PERMISSIONS.user));
-            } finally { setPermissionsLoading(false); }
+            } finally { 
+                setPermissionsLoading(false); 
+            }
         };
+        
         checkUserRoleAndPermissions();
     }, [user]);
 

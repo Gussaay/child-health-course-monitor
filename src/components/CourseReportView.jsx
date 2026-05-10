@@ -20,7 +20,9 @@ import { fetchFacilitiesHistoryMultiDate, upsertCourse } from '../data.js';
 import { useAuth } from '../hooks/useAuth';
 import { useDataCache } from '../DataContext';
 import { db } from '../firebase';
-import { doc, getDoc } from 'firebase/firestore'; 
+import { doc, getDoc } from 'firebase/firestore';
+import { ReportsView } from './ReportsView'; 
+import { FinalReportManager } from './FinalReportManager';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, PointElement, LineElement, ChartDataLabels);
 
@@ -39,6 +41,37 @@ const LinkIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
     </svg>
+);
+
+// --- LEGEND COMPONENTS ---
+const LegendBadge = ({ colorClass, label, range }) => (
+    <div className="flex items-center space-x-2 text-sm whitespace-nowrap">
+        <span className={`px-2 py-1 rounded font-semibold ${colorClass} border border-black/10`}>{label}</span>
+        <span className="text-gray-600 font-medium">{range}</span>
+    </div>
+);
+
+const RawScoreLegend = () => (
+    <div className="flex flex-wrap gap-4 p-3 bg-gray-50 border border-gray-200 rounded-lg mb-4 text-sm print-hide">
+        <span className="font-bold text-gray-700 self-center mr-2">Practical / Daily Score Legend:</span>
+        <LegendBadge colorClass="bg-green-200 text-green-800" label="Perfect" range="100%" />
+        <LegendBadge colorClass="bg-yellow-200 text-yellow-800" label="Excellent" range="95% - 99.9%" />
+        <LegendBadge colorClass="bg-orange-200 text-orange-800" label="Good" range="90% - 94.9%" />
+        <LegendBadge colorClass="bg-red-200 text-red-800" label="Fail" range="< 90%" />
+        <LegendBadge colorClass="bg-gray-700 text-white" label="Data Incomplete" range="N/A" />
+    </div>
+);
+
+const ImprovementScoreLegend = () => (
+    <div className="flex flex-wrap gap-4 p-3 bg-gray-50 border border-gray-200 rounded-lg mb-4 text-sm print-hide">
+        <span className="font-bold text-gray-700 self-center mr-2">Test Improvement Legend:</span>
+        <LegendBadge colorClass="bg-green-200 text-green-800" label="Perfect" range="> 50%" />
+        <LegendBadge colorClass="bg-yellow-200 text-yellow-800" label="Excellent" range="30% - 50%" />
+        <LegendBadge colorClass="bg-gray-200 text-gray-800" label="Good" range="15% - 29.9%" />
+        <LegendBadge colorClass="bg-orange-200 text-orange-800" label="Fair" range="0% - 14.9%" />
+        <LegendBadge colorClass="bg-red-200 text-red-800" label="Fail" range="< 0%" />
+        <LegendBadge colorClass="bg-gray-700 text-white" label="Data Incomplete" range="N/A" />
+    </div>
 );
 
 // --- INTERNAL COMPONENT: ShareModal ---
@@ -469,8 +502,10 @@ const generateFullCourseReportPdf = async (course, quality, onSuccess, onError, 
 // --- MAIN COMPONENT: CourseReportView ---
 export function CourseReportView({ 
     course, onBack, participants: rawParticipants, allObs: rawObs, allCases: rawCases, finalReportData, onEditFinalReport, 
-    onDeletePdf, onViewParticipantReport, isSharedView = false, onShare, setToast, allHealthFacilities: rawFacilities
+    onDeletePdf, onViewParticipantReport, isSharedView = false, onShare, setToast, allHealthFacilities: rawFacilities,
+    onSaveFinalReport
 }) {
+    const [activeTab, setActiveTab] = useState('full-course-report');
     
     // --- APPLY SOFT DELETE FILTERS ---
     const participants = useMemo(() => (rawParticipants || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true"), [rawParticipants]);
@@ -520,11 +555,19 @@ export function CourseReportView({
     const dataCache = useDataCache();
     const fetchCourses = dataCache?.fetchCourses;
     const [isSuperUser, setIsSuperUser] = useState(false);
+    const [isFederalManager, setIsFederalManager] = useState(false);
+
     useEffect(() => {
         if (user && !isSharedView) {
             getDoc(doc(db, 'users', user.uid)).then(snap => {
-                if (snap.exists() && snap.data().permissions?.canUseSuperUserAdvancedFeatures) {
-                    setIsSuperUser(true);
+                if (snap.exists()) {
+                    const permissions = snap.data().permissions;
+                    if (permissions?.canUseSuperUserAdvancedFeatures) {
+                        setIsSuperUser(true);
+                    }
+                    if (permissions?.canUseFederalManagerAdvancedFeatures) {
+                        setIsFederalManager(true);
+                    }
                 }
             }).catch(e => console.error(e));
         }
@@ -1041,30 +1084,63 @@ export function CourseReportView({
     return (
         <div className="flex flex-col gap-6 pb-28 lg:pb-8 w-full max-w-full min-w-0">
             <PageHeader 
-                title="Full Course Report" 
+                title={activeTab === 'full-course-report' ? "Full Course Report" : activeTab === 'final-report' ? "Final Course Report" : "Individual Participant Report"} 
                 subtitle={`${course.course_type} - ${course.state}`} 
                 actions={
-                    isSharedView ? (
-                        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full sm:w-auto justify-start sm:justify-end">
-                            <Button onClick={() => handlePdfGeneration('print')} variant="secondary" disabled={isPdfGenerating} className="w-full sm:w-auto"><PdfIcon /> Export for Print</Button>
-                            <Button onClick={() => handlePdfGeneration('screen')} variant="secondary" disabled={isPdfGenerating} className="w-full sm:w-auto"><PdfIcon /> Export for Sharing</Button>
-                            {isPdfGenerating && <div className="flex items-center gap-2 text-gray-500 justify-center w-full sm:w-auto"><Spinner size="sm" /><span>Generating...</span></div>}
-                        </div>
+                    activeTab === 'full-course-report' ? (
+                        isSharedView ? (
+                            <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full sm:w-auto justify-start sm:justify-end">
+                                <Button onClick={() => handlePdfGeneration('print')} variant="secondary" disabled={isPdfGenerating} className="w-full sm:w-auto"><PdfIcon /> Export for Print</Button>
+                                <Button onClick={() => handlePdfGeneration('screen')} variant="secondary" disabled={isPdfGenerating} className="w-full sm:w-auto"><PdfIcon /> Export for Sharing</Button>
+                                {isPdfGenerating && <div className="flex items-center gap-2 text-gray-500 justify-center w-full sm:w-auto"><Spinner size="sm" /><span>Generating...</span></div>}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full sm:w-auto justify-start sm:justify-end mt-4 sm:mt-0">
+                                <Button onClick={() => setIsShareModalOpen(true)} variant="secondary" disabled={isPdfGenerating} className="w-full sm:w-auto">
+                                    <ShareIcon /> Share
+                                </Button>
+                                <Button onClick={() => handlePdfGeneration('print')} variant="secondary" disabled={isPdfGenerating} className="w-full sm:w-auto"><PdfIcon /> Export for Print</Button>
+                                <Button onClick={() => handlePdfGeneration('screen')} variant="secondary" disabled={isPdfGenerating} className="w-full sm:w-auto"><PdfIcon /> Export for Sharing</Button>
+                                {isPdfGenerating && <div className="flex items-center gap-2 text-gray-500 justify-center w-full sm:w-auto"><Spinner size="sm" /><span>Generating...</span></div>}
+                                <Button onClick={onBack} disabled={isPdfGenerating} className="w-full sm:w-auto mt-2 sm:mt-0">Back to List</Button>
+                            </div>
+                        )
                     ) : (
-                        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full sm:w-auto justify-start sm:justify-end mt-4 sm:mt-0">
-                            <Button onClick={() => setIsShareModalOpen(true)} variant="secondary" disabled={isPdfGenerating} className="w-full sm:w-auto">
-                                <ShareIcon /> Share
-                            </Button>
-                            <Button onClick={() => handlePdfGeneration('print')} variant="secondary" disabled={isPdfGenerating} className="w-full sm:w-auto"><PdfIcon /> Export for Print</Button>
-                            <Button onClick={() => handlePdfGeneration('screen')} variant="secondary" disabled={isPdfGenerating} className="w-full sm:w-auto"><PdfIcon /> Export for Sharing</Button>
-                            {isPdfGenerating && <div className="flex items-center gap-2 text-gray-500 justify-center w-full sm:w-auto"><Spinner size="sm" /><span>Generating...</span></div>}
-                            <Button onClick={onBack} disabled={isPdfGenerating} className="w-full sm:w-auto mt-2 sm:mt-0">Back to List</Button>
-                        </div>
+                        !isSharedView ? <Button onClick={onBack} disabled={isPdfGenerating} className="w-full sm:w-auto mt-2 sm:mt-0">Back to List</Button> : null
                     )
                 }
             />
             
-            <div id="full-course-report" className="flex flex-col gap-6 w-full max-w-full min-w-0">
+            <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-4 print-hide">
+                <Button variant="tab" isActive={activeTab === 'full-course-report'} onClick={() => setActiveTab('full-course-report')}>Full Course Report</Button>
+                <Button variant="tab" isActive={activeTab === 'individual-participant-report'} onClick={() => setActiveTab('individual-participant-report')}>Individual Participant Report</Button>
+                
+                {/* FINAL REPORT TAB - Access strictly bound to Federal Manager permissions */}
+                {isFederalManager && !isSharedView && (
+                    <Button variant="tab" isActive={activeTab === 'final-report'} onClick={() => setActiveTab('final-report')}>Final Report</Button>
+                )}
+            </div>
+
+            {/* TAB CONTENT: FINAL REPORT MANAGER */}
+            {activeTab === 'final-report' && isFederalManager && !isSharedView && (
+                <div className="w-full max-w-full min-w-0 mt-4">
+                    <FinalReportManager 
+                        course={course} 
+                        participants={participants} 
+                        onCancel={() => setActiveTab('full-course-report')} 
+                        onSave={async (data) => {
+                            if (onSaveFinalReport) {
+                                await onSaveFinalReport(data);
+                            }
+                        }} 
+                        initialData={activeFinalReport} 
+                        canUseFederalManagerAdvancedFeatures={isFederalManager}
+                    />
+                </div>
+            )}
+
+            {activeTab === 'full-course-report' && (
+                <div id="full-course-report" className="flex flex-col gap-6 w-full max-w-full min-w-0">
                 <Card>
                     <div id="course-info-card" className="relative p-2 w-full max-w-full min-w-0">
                         {!isSharedView && <button onClick={() => handleCopyAsImage('course-info-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
@@ -1082,34 +1158,6 @@ export function CourseReportView({
                     </div>
                 </Card>
 
-                {activeFinalReport && activeFinalReport.pdf_url && (
-                    <Card>
-                        <div className="w-full max-w-full min-w-0">
-                            <h3 className="text-xl font-bold mb-4">Final Report Documents</h3>
-                            <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2">
-                                <Table headers={['Link', 'Actions']}>
-                                    <tr>
-                                        <td className="p-2 border"><a href={activeFinalReport.pdf_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-2"><PdfIcon className="text-blue-500" /> View Report PDF</a></td>
-                                        <td className="p-2 border text-right">
-                                            <div className="flex flex-col sm:flex-row flex-wrap gap-2 justify-start sm:justify-end">
-                                                <a href={activeFinalReport.pdf_url} download={`Final_Report_${course.course_type}_${course.state}.pdf`} className="text-gray-600 hover:text-gray-900 w-full sm:w-auto">
-                                                    <Button variant="secondary" className="w-full sm:w-auto">Download</Button>
-                                                </a>
-                                                {!isSharedView && (
-                                                    <>
-                                                        <Button variant="secondary" onClick={() => onEditFinalReport(course.id)} className="w-full sm:w-auto">Edit</Button>
-                                                        <Button variant="danger" onClick={() => onDeletePdf(course.id)} className="w-full sm:w-auto">Delete PDF</Button>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </Table>
-                            </div>
-                        </div>
-                    </Card>
-                )}
-                
                 {availableSubTypes.length > 1 && (
                     <Card>
                         <div className="p-4 bg-gray-50 border-b border-gray-100 w-full max-w-full min-w-0">
@@ -1375,7 +1423,12 @@ export function CourseReportView({
                 )}
 
                 <div id="daily-tables-section" className="w-full max-w-full min-w-0">
-                    {(hasDailyCaseData || hasDailySkillData) && <h3 className="text-xl font-bold mb-4 px-2">Daily Performance Tables</h3>}
+                    {(hasDailyCaseData || hasDailySkillData) && (
+                        <>
+                            <h3 className="text-xl font-bold mb-4 px-2">Daily Performance Tables</h3>
+                            <RawScoreLegend />
+                        </>
+                    )}
                     <div id="daily-tables-grid" className="flex flex-col lg:flex-row gap-6 w-full max-w-full min-w-0">
                         {hasDailyCaseData && (
                             <div className="w-full min-w-0 flex-1">
@@ -1483,6 +1536,13 @@ export function CourseReportView({
                          <div id="participant-results-card" className="relative p-2 w-full max-w-full min-w-0">
                             {!isSharedView && <button onClick={() => handleCopyAsImage('participant-results-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title="Copy as Image"><CopyIcon /></button>}
                             <h3 className="text-xl font-bold mb-4">Participant Results</h3>
+                            
+                            {/* Insert Legends Here */}
+                            <div className="flex flex-col gap-2 mb-6">
+                                {showCaseColumns && <RawScoreLegend />}
+                                {showTestScoreColumns && <ImprovementScoreLegend />}
+                            </div>
+
                             {showCaseColumns && (
                                 <div id="participant-summary-table" className="mb-6 w-full max-w-full min-w-0">
                                     <h4 className="text-md font-semibold mb-2 text-gray-700">Participant Score Summary</h4>
@@ -1533,7 +1593,14 @@ export function CourseReportView({
                         </div>
                     </Card>
                 )}
-            </div>
+                </div>
+            )}
+
+            {activeTab === 'individual-participant-report' && (
+                <div className="w-full max-w-full min-w-0 mt-4">
+                    <ReportsView course={course} participants={participants} hideHeader={true} />
+                </div>
+            )}
 
             {/* Modal for Historical Coverage Preview */}
             <Modal isOpen={isCoverageModalOpen} onClose={() => setIsCoverageModalOpen(false)} title="Historical Coverage Baseline" size="lg">

@@ -113,7 +113,7 @@ const addCanvasToPdfOnePage = (doc, headerCanvas, groupCanvas, profile, margin, 
     doc.addImage(groupImgData, profile.imageFormat, xOffset, currentY, finalWidth, finalHeight, undefined, profile.compression);
 };
 
-export function ReportsView({ course, participants, allObs: propAllObs, allCases: propAllCases, allTests: propAllTests }) {
+export function ReportsView({ course, participants, allObs: propAllObs, allCases: propAllCases, allTests: propAllTests, hideHeader }) {
     const [allObs, setAllObs] = useState([]);
     const [allCases, setAllCases] = useState([]);
     const [allTests, setAllTests] = useState([]); 
@@ -188,7 +188,7 @@ export function ReportsView({ course, participants, allObs: propAllObs, allCases
             `}
             </style>
 
-            <PageHeader title={`${course.course_type} Reports`} subtitle={`${course.state} / ${course.locality}`} className="print-hide" />
+            {!hideHeader && <PageHeader title="Individual Participant Report" subtitle={`${course.course_type} - ${course.state} / ${course.locality}`} className="print-hide" />}
             
             {hasTestReports && (
                 <div className="flex gap-2 mb-6 print-hide">
@@ -372,7 +372,7 @@ function CourseTestReports({ course, participants, allTests }) {
     return (
         <div className="mt-6 printable-area" id="test-report-container">
             <div className="report-header mb-4 p-4" id="test-report-header">
-                <h2 className="text-2xl font-bold">{course.course_type} Test Report</h2>
+                <h2 className="text-2xl font-bold">Individual Participant Report (Test Scores)</h2>
                 <h3 className="text-lg text-gray-700">{course.state} / {course.locality}</h3>
                 <h4 className="text-md text-gray-600">Report Type: {tab === 'summary' ? 'Score Summary' : `Detailed Matrix (${testTypeFilter === 'pre-test' ? 'Pre-Test' : 'Post-Test'})`}</h4>
             </div>
@@ -647,7 +647,7 @@ function ImnciReports({ course, participants, allObs, allCases }) {
     return (
         <div className="mt-6 printable-area" id="imnci-report-container">
             <div className="report-header mb-4 px-1" id="imnci-report-header">
-                <h2 className="text-2xl font-bold">{course.course_type} Report</h2>
+                <h2 className="text-2xl font-bold">Individual Participant Report</h2>
                 <h3 className="text-lg text-gray-700">{course.state} / {course.locality}</h3>
                 <h4 className="text-md text-gray-600">Age Group: {age === 'LT2M' ? '0-2 months' : '2-59 months'}</h4>
             </div>
@@ -817,7 +817,7 @@ function EtatReports({ course, participants, allObs, allCases }) {
     return (
         <div className="mt-6 printable-area" id="etat-report-container">
             <div className="report-header mb-4 px-1" id="etat-report-header">
-                <h2 className="text-2xl font-bold">{course.course_type} Report</h2>
+                <h2 className="text-2xl font-bold">Individual Participant Report</h2>
                 <h3 className="text-lg text-gray-700">{course.state} / {course.locality}</h3>
             </div>
 
@@ -1021,7 +1021,7 @@ function IccmReports({ course, participants, allObs, allCases }) {
     return (
         <div className="mt-6 printable-area" id="iccm-report-container">
             <div className="report-header mb-4 px-1" id="iccm-report-header">
-                <h2 className="text-2xl font-bold">{course.course_type} Report</h2>
+                <h2 className="text-2xl font-bold">Individual Participant Report</h2>
                 <h3 className="text-lg text-gray-700">{course.state} / {course.locality}</h3>
             </div>
 
@@ -1290,7 +1290,7 @@ function EencReports({ course, participants, allObs, allCases }) {
     return (
         <div className="mt-6 printable-area" id="eenc-report-container">
             <div className="report-header mb-4 px-1" id="eenc-report-header">
-                <h2 className="text-2xl font-bold">{course.course_type} Report</h2>
+                <h2 className="text-2xl font-bold">Individual Participant Report</h2>
                 <h3 className="text-lg text-gray-700">{course.state} / {course.locality}</h3>
             </div>
 

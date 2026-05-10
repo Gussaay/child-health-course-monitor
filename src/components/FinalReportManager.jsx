@@ -1,29 +1,263 @@
 // src/components/FinalReportManager.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Button, Card, FormGroup, Input, PageHeader, PdfIcon, Select, Table, Textarea, Spinner } from './CommonComponents';
+import { Copy, Image as ImageIcon, Users, BookOpen, Clock } from 'lucide-react'; // <-- Added Clock icon
+import { useDataCache } from '../DataContext';
+import { STATE_LOCALITIES } from './constants';
+import html2canvas from 'html2canvas'; 
+
+// --- Shared Utility: Copy as Image ---
+const copyAsImage = async (ref) => {
+    try {
+        const node = ref.current;
+        if (!node) return;
+        
+        const canvas = await html2canvas(node, {
+            backgroundColor: '#ffffff', 
+            scale: 2, 
+            useCORS: true 
+        });
+
+        canvas.toBlob(async (blob) => {
+            if (!blob) {
+                alert("Failed to create image blob.");
+                return;
+            }
+            try {
+                const item = new window.ClipboardItem({ 'image/png': blob });
+                await navigator.clipboard.write([item]);
+                alert("Image copied to clipboard!");
+            } catch (err) {
+                console.error("Clipboard API failed:", err);
+                alert("Failed to copy image. Your browser might require HTTPS or strict permissions.");
+            }
+        }, 'image/png');
+    } catch (err) {
+        console.error("HTML2Canvas Error:", err);
+        alert("Failed to generate image.");
+    }
+};
+
+// --- Sub-component for individual participant groups ---
+const ParticipantGroupTable = ({ subCourse, group, participantHeaders }) => {
+    const tableRef = useRef(null);
+
+    const isArabic = subCourse && subCourse.toLowerCase().includes('medical assist');
+    
+    const displayHeaders = isArabic 
+        ? ['الرقم', 'الاسم', 'المسمى الوظيفي', 'الولاية', 'المحلية', 'المؤسسة', 'رقم الهاتف']
+        : participantHeaders;
+
+    const getDisplayState = (state) => {
+        if (!isArabic || !state) return state;
+        return STATE_LOCALITIES[state]?.ar || state;
+    };
+
+    const getDisplayLocality = (state, locality) => {
+        if (!isArabic || !state || !locality) return locality;
+        const stateData = STATE_LOCALITIES[state];
+        if (!stateData || !stateData.localities) return locality;
+        const locData = stateData.localities.find(l => l.en === locality);
+        return locData ? locData.ar : locality;
+    };
+
+    const copyAsText = () => {
+        const rows = group.map((p, index) => [
+            index + 1, 
+            p.name, 
+            p.job_title, 
+            getDisplayState(p.state), 
+            getDisplayLocality(p.state, p.locality), 
+            p.center_name || p.department || 'N/A', 
+            p.phone || 'N/A'
+        ]);
+        const tsv = [displayHeaders.join('\t'), ...rows.map(row => row.join('\t'))].join('\n');
+        navigator.clipboard.writeText(tsv)
+            .then(() => alert(`Table for ${subCourse} copied as text!`))
+            .catch(err => alert("Failed to copy table."));
+    };
+
+    return (
+        <div className="bg-white rounded-xl shadow-md border border-blue-200 overflow-hidden">
+            <div className="flex justify-between items-center p-4 bg-blue-50 border-b border-blue-200" dir={isArabic ? "rtl" : "ltr"}>
+                <h4 className="text-lg font-bold text-blue-900 flex items-center gap-2">
+                    <BookOpen className={`w-5 h-5 text-blue-600 ${isArabic ? 'ml-2 mr-0' : 'mr-2 ml-0'}`} />
+                    {subCourse}
+                </h4>
+                <div className="flex gap-2">
+                    <Button variant="secondary" size="sm" onClick={copyAsText} className="bg-white text-blue-700 border-blue-300 hover:bg-blue-100">
+                        <Copy className={`w-4 h-4 ${isArabic ? 'ml-2 mr-0' : 'mr-2 ml-0'}`} /> {isArabic ? 'نسخ كجدول' : 'Copy as Table'}
+                    </Button>
+                    <Button variant="secondary" size="sm" onClick={() => copyAsImage(tableRef)} className="bg-white text-blue-700 border-blue-300 hover:bg-blue-100">
+                        <ImageIcon className={`w-4 h-4 ${isArabic ? 'ml-2 mr-0' : 'mr-2 ml-0'}`} /> {isArabic ? 'نسخ كصورة' : 'Copy as Image'}
+                    </Button>
+                </div>
+            </div>
+            <div ref={tableRef} className="bg-white overflow-x-auto p-4" dir={isArabic ? "rtl" : "ltr"}>
+                <table className="min-w-full divide-y divide-blue-200">
+                    <thead className="bg-blue-600">
+                        <tr>
+                            {displayHeaders.map((h, i) => (
+                                <th key={i} className="px-4 py-3 text-start text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">
+                                    {h}
+                                </th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-blue-100">
+                        {group.map((p, i) => (
+                            <tr key={i} className="hover:bg-blue-50 transition-colors">
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 font-medium text-start">{i + 1}</td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-semibold text-start">{p.name}</td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-blue-800 bg-blue-50/50 text-start">{p.job_title}</td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 text-start">{getDisplayState(p.state)}</td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 text-start">{getDisplayLocality(p.state, p.locality)}</td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 text-start">{p.center_name || p.department || 'N/A'}</td>
+                                <td className={`px-4 py-3 whitespace-nowrap text-sm text-gray-700 text-start ${isArabic ? '' : 'font-mono'}`} dir="ltr">{p.phone || 'N/A'}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+};
+
+// --- Annex Section Component ---
+const AnnexSection = ({ groupedParticipants, annexFacilitators }) => {
+    const facilitatorTableRef = useRef(null);
+
+    const facilitatorHeaders = ['#', 'Facilitator Name', 'Phone Number', 'Qualification'];
+    const participantHeaders = ['#', 'Participant Name', 'Job Title', 'State', 'Locality', 'Facility', 'Phone Number'];
+
+    const copyFacilitatorsAsText = () => {
+        const rows = annexFacilitators.map((f, i) => [i + 1, f.name, f.phone, f.qualification]);
+        const tsv = [facilitatorHeaders.join('\t'), ...rows.map(row => row.join('\t'))].join('\n');
+        navigator.clipboard.writeText(tsv)
+            .then(() => alert("Table copied as text!"))
+            .catch(err => alert("Failed to copy table."));
+    };
+
+    return (
+        <div className="mt-10 pt-8 border-t-2 border-blue-200">
+            <h2 className="text-2xl font-extrabold mb-6 text-blue-900">Annex: Detailed Rosters</h2>
+
+            <div className="mb-10">
+                <div className="bg-white rounded-xl shadow-md border border-blue-200 overflow-hidden">
+                    <div className="flex justify-between items-center p-4 bg-blue-50 border-b border-blue-200">
+                        <h3 className="text-xl font-bold text-blue-900 flex items-center gap-2">
+                            <Users className="w-6 h-6 text-blue-600" />
+                            Course Facilitators
+                        </h3>
+                        <div className="flex gap-2">
+                            <Button variant="secondary" size="sm" onClick={copyFacilitatorsAsText} className="bg-white text-blue-700 border-blue-300 hover:bg-blue-100">
+                                <Copy className="w-4 h-4 mr-2" /> Copy as Table
+                            </Button>
+                            <Button variant="secondary" size="sm" onClick={() => copyAsImage(facilitatorTableRef)} className="bg-white text-blue-700 border-blue-300 hover:bg-blue-100">
+                                <ImageIcon className="w-4 h-4 mr-2" /> Copy as Image
+                            </Button>
+                        </div>
+                    </div>
+                    
+                    <div ref={facilitatorTableRef} className="bg-white overflow-x-auto p-4">
+                        <table className="min-w-full divide-y divide-blue-200">
+                            <thead className="bg-blue-600">
+                                <tr>
+                                    {facilitatorHeaders.map((h, i) => (
+                                        <th key={i} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">{h}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-blue-100">
+                                {annexFacilitators.length > 0 ? annexFacilitators.map((f, i) => (
+                                    <tr key={i} className="hover:bg-blue-50 transition-colors">
+                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 font-medium">{i + 1}</td>
+                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-semibold">{f.name}</td>
+                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 font-mono">{f.phone}</td>
+                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-blue-800 bg-blue-50/50">{f.qualification}</td>
+                                    </tr>
+                                )) : (
+                                    <tr><td colSpan="4" className="px-4 py-8 text-center text-sm text-gray-500 italic">No facilitators found.</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h3 className="text-xl font-bold text-blue-900 mb-6 flex items-center gap-2">
+                    <Users className="w-6 h-6 text-blue-600" />
+                    Course Participants (By Sub-course)
+                </h3>
+                
+                <div className="space-y-8">
+                    {Object.keys(groupedParticipants).length > 0 ? (
+                        Object.entries(groupedParticipants).map(([subCourse, group]) => (
+                            <ParticipantGroupTable 
+                                key={subCourse} subCourse={subCourse} group={group} participantHeaders={participantHeaders}
+                            />
+                        ))
+                    ) : (
+                        <div className="p-8 text-center text-gray-500 bg-white rounded-xl shadow-sm border border-blue-200 italic">
+                            No participants found for this course.
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
 
 export function FinalReportManager({ 
     course, participants, onCancel, onSave, initialData, 
-    // --- UPDATED PERMISSION PROP ---
     canUseFederalManagerAdvancedFeatures
 }) {
+    const { facilitators } = useDataCache();
+    const facilitatorsList = facilitators || [];
+
     const [isEditing, setIsEditing] = useState(!initialData);
     const [isDownloading, setIsDownloading] = useState(false);
 
-    // State for all form fields
     const [summary, setSummary] = useState('');
     const [recommendations, setRecommendations] = useState([{ recommendation: '', responsible: '', status: '' }]);
     const [potentialFacilitators, setPotentialFacilitators] = useState([]);
     const [pdfFile, setPdfFile] = useState(null);
     const [existingPdfUrl, setExistingPdfUrl] = useState(null);
     const [fileName, setFileName] = useState(null);
-    // New State for Gallery and Follow-up
     const [galleryImageFiles, setGalleryImageFiles] = useState({});
     const [galleryImageUrls, setGalleryImageUrls] = useState(Array(3).fill(null));
     const [participantsForFollowUp, setParticipantsForFollowUp] = useState([{ participant_id: '', phone: '', comment: '' }]);
 
+    const currentAnnexFacilitators = useMemo(() => {
+        const names = new Set();
+        if (course.director) names.add(course.director);
+        if (course.clinical_instructor) names.add(course.clinical_instructor);
+        if (course.facilitators) course.facilitators.forEach(f => names.add(f));
 
-    // Effect to populate the form's state when initialData is provided
+        return Array.from(names).map(name => {
+            const details = facilitatorsList.find(f => f.name === name) || {};
+            return {
+                name,
+                phone: details.phone || 'N/A',
+                qualification: details.backgroundQualification === 'Other' ? details.backgroundQualificationOther : (details.backgroundQualification || 'N/A')
+            };
+        });
+    }, [course, facilitatorsList]);
+
+    const currentGroupedParticipants = useMemo(() => {
+        const groups = {};
+        (participants || []).forEach(p => {
+            const subCourse = p.imci_sub_type || course?.facilitatorAssignments?.find(a => a.group === p.group)?.imci_sub_type || 'Unspecified Sub-course';
+            if (!groups[subCourse]) groups[subCourse] = [];
+            groups[subCourse].push(p);
+        });
+        return groups;
+    }, [participants, course]);
+
+    const finalAnnexFacilitators = initialData?.annexFacilitators || currentAnnexFacilitators;
+    const finalGroupedParticipants = initialData?.groupedParticipants || currentGroupedParticipants;
+
     useEffect(() => {
         if (initialData) {
             setSummary(initialData.summary || '');
@@ -32,7 +266,6 @@ export function FinalReportManager({
             setExistingPdfUrl(initialData.pdfUrl || null);
             setFileName(initialData.pdfUrl ? 'Existing PDF' : null);
             
-            // Populate new state
             const existingImages = initialData.galleryImageUrls || [];
             const urls = Array(3).fill(null);
             existingImages.forEach((url, index) => urls[index] = url);
@@ -86,17 +319,12 @@ export function FinalReportManager({
     };
 
     const handleSave = async () => {
-        
-        // Enrich the potentialFacilitators array with participant names before saving
-        // This ensures the name is saved even if the user didn't change the dropdown
         const finalPotentialFacilitators = potentialFacilitators
             .filter(f => f.participant_id)
             .map(fac => {
-                // Find the participant from the main list
                 const participant = participants.find(p => p.id === fac.participant_id);
                 return {
                     participant_id: fac.participant_id,
-                    // Ensure participant_name is saved
                     participant_name: participant ? participant.name : (fac.participant_name || 'N/A') 
                 };
             });
@@ -105,14 +333,15 @@ export function FinalReportManager({
             courseId: course.id,
             summary,
             recommendations: recommendations.filter(r => r.recommendation),
-            potentialFacilitators: finalPotentialFacilitators, // <-- Use the enriched array
+            potentialFacilitators: finalPotentialFacilitators,
             pdfFile,
             existingPdfUrl: existingPdfUrl,
-            // Pass new data for processing in App.jsx
             originalGalleryUrls: initialData?.galleryImageUrls || [],
             finalGalleryUrls: galleryImageUrls,
             galleryImageFiles: galleryImageFiles,
             participantsForFollowUp: participantsForFollowUp.filter(p => p.participant_id),
+            annexFacilitators: currentAnnexFacilitators,
+            groupedParticipants: currentGroupedParticipants
         };
         
         if (initialData?.id) {
@@ -122,7 +351,6 @@ export function FinalReportManager({
         await onSave(finalReportData);
     };
     
-    // Form update handlers
     const addRecommendation = () => setRecommendations([...recommendations, { recommendation: '', responsible: '', status: '' }]);
     const updateRecommendation = (index, field, value) => {
         const newRecs = [...recommendations];
@@ -154,7 +382,6 @@ export function FinalReportManager({
         }
     };
     
-    // --- New Handlers for Gallery and Follow-up ---
     const handleGalleryImageUpload = (e, index) => {
         const file = e.target.files[0];
         if (file) {
@@ -193,7 +420,6 @@ export function FinalReportManager({
         setParticipantsForFollowUp(newFollowUps);
     };
 
-    // --- Conditional Rendering: EDIT MODE ---
     if (isEditing) {
         return (
             <Card>
@@ -281,20 +507,25 @@ export function FinalReportManager({
                             </tr>
                         </tbody>
                     </Table>
+
+                    <AnnexSection groupedParticipants={currentGroupedParticipants} annexFacilitators={currentAnnexFacilitators} />
                 </div>
                 <div className="flex gap-2 justify-end mt-6 border-t pt-6 px-6 pb-6"><Button variant="secondary" onClick={handleCancelEdit}>Cancel</Button><Button onClick={handleSave}>Save Final Report</Button></div>
             </Card>
         );
     }
 
-    // --- Conditional Rendering: VIEW MODE ---
-    
-    // Read directly from initialData prop for view mode
+    // --- VARIABLES FOR VIEW MODE ---
     const finalGalleryUrls = initialData?.galleryImageUrls?.filter(url => url) || [];
     const finalFollowUpList = initialData?.participantsForFollowUp?.filter(p => p.participant_id) || [];
     const finalSummary = initialData?.summary || 'No summary provided.';
     const finalRecommendations = initialData?.recommendations?.filter(r => r.recommendation) || [];
     const finalFacilitatorList = initialData?.potentialFacilitators?.filter(f => f.participant_id) || [];
+
+    // --- EXTRACT METADATA FOR AUDIT LOG ---
+    const createdBy = initialData?.createdBy || 'Unknown User';
+    const createdAt = initialData?.createdAt ? new Date(initialData.createdAt).toLocaleString() : 'Unknown Date';
+    const editHistory = initialData?.editHistory || [];
 
     return (
         <Card>
@@ -303,39 +534,65 @@ export function FinalReportManager({
                 subtitle="Review the summary, recommendations, and documents for this course." 
                 actions={canUseFederalManagerAdvancedFeatures && <Button onClick={() => setIsEditing(true)}>Edit Report</Button>} 
             />
+            
             <div className="space-y-8 mt-6 p-6">
+
+                {/* --- HISTORY & AUDIT LOG SECTION --- */}
+                {initialData && (
+                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                        <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                            <Clock className="w-5 h-5 text-gray-600" />
+                            Report History & Audit Log
+                        </h3>
+                        <div className="text-sm text-gray-700">
+                            <p className="mb-2">
+                                <span className="font-semibold text-gray-900">Initially Created By:</span> {createdBy} on <span className="font-mono">{createdAt}</span>
+                            </p>
+                            
+                            {editHistory.length > 0 && (
+                                <div className="mt-4 border-t border-gray-200 pt-3">
+                                    <p className="font-semibold text-gray-900 mb-2">Edit History:</p>
+                                    <ul className="space-y-2">
+                                        {editHistory.map((edit, index) => (
+                                            <li key={index} className="flex items-center gap-2 before:content-['•'] before:text-blue-500 before:font-bold">
+                                                <span>
+                                                    Edited by <span className="font-medium">{edit.editedBy}</span> on <span className="font-mono">{new Date(edit.editedAt).toLocaleString()}</span>
+                                                </span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+                {/* ----------------------------------- */}
+
                 <div><h3 className="text-xl font-bold mb-2 text-gray-800">Course Summary</h3><p className="text-gray-700 whitespace-pre-wrap">{finalSummary}</p></div>
                 
                 <div><h3 className="text-xl font-bold mb-2 text-gray-800">Course Recommendations</h3><Table headers={['#', 'Recommendation', 'Responsible', 'Status']}>{finalRecommendations.length > 0 ? (finalRecommendations.map((rec, index) => (<tr key={index}><td className="p-2 border">{index + 1}</td><td className="p-2 border">{rec.recommendation}</td><td className="p-2 border">{rec.responsible}</td><td className="p-2 border capitalize">{rec.status}</td></tr>))) : (<tr><td colSpan="4" className="p-4 text-center text-gray-500">No recommendations were made.</td></tr>)}</Table></div>
                 
-                {/* --- THIS IS THE FIX --- */}
                 <div>
                     <h3 className="text-xl font-bold mb-2 text-gray-800">Potential Facilitators</h3>
-                    {/* Updated headers */}
                     <Table headers={['#', 'Participant Name', 'Phone Number', 'Responsible Facilitator']}>
                         {finalFacilitatorList.length > 0 ? (
                             finalFacilitatorList.map((fac, index) => {
-                                // Added lookup logic, same as in Edit Mode
                                 const participant = participants.find(p => p.id === fac.participant_id);
                                 const responsibleFacilitator = course.facilitatorAssignments?.find(f => f.group === participant?.group);
-                                
                                 return (
                                     <tr key={index}>
                                         <td className="p-2 border">{index + 1}</td>
                                         <td className="p-2 border">{fac.participant_name || 'N/A'}</td>
-                                        {/* Added new columns */}
                                         <td className="p-2 border">{participant?.phone || 'N/A'}</td>
                                         <td className="p-2 border">{responsibleFacilitator?.name || 'N/A'}</td>
                                     </tr>
                                 );
                             })
                         ) : (
-                            // Updated colspan
                             <tr><td colSpan="4" className="p-4 text-center text-gray-500">No potential facilitators were identified.</td></tr>
                         )}
                     </Table>
                 </div>
-                {/* --- END FIX --- */}
                 
                 <div><h3 className="text-xl font-bold mb-2 text-gray-800">Participants Requiring Follow-up</h3><Table headers={['#', 'Participant Name', 'Phone', 'Comment / Action Required']}>{finalFollowUpList.length > 0 ? (finalFollowUpList.map((p, index) => (<tr key={index}><td className="p-2 border">{index + 1}</td><td className="p-2 border">{p.participant_name}</td><td className="p-2 border">{p.phone}</td><td className="p-2 border">{p.comment}</td></tr>))) : (<tr><td colSpan="4" className="p-4 text-center text-gray-500">No participants were marked for follow-up.</td></tr>)}</Table></div>
                 
@@ -344,6 +601,8 @@ export function FinalReportManager({
                     {finalGalleryUrls.length > 0 ? (<div className="grid grid-cols-1 md:grid-cols-3 gap-4">{finalGalleryUrls.map((url, index) => (<a key={index} href={url} target="_blank" rel="noopener noreferrer"><img src={url} alt={`Gallery item ${index + 1}`} className="w-full h-48 object-cover rounded-lg shadow-md hover:shadow-xl transition-shadow" /></a>))}</div>) : (<p className="text-gray-500">No images were added to the gallery.</p>)}
                 </div>
                 {existingPdfUrl && (<div><h3 className="text-xl font-bold mb-2 text-gray-800">Final Report Document</h3><div className="border rounded-lg p-4 flex items-center justify-between"><a href={existingPdfUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-2 font-semibold"><PdfIcon className="text-blue-500 w-6 h-6" /><span>View Uploaded PDF</span></a><Button variant="secondary" onClick={() => handleForceDownload(existingPdfUrl, `Final_Report_${course.course_type}_${course.state}.pdf`)} disabled={isDownloading}>{isDownloading ? <Spinner/> : 'Download'}</Button></div></div>)}
+                
+                <AnnexSection groupedParticipants={finalGroupedParticipants} annexFacilitators={finalAnnexFacilitators} />
             </div>
             <div className="flex justify-end mt-6 border-t pt-6 px-6 pb-6"><Button variant="secondary" onClick={onCancel}>Back</Button></div>
         </Card>
