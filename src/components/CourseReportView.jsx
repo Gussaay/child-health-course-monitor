@@ -611,8 +611,7 @@ export function CourseReportView({
         setEditableCoverageData(prev => {
             const newData = { ...prev };
             let target;
-            if (level === 'national') target = newData.nationalCov;
-            else if (level === 'state') target = newData.stateCoverage[index];
+            if (level === 'state') target = newData.stateCoverage[index];
             else if (level === 'locality') target = newData.localityCoverage[index];
 
             target[field] = val;
@@ -825,20 +824,13 @@ export function CourseReportView({
             const historicalFacilitiesData = await fetchFacilitiesHistoryMultiDate(combinedStates, [course.start_date]);
             const historicalFacilities = historicalFacilitiesData[0] || [];
 
-            const calculateCoverageInfo = (facilitiesFilter, newImciFilter, isNational = false) => {
+            const calculateCoverageInfo = (facilitiesFilter, newImciFilter) => {
                 const historicalPhcFacilities = historicalFacilities
                     .filter(facilitiesFilter)
                     .filter(f => f['هل_المؤسسة_تعمل'] === 'Yes')
                     .filter(f => ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(f['نوع_المؤسسةالصحية']));
                 
                 let totalPhc = historicalPhcFacilities.length;
-                if (isNational) {
-                    totalPhc = (allHealthFacilities || [])
-                        .filter(facilitiesFilter)
-                        .filter(f => f['هل_المؤسسة_تعمل'] === 'Yes')
-                        .filter(f => ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(f['نوع_المؤسسةالصحية']))
-                        .length;
-                }
                 
                 const newPhcImciFacilities = newImciFacilities.filter(f => !f.isHospital);
                 const courseNewPhcs = newPhcImciFacilities.filter(newImciFilter);
@@ -862,25 +854,26 @@ export function CourseReportView({
                 return { totalPhc, phcWithImnciBefore, newPhc, covBefore, covAfter, increase };
             };
 
-            const nationalCov = calculateCoverageInfo(f => f['الولاية'] !== 'إتحادي', () => true, true);
-            
             const stateCoverage = combinedStates.map(s => {
-                const info = calculateCoverageInfo(f => f['الولاية'] === s, f => f.state === s, false);
+                const info = calculateCoverageInfo(f => f['الولاية'] === s, f => f.state === s);
                 return { name: s, ...info };
             });
 
             const localityCoverage = combinedLocalities.map(l => {
-                const info = calculateCoverageInfo(f => f['المحلية'] === l, f => f.locality === l, false);
+                const info = calculateCoverageInfo(f => f['المحلية'] === l, f => f.locality === l);
                 return { name: l, ...info };
             });
 
             const totalBudget = Number(course.course_budget) || 0;
             const costPerParticipant = participants.length > 0 ? totalBudget / participants.length : 0;
-            const costPerNewFacility = nationalCov.newPhc > 0 ? totalBudget / nationalCov.newPhc : 0;
+            
+            // Dynamic cost calculation based on state sums
+            const totalNewPhc = stateCoverage.reduce((sum, s) => sum + s.newPhc, 0);
+            const costPerNewFacility = totalNewPhc > 0 ? totalBudget / totalNewPhc : 0;
 
             setHistoricalCoveragePreview({
                 totalBudget, costPerParticipant, costPerNewFacility, totalNewFacilities: newImciFacilities.length,
-                nationalCov, stateCoverage, localityCoverage,
+                stateCoverage, localityCoverage,
                 retrievedAt: new Date().toISOString()
             });
 
@@ -1295,15 +1288,17 @@ export function CourseReportView({
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-center">
                                 <div className="flex flex-col items-center justify-center p-4 bg-blue-50 rounded-lg border border-blue-100 text-center w-full">
                                     <div className="text-sm font-semibold text-blue-700">Total Investment</div>
-                                    <div className="text-2xl font-bold text-blue-800">${coverageData.totalBudget.toLocaleString()}</div>
+                                    <div className="text-2xl font-bold text-blue-800">${coverageData.totalBudget?.toLocaleString() || '0'}</div>
                                 </div>
                                 <div className="flex flex-col items-center justify-center p-4 bg-yellow-50 rounded-lg border border-yellow-100 text-center w-full">
                                     <div className="text-sm font-semibold text-yellow-700">Cost / Participant</div>
-                                    <div className="text-2xl font-bold text-yellow-800">${Math.round(coverageData.costPerParticipant).toLocaleString()}</div>
+                                    <div className="text-2xl font-bold text-yellow-800">${Math.round(coverageData.costPerParticipant || 0).toLocaleString()}</div>
                                 </div>
                                 <div className="flex flex-col items-center justify-center p-4 bg-purple-50 rounded-lg border border-purple-100 text-center w-full">
                                     <div className="text-sm font-semibold text-purple-700">Cost/New Facility introduce IMNCI</div>
-                                    <div className="text-2xl font-bold text-purple-800">${Math.round(coverageData.costPerNewFacility).toLocaleString()}</div>
+                                    <div className="text-2xl font-bold text-purple-800">
+                                        ${Math.round((coverageData.stateCoverage?.reduce((sum, s) => sum + s.newPhc, 0) || 0) > 0 ? (coverageData.totalBudget / coverageData.stateCoverage.reduce((sum, s) => sum + s.newPhc, 0)) : 0).toLocaleString()}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1326,29 +1321,27 @@ export function CourseReportView({
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-center mb-6">
                                 <div className="flex flex-col items-center justify-center p-4 bg-green-50 rounded-lg border border-green-100 text-center w-full">
                                     <div className="text-sm font-semibold text-green-700">Total new PHC facility Introduce IMNCI</div>
-                                    <div className="text-2xl font-bold text-green-800">{coverageData.nationalCov.newPhc}</div>
+                                    <div className="text-2xl font-bold text-green-800">
+                                        {coverageData.stateCoverage?.reduce((sum, s) => sum + s.newPhc, 0) || 0}
+                                    </div>
                                 </div>
-                                {coverageData.localityCoverage.map(l => (
+                                {coverageData.localityCoverage?.map(l => (
                                     <div key={`card-loc-${l.name}`} className="p-4 bg-sky-50 rounded-lg border border-sky-100">
                                         <div className="text-sm font-semibold text-sky-700">Locality Increase ({l.name})</div>
                                         <div className="text-2xl font-bold text-sky-800">{l.newPhc} <span className="text-sm text-green-600 block xl:inline">(+{l.increase.toFixed(2)}%)</span></div>
                                     </div>
                                 ))}
-                                {coverageData.stateCoverage.map(s => (
+                                {coverageData.stateCoverage?.map(s => (
                                     <div key={`card-state-${s.name}`} className="p-4 bg-indigo-50 rounded-lg border border-indigo-100">
                                         <div className="text-sm font-semibold text-indigo-700">State Increase ({s.name})</div>
                                         <div className="text-2xl font-bold text-indigo-800">{s.newPhc} <span className="text-sm text-green-600 block xl:inline">(+{s.increase.toFixed(2)}%)</span></div>
                                     </div>
                                 ))}
-                                <div className="flex flex-col items-center justify-center p-4 bg-purple-50 rounded-lg border border-purple-100 text-center w-full">
-                                    <div className="text-sm font-semibold text-purple-700">National Increase (Sudan Overall)</div>
-                                    <div className="text-2xl font-bold text-purple-800">{coverageData.nationalCov.newPhc} <span className="text-sm text-green-600 block xl:inline">(+{coverageData.nationalCov.increase.toFixed(4)}%)</span></div>
-                                </div>
                             </div>
 
                             <div className="w-full max-w-full overflow-x-auto touch-pan-x pb-2">
                                 <Table headers={['Level / Name', 'Total Functioning PHCs', 'PHCs w/ IMNCI (Before)', 'Coverage Before', 'New PHCs w/ IMNCI', 'Coverage After', 'Increase']}>
-                                    {coverageData.localityCoverage.map(l => (
+                                    {coverageData.localityCoverage?.map(l => (
                                         <tr key={`loc-${l.name}`} className="hover:bg-gray-50">
                                             <td className="p-2 border font-semibold text-gray-700 min-w-[120px]">Locality: {l.name}</td>
                                             <td className="p-2 border text-center">{l.totalPhc}</td>
@@ -1359,7 +1352,7 @@ export function CourseReportView({
                                             <td className="p-2 border text-center font-bold text-green-600 min-w-[80px]">+{l.increase.toFixed(2)}%</td>
                                         </tr>
                                     ))}
-                                    {coverageData.stateCoverage.map(s => (
+                                    {coverageData.stateCoverage?.map(s => (
                                         <tr key={`state-${s.name}`} className="hover:bg-gray-50 bg-gray-50/50">
                                             <td className="p-2 border font-semibold text-gray-800 min-w-[120px]">State: {s.name}</td>
                                             <td className="p-2 border text-center">{s.totalPhc}</td>
@@ -1370,15 +1363,6 @@ export function CourseReportView({
                                             <td className="p-2 border text-center font-bold text-green-600 min-w-[80px]">+{s.increase.toFixed(2)}%</td>
                                         </tr>
                                     ))}
-                                    <tr className="hover:bg-gray-50 bg-sky-50">
-                                        <td className="p-2 border font-bold text-gray-900 min-w-[150px]">National (Sudan Overall)</td>
-                                        <td className="p-2 border text-center font-bold">{coverageData.nationalCov.totalPhc}</td>
-                                        <td className="p-2 border text-center font-bold">{coverageData.nationalCov.phcWithImnciBefore}</td>
-                                        <td className="p-2 border text-center font-bold text-gray-700">{fmtPct(coverageData.nationalCov.covBefore)}</td>
-                                        <td className="p-2 border text-center font-bold">{coverageData.nationalCov.newPhc}</td>
-                                        <td className="p-2 border text-center font-bold text-sky-800">{fmtPct(coverageData.nationalCov.covAfter)}</td>
-                                        <td className="p-2 border text-center font-bold text-green-700 min-w-[80px]">+{coverageData.nationalCov.increase.toFixed(4)}%</td>
-                                    </tr>
                                 </Table>
                             </div>
                         </div>
@@ -1805,15 +1789,6 @@ export function CourseReportView({
                                             <td className="p-2 border text-center font-bold text-green-600 min-w-[80px]">+{s.increase.toFixed(2)}%</td>
                                         </tr>
                                     ))}
-                                    <tr className="hover:bg-gray-50 bg-sky-50">
-                                        <td className="p-2 border font-bold text-gray-900 min-w-[150px]">National (Sudan Overall)</td>
-                                        <td className="p-2 border text-center font-bold">{historicalCoveragePreview.nationalCov.totalPhc}</td>
-                                        <td className="p-2 border text-center font-bold">{historicalCoveragePreview.nationalCov.phcWithImnciBefore}</td>
-                                        <td className="p-2 border text-center font-bold text-gray-700">{fmtPct(historicalCoveragePreview.nationalCov.covBefore)}</td>
-                                        <td className="p-2 border text-center font-bold">{historicalCoveragePreview.nationalCov.newPhc}</td>
-                                        <td className="p-2 border text-center font-bold text-sky-800">{fmtPct(historicalCoveragePreview.nationalCov.covAfter)}</td>
-                                        <td className="p-2 border text-center font-bold text-green-700 min-w-[80px]">+{historicalCoveragePreview.nationalCov.increase.toFixed(4)}%</td>
-                                    </tr>
                                 </Table>
                             </div>
                             
@@ -1836,15 +1811,6 @@ export function CourseReportView({
                 <div className="p-3 sm:p-4 max-h-[70vh] overflow-y-auto space-y-4 sm:space-y-6">
                     {editableCoverageData && (
                         <>
-                            <div className="bg-white p-4 rounded shadow-sm border">
-                                <h4 className="font-bold text-lg border-b pb-2 mb-4 text-purple-800">National (Sudan Overall)</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <FormGroup label="Total Functioning PHCs"><Input type="number" value={editableCoverageData.nationalCov.totalPhc} onChange={(e) => handleCoverageEditChange('national', null, 'totalPhc', e.target.value)} /></FormGroup>
-                                    <FormGroup label="PHCs w/ IMNCI (Before)"><Input type="number" value={editableCoverageData.nationalCov.phcWithImnciBefore} onChange={(e) => handleCoverageEditChange('national', null, 'phcWithImnciBefore', e.target.value)} /></FormGroup>
-                                    <FormGroup label="New PHCs w/ IMNCI"><Input type="number" value={editableCoverageData.nationalCov.newPhc} onChange={(e) => handleCoverageEditChange('national', null, 'newPhc', e.target.value)} /></FormGroup>
-                                </div>
-                            </div>
-                            
                             {editableCoverageData.stateCoverage.map((s, idx) => (
                                 <div key={s.name} className="bg-white p-4 rounded shadow-sm border">
                                     <h4 className="font-bold text-lg border-b pb-2 mb-4 text-indigo-800">State: {s.name}</h4>

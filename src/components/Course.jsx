@@ -77,7 +77,8 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
     const [isFacilitySelectorOpen, setIsFacilitySelectorOpen] = useState(false);
 
     const jobOptions = useMemo(() => {
-        if (course.course_type === 'ICCM') return ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
+        if (course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives') 
+            return ["قابلة مجتمع", "زائرة صحية", "طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
         if (course.course_type === 'Small & Sick Newborn' || course.course_type === 'SSNC') return JOB_TITLES_SSNC;
         return ['Medical Doctor', 'Nurse', 'Midwife', 'Medical Assistant', 'Health Visitor', 'Nutritionist', 'Vaccinator'];
     }, [course.course_type]);
@@ -284,6 +285,7 @@ const Landing = React.memo(function Landing({ active, onPick }) {
    const items = [
         { key: 'IMNCI', title: 'Integrated Management of Newborn and Childhood Illnesses (IMNCI)', enabled: true },
         { key: 'ICCM', title: 'Integrated Community case management for under 5 children (iCCM)', enabled: true },
+        { key: 'Comprehensive Package For Community Midwives', title: 'Comprehensive Package For Community Midwives', enabled: true },
         { key: 'ETAT', title: 'Emergency Triage, Assessment & Treatment (ETAT)', enabled: true },
         { key: 'EENC', title: 'Early Essential Newborn Care (EENC)', enabled: true },
         { key: 'IPC', title: 'Infection Prevention & Control (Neonatal Unit)', enabled: true },
@@ -299,6 +301,7 @@ const Landing = React.memo(function Landing({ active, onPick }) {
                     <button key={it.key} disabled={!it.enabled} className={`border rounded-lg p-6 text-left transition-all duration-200 ${active === it.key ? 'ring-2 ring-sky-500 shadow-lg' : ''} ${it.enabled ? 'hover:shadow-md hover:scale-105' : 'opacity-60 cursor-not-allowed bg-gray-50'}`} onClick={() => it.enabled && onPick(it.key)}>
                         <div className="flex items-center gap-4">
                             {it.key === 'ICCM' ? <IccmIcon className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
+                             it.key === 'Comprehensive Package For Community Midwives' ? <Users className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
                              it.key === 'IPC' ? <IpcIcon className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
                              it.key === 'Small & Sick Newborn' ? <NewbornIcon className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
                              it.key === 'Program Management' ? <ClipboardList className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
@@ -629,7 +632,7 @@ export function CoursesTable({
                                     </div>
                                 </div>
                                 
-                                {(['ICCM', 'EENC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management'].includes(shareModalCourse.course_type)) && (
+                                {(['ICCM', 'EENC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management', 'Comprehensive Package For Community Midwives'].includes(shareModalCourse.course_type)) && (
                                     <div className="bg-gray-50 p-3 rounded border">
                                         <span className="text-sm font-semibold block mb-2">Testing</span>
                                         <div className="grid grid-cols-2 gap-2">
@@ -711,7 +714,7 @@ export function CoursesTable({
                             </div>
                         </Button>
 
-                        {(['ICCM', 'EENC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management'].includes(reportModalCourse.course_type)) && (
+                        {(['ICCM', 'EENC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management', 'Comprehensive Package For Community Midwives'].includes(reportModalCourse.course_type)) && (
                             <Button variant="secondary" className="flex items-center gap-3 p-4 justify-start" onClick={() => { onOpenTestForm(reportModalCourse.id); setReportModalCourse(null); }}>
                                 <div className="bg-orange-100 p-2 rounded-full"><CheckCircle className="text-orange-600" size={20} /></div>
                                 <div className="text-left">
@@ -1234,7 +1237,6 @@ export function CourseManagementView({
                     };
                 };
 
-                const nationalCov = calculateBaseline(f => f['الولاية'] !== 'إتحادي', 'National');
                 const stateCoverage = payload.states.map(s => calculateBaseline(f => f['الولاية'] === s, s));
                 const localityCoverage = payload.localities.map(l => calculateBaseline(f => f['المحلية'] === l, l));
 
@@ -1244,7 +1246,6 @@ export function CourseManagementView({
                     costPerNewFacility: 0,
                     totalNewFacilities: 0,
                     newImciFacilitiesList: [],
-                    nationalCov,
                     stateCoverage,
                     localityCoverage,
                     baselineLockedAt: new Date().toISOString()
@@ -1427,7 +1428,7 @@ export function CourseManagementView({
                         <Button disabled={isProcessing} variant="tab" isActive={['participants', 'participant-form', 'participant-migration'].includes(activeCoursesTab)} onClick={() => { setActiveCoursesTab('participants'); onSetSelectedParticipantId(null); }}>Participants</Button>
                         <Button disabled={isProcessing || !currentParticipant} variant="tab" isActive={activeCoursesTab === 'monitoring'} onClick={() => setActiveCoursesTab('monitoring')}>Monitoring</Button>
                         <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'reports'} onClick={() => setActiveCoursesTab('reports')}>Individual Participant Report</Button>
-                        {(['ICCM', 'EENC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management'].includes(selectedCourse.course_type)) && (
+                        {(['ICCM', 'EENC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management', 'Comprehensive Package For Community Midwives'].includes(selectedCourse.course_type)) && (
                             <Button disabled={isProcessing} variant="tab" isActive={activeCoursesTab === 'enter-test-scores'} onClick={() => { setActiveCoursesTab('enter-test-scores'); }}>Test Scores</Button>
                         )}
                     </>
@@ -1754,6 +1755,7 @@ export function CourseForm({
     ];
 
     const ICCM_SUBCOURSE_TYPES = ['ICCM Community Module'];
+    const CPCM_SUBCOURSE_TYPES = ['CPCM Community Module'];
     const SMALL_AND_SICK_SUBCOURSE_TYPES = ['Portable warmer training', 'CPAP training', 'Kangaroo mother Care'];
 
     const EENC_SUBCOURSE_TYPES = [
@@ -1780,6 +1782,7 @@ export function CourseForm({
     const isImnci = courseType === 'IMNCI';
     const isInfectionControl = courseType === 'IPC';
     const isIccm = courseType === 'ICCM';
+    const isCpcm = courseType === 'Comprehensive Package For Community Midwives';
     const isSmallAndSick = courseType === 'Small & Sick Newborn';
     const isEenc = courseType === 'EENC';
     const isEtat = courseType === 'ETAT';
@@ -1788,7 +1791,7 @@ export function CourseForm({
     const [groups, setGroups] = useState(initialData?.facilitatorAssignments?.length > 0 ? [...new Set(initialData.facilitatorAssignments.map(a => a.group))] : ['Group A', 'Group B']);
 
     const [facilitatorGroups, setFacilitatorGroups] = useState(() => {
-        const defaultSubcourse = isIccm ? ICCM_SUBCOURSE_TYPES[0] : '';
+        const defaultSubcourse = isIccm ? ICCM_SUBCOURSE_TYPES[0] : isCpcm ? CPCM_SUBCOURSE_TYPES[0] : '';
         if (initialData?.facilitatorAssignments?.length > 0) {
             const groups = {};
             initialData.facilitatorAssignments.forEach(assignment => {
@@ -1833,14 +1836,14 @@ export function CourseForm({
             .filter(f => {
                 const fCourses = Array.isArray(f.courses) ? f.courses : [];
                 
-                if (isIccm) return fCourses.includes('ICCM') || fCourses.includes('IMNCI');
+                if (isIccm || isCpcm) return fCourses.includes('ICCM') || fCourses.includes('IMNCI') || fCourses.includes('Comprehensive Package For Community Midwives');
                 if (isInfectionControl) return fCourses.includes('IPC');
                 if (isProgramManagement) return fCourses.includes('Program Management') || fCourses.includes('IMNCI');
                 
                 return fCourses.includes(courseType);
             })
             .sort((a, b) => a.name.localeCompare(b.name));
-    }, [facilitatorsList, courseType, isInfectionControl, isIccm, isProgramManagement]);
+    }, [facilitatorsList, courseType, isInfectionControl, isIccm, isCpcm, isProgramManagement]);
 
     const federalCoordinatorOptions = useMemo(() => {
         return federalCoordinatorsList.map(c => ({ id: c.id, name: c.name }));
@@ -1886,7 +1889,7 @@ export function CourseForm({
     }, [fundersList]);
 
     const addFacilitatorToGroup = (groupName) => {
-        const defaultSubcourse = isIccm ? ICCM_SUBCOURSE_TYPES[0] : '';
+        const defaultSubcourse = isIccm ? ICCM_SUBCOURSE_TYPES[0] : isCpcm ? CPCM_SUBCOURSE_TYPES[0] : '';
         setFacilitatorGroups(prev => ({
             ...prev,
             [groupName]: [...prev[groupName], { imci_sub_type: defaultSubcourse, name: '' }]
@@ -1910,7 +1913,7 @@ export function CourseForm({
     const addGroup = () => {
         const nextGroupIndex = groups.length;
         if (nextGroupIndex < COURSE_GROUPS.length) {
-            const defaultSubcourse = isIccm ? ICCM_SUBCOURSE_TYPES[0] : '';
+            const defaultSubcourse = isIccm ? ICCM_SUBCOURSE_TYPES[0] : isCpcm ? CPCM_SUBCOURSE_TYPES[0] : '';
             const newGroup = COURSE_GROUPS[nextGroupIndex];
             setGroups(prev => [...prev, newGroup]);
             setFacilitatorGroups(prev => ({
@@ -1934,10 +1937,12 @@ export function CourseForm({
             const groupAssignments = facilitatorGroups[group].map(assignment => ({
                 ...assignment,
                 group: group
-            })).filter(assignment => assignment.name && (assignment.imci_sub_type || isIccm));
+            })).filter(assignment => assignment.name && (assignment.imci_sub_type || isIccm || isCpcm));
             
             if (isIccm) {
                 groupAssignments.forEach(a => a.imci_sub_type = ICCM_SUBCOURSE_TYPES[0]);
+            } else if (isCpcm) {
+                groupAssignments.forEach(a => a.imci_sub_type = CPCM_SUBCOURSE_TYPES[0]);
             }
             
             return [...acc, ...groupAssignments];
@@ -1995,10 +2000,10 @@ export function CourseForm({
             payload.baselineLockedAt = null;
         }
 
-        if (isImnci || isIccm) {
+        if (isImnci || isIccm || isCpcm) {
             payload.clinical_instructor = clinical;
-            payload.director_imci_sub_type = isIccm ? ICCM_SUBCOURSE_TYPES[0] : directorImciSubType;
-            payload.clinical_instructor_imci_sub_type = isIccm ? ICCM_SUBCOURSE_TYPES[0] : clinicalImciSubType;
+            payload.director_imci_sub_type = isIccm ? ICCM_SUBCOURSE_TYPES[0] : isCpcm ? CPCM_SUBCOURSE_TYPES[0] : directorImciSubType;
+            payload.clinical_instructor_imci_sub_type = isIccm ? ICCM_SUBCOURSE_TYPES[0] : isCpcm ? CPCM_SUBCOURSE_TYPES[0] : clinicalImciSubType;
         }
 
         setIsSaving(true);
@@ -2140,7 +2145,7 @@ export function CourseForm({
                                 )}
                             </div>
 
-                            {(isImnci || isIccm) && (
+                            {(isImnci || isIccm || isCpcm) && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-end pt-5 border-t border-gray-100">
                                     <FormGroup label="المدرب السريري - اختياري">
                                         <SearchableSelect
@@ -2173,7 +2178,7 @@ export function CourseForm({
                                 <h4 className="text-md font-bold mb-5 text-indigo-700 bg-indigo-50 inline-block px-4 py-1.5 rounded-lg border border-indigo-200">{groupName}</h4>
                                 {facilitatorGroups[groupName]?.map((assignment, index) => (
                                     <div key={index} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-4 items-end pb-4 border-b border-gray-50 last:border-0">
-                                        <FormGroup label="اسم الميسر" className={isIccm ? "lg:col-span-2" : ""}>
+                                        <FormGroup label="اسم الميسر" className={(isIccm || isCpcm) ? "lg:col-span-2" : ""}>
                                             <SearchableSelect
                                                 disabled={isSaving}
                                                 value={assignment.name}
@@ -2183,7 +2188,7 @@ export function CourseForm({
                                                 label="اسم الميسر"
                                             />
                                         </FormGroup>
-                                        {!isIccm && (
+                                        {!(isIccm || isCpcm) && (
                                             <FormGroup label="اسم الورشة الفرعية">
                                                 <Select
                                                     disabled={isSaving}
@@ -2193,7 +2198,6 @@ export function CourseForm({
                                                 >
                                                     <option value="">— اختر الورشة الفرعية —</option>
                                                     {(isImnci ? IMNCI_SUBCOURSE_TYPES : 
-                                                      isIccm ? ICCM_SUBCOURSE_TYPES : 
                                                       isInfectionControl ? INFECTION_CONTROL_SUBCOURSE_TYPES : 
                                                       isSmallAndSick ? SMALL_AND_SICK_SUBCOURSE_TYPES :
                                                       isEenc ? EENC_SUBCOURSE_TYPES :

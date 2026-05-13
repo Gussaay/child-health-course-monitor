@@ -528,6 +528,7 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, co
         if (courseType === 'ETAT') return JOB_TITLES_ETAT;
         if (courseType === 'EENC') return JOB_TITLES_EENC;
         if (courseType === 'SSNC' || courseType === 'Small & Sick Newborn') return JOB_TITLES_SSNC;
+        if (courseType === 'ICCM' || courseType === 'Comprehensive Package For Community Midwives') return ["قابلة مجتمع", "زائرة صحية", "طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
         return ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
     }, [courseType]);
 
@@ -561,17 +562,19 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, co
             },
         };
 
-        if (courseType === 'IMNCI' || courseType === 'ICCM') {
+        if (courseType === 'IMNCI' || courseType === 'ICCM' || courseType === 'Comprehensive Package For Community Midwives') {
             config['imci_sub_type'] = {
-                label: 'IMCI Sub-type',
-                standardValues: IMNCI_SUBCOURSE_TYPES,
+                label: 'Course Sub-type',
+                standardValues: courseType === 'IMNCI' ? IMNCI_SUBCOURSE_TYPES : courseType === 'ICCM' ? ['ICCM Community Module'] : ['CPCM Community Module'],
                 getOptionLabel: (opt) => opt
             };
-            config['facility_type'] = {
-                label: 'Facility Type',
-                standardValues: ["مركز صحة الاسرة", "مستشفى ريفي", "وحدة صحة الاسرة", "مستشفى"],
-                getOptionLabel: (opt) => opt
-            };
+            if (courseType === 'IMNCI') {
+                config['facility_type'] = {
+                    label: 'Facility Type',
+                    standardValues: ["مركز صحة الاسرة", "مستشفى ريفي", "وحدة صحة الاسرة", "مستشفى"],
+                    getOptionLabel: (opt) => opt
+                };
+            }
         }
 
         if (courseType === 'ETAT') {
@@ -761,6 +764,7 @@ const BulkChangeModal = ({ isOpen, onClose, participants, onSave, courseType, se
         if (courseType === 'ETAT') return JOB_TITLES_ETAT;
         if (courseType === 'EENC') return JOB_TITLES_EENC;
         if (courseType === 'SSNC' || courseType === 'Small & Sick Newborn') return JOB_TITLES_SSNC;
+        if (courseType === 'ICCM' || courseType === 'Comprehensive Package For Community Midwives') return ["قابلة مجتمع", "زائرة صحية", "طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
         return ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
     }, [courseType]);
 
@@ -917,6 +921,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, set
         if (course.course_type === 'ETAT') return JOB_TITLES_ETAT;
         if (course.course_type === 'EENC') return JOB_TITLES_EENC;
         if (course.course_type === 'SSNC' || course.course_type === 'Small & Sick Newborn') return JOB_TITLES_SSNC;
+        if (course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives') return ["قابلة مجتمع", "زائرة صحية", "طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
         return ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
     }, [course.course_type]);
 
@@ -944,7 +949,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, set
         { key: 'email', label: 'Email' },
         { key: 'state', label: 'State', required: true },
         { key: 'locality', label: 'Locality', required: true },
-        { key: 'center_name', label: course.course_type === 'ICCM' ? 'Village Name' : (course.course_type === 'Program Management' ? 'Department' : 'Health Facility Name'), required: true },
+        { key: 'center_name', label: (course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives') ? 'Village Name' : (course.course_type === 'Program Management' ? 'Department' : 'Health Facility Name'), required: true },
         { key: 'job_title', label: 'Job Title', required: true },
         { key: 'phone', label: 'Phone Number' },
         { key: 'pre_test_score', label: 'Pre-Test Score' },
@@ -963,8 +968,8 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, set
             { key: 'has_ors_room', label: 'Has ORS corner service?' },
             { key: 'has_growth_monitoring', label: 'Has Growth Monitoring Service?' }
         ] : []),
-        ...(course.course_type === 'ICCM' ? [
-            { key: 'trained_before', label: 'Previously trained in IMNCI/ICCM?' },
+        ...((course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives') ? [
+            { key: 'trained_before', label: `Previously trained in ${course.course_type}?` },
             { key: 'last_imci_training', label: 'Date of last training' },
             { key: 'nearest_health_facility', label: 'Nearest Health Facility' },
             { key: 'hours_to_facility', label: 'Hours to Facility (on foot)' },
@@ -1098,7 +1103,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, set
                 }
             });
 
-            const centerNameLabel = course.course_type === 'ICCM' ? 'Village Name' : (course.course_type === 'Program Management' ? 'Department' : 'Health Facility Name');
+            const centerNameLabel = (course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives') ? 'Village Name' : (course.course_type === 'Program Management' ? 'Department' : 'Health Facility Name');
             if (!participant.name || !participant.state || !participant.locality || !participant.center_name) {
                 const missing = [];
                 if (!participant.name) missing.push("Name");
@@ -1112,6 +1117,8 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, set
 
             if (course.course_type === 'ICCM') {
                  participant.imci_sub_type = 'ICCM Community Module';
+            } else if (course.course_type === 'Comprehensive Package For Community Midwives') {
+                 participant.imci_sub_type = 'CPCM Community Module';
             }
             
             if (course.course_type === 'Program Management') {
@@ -1121,7 +1128,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, set
 
             participantsToImport.push(participant);
 
-            if (course.course_type === 'ICCM' || course.course_type === 'Program Management') {
+            if (course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives' || course.course_type === 'Program Management') {
                 return;
             }
 
@@ -1759,8 +1766,64 @@ export function ParticipantsView({
 
     useEffect(() => { setLocalApprovalStatus(course.isCertificateApproved); }, [course.isCertificateApproved]);
 
+    // Added Logic to Sync Coverage Snapshot with Database Dynamically
+    const syncCourseCoverageSnapshot = async (updatedParticipantsList) => {
+        if (!course?.coverageSnapshot || course.course_type !== 'IMNCI') return;
 
-    
+        // 1. Identify unique new PHC facilities from the participant list
+        const newPhcMap = new Map();
+        updatedParticipantsList.forEach(p => {
+            if (p.introduced_imci_to_facility) {
+                let isHospital = false;
+                const matchedFacility = healthFacilities?.find(f => f['اسم_المؤسسة'] === p.center_name && f['المحلية'] === p.locality && f['الولاية'] === p.state);
+                
+                if (matchedFacility && matchedFacility['نوع_المؤسسةالصحية']) {
+                    isHospital = ['مستشفى', 'مستشفى ريفي'].includes(matchedFacility['نوع_المؤسسةالصحية']);
+                } else if (typeof p.center_name === 'string') {
+                    isHospital = p.center_name.includes('مستشفى') || p.center_name.toLowerCase().includes('hospital');
+                }
+
+                if (!isHospital) {
+                    newPhcMap.set(`${p.state}-${p.locality}-${p.center_name}`, true);
+                }
+            }
+        });
+
+        const uniqueNewPhcKeys = Array.from(newPhcMap.keys());
+        const updatedSnapshot = JSON.parse(JSON.stringify(course.coverageSnapshot));
+        let hasChanges = false;
+
+        // 2. Recalculate Locality Coverage
+        updatedSnapshot.localityCoverage?.forEach(l => {
+            const count = uniqueNewPhcKeys.filter(key => key.includes(`-${l.name}-`)).length;
+            if (l.newPhc !== count) {
+                l.newPhc = count;
+                l.covAfter = l.totalPhc > 0 ? ((l.phcWithImnciBefore + l.newPhc) / l.totalPhc) * 100 : 0;
+                l.increase = l.covAfter - l.covBefore;
+                hasChanges = true;
+            }
+        });
+
+        // 3. Recalculate State Coverage
+        updatedSnapshot.stateCoverage?.forEach(s => {
+            const count = uniqueNewPhcKeys.filter(key => key.startsWith(`${s.name}-`)).length;
+            if (s.newPhc !== count) {
+                s.newPhc = count;
+                s.covAfter = s.totalPhc > 0 ? ((s.phcWithImnciBefore + s.newPhc) / s.totalPhc) * 100 : 0;
+                s.increase = s.covAfter - s.covBefore;
+                hasChanges = true;
+            }
+        });
+
+        // 4. Save to Firestore if numbers changed
+        if (hasChanges) {
+            try {
+                await updateDoc(doc(db, 'courses', course.id), { coverageSnapshot: updatedSnapshot });
+            } catch (error) {
+                console.error("Failed to sync coverage snapshot:", error);
+            }
+        }
+    };
 
 
     const federalProgramManagerName = useMemo(() => {
@@ -1799,6 +1862,11 @@ export function ParticipantsView({
             setIsProcessing(true);
             try {
                 await deleteParticipant(participantId, currentUserIdentifier);
+                
+                // Calculate the new array and update DB to keep Coverage in sync
+                const updatedParticipantsList = participants.filter(p => p.id !== participantId);
+                await syncCourseCoverageSnapshot(updatedParticipantsList);
+
                 await fetchParticipants(navigator.onLine);
                 if (onBatchUpdate) onBatchUpdate();
                 setToast({ show: true, message: 'Participant deleted successfully.', type: 'success' });
@@ -1821,7 +1889,12 @@ export function ParticipantsView({
                 updatedBy: currentUserIdentifier,
                 ...(editingParticipant?.id ? {} : { createdBy: currentUserIdentifier })
             };
-            await saveParticipantAndSubmitFacilityUpdate(fullPayload, facilityUpdateData, currentUserIdentifier);
+            const savedParticipant = await saveParticipantAndSubmitFacilityUpdate(fullPayload, facilityUpdateData, currentUserIdentifier);
+            
+            // Calculate the new array and update DB to keep Coverage in sync
+            const updatedParticipantsList = [...(participants || []).filter(p => p.id !== (editingParticipant?.id || savedParticipant.id)), fullPayload];
+            await syncCourseCoverageSnapshot(updatedParticipantsList);
+
             await fetchParticipants(navigator.onLine);
             if (onBatchUpdate) onBatchUpdate();
             setActiveScreen('list');
@@ -1869,6 +1942,11 @@ export function ParticipantsView({
                 ...(!p.id && !p.createdBy ? { createdBy: currentUserIdentifier } : {})
             }));
             await importParticipants(participantsWithCourseId);
+            
+            // Re-sync coverage snapshot after an import
+            const newParticipantsList = [...(participants || []), ...participantsWithCourseId];
+            await syncCourseCoverageSnapshot(newParticipantsList);
+
             await fetchParticipants(navigator.onLine);
             if (onBatchUpdate) onBatchUpdate();
             if (setLocalToast) setToast({ show: true, message: `Successfully imported ${participantsToImport.length} participants.`, type: 'success' });
@@ -2053,6 +2131,10 @@ export function ParticipantsView({
                 onCancel={() => setIsBulkEditing(false)}
                 onSave={async (pData, fData) => {
                     await handleAdvancedSave(pData, fData);
+                    // Also trigger the coverage snapshot update upon mass edit
+                    const updatedParticipantsList = participants.map(orig => pData.find(u => u.id === orig.id) || orig);
+                    await syncCourseCoverageSnapshot(updatedParticipantsList);
+
                     setToast({ show: true, message: 'Bulk edit saved successfully!', type: 'success' });
                     setIsBulkEditing(false);
                 }}
@@ -2060,7 +2142,7 @@ export function ParticipantsView({
         );
     }
 
-    const centerNameLabel = course.course_type === 'ICCM' ? 'Village Name' : (course.course_type === 'Program Management' ? 'Department' : 'Facility Name');
+    const centerNameLabel = (course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives') ? 'Village Name' : (course.course_type === 'Program Management' ? 'Department' : 'Facility Name');
 
     return (
         <Card>
@@ -2296,7 +2378,7 @@ export function ParticipantsView({
                                                 Report
                                             </Button>
 
-                                            {(course.course_type === 'ICCM' || course.course_type === 'EENC') && (
+                                            {(course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives' || course.course_type === 'EENC') && (
                                                 <Button variant="secondary" className="px-2.5 py-1 text-[11px]" onClick={() => onOpenTestFormForParticipant(p.id)} disabled={isProcessing}>
                                                     Test
                                                 </Button>
@@ -2385,7 +2467,7 @@ export function ParticipantsView({
                                             </Button>
                                         )}
 
-                                        {(course.course_type === 'ICCM' || course.course_type === 'EENC') && (
+                                        {(course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives' || course.course_type === 'EENC') && (
                                             <Button variant="secondary" className="w-full justify-center" onClick={() => onOpenTestFormForParticipant(p.id)} disabled={isProcessing}>Test Score</Button>
                                         )}
                                         
@@ -2417,20 +2499,22 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
     const { fetchHealthFacilities } = useDataCache();
     const isImnci = course.course_type === 'IMNCI';
     const isIccm = course.course_type === 'ICCM';
+    const isCpcm = course.course_type === 'Comprehensive Package For Community Midwives';
     const isEtat = course.course_type === 'ETAT';
     const isEenc = course.course_type === 'EENC';
     const isSsnc = course.course_type === 'SSNC' || course.course_type === 'Small & Sick Newborn';
     const isProgramManagement = course.course_type === 'Program Management';
 
     const excludedImnciSubtypes = ["Standard 7 days course for Medical Doctors", "Standard 7 days course for Medical Assistance", "Refreshment IMNCI Course"];
-    const showTestScores = !(isImnci || isIccm || isEenc || isSsnc || isProgramManagement) || ((isImnci || isIccm) && !excludedImnciSubtypes.includes(initialData?.imci_sub_type));
+    const showTestScores = !(isImnci || isIccm || isCpcm || isEenc || isSsnc || isProgramManagement) || ((isImnci || isIccm || isCpcm) && !excludedImnciSubtypes.includes(initialData?.imci_sub_type));
 
     const jobTitleOptions = useMemo(() => {
         if (isEtat) return JOB_TITLES_ETAT;
         if (isEenc) return JOB_TITLES_EENC;
         if (isSsnc) return JOB_TITLES_SSNC;
+        if (isIccm || isCpcm) return ["قابلة مجتمع", "زائرة صحية", "طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
         return ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
-    }, [isIccm, isImnci, isEtat, isEenc, isSsnc]);
+    }, [isIccm, isCpcm, isImnci, isEtat, isEenc, isSsnc]);
 
     const [isSaving, setIsSaving] = useState(false);
 
@@ -2507,7 +2591,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
     useEffect(() => {
         const fetchFacilities = async () => {
             setError('');
-            if (state && locality && !isIccm && !isProgramManagement) {
+            if (state && locality && !isIccm && !isCpcm && !isProgramManagement) {
                 setIsLoadingFacilities(true);
                 try {
                     const facilities = await fetchHealthFacilities({ state, locality }, false);
@@ -2545,7 +2629,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                  isInitialLoad.current = false; 
             }
         };
-        if (state && locality && !isIccm && !isProgramManagement) {
+        if (state && locality && !isIccm && !isCpcm && !isProgramManagement) {
              fetchFacilities();
         } else {
              setFacilitiesInLocality([]); 
@@ -2553,7 +2637,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
              isInitialLoad.current = false;
         }
 
-    }, [state, locality, initialData?.facilityId, initialData?.center_name, isIccm, isProgramManagement, fetchHealthFacilities]); 
+    }, [state, locality, initialData?.facilityId, initialData?.center_name, isIccm, isCpcm, isProgramManagement, fetchHealthFacilities]); 
 
     const handleFacilitySelect = (facilityId) => {
         setError('');
@@ -2623,7 +2707,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
             }
             setPhone(String(worker.phone || ''));
 
-            if (isImnci || isIccm) {
+            if (isImnci || isIccm || isCpcm) {
                 setTrainedIMNCI(String(worker.is_trained || '').trim().toLowerCase() === 'yes' ? 'yes' : 'no');
                 setLastTrainIMNCI(worker.training_date || '');
             }
@@ -2659,7 +2743,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
         if (!state) { setError('الولاية مطلوبة.'); return; }
         if (!locality) { setError('المحلية مطلوبة.'); return; }
         
-        if (!isProgramManagement && !center.trim()) { setError(isIccm ? 'اسم القرية مطلوب.' : 'اسم المؤسسة الصحية مطلوب.'); return; }
+        if (!isProgramManagement && !center.trim()) { setError((isIccm || isCpcm) ? 'اسم القرية مطلوب.' : 'اسم المؤسسة الصحية مطلوب.'); return; }
         if (isProgramManagement && !department.trim()) { setError('اسم الإدارة مطلوب.'); return; }
 
         if (!finalJobTitle) { setError('المسمى الوظيفي مطلوب.'); return; }
@@ -2675,6 +2759,8 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                 }
             } else if (isIccm) {
                 finalImciSubType = 'ICCM Community Module';
+            } else if (isCpcm) {
+                finalImciSubType = 'CPCM Community Module';
             }
 
             const currentFacilityType = selectedFacility?.['نوع_المؤسسةالصحية'] || initialData?.facility_type || 'no data';
@@ -2683,7 +2769,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                 ...(initialData || {}), 
                 name: name.trim(), group, state, locality,
                 center_name: isProgramManagement ? 'N/A' : center.trim(),
-                facilityId: (isIccm || isProgramManagement || selectedFacility?.id.startsWith('pending_')) ? null : selectedFacility?.id || null, 
+                facilityId: (isIccm || isCpcm || isProgramManagement || selectedFacility?.id.startsWith('pending_')) ? null : selectedFacility?.id || null, 
                 job_title: finalJobTitle, phone: phone.trim(), email: email ? email.trim() : null,
                 department: isProgramManagement ? department.trim() : null
             };
@@ -2692,7 +2778,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                 p = { ...p, pre_test_score: preTestScore || null, post_test_score: postTestScore || null };
             }
 
-            if (isImnci || isIccm) {
+            if (isImnci || isIccm || isCpcm) {
                  p = { ...p, trained_before: parseBool(trainedIMNCI), last_imci_training: trainedIMNCI === 'yes' ? (lastTrainIMNCI || null) : null };
                 
                 if (isImnci) {
@@ -2737,7 +2823,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                         nearest_immunization_center: hasImm === 'no' ? (nearestImm || null) : null, 
                         has_growth_monitoring: parseBool(hasGrowthMonitoring) 
                     };
-                } else if (isIccm) {
+                } else if (isIccm || isCpcm) {
                     p = { ...p, imci_sub_type: finalImciSubType, nearest_health_facility: nearestHealthFacility || null, hours_to_facility: hoursToFacility !== '' ? Number(hoursToFacility) : null }; 
                 }
             } else if (isEtat) {
@@ -2916,7 +3002,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                             )}
 
                             {!isProgramManagement && (
-                                isIccm ? (
+                                (isIccm || isCpcm) ? (
                                     <FormGroup label="اسم القرية">
                                         <Input
                                             disabled={isSaving || !locality}
@@ -2950,7 +3036,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                 )
                             )}
                             
-                            {(isIccm || isProgramManagement) ? (
+                            {(isIccm || isCpcm || isProgramManagement) ? (
                                  <FormGroup label="اسم المشارك">
                                     <Input
                                         disabled={isSaving || !locality}
@@ -3011,14 +3097,14 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                     )}
 
                     {/* --- القسم 3: بيانات التدريب والمؤسسة --- */}
-                    {(isImnci || isIccm || isEtat || isEenc || isSsnc) && (
+                    {(isImnci || isIccm || isCpcm || isEtat || isEenc || isSsnc) && (
                         <div className="mb-6">
                             <h3 className="text-lg font-bold mb-4 text-blue-700 border-b pb-2">بيانات التدريب وإحصائيات الكوادر</h3>
                             <div className="grid md:grid-cols-1 gap-6">
                                 
-                                {(isImnci || isIccm) && (
+                                {(isImnci || isIccm || isCpcm) && (
                                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        <FormGroup label={`هل تم التدريب مسبقاً في ${isIccm ? 'IMNCI/ICCM' : 'العلاج المتكامل (IMNCI)'}؟`}>
+                                        <FormGroup label={`هل تم التدريب مسبقاً في ${(isIccm || isCpcm) ? course.course_type : 'العلاج المتكامل (IMNCI)'}؟`}>
                                             <Select disabled={isEditingExistingWorker || isSaving} value={trainedIMNCI} onChange={(e) => setTrainedIMNCI(e.target.value)}>
                                                 <option value="">— اختر —</option>
                                                 <option value="no">لا</option>
@@ -3066,7 +3152,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                     </div>
                                 )}
                                 
-                                {isIccm && (
+                                {(isIccm || isCpcm) && (
                                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                                         <FormGroup label="أقرب مؤسسة صحية">
                                             <Input disabled={isSaving} value={nearestHealthFacility} onChange={(e) => setNearestHealthFacility(e.target.value)} placeholder="اسم أقرب مؤسسة" />

@@ -1,4 +1,4 @@
-// ReportsView.jsx
+// src/components/ReportsView.jsx
 import React, { useState, useMemo, useEffect } from 'react';
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable"; 
@@ -136,14 +136,14 @@ export function ReportsView({ course, participants, allObs: propAllObs, allCases
             try {
                 // 1. Try Cache First for instant rendering
                 let courseData = await listAllDataForCourse(course.id, { source: 'cache' }).catch(() => ({allObs: [], allCases: []}));
-                let testData = (course.course_type === 'ICCM' || course.course_type === 'EENC') ? await listParticipantTestsForCourse(course.id, { source: 'cache' }).catch(() => []) : [];
+                let testData = (course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives' || course.course_type === 'EENC') ? await listParticipantTestsForCourse(course.id, { source: 'cache' }).catch(() => []) : [];
 
                 const hasData = (courseData.allObs && courseData.allObs.length > 0) || (courseData.allCases && courseData.allCases.length > 0);
 
                 // 2. Fetch from Server ONLY if Cache is empty
                 if (!hasData) {
                     courseData = await listAllDataForCourse(course.id, { source: 'server' }).catch(() => ({allObs: [], allCases: []}));
-                    testData = (course.course_type === 'ICCM' || course.course_type === 'EENC') ? await listParticipantTestsForCourse(course.id, { source: 'server' }).catch(() => []) : [];
+                    testData = (course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives' || course.course_type === 'EENC') ? await listParticipantTestsForCourse(course.id, { source: 'server' }).catch(() => []) : [];
                 }
 
                 // 3. Apply Soft Delete Filter
@@ -165,8 +165,8 @@ export function ReportsView({ course, participants, allObs: propAllObs, allCases
 
     if (loading) { return <Card><Spinner /></Card>; }
 
-    const StandardReportComponent = { 'IMNCI': ImnciReports, 'ETAT': EtatReports, 'EENC': EencReports, 'ICCM': IccmReports }[course.course_type];
-    const hasTestReports = (course.course_type === 'ICCM' || course.course_type === 'EENC');
+    const StandardReportComponent = { 'IMNCI': ImnciReports, 'ETAT': EtatReports, 'EENC': EencReports, 'ICCM': IccmReports, 'Comprehensive Package For Community Midwives': IccmReports }[course.course_type];
+    const hasTestReports = (course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives' || course.course_type === 'EENC');
 
     return (
         <Card>
@@ -312,7 +312,8 @@ function CourseTestReports({ course, participants, allTests }) {
         setIsPdfGenerating(true);
         const profile = qualityProfiles[quality] || qualityProfiles.print;
         const doc = new jsPDF('portrait', 'mm', 'a4');
-        const reportName = `${course.course_type}_Test_${tab}_Report${profile.fileSuffix}.pdf`;
+        const reportPrefix = course.course_type === 'Comprehensive Package For Community Midwives' ? 'CPCM' : course.course_type;
+        const reportName = `${reportPrefix}_Test_${tab}_Report${profile.fileSuffix}.pdf`;
         const margin = 15;
         const canvasOptions = { scale: profile.scale, useCORS: true, allowTaint: true, backgroundColor: '#ffffff' };
         const headerEl = document.getElementById('test-report-header');
@@ -971,7 +972,8 @@ function IccmReports({ course, participants, allObs, allCases }) {
         setIsPdfGenerating(true);
         const profile = qualityProfiles[quality] || qualityProfiles.print;
         const doc = new jsPDF('portrait', 'mm', 'a4');
-        const reportName = `ICCM_${tab}_Report${profile.fileSuffix}.pdf`;
+        const reportPrefix = course.course_type === 'Comprehensive Package For Community Midwives' ? 'CPCM' : 'ICCM';
+        const reportName = `${reportPrefix}_${tab}_Report${profile.fileSuffix}.pdf`;
         const margin = 15; 
         const canvasOptions = { scale: profile.scale, useCORS: true, allowTaint: true, backgroundColor: '#ffffff' };
         

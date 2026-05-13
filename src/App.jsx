@@ -545,7 +545,7 @@ export default function App() {
     const isPopStateNavigation = useRef(false);
     const initialViewIsSet = useRef(false);
 
-    // --- EFFECT: CHECK FOR WEB UPDATES & NATIVE APK UPDATES WITH NOTIFICATIONS ---
+    // --- COMPLETELY DECOUPLED: WEB UPDATES & NATIVE APK UPDATES ---
     useEffect(() => {
         let downloadListenerHandle;
 
@@ -567,49 +567,48 @@ export default function App() {
                 downloadListenerHandle = handle;
             });
 
-            const checkUpdates = async () => {
+            // 3. INDEPENDENT NATIVE CHECK
+            const checkNativeUpdates = async () => {
                 try {
                     const status = await Network.getStatus();
                     if (!status.connected) return;
 
-                    // --- CHECK FOR NATIVE APK UPDATES (External) ---
-                    try {
-                        const nativeRes = await fetch('https://imnci-courses-monitor.web.app/native-version.json?t=' + Date.now());
-                        if (nativeRes.ok) {
-                            const serverConfig = await nativeRes.json();
-                            const appInfo = await CapacitorApp.getInfo();
-                            
-                            const currentBuild = parseInt(appInfo.build, 10);
-                            const serverBuild = parseInt(serverConfig.latestNativeBuild, 10);
+                    const nativeRes = await fetch('https://imnci-courses-monitor.web.app/native-version.json?t=' + Date.now());
+                    if (nativeRes.ok) {
+                        const serverConfig = await nativeRes.json();
+                        const appInfo = await CapacitorApp.getInfo();
+                        
+                        const currentBuild = parseInt(appInfo.build, 10);
+                        const serverBuild = parseInt(serverConfig.latestNativeBuild, 10);
 
-                            if (serverBuild > currentBuild) {
-                                console.log(`Native update required. Current: ${currentBuild}, Server: ${serverBuild}`);
-                                
-                                // Show in-app toast
-                                setToast({ show: true, message: 'A new external app update is available!', type: 'info' });
-                                setNativeUpdatePrompt(serverConfig);
+                        if (serverBuild > currentBuild) {
+                            console.log(`Native update available. Current: ${currentBuild}, Server: ${serverBuild}`);
+                            setToast({ show: true, message: 'A new external app update is available!', type: 'info' });
+                            setNativeUpdatePrompt(serverConfig);
 
-                                // Trigger System Notification
-                                await LocalNotifications.schedule({
-                                    notifications: [
-                                        {
-                                            title: "App Update Required",
-                                            body: `Version ${serverConfig.versionString} is available. Tap to download.`,
-                                            id: 1,
-                                            schedule: { at: new Date(Date.now() + 1000) }, // Trigger almost immediately
-                                            actionTypeId: "",
-                                            extra: null
-                                        }
-                                    ]
-                                });
-                                return; // Stop here, Native update takes priority
-                            }
+                            await LocalNotifications.schedule({
+                                notifications: [{
+                                    title: "App Update Required",
+                                    body: `Version ${serverConfig.versionString} is available. Tap to download.`,
+                                    id: 1,
+                                    schedule: { at: new Date(Date.now() + 1000) },
+                                    actionTypeId: "",
+                                    extra: null
+                                }]
+                            });
                         }
-                    } catch (e) {
-                        console.warn("Native update check failed:", e);
                     }
+                } catch (e) {
+                    console.warn("Native update check failed:", e);
+                }
+            };
 
-                    // --- CHECK FOR WEB ASSET UPDATES (Internal Capgo) ---
+            // 4. INDEPENDENT WEB CHECK (CAPGO)
+            const checkWebUpdates = async () => {
+                try {
+                    const status = await Network.getStatus();
+                    if (!status.connected) return;
+
                     console.log("Capgo Updater: Checking for latest web update...");
                     const response = await CapacitorHttp.request({
                         method: 'GET',
@@ -635,21 +634,17 @@ export default function App() {
                             setUpdateBundle(downloadedBundle); 
                             setIsUpdateReady(true);
                             
-                            // Show in-app toast
                             setToast({ show: true, message: 'Update ready to install!', type: 'success' });
 
-                            // Trigger System Notification so they know to open the app if it was minimized
                             await LocalNotifications.schedule({
-                                notifications: [
-                                    {
-                                        title: "Update Ready!",
-                                        body: "The new version has been downloaded. Tap here to restart and apply.",
-                                        id: 2,
-                                        schedule: { at: new Date(Date.now() + 1000) },
-                                        actionTypeId: "",
-                                        extra: null
-                                    }
-                                ]
+                                notifications: [{
+                                    title: "Update Ready!",
+                                    body: "The new version has been downloaded. Tap here to restart and apply.",
+                                    id: 2,
+                                    schedule: { at: new Date(Date.now() + 1000) },
+                                    actionTypeId: "",
+                                    extra: null
+                                }]
                             });
 
                         } catch (err) {
@@ -659,11 +654,15 @@ export default function App() {
                         }
                     }
                 } catch (error) { 
-                    console.warn("Update check failed:", error); 
+                    console.warn("Capgo update check failed:", error); 
                 }
             };
             
-            setTimeout(checkUpdates, 2000);
+            // Execute both checks simultaneously
+            setTimeout(() => {
+                checkNativeUpdates();
+                checkWebUpdates();
+            }, 2000);
         }
 
         // Cleanup listener on unmount
@@ -671,7 +670,6 @@ export default function App() {
             if (downloadListenerHandle) downloadListenerHandle.remove();
         };
     }, []);
-
     useEffect(() => { if (!authLoading && user) initializeUsageTracking(); }, [authLoading, user]);
 
     useEffect(() => {
