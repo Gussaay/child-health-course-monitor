@@ -16,7 +16,7 @@ import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { Network } from '@capacitor/network';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
-import { LocalNotifications } from '@capacitor/local-notifications'; // <-- NEW IMPORT
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 // --- PRE-FLIGHT LANGUAGE CHECK ---
 if (typeof window !== 'undefined') {
@@ -545,61 +545,72 @@ export default function App() {
     const isPopStateNavigation = useRef(false);
     const initialViewIsSet = useRef(false);
 
-    // --- COMPLETELY DECOUPLED: WEB UPDATES & NATIVE APK UPDATES ---
+    // --- COMPLETELY DECOUPLED & ARMOR-PLATED UPDATE SCRIPT ---
     useEffect(() => {
         let downloadListenerHandle;
 
         if (Capacitor.isNativePlatform()) {
             
-            // 1. Request Notification Permissions on load
+            // 1. SAFE NOTIFICATIONS (Will not crash if plugin is missing)
             const setupNotifications = async () => {
-                const permStatus = await LocalNotifications.checkPermissions();
-                if (permStatus.display !== 'granted') {
-                    await LocalNotifications.requestPermissions();
+                try {
+                    const permStatus = await LocalNotifications.checkPermissions();
+                    if (permStatus.display !== 'granted') {
+                        await LocalNotifications.requestPermissions();
+                    }
+                } catch (err) {
+                    console.warn("Notifications missing or denied. Skipping.", err);
                 }
             };
             setupNotifications();
 
-            // 2. Register download listener for Capgo background updates
+            // 2. REGISTER CAPGO LISTENER
             CapacitorUpdater.addListener('download', (info) => {
                 setUpdateProgress(info.percent); 
             }).then(handle => {
                 downloadListenerHandle = handle;
-            });
+            }).catch(e => console.warn("Failed to bind Capgo listener", e));
 
-            // 3. INDEPENDENT NATIVE CHECK
+            // 3. INDEPENDENT NATIVE CHECK (CORS-SAFE)
             const checkNativeUpdates = async () => {
                 try {
                     const status = await Network.getStatus();
                     if (!status.connected) return;
 
-                    const nativeRes = await fetch('https://imnci-courses-monitor.web.app/native-version.json?t=' + Date.now());
-                    if (nativeRes.ok) {
-                        const serverConfig = await nativeRes.json();
+                    // CRITICAL FIX: Use CapacitorHttp to bypass Android CORS security blocks!
+                    const nativeRes = await CapacitorHttp.request({
+                        method: 'GET',
+                        url: 'https://imnci-courses-monitor.web.app/native-version.json?t=' + Date.now(),
+                        connectTimeout: 5000,
+                        readTimeout: 5000
+                    });
+
+                    if (nativeRes.status === 200) {
+                        const serverConfig = typeof nativeRes.data === 'string' ? JSON.parse(nativeRes.data) : nativeRes.data;
                         const appInfo = await CapacitorApp.getInfo();
                         
-                        const currentBuild = parseInt(appInfo.build, 10);
+                        const currentBuild = parseInt(appInfo.build, 10) || 1;
                         const serverBuild = parseInt(serverConfig.latestNativeBuild, 10);
 
                         if (serverBuild > currentBuild) {
-                            console.log(`Native update available. Current: ${currentBuild}, Server: ${serverBuild}`);
-                            setToast({ show: true, message: 'A new external app update is available!', type: 'info' });
+                            console.log(`Native update required! App: ${currentBuild}, Server: ${serverBuild}`);
+                            setToast({ show: true, message: 'A new app update is required!', type: 'info' });
                             setNativeUpdatePrompt(serverConfig);
 
-                            await LocalNotifications.schedule({
-                                notifications: [{
-                                    title: "App Update Required",
-                                    body: `Version ${serverConfig.versionString} is available. Tap to download.`,
-                                    id: 1,
-                                    schedule: { at: new Date(Date.now() + 1000) },
-                                    actionTypeId: "",
-                                    extra: null
-                                }]
-                            });
+                            try {
+                                await LocalNotifications.schedule({
+                                    notifications: [{
+                                        title: "App Update Required",
+                                        body: `Version ${serverConfig.versionString} is available. Tap to download.`,
+                                        id: 1,
+                                        schedule: { at: new Date(Date.now() + 1000) }
+                                    }]
+                                });
+                            } catch (e) { /* Ignore notification crash */ }
                         }
                     }
                 } catch (e) {
-                    console.warn("Native update check failed:", e);
+                    console.warn("Native update check failed safely:", e);
                 }
             };
 
@@ -609,7 +620,7 @@ export default function App() {
                     const status = await Network.getStatus();
                     if (!status.connected) return;
 
-                    console.log("Capgo Updater: Checking for latest web update...");
+                    console.log("Checking Capgo...");
                     const response = await CapacitorHttp.request({
                         method: 'GET',
                         url: 'https://imnci-courses-monitor.web.app/latest/update.json?t=' + Date.now(),
@@ -617,44 +628,44 @@ export default function App() {
                         readTimeout: 5000
                     });
 
-                    if (response.status !== 200) throw new Error(`Network response was not ok: ${response.status}`);
-                    
-                    const latestUpdate = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
-                    const currentState = await CapacitorUpdater.current();
-                    const currentVersion = currentState.bundle?.version || "builtin";
+                    if (response.status === 200) {
+                        const latestUpdate = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+                        const currentState = await CapacitorUpdater.current();
+                        const currentVersion = currentState.bundle?.version || "builtin";
 
-                    if (currentVersion !== latestUpdate.version) {
-                        console.log(`Capgo Updater: Downloading bundle ${latestUpdate.version}...`);
-                        setToast({ show: true, message: 'Downloading internal application update...', type: 'info' });
-                        setIsDownloadingUpdate(true);
-                        setUpdateProgress(0);
+                        if (currentVersion !== latestUpdate.version) {
+                            console.log(`Downloading Capgo bundle ${latestUpdate.version}...`);
+                            setToast({ show: true, message: 'Downloading app update...', type: 'info' });
+                            setIsDownloadingUpdate(true);
+                            setUpdateProgress(0);
 
-                        try {
-                            const downloadedBundle = await CapacitorUpdater.download({ url: latestUpdate.url, version: latestUpdate.version });
-                            setUpdateBundle(downloadedBundle); 
-                            setIsUpdateReady(true);
-                            
-                            setToast({ show: true, message: 'Update ready to install!', type: 'success' });
+                            try {
+                                const downloadedBundle = await CapacitorUpdater.download({ url: latestUpdate.url, version: latestUpdate.version });
+                                setUpdateBundle(downloadedBundle); 
+                                setIsUpdateReady(true);
+                                
+                                setToast({ show: true, message: 'Update ready to install!', type: 'success' });
 
-                            await LocalNotifications.schedule({
-                                notifications: [{
-                                    title: "Update Ready!",
-                                    body: "The new version has been downloaded. Tap here to restart and apply.",
-                                    id: 2,
-                                    schedule: { at: new Date(Date.now() + 1000) },
-                                    actionTypeId: "",
-                                    extra: null
-                                }]
-                            });
+                                try {
+                                    await LocalNotifications.schedule({
+                                        notifications: [{
+                                            title: "Update Ready!",
+                                            body: "New features downloaded. Tap to apply.",
+                                            id: 2,
+                                            schedule: { at: new Date(Date.now() + 1000) }
+                                        }]
+                                    });
+                                } catch (e) { /* Ignore notification crash */ }
 
-                        } catch (err) {
-                            console.error("Failed to download Capgo update", err);
-                        } finally {
-                            setIsDownloadingUpdate(false);
+                            } catch (err) {
+                                console.error("Failed to download Capgo update safely", err);
+                            } finally {
+                                setIsDownloadingUpdate(false);
+                            }
                         }
                     }
                 } catch (error) { 
-                    console.warn("Capgo update check failed:", error); 
+                    console.warn("Capgo check failed safely:", error); 
                 }
             };
             
@@ -662,14 +673,14 @@ export default function App() {
             setTimeout(() => {
                 checkNativeUpdates();
                 checkWebUpdates();
-            }, 2000);
+            }, 3000); // Delayed slightly more to ensure App UI is fully rendered
         }
 
-        // Cleanup listener on unmount
         return () => {
             if (downloadListenerHandle) downloadListenerHandle.remove();
         };
     }, []);
+    
     useEffect(() => { if (!authLoading && user) initializeUsageTracking(); }, [authLoading, user]);
 
     useEffect(() => {

@@ -14,7 +14,7 @@ import { Award, FileSignature, Stamp, Upload, Lock, XCircle, CheckCircle, Refres
 // Data & Firebase
 import { STATE_LOCALITIES } from './constants'; 
 import { db } from '../firebase'; 
-import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, getDoc } from 'firebase/firestore'; // Added getDoc
 import { useDataCache } from '../DataContext';
 import { 
     getParticipantById, 
@@ -30,18 +30,12 @@ import {
 // -----------------------------------------------------------------------------
 
 const getArabicMonthName = (monthIndex) => {
-    const months = [
-        "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
-        "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"
-    ];
+    const months = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
     return months[monthIndex];
 };
 
 const getEnglishMonthName = (monthIndex) => {
-    const months = [
-        "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"
-    ];
+    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     return months[monthIndex];
 };
 
@@ -99,26 +93,55 @@ const getSmallAndSickSubCourseArabic = (subCourse) => {
     }
 };
 
-const fetchArabicNameHelper = async (cachedList, collectionName, englishName, fieldName) => {
+// --- UPDATED HELPER: Checks specific ID first, then falls back to robust string matching ---
+const fetchArabicNameHelper = async (cachedList, collectionName, englishName, fieldName, specificId = null) => {
+    
+    // 1. Exact ID match (Safest and preferred)
+    if (specificId) {
+        if (cachedList && cachedList.length > 0) {
+            const match = cachedList.find(item => item.id === specificId);
+            if (match && match[fieldName]) return match[fieldName];
+        }
+        try {
+            const docSnap = await getDoc(doc(db, collectionName, specificId));
+            if (docSnap.exists() && docSnap.data()[fieldName]) return docSnap.data()[fieldName];
+        } catch (e) {
+            console.error("Error fetching Arabic name by ID", e);
+        }
+    }
+
     if (!englishName) return null;
     const searchName = englishName.trim().toLowerCase();
+    const cleanSearchName = searchName.replace(/^dr\.?\s*/i, '').trim();
 
+    // 2. Name Match in Cache
     if (cachedList && cachedList.length > 0) {
         const match = cachedList.find(item => {
             const itemName = (item.name || '').trim().toLowerCase();
-            return itemName === searchName || itemName.replace(/^dr\.?\s*/i, '').trim() === searchName.replace(/^dr\.?\s*/i, '').trim();
+            const cleanItemName = itemName.replace(/^dr\.?\s*/i, '').trim();
+            return itemName === searchName || cleanItemName === cleanSearchName;
         });
         if (match && match[fieldName]) return match[fieldName];
     }
 
-    const cleanSearchName = englishName.trim();
+    // 3. Fallback to Firestore Queries for older, name-only records
     try {
-        let q = query(collection(db, collectionName), where("name", "==", cleanSearchName));
+        let q = query(collection(db, collectionName), where("name", "==", englishName.trim()));
         let snapshot = await getDocs(q);
 
-        if (snapshot.empty && cleanSearchName.includes("Dr.")) {
-            const cleanName = cleanSearchName.replace(/^Dr\.?\s*/i, '').trim();
-            q = query(collection(db, collectionName), where("name", "==", cleanName));
+        if (snapshot.empty) {
+            q = query(collection(db, collectionName), where("name", "==", `Dr. ${englishName.trim()}`));
+            snapshot = await getDocs(q);
+        }
+
+        if (snapshot.empty) {
+            q = query(collection(db, collectionName), where("name", "==", `Dr ${englishName.trim()}`));
+            snapshot = await getDocs(q);
+        }
+
+        if (snapshot.empty) {
+            const stripped = englishName.trim().replace(/^Dr\.?\s*/i, '').trim();
+            q = query(collection(db, collectionName), where("name", "==", stripped));
             snapshot = await getDocs(q);
         }
 
@@ -126,6 +149,14 @@ const fetchArabicNameHelper = async (cachedList, collectionName, englishName, fi
             const data = snapshot.docs[0].data();
             const arName = data[fieldName]; 
             if (arName) return arName;
+        } else {
+            const allDocsSnapshot = await getDocs(collection(db, collectionName));
+            const match = allDocsSnapshot.docs.find(doc => {
+                const itemName = (doc.data().name || '').trim().toLowerCase();
+                const cleanItemName = itemName.replace(/^dr\.?\s*/i, '').trim();
+                return itemName === searchName || cleanItemName === cleanSearchName;
+            });
+            if (match && match.data()[fieldName]) return match.data()[fieldName];
         }
     } catch (error) {
         console.error(`Error fetching Arabic name from ${collectionName}:`, error);
@@ -156,81 +187,47 @@ const imageUrlToBase64 = async (url) => {
 // -----------------------------------------------------------------------------
 
 const CertificateTemplate = React.memo(function CertificateTemplate({ 
-    course, 
-    participant, 
-    federalProgramManagerName, 
-    participantSubCourse,
-    language = 'en',
-    directorNameAr,      
-    programManagerNameAr,
-    programManagerSignatureUrl,
-    directorName,          
-    directorSignatureUrl,  
-    programStampUrl,
-    isTemplate = false 
+    course, participant, federalProgramManagerName, participantSubCourse, language = 'en',
+    directorNameAr, programManagerNameAr, programManagerSignatureUrl, directorName, directorSignatureUrl,  
+    programStampUrl, isTemplate = false 
 }) {
     const isArabic = language === 'ar';
     const courseType = course.course_type ? course.course_type.trim() : '';
     const courseTitle = getCertificateCourseTitle(courseType, language);
     
-    // Logic to determine what to display for the sub-course
     let displaySubCourse = participantSubCourse;
-    
-   if (participantSubCourse) {
+    if (participantSubCourse) {
         if (isArabic) {
-            // Arabic Translation Logic
-            if (courseType === 'ICCM') {
-                displaySubCourse = "تدريب العامل الصحي المجتمعي";
-            } else if (courseType === 'IMNCI') {
-                displaySubCourse = "المعالجة القياسية للاطفال اقل من 5 سنوات";
-            } else if (courseType === 'Small & Sick Newborn') {
-                displaySubCourse = getSmallAndSickSubCourseArabic(participantSubCourse);
-            } else if (courseType === 'Program Management') {
-                if (participantSubCourse.includes('IMNCI implementation operational Guide')) {
-                    displaySubCourse = "دورة تدريب المدريبين على الدليل التشغيلي لتطبيق العلاج المتكامل في مؤسسات الرعاية الصحية الأساسية";
-                } else if (participantSubCourse.includes('planning, Monitoring and evaluation')) {
-                    displaySubCourse = "التخطيط والمتابعة والتقييم";
-                }
+            if (courseType === 'ICCM') displaySubCourse = "تدريب العامل الصحي المجتمعي";
+            else if (courseType === 'IMNCI') displaySubCourse = "المعالجة القياسية للاطفال اقل من 5 سنوات";
+            else if (courseType === 'Small & Sick Newborn') displaySubCourse = getSmallAndSickSubCourseArabic(participantSubCourse);
+            else if (courseType === 'Program Management') {
+                if (participantSubCourse.includes('IMNCI implementation operational Guide')) displaySubCourse = "دورة تدريب المدريبين على الدليل التشغيلي لتطبيق العلاج المتكامل في مؤسسات الرعاية الصحية الأساسية";
+                else if (participantSubCourse.includes('planning, Monitoring and evaluation')) displaySubCourse = "التخطيط والمتابعة والتقييم";
             }
         }
     }
 
     let stateDisplay = course.state || '';
-    // Handle multiple states gracefully if they exist from the enhanced CourseForm
     if (isArabic) {
-        if (course.states && Array.isArray(course.states)) {
-            stateDisplay = course.states.map(s => STATE_LOCALITIES[s] ? STATE_LOCALITIES[s].ar : s).join('، ');
-        } else if (STATE_LOCALITIES[course.state]) {
-            stateDisplay = STATE_LOCALITIES[course.state].ar;
-        }
+        if (course.states && Array.isArray(course.states)) stateDisplay = course.states.map(s => STATE_LOCALITIES[s] ? STATE_LOCALITIES[s].ar : s).join('، ');
+        else if (STATE_LOCALITIES[course.state]) stateDisplay = STATE_LOCALITIES[course.state].ar;
     } else {
-        // For English certificates, ensure states are separated by commas
-        if (course.states && Array.isArray(course.states)) {
-            stateDisplay = course.states.join(', ');
-        }
+        if (course.states && Array.isArray(course.states)) stateDisplay = course.states.join(', ');
     }
 
-    // Use English hall name if language is English and the field exists, otherwise fallback to Arabic hall
     const hallDisplay = (!isArabic && course.hall_english) ? course.hall_english : (course.hall || '');
-    
-    // Combine state(s) and hall, avoiding trailing hyphens if hall is missing
     const location = hallDisplay ? `${stateDisplay} - ${hallDisplay}` : stateDisplay;
 
     let courseDate = '';
     let courseDuration = course.course_duration;
     
-    // --- NEW LOGIC: Override duration based on IMNCI sub-course ---
     if (courseType === 'IMNCI' && participantSubCourse) {
         const subTypeLower = participantSubCourse.toLowerCase();
-        if (subTypeLower.includes('standard')) {
-            courseDuration = 7;
-        } else if (subTypeLower.includes('refreshment')) {
-            courseDuration = 3;
-        } else {
-            courseDuration = 4; // Default for other IMNCI sub-courses
-        }
+        if (subTypeLower.includes('standard')) courseDuration = 7;
+        else if (subTypeLower.includes('refreshment')) courseDuration = 3;
+        else courseDuration = 4;
     }
-    // --------------------------------------------------------------
     
     if (courseDuration && course.start_date) {
         const [startYear, startMonth, startDay] = course.start_date.split('-').map(Number);
@@ -248,22 +245,15 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
         if (isArabic) {
             const startMonthName = getArabicMonthName(startMonthIndex);
             const endMonthName = getArabicMonthName(endMonthIndex);
-            if (startMonthIndex === endMonthIndex) {
-                courseDate = `${startDayOfMonth} - ${endDayOfMonth} ${startMonthName} ${startYearNum}`;
-            } else {
-                courseDate = `${startDayOfMonth} ${startMonthName} - ${endDayOfMonth} ${endMonthName} ${endYearNum}`;
-            }
+            if (startMonthIndex === endMonthIndex) courseDate = `${startDayOfMonth} - ${endDayOfMonth} ${startMonthName} ${startYearNum}`;
+            else courseDate = `${startDayOfMonth} ${startMonthName} - ${endDayOfMonth} ${endMonthName} ${endYearNum}`;
         } else {
             const startMonthName = getEnglishMonthName(startMonthIndex);
             const endMonthName = getEnglishMonthName(endMonthIndex);
             const startDayHtml = getDayWithSuffix(startDayOfMonth);
             const endDayHtml = getDayWithSuffix(endDayOfMonth);
-
-            if (startMonthIndex === endMonthIndex) {
-                courseDate = `${startDayHtml} - ${endDayHtml} ${startMonthName} ${startYearNum}`;
-            } else {
-                courseDate = `${startDayHtml} ${startMonthName} - ${endDayHtml} ${endMonthName} ${endYearNum}`;
-            }
+            if (startMonthIndex === endMonthIndex) courseDate = `${startDayHtml} - ${endDayHtml} ${startMonthName} ${startYearNum}`;
+            else courseDate = `${startDayHtml} ${startMonthName} - ${endDayHtml} ${endMonthName} ${endYearNum}`;
         }
     } else {
         courseDate = course.start_date ? course.start_date.split('-').reverse().join('/') : 'N/A';
@@ -271,363 +261,102 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
     
     const verificationUrl = isTemplate ? '' : `${window.location.origin}/verify/certificate/${participant?.id}`;
 
-    const containerStyle = { 
-        width: '297mm', 
-        height: '210mm', 
-        boxSizing: 'border-box', 
-        fontFamily: isArabic ? 'Arial, sans-serif' : 'Times New Roman, serif', 
-        color: 'black', 
-        backgroundColor: 'white', 
-        position: 'relative',
-        direction: isArabic ? 'rtl' : 'ltr'
-    };
-
-    const qrContainerStyle = {
-        position: 'absolute',
-        top: '60mm',
-        width: '45mm',
-        height: 'auto',
-        zIndex: 2,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',     
-        justifyContent: 'center', 
-        left: isArabic ? '15mm' : 'auto',
-        right: isArabic ? 'auto' : '15mm',
-    };
-
+    const containerStyle = { width: '297mm', height: '210mm', boxSizing: 'border-box', fontFamily: isArabic ? 'Arial, sans-serif' : 'Times New Roman, serif', color: 'black', backgroundColor: 'white', position: 'relative', direction: isArabic ? 'rtl' : 'ltr' };
+    const qrContainerStyle = { position: 'absolute', top: '60mm', width: '45mm', height: 'auto', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', left: isArabic ? '15mm' : 'auto', right: isArabic ? 'auto' : '15mm' };
     const finalDirectorName = directorName || course.director;
 
     return (
         <div id="certificate-template" style={containerStyle}>
-            <img 
-                src="/certificate/border.jpg" 
-                alt="Certificate Border" 
-                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0 }}
-            />
+            <img src="/certificate/border.jpg" alt="Certificate Border" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0 }} />
             
-            {/* Logos */}
-            <div style={{ 
-                position: 'absolute', 
-                top: '25mm', 
-                [isArabic ? 'right' : 'left']: '25mm', 
-                zIndex: 1, 
-                textAlign: 'center', 
-                display: 'flex', 
-                flexDirection: 'row', 
-                gap: '15px',
-                alignItems: 'center'
-            }}>
+            <div style={{ position: 'absolute', top: '25mm', [isArabic ? 'right' : 'left']: '25mm', zIndex: 1, textAlign: 'center', display: 'flex', flexDirection: 'row', gap: '15px', alignItems: 'center' }}>
                 <img src="/certificate/fmoh-logo.jpg" alt="FMOH" style={{ height: '30mm', width: 'auto' }} />
                 <img src="/certificate/ch-logo.png" alt="NCHP" style={{ height: '35mm', width: 'auto' }} />
             </div>
             
-            <div style={{ 
-                position: 'absolute', 
-                top: '25mm', 
-                [isArabic ? 'left' : 'right']: '25mm', 
-                zIndex: 1, 
-                display: 'flex', 
-                flexDirection: 'row', 
-                gap: '15px',
-                alignItems: 'center'
-            }}>
+            <div style={{ position: 'absolute', top: '25mm', [isArabic ? 'left' : 'right']: '25mm', zIndex: 1, display: 'flex', flexDirection: 'row', gap: '15px', alignItems: 'center' }}>
                  <img src="/certificate/who-logo.png" alt="WHO" style={{ height: '30mm', width: 'auto' }} />
                  <img src="/certificate/unicef-logo.png" alt="UNICEF" style={{ height: '30mm', width: 'auto' }} />
             </div>
 
-            {/* Header */}
-            <div style={{
-                position: 'absolute',
-                top: '14mm', 
-                left: '0mm',
-                right: '0mm',
-                textAlign: 'center',
-                fontSize: isArabic ? '22px' : '24px',
-                fontWeight: 'bold',
-                lineHeight: '1.5',
-                zIndex: 2
-            }}>
-                {isArabic ? (
-                    <>
-                        جمهورية السودان<br />
-                        وزارة الصحة الاتحادية<br />
-                        الإدارة العامة للرعاية الصحية الاساسية<br />
-                        إدارة صحة الأم والطفل<br />
-                        البرنامج القومي لصحة الطفل
-                    </>
-                ) : (
-                    <>
-                        Republic of Sudan<br />
-                        Federal Ministry of Health<br />
-                        Directorate General of PHC<br />
-                        Maternal and Child Health Directorate<br />
-                        National Child Health Program
-                    </>
-                )}
+            <div style={{ position: 'absolute', top: '14mm', left: '0mm', right: '0mm', textAlign: 'center', fontSize: isArabic ? '22px' : '24px', fontWeight: 'bold', lineHeight: '1.5', zIndex: 2 }}>
+                {isArabic ? (<>جمهورية السودان<br />وزارة الصحة الاتحادية<br />الإدارة العامة للرعاية الصحية الاساسية<br />إدارة صحة الأم والطفل<br />البرنامج القومي لصحة الطفل</>) : (<>Republic of Sudan<br />Federal Ministry of Health<br />Directorate General of PHC<br />Maternal and Child Health Directorate<br />National Child Health Program</>)}
             </div>
 
-            {/* Certificate Word */}
-             <div style={{
-                position: 'absolute',
-                top: '60mm',
-                left: '0',
-                right: '0',
-                textAlign: 'center',
-                fontSize: '60px',
-                fontWeight: 'bold',
-                textDecoration: 'underline',
-                color: 'red',
-                zIndex: 2,
-                fontFamily: isArabic ? 'Arial, sans-serif' : 'Times New Roman, serif'
-            }}>
+             <div style={{ position: 'absolute', top: '60mm', left: '0', right: '0', textAlign: 'center', fontSize: '60px', fontWeight: 'bold', textDecoration: 'underline', color: 'red', zIndex: 2, fontFamily: isArabic ? 'Arial, sans-serif' : 'Times New Roman, serif' }}>
                 {isArabic ? 'شهادة' : 'CERTIFICATE'}
             </div>
 
-            {/* Participant Name */}
-            <div style={{
-                position: 'absolute',
-                top: isArabic ? '90mm' : '90mm',
-                left: '30mm',
-                right: '30mm',
-                textAlign: 'center',
-                fontSize: '35px',
-                fontWeight: 'bold',
-                zIndex: 2,
-                borderBottom: '3px dotted #000', 
-                paddingBottom: '10px',
-                minHeight: '40px'
-            }}>
+            <div style={{ position: 'absolute', top: '90mm', left: '30mm', right: '30mm', textAlign: 'center', fontSize: '35px', fontWeight: 'bold', zIndex: 2, borderBottom: '3px dotted #000', paddingBottom: '10px', minHeight: '40px' }}>
                 {!isTemplate && (isArabic ? `${participant.name}` : `${participant.name}`)}
             </div>
 
-            {/* Completion Text */}
-            <div style={{
-                position: 'absolute',
-                top: isArabic ? '108mm' : '108mm', 
-                left: '50mm',
-                right: '50mm',
-                textAlign: 'center',
-                fontSize: '22px', 
-                fontStyle: isArabic ? 'normal' : 'italic',
-                zIndex: 2
-            }}>
+            <div style={{ position: 'absolute', top: '108mm', left: '50mm', right: '50mm', textAlign: 'center', fontSize: '22px', fontStyle: isArabic ? 'normal' : 'italic', zIndex: 2 }}>
                 {isArabic ? 'أكمل/ت بنجاح الدورة التدريبية على : ' : 'Has successfully completed:'}
             </div>
 
-            {/* Course Title */}
-            <div style={{
-                position: 'absolute',
-                top: '120mm', 
-                left: '10mm',
-                right: '10mm',
-                textAlign: 'center',
-                fontSize: '28px', 
-                fontWeight: 'bold',
-                color: 'red',
-                zIndex: 2,
-                lineHeight: '1.3' 
-            }}>
+            <div style={{ position: 'absolute', top: '120mm', left: '10mm', right: '10mm', textAlign: 'center', fontSize: '28px', fontWeight: 'bold', color: 'red', zIndex: 2, lineHeight: '1.3' }}>
                 {courseTitle}
             </div>
             
-            {/* Sub Course - Explicitly Centered and Positioned */}
             {(displaySubCourse) && (
-                <div style={{
-                    position: 'absolute',
-                    top: '135mm', 
-                    left: '0',
-                    right: '0',
-                    width: '100%',
-                    textAlign: 'center',
-                    fontSize: '20px',
-                    fontWeight: 'normal',
-                    color: 'black',
-                    zIndex: 2
-                }}>
+                <div style={{ position: 'absolute', top: '135mm', left: '0', right: '0', width: '100%', textAlign: 'center', fontSize: '20px', fontWeight: 'normal', color: 'black', zIndex: 2 }}>
                    ({displaySubCourse})
                 </div>
             )}
 
-            {/* Location & Date */}
-            <div style={{
-                position: 'absolute',
-                top: '148mm', 
-                left: '0',
-                right: '0',
-                width: '100%',
-                textAlign: 'center', 
-                zIndex: 2
-            }}>
-                <div style={{
-                    fontSize: '24px',
-                    fontWeight: 'bold',
-                    display: 'inline-block', 
-                    marginRight: isArabic ? '0' : '20px',
-                    marginLeft: isArabic ? '20px' : '0'
-                }}>
+            <div style={{ position: 'absolute', top: '148mm', left: '0', right: '0', width: '100%', textAlign: 'center', zIndex: 2 }}>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', display: 'inline-block', marginRight: isArabic ? '0' : '20px', marginLeft: isArabic ? '20px' : '0' }}>
                     <span style={{ color: 'red' }}>{isArabic ? 'المكان : ' : 'Place : '}</span> {location}
                 </div>
-
-                <div style={{
-                    marginTop: '3mm', 
-                    fontSize: '24px',
-                    fontWeight: 'bold',
-                    display: 'block', 
-                }}>
-                    <span style={{ color: 'red' }}>{isArabic ? 'التاريخ : ' : 'Date : '}</span> 
-                    <span dangerouslySetInnerHTML={{ __html: courseDate }}></span>
+                <div style={{ marginTop: '3mm', fontSize: '24px', fontWeight: 'bold', display: 'block' }}>
+                    <span style={{ color: 'red' }}>{isArabic ? 'التاريخ : ' : 'Date : '}</span> <span dangerouslySetInnerHTML={{ __html: courseDate }}></span>
                 </div>
             </div>
 
-            {/* QR Code Section */}
             {!isTemplate && (
                 <div style={qrContainerStyle}>
-                    <div style={{
-                        marginBottom: '8px',
-                        lineHeight: '1.5',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        fontFamily: isArabic ? 'Arial, sans-serif' : 'sans-serif',
-                    }}>
+                    <div style={{ marginBottom: '8px', lineHeight: '1.5', fontSize: '16px', fontWeight: 'bold', fontFamily: isArabic ? 'Arial, sans-serif' : 'sans-serif' }}>
                         {isArabic ? 'أمسح وتحقق' : 'Scan & Verify'}
                     </div>
                     <div style={{ display: 'block' }}>
-                        <QRCodeCanvas
-                            value={verificationUrl}
-                            size={87} 
-                            bgColor={"#ffffff"}
-                            fgColor={"#000000"}
-                            level={"L"} 
-                            includeMargin={false}
-                        />
+                        <QRCodeCanvas value={verificationUrl} size={87} bgColor={"#ffffff"} fgColor={"#000000"} level={"L"} includeMargin={false} />
                     </div>
                 </div>
             )}
 
-            {/* Signatures & Stamp Section */}
-            
-            {/* PROGRAM STAMP */}
             {programStampUrl && (
-                <div style={{
-                    position: 'absolute',
-                    top: '162mm', 
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    zIndex: 1, 
-                    opacity: 0.9,
-                    pointerEvents: 'none'
-                }}>
-                    <img 
-                        src={programStampUrl} 
-                        alt="Program Stamp" 
-                        crossOrigin="anonymous" 
-                        style={{ 
-                            width: '40mm', 
-                            height: 'auto',
-                            maxHeight: '40mm' 
-                        }} 
-                    />
+                <div style={{ position: 'absolute', top: '162mm', left: '50%', transform: 'translateX(-50%)', zIndex: 1, opacity: 0.9, pointerEvents: 'none' }}>
+                    <img src={programStampUrl} alt="Program Stamp" crossOrigin="anonymous" style={{ width: '40mm', height: 'auto', maxHeight: '40mm' }} />
                 </div>
             )}
 
-            {/* RIGHT SIDE SIGNATURE */}
-            <div style={{
-                position: 'absolute',
-                top: '175mm', 
-                right: '5mm',
-                width: '90mm', 
-                textAlign: 'center',
-                fontSize: '20px',
-                fontWeight: 'bold',
-                zIndex: 2
-            }}>
+            <div style={{ position: 'absolute', top: '175mm', right: '5mm', width: '90mm', textAlign: 'center', fontSize: '20px', fontWeight: 'bold', zIndex: 2 }}>
                {isArabic ? (
-                   // ARABIC RIGHT: PROGRAM MANAGER
                    <div style={{ position: 'relative' }}>
-                       {programManagerSignatureUrl && (
-                           <img 
-                               src={programManagerSignatureUrl} 
-                               alt="Signature" 
-                               crossOrigin="anonymous" 
-                               style={{ 
-                                   display: 'block', margin: '0 auto', maxHeight: '20mm', maxWidth: '30mm',
-                                   position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', 
-                                   zIndex: 1 
-                               }} 
-                           />
-                       )}
+                       {programManagerSignatureUrl && ( <img src={programManagerSignatureUrl} alt="Signature" crossOrigin="anonymous" style={{ display: 'block', margin: '0 auto', maxHeight: '20mm', maxWidth: '30mm', position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', zIndex: 1 }} /> )}
                        <div style={{ marginBottom: '1mm', position: 'relative', zIndex: 2 }}>د. {programManagerNameAr || federalProgramManagerName || '...'}</div>
                        <div>مدير البرنامج</div>
                    </div>
                ) : (
-                   // ENGLISH RIGHT: COURSE DIRECTOR
                    <div style={{ position: 'relative' }}>
-                        {directorSignatureUrl && (
-                           <img 
-                               src={directorSignatureUrl} 
-                               alt="Signature" 
-                               crossOrigin="anonymous" 
-                               style={{ 
-                                   display: 'block', margin: '0 auto', maxHeight: '20mm', maxWidth: '30mm',
-                                   position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', 
-                                   zIndex: 1 
-                               }} 
-                           />
-                       )}
+                        {directorSignatureUrl && ( <img src={directorSignatureUrl} alt="Signature" crossOrigin="anonymous" style={{ display: 'block', margin: '0 auto', maxHeight: '20mm', maxWidth: '30mm', position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', zIndex: 1 }} /> )}
                        <div style={{ marginBottom: '1mm', position: 'relative', zIndex: 2 }}>Dr. {finalDirectorName}</div>
                        <div>Course Director</div>
                    </div>
                )}
             </div>
 
-            {/* LEFT SIDE SIGNATURE */}
-            <div style={{
-                position: 'absolute',
-                top: '175mm', 
-                left: '5mm', 
-                width: '90mm', 
-                textAlign: 'center',
-                fontSize: '20px', 
-                fontWeight: 'bold',
-                zIndex: 2
-            }}>
+            <div style={{ position: 'absolute', top: '175mm', left: '5mm', width: '90mm', textAlign: 'center', fontSize: '20px', fontWeight: 'bold', zIndex: 2 }}>
                 {isArabic ? (
-                   // ARABIC LEFT: COURSE DIRECTOR
                    <div style={{ position: 'relative' }}>
-                       {directorSignatureUrl && (
-                           <img 
-                               src={directorSignatureUrl} 
-                               alt="Signature" 
-                               crossOrigin="anonymous" 
-                               style={{ 
-                                   display: 'block', margin: '0 auto', maxHeight: '20mm', maxWidth: '30mm',
-                                   position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', 
-                                   zIndex: 1 
-                               }} 
-                           />
-                       )}
-                       {/* Ensure "Dr." is displayed correctly. If directorNameAr is missing, fallback to English name */}
-                       <div style={{ marginBottom: '1mm', position: 'relative', zIndex: 2 }}>
-                           {directorNameAr ? `د. ${directorNameAr}` : `د. ${finalDirectorName || '...'}`}
-                       </div>
+                       {directorSignatureUrl && ( <img src={directorSignatureUrl} alt="Signature" crossOrigin="anonymous" style={{ display: 'block', margin: '0 auto', maxHeight: '20mm', maxWidth: '30mm', position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', zIndex: 1 }} /> )}
+                       <div style={{ marginBottom: '1mm', position: 'relative', zIndex: 2 }}>{directorNameAr ? `د. ${directorNameAr}` : `د. ${finalDirectorName || '...'}`}</div>
                        <div>مدير الدورة</div>
                    </div>
                ) : (
-                   // ENGLISH LEFT: PROGRAM MANAGER
                    <div style={{ position: 'relative' }}>
-                       {programManagerSignatureUrl && (
-                           <img 
-                               src={programManagerSignatureUrl} 
-                               alt="Signature" 
-                               crossOrigin="anonymous" 
-                               style={{ 
-                                   display: 'block', margin: '0 auto', maxHeight: '20mm', maxWidth: '30mm',
-                                   position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', 
-                                   zIndex: 1 
-                               }} 
-                           />
-                       )}
+                       {programManagerSignatureUrl && ( <img src={programManagerSignatureUrl} alt="Signature" crossOrigin="anonymous" style={{ display: 'block', margin: '0 auto', maxHeight: '20mm', maxWidth: '30mm', position: 'absolute', bottom: '12mm', left: '50%', transform: 'translateX(-50%)', zIndex: 1 }} /> )}
                        <div style={{ marginBottom: '1mm', position: 'relative', zIndex: 2 }}>Dr. {federalProgramManagerName || 'Federal Program Manager'}</div>
                        <div>National Program Manager</div>
                    </div>
@@ -642,18 +371,13 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
 // -----------------------------------------------------------------------------
 
 export const generateCertificatePdf = async (course, participant, federalProgramManagerName, participantSubCourse, language = 'en', cachedFacilitators = null, cachedCoordinators = null) => {
-    
-    // --- Logic to prioritize the approved name & signature ---
-    // Ensure names are trimmed to match database records effectively
     const finalManagerName = (course.approvedByManagerName || federalProgramManagerName || '').trim();
     const rawManagerSignature = course.approvedByManagerSignatureUrl || null;
 
-    // --- New Fields ---
     const finalDirectorName = (course.approvedDirectorName || course.director || '').trim();
     const rawDirectorSignature = course.approvedDirectorSignatureUrl || null;
     const rawProgramStamp = course.approvedProgramStampUrl || null;
 
-    // --- CONVERT IMAGES TO BASE64 (Fixes CORS/Loading issues) ---
     const finalManagerSignature = await imageUrlToBase64(rawManagerSignature);
     const finalDirectorSignature = await imageUrlToBase64(rawDirectorSignature);
     const finalProgramStamp = await imageUrlToBase64(rawProgramStamp);
@@ -662,9 +386,9 @@ export const generateCertificatePdf = async (course, participant, federalProgram
     let programManagerNameAr = null;
 
     if (language === 'ar') {
-        // Fetch Arabic names from the collections
-        directorNameAr = await fetchArabicNameHelper(cachedFacilitators, 'facilitators', finalDirectorName, 'arabicName');
-        programManagerNameAr = await fetchArabicNameHelper(cachedCoordinators, 'federalCoordinators', finalManagerName, 'nameAr');
+        // Now fetching with IDs seamlessly if they exist on the course
+        directorNameAr = await fetchArabicNameHelper(cachedFacilitators, 'facilitators', finalDirectorName, 'arabicName', course.approvedDirectorId || course.directorId);
+        programManagerNameAr = await fetchArabicNameHelper(cachedCoordinators, 'federalCoordinators', finalManagerName, 'nameAr', course.approvedByManagerId);
     }
 
     try {
@@ -691,61 +415,31 @@ export const generateCertificatePdf = async (course, participant, federalProgram
     
     let canvas = null;
     try {
-        // Render with new props
-        root.render(
-            <CertificateTemplate 
-                course={course} 
-                participant={participant} 
-                federalProgramManagerName={finalManagerName} 
-                participantSubCourse={participantSubCourse} 
-                language={language}
-                directorNameAr={directorNameAr}       
-                programManagerNameAr={programManagerNameAr} 
-                programManagerSignatureUrl={finalManagerSignature} 
-                directorName={finalDirectorName}
-                directorSignatureUrl={finalDirectorSignature}
-                programStampUrl={finalProgramStamp}
-            />
-        );
-
-        // Wait slightly longer to ensure rendering
+        root.render(<CertificateTemplate course={course} participant={participant} federalProgramManagerName={finalManagerName} participantSubCourse={participantSubCourse} language={language} directorNameAr={directorNameAr} programManagerNameAr={programManagerNameAr} programManagerSignatureUrl={finalManagerSignature} directorName={finalDirectorName} directorSignatureUrl={finalDirectorSignature} programStampUrl={finalProgramStamp} />);
         await new Promise(resolve => setTimeout(resolve, 1000)); 
 
         const element = container.querySelector('#certificate-template');
         if (!element) throw new Error("Certificate template element not found.");
 
-        canvas = await html2canvas(element, { 
-            scale: 2, 
-            useCORS: true,
-            logging: false,
-            backgroundColor: '#ffffff' 
-        });
-        
+        canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' });
         return canvas;
-
     } catch (error) {
         console.error("Error generating certificate:", error);
         alert(`Could not generate certificate for ${participant.name}. See console for details.`);
         return null;
     } finally {
-        if (container.parentNode === document.body) {
-             root.unmount();
-             document.body.removeChild(container);
-        }
+        if (container.parentNode === document.body) { root.unmount(); document.body.removeChild(container); }
     }
 };
 
 export const generateBlankCertificatePdf = async (course, federalProgramManagerName, language = 'en', cachedFacilitators = null, cachedCoordinators = null) => {
-    // --- Logic to prioritize the approved name & signature ---
     const finalManagerName = (course.approvedByManagerName || federalProgramManagerName || '').trim();
     const rawManagerSignature = course.approvedByManagerSignatureUrl || null;
 
-    // --- New Fields ---
     const finalDirectorName = (course.approvedDirectorName || course.director || '').trim();
     const rawDirectorSignature = course.approvedDirectorSignatureUrl || null;
     const rawProgramStamp = course.approvedProgramStampUrl || null;
 
-    // --- CONVERT IMAGES TO BASE64 ---
     const finalManagerSignature = await imageUrlToBase64(rawManagerSignature);
     const finalDirectorSignature = await imageUrlToBase64(rawDirectorSignature);
     const finalProgramStamp = await imageUrlToBase64(rawProgramStamp);
@@ -754,8 +448,8 @@ export const generateBlankCertificatePdf = async (course, federalProgramManagerN
     let programManagerNameAr = null;
 
     if (language === 'ar') {
-        directorNameAr = await fetchArabicNameHelper(cachedFacilitators, 'facilitators', finalDirectorName, 'arabicName');
-        programManagerNameAr = await fetchArabicNameHelper(cachedCoordinators, 'federalCoordinators', finalManagerName, 'nameAr');
+        directorNameAr = await fetchArabicNameHelper(cachedFacilitators, 'facilitators', finalDirectorName, 'arabicName', course.approvedDirectorId || course.directorId);
+        programManagerNameAr = await fetchArabicNameHelper(cachedCoordinators, 'federalCoordinators', finalManagerName, 'nameAr', course.approvedByManagerId);
     }
 
     try {
@@ -765,11 +459,7 @@ export const generateBlankCertificatePdf = async (course, federalProgramManagerN
             img.onload = resolve;
             img.onerror = () => reject(new Error("Failed to load certificate background image."));
         });
-    } catch (error) {
-        console.error(error);
-        alert(error.message);
-        return null;
-    }
+    } catch (error) { console.error(error); alert(error.message); return null; }
 
     const container = document.createElement('div');
     container.style.position = 'absolute';
@@ -777,75 +467,32 @@ export const generateBlankCertificatePdf = async (course, federalProgramManagerN
     container.style.top = '0';
     container.style.zIndex = '-1'; 
     document.body.appendChild(container);
-
     const root = createRoot(container);
     
     let canvas = null;
     try {
-        // Mock participant for structure
         const dummyParticipant = { name: '', id: 'template' };
-
         let sampleSubCourse = null;
         if (course.facilitatorAssignments && course.facilitatorAssignments.length > 0) {
             const assignment = course.facilitatorAssignments.find(a => a.imci_sub_type);
-            if (assignment) {
-                sampleSubCourse = assignment.imci_sub_type;
-            }
+            if (assignment) sampleSubCourse = assignment.imci_sub_type;
         }
-        
-        // Fallback for visual confirmation in template if no assignment found
-        if (!sampleSubCourse && course.course_type === 'Small & Sick Newborn') {
-            sampleSubCourse = "Module (1) Emergency and Essential Newborn Care";
-        }
+        if (!sampleSubCourse && course.course_type === 'Small & Sick Newborn') sampleSubCourse = "Module (1) Emergency and Essential Newborn Care";
 
-        root.render(
-            <CertificateTemplate 
-                course={course} 
-                participant={dummyParticipant} 
-                federalProgramManagerName={finalManagerName} 
-                participantSubCourse={sampleSubCourse}
-                language={language}
-                directorNameAr={directorNameAr}       
-                programManagerNameAr={programManagerNameAr} 
-                programManagerSignatureUrl={finalManagerSignature} 
-                directorName={finalDirectorName}
-                directorSignatureUrl={finalDirectorSignature}
-                programStampUrl={finalProgramStamp}
-                isTemplate={true} 
-            />
-        );
-
+        root.render(<CertificateTemplate course={course} participant={dummyParticipant} federalProgramManagerName={finalManagerName} participantSubCourse={sampleSubCourse} language={language} directorNameAr={directorNameAr} programManagerNameAr={programManagerNameAr} programManagerSignatureUrl={finalManagerSignature} directorName={finalDirectorName} directorSignatureUrl={finalDirectorSignature} programStampUrl={finalProgramStamp} isTemplate={true} />);
         await new Promise(resolve => setTimeout(resolve, 1000)); 
 
         const element = container.querySelector('#certificate-template');
         if (!element) throw new Error("Certificate template element not found.");
 
-        canvas = await html2canvas(element, { 
-            scale: 2, 
-            useCORS: true,
-            logging: false,
-            backgroundColor: '#ffffff' 
-        });
-        
+        canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' });
         return canvas;
-
-    } catch (error) {
-        console.error("Error generating certificate template:", error);
-        alert("Could not generate certificate template.");
-        return null;
-    } finally {
-        if (container.parentNode === document.body) {
-             root.unmount();
-             document.body.removeChild(container);
-        }
-    }
+    } catch (error) { console.error("Error generating certificate template:", error); alert("Could not generate certificate template."); return null; } 
+    finally { if (container.parentNode === document.body) { root.unmount(); document.body.removeChild(container); } }
 };
 
 export const generateAllCertificatesPdf = async (course, participants, federalProgramManagerName, language = 'en', onProgress = null, cachedFacilitators = null, cachedCoordinators = null) => {
-    if (!participants || participants.length === 0) {
-        alert("No participants found to generate certificates.");
-        return;
-    }
+    if (!participants || participants.length === 0) { alert("No participants found to generate certificates."); return; }
 
     const doc = new jsPDF('landscape', 'mm', 'a4');
     const imgWidth = 297; 
@@ -853,40 +500,21 @@ export const generateAllCertificatesPdf = async (course, participants, federalPr
     let firstPage = true;
 
     for (let i = 0; i < participants.length; i++) {
-        // Report progress
-        if (onProgress) {
-            onProgress(i + 1, participants.length);
-            // Allow UI to update
-            await new Promise(resolve => setTimeout(resolve, 0));
-        }
+        if (onProgress) { onProgress(i + 1, participants.length); await new Promise(resolve => setTimeout(resolve, 0)); }
 
         const participant = participants[i];
-        
         let participantSubCourse = participant.imci_sub_type;
         if (!participantSubCourse) {
-             const participantAssignment = course.facilitatorAssignments?.find(
-                (a) => a.group === participant.group
-            );
+             const participantAssignment = course.facilitatorAssignments?.find((a) => a.group === participant.group);
             participantSubCourse = participantAssignment?.imci_sub_type;
         }
 
-        const canvas = await generateCertificatePdf(
-            course, 
-            participant, 
-            federalProgramManagerName, 
-            participantSubCourse,
-            language,
-            cachedFacilitators,
-            cachedCoordinators
-        );
+        const canvas = await generateCertificatePdf(course, participant, federalProgramManagerName, participantSubCourse, language, cachedFacilitators, cachedCoordinators);
 
         if (canvas) {
-            if (!firstPage) {
-                doc.addPage();
-            }
+            if (!firstPage) doc.addPage();
             firstPage = false;
-            
-            const imgData = canvas.toDataURL('image/jpeg', 1); // 100% quality JPEG
+            const imgData = canvas.toDataURL('image/jpeg', 1); 
             doc.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight, undefined, 'FAST');
         }
     }
@@ -895,10 +523,10 @@ export const generateAllCertificatesPdf = async (course, participants, federalPr
         const langSuffix = language === 'ar' ? 'AR' : 'EN';
         const fileName = `All_Certificates_${langSuffix}_${course.course_type}_${course.start_date}.pdf`;
         doc.save(fileName);
-    } else {
-        alert("Failed to generate any certificates.");
-    }
+    } else { alert("Failed to generate any certificates."); }
 };
+
+
 
 // ============================================================================
 // PUBLIC & ADMIN CERTIFICATE VIEWS (Migrated from Course.jsx)

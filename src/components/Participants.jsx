@@ -8,7 +8,7 @@ import { Mail, Lock, RefreshCw, Search, Printer, ArrowLeft, Save, X } from 'luci
 
 // --- Firebase Imports ---
 import { db } from '../firebase';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 
 import {
     Card, PageHeader, Button, FormGroup, Input, Select, Textarea, Table, EmptyState, Modal, Spinner, Toast
@@ -1712,8 +1712,9 @@ export function ParticipantsView({
         }
     }, [user]);
 
-    const { fetchParticipants, federalCoordinators, fetchFederalCoordinators, isLoading, healthFacilities, fetchHealthFacilities } = useDataCache();
-    const isCacheLoading = isLoading?.federalCoordinators === true || isLoading?.courses === true;
+    // --- UPDATED HOOK USAGE: Extracted facilitators and fetchFacilitators ---
+    const { fetchParticipants, federalCoordinators, fetchFederalCoordinators, facilitators, fetchFacilitators, isLoading, healthFacilities, fetchHealthFacilities } = useDataCache();
+    const isCacheLoading = isLoading?.federalCoordinators === true || isLoading?.courses === true || isLoading?.facilitators === true;
 
     // Load HealthFacilities immediately if we are viewing an IMNCI course, to ensure baseline generation works.
     useEffect(() => {
@@ -1762,9 +1763,41 @@ export function ParticipantsView({
     const [isAdvancedActionsModalOpen, setIsAdvancedActionsModalOpen] = useState(false);
     const [isCertManagementModalOpen, setIsCertManagementModalOpen] = useState(false);
 
-    useEffect(() => { fetchFederalCoordinators(); }, [fetchFederalCoordinators]);
+    // --- UPDATED EFFECT: Fetches facilitators alongside federal coordinators ---
+    useEffect(() => { 
+        fetchFederalCoordinators(); 
+        fetchFacilitators(); 
+    }, [fetchFederalCoordinators, fetchFacilitators]);
 
-    useEffect(() => { setLocalApprovalStatus(course.isCertificateApproved); }, [course.isCertificateApproved]);
+    // 1. Incremental Sync: Ensure we fetch any new participants incrementally when the view opens
+    useEffect(() => {
+        if (course?.id && fetchParticipants) {
+            // The 'true' flag tells your DataCache to perform an incremental sync
+            fetchParticipants(true);
+        }
+    }, [course?.id, fetchParticipants]);
+
+    // 2. Real-time Certificate Approval Sync: Auto-unlock certificates when approved on the server
+    useEffect(() => {
+        if (!course?.id) return;
+
+        // Set initial state from props
+        setLocalApprovalStatus(course.isCertificateApproved === true);
+
+        // Attach a real-time listener to the specific course document
+        const courseRef = doc(db, 'courses', course.id);
+        const unsubscribe = onSnapshot(courseRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                // This will instantly update the UI (unlocking the download buttons) 
+                // if the certificate status changes to approved on the server.
+                setLocalApprovalStatus(data.isCertificateApproved === true);
+            }
+        });
+
+        // Cleanup the listener when the component unmounts or course changes
+        return () => unsubscribe();
+    }, [course?.id, course?.isCertificateApproved]);
 
     // Added Logic to Sync Coverage Snapshot with Database Dynamically
     const syncCourseCoverageSnapshot = async (updatedParticipantsList) => {
@@ -1999,6 +2032,7 @@ export function ParticipantsView({
         }
     };
 
+    // --- UPDATED: Pass facilitators array ---
     const handleGenerateSingleCert = async (p, participantSubCourse, language) => {
         cancelDownloadRef.current = false;
         setProcessingRowId(p.id);
@@ -2007,7 +2041,7 @@ export function ParticipantsView({
         setDownloadProgress({ current: 0, total: 1 });
         
         try {
-            const canvas = await generateCertificatePdf(course, p, federalProgramManagerName, participantSubCourse, language);
+            const canvas = await generateCertificatePdf(course, p, federalProgramManagerName, participantSubCourse, language, facilitators, federalCoordinators);
             
             if (cancelDownloadRef.current) throw new Error("CANCELLED_BY_USER");
             
@@ -2033,6 +2067,7 @@ export function ParticipantsView({
         }
     };
 
+    // --- UPDATED: Pass facilitators array ---
     const handleBulkCertificateDownload = async (language) => {
         if (filtered.length === 0) {
             setToast({ show: true, message: "No participants available for bulk certificate download.", type: 'warning' });
@@ -2048,7 +2083,7 @@ export function ParticipantsView({
              await generateAllCertificatesPdf(course, filtered, federalProgramManagerName, language, (current, total) => {
                  if (cancelDownloadRef.current) throw new Error("CANCELLED_BY_USER");
                  setDownloadProgress({ current, total });
-             });
+             }, facilitators, federalCoordinators);
              setToast({ show: true, message: "Bulk certificates downloaded successfully!", type: 'success' });
         } catch(error) {
             if (error.message === "CANCELLED_BY_USER") {
@@ -2063,11 +2098,12 @@ export function ParticipantsView({
         }
     };
 
+    // --- UPDATED: Pass facilitators array ---
     const handleDesignCertificate = async (language) => {
         setIsGeneratingTemplate(true);
         setIsProcessing(true);
         try {
-            const canvas = await generateBlankCertificatePdf(course, federalProgramManagerName, language);
+            const canvas = await generateBlankCertificatePdf(course, federalProgramManagerName, language, facilitators, federalCoordinators);
             if (canvas) {
                 const doc = new jsPDF('landscape', 'mm', 'a4');
                 doc.addImage(canvas.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, 297, 210);

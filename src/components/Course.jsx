@@ -958,8 +958,16 @@ export function CourseManagementView({
         fetchStateCoordinators();
         fetchLocalityCoordinators();
         fetchFunders();
-        fetchParticipants(); 
+        fetchParticipants(true); // <-- UPDATED: Force incremental sync on load
     }, [fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators, fetchFunders, fetchParticipants]); 
+
+    // --- NEW EFFECT: Trigger incremental syncs when switching views ---
+    useEffect(() => {
+        if (['courses', 'dashboard', 'participants'].includes(activeCoursesTab)) {
+            fetchCourses(true);
+            fetchParticipants(true);
+        }
+    }, [activeCoursesTab, fetchCourses, fetchParticipants]);
 
     useEffect(() => {
         if (activeCoursesTab === 'dashboard' && (!healthFacilities || healthFacilities.length === 0)) {
