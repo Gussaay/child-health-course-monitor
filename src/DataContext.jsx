@@ -339,7 +339,8 @@ export const DataProvider = ({ children }) => {
                     effectiveLastFetchTime = 0;
                 }
 
-                // REMOVED THE FAULTY "force === true" BLOCK THAT WIPED OUT THE INCREMENTAL DELTA
+                // -> WE DO NOT RESET effectiveLastFetchTime HERE ANYMORE. 
+                // Incremental fetch uses the actual last update timestamp.
 
                 const newOrUpdatedData = await fetchWithTimeout(fetchFn({ source: 'server' }, effectiveLastFetchTime), 60000); 
                 

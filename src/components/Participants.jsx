@@ -1712,7 +1712,6 @@ export function ParticipantsView({
         }
     }, [user]);
 
-    // --- UPDATED HOOK USAGE: Extracted facilitators and fetchFacilitators ---
     const { fetchParticipants, federalCoordinators, fetchFederalCoordinators, facilitators, fetchFacilitators, isLoading, healthFacilities, fetchHealthFacilities } = useDataCache();
     const isCacheLoading = isLoading?.federalCoordinators === true || isLoading?.courses === true || isLoading?.facilitators === true;
 
@@ -1741,7 +1740,15 @@ export function ParticipantsView({
     const [certLangModal, setCertLangModal] = useState({ isOpen: false, actionType: null, data: null });
     const [certActionModal, setCertActionModal] = useState({ isOpen: false, data: null });
     
-    const [localApprovalStatus, setLocalApprovalStatus] = useState(course.isCertificateApproved);
+    // --- UPDATED: LOCAL COURSE STATE FIX ---
+    const [localApprovalStatus, setLocalApprovalStatus] = useState(course?.isCertificateApproved);
+    const [localCourseData, setLocalCourseData] = useState(course); // Tracks the full updated course object
+
+    useEffect(() => {
+        setLocalCourseData(course);
+        setLocalApprovalStatus(course?.isCertificateApproved === true);
+    }, [course]);
+
     const [isRefreshingApproval, setIsRefreshingApproval] = useState(false);
 
     const [groupFilter, setGroupFilter] = useState([]);
@@ -1763,7 +1770,6 @@ export function ParticipantsView({
     const [isAdvancedActionsModalOpen, setIsAdvancedActionsModalOpen] = useState(false);
     const [isCertManagementModalOpen, setIsCertManagementModalOpen] = useState(false);
 
-    // --- UPDATED EFFECT: Fetches facilitators alongside federal coordinators ---
     useEffect(() => { 
         fetchFederalCoordinators(); 
         fetchFacilitators(); 
@@ -1781,23 +1787,19 @@ export function ParticipantsView({
     useEffect(() => {
         if (!course?.id) return;
 
-        // Set initial state from props
-        setLocalApprovalStatus(course.isCertificateApproved === true);
-
         // Attach a real-time listener to the specific course document
         const courseRef = doc(db, 'courses', course.id);
         const unsubscribe = onSnapshot(courseRef, (docSnap) => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
-                // This will instantly update the UI (unlocking the download buttons) 
-                // if the certificate status changes to approved on the server.
                 setLocalApprovalStatus(data.isCertificateApproved === true);
+                setLocalCourseData({ id: docSnap.id, ...data }); // THIS FIXES THE SIGNATURE BUG
             }
         });
 
         // Cleanup the listener when the component unmounts or course changes
         return () => unsubscribe();
-    }, [course?.id, course?.isCertificateApproved]);
+    }, [course?.id]);
 
     // Added Logic to Sync Coverage Snapshot with Database Dynamically
     const syncCourseCoverageSnapshot = async (updatedParticipantsList) => {
@@ -2023,6 +2025,7 @@ export function ParticipantsView({
             if (snapshot.exists()) {
                 const data = snapshot.data();
                 setLocalApprovalStatus(data.isCertificateApproved === true);
+                setLocalCourseData({ id: snapshot.id, ...data }); // Ensure we sync full updated data
                 setToast({ show: true, message: data.isCertificateApproved ? 'Status updated! Certificates are approved.' : 'Status refreshed. Still pending.', type: data.isCertificateApproved ? 'success' : 'info' });
             }
         } catch (error) {
@@ -2032,7 +2035,6 @@ export function ParticipantsView({
         }
     };
 
-    // --- UPDATED: Pass facilitators array ---
     const handleGenerateSingleCert = async (p, participantSubCourse, language) => {
         cancelDownloadRef.current = false;
         setProcessingRowId(p.id);
@@ -2041,7 +2043,8 @@ export function ParticipantsView({
         setDownloadProgress({ current: 0, total: 1 });
         
         try {
-            const canvas = await generateCertificatePdf(course, p, federalProgramManagerName, participantSubCourse, language, facilitators, federalCoordinators);
+            // UPDATED: Use localCourseData which contains the signature URLs from the onSnapshot
+            const canvas = await generateCertificatePdf(localCourseData, p, federalProgramManagerName, participantSubCourse, language, facilitators, federalCoordinators);
             
             if (cancelDownloadRef.current) throw new Error("CANCELLED_BY_USER");
             
@@ -2067,7 +2070,6 @@ export function ParticipantsView({
         }
     };
 
-    // --- UPDATED: Pass facilitators array ---
     const handleBulkCertificateDownload = async (language) => {
         if (filtered.length === 0) {
             setToast({ show: true, message: "No participants available for bulk certificate download.", type: 'warning' });
@@ -2080,7 +2082,8 @@ export function ParticipantsView({
         setDownloadProgress({ current: 0, total: filtered.length }); 
 
         try {
-             await generateAllCertificatesPdf(course, filtered, federalProgramManagerName, language, (current, total) => {
+             // UPDATED: Use localCourseData
+             await generateAllCertificatesPdf(localCourseData, filtered, federalProgramManagerName, language, (current, total) => {
                  if (cancelDownloadRef.current) throw new Error("CANCELLED_BY_USER");
                  setDownloadProgress({ current, total });
              }, facilitators, federalCoordinators);
@@ -2098,12 +2101,12 @@ export function ParticipantsView({
         }
     };
 
-    // --- UPDATED: Pass facilitators array ---
     const handleDesignCertificate = async (language) => {
         setIsGeneratingTemplate(true);
         setIsProcessing(true);
         try {
-            const canvas = await generateBlankCertificatePdf(course, federalProgramManagerName, language, facilitators, federalCoordinators);
+            // UPDATED: Use localCourseData
+            const canvas = await generateBlankCertificatePdf(localCourseData, federalProgramManagerName, language, facilitators, federalCoordinators);
             if (canvas) {
                 const doc = new jsPDF('landscape', 'mm', 'a4');
                 doc.addImage(canvas.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, 297, 210);

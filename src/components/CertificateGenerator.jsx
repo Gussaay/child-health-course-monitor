@@ -9,12 +9,12 @@ import {
     Button, Card, EmptyState, PageHeader, 
     Spinner, Table, Modal, CardBody, CardFooter, FormGroup, Select, Input
 } from './CommonComponents'; 
-import { Award, FileSignature, Stamp, Upload, Lock, XCircle, CheckCircle, RefreshCw } from 'lucide-react'; 
+import { Award, FileSignature, Stamp, CheckCircle } from 'lucide-react'; 
 
 // Data & Firebase
 import { STATE_LOCALITIES } from './constants'; 
 import { db } from '../firebase'; 
-import { collection, query, where, getDocs, doc, updateDoc, getDoc } from 'firebase/firestore'; // Added getDoc
+import { collection, query, where, getDocs, doc, updateDoc, getDoc, serverTimestamp } from 'firebase/firestore'; // <--- IMPORTED serverTimestamp
 import { useDataCache } from '../DataContext';
 import { 
     getParticipantById, 
@@ -93,10 +93,7 @@ const getSmallAndSickSubCourseArabic = (subCourse) => {
     }
 };
 
-// --- UPDATED HELPER: Checks specific ID first, then falls back to robust string matching ---
 const fetchArabicNameHelper = async (cachedList, collectionName, englishName, fieldName, specificId = null) => {
-    
-    // 1. Exact ID match (Safest and preferred)
     if (specificId) {
         if (cachedList && cachedList.length > 0) {
             const match = cachedList.find(item => item.id === specificId);
@@ -114,7 +111,6 @@ const fetchArabicNameHelper = async (cachedList, collectionName, englishName, fi
     const searchName = englishName.trim().toLowerCase();
     const cleanSearchName = searchName.replace(/^dr\.?\s*/i, '').trim();
 
-    // 2. Name Match in Cache
     if (cachedList && cachedList.length > 0) {
         const match = cachedList.find(item => {
             const itemName = (item.name || '').trim().toLowerCase();
@@ -124,7 +120,6 @@ const fetchArabicNameHelper = async (cachedList, collectionName, englishName, fi
         if (match && match[fieldName]) return match[fieldName];
     }
 
-    // 3. Fallback to Firestore Queries for older, name-only records
     try {
         let q = query(collection(db, collectionName), where("name", "==", englishName.trim()));
         let snapshot = await getDocs(q);
@@ -164,7 +159,6 @@ const fetchArabicNameHelper = async (cachedList, collectionName, englishName, fi
     return null;
 };
 
-// Helper to convert URL to Base64 to bypass CORS/Loading issues in html2canvas
 const imageUrlToBase64 = async (url) => {
     if (!url) return null;
     try {
@@ -386,7 +380,6 @@ export const generateCertificatePdf = async (course, participant, federalProgram
     let programManagerNameAr = null;
 
     if (language === 'ar') {
-        // Now fetching with IDs seamlessly if they exist on the course
         directorNameAr = await fetchArabicNameHelper(cachedFacilitators, 'facilitators', finalDirectorName, 'arabicName', course.approvedDirectorId || course.directorId);
         programManagerNameAr = await fetchArabicNameHelper(cachedCoordinators, 'federalCoordinators', finalManagerName, 'nameAr', course.approvedByManagerId);
     }
@@ -525,8 +518,6 @@ export const generateAllCertificatesPdf = async (course, participants, federalPr
         doc.save(fileName);
     } else { alert("Failed to generate any certificates."); }
 };
-
-
 
 // ============================================================================
 // PUBLIC & ADMIN CERTIFICATE VIEWS (Migrated from Course.jsx)
@@ -693,6 +684,8 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
     const [loadingApprovals, setLoadingApprovals] = React.useState(false);
     const [isProcessing, setIsProcessing] = React.useState(false);
 
+    const [localCourseUpdates, setLocalCourseUpdates] = React.useState({});
+
     const fileInputRef = React.useRef(null);
     const [uploadContext, setUploadContext] = React.useState({ course: null, assetType: null });
     const [courseToApprove, setCourseToApprove] = React.useState(null);
@@ -715,7 +708,11 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
     const courseTypes = React.useMemo(() => ['All', ...new Set(allCourses.map(c => c.course_type).filter(Boolean))].sort(), [allCourses]);
 
     const courses = React.useMemo(() => {
-        let filtered = [...allCourses];
+        let filtered = allCourses.map(c => ({
+            ...c,
+            ...(localCourseUpdates[c.id] || {})
+        }));
+
         if (filterState !== 'All') filtered = filtered.filter(c => c.state === filterState);
         if (filterLocality !== 'All') filtered = filtered.filter(c => c.locality === filterLocality);
         if (filterCourseType !== 'All') filtered = filtered.filter(c => c.course_type === filterCourseType);
@@ -724,7 +721,7 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
             filtered = filtered.filter(c => !!c.isCertificateApproved === isApproved);
         }
         return filtered.sort((a, b) => new Date(b.start_date || 0) - new Date(a.start_date || 0));
-    }, [allCourses, filterState, filterLocality, filterCourseType, filterStatus]);
+    }, [allCourses, localCourseUpdates, filterState, filterLocality, filterCourseType, filterStatus]);
 
     const loadData = async () => {
         setLoadingApprovals(true);
@@ -746,14 +743,26 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
         if (!courseToApprove) return;
         setIsProcessing(true);
         try {
+            setLocalCourseUpdates(prev => ({
+                ...prev,
+                [courseToApprove.id]: {
+                    ...(prev[courseToApprove.id] || {}),
+                    isCertificateApproved: true,
+                    certificateApprovedAt: new Date(),
+                    approvedByManagerName: courseToApprove.approvedByManagerName || managerName 
+                }
+            }));
+
             const courseRef = doc(db, 'courses', courseToApprove.id);
             await updateDoc(courseRef, {
                 isCertificateApproved: true,
-                certificateApprovedAt: new Date(),
-                approvedByManagerName: courseToApprove.approvedByManagerName || managerName 
+                certificateApprovedAt: serverTimestamp(),
+                approvedByManagerName: courseToApprove.approvedByManagerName || managerName,
+                lastUpdatedAt: serverTimestamp() // FORCE TIMESTAMP UPDATE
             });
+            
             setToast({ show: true, message: "Certificates Approved Successfully.", type: 'success' });
-            await fetchCourses(true);
+            await fetchCourses(true); 
             setCourseToApprove(null);
         } catch (err) {
             setToast({ show: true, message: `Error: ${err.message}`, type: 'error' });
@@ -764,9 +773,17 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
         if (window.confirm(`Revoke approval for ${course.course_type}?`)) {
             setIsProcessing(true);
             try {
+                setLocalCourseUpdates(prev => ({
+                    ...prev,
+                    [course.id]: {
+                        ...(prev[course.id] || {}),
+                        isCertificateApproved: false
+                    }
+                }));
+
                 await unapproveCourseCertificates(course.id);
                 setToast({ show: true, message: "Approval Revoked.", type: 'info' });
-                await fetchCourses(true);
+                await fetchCourses(true); 
             } catch (err) { setToast({ show: true, message: err.message, type: 'error' }); } 
             finally { setIsProcessing(false); }
         }
@@ -784,15 +801,29 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
         setIsProcessing(true);
         try {
             const url = await uploadFile(file, `courses/${course.id}/${assetType}_${Date.now()}`);
-            const updatePayload = {};
+            
+            // ---> CRITICAL FIX: Ensure the delta fetch catches this file upload <---
+            const updatePayload = { lastUpdatedAt: serverTimestamp() }; 
+            
             if (assetType === 'managerSignature') { updatePayload.approvedByManagerSignatureUrl = url; updatePayload.approvedByManagerName = managerName; }
             else if (assetType === 'directorSignature') { updatePayload.approvedDirectorSignatureUrl = url; updatePayload.approvedDirectorName = course.director || ''; }
             else if (assetType === 'stamp') { updatePayload.approvedProgramStampUrl = url; }
+            
+            setLocalCourseUpdates(prev => ({
+                ...prev,
+                [course.id]: {
+                    ...(prev[course.id] || {}),
+                    ...updatePayload,
+                    lastUpdatedAt: new Date() // local representation
+                }
+            }));
+
             await updateDoc(doc(db, 'courses', course.id), updatePayload);
             setToast({ show: true, message: `Asset uploaded successfully!`, type: 'success' });
-            await fetchCourses(true);
+            
+            await fetchCourses(true); // Triggers delta fetch, and it WILL see the update now.
         } catch (err) { setToast({ show: true, message: `Upload failed: ${err.message}`, type: 'error' }); } 
-        finally { setIsProcessing(false); setUploadContext({ course: null, assetType: null }); }
+        finally { setIsProcessing(false); setUploadContext({ course: null, assetType: null }); fileInputRef.current.value = ""; }
     };
 
     if (loadingApprovals && courses.length === 0) return <div className="flex justify-center p-8"><Spinner /></div>;
@@ -851,9 +882,15 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                                             <div className="text-[10px] text-gray-500 whitespace-nowrap">{c.start_date}</div>
                                         </td>
                                         <td className="p-3 align-middle border-b border-slate-200">
-                                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${isApproved ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
-                                                {isApproved ? 'Ready' : 'Pending'}
-                                            </span>
+                                            {isApproved ? (
+                                                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-800">
+                                                    Ready
+                                                </span>
+                                            ) : (
+                                                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800">
+                                                    Pending
+                                                </span>
+                                            )}
                                         </td>
                                         
                                         <td className="p-3 align-middle border-b border-slate-200 text-right">
@@ -861,18 +898,18 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                                                 {isApproved ? (
                                                     <Button onClick={() => handleUnapprove(c)} disabled={!canModify || isProcessing} variant="danger" className="px-2 py-1 text-[10px] whitespace-nowrap">Revoke</Button>
                                                 ) : (
-                                                    <Button onClick={() => setCourseToApprove(c)} disabled={isProcessing} variant="success" className="px-2 py-1 text-[10px] whitespace-nowrap font-bold">Approve</Button>
+                                                    <Button onClick={() => setCourseToApprove(c)} disabled={isProcessing} variant="success" className="px-2 py-1 text-[10px] whitespace-nowrap font-bold bg-green-600 text-white hover:bg-green-700 border-transparent">Approve</Button>
                                                 )}
 
-                                                <Button onClick={() => triggerUpload(c, 'managerSignature')} disabled={!isFederalProgramManager || isProcessing} variant={c.approvedByManagerSignatureUrl ? "success" : "secondary"} className="px-2 py-1 text-[10px] whitespace-nowrap flex items-center gap-1">
+                                                <Button onClick={() => triggerUpload(c, 'managerSignature')} disabled={!isFederalProgramManager || isProcessing} variant={c.approvedByManagerSignatureUrl ? "success" : "secondary"} className={`px-2 py-1 text-[10px] whitespace-nowrap flex items-center gap-1 ${c.approvedByManagerSignatureUrl ? 'bg-green-600 text-white hover:bg-green-700 border-transparent' : ''}`}>
                                                     {c.approvedByManagerSignatureUrl ? <CheckCircle size={12} /> : <FileSignature size={12} />} PM Signature
                                                 </Button>
 
-                                                <Button onClick={() => triggerUpload(c, 'directorSignature')} disabled={isProcessing} variant={c.approvedDirectorSignatureUrl ? "success" : "secondary"} className="px-2 py-1 text-[10px] whitespace-nowrap flex items-center gap-1">
+                                                <Button onClick={() => triggerUpload(c, 'directorSignature')} disabled={isProcessing} variant={c.approvedDirectorSignatureUrl ? "success" : "secondary"} className={`px-2 py-1 text-[10px] whitespace-nowrap flex items-center gap-1 ${c.approvedDirectorSignatureUrl ? 'bg-green-600 text-white hover:bg-green-700 border-transparent' : ''}`}>
                                                     {c.approvedDirectorSignatureUrl ? <CheckCircle size={12} /> : <FileSignature size={12} />} Dir Signature
                                                 </Button>
 
-                                                <Button onClick={() => triggerUpload(c, 'stamp')} disabled={!canUseFederalManagerAdvancedFeatures || isProcessing} variant={c.approvedProgramStampUrl ? "success" : "secondary"} className="px-2 py-1 text-[10px] whitespace-nowrap flex items-center gap-1">
+                                                <Button onClick={() => triggerUpload(c, 'stamp')} disabled={!canUseFederalManagerAdvancedFeatures || isProcessing} variant={c.approvedProgramStampUrl ? "success" : "secondary"} className={`px-2 py-1 text-[10px] whitespace-nowrap flex items-center gap-1 ${c.approvedProgramStampUrl ? 'bg-green-600 text-white hover:bg-green-700 border-transparent' : ''}`}>
                                                     {c.approvedProgramStampUrl ? <CheckCircle size={12} /> : <Stamp size={12} />} Stamp
                                                 </Button>
                                             </div>
