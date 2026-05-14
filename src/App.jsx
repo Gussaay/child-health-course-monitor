@@ -831,7 +831,7 @@ export default function App() {
                     try {
                         const [courseData, participantData, testData] = await Promise.all([ getCourseById(courseId, 'server'), listAllParticipantsForCourse(courseId, { source: 'server' }), listParticipantTestsForCourse(courseId, { source: 'server' }) ]);
                         if (!courseData) throw new Error('Course not found.'); if (!participantData) throw new Error('Participants not found.');
-                        if (!['ICCM', 'EENC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management'].includes(courseData.course_type)) { throw new Error('Test forms are only available for selected courses.'); }
+                        if (!['ICCM', 'EENC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management', 'Comprehensive Package For Community Midwives'].includes(courseData.course_type)) { throw new Error('Test forms are only available for selected courses.'); }
                         const activeParticipants = (participantData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
                         const activeTests = (testData || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true");
                         setPublicTestData({ course: courseData, participants: activeParticipants, tests: activeTests });

@@ -50,7 +50,8 @@ const getCertificateName = (key) => {
         ETAT: 'ETAT ToT Certificate',
         EENC: 'EENC ToT Certificate',
         IPC: 'IPC ToT Certificate',
-        'Small & Sick Newborn': 'Small & Sick Newborn ToT Certificate',
+        SSNC: 'SSNC ToT Certificate',
+        'Comprehensive Package For Community Midwives': 'CPCM ToT Certificate',
         directorCourseCert: 'IMNCI Course Director Certificate',
         followUpCourseCert: 'IMNCI Follow-up Course Certificate',
         teamLeaderCourseCert: 'IMNCI Team Leader Certificate',
@@ -176,9 +177,10 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
             row['ETAT ToT Date'] = f.totDates?.ETAT || '';
             row['EENC ToT Date'] = f.totDates?.EENC || '';
             row['IPC ToT Date'] = f.totDates?.IPC || '';
+            row['SSNC ToT Date'] = f.totDates?.SSNC || '';
             return row;
         });
-        const dynamicHeaders = [...allFields.map(f => f.label), 'Courses', 'IMNCI ToT Date', 'ETAT ToT Date', 'EENC ToT Date', 'IPC ToT Date'];
+        const dynamicHeaders = [...allFields.map(f => f.label), 'Courses', 'IMNCI ToT Date', 'ETAT ToT Date', 'EENC ToT Date', 'IPC ToT Date', 'SSNC ToT Date'];
         const worksheet = XLSX.utils.json_to_sheet(templateData, { header: dynamicHeaders });
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Facilitators");
@@ -239,6 +241,10 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
             if (facilitator['IMNCI ToT Date']) {
                 facilitator.totDates = { ...facilitator.totDates, IMNCI: facilitator['IMNCI ToT Date'] };
                 delete facilitator['IMNCI ToT Date'];
+            }
+            if (facilitator['SSNC ToT Date']) {
+                facilitator.totDates = { ...facilitator.totDates, SSNC: facilitator['SSNC ToT Date'] };
+                delete facilitator['SSNC ToT Date'];
             }
             return facilitator;
         }).filter(f => f.name);
@@ -390,8 +396,17 @@ export function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublic
     };
 
     const displayCourseTypes = useMemo(() => {
-        const types = new Set(COURSE_TYPES_FACILITATOR);
-        types.add('Small & Sick Newborn');
+        // Clean and filter out duplicates or variations of the newborn course
+        const types = new Set(
+            (COURSE_TYPES_FACILITATOR || []).filter(course => 
+                course !== 'Small and Sick Newborn' && 
+                course !== 'Small & Sick Newborn' &&
+                course !== 'SSNC'
+            )
+        );
+        
+        types.add('SSNC'); // Use strictly the abbreviation
+        types.add('Comprehensive Package For Community Midwives');
         return Array.from(types);
     }, []);
 
@@ -1069,31 +1084,41 @@ export function FacilitatorForm({ initialData, onCancel, onSave, setToast, setLo
             
             await upsertFacilitator(finalPayload); 
 
-            const email = finalPayload.email;
-            if (email) {
-                const facilitatorRole = 'facilitator';
-                const newPermissions = DEFAULT_ROLE_PERMISSIONS[facilitatorRole];
+            // FIX: Only assign the role if this is a NEW facilitator being created
+            if (!initialData?.id) {
+                const email = finalPayload.email;
+                if (email) {
+                    const facilitatorRole = 'facilitator';
+                    const newPermissions = DEFAULT_ROLE_PERMISSIONS[facilitatorRole];
 
-                if (!newPermissions) {
-                    console.warn(`[RoleSync] Default permissions for role '${facilitatorRole}' not found.`);
-                } else {
-                    const usersRef = collection(db, "users");
-                    const q = query(usersRef, where("email", "==", email));
-                    const querySnapshot = await getDocs(q);
-
-                    if (!querySnapshot.empty) {
-                        const userDoc = querySnapshot.docs[0];
-                        await updateDoc(userDoc.ref, {
-                            role: facilitatorRole,
-                            permissions: { ...ALL_PERMISSIONS, ...newPermissions }
-                        });
-                        console.log(`[RoleSync] Successfully assigned 'facilitator' role to ${email}`);
+                    if (!newPermissions) {
+                        console.warn(`[RoleSync] Default permissions for role '${facilitatorRole}' not found.`);
                     } else {
-                        console.warn(`[RoleSync] Could not find user with email ${email} to assign role.`);
+                        const usersRef = collection(db, "users");
+                        const q = query(usersRef, where("email", "==", email));
+                        const querySnapshot = await getDocs(q);
+
+                        if (!querySnapshot.empty) {
+                            const userDoc = querySnapshot.docs[0];
+                            const userData = userDoc.data();
+                            
+                            // Extra safety check: Only assign if they don't already have a higher-level role
+                            if (!userData.role || userData.role === 'guest') {
+                                await updateDoc(userDoc.ref, {
+                                    role: facilitatorRole,
+                                    permissions: { ...ALL_PERMISSIONS, ...newPermissions }
+                                });
+                                console.log(`[RoleSync] Successfully assigned 'facilitator' role to ${email}`);
+                            } else {
+                                console.log(`[RoleSync] User ${email} already has role '${userData.role}'. Skipping assignment to prevent demotion.`);
+                            }
+                        } else {
+                            console.warn(`[RoleSync] Could not find user with email ${email} to assign role.`);
+                        }
                     }
+                } else {
+                    console.warn(`[RoleSync] New facilitator has no email. Skipping role assignment.`);
                 }
-            } else {
-                console.warn(`[RoleSync] New facilitator has no email. Skipping role assignment.`);
             }
             
             onSave(); 

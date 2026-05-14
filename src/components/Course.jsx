@@ -1253,7 +1253,7 @@ export function CourseManagementView({
             }
 
             await upsertCourse(payload, currentUserIdentifier);
-            await fetchCourses();
+            await fetchCourses(true); // <--- CACHE BYPASS FIX
             setActiveCoursesTab('courses'); 
             setCourseToEdit(null);
             setToast({ show: true, message: 'Course saved successfully!', type: 'success' });
@@ -1272,7 +1272,7 @@ export function CourseManagementView({
         try {
             await upsertCourse({ ...courseToUpdate, deletionRequested: false, inRecycleBin: true }, currentUserIdentifier);
             setToast({ show: true, message: 'Course moved to Deleted Courses.', type: 'success' });
-            await fetchCourses();
+            await fetchCourses(true); // <--- CACHE BYPASS FIX
         } catch (error) {
             setToast({ show: true, message: `Failed to process deletion: ${error.message}`, type: 'error' });
         } finally {
@@ -1285,7 +1285,7 @@ export function CourseManagementView({
             setIsProcessing(true);
             try {
                 await deleteCourse(courseId, currentUserIdentifier);
-                await fetchCourses();
+                await fetchCourses(true); // <--- CACHE BYPASS FIX
                 setToast({ show: true, message: 'Course permanently deleted.', type: 'success' });
             } catch (error) {
                 setToast({ show: true, message: `Deletion failed: ${error.message}`, type: 'error' });
@@ -1301,7 +1301,7 @@ export function CourseManagementView({
             setIsProcessing(true);
             try {
                 await upsertCourse({ ...courseToUpdate, approvalStatus: 'approved' }, currentUserIdentifier);
-                await fetchCourses();
+                await fetchCourses(true); // <--- CACHE BYPASS FIX
                 setToast({ show: true, message: 'Course approved successfully!', type: 'success' });
             } catch (error) {
                 setToast({ show: true, message: `Approval failed: ${error.message}`, type: 'error' });
@@ -1319,7 +1319,7 @@ export function CourseManagementView({
                 try {
                     // Update status to rejected AND move directly to recycle bin
                     await upsertCourse({ ...courseToUpdate, approvalStatus: 'rejected', inRecycleBin: true }, currentUserIdentifier);
-                    await fetchCourses();
+                    await fetchCourses(true); // <--- CACHE BYPASS FIX
                     setToast({ show: true, message: 'Course rejected and moved to Deleted Courses.', type: 'info' });
                 } catch (error) {
                     setToast({ show: true, message: `Rejection failed: ${error.message}`, type: 'error' });
@@ -1334,7 +1334,7 @@ export function CourseManagementView({
         setIsProcessing(true);
         try {
             await upsertCourse({ ...course, deletionRequested: false }, currentUserIdentifier);
-            await fetchCourses();
+            await fetchCourses(true); // <--- CACHE BYPASS FIX
             setToast({ show: true, message: 'Deletion request rejected.', type: 'success' });
         } catch (error) {
             setToast({ show: true, message: `Failed to reject deletion: ${error.message}`, type: 'error' });
@@ -1348,7 +1348,7 @@ export function CourseManagementView({
             setIsProcessing(true);
             try {
                 await upsertCourse({ ...course, inRecycleBin: false }, currentUserIdentifier); 
-                await fetchCourses();
+                await fetchCourses(true); // <--- CACHE BYPASS FIX
                 setToast({ show: true, message: 'Course restored successfully!', type: 'success' });
             } catch (error) {
                 setToast({ show: true, message: `Failed to restore course: ${error.message}`, type: 'error' });
@@ -1821,9 +1821,18 @@ export function CourseForm({
 
     const directorOptions = useMemo(() => {
         return facilitatorsList
-            .filter(f => f.directorCourse === 'Yes')
+            .filter(f => {
+                const fCourses = Array.isArray(f.courses) ? f.courses : [];
+                if (isCpcm) {
+                    return fCourses.includes('ICCM') || fCourses.includes('IMNCI') || fCourses.includes('Comprehensive Package For Community Midwives');
+                }
+                if (isSmallAndSick) {
+                    return fCourses.includes('SSNC') || fCourses.includes('Small & Sick Newborn');
+                }
+                return f.directorCourse === 'Yes';
+            })
             .sort((a, b) => a.name.localeCompare(b.name));
-    }, [facilitatorsList]);
+    }, [facilitatorsList, isCpcm, isSmallAndSick]);
 
     const clinicalInstructorOptions = useMemo(() => {
         return facilitatorsList
@@ -1839,11 +1848,12 @@ export function CourseForm({
                 if (isIccm || isCpcm) return fCourses.includes('ICCM') || fCourses.includes('IMNCI') || fCourses.includes('Comprehensive Package For Community Midwives');
                 if (isInfectionControl) return fCourses.includes('IPC');
                 if (isProgramManagement) return fCourses.includes('Program Management') || fCourses.includes('IMNCI');
+                if (isSmallAndSick) return fCourses.includes('SSNC') || fCourses.includes('Small & Sick Newborn');
                 
                 return fCourses.includes(courseType);
             })
             .sort((a, b) => a.name.localeCompare(b.name));
-    }, [facilitatorsList, courseType, isInfectionControl, isIccm, isCpcm, isProgramManagement]);
+    }, [facilitatorsList, courseType, isInfectionControl, isIccm, isCpcm, isProgramManagement, isSmallAndSick]);
 
     const federalCoordinatorOptions = useMemo(() => {
         return federalCoordinatorsList.map(c => ({ id: c.id, name: c.name }));
@@ -1972,6 +1982,7 @@ export function CourseForm({
         const localitiesChanged = JSON.stringify(localities.slice().sort()) !== JSON.stringify(initialData?.localities?.slice().sort() || []);
 
         const payload = {
+            ...initialData, 
             ...(initialData?.id && { id: initialData.id }),
             state: states.join(', '), 
             locality: localities.join(', '),
