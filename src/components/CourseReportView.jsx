@@ -217,7 +217,7 @@ function ShareModal({ isOpen, onClose, shareableItem, shareType = 'course', onSa
                             <LinkIcon /> {copySuccess ? copySuccess : "Copy Link"}
                         </Button>
                         <div className="flex flex-col-reverse sm:flex-row gap-3 w-full sm:w-auto">
-                            <Button variant="secondary" onClick={onClose} className="w-full sm:w-auto">Cancel</Button>
+                            <Button variant="secondary" onClose={onClose} className="w-full sm:w-auto">Cancel</Button>
                             <Button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto">
                                 {isSaving ? <Spinner /> : 'Save Changes'}
                             </Button>
@@ -510,11 +510,46 @@ const generateFullCourseReportPdf = async (course, quality, onSuccess, onError, 
         }
 
         if (Capacitor.isNativePlatform()) {
-            const base64Data = doc.output('datauristring').split('base64,')[1];
-            const writeResult = await Filesystem.writeFile({ path: fileName, data: base64Data, directory: Directory.Downloads });
-            await FileOpener.open({ filePath: writeResult.uri, contentType: 'application/pdf' });
-            onSuccess(`PDF saved to Downloads folder: ${fileName}`);
+            try {
+                const base64Data = doc.output('datauristring').split('base64,')[1];
+                
+                // 1. Define the exact folder and file path your Downloads page expects
+                const folderPath = 'downloads';
+                const filePath = `${folderPath}/${fileName}`;
+                
+                // 2. Safely create the 'downloads' directory first
+                try {
+                    await Filesystem.mkdir({ 
+                        path: folderPath, 
+                        directory: Directory.Data, 
+                        recursive: true 
+                    });
+                } catch (e) {
+                    // Ignore error if the directory already exists
+                }
+                
+                // 3. Write the PDF file into that directory
+                const writeResult = await Filesystem.writeFile({ 
+                    path: filePath, 
+                    data: base64Data, 
+                    directory: Directory.Data,
+                    recursive: true // Extra safety flag
+                });
+                
+                // 4. Open the file natively
+                await FileOpener.open({ 
+                    filePath: writeResult.uri, 
+                    contentType: 'application/pdf',
+                    openWithDefault: true 
+                });
+                
+                onSuccess(`PDF saved to App Downloads and opened successfully.`);
+            } catch (err) {
+                console.error("Native export error:", err);
+                onError(`Failed to process PDF natively: ${err.message}`);
+            }
         } else {
+            // Web fallback
             doc.save(fileName);
             onSuccess("PDF download initiated.");
         }
@@ -1118,24 +1153,30 @@ export function CourseReportView({
                 actions={
                     activeTab === 'full-course-report' ? (
                         isSharedView ? (
-                            <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full sm:w-auto justify-start sm:justify-end">
-                                <Button onClick={() => handlePdfGeneration('print')} variant="secondary" disabled={isPdfGenerating} className="w-full sm:w-auto"><PdfIcon /> Export for Print</Button>
-                                <Button onClick={() => handlePdfGeneration('screen')} variant="secondary" disabled={isPdfGenerating} className="w-full sm:w-auto"><PdfIcon /> Export for Sharing</Button>
-                                {isPdfGenerating && <div className="flex items-center gap-2 text-gray-500 justify-center w-full sm:w-auto"><Spinner size="sm" /><span>Generating...</span></div>}
+                            <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2 w-full sm:w-auto justify-end mt-4 sm:mt-0">
+                                <Button onClick={() => handlePdfGeneration('print')} variant="secondary" disabled={isPdfGenerating} className="w-full text-sm justify-center"><PdfIcon /> PDF (Print)</Button>
+                                <Button onClick={() => handlePdfGeneration('screen')} variant="secondary" disabled={isPdfGenerating} className="w-full text-sm justify-center"><PdfIcon /> PDF (Share)</Button>
+                                {isPdfGenerating && <div className="col-span-2 flex items-center justify-center gap-2 text-gray-500 w-full"><Spinner size="sm" /><span>Generating...</span></div>}
                             </div>
                         ) : (
-                            <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full sm:w-auto justify-start sm:justify-end mt-4 sm:mt-0">
-                                <Button onClick={() => setIsShareModalOpen(true)} variant="secondary" disabled={isPdfGenerating} className="w-full sm:w-auto">
+                            <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2 w-full sm:w-auto justify-end mt-4 sm:mt-0">
+                                <Button onClick={() => setIsShareModalOpen(true)} variant="secondary" disabled={isPdfGenerating} className="w-full text-sm justify-center">
                                     <ShareIcon /> Share
                                 </Button>
-                                <Button onClick={() => handlePdfGeneration('print')} variant="secondary" disabled={isPdfGenerating} className="w-full sm:w-auto"><PdfIcon /> Export for Print</Button>
-                                <Button onClick={() => handlePdfGeneration('screen')} variant="secondary" disabled={isPdfGenerating} className="w-full sm:w-auto"><PdfIcon /> Export for Sharing</Button>
-                                {isPdfGenerating && <div className="flex items-center gap-2 text-gray-500 justify-center w-full sm:w-auto"><Spinner size="sm" /><span>Generating...</span></div>}
-                                <Button onClick={onBack} disabled={isPdfGenerating} className="w-full sm:w-auto mt-2 sm:mt-0">Back to List</Button>
+                                <Button onClick={onBack} disabled={isPdfGenerating} className="w-full text-sm justify-center">
+                                    Back to List
+                                </Button>
+                                <Button onClick={() => handlePdfGeneration('print')} variant="secondary" disabled={isPdfGenerating} className="w-full text-sm justify-center">
+                                    <PdfIcon /> PDF (Print)
+                                </Button>
+                                <Button onClick={() => handlePdfGeneration('screen')} variant="secondary" disabled={isPdfGenerating} className="w-full text-sm justify-center">
+                                    <PdfIcon /> PDF (Share)
+                                </Button>
+                                {isPdfGenerating && <div className="col-span-2 flex items-center justify-center gap-2 text-gray-500 w-full"><Spinner size="sm" /><span>Generating...</span></div>}
                             </div>
                         )
                     ) : (
-                        !isSharedView ? <Button onClick={onBack} disabled={isPdfGenerating} className="w-full sm:w-auto mt-2 sm:mt-0">Back to List</Button> : null
+                        !isSharedView ? <Button onClick={onBack} disabled={isPdfGenerating} className="w-full sm:w-auto mt-4 sm:mt-0">Back to List</Button> : null
                     )
                 }
             />

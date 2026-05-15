@@ -360,7 +360,7 @@ export function AdminDashboard() {
     };
 
     const handleSaveUpdateConfig = async () => {
-        if (!window.confirm("Are you sure? Updating this configuration will immediately trigger a mandatory download prompt for any user running an older native app build.")) return;
+        if (!window.confirm("Are you sure you want to push these live update settings to all users?")) return;
         setLoading(true);
         try {
             await setDoc(doc(db, "meta", "update_config"), updateConfig);
@@ -369,7 +369,7 @@ export function AdminDashboard() {
             } else {
                 setIsUpdateActive(false);
             }
-            setToast({show: true, message: 'Update triggered! Mobile users will be prompted immediately.', type: 'success'});
+            setToast({show: true, message: 'Update configuration saved and pushed to users!', type: 'success'});
         } catch(e) {
             console.error("Update config error", e);
             setToast({show: true, message: 'Failed to save update configuration.', type: 'error'});
@@ -385,7 +385,7 @@ export function AdminDashboard() {
             await setDoc(doc(db, "meta", "update_config"), newConfig);
             setUpdateConfig(newConfig);
             setIsUpdateActive(false);
-            setToast({show: true, message: 'Mandatory update requirement reversed.', type: 'success'});
+            setToast({show: true, message: 'Mandatory update requirement cancelled.', type: 'success'});
         } catch(e) {
             console.error("Revert config error", e);
             setToast({show: true, message: 'Failed to reverse update configuration.', type: 'error'});
@@ -692,18 +692,23 @@ export function AdminDashboard() {
                             <div>
                                 <h3 className="text-lg font-bold text-emerald-900">New APK Available for Deployment!</h3>
                                 <p className="text-sm text-emerald-700 mt-0.5 max-w-xl">
-                                    GitHub Actions has built a newer native app (<strong>v{serverNativeConfig.versionString}</strong>). Click the button to instantly configure and trigger this update.
+                                    GitHub Actions has built a newer native app (<strong>v{serverNativeConfig.versionString}</strong>). Click the button to configure and trigger this update.
                                 </p>
                             </div>
                         </div>
                         <Button 
                             onClick={() => {
-                                setUpdateConfig({
-                                    ...serverNativeConfig,
-                                    mandatory: true,
-                                    releaseNotes: `Update to version ${serverNativeConfig.versionString}. Includes latest bug fixes and improvements.`
-                                });
-                                // Note: It still requires clicking "Push Native Update Prompt" to save and lock
+                                const defaultMsg = `Update to version ${serverNativeConfig.versionString}. Includes latest bug fixes and improvements.`;
+                                const customMessage = window.prompt("Set the release notes/message for this update:", defaultMsg);
+                                
+                                if (customMessage !== null) {
+                                    const isMandatory = window.confirm("Make this a MANDATORY update? \n\nClick 'OK' for Yes (users must update).\nClick 'Cancel' for No (optional update).");
+                                    setUpdateConfig({
+                                        ...serverNativeConfig,
+                                        mandatory: isMandatory,
+                                        releaseNotes: customMessage
+                                    });
+                                }
                             }}
                             className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md border border-emerald-700 whitespace-nowrap"
                         >
@@ -730,15 +735,40 @@ export function AdminDashboard() {
                     </div>
                     
                     {isUpdateActive ? (
-                        <div className="p-8 flex flex-col items-center justify-center text-center bg-red-50/20">
+                        <div className="p-8 flex flex-col items-center justify-center bg-red-50/20">
                             <div className="inline-flex items-center px-4 py-2 rounded-full bg-red-100 text-red-800 font-bold mb-4 shadow-sm border border-red-200">
                                 <Smartphone className="w-5 h-5 mr-2" /> Native Update is Currently Mandatory
                             </div>
                             <h4 className="text-lg font-bold text-gray-800 mb-2">Target Build: v{updateConfig.versionString} (ID: {updateConfig.latestNativeBuild})</h4>
-                            <p className="text-sm text-gray-600 max-w-md mb-6">Users opening an older app build are currently being locked out and forced to download the new APK. Form entry fields are hidden while active.</p>
+                            <p className="text-sm text-gray-600 max-w-md mb-6 text-center">Users opening an older app build are currently being locked out and forced to download the new APK. You can adjust the live message or toggle mandatory status below.</p>
                             
+                            {/* Live Edit Interface for Active Updates */}
+                            <div className="w-full max-w-2xl bg-white border border-red-100 rounded-xl p-5 shadow-sm text-left mb-6">
+                                <FormGroup label="Live Release Notes / Message">
+                                    <textarea 
+                                        rows="3" 
+                                        className="w-full bg-gray-50 border border-gray-300 rounded-lg p-3 text-sm shadow-sm focus:ring-sky-500 focus:border-sky-500" 
+                                        value={updateConfig.releaseNotes} 
+                                        onChange={e => setUpdateConfig({...updateConfig, releaseNotes: e.target.value})} 
+                                        placeholder="Describe what's new in this Native APK..."
+                                    ></textarea>
+                                </FormGroup>
+                                
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-4 gap-4">
+                                    <label className="flex items-center cursor-pointer">
+                                        <Checkbox checked={updateConfig.mandatory} onChange={e => setUpdateConfig({...updateConfig, mandatory: e.target.checked})} />
+                                        <span className="ml-3 font-bold text-red-900 text-sm">Force Mandatory Update</span>
+                                    </label>
+                                    <div className="flex gap-2 w-full sm:w-auto">
+                                        <Button onClick={handleSaveUpdateConfig} variant="primary" className="shadow-sm flex-1 sm:flex-none">
+                                            <CheckCircle className="w-4 h-4 mr-2" /> Update Live
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+
                             <Button onClick={handleReverseUpdate} variant="secondary" className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 shadow-sm bg-white">
-                                <RefreshCw className="w-4 h-4 mr-2" /> Reverse / Cancel Mandatory Update
+                                <XCircle className="w-4 h-4 mr-2" /> Cancel Mandatory Update Completely
                             </Button>
                         </div>
                     ) : (
@@ -760,7 +790,7 @@ export function AdminDashboard() {
                                 />
                             </FormGroup>
                             <div className="md:col-span-2">
-                                <FormGroup label="Release Notes / Changelog">
+                                <FormGroup label="Release Notes / Message">
                                     <textarea 
                                         rows="3" 
                                         className="w-full bg-white border border-gray-300 rounded-lg p-3 text-sm shadow-sm focus:ring-sky-500 focus:border-sky-500" 

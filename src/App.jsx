@@ -568,8 +568,9 @@ export default function App() {
             return;
         }
 
-        setToast({ show: true, message: 'Starting download...', type: 'info' });
+        // Use top banner for progress
         setIsDownloadingUpdate(true); 
+        setUpdateProgress(0);
 
         try {
             // Extract filename from URL or use provided name
@@ -625,8 +626,6 @@ export default function App() {
                 directory: Directory.Data
             });
 
-            setToast({ show: true, message: 'Download complete. Opening...', type: 'success' });
-
             // Trigger the native OS "Open With" / Installer intent
             await FileOpener.open({
                 filePath: uri,
@@ -636,10 +635,7 @@ export default function App() {
 
         } catch (error) {
             console.error("Download/Open Error:", error);
-            setToast({ show: true, message: `Failed to handle file. Opening browser as fallback.`, type: 'error' });
-            
-            // Fallback: If native opening fails (e.g., missing permissions), use the browser
-            await Browser.open({ url: url });
+            setToast({ show: true, message: `Failed to open file automatically. Try opening it from "App Files & Downloads".`, type: 'error' });
         } finally {
             setIsDownloadingUpdate(false);
             setUpdateProgress(0);
@@ -652,12 +648,23 @@ export default function App() {
 
         if (Capacitor.isNativePlatform()) {
             
-            // 1. SAFE NOTIFICATIONS
+            // 1. SAFE NOTIFICATIONS - Ensure Channel Exists for Android 13+
             const setupNotifications = async () => {
                 try {
-                    const permStatus = await LocalNotifications.checkPermissions();
+                    let permStatus = await LocalNotifications.checkPermissions();
                     if (permStatus.display !== 'granted') {
-                        await LocalNotifications.requestPermissions();
+                        permStatus = await LocalNotifications.requestPermissions();
+                    }
+                    
+                    // Explicitly create a channel for newer Androids to ensure notifications display
+                    if (permStatus.display === 'granted' && Capacitor.getPlatform() === 'android') {
+                        await LocalNotifications.createChannel({
+                            id: 'updates',
+                            name: 'App Updates',
+                            description: 'Notifications for app updates',
+                            importance: 5,
+                            visibility: 1
+                        });
                     }
                 } catch (err) {
                     console.warn("Notifications missing or denied. Skipping.", err);
@@ -690,15 +697,15 @@ export default function App() {
 
                         if (serverBuild > currentBuild) {
                             console.log(`Native update required! App: ${currentBuild}, Server: ${serverBuild}`);
-                            setToast({ show: true, message: 'A new app update is required!', type: 'info' });
                             setNativeUpdatePrompt(serverConfig);
 
                             try {
                                 await LocalNotifications.schedule({
                                     notifications: [{
-                                        title: "App Update Required",
-                                        body: `Version ${serverConfig.versionString} is available. Tap to download.`,
-                                        id: 1,
+                                        title: "تحديث جديد للتطبيق",
+                                        body: `يتوفر إصدار جديد (${serverConfig.versionString}). يرجى التحميل الآن.`,
+                                        id: 101,
+                                        channelId: 'updates',
                                         schedule: { at: new Date(Date.now() + 1000) }
                                     }]
                                 });
@@ -732,7 +739,7 @@ export default function App() {
 
                         if (currentVersion !== latestUpdate.version) {
                             console.log(`Downloading Capgo bundle ${latestUpdate.version}...`);
-                            setToast({ show: true, message: 'Downloading app update...', type: 'info' });
+                            // ONLY show top banner, remove setToast to prevent overlapping UI
                             setIsDownloadingUpdate(true);
                             setUpdateProgress(0);
 
@@ -740,15 +747,14 @@ export default function App() {
                                 const downloadedBundle = await CapacitorUpdater.download({ url: latestUpdate.url, version: latestUpdate.version });
                                 setUpdateBundle(downloadedBundle); 
                                 setIsUpdateReady(true);
-                                
-                                setToast({ show: true, message: 'Update ready to install!', type: 'success' });
 
                                 try {
                                     await LocalNotifications.schedule({
                                         notifications: [{
-                                            title: "Update Ready!",
-                                            body: "New features downloaded. Tap to apply.",
-                                            id: 2,
+                                            title: "تحديث جاهز!",
+                                            body: "تم تحميل التحديث بنجاح. انقر لإعادة تشغيل التطبيق.",
+                                            id: 102,
+                                            channelId: 'updates',
                                             schedule: { at: new Date(Date.now() + 1000) }
                                         }]
                                     });
@@ -833,18 +839,14 @@ export default function App() {
                 const currentVersion = currentState.bundle?.version || "builtin";
 
                 if (currentVersion !== latestUpdate.version) {
-                    setManualUpdateModal({ 
-                        isOpen: true, 
-                        status: 'downloading', 
-                        message: `Update found! (Server: ${latestUpdate.version} | Current: ${currentVersion}) Downloading...` 
-                    });
+                    // Hide modal immediately so the top banner is fully visible!
+                    setManualUpdateModal({ isOpen: false, status: 'idle', message: '' });
                     setIsDownloadingUpdate(true);
                     setUpdateProgress(0);
                     
                     const downloadedBundle = await CapacitorUpdater.download({ url: latestUpdate.url, version: latestUpdate.version });
                     setUpdateBundle(downloadedBundle); 
                     setIsUpdateReady(true);
-                    setManualUpdateModal({ isOpen: false, status: 'idle', message: '' });
                 } else if (!nativeUpdateFound) {
                     setManualUpdateModal({ 
                         isOpen: true, 
@@ -858,7 +860,6 @@ export default function App() {
 
         } catch (error) {
             console.error("Manual update check failed:", error);
-            // Show exact error message to user so we know what broke
             setManualUpdateModal({ isOpen: true, status: 'error', message: `${error.message || 'Unknown error occurred.'}` });
         } finally {
             setIsDownloadingUpdate(false);
@@ -1731,7 +1732,7 @@ export default function App() {
     const navItems = useMemo(() => [
         { label: t('landing.modules.home', 'Home'), view: 'landing', active: view === 'landing', disabled: false },
         { label: t('landing.modules.dashboard', 'Dashboard'), view: 'dashboard', active: view === 'dashboard', disabled: false },
-        { label: t('landing.modules.courses', 'Courses'), view: 'courses', active: ['courses', 'courseForm', 'courseReport', 'participants', 'participantForm', 'participantReport', 'observe', 'monitoring', 'reports', 'finalReport', 'participantMigration', 'courseDetails', 'test-dashboard', 'enter-test-scores', 'attendanceManager', 'imciForm'].includes(view), disabled: !permissions.canViewCourse }, 
+        { label: t('landing.modules.courses', 'Courses'), active: ['courses', 'courseForm', 'courseReport', 'participants', 'participantForm', 'participantReport', 'observe', 'monitoring', 'reports', 'finalReport', 'participantMigration', 'courseDetails', 'test-dashboard', 'enter-test-scores', 'attendanceManager', 'imciForm'].includes(view), disabled: !permissions.canViewCourse }, 
         { label: t('landing.modules.human_resources', 'Human Resources'), view: 'humanResources', active: ['humanResources', 'facilitatorForm', 'facilitatorReport'].includes(view), disabled: !permissions.canViewHumanResource },
         { label: t('landing.modules.facilities', 'Child Health Services'), view: 'childHealthServices', active: view === 'childHealthServices', disabled: !permissions.canViewFacilities },
         { label: t('landing.modules.mentorship', 'Skills Mentorship'), view: 'skillsMentorship', active: view === 'skillsMentorship', disabled: !permissions.canViewSkillsMentorship }
@@ -1969,7 +1970,7 @@ export default function App() {
 
     return (
         <div className="min-h-screen bg-sky-50 flex flex-col pt-0 relative">
-            <div className="fixed top-0 start-0 w-full z-[100] flex flex-col">
+            <div className="fixed top-0 start-0 w-full z-[100005] flex flex-col">
                 {isOffline && (
                     <div className="bg-amber-500 text-white text-center py-2 px-4 text-sm font-bold flex justify-center items-center gap-2 shadow-md">
                         <WifiOff className="w-5 h-5" /> {t('app.offline', 'You are offline. Changes are saved locally and will sync when reconnected.')}
