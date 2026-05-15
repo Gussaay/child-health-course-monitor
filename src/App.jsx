@@ -8,7 +8,7 @@ import { Bar, Pie, Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, LineElement, PointElement } from 'chart.js';
 
 import {
-    Home, Book, Users, User, Hospital, Database, ClipboardCheck, ClipboardList, FolderKanban, TrendingUp, X, WifiOff, RefreshCw, Activity, Layers, Globe, LogOut, Info, Download
+    Home, Book, Users, User, Hospital, Database, ClipboardCheck, ClipboardList, FolderKanban, TrendingUp, X, WifiOff, RefreshCw, Activity, Layers, Globe, LogOut, Info, Download, HardDrive
 } from 'lucide-react';
 
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
@@ -17,6 +17,10 @@ import { Network } from '@capacitor/network';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 import { LocalNotifications } from '@capacitor/local-notifications';
+
+// --- IMPORTS FOR GENERIC DOWNLOAD MANAGER ---
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { FileOpener } from '@capacitor-community/file-opener';
 
 // --- PRE-FLIGHT LANGUAGE CHECK ---
 if (typeof window !== 'undefined') {
@@ -73,8 +77,9 @@ const PublicMeetingAttendanceView = lazy(() => import('./components/ProjectTrack
 const PlanningView = lazy(() => import('./components/PlanningView'));
 const LocalityPlanView = lazy(() => import('./components/LocalityPlanView'));
 
-// --- IMPORT THE ABOUT PAGE HERE ---
+// --- DOWNLOADS AND ABOUT PAGE ---
 const AboutDeveloperPage = lazy(() => import('./components/AboutDeveloperPage'));
+const DownloadedFilesView = lazy(() => import('./components/DownloadedFilesView.jsx'));
 
 // --- PERMISSIONS IMPORT ---
 import { 
@@ -286,6 +291,7 @@ function Landing({ navigate, permissions }) {
         { label: t('landing.modules.projects', 'Project Tracker'), view: 'projects', icon: FolderKanban, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.planning', 'Master Plan'), view: 'planning', icon: TrendingUp, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.locality_plan', 'Bottom-up Planning'), view: 'localityPlan', icon: Layers, permission: permissions.canViewLocalityPlan },
+        { label: t('landing.modules.downloads', 'App Files & Downloads'), view: 'downloads', icon: HardDrive, permission: true },
         { label: t('landing.modules.admin', 'Admin'), view: 'admin', icon: User, permission: permissions.canViewAdmin },
         { label: t('landing.modules.about', 'About Team'), view: 'about', icon: Info, permission: true },
     ];
@@ -327,7 +333,7 @@ function Landing({ navigate, permissions }) {
 const BottomNav = React.memo(function BottomNav({ navItems, navigate, currentView }) {
     const icons = { 
         'landing': Home, 'dashboard': Home, 'courses': Book, 'humanResources': Users, 'childHealthServices': Hospital, 
-        'skillsMentorship': ClipboardCheck 
+        'skillsMentorship': ClipboardCheck, 'downloads': HardDrive
     };
     
     return (
@@ -550,6 +556,75 @@ export default function App() {
     const isPopStateNavigation = useRef(false);
     const initialViewIsSet = useRef(false);
 
+    // =========================================================================
+    // --- GENERIC IN-APP DOWNLOAD & OPEN MANAGER ---
+    // =========================================================================
+    const handleFileDownloadAndOpen = async (url, customFileName = null) => {
+        if (!Capacitor.isNativePlatform()) {
+            // Fallback for Web: just open in a new tab to download
+            window.open(url, '_blank');
+            return;
+        }
+
+        setToast({ show: true, message: 'Starting download...', type: 'info' });
+        setIsDownloadingUpdate(true); 
+
+        try {
+            // Extract filename from URL or use provided name
+            const fileName = customFileName || url.substring(url.lastIndexOf('/') + 1) || 'downloaded_file';
+            
+            // Determine MIME type based on extension
+            let mimeType = '*/*';
+            const lowerName = fileName.toLowerCase();
+            if (lowerName.endsWith('.apk')) mimeType = 'application/vnd.android.package-archive';
+            else if (lowerName.endsWith('.pdf')) mimeType = 'application/pdf';
+            else if (lowerName.endsWith('.xlsx')) mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+            else if (lowerName.endsWith('.png')) mimeType = 'image/png';
+            else if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) mimeType = 'image/jpeg';
+
+            // Ensure the specific downloads folder exists in Data directory (so it persists and we can manage it)
+            try {
+                await Filesystem.mkdir({ path: 'downloads', directory: Directory.Data, recursive: true });
+            } catch (e) {
+                // Ignore if it already exists
+            }
+
+            const filePath = `downloads/${fileName}`;
+
+            // 1. Download the file directly to Directory.Data/downloads
+            await CapacitorHttp.downloadFile({
+                url: url,
+                filePath: filePath,
+                fileDirectory: Directory.Data 
+            });
+
+            // 2. Get the absolute device URI for the downloaded file
+            const { uri } = await Filesystem.getUri({
+                path: filePath,
+                directory: Directory.Data
+            });
+
+            setToast({ show: true, message: 'Download complete. Opening...', type: 'success' });
+
+            // 3. Trigger the native OS "Open With" / Installer intent
+            await FileOpener.open({
+                filePath: uri,
+                contentType: mimeType,
+                openWithDefault: true
+            });
+
+        } catch (error) {
+            console.error("Download/Open Error:", error);
+            setToast({ show: true, message: `Failed to handle file. Opening browser as fallback.`, type: 'error' });
+            
+            // Fallback: If native opening fails (e.g., missing permissions), use the browser
+            await Browser.open({ url: url });
+        } finally {
+            setIsDownloadingUpdate(false);
+            setUpdateProgress(0);
+        }
+    };
+
     // --- DECOUPLED & ARMOR-PLATED UPDATE SCRIPT ---
     useEffect(() => {
         let downloadListenerHandle;
@@ -582,7 +657,7 @@ export default function App() {
                     const status = await Network.getStatus();
                     if (!status.connected) return;
 
-                    // 🛑 NEW: Fetch from Firestore instead of URL, controlled by Admin Dashboard
+                    // Fetch from Firestore instead of URL, controlled by Admin Dashboard
                     const updateDocRef = doc(db, "meta", "update_config");
                     const updateSnap = await getDoc(updateDocRef);
 
@@ -618,7 +693,6 @@ export default function App() {
             // 4. INDEPENDENT WEB CHECK (CAPGO)
             const checkWebUpdates = async () => {
                 try {
-                    // Update UI with the active Capgo Bundle version immediately
                     const currentState = await CapacitorUpdater.current();
                     if (currentState.bundle && currentState.bundle.version) {
                         setAppVersion(currentState.bundle.version);
@@ -637,7 +711,9 @@ export default function App() {
 
                     if (response.status === 200) {
                         const latestUpdate = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
-                        const currentVersion = currentState.bundle?.version || import.meta.env.VITE_APP_VERSION || "builtin";
+                        
+                        // FIX: Exclude Vite App Version so it strictly checks Capgo Native bundle state vs the server JSON.
+                        const currentVersion = currentState.bundle?.version || "builtin";
 
                         if (currentVersion !== latestUpdate.version) {
                             console.log(`Downloading Capgo bundle ${latestUpdate.version}...`);
@@ -736,10 +812,16 @@ export default function App() {
             if (response.status === 200) {
                 const latestUpdate = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
                 const currentState = await CapacitorUpdater.current();
-                const currentVersion = currentState.bundle?.version || import.meta.env.VITE_APP_VERSION || "builtin";
+                
+                // FIX: Strictly compare Capgo state to force manual trigger if it hasn't caught up
+                const currentVersion = currentState.bundle?.version || "builtin";
 
                 if (currentVersion !== latestUpdate.version) {
-                    setManualUpdateModal({ isOpen: true, status: 'downloading', message: 'Update found! Downloading...' });
+                    setManualUpdateModal({ 
+                        isOpen: true, 
+                        status: 'downloading', 
+                        message: `Update found! (Server: ${latestUpdate.version} | Current: ${currentVersion}) Downloading...` 
+                    });
                     setIsDownloadingUpdate(true);
                     setUpdateProgress(0);
                     
@@ -748,7 +830,11 @@ export default function App() {
                     setIsUpdateReady(true);
                     setManualUpdateModal({ isOpen: false, status: 'idle', message: '' }); // Close to show the OTA Ready modal
                 } else if (!nativeUpdateFound) {
-                    setManualUpdateModal({ isOpen: true, status: 'success', message: 'App is already up to date!' });
+                    setManualUpdateModal({ 
+                        isOpen: true, 
+                        status: 'success', 
+                        message: `App is already up to date! (Version: ${currentVersion})` 
+                    });
                 }
             }
         } catch (error) {
@@ -1266,7 +1352,7 @@ export default function App() {
             'skillsMentorship': permissions.canViewSkillsMentorship, 'facilitators': permissions.canViewHumanResource, 'programTeams': permissions.canViewHumanResource,
             'partnersPage': permissions.canViewHumanResource, 'attendanceManager': permissions.canManageCourse, 
             'projects': permissions.canUseFederalManagerAdvancedFeatures, 'planning': permissions.canUseFederalManagerAdvancedFeatures, 'localityPlan': permissions.canViewLocalityPlan,
-            'about': true, 
+            'downloads': true, 'about': true, 
         };
 
         if (user && !viewPermissions[newView]) {
@@ -1294,9 +1380,9 @@ export default function App() {
         if (state.openParticipantReport) { setSelectedParticipantId(state.openParticipantReport); setSelectedCourseId(state.openCourseReport); }
         if (state.caseToEdit) setEditingCaseFromReport(state.caseToEdit);
 
-        if (['courses', 'humanResources', 'dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'about'].includes(newView)) {
+        if (['courses', 'humanResources', 'dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'downloads', 'about'].includes(newView)) {
             setSelectedCourseId(null); setSelectedParticipantId(null); setFinalReportCourse(null);
-            if (['dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'about'].includes(newView)) setActiveCourseType(null);
+            if (['dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'downloads', 'about'].includes(newView)) setActiveCourseType(null);
         }
         if ((view === 'observe' || view === 'participantReport') && !['observe', 'participantReport'].includes(newView)) setSelectedParticipantId(null);
     }, [view, selectedCourseId, selectedParticipantId, permissions, user, isCourseActive]);
@@ -1576,6 +1662,9 @@ export default function App() {
 
             case 'localityPlan':
                 return permissions.canViewLocalityPlan ? ( <Suspense fallback={<Spinner />}><LocalityPlanView permissions={permissions} userStates={userStates} userLocalities={userLocalities} /></Suspense> ) : null;
+
+            case 'downloads':
+                return ( <Suspense fallback={<Card><Spinner /></Card>}><DownloadedFilesView onBack={() => navigate(previousView)} setToast={setToast} /></Suspense> );
 
             case 'monitoring': case 'observe':
                 const canMonitor = (permissions.canManageCourse && isCourseActive) || permissions.canUseFederalManagerAdvancedFeatures || permissions.manageTimePeriod === 'anytime';
@@ -2168,8 +2257,8 @@ export default function App() {
                             </div>
                         )}
                         <button 
-                            onClick={async () => {
-                                await Browser.open({ url: nativeUpdatePrompt.downloadUrl });
+                            onClick={() => {
+                                handleFileDownloadAndOpen(nativeUpdatePrompt.downloadUrl, `update_v${nativeUpdatePrompt.latestNativeBuild}.apk`);
                             }}
                             className="w-full justify-center rounded-xl bg-red-600 px-4 py-3 text-base font-bold text-white shadow-sm hover:bg-red-700 transition-colors"
                         >

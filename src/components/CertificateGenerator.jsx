@@ -64,6 +64,7 @@ const getCertificateCourseTitle = (courseType, language = 'en') => {
             case 'IPC': return 'مكافحة العدوى (وحدة حديثي الولادة)';
             case 'Small & Sick Newborn': return 'رعاية الاطفال حديثي الولادة المرضى والصغار';
             case 'Program Management': return 'إدارة برنامج صحة الطفل';
+            case 'Comprehensive Package For Community Midwives': return 'الحزمة الشاملة لقابلات المجتمع';
             default: return normalizedType;
         }
     }
@@ -75,6 +76,7 @@ const getCertificateCourseTitle = (courseType, language = 'en') => {
         case 'IPC': return 'Infection Prevention & Control (Neonatal Unit)';
         case 'Small & Sick Newborn': return 'Small & Sick Newborn Case Management';
         case 'Program Management': return 'Program Management';
+        case 'Comprehensive Package For Community Midwives': return 'Comprehensive Package For Community Midwives';
         default: return normalizedType;
     }
 };
@@ -198,6 +200,9 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
             else if (courseType === 'Program Management') {
                 if (participantSubCourse.includes('IMNCI implementation operational Guide')) displaySubCourse = "دورة تدريب المدريبين على الدليل التشغيلي لتطبيق العلاج المتكامل في مؤسسات الرعاية الصحية الأساسية";
                 else if (participantSubCourse.includes('planning, Monitoring and evaluation')) displaySubCourse = "التخطيط والمتابعة والتقييم";
+            }
+            else if (courseType === 'Comprehensive Package For Community Midwives') {
+                displaySubCourse = "الرعاية الضرورية للاطفال حديثي الولادة + مساعدة الأطفال حديثي الولادة على التنفس";
             }
         }
     }

@@ -220,7 +220,9 @@ export function AdminDashboard() {
 
     // --- APP UPDATE STATES ---
     const [otaVersion, setOtaVersion] = useState("Checking Server...");
-    const [serverNativeConfig, setServerNativeConfig] = useState(null); // Tracks the absolute latest APK on GitHub
+    const [serverNativeConfig, setServerNativeConfig] = useState(null); 
+    const [isUpdateActive, setIsUpdateActive] = useState(false); // Controls the "Native Update Required" View
+
     const [updateConfig, setUpdateConfig] = useState({
         latestNativeBuild: 1,
         versionString: "1.0.0",
@@ -319,7 +321,12 @@ export function AdminDashboard() {
                 const updateRef = doc(db, "meta", "update_config");
                 const updateSnap = await getDoc(updateRef);
                 if (updateSnap.exists()) {
-                    setUpdateConfig(updateSnap.data());
+                    const data = updateSnap.data();
+                    setUpdateConfig(data);
+                    // Determine if the form should be hidden based on the active mandatory configuration
+                    if (data.mandatory) {
+                        setIsUpdateActive(true);
+                    }
                 }
 
                 // 1. Fetch current Live OTA Version from Firebase Hosting
@@ -357,13 +364,34 @@ export function AdminDashboard() {
         setLoading(true);
         try {
             await setDoc(doc(db, "meta", "update_config"), updateConfig);
+            if (updateConfig.mandatory) {
+                setIsUpdateActive(true);
+            } else {
+                setIsUpdateActive(false);
+            }
             setToast({show: true, message: 'Update triggered! Mobile users will be prompted immediately.', type: 'success'});
         } catch(e) {
             console.error("Update config error", e);
             setToast({show: true, message: 'Failed to save update configuration.', type: 'error'});
         }
         setLoading(false);
-    }
+    };
+
+    const handleReverseUpdate = async () => {
+        if (!window.confirm("Are you sure you want to reverse the mandatory update? Users will no longer be forced to download the new APK.")) return;
+        setLoading(true);
+        try {
+            const newConfig = { ...updateConfig, mandatory: false };
+            await setDoc(doc(db, "meta", "update_config"), newConfig);
+            setUpdateConfig(newConfig);
+            setIsUpdateActive(false);
+            setToast({show: true, message: 'Mandatory update requirement reversed.', type: 'success'});
+        } catch(e) {
+            console.error("Revert config error", e);
+            setToast({show: true, message: 'Failed to reverse update configuration.', type: 'error'});
+        }
+        setLoading(false);
+    };
 
     const handleUserRolesChange = async (userId, selectedRoles, assignedState, assignedLocality) => {
         const userToUpdate = users.find(u => u.id === userId);
@@ -675,6 +703,7 @@ export function AdminDashboard() {
                                     mandatory: true,
                                     releaseNotes: `Update to version ${serverNativeConfig.versionString}. Includes latest bug fixes and improvements.`
                                 });
+                                // Note: It still requires clicking "Push Native Update Prompt" to save and lock
                             }}
                             className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md border border-emerald-700 whitespace-nowrap"
                         >
@@ -685,54 +714,76 @@ export function AdminDashboard() {
 
                 {/* Native APK Trigger Control Block */}
                 <Card className="shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="p-5 border-b border-gray-100 bg-gray-50 flex items-center">
-                        <Smartphone className="w-5 h-5 text-sky-600 mr-3" />
-                        <div>
-                            <h3 className="text-md font-bold text-gray-800">Native APK Trigger Control</h3>
-                            <p className="text-xs text-gray-500">You control when users are forced to download a completely new Native APK installation.</p>
-                        </div>
-                    </div>
-                    <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormGroup label="Target Native Build ID">
-                            <Input 
-                                type="number" 
-                                value={updateConfig.latestNativeBuild} 
-                                onChange={e => setUpdateConfig({...updateConfig, latestNativeBuild: parseInt(e.target.value)})} 
-                                placeholder="e.g. 19" 
-                            />
-                            <p className="text-[10px] text-gray-500 mt-1">Matches the exact Native ID built by GitHub Actions.</p>
-                        </FormGroup>
-                        <FormGroup label="Display Version String">
-                            <Input 
-                                value={updateConfig.versionString} 
-                                onChange={e => setUpdateConfig({...updateConfig, versionString: e.target.value})} 
-                                placeholder="e.g. 1.19.0" 
-                            />
-                        </FormGroup>
-                        <div className="md:col-span-2">
-                            <FormGroup label="Release Notes / Changelog">
-                                <textarea 
-                                    rows="3" 
-                                    className="w-full bg-white border border-gray-300 rounded-lg p-3 text-sm shadow-sm focus:ring-sky-500 focus:border-sky-500" 
-                                    value={updateConfig.releaseNotes} 
-                                    onChange={e => setUpdateConfig({...updateConfig, releaseNotes: e.target.value})} 
-                                    placeholder="Describe what's new in this Native APK..."
-                                ></textarea>
-                            </FormGroup>
-                        </div>
-                        <div className="md:col-span-2 flex flex-col md:flex-row items-start md:items-center justify-between p-4 bg-sky-50 rounded-xl border border-sky-100 gap-4">
+                    <div className="p-5 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+                        <div className="flex items-center">
+                            <Smartphone className="w-5 h-5 text-sky-600 mr-3" />
                             <div>
-                                <label className="flex items-center cursor-pointer">
-                                    <Checkbox checked={updateConfig.mandatory} onChange={e => setUpdateConfig({...updateConfig, mandatory: e.target.checked})} />
-                                    <span className="ml-3 font-bold text-sky-900 text-sm">Force Mandatory Update</span>
-                                </label>
-                                <p className="text-xs text-sky-700 mt-1 ml-8">If checked, users cannot dismiss the popup and must download the APK.</p>
+                                <h3 className="text-md font-bold text-gray-800">Native APK Trigger Control</h3>
+                                <p className="text-xs text-gray-500">You control when users are forced to download a completely new Native APK installation.</p>
                             </div>
-                            <Button onClick={handleSaveUpdateConfig} variant="primary" className="shadow-md shrink-0 w-full md:w-auto">
-                                <Smartphone className="w-4 h-4 mr-2"/> Push Native Update Prompt
+                        </div>
+                        {isUpdateActive && (
+                            <span className="inline-flex items-center px-3 py-1 rounded-full bg-red-100 text-red-800 text-xs font-bold border border-red-200 shadow-sm">
+                                <Shield className="w-3.5 h-3.5 mr-1" /> Native Update Required
+                            </span>
+                        )}
+                    </div>
+                    
+                    {isUpdateActive ? (
+                        <div className="p-8 flex flex-col items-center justify-center text-center bg-red-50/20">
+                            <div className="inline-flex items-center px-4 py-2 rounded-full bg-red-100 text-red-800 font-bold mb-4 shadow-sm border border-red-200">
+                                <Smartphone className="w-5 h-5 mr-2" /> Native Update is Currently Mandatory
+                            </div>
+                            <h4 className="text-lg font-bold text-gray-800 mb-2">Target Build: v{updateConfig.versionString} (ID: {updateConfig.latestNativeBuild})</h4>
+                            <p className="text-sm text-gray-600 max-w-md mb-6">Users opening an older app build are currently being locked out and forced to download the new APK. Form entry fields are hidden while active.</p>
+                            
+                            <Button onClick={handleReverseUpdate} variant="secondary" className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 shadow-sm bg-white">
+                                <RefreshCw className="w-4 h-4 mr-2" /> Reverse / Cancel Mandatory Update
                             </Button>
                         </div>
-                    </div>
+                    ) : (
+                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <FormGroup label="Target Native Build ID">
+                                <Input 
+                                    type="number" 
+                                    value={updateConfig.latestNativeBuild} 
+                                    onChange={e => setUpdateConfig({...updateConfig, latestNativeBuild: parseInt(e.target.value)})} 
+                                    placeholder="e.g. 19" 
+                                />
+                                <p className="text-[10px] text-gray-500 mt-1">Matches the exact Native ID built by GitHub Actions.</p>
+                            </FormGroup>
+                            <FormGroup label="Display Version String">
+                                <Input 
+                                    value={updateConfig.versionString} 
+                                    onChange={e => setUpdateConfig({...updateConfig, versionString: e.target.value})} 
+                                    placeholder="e.g. 1.19.0" 
+                                />
+                            </FormGroup>
+                            <div className="md:col-span-2">
+                                <FormGroup label="Release Notes / Changelog">
+                                    <textarea 
+                                        rows="3" 
+                                        className="w-full bg-white border border-gray-300 rounded-lg p-3 text-sm shadow-sm focus:ring-sky-500 focus:border-sky-500" 
+                                        value={updateConfig.releaseNotes} 
+                                        onChange={e => setUpdateConfig({...updateConfig, releaseNotes: e.target.value})} 
+                                        placeholder="Describe what's new in this Native APK..."
+                                    ></textarea>
+                                </FormGroup>
+                            </div>
+                            <div className="md:col-span-2 flex flex-col md:flex-row items-start md:items-center justify-between p-4 bg-sky-50 rounded-xl border border-sky-100 gap-4">
+                                <div>
+                                    <label className="flex items-center cursor-pointer">
+                                        <Checkbox checked={updateConfig.mandatory} onChange={e => setUpdateConfig({...updateConfig, mandatory: e.target.checked})} />
+                                        <span className="ml-3 font-bold text-sky-900 text-sm">Force Mandatory Update</span>
+                                    </label>
+                                    <p className="text-xs text-sky-700 mt-1 ml-8">If checked, users cannot dismiss the popup and must download the APK.</p>
+                                </div>
+                                <Button onClick={handleSaveUpdateConfig} variant="primary" className="shadow-md shrink-0 w-full md:w-auto">
+                                    <Smartphone className="w-4 h-4 mr-2"/> Push Native Update Prompt
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </Card>
             </div>
         );
