@@ -28,7 +28,11 @@ export default defineConfig({
         ]
       },
       workbox: {
-        navigateFallback: '/index.html', // <-- ADD THIS LINE
+        navigateFallback: '/index.html',
+        
+        // 🛑 THE FIX: Tell the Service Worker NOT to intercept APK or JSON files
+        navigateFallbackDenylist: [/\.apk$/, /\.json$/], 
+        
         runtimeCaching: [
           {
             urlPattern: /\.(?:png|jpg|jpeg|svg|gif|woff2?|ttf)$/,

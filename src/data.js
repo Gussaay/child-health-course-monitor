@@ -19,7 +19,7 @@ import {
     Timestamp,
     startAfter,
     deleteField,
-    arrayUnion // <-- Added arrayUnion here
+    arrayUnion
 } from "firebase/firestore";
 import { onAuthStateChanged } from 'firebase/auth'; 
 import { storage } from './firebase';
@@ -40,14 +40,35 @@ const DURATION_TICK_MS = 60 * 1000;
 const LOCAL_STORAGE_KEY_DURATION = 'unsyncedAppDuration'; 
 
 // --- INTERNAL HELPERS FOR USAGE TRACKING ---
+
+// 🛑 Helper to determine current version and platform
+const getPlatformAndVersion = () => {
+    const isNative = typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.();
+    const currentVersion = (typeof window !== 'undefined' && window.APP_VERSION) || 'unknown';
+    return { isNative, currentVersion };
+};
+
 const syncDurationToDb = (durationMs, userId) => {
     if (!userId || !durationMs || durationMs <= 0) return;
 
+    const { isNative, currentVersion } = getPlatformAndVersion();
     const userUsageRef = doc(db, 'userUsageStats', userId);
-    fbSetDoc(userUsageRef, {
+    
+    const payload = {
         totalActiveDurationMs: increment(durationMs),
         lastUpdated: serverTimestamp() 
-    }, { merge: true }).catch(e => console.error("Failed to sync duration:", e));
+    };
+
+    // 🛑 Append version and access time based on platform
+    if (isNative) {
+        payload.appVersion = currentVersion;
+        payload.lastAppAccess = serverTimestamp();
+    } else {
+        payload.webVersion = currentVersion;
+        payload.lastWebAccess = serverTimestamp();
+    }
+
+    fbSetDoc(userUsageRef, payload, { merge: true }).catch(e => console.error("Failed to sync duration:", e));
 };
 
 const tickLocalDuration = () => {
@@ -87,14 +108,26 @@ const updateUsageStatsInDb = () => {
     if (updateTimeout) clearTimeout(updateTimeout);
     updateTimeout = null;
 
+    const { isNative, currentVersion } = getPlatformAndVersion();
     const userUsageRef = doc(db, 'userUsageStats', userId);
 
-    fbSetDoc(userUsageRef, {
+    const updatePayload = {
         totalReads: increment(readsToUpdate),
         totalWrites: increment(writesToUpdate),
         email: userEmail,
         lastUpdated: serverTimestamp()
-    }, { merge: true }).catch(e => console.error("Failed to update stats:", e));
+    };
+
+    // 🛑 Append version and access time based on platform
+    if (isNative) {
+        updatePayload.appVersion = currentVersion;
+        updatePayload.lastAppAccess = serverTimestamp();
+    } else {
+        updatePayload.webVersion = currentVersion;
+        updatePayload.lastWebAccess = serverTimestamp();
+    }
+
+    fbSetDoc(userUsageRef, updatePayload, { merge: true }).catch(e => console.error("Failed to update stats:", e));
 };
 
 const dispatchOpEvent = (type, count = 1) => {
@@ -144,6 +177,19 @@ export const initializeUsageTracking = () => {
 
     if (user && !currentUser) { 
         currentUser = { uid: user.uid, email: user.email };
+        
+        // 🛑 STAMP LOGIN VERSION IMMEDIATELY ON BOOT
+        const { isNative, currentVersion } = getPlatformAndVersion();
+        const stampPayload = { lastUpdated: serverTimestamp(), email: user.email };
+        if (isNative) {
+            stampPayload.appVersion = currentVersion;
+            stampPayload.lastAppAccess = serverTimestamp();
+        } else {
+            stampPayload.webVersion = currentVersion;
+            stampPayload.lastWebAccess = serverTimestamp();
+        }
+        fbSetDoc(doc(db, 'userUsageStats', user.uid), stampPayload, { merge: true }).catch(e => console.warn(e));
+
         const unsyncedMs = parseInt(localStorage.getItem(LOCAL_STORAGE_KEY_DURATION) || '0', 10);
         if (unsyncedMs > 0) {
             syncDurationToDb(unsyncedMs, currentUser.uid);
@@ -510,7 +556,6 @@ export async function listHealthFacilities(filters = {}, sourceOptions = {}) {
     try {
         const querySnapshot = await getData(q, sourceOptions);
         
-        // --- 🟢 FIX: d.data() not doc.data() ---
         let facilities = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
         if (filters.state === 'NOT_ASSIGNED') facilities = facilities.filter(f => !f['الولاية']);
@@ -2239,12 +2284,11 @@ export async function getAboutTeamImages(sourceOptions = {}) {
     const docRef = doc(db, "settings", "aboutTeamImages");
     const docSnap = await getDoc(docRef, sourceOptions);
     if (docSnap.exists()) return docSnap.data();
-    return {}; // Return empty object if no images saved yet
+    return {}; 
 }
 
 export async function updateAboutTeamImage(memberId, imageUrl) {
     const docRef = doc(db, "settings", "aboutTeamImages");
-    // Use merge: true so we don't accidentally delete other team members' images
     const writePromise = setDoc(docRef, { [memberId]: imageUrl }, { merge: true });
     await executeOfflineSafeWrite(writePromise);
     return true;

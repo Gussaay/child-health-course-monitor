@@ -7,7 +7,7 @@ import { onAuthStateChanged, sendPasswordResetEmail } from 'firebase/auth';
 import { STATE_LOCALITIES } from './constants'; 
 
 // --- Icons & Data Imports ---
-import { CheckCircle, XCircle, RefreshCw, Lock, Users, Shield, Activity, Filter, Database, Edit3, Clock, Settings } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, Lock, Users, Shield, Activity, Filter, Database, Edit3, Clock, Settings, Smartphone, CloudDownload, History } from 'lucide-react';
 import { listFederalCoordinators } from '../data';
 
 // --- PERMISSIONS IMPORT ---
@@ -45,6 +45,7 @@ const AdminTabs = ({ activeTab, setActiveTab, currentUserRoles = [] }) => {
 
     if (currentUserRoles.includes('super_user')) {
         tabs.push({ key: 'usage', label: 'Resource Usage', icon: Activity });
+        tabs.push({ key: 'updates', label: 'App Updates', icon: Smartphone });
     }
 
     return (
@@ -91,14 +92,12 @@ const PermissionsEditor = ({ role, currentPermissions, allPermissions, onPermiss
             <div className="bg-white rounded-xl">
                 {PERMISSION_CATEGORIES.map((category, catIndex) => (
                     <div key={category.title} className={catIndex > 0 ? 'border-t-4 border-gray-100' : ''}>
-                        {/* Category Heading - Sticks cleanly to the top */}
                         <div className={`px-6 py-3 bg-gray-100 border-b border-gray-200 sticky top-0 z-20 shadow-sm ${catIndex === 0 ? 'rounded-t-xl' : ''}`}>
                             <h5 className="text-gray-800 font-black text-sm uppercase tracking-wider">
                                 {category.title}
                             </h5>
                         </div>
 
-                        {/* Coherent List within Category */}
                         <div className="divide-y divide-gray-100">
                             {category.keys.map(permission => {
                                 if (!currentPermissions.hasOwnProperty(permission)) return null;
@@ -106,7 +105,6 @@ const PermissionsEditor = ({ role, currentPermissions, allPermissions, onPermiss
                                 const isBoolean = typeof allPermissions[permission] === 'boolean';
                                 const formattedTitle = permission.replace(/([A-Z])/g, ' $1').trim();
                                 
-                                // View for Derived/Read-only Permissions (canViewAdmin removed from this list so it renders as a checkbox)
                                 if (['canViewDashboard', 'canApproveSubmissions'].includes(permission)) {
                                     return (
                                         <div key={permission} className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gray-50/40">
@@ -126,7 +124,6 @@ const PermissionsEditor = ({ role, currentPermissions, allPermissions, onPermiss
                                     );
                                 }
                                 
-                                // View for Standard Editable Permissions
                                 return (
                                     <div key={permission} className="px-6 py-4 hover:bg-sky-50/40 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4 group">
                                         <div className="flex-1 pr-4">
@@ -221,6 +218,17 @@ export function AdminDashboard() {
     const [editingUserPermissions, setEditingUserPermissions] = useState(null);
     const [tempUserPermissions, setTempUserPermissions] = useState({});
 
+    // --- APP UPDATE STATES ---
+    const [otaVersion, setOtaVersion] = useState("Checking Server...");
+    const [serverNativeConfig, setServerNativeConfig] = useState(null); // Tracks the absolute latest APK on GitHub
+    const [updateConfig, setUpdateConfig] = useState({
+        latestNativeBuild: 1,
+        versionString: "1.0.0",
+        downloadUrl: "https://imnci-courses-monitor.web.app/app-release.apk",
+        mandatory: true,
+        releaseNotes: ""
+    });
+
     useEffect(() => {
         setLoading(true);
         const unsubscribe = onAuthStateChanged(auth, user => {
@@ -281,18 +289,19 @@ export function AdminDashboard() {
             const rolesDocRef = doc(db, "meta", "roles");
             const rolesDocSnap = await getDoc(rolesDocRef);
             const permissionsData = rolesDocSnap.exists() ? rolesDocSnap.data() : {};
-            const updatedPermissions = Object.keys(ROLES).reduce((acc, role) => {
-                const defaultPerms = DEFAULT_ROLE_PERMISSIONS[role] || DEFAULT_ROLE_PERMISSIONS['user'];
-                const savedPerms = permissionsData[role]; 
+            const updatedPermissions = Object.keys(ROLES).reduce((acc, r) => {
+                const defaultPerms = DEFAULT_ROLE_PERMISSIONS[r] || DEFAULT_ROLE_PERMISSIONS['user'];
+                const savedPerms = permissionsData[r]; 
                 let mergedPerms = { ...ALL_PERMISSIONS, ...defaultPerms, ...(savedPerms || {}) };
-                acc[role] = applyDerivedPermissions(mergedPerms);
+                acc[r] = applyDerivedPermissions(mergedPerms);
                 return acc;
             }, {});
 
             setUsers(userList);
             setRolesAndPermissions(updatedPermissions);
 
-            if (role === 'super_user') {
+            // Always fetch usage stats (telemetry) to populate versions in the User Directory
+            try {
                 const usageQuery = query(collection(db, "userUsageStats"));
                 const usageSnapshot = await getDocs(usageQuery);
                 const usageList = usageSnapshot.docs.map(doc => ({
@@ -300,12 +309,61 @@ export function AdminDashboard() {
                     ...doc.data()
                 }));
                 setUsageStats(usageList);
+            } catch (e) {
+                console.warn("Could not load usage stats:", e);
+                setUsageStats([]);
+            }
+
+            if (role === 'super_user') {
+                // Load Native App Update Config from Database
+                const updateRef = doc(db, "meta", "update_config");
+                const updateSnap = await getDoc(updateRef);
+                if (updateSnap.exists()) {
+                    setUpdateConfig(updateSnap.data());
+                }
+
+                // 1. Fetch current Live OTA Version from Firebase Hosting
+                try {
+                    const res = await fetch("https://imnci-courses-monitor.web.app/latest/update.json?t=" + Date.now());
+                    if (res.ok) {
+                        const otaData = await res.json();
+                        setOtaVersion(otaData.version || "Unknown");
+                    } else {
+                        setOtaVersion("No Capgo Payload Found");
+                    }
+                } catch(e) {
+                    setOtaVersion("Offline");
+                }
+
+                // 2. Fetch the absolute latest compiled APK config from Firebase Hosting
+                try {
+                    const nativeRes = await fetch("https://imnci-courses-monitor.web.app/native-version.json?t=" + Date.now());
+                    if (nativeRes.ok) {
+                        const nativeData = await nativeRes.json();
+                        setServerNativeConfig(nativeData);
+                    }
+                } catch(e) {
+                    console.warn("Could not fetch server native config", e);
+                }
             }
         } catch (error) {
             setToast({ show: true, message: "Error loading data. Please try again.", type: "error" });
         }
         setLoading(false);
     };
+
+    const handleSaveUpdateConfig = async () => {
+        if (!window.confirm("Are you sure? Updating this configuration will immediately trigger a mandatory download prompt for any user running an older native app build.")) return;
+        setLoading(true);
+        try {
+            await setDoc(doc(db, "meta", "update_config"), updateConfig);
+            setToast({show: true, message: 'Update triggered! Mobile users will be prompted immediately.', type: 'success'});
+        } catch(e) {
+            console.error("Update config error", e);
+            setToast({show: true, message: 'Failed to save update configuration.', type: 'error'});
+        }
+        setLoading(false);
+    }
 
     const handleUserRolesChange = async (userId, selectedRoles, assignedState, assignedLocality) => {
         const userToUpdate = users.find(u => u.id === userId);
@@ -397,7 +455,6 @@ export function AdminDashboard() {
             let baseRole = { ...ALL_PERMISSIONS, ...prev[role] };
             baseRole[permission] = value;
             
-            // Maintain derivations manually here
             baseRole.canApproveSubmissions = ALL_PERMISSIONS.canApproveSubmissions;
             baseRole.canViewDashboard = ALL_PERMISSIONS.canViewDashboard; 
             
@@ -417,7 +474,6 @@ export function AdminDashboard() {
             if (baseRole.canManageFacilities) {
                  baseRole.canViewFacilities = true;
             }
-            // Ensure derived rules trigger correctly for courses
             if (baseRole.canAddCourse || baseRole.canManageCourse) {
                  baseRole.canViewCourse = true;
             }
@@ -460,18 +516,15 @@ export function AdminDashboard() {
 
         setLoading(true);
         try {
-            // 1. Calculate the derived permissions for the global blueprint
             const rolesAndPermissionsWithDerived = Object.keys(rolesAndPermissions).reduce((acc, role) => {
                 const currentRolePerms = { ...ALL_PERMISSIONS, ...(rolesAndPermissions[role] || {}) };
                 acc[role] = applyDerivedPermissions(currentRolePerms);
                 return acc;
             }, {});
 
-            // 2. Save the updated blueprint to the global meta document
             const rolesDocRef = doc(db, "meta", "roles");
             await setDoc(rolesDocRef, rolesAndPermissionsWithDerived);
             
-            // 3. Incrementally update ONLY the users who hold the role being edited
             const batch = writeBatch(db);
             let updateCount = 0;
 
@@ -489,12 +542,10 @@ export function AdminDashboard() {
                 return user;
             });
             
-            // 4. Commit batch if there are affected users
             if (updateCount > 0) {
                 await batch.commit();
             }
             
-            // 5. Update local state
             setRolesAndPermissions(rolesAndPermissionsWithDerived);
             setUsers(updatedUsers); 
             
@@ -508,7 +559,6 @@ export function AdminDashboard() {
         }
     };
 
-    // --- NEW HANDLERS FOR ACCOUNT MANAGEMENT ---
     const handleSendPasswordReset = async (email) => {
         if (!email) return;
         if (window.confirm(`Send a password reset email to ${email}?`)) {
@@ -583,6 +633,111 @@ export function AdminDashboard() {
 
     if (loading) return <Spinner />;
 
+    // =========================================================================
+    // NEW APP UPDATES TAB
+    // =========================================================================
+    const renderUpdatesTab = () => {
+        const isNewApkAvailable = serverNativeConfig && serverNativeConfig.latestNativeBuild > (updateConfig?.latestNativeBuild || 0);
+
+        return (
+            <div className="space-y-6 animate-in fade-in duration-500">
+                {/* OTA Web Status Block */}
+                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+                    <div className="p-3 bg-emerald-50 rounded-full shrink-0"><CloudDownload className="w-6 h-6 text-emerald-500" /></div>
+                    <div>
+                        <h3 className="text-lg font-bold text-gray-800">Over-The-Air (OTA) Status</h3>
+                        <p className="text-sm text-gray-500 mt-0.5 max-w-lg">
+                            OTA updates happen entirely automatically. Whenever GitHub Actions finishes a build, Capgo serves these UI changes to users instantly in the background.
+                        </p>
+                    </div>
+                    <div className="ml-auto text-right">
+                        <div className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Live OTA Version</div>
+                        <div className="text-2xl font-black text-emerald-600 border border-emerald-100 bg-emerald-50 px-3 py-1 rounded-lg">v{otaVersion}</div>
+                    </div>
+                </div>
+
+                {/* --- 1-CLICK NEW APK NOTIFICATION BANNER --- */}
+                {isNewApkAvailable && (
+                    <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-2xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-emerald-100 rounded-full shrink-0"><Smartphone className="w-6 h-6 text-emerald-600" /></div>
+                            <div>
+                                <h3 className="text-lg font-bold text-emerald-900">New APK Available for Deployment!</h3>
+                                <p className="text-sm text-emerald-700 mt-0.5 max-w-xl">
+                                    GitHub Actions has built a newer native app (<strong>v{serverNativeConfig.versionString}</strong>). Click the button to instantly configure and trigger this update.
+                                </p>
+                            </div>
+                        </div>
+                        <Button 
+                            onClick={() => {
+                                setUpdateConfig({
+                                    ...serverNativeConfig,
+                                    mandatory: true,
+                                    releaseNotes: `Update to version ${serverNativeConfig.versionString}. Includes latest bug fixes and improvements.`
+                                });
+                            }}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md border border-emerald-700 whitespace-nowrap"
+                        >
+                            <CloudDownload className="w-4 h-4 mr-2" /> 1-Click Load Latest APK
+                        </Button>
+                    </div>
+                )}
+
+                {/* Native APK Trigger Control Block */}
+                <Card className="shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="p-5 border-b border-gray-100 bg-gray-50 flex items-center">
+                        <Smartphone className="w-5 h-5 text-sky-600 mr-3" />
+                        <div>
+                            <h3 className="text-md font-bold text-gray-800">Native APK Trigger Control</h3>
+                            <p className="text-xs text-gray-500">You control when users are forced to download a completely new Native APK installation.</p>
+                        </div>
+                    </div>
+                    <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FormGroup label="Target Native Build ID">
+                            <Input 
+                                type="number" 
+                                value={updateConfig.latestNativeBuild} 
+                                onChange={e => setUpdateConfig({...updateConfig, latestNativeBuild: parseInt(e.target.value)})} 
+                                placeholder="e.g. 19" 
+                            />
+                            <p className="text-[10px] text-gray-500 mt-1">Matches the exact Native ID built by GitHub Actions.</p>
+                        </FormGroup>
+                        <FormGroup label="Display Version String">
+                            <Input 
+                                value={updateConfig.versionString} 
+                                onChange={e => setUpdateConfig({...updateConfig, versionString: e.target.value})} 
+                                placeholder="e.g. 1.19.0" 
+                            />
+                        </FormGroup>
+                        <div className="md:col-span-2">
+                            <FormGroup label="Release Notes / Changelog">
+                                <textarea 
+                                    rows="3" 
+                                    className="w-full bg-white border border-gray-300 rounded-lg p-3 text-sm shadow-sm focus:ring-sky-500 focus:border-sky-500" 
+                                    value={updateConfig.releaseNotes} 
+                                    onChange={e => setUpdateConfig({...updateConfig, releaseNotes: e.target.value})} 
+                                    placeholder="Describe what's new in this Native APK..."
+                                ></textarea>
+                            </FormGroup>
+                        </div>
+                        <div className="md:col-span-2 flex flex-col md:flex-row items-start md:items-center justify-between p-4 bg-sky-50 rounded-xl border border-sky-100 gap-4">
+                            <div>
+                                <label className="flex items-center cursor-pointer">
+                                    <Checkbox checked={updateConfig.mandatory} onChange={e => setUpdateConfig({...updateConfig, mandatory: e.target.checked})} />
+                                    <span className="ml-3 font-bold text-sky-900 text-sm">Force Mandatory Update</span>
+                                </label>
+                                <p className="text-xs text-sky-700 mt-1 ml-8">If checked, users cannot dismiss the popup and must download the APK.</p>
+                            </div>
+                            <Button onClick={handleSaveUpdateConfig} variant="primary" className="shadow-md shrink-0 w-full md:w-auto">
+                                <Smartphone className="w-4 h-4 mr-2"/> Push Native Update Prompt
+                            </Button>
+                        </div>
+                    </div>
+                </Card>
+            </div>
+        );
+    }
+
     const renderUserRolesTab = () => (
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
@@ -623,13 +778,45 @@ export function AdminDashboard() {
                 </div>
                 {filteredUsers.length > 0 ? (
                     <div className="overflow-x-auto rounded-lg border border-gray-200">
-                        <Table headers={["Name & Email", "Current Roles", "Manage Roles", "Assigned Area"]}>
+                        <Table headers={["Name & Email", "Current Roles", "Manage Roles", "Assigned Area", "App Status", "Web Status"]}>
                             {filteredUsers.map((user) => {
                                 const userRoles = user.roles || [user.role || 'user'];
                                 const isStateAssignable = userRoles.some(r => ['states_manager', 'state_coordinator', 'locality_manager'].includes(r));
                                 const isLocalityAssignable = userRoles.includes('locality_manager');
                                 const currentLocalities = user.assignedState ? (STATE_LOCALITIES[user.assignedState]?.localities || []) : [];
                                 
+                                const userStats = usageStats.find(s => s.id === user.id) || {};
+                                
+                                const appVersion = user.appVersion || userStats.appVersion;
+                                const lastAppAccess = user.lastAppAccess || userStats.lastAppAccess;
+                                
+                                const webVersion = user.webVersion || userStats.webVersion;
+                                const lastWebAccess = user.lastWebAccess || userStats.lastWebAccess;
+
+                                const renderVersionInfo = (version, timestamp) => {
+                                    if (!version && !timestamp) return <span className="text-gray-400 text-[10px] italic">No record</span>;
+                                    
+                                    let dateStr = 'Unknown date';
+                                    if (timestamp?.seconds) {
+                                        dateStr = new Date(timestamp.seconds * 1000).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                                    } else if (timestamp && typeof timestamp === 'string') {
+                                        dateStr = new Date(timestamp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                                    } else if (timestamp instanceof Date) {
+                                        dateStr = timestamp.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                                    }
+
+                                    return (
+                                        <div className="flex flex-col gap-1 items-start min-w-[90px]">
+                                            <div className="font-mono text-[10px] font-bold text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded border border-sky-100 shadow-sm">
+                                                {version ? `v${version}` : 'Unknown v'}
+                                            </div>
+                                            <div className="text-[9px] text-gray-500 flex items-center font-medium whitespace-nowrap">
+                                                <Clock className="w-2.5 h-2.5 mr-1" /> {dateStr}
+                                            </div>
+                                        </div>
+                                    );
+                                };
+
                                 return (
                                     <tr key={user.id} className="hover:bg-sky-50/50 transition-colors group">
                                         <td className="py-3">
@@ -643,7 +830,7 @@ export function AdminDashboard() {
                                             <div className="text-xs text-gray-500 mt-0.5">{user.email}</div>
                                         </td>
                                         <td className="py-3">
-                                            <div className="flex flex-wrap gap-1.5 max-w-[250px]">
+                                            <div className="flex flex-wrap gap-1.5 max-w-[200px]">
                                                 {userRoles.map(r => (
                                                     <span key={r} className={`border text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded shadow-sm whitespace-nowrap ${getRoleBadgeStyle(r)}`}>
                                                         {ROLES[r] || r}
@@ -652,7 +839,7 @@ export function AdminDashboard() {
                                             </div>
                                         </td>
                                         <td className="py-3">
-                                            <div className="flex flex-col gap-2 items-start max-w-[140px]">
+                                            <div className="flex flex-col gap-2 items-start max-w-[130px]">
                                                 <Button 
                                                     size="sm" 
                                                     variant="secondary" 
@@ -680,7 +867,7 @@ export function AdminDashboard() {
                                             </div>
                                         </td>
                                         <td className="py-3">
-                                            <div className="flex flex-col gap-2 max-w-[200px]">
+                                            <div className="flex flex-col gap-2 max-w-[180px]">
                                                 {isStateAssignable ? (
                                                     <Select value={user.assignedState || ''} onChange={(e) => handleUserStateChange(user.id, e.target.value)} className="text-xs py-1">
                                                         <option value="">-- State --</option>
@@ -696,6 +883,12 @@ export function AdminDashboard() {
                                                 )}
                                                 {!isLocalityAssignable && isStateAssignable && <span className="text-[10px] text-gray-400">All Localities</span>}
                                             </div>
+                                        </td>
+                                        <td className="py-3">
+                                            {renderVersionInfo(appVersion, lastAppAccess)}
+                                        </td>
+                                        <td className="py-3">
+                                            {renderVersionInfo(webVersion, lastWebAccess)}
                                         </td>
                                     </tr>
                                 );
@@ -836,6 +1029,7 @@ export function AdminDashboard() {
                 {activeTab === 'roles' && renderUserRolesTab()}
                 {activeTab === 'permissions' && renderRolePermissionsTab()}
                 {activeTab === 'usage' && currentUserRoles.includes('super_user') && renderUsageTab()}
+                {activeTab === 'updates' && currentUserRoles.includes('super_user') && renderUpdatesTab()}
             </div>
 
             {/* EDIT ROLES MODAL */}
@@ -920,7 +1114,6 @@ export function AdminDashboard() {
                     <div className="flex justify-end gap-3 w-full pt-1">
                         <Button variant="secondary" onClick={() => setEditingRolesUser(null)} className="px-5">Cancel</Button>
                         <Button variant="primary" onClick={() => {
-                            // Validation checks before saving
                             const LOCATION_ASSIGNMENT_ROLES = ['states_manager', 'state_coordinator', 'locality_manager'];
                             const needsLocation = tempSelectedRoles.some(r => LOCATION_ASSIGNMENT_ROLES.includes(r));
                             const needsLocality = tempSelectedRoles.includes('locality_manager');
@@ -934,7 +1127,6 @@ export function AdminDashboard() {
                                 return;
                             }
 
-                            // Proceed with save
                             handleUserRolesChange(editingRolesUser.id, tempSelectedRoles, tempSelectedState, tempSelectedLocality);
                             setEditingRolesUser(null);
                         }} className="px-6 shadow-md">
@@ -1064,10 +1256,7 @@ export function AdminDashboard() {
                             </div>
                         </div>
 
-                        {/* REPLACEMENT MODAL FOOTER */}
                         <div className="mt-8 flex flex-col sm:flex-row justify-between items-center pt-4 border-t border-gray-100 gap-4">
-                            
-                            {/* Admin Actions */}
                             <div className="flex gap-2 w-full sm:w-auto">
                                 <Button 
                                     onClick={() => handleSendPasswordReset(viewingUser.email)} 
@@ -1077,7 +1266,6 @@ export function AdminDashboard() {
                                     Reset Password
                                 </Button>
                                 
-                                {/* Only allow Super Users to delete accounts to prevent accidents */}
                                 {currentUserRoles.includes('super_user') && (
                                     <Button 
                                         onClick={() => handleDeleteAccount(viewingUser.id, viewingUser.email)} 
@@ -1089,7 +1277,6 @@ export function AdminDashboard() {
                                 )}
                             </div>
 
-                            {/* Close Button */}
                             <Button onClick={() => setViewingUser(null)} variant="secondary" className="px-6 w-full sm:w-auto">
                                 Close Profile
                             </Button>

@@ -573,21 +573,18 @@ export default function App() {
                 downloadListenerHandle = handle;
             }).catch(e => console.warn("Failed to bind Capgo listener", e));
 
-            // 3. INDEPENDENT NATIVE CHECK
+            // 3. INDEPENDENT NATIVE CHECK (FIRESTORE MANAGED)
             const checkNativeUpdates = async () => {
                 try {
                     const status = await Network.getStatus();
                     if (!status.connected) return;
 
-                    const nativeRes = await CapacitorHttp.request({
-                        method: 'GET',
-                        url: 'https://imnci-courses-monitor.web.app/native-version.json?t=' + Date.now(),
-                        connectTimeout: 5000,
-                        readTimeout: 5000
-                    });
+                    // 🛑 NEW: Fetch from Firestore instead of URL, controlled by Admin Dashboard
+                    const updateDocRef = doc(db, "meta", "update_config");
+                    const updateSnap = await getDoc(updateDocRef);
 
-                    if (nativeRes.status === 200) {
-                        const serverConfig = typeof nativeRes.data === 'string' ? JSON.parse(nativeRes.data) : nativeRes.data;
+                    if (updateSnap.exists()) {
+                        const serverConfig = updateSnap.data();
                         const appInfo = await CapacitorApp.getInfo();
                         
                         const currentBuild = parseInt(appInfo.build, 10) || 1;
@@ -707,16 +704,12 @@ export default function App() {
 
             let nativeUpdateFound = false;
 
-            // 1. Check Native APK First
-            const nativeRes = await CapacitorHttp.request({
-                method: 'GET',
-                url: 'https://imnci-courses-monitor.web.app/native-version.json?t=' + Date.now(),
-                connectTimeout: 5000,
-                readTimeout: 5000
-            });
+            // 1. Check Native APK First (From Firestore)
+            const updateDocRef = doc(db, "meta", "update_config");
+            const updateSnap = await getDoc(updateDocRef);
 
-            if (nativeRes.status === 200) {
-                const serverConfig = typeof nativeRes.data === 'string' ? JSON.parse(nativeRes.data) : nativeRes.data;
+            if (updateSnap.exists()) {
+                const serverConfig = updateSnap.data();
                 const appInfo = await CapacitorApp.getInfo();
                 const currentBuild = parseInt(appInfo.build, 10) || 1;
                 const serverBuild = parseInt(serverConfig.latestNativeBuild, 10);
@@ -2152,7 +2145,7 @@ export default function App() {
                 <ResourceMonitor counts={operationCounts} onReset={handleResetMonitor} onDismiss={handleDismissMonitor} />
             )}
 
-            {/* --- NATIVE DIRECT DOWNLOAD MODAL (OPTION B) --- */}
+            {/* --- NATIVE DIRECT DOWNLOAD MODAL --- */}
             {nativeUpdatePrompt && (
                 <div className="fixed inset-0 bg-slate-900 bg-opacity-90 flex flex-col items-center justify-center z-[100000] p-4 backdrop-blur-sm" dir="rtl">
                     <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center space-y-4">
@@ -2186,6 +2179,7 @@ export default function App() {
                 </div>
             )}
 
+           {/* --- CAPGO OTA UPDATE READY MODAL --- */}
            {isUpdateReady && updateBundle && !nativeUpdatePrompt && (
                 <div className="fixed inset-0 bg-slate-900 bg-opacity-80 flex flex-col items-center justify-center z-[100000] p-4 backdrop-blur-sm">
                     <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full text-center space-y-4">
