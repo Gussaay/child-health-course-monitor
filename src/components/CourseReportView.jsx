@@ -373,14 +373,37 @@ const generateFullCourseReportPdf = async (course, quality, onSuccess, onError, 
         return currentY;
     };
 
+    // 🟢 FIX: Added logic to expand horizontal scroll elements during PDF capture
     const addCanvasImageToPdf = async (elementId, currentY) => {
         const element = document.getElementById(elementId);
         if (!element) return currentY;
+        
         try {
-            const canvas = await html2canvas(element, { scale: profile.scale, useCORS: true, backgroundColor: '#ffffff' });
+            const canvas = await html2canvas(element, { 
+                scale: profile.scale, 
+                useCORS: true, 
+                backgroundColor: '#ffffff',
+                windowWidth: element.scrollWidth, 
+                onclone: (clonedDoc) => {
+                    const clonedElement = clonedDoc.getElementById(elementId);
+                    if (clonedElement) {
+                        const scrollableContainers = clonedElement.querySelectorAll('.overflow-x-auto, .overflow-hidden');
+                        scrollableContainers.forEach(container => {
+                            container.style.overflow = 'visible';
+                            container.style.width = 'max-content';
+                            container.style.maxWidth = 'none';
+                        });
+
+                        const copyButtons = clonedElement.querySelectorAll('.copy-button');
+                        copyButtons.forEach(btn => btn.style.display = 'none');
+                    }
+                }
+            });
+
             const imgData = canvas.toDataURL(profile.imageType, profile.imageQuality);
             const imgWidth = contentWidth;
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            
             currentY = checkPageBreak(currentY, imgHeight);
             doc.addImage(imgData, profile.imageFormat, margin, currentY, imgWidth, imgHeight, undefined, profile.compression);
             return currentY + imgHeight + 5;
@@ -509,15 +532,14 @@ const generateFullCourseReportPdf = async (course, quality, onSuccess, onError, 
             doc.text(text, x, pageHeight - 10);
         }
 
+        // 🟢 FIX: Mobile download with Directory.Data and recursive folder creation
         if (Capacitor.isNativePlatform()) {
             try {
                 const base64Data = doc.output('datauristring').split('base64,')[1];
                 
-                // 1. Define the exact folder and file path your Downloads page expects
                 const folderPath = 'downloads';
                 const filePath = `${folderPath}/${fileName}`;
                 
-                // 2. Safely create the 'downloads' directory first
                 try {
                     await Filesystem.mkdir({ 
                         path: folderPath, 
@@ -525,18 +547,16 @@ const generateFullCourseReportPdf = async (course, quality, onSuccess, onError, 
                         recursive: true 
                     });
                 } catch (e) {
-                    // Ignore error if the directory already exists
+                    // Ignore error if directory exists
                 }
                 
-                // 3. Write the PDF file into that directory
                 const writeResult = await Filesystem.writeFile({ 
                     path: filePath, 
                     data: base64Data, 
                     directory: Directory.Data,
-                    recursive: true // Extra safety flag
+                    recursive: true
                 });
                 
-                // 4. Open the file natively
                 await FileOpener.open({ 
                     filePath: writeResult.uri, 
                     contentType: 'application/pdf',
@@ -1145,6 +1165,7 @@ export function CourseReportView({
     const hasTestScoreDataForKpis = preTestStats.avg > 0 || postTestStats.avg > 0;
     const hasChartParticipants = chartParticipants.length > 0;
 
+    // 🟢 FIX: Used Grid layout for buttons on mobile devices
     return (
         <div className="flex flex-col gap-6 pb-28 lg:pb-8 w-full max-w-full min-w-0">
             <PageHeader 
@@ -1194,7 +1215,6 @@ export function CourseReportView({
             {/* TAB CONTENT: FINAL REPORT MANAGER */}
             {activeTab === 'final-report' && isFederalManager && !isSharedView && (
                 <div className="w-full max-w-full min-w-0 mt-4">
-                    {/* 🟢 FIX: Added try/catch and fallback for onSaveFinalReport */}
                     <FinalReportManager 
                         course={course} 
                         participants={participants} 

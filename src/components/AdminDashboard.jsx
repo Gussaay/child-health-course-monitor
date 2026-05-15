@@ -221,7 +221,8 @@ export function AdminDashboard() {
     // --- APP UPDATE STATES ---
     const [otaVersion, setOtaVersion] = useState("Checking Server...");
     const [serverNativeConfig, setServerNativeConfig] = useState(null); 
-    const [isUpdateActive, setIsUpdateActive] = useState(false); // Controls the "Native Update Required" View
+    const [isUpdateActive, setIsUpdateActive] = useState(false); // Tracks if currently enforced
+    const [isEditingUpdate, setIsEditingUpdate] = useState(false); // Tracks if the edit form is visible
 
     const [updateConfig, setUpdateConfig] = useState({
         latestNativeBuild: 1,
@@ -323,7 +324,7 @@ export function AdminDashboard() {
                 if (updateSnap.exists()) {
                     const data = updateSnap.data();
                     setUpdateConfig(data);
-                    // Determine if the form should be hidden based on the active mandatory configuration
+                    // Determine if active mandatory config
                     if (data.mandatory) {
                         setIsUpdateActive(true);
                     }
@@ -369,6 +370,7 @@ export function AdminDashboard() {
             } else {
                 setIsUpdateActive(false);
             }
+            setIsEditingUpdate(false); // Hide the form after saving
             setToast({show: true, message: 'Update configuration saved and pushed to users!', type: 'success'});
         } catch(e) {
             console.error("Update config error", e);
@@ -378,7 +380,7 @@ export function AdminDashboard() {
     };
 
     const handleReverseUpdate = async () => {
-        if (!window.confirm("Are you sure you want to reverse the mandatory update? Users will no longer be forced to download the new APK.")) return;
+        if (!window.confirm("Are you sure you want to turn off the mandatory block? Users will no longer be forced to download the APK.")) return;
         setLoading(true);
         try {
             const newConfig = { ...updateConfig, mandatory: false };
@@ -698,17 +700,13 @@ export function AdminDashboard() {
                         </div>
                         <Button 
                             onClick={() => {
-                                const defaultMsg = `Update to version ${serverNativeConfig.versionString}. Includes latest bug fixes and improvements.`;
-                                const customMessage = window.prompt("Set the release notes/message for this update:", defaultMsg);
-                                
-                                if (customMessage !== null) {
-                                    const isMandatory = window.confirm("Make this a MANDATORY update? \n\nClick 'OK' for Yes (users must update).\nClick 'Cancel' for No (optional update).");
-                                    setUpdateConfig({
-                                        ...serverNativeConfig,
-                                        mandatory: isMandatory,
-                                        releaseNotes: customMessage
-                                    });
-                                }
+                                // Direct load into form, switch to edit mode
+                                setUpdateConfig({
+                                    ...serverNativeConfig,
+                                    mandatory: true,
+                                    releaseNotes: `Update to version ${serverNativeConfig.versionString}. Includes latest bug fixes and improvements.`
+                                });
+                                setIsEditingUpdate(true);
                             }}
                             className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md border border-emerald-700 whitespace-nowrap"
                         >
@@ -719,60 +717,31 @@ export function AdminDashboard() {
 
                 {/* Native APK Trigger Control Block */}
                 <Card className="shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="p-5 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+                    <div className="p-5 border-b border-gray-100 bg-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="flex items-center">
-                            <Smartphone className="w-5 h-5 text-sky-600 mr-3" />
+                            <Smartphone className="w-5 h-5 text-sky-600 mr-3 shrink-0" />
                             <div>
                                 <h3 className="text-md font-bold text-gray-800">Native APK Trigger Control</h3>
                                 <p className="text-xs text-gray-500">You control when users are forced to download a completely new Native APK installation.</p>
                             </div>
                         </div>
                         {isUpdateActive && (
-                            <span className="inline-flex items-center px-3 py-1 rounded-full bg-red-100 text-red-800 text-xs font-bold border border-red-200 shadow-sm">
-                                <Shield className="w-3.5 h-3.5 mr-1" /> Native Update Required
-                            </span>
+                            <div className="flex items-center gap-3 shrink-0">
+                                <span className="inline-flex items-center px-3 py-1 rounded-full bg-red-100 text-red-800 text-xs font-bold border border-red-200 shadow-sm animate-pulse">
+                                    <Shield className="w-3.5 h-3.5 mr-1" /> Active Mandatory Update
+                                </span>
+                                {!isEditingUpdate && (
+                                    <Button onClick={handleReverseUpdate} variant="secondary" size="sm" className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 shadow-sm bg-white">
+                                        Cancel Block
+                                    </Button>
+                                )}
+                            </div>
                         )}
                     </div>
                     
-                    {isUpdateActive ? (
-                        <div className="p-8 flex flex-col items-center justify-center bg-red-50/20">
-                            <div className="inline-flex items-center px-4 py-2 rounded-full bg-red-100 text-red-800 font-bold mb-4 shadow-sm border border-red-200">
-                                <Smartphone className="w-5 h-5 mr-2" /> Native Update is Currently Mandatory
-                            </div>
-                            <h4 className="text-lg font-bold text-gray-800 mb-2">Target Build: v{updateConfig.versionString} (ID: {updateConfig.latestNativeBuild})</h4>
-                            <p className="text-sm text-gray-600 max-w-md mb-6 text-center">Users opening an older app build are currently being locked out and forced to download the new APK. You can adjust the live message or toggle mandatory status below.</p>
-                            
-                            {/* Live Edit Interface for Active Updates */}
-                            <div className="w-full max-w-2xl bg-white border border-red-100 rounded-xl p-5 shadow-sm text-left mb-6">
-                                <FormGroup label="Live Release Notes / Message">
-                                    <textarea 
-                                        rows="3" 
-                                        className="w-full bg-gray-50 border border-gray-300 rounded-lg p-3 text-sm shadow-sm focus:ring-sky-500 focus:border-sky-500" 
-                                        value={updateConfig.releaseNotes} 
-                                        onChange={e => setUpdateConfig({...updateConfig, releaseNotes: e.target.value})} 
-                                        placeholder="Describe what's new in this Native APK..."
-                                    ></textarea>
-                                </FormGroup>
-                                
-                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-4 gap-4">
-                                    <label className="flex items-center cursor-pointer">
-                                        <Checkbox checked={updateConfig.mandatory} onChange={e => setUpdateConfig({...updateConfig, mandatory: e.target.checked})} />
-                                        <span className="ml-3 font-bold text-red-900 text-sm">Force Mandatory Update</span>
-                                    </label>
-                                    <div className="flex gap-2 w-full sm:w-auto">
-                                        <Button onClick={handleSaveUpdateConfig} variant="primary" className="shadow-sm flex-1 sm:flex-none">
-                                            <CheckCircle className="w-4 h-4 mr-2" /> Update Live
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <Button onClick={handleReverseUpdate} variant="secondary" className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 shadow-sm bg-white">
-                                <XCircle className="w-4 h-4 mr-2" /> Cancel Mandatory Update Completely
-                            </Button>
-                        </div>
-                    ) : (
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {isEditingUpdate ? (
+                        /* EDIT MODE: Form Fields */
+                        <div className={`p-6 grid grid-cols-1 md:grid-cols-2 gap-6 ${isUpdateActive ? 'bg-red-50/10' : ''}`}>
                             <FormGroup label="Target Native Build ID">
                                 <Input 
                                     type="number" 
@@ -800,17 +769,58 @@ export function AdminDashboard() {
                                     ></textarea>
                                 </FormGroup>
                             </div>
-                            <div className="md:col-span-2 flex flex-col md:flex-row items-start md:items-center justify-between p-4 bg-sky-50 rounded-xl border border-sky-100 gap-4">
+                            <div className={`md:col-span-2 flex flex-col md:flex-row items-start md:items-center justify-between p-4 rounded-xl border gap-4 ${isUpdateActive ? 'bg-red-50 border-red-200' : 'bg-sky-50 border-sky-100'}`}>
                                 <div>
                                     <label className="flex items-center cursor-pointer">
                                         <Checkbox checked={updateConfig.mandatory} onChange={e => setUpdateConfig({...updateConfig, mandatory: e.target.checked})} />
-                                        <span className="ml-3 font-bold text-sky-900 text-sm">Force Mandatory Update</span>
+                                        <span className={`ml-3 font-bold text-sm ${isUpdateActive ? 'text-red-900' : 'text-sky-900'}`}>Force Mandatory Update</span>
                                     </label>
-                                    <p className="text-xs text-sky-700 mt-1 ml-8">If checked, users cannot dismiss the popup and must download the APK.</p>
+                                    <p className={`text-xs mt-1 ml-8 ${isUpdateActive ? 'text-red-700' : 'text-sky-700'}`}>If checked, users cannot dismiss the popup and must download the APK.</p>
                                 </div>
-                                <Button onClick={handleSaveUpdateConfig} variant="primary" className="shadow-md shrink-0 w-full md:w-auto">
-                                    <Smartphone className="w-4 h-4 mr-2"/> Push Native Update Prompt
+                                <div className="flex gap-2 w-full md:w-auto">
+                                    <Button onClick={() => setIsEditingUpdate(false)} variant="secondary" className="shadow-sm w-full md:w-auto bg-white border-gray-300 hover:bg-gray-50 text-gray-700">
+                                        Cancel
+                                    </Button>
+                                    <Button onClick={handleSaveUpdateConfig} variant="primary" className="shadow-md w-full md:w-auto">
+                                        <CheckCircle className="w-4 h-4 mr-2"/> Save & Push Changes
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        /* VIEW MODE: Read-only summary */
+                        <div className={`p-8 flex flex-col items-center justify-center ${isUpdateActive ? 'bg-red-50/20' : 'bg-white'}`}>
+                            {isUpdateActive ? (
+                                <>
+                                    <div className="inline-flex items-center px-4 py-2 rounded-full bg-red-100 text-red-800 font-bold mb-4 shadow-sm border border-red-200">
+                                        <Smartphone className="w-5 h-5 mr-2" /> Native Update is Currently Mandatory
+                                    </div>
+                                    <h4 className="text-lg font-bold text-gray-800 mb-2">Target Build: v{updateConfig.versionString} (ID: {updateConfig.latestNativeBuild})</h4>
+                                    <p className="text-sm text-gray-600 max-w-2xl mb-6 text-center">
+                                        <strong>Release Notes:</strong> {updateConfig.releaseNotes || "No release notes provided."}
+                                    </p>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="inline-flex items-center px-4 py-2 rounded-full bg-gray-100 text-gray-600 font-bold mb-4 shadow-sm border border-gray-200">
+                                        <Smartphone className="w-5 h-5 mr-2" /> No Mandatory Update Active
+                                    </div>
+                                    <h4 className="text-md font-medium text-gray-600 mb-2">Last Configured Build: v{updateConfig.versionString} (ID: {updateConfig.latestNativeBuild})</h4>
+                                    <p className="text-sm text-gray-500 max-w-2xl mb-6 text-center italic">
+                                        Users are currently not being forced to download an APK update.
+                                    </p>
+                                </>
+                            )}
+                            
+                            <div className="flex gap-3">
+                                <Button onClick={() => setIsEditingUpdate(true)} variant="primary" className="shadow-sm border border-sky-600">
+                                    <Edit3 className="w-4 h-4 mr-2" /> Edit Update Configuration
                                 </Button>
+                                {isUpdateActive && (
+                                    <Button onClick={handleReverseUpdate} variant="secondary" className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 shadow-sm bg-white">
+                                        <XCircle className="w-4 h-4 mr-2" /> Cancel Block
+                                    </Button>
+                                )}
                             </div>
                         </div>
                     )}

@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { Network } from '@capacitor/network';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
@@ -386,29 +386,20 @@ function SplashScreen() {
 export default function App() {
     const { t, i18n } = useTranslation();
     
-    // 🛑 DYNAMIC VERSION STATE: Pulls from Vite env initially, updates to actual Capgo bundle later
     const [appVersion, setAppVersion] = useState(import.meta.env.VITE_APP_VERSION || window.APP_VERSION || '1.0.2');
     
-    // Web Update State (Capgo)
     const [isUpdateReady, setIsUpdateReady] = useState(false);
     const [updateBundle, setUpdateBundle] = useState(null);
-    
-    // Internal Update Download Progress States
     const [isDownloadingUpdate, setIsDownloadingUpdate] = useState(false);
     const [updateProgress, setUpdateProgress] = useState(0);
 
-    // Native APK Update State (Direct Download)
     const [nativeUpdatePrompt, setNativeUpdatePrompt] = useState(null);
-
-    // Manual Update Check State
     const [manualUpdateModal, setManualUpdateModal] = useState({ isOpen: false, status: 'idle', message: '' });
 
     const [isOffline, setIsOffline] = useState(!navigator.onLine);
     const [isSyncing, setIsSyncing] = useState(false);
-
     const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
 
-    // Profile Edit States
     const [isEditingProfile, setIsEditingProfile] = useState(false);
     const [editDisplayName, setEditDisplayName] = useState('');
 
@@ -459,7 +450,6 @@ export default function App() {
         if (isUserProfileModalOpen) { fetchFederalCoordinators(); fetchStateCoordinators(); fetchLocalityCoordinators(); }
     }, [isUserProfileModalOpen, fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators]);
 
-    // Handle initial profile edit population
     useEffect(() => {
         if (isUserProfileModalOpen && user) {
             setEditDisplayName(user.displayName || '');
@@ -467,7 +457,6 @@ export default function App() {
         }
     }, [isUserProfileModalOpen, user]);
 
-    // Handle Profile Save
     const handleSaveProfile = async () => {
         try {
             await updateProfile(auth.currentUser, { displayName: editDisplayName });
@@ -559,33 +548,27 @@ export default function App() {
     const initialViewIsSet = useRef(false);
 
     // =========================================================================
-    // --- GENERIC IN-APP DOWNLOAD & OPEN MANAGER ---
+    // --- GENERIC IN-APP DOWNLOAD & OPEN MANAGER (FIXED MEMORY CRASH) ---
     // =========================================================================
     const handleFileDownloadAndOpen = async (url, customFileName = null) => {
         if (!Capacitor.isNativePlatform()) {
-            // Fallback for Web: just open in a new tab to download
             window.open(url, '_blank');
             return;
         }
 
-        // Use top banner for progress
         setIsDownloadingUpdate(true); 
         setUpdateProgress(0);
 
         try {
-            // Extract filename from URL or use provided name
-            const fileName = customFileName || url.substring(url.lastIndexOf('/') + 1) || 'downloaded_file';
+            const fileName = customFileName || url.substring(url.lastIndexOf('/') + 1) || 'downloaded_file.apk';
             
-            // Determine MIME type based on extension
-            let mimeType = '*/*';
+            let mimeType = 'application/vnd.android.package-archive';
             const lowerName = fileName.toLowerCase();
-            if (lowerName.endsWith('.apk')) mimeType = 'application/vnd.android.package-archive';
-            else if (lowerName.endsWith('.pdf')) mimeType = 'application/pdf';
+            if (lowerName.endsWith('.pdf')) mimeType = 'application/pdf';
             else if (lowerName.endsWith('.xlsx')) mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
             else if (lowerName.endsWith('.png')) mimeType = 'image/png';
             else if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) mimeType = 'image/jpeg';
 
-            // Ensure the specific downloads folder exists in Data directory (so it persists and we can manage it)
             try {
                 await Filesystem.mkdir({ path: 'downloads', directory: Directory.Data, recursive: true });
             } catch (e) {
@@ -594,37 +577,21 @@ export default function App() {
 
             const filePath = `downloads/${fileName}`;
 
-            // Fetch the file as a blob and save it locally using standard fetch to bypass CapacitorHttp plugin issues
-            const response = await fetch(url);
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            
-            const blob = await response.blob();
-            
-            // Convert Blob to Base64 to write to Filesystem
-            const reader = new FileReader();
-            reader.readAsDataURL(blob);
-            await new Promise((resolve, reject) => {
-                reader.onloadend = async () => {
-                    try {
-                        const base64data = reader.result.split(',')[1];
-                        await Filesystem.writeFile({
-                            path: filePath,
-                            data: base64data,
-                            directory: Directory.Data
-                        });
-                        resolve();
-                    } catch (err) {
-                        reject(err);
-                    }
-                };
-                reader.onerror = reject;
+            // --- USE NATIVE BACKGROUND DOWNLOADER ---
+            // Bypasses the webview memory limits completely, fixing the Base64/Fetch Crash!
+            await CapacitorHttp.downloadFile({
+                url: url,
+                filePath: filePath,
+                fileDirectory: Directory.Data 
             });
 
-            // Get the absolute device URI for the downloaded file
+            // Get the absolute device URI for the newly downloaded file
             const { uri } = await Filesystem.getUri({
                 path: filePath,
                 directory: Directory.Data
             });
+
+            setToast({ show: true, message: 'Download complete. Opening...', type: 'success' });
 
             // Trigger the native OS "Open With" / Installer intent
             await FileOpener.open({
@@ -634,8 +601,9 @@ export default function App() {
             });
 
         } catch (error) {
-            console.error("Download/Open Error:", error);
-            setToast({ show: true, message: `Failed to open file automatically. Try opening it from "App Files & Downloads".`, type: 'error' });
+            console.error("Full Download Error:", error);
+            alert(`NATIVE ERROR: ${error.message || JSON.stringify(error)}`);
+            setToast({ show: true, message: `Failed to open automatically. Check App Files & Downloads.`, type: 'error' });
         } finally {
             setIsDownloadingUpdate(false);
             setUpdateProgress(0);
@@ -647,16 +615,23 @@ export default function App() {
         let downloadListenerHandle;
 
         if (Capacitor.isNativePlatform()) {
-            
-            // 1. SAFE NOTIFICATIONS - Ensure Channel Exists for Android 13+
-            const setupNotifications = async () => {
+            const setupAndCheckUpdates = async () => {
+                
+                // 1. CONFIRM OTA SUCCESS TO CAPGO (PREVENTS ROLLBACK LOOP!)
+                try {
+                    await CapacitorUpdater.notifyAppReady();
+                } catch (e) {
+                    console.warn("notifyAppReady failed", e);
+                }
+
+                // 2. SETUP ANDROID NOTIFICATION CHANNELS (FIXES SILENT NOTIFICATIONS)
                 try {
                     let permStatus = await LocalNotifications.checkPermissions();
                     if (permStatus.display !== 'granted') {
                         permStatus = await LocalNotifications.requestPermissions();
                     }
                     
-                    // Explicitly create a channel for newer Androids to ensure notifications display
+                    // Create channel explicitly for Android 13+ before scheduling anything
                     if (permStatus.display === 'granted' && Capacitor.getPlatform() === 'android') {
                         await LocalNotifications.createChannel({
                             id: 'updates',
@@ -669,22 +644,13 @@ export default function App() {
                 } catch (err) {
                     console.warn("Notifications missing or denied. Skipping.", err);
                 }
-            };
-            setupNotifications();
 
-            // 2. REGISTER CAPGO LISTENER
-            CapacitorUpdater.addListener('download', (info) => {
-                setUpdateProgress(info.percent); 
-            }).then(handle => {
-                downloadListenerHandle = handle;
-            }).catch(e => console.warn("Failed to bind Capgo listener", e));
+                // 3. START BACKGROUND CHECKS
+                const status = await Network.getStatus();
+                if (!status.connected) return;
 
-            // 3. INDEPENDENT NATIVE CHECK (FIRESTORE MANAGED)
-            const checkNativeUpdates = async () => {
+                // --- NATIVE CHECK (FIRESTORE) ---
                 try {
-                    const status = await Network.getStatus();
-                    if (!status.connected) return;
-
                     const updateDocRef = doc(db, "meta", "update_config");
                     const updateSnap = await getDoc(updateDocRef);
 
@@ -709,62 +675,46 @@ export default function App() {
                                         schedule: { at: new Date(Date.now() + 1000) }
                                     }]
                                 });
-                            } catch (e) { /* Ignore notification crash */ }
+                            } catch (e) {}
+                            return; // Stop here if native update is required
                         }
                     }
                 } catch (e) {
                     console.warn("Native update check failed safely:", e);
                 }
-            };
 
-            // 4. INDEPENDENT WEB CHECK (CAPGO)
-            const checkWebUpdates = async () => {
+                // --- CAPGO OTA WEB CHECK (SILENT BACKGROUND) ---
                 try {
                     const currentState = await CapacitorUpdater.current();
-                    if (currentState.bundle && currentState.bundle.version) {
-                        setAppVersion(currentState.bundle.version);
-                    }
-
-                    const status = await Network.getStatus();
-                    if (!status.connected) return;
-
-                    console.log("Checking Capgo...");
+                    const currentVersion = currentState.bundle?.version || import.meta.env.VITE_APP_VERSION || "builtin";
                     
-                    // FIX: Standard fetch instead of CapacitorHttp
-                    const response = await fetch('https://imnci-courses-monitor.web.app/latest/update.json?t=' + Date.now());
+                    setAppVersion(currentVersion); // Update UI version immediately
+
+                    // Standard fetch with cache busting to prevent old versions from sticking
+                    const response = await fetch('https://imnci-courses-monitor.web.app/latest/update.json?t=' + Date.now(), { cache: "no-store" });
 
                     if (response.ok) {
                         const latestUpdate = await response.json();
-                        const currentVersion = currentState.bundle?.version || "builtin";
 
                         if (currentVersion !== latestUpdate.version) {
                             console.log(`Downloading Capgo bundle ${latestUpdate.version}...`);
-                            // ONLY show top banner, remove setToast to prevent overlapping UI
-                            setIsDownloadingUpdate(true);
-                            setUpdateProgress(0);
+                            
+                            // Download SILENTLY in the background without blocking the UI
+                            const downloadedBundle = await CapacitorUpdater.download({ url: latestUpdate.url, version: latestUpdate.version });
+                            setUpdateBundle(downloadedBundle); 
+                            setIsUpdateReady(true); // Pops up the "Restart to Apply" modal
 
                             try {
-                                const downloadedBundle = await CapacitorUpdater.download({ url: latestUpdate.url, version: latestUpdate.version });
-                                setUpdateBundle(downloadedBundle); 
-                                setIsUpdateReady(true);
-
-                                try {
-                                    await LocalNotifications.schedule({
-                                        notifications: [{
-                                            title: "تحديث جاهز!",
-                                            body: "تم تحميل التحديث بنجاح. انقر لإعادة تشغيل التطبيق.",
-                                            id: 102,
-                                            channelId: 'updates',
-                                            schedule: { at: new Date(Date.now() + 1000) }
-                                        }]
-                                    });
-                                } catch (e) { /* Ignore notification crash */ }
-
-                            } catch (err) {
-                                console.error("Failed to download Capgo update safely", err);
-                            } finally {
-                                setIsDownloadingUpdate(false);
-                            }
+                                await LocalNotifications.schedule({
+                                    notifications: [{
+                                        title: "تحديث جاهز!",
+                                        body: "تم تحميل التحديث بنجاح. انقر لإعادة تشغيل التطبيق.",
+                                        id: 102,
+                                        channelId: 'updates',
+                                        schedule: { at: new Date(Date.now() + 1000) }
+                                    }]
+                                });
+                            } catch (e) {}
                         }
                     }
                 } catch (error) { 
@@ -772,11 +722,15 @@ export default function App() {
                 }
             };
             
-            // Execute both checks simultaneously
-            setTimeout(() => {
-                checkNativeUpdates();
-                checkWebUpdates();
-            }, 3000); 
+            // Wait a few seconds for app to fully boot before checking
+            setTimeout(setupAndCheckUpdates, 5000); 
+
+            // REGISTER PROGRESS LISTENER
+            CapacitorUpdater.addListener('download', (info) => {
+                setUpdateProgress(info.percent); 
+            }).then(handle => {
+                downloadListenerHandle = handle;
+            }).catch(e => console.warn("Failed to bind Capgo listener", e));
         }
 
         return () => {
@@ -804,7 +758,6 @@ export default function App() {
 
             let nativeUpdateFound = false;
 
-            // 1. Check Native APK First (From Firestore) - Wrapped to prevent full failure if DB read fails
             try {
                 const updateDocRef = doc(db, "meta", "update_config");
                 const updateSnap = await getDoc(updateDocRef);
@@ -826,9 +779,8 @@ export default function App() {
                 console.warn("Firestore native check skipped due to error:", fsError);
             }
 
-            // 2. Check Capgo OTA - Standard fetch to avoid plugin issues
             try {
-                const response = await fetch('https://imnci-courses-monitor.web.app/latest/update.json?t=' + Date.now());
+                const response = await fetch('https://imnci-courses-monitor.web.app/latest/update.json?t=' + Date.now(), { cache: "no-store" });
 
                 if (!response.ok) {
                     throw new Error(`Server returned ${response.status}`);
@@ -839,7 +791,6 @@ export default function App() {
                 const currentVersion = currentState.bundle?.version || "builtin";
 
                 if (currentVersion !== latestUpdate.version) {
-                    // Hide modal immediately so the top banner is fully visible!
                     setManualUpdateModal({ isOpen: false, status: 'idle', message: '' });
                     setIsDownloadingUpdate(true);
                     setUpdateProgress(0);
@@ -1732,7 +1683,7 @@ export default function App() {
     const navItems = useMemo(() => [
         { label: t('landing.modules.home', 'Home'), view: 'landing', active: view === 'landing', disabled: false },
         { label: t('landing.modules.dashboard', 'Dashboard'), view: 'dashboard', active: view === 'dashboard', disabled: false },
-        { label: t('landing.modules.courses', 'Courses'), active: ['courses', 'courseForm', 'courseReport', 'participants', 'participantForm', 'participantReport', 'observe', 'monitoring', 'reports', 'finalReport', 'participantMigration', 'courseDetails', 'test-dashboard', 'enter-test-scores', 'attendanceManager', 'imciForm'].includes(view), disabled: !permissions.canViewCourse }, 
+        { label: t('landing.modules.courses', 'Courses'), view: 'courses', active: ['courses', 'courseForm', 'courseReport', 'participants', 'participantForm', 'participantReport', 'observe', 'monitoring', 'reports', 'finalReport', 'participantMigration', 'courseDetails', 'test-dashboard', 'enter-test-scores', 'attendanceManager', 'imciForm'].includes(view), disabled: !permissions.canViewCourse }, 
         { label: t('landing.modules.human_resources', 'Human Resources'), view: 'humanResources', active: ['humanResources', 'facilitatorForm', 'facilitatorReport'].includes(view), disabled: !permissions.canViewHumanResource },
         { label: t('landing.modules.facilities', 'Child Health Services'), view: 'childHealthServices', active: view === 'childHealthServices', disabled: !permissions.canViewFacilities },
         { label: t('landing.modules.mentorship', 'Skills Mentorship'), view: 'skillsMentorship', active: view === 'skillsMentorship', disabled: !permissions.canViewSkillsMentorship }
