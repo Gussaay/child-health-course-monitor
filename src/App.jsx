@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
-import { Capacitor, CapacitorHttp } from '@capacitor/core';
+import { Capacitor } from '@capacitor/core';
 import { Network } from '@capacitor/network';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
@@ -281,6 +281,8 @@ const ResourceMonitor = ({ counts, onReset, onDismiss }) => {
 // --- Landing Page ---
 function Landing({ navigate, permissions }) {
     const { t } = useTranslation();
+    
+    // Conditionally include 'downloads' ONLY if it's a native platform
     const navButtons = [
         { label: t('landing.modules.dashboard', 'Dashboard'), view: 'dashboard', icon: Home, permission: true },
         { label: t('landing.modules.courses', 'Courses'), view: 'courses', icon: Book, permission: permissions.canViewCourse },
@@ -291,7 +293,7 @@ function Landing({ navigate, permissions }) {
         { label: t('landing.modules.projects', 'Project Tracker'), view: 'projects', icon: FolderKanban, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.planning', 'Master Plan'), view: 'planning', icon: TrendingUp, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.locality_plan', 'Bottom-up Planning'), view: 'localityPlan', icon: Layers, permission: permissions.canViewLocalityPlan },
-        { label: t('landing.modules.downloads', 'App Files & Downloads'), view: 'downloads', icon: HardDrive, permission: true },
+        { label: t('landing.modules.downloads', 'App Files & Downloads'), view: 'downloads', icon: HardDrive, permission: Capacitor.isNativePlatform() },
         { label: t('landing.modules.admin', 'Admin'), view: 'admin', icon: User, permission: permissions.canViewAdmin },
         { label: t('landing.modules.about', 'About Team'), view: 'about', icon: Info, permission: true },
     ];
@@ -591,14 +593,33 @@ export default function App() {
 
             const filePath = `downloads/${fileName}`;
 
-            // 1. Download the file directly to Directory.Data/downloads
-            await CapacitorHttp.downloadFile({
-                url: url,
-                filePath: filePath,
-                fileDirectory: Directory.Data 
+            // Fetch the file as a blob and save it locally using standard fetch to bypass CapacitorHttp plugin issues
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            
+            const blob = await response.blob();
+            
+            // Convert Blob to Base64 to write to Filesystem
+            const reader = new FileReader();
+            reader.readAsDataURL(blob);
+            await new Promise((resolve, reject) => {
+                reader.onloadend = async () => {
+                    try {
+                        const base64data = reader.result.split(',')[1];
+                        await Filesystem.writeFile({
+                            path: filePath,
+                            data: base64data,
+                            directory: Directory.Data
+                        });
+                        resolve();
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+                reader.onerror = reject;
             });
 
-            // 2. Get the absolute device URI for the downloaded file
+            // Get the absolute device URI for the downloaded file
             const { uri } = await Filesystem.getUri({
                 path: filePath,
                 directory: Directory.Data
@@ -606,7 +627,7 @@ export default function App() {
 
             setToast({ show: true, message: 'Download complete. Opening...', type: 'success' });
 
-            // 3. Trigger the native OS "Open With" / Installer intent
+            // Trigger the native OS "Open With" / Installer intent
             await FileOpener.open({
                 filePath: uri,
                 contentType: mimeType,
@@ -657,7 +678,6 @@ export default function App() {
                     const status = await Network.getStatus();
                     if (!status.connected) return;
 
-                    // Fetch from Firestore instead of URL, controlled by Admin Dashboard
                     const updateDocRef = doc(db, "meta", "update_config");
                     const updateSnap = await getDoc(updateDocRef);
 
@@ -702,17 +722,12 @@ export default function App() {
                     if (!status.connected) return;
 
                     console.log("Checking Capgo...");
-                    const response = await CapacitorHttp.request({
-                        method: 'GET',
-                        url: 'https://imnci-courses-monitor.web.app/latest/update.json?t=' + Date.now(),
-                        connectTimeout: 5000,
-                        readTimeout: 5000
-                    });
+                    
+                    // FIX: Standard fetch instead of CapacitorHttp
+                    const response = await fetch('https://imnci-courses-monitor.web.app/latest/update.json?t=' + Date.now());
 
-                    if (response.status === 200) {
-                        const latestUpdate = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
-                        
-                        // FIX: Exclude Vite App Version so it strictly checks Capgo Native bundle state vs the server JSON.
+                    if (response.ok) {
+                        const latestUpdate = await response.json();
                         const currentVersion = currentState.bundle?.version || "builtin";
 
                         if (currentVersion !== latestUpdate.version) {
@@ -783,37 +798,38 @@ export default function App() {
 
             let nativeUpdateFound = false;
 
-            // 1. Check Native APK First (From Firestore)
-            const updateDocRef = doc(db, "meta", "update_config");
-            const updateSnap = await getDoc(updateDocRef);
+            // 1. Check Native APK First (From Firestore) - Wrapped to prevent full failure if DB read fails
+            try {
+                const updateDocRef = doc(db, "meta", "update_config");
+                const updateSnap = await getDoc(updateDocRef);
 
-            if (updateSnap.exists()) {
-                const serverConfig = updateSnap.data();
-                const appInfo = await CapacitorApp.getInfo();
-                const currentBuild = parseInt(appInfo.build, 10) || 1;
-                const serverBuild = parseInt(serverConfig.latestNativeBuild, 10);
-                
-                if (serverBuild > currentBuild) {
-                    setManualUpdateModal({ isOpen: false, status: 'idle', message: '' }); // Close this modal
-                    setNativeUpdatePrompt(serverConfig); // Let the Native required update modal show
-                    nativeUpdateFound = true;
-                    return; 
+                if (updateSnap.exists()) {
+                    const serverConfig = updateSnap.data();
+                    const appInfo = await CapacitorApp.getInfo();
+                    const currentBuild = parseInt(appInfo.build, 10) || 1;
+                    const serverBuild = parseInt(serverConfig.latestNativeBuild, 10);
+                    
+                    if (serverBuild > currentBuild) {
+                        setManualUpdateModal({ isOpen: false, status: 'idle', message: '' }); 
+                        setNativeUpdatePrompt(serverConfig); 
+                        nativeUpdateFound = true;
+                        return; 
+                    }
                 }
+            } catch (fsError) {
+                console.warn("Firestore native check skipped due to error:", fsError);
             }
 
-            // 2. Check Capgo OTA
-            const response = await CapacitorHttp.request({
-                method: 'GET',
-                url: 'https://imnci-courses-monitor.web.app/latest/update.json?t=' + Date.now(),
-                connectTimeout: 5000,
-                readTimeout: 5000
-            });
+            // 2. Check Capgo OTA - Standard fetch to avoid plugin issues
+            try {
+                const response = await fetch('https://imnci-courses-monitor.web.app/latest/update.json?t=' + Date.now());
 
-            if (response.status === 200) {
-                const latestUpdate = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}`);
+                }
+
+                const latestUpdate = await response.json();
                 const currentState = await CapacitorUpdater.current();
-                
-                // FIX: Strictly compare Capgo state to force manual trigger if it hasn't caught up
                 const currentVersion = currentState.bundle?.version || "builtin";
 
                 if (currentVersion !== latestUpdate.version) {
@@ -828,7 +844,7 @@ export default function App() {
                     const downloadedBundle = await CapacitorUpdater.download({ url: latestUpdate.url, version: latestUpdate.version });
                     setUpdateBundle(downloadedBundle); 
                     setIsUpdateReady(true);
-                    setManualUpdateModal({ isOpen: false, status: 'idle', message: '' }); // Close to show the OTA Ready modal
+                    setManualUpdateModal({ isOpen: false, status: 'idle', message: '' });
                 } else if (!nativeUpdateFound) {
                     setManualUpdateModal({ 
                         isOpen: true, 
@@ -836,10 +852,14 @@ export default function App() {
                         message: `App is already up to date! (Version: ${currentVersion})` 
                     });
                 }
+            } catch (fetchError) {
+                 throw new Error(`Network request failed: ${fetchError.message}`);
             }
+
         } catch (error) {
             console.error("Manual update check failed:", error);
-            setManualUpdateModal({ isOpen: true, status: 'error', message: 'Failed to check for updates.' });
+            // Show exact error message to user so we know what broke
+            setManualUpdateModal({ isOpen: true, status: 'error', message: `${error.message || 'Unknown error occurred.'}` });
         } finally {
             setIsDownloadingUpdate(false);
         }
@@ -1352,7 +1372,7 @@ export default function App() {
             'skillsMentorship': permissions.canViewSkillsMentorship, 'facilitators': permissions.canViewHumanResource, 'programTeams': permissions.canViewHumanResource,
             'partnersPage': permissions.canViewHumanResource, 'attendanceManager': permissions.canManageCourse, 
             'projects': permissions.canUseFederalManagerAdvancedFeatures, 'planning': permissions.canUseFederalManagerAdvancedFeatures, 'localityPlan': permissions.canViewLocalityPlan,
-            'downloads': true, 'about': true, 
+            'downloads': Capacitor.isNativePlatform(), 'about': true, 
         };
 
         if (user && !viewPermissions[newView]) {
