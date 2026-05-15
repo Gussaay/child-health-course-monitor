@@ -200,6 +200,7 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
 
     const handleImport = () => {
         if (!fieldMappings['name']) { setError('The "Name" field must be mapped to an Excel column.'); return; }
+        
         const importedFacilitators = excelData.map(row => {
             const facilitator = {};
             Object.entries(fieldMappings).forEach(([appField, excelHeader]) => {
@@ -213,7 +214,35 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, facilitators }) => {
         }).filter(f => f.name);
 
         if (importedFacilitators.length === 0) { setError('No valid facilitators found with a name after mapping.'); return; }
-        onImport(importedFacilitators);
+
+        // --- Duplicate Prevention Check ---
+        const validFacilitators = [];
+        const duplicates = [];
+
+        importedFacilitators.forEach(f => {
+            const isDuplicate = facilitators.some(existing => 
+                (existing.phone && existing.phone === f.phone) || 
+                (f.email && existing.email === f.email)
+            );
+            
+            // Allow update if ID is explicitly mapped, else block duplicates
+            if (isDuplicate && !f.id) {
+                duplicates.push(f.name);
+            } else {
+                validFacilitators.push(f);
+            }
+        });
+
+        if (duplicates.length > 0) {
+            if (validFacilitators.length === 0) {
+                setError(`All imported facilitators are already in the system (${duplicates.join(', ')}). Duplicate check applies to Phone and Email.`);
+                return;
+            } else {
+                alert(`The following facilitators were skipped because they are duplicates: ${duplicates.join(', ')}`);
+            }
+        }
+
+        onImport(validFacilitators);
         onClose();
     };
 
@@ -511,6 +540,8 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
     const [viewingCertsFor, setViewingCertsFor] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [shareModalInfo, setShareModalInfo] = useState({ isOpen: false, link: '' });
+    const [processingId, setProcessingId] = useState(null);
+    const [processedSubmissionIds, setProcessedSubmissionIds] = useState(new Set()); // Local optimistic state
 
     useEffect(() => {
         fetchFacilitators(false); 
@@ -529,6 +560,18 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
     };
 
     const handleApprove = async (submission) => {
+        // --- Duplicate Check Before Approval ---
+        const isDuplicate = facilitators.some(f => 
+            (f.phone && f.phone === submission.phone) || 
+            (submission.email && f.email === submission.email)
+        );
+        
+        if (isDuplicate) {
+            alert("Cannot approve: A facilitator with this phone number or email already exists in the system. Please reject this submission to avoid duplicates.");
+            return;
+        }
+
+        setProcessingId(submission.id);
         try {
             await onApproveSubmission(submission); 
             if (submission.email) {
@@ -544,20 +587,47 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
                     }
                 }
             }
-            fetchFacilitators(true); 
-            fetchPendingFacilitatorSubmissions(true);
-        } catch (error) { console.error("Error during approval:", error); }
+            
+            // Instantly hide it from UI
+            setProcessedSubmissionIds(prev => new Set(prev).add(submission.id));
+
+            // Await strict fetches for background updates
+            await fetchFacilitators(true); 
+            await fetchPendingFacilitatorSubmissions(true);
+        } catch (error) { 
+            console.error("Error during approval:", error); 
+        } finally {
+            setProcessingId(null);
+        }
     };
 
     const handleReject = async (submissionId) => {
-        await onRejectSubmission(submissionId); 
-        fetchPendingFacilitatorSubmissions(true); 
+        setProcessingId(submissionId);
+        try {
+            await onRejectSubmission(submissionId); 
+            
+            // Instantly hide it from UI
+            setProcessedSubmissionIds(prev => new Set(prev).add(submissionId));
+
+            // Await strict fetch for background update
+            await fetchPendingFacilitatorSubmissions(true); 
+        } catch(error) {
+            console.error("Error during rejection:", error);
+        } finally {
+            setProcessingId(null);
+        }
     };
     
     const handleShare = (facilitator) => {
         const link = `${getBaseUrl()}/public/report/facilitator/${facilitator.id}`;
         setShareModalInfo({ isOpen: true, link: link });
     };
+
+    // Filter out submissions that have been locally approved/rejected
+    const displayPendingSubmissions = useMemo(() => {
+        if (!pendingSubmissions) return [];
+        return pendingSubmissions.filter(sub => !processedSubmissionIds.has(sub.id));
+    }, [pendingSubmissions, processedSubmissionIds]);
 
     const filteredFacilitators = useMemo(() => {
         if (!facilitators) return [];
@@ -690,7 +760,7 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
                             <Button variant="tab" isActive={activeTab === 'current'} onClick={() => setActiveTab('current')}>Current Facilitators</Button>
                             {permissions.canApproveSubmissions && (
                                 <Button variant="tab" isActive={activeTab === 'pending'} onClick={() => setActiveTab('pending')}>
-                                    Pending Submissions <span className={`ml-2 text-xs font-bold px-2 py-1 rounded-full ${activeTab === 'pending' ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-200 text-gray-600'}`}>{pendingSubmissions ? pendingSubmissions.length : 0}</span>
+                                    Pending Submissions <span className={`ml-2 text-xs font-bold px-2 py-1 rounded-full ${activeTab === 'pending' ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-200 text-gray-600'}`}>{displayPendingSubmissions.length}</span>
                                 </Button>
                             )}
                         </nav>
@@ -757,8 +827,8 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
                         {activeTab === 'pending' && permissions.canApproveSubmissions && (
                             isSubmissionsLoading ? <Spinner /> : (
                                 <Table headers={["Name", "Phone", "State", "Submitted At", "Actions"]}>
-                                    {pendingSubmissions && pendingSubmissions.length > 0 ? (
-                                        pendingSubmissions.map(sub => (
+                                    {displayPendingSubmissions.length > 0 ? (
+                                        displayPendingSubmissions.map(sub => (
                                             <tr key={sub.id}>
                                                 <td className="p-2">{sub.name}</td>
                                                 <td className="p-2">{sub.phone}</td>
@@ -767,8 +837,12 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
                                                 <td className="p-2">
                                                     <div className="flex gap-2 whitespace-nowrap">
                                                         <Button size="sm" variant="secondary" onClick={() => setViewingSubmission(sub)}>View</Button>
-                                                        <Button size="sm" variant="success" onClick={() => handleApprove(sub)}>Approve</Button>
-                                                        <Button size="sm" variant="danger" onClick={() => handleReject(sub.id)}>Reject</Button>
+                                                        <Button size="sm" variant="success" onClick={() => handleApprove(sub)} disabled={processingId === sub.id}>
+                                                            {processingId === sub.id ? 'Processing...' : 'Approve'}
+                                                        </Button>
+                                                        <Button size="sm" variant="danger" onClick={() => handleReject(sub.id)} disabled={processingId === sub.id}>
+                                                            {processingId === sub.id ? 'Processing...' : 'Reject'}
+                                                        </Button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -791,13 +865,294 @@ export function FacilitatorsView({ onAdd, onEdit, onDelete, onOpenReport, onImpo
 }
 
 export function FacilitatorForm({ initialData, onCancel, onSave, setToast, setLoading }) {
-    // Component remains exactly as originally defined...
-    // (Truncated standard CRUD forms to fit context, everything functions identical)
+    const { facilitators } = useDataCache();
+    const [formData, setFormData] = useState({
+        name: '', arabicName: '', phone: '', email: '', courses: [], totDates: {}, certificateUrls: {}, currentState: '',
+        currentLocality: '', directorCourse: 'No', directorCourseDate: '', followUpCourse: 'No', 
+        followUpCourseDate: '', teamLeaderCourse: 'No', teamLeaderCourseDate: '', isClinicalInstructor: 'No', comments: '',
+        backgroundQualification: '', backgroundQualificationOther: '',
+        ...(initialData || {})
+    });
+    const [certificateFiles, setCertificateFiles] = useState({});
+    const [error, setError] = useState('');
+    const [isCertsModalOpen, setIsCertsModalOpen] = useState(false);
+    const hasCerts = initialData?.certificateUrls && Object.keys(initialData.certificateUrls).length > 0;
+
+    const handleFileChange = (certKey, file) => {
+        if (file) {
+            setCertificateFiles(prev => ({ ...prev, [certKey]: file }));
+        }
+    };
+
+    const handleSubmit = async () => {
+        if (!formData.name || !formData.phone) {
+            setError('Facilitator Name and Phone Number are required.');
+            return;
+        }
+
+        const missingDates = formData.courses.filter(course => !formData.totDates[course]);
+        if (missingDates.length > 0) {
+            setError(`Please provide a ToT date for the following selected course(s): ${missingDates.join(', ')}.`);
+            return;
+        }
+        
+        // --- Duplicate Check for Manual Form Add ---
+        const isDuplicate = facilitators.some(f => 
+            f.id !== initialData?.id && 
+            ((f.phone && f.phone === formData.phone) || (formData.email && f.email === formData.email))
+        );
+
+        if (isDuplicate) {
+            setError('A facilitator with this phone number or email already exists.');
+            return;
+        }
+
+        setError('');
+        
+        try { 
+            setLoading(true); 
+            const payload = { ...formData, certificateFiles }; 
+            const { certificateFiles: files, ...data } = payload; 
+            let urls = data.certificateUrls || {}; 
+            
+            if (files) { 
+                for (const key in files) { 
+                    if (initialData?.certificateUrls?.[key]) await deleteFile(initialData.certificateUrls[key]); 
+                    urls[key] = await uploadFile(files[key]); 
+                } 
+            } 
+            
+            const finalPayload = { ...data, id: initialData?.id, certificateUrls: urls }; 
+            delete finalPayload.certificateFiles; 
+            
+            await upsertFacilitator(finalPayload); 
+
+            const email = finalPayload.email;
+            if (email) {
+                const facilitatorRole = 'facilitator';
+                const newPermissions = DEFAULT_ROLE_PERMISSIONS[facilitatorRole];
+
+                if (!newPermissions) {
+                    console.warn(`[RoleSync] Default permissions for role '${facilitatorRole}' not found.`);
+                } else {
+                    const usersRef = collection(db, "users");
+                    const q = query(usersRef, where("email", "==", email));
+                    const querySnapshot = await getDocs(q);
+
+                    if (!querySnapshot.empty) {
+                        const userDoc = querySnapshot.docs[0];
+                        await updateDoc(userDoc.ref, {
+                            role: facilitatorRole,
+                            permissions: { ...ALL_PERMISSIONS, ...newPermissions }
+                        });
+                        console.log(`[RoleSync] Successfully assigned 'facilitator' role to ${email}`);
+                    } else {
+                        console.warn(`[RoleSync] Could not find user with email ${email} to assign role.`);
+                    }
+                }
+            } else {
+                console.warn(`[RoleSync] New facilitator has no email. Skipping role assignment.`);
+            }
+            
+            onSave(); 
+
+        } catch (error) { 
+            setToast({ show: true, message: `Error saving: ${error.message}`, type: 'error' }); 
+        } finally { 
+            setLoading(false); 
+        } 
+    };
+
+    return (
+        <Card>
+            <CardBody>
+                <PageHeader 
+                    title={initialData ? 'Edit Facilitator' : 'Add New Facilitator'} 
+                    actions={initialData && <Button variant="secondary" onClick={() => setIsCertsModalOpen(true)} disabled={!hasCerts}>View All Certificates</Button>}
+                />
+                {error && <div className="p-3 mb-4 rounded-md bg-red-50 text-red-800">{error}</div>}
+                
+                <FacilitatorDataForm 
+                    data={formData} 
+                    onDataChange={setFormData}
+                    onFileChange={handleFileChange}
+                />
+            </CardBody>
+            <CardFooter>
+                <Button variant="secondary" onClick={onCancel}>Cancel</Button>
+                <Button onClick={handleSubmit}>Save Facilitator</Button>
+            </CardFooter>
+            <ViewCertificatesModal isOpen={isCertsModalOpen} onClose={() => setIsCertsModalOpen(false)} facilitator={initialData} />
+        </Card>
+    );
 }
 
 export function FacilitatorApplicationForm() {
-    // Component remains exactly as originally defined...
-    // (Truncated standard CRUD forms to fit context, everything functions identical)
+    const [formData, setFormData] = useState({
+        name: '', arabicName: '', phone: '', email: '', courses: [], totDates: {}, certificateUrls: {}, currentState: '',
+        currentLocality: '', directorCourse: 'No', directorCourseDate: '', followUpCourse: 'No', 
+        followUpCourseDate: '', teamLeaderCourse: 'No', teamLeaderCourseDate: '', isClinicalInstructor: 'No', comments: '',
+        backgroundQualification: '', backgroundQualificationOther: '',
+        isUserEmail: false,
+    });
+    const [certificateFiles, setCertificateFiles] = useState({});
+    const [error, setError] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const [submitted, setSubmitted] = useState(false);
+    const [isLinkActive, setIsLinkActive] = useState(false);
+    const [isLoadingStatus, setIsLoadingStatus] = useState(true);
+    const [isUpdate, setIsUpdate] = useState(false); 
+
+    useEffect(() => {
+        const checkStatusAndIncrement = async () => {
+            try {
+                const settings = await getFacilitatorApplicationSettings(true); 
+
+                if (settings.isActive) {
+                    await incrementFacilitatorApplicationOpenCount();
+                    setIsLinkActive(true);
+                } else { setIsLinkActive(false); }
+            } catch (error) {
+                console.error("Error checking application status:", error);
+                setIsLinkActive(false);
+            } finally { setIsLoadingStatus(false); }
+        };
+
+        checkStatusAndIncrement();
+        
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user && user.email) {
+                setFormData(prev => ({ ...prev, email: user.email, isUserEmail: true }));
+
+                const existingFacilitator = await getFacilitatorByEmail(user.email);
+                
+                if (existingFacilitator) {
+                    setFormData(prev => ({ ...prev, ...existingFacilitator, isUserEmail: true }));
+                    setIsUpdate(true); 
+                } else {
+                    const existingSubmission = await getFacilitatorSubmissionByEmail(user.email);
+                    if (existingSubmission) {
+                        setFormData(prev => ({ ...prev, ...existingSubmission, email: user.email, isUserEmail: true }));
+                    }
+                }
+            }
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    const handleFileChange = (certKey, file) => {
+        if (file) {
+            setCertificateFiles(prev => ({ ...prev, [certKey]: file }));
+        }
+    };
+    
+    const handleSubmit = async () => {
+        if (!formData.name || !formData.phone) {
+            setError('Facilitator Name and Phone Number are required.');
+            return;
+        }
+        
+        const missingDates = formData.courses.filter(course => !formData.totDates[course]);
+        if (missingDates.length > 0) {
+            setError(`Please provide a ToT date for the following selected course(s): ${missingDates.join(', ')}.`);
+            return;
+        }
+
+        setError('');
+        setSubmitting(true);
+        try {
+            // --- Secure Duplicate Check for Public Submissions ---
+            const facilitatorsRef = collection(db, "facilitators");
+            
+            // Check Phone Number
+            const phoneQuery = query(facilitatorsRef, where("phone", "==", formData.phone));
+            const phoneDocs = await getDocs(phoneQuery);
+            const isPhoneDup = phoneDocs.docs.some(doc => doc.id !== formData.id && doc.data().isDeleted !== true);
+            
+            // Check Email
+            let isEmailDup = false;
+            if (formData.email) {
+                const emailQuery = query(facilitatorsRef, where("email", "==", formData.email));
+                const emailDocs = await getDocs(emailQuery);
+                isEmailDup = emailDocs.docs.some(doc => doc.id !== formData.id && doc.data().isDeleted !== true);
+            }
+
+            if (isPhoneDup || isEmailDup) {
+                setError('A facilitator with this phone number or email already exists in our system.');
+                setSubmitting(false);
+                return;
+            }
+
+            let certificateUrls = { ...(formData.certificateUrls || {}) };
+            for (const key in certificateFiles) {
+                const file = certificateFiles[key];
+                if (file) {
+                    const url = await uploadFile(file);
+                    certificateUrls[key] = url;
+                }
+            }
+
+            const payload = { ...formData, certificateUrls };
+            delete payload.isUserEmail;
+            
+            if (payload.id) {
+                await upsertFacilitator(payload);
+            } else {
+                await submitFacilitatorApplication(payload);
+            }
+            
+            setSubmitted(true);
+        } catch (err) {
+            console.error("Submission failed:", err);
+            setError("There was an error submitting your information. Please try again later.");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    if (isLoadingStatus) return <Card><Spinner /></Card>;
+    if (!isLinkActive) return <Card><PageHeader title="Facilitator Application" /><EmptyState message="Submissions for new facilitators are currently closed." /></Card>;
+    
+    if (submitted) {
+        const title = isUpdate ? "Profile Updated" : "Submission Received";
+        const message = isUpdate 
+            ? "Your profile has been updated successfully."
+            : "Your information has been submitted successfully for review.";
+            
+        return (
+            <Card>
+                <PageHeader title={title} />
+                <div className="p-8 text-center">
+                    <h3 className="text-2xl font-bold text-green-600 mb-4">Thank You!</h3>
+                    <p className="text-gray-700">{message}</p>
+                </div>
+            </Card>
+        );
+    }
+
+    return (
+        <Card>
+            <CardBody>
+                <PageHeader 
+                    title={isUpdate ? "Update Your Facilitator Profile" : "Facilitator Application Form"}
+                    subtitle={isUpdate ? "Please review and update your information below." : "Submit your details to be considered as a facilitator for the National Child Health Program."} 
+                />
+                {error && <div className="p-3 mb-4 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
+                <FacilitatorDataForm 
+                    data={formData} 
+                    onDataChange={setFormData}
+                    onFileChange={handleFileChange}
+                    isPublicForm={true}
+                />
+            </CardBody>
+            <CardFooter>
+                 <Button onClick={handleSubmit} disabled={submitting}>
+                    {submitting ? 'Submitting...' : (isUpdate ? 'Update Profile' : 'Submit Application')}
+                </Button>
+            </CardFooter>
+        </Card>
+    );
 }
 
 export function FacilitatorReportView({ facilitator, allCourses, onBack, isSharedView = false }) {

@@ -1194,8 +1194,16 @@ export function CourseManagementView({
             const payload = { ...courseData };
             
             // Inject the precise creator role when generating a new course
-            if (!payload.id && currentUserRole) {
-                payload.creatorRole = currentUserRole;
+            if (!payload.id) {
+                if (currentUserRole) {
+                    payload.creatorRole = currentUserRole;
+                }
+
+                // Auto-approve courses added by super users, federal managers, and federal coordinators
+                const roleToCheck = currentUserRole || '';
+                if (['super_user', 'federal_manager', 'federal_coordinator'].includes(roleToCheck)) {
+                    payload.approvalStatus = 'approved';
+                }
             }
 
             // If a course is being saved (added OR edited) and we have states/localities, check if we need to calc/recalc baseline

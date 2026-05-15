@@ -377,17 +377,19 @@ function SplashScreen() {
 
 export default function App() {
     const { t, i18n } = useTranslation();
-    const appVersion = window.APP_VERSION || '1.0.2';
+    
+    // 🛑 DYNAMIC VERSION STATE: Pulls from Vite env initially, updates to actual Capgo bundle later
+    const [appVersion, setAppVersion] = useState(import.meta.env.VITE_APP_VERSION || window.APP_VERSION || '1.0.2');
     
     // Web Update State (Capgo)
     const [isUpdateReady, setIsUpdateReady] = useState(false);
     const [updateBundle, setUpdateBundle] = useState(null);
     
-    // --- NEW: Internal Update Download Progress States ---
+    // Internal Update Download Progress States
     const [isDownloadingUpdate, setIsDownloadingUpdate] = useState(false);
     const [updateProgress, setUpdateProgress] = useState(0);
 
-    // --- NEW: Native APK Update State (Direct Download) ---
+    // Native APK Update State (Direct Download)
     const [nativeUpdatePrompt, setNativeUpdatePrompt] = useState(null);
 
     const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -545,13 +547,13 @@ export default function App() {
     const isPopStateNavigation = useRef(false);
     const initialViewIsSet = useRef(false);
 
-    // --- COMPLETELY DECOUPLED & ARMOR-PLATED UPDATE SCRIPT ---
+    // --- DECOUPLED & ARMOR-PLATED UPDATE SCRIPT ---
     useEffect(() => {
         let downloadListenerHandle;
 
         if (Capacitor.isNativePlatform()) {
             
-            // 1. SAFE NOTIFICATIONS (Will not crash if plugin is missing)
+            // 1. SAFE NOTIFICATIONS
             const setupNotifications = async () => {
                 try {
                     const permStatus = await LocalNotifications.checkPermissions();
@@ -571,13 +573,12 @@ export default function App() {
                 downloadListenerHandle = handle;
             }).catch(e => console.warn("Failed to bind Capgo listener", e));
 
-            // 3. INDEPENDENT NATIVE CHECK (CORS-SAFE)
+            // 3. INDEPENDENT NATIVE CHECK
             const checkNativeUpdates = async () => {
                 try {
                     const status = await Network.getStatus();
                     if (!status.connected) return;
 
-                    // CRITICAL FIX: Use CapacitorHttp to bypass Android CORS security blocks!
                     const nativeRes = await CapacitorHttp.request({
                         method: 'GET',
                         url: 'https://imnci-courses-monitor.web.app/native-version.json?t=' + Date.now(),
@@ -617,6 +618,12 @@ export default function App() {
             // 4. INDEPENDENT WEB CHECK (CAPGO)
             const checkWebUpdates = async () => {
                 try {
+                    // Update UI with the active Capgo Bundle version immediately
+                    const currentState = await CapacitorUpdater.current();
+                    if (currentState.bundle && currentState.bundle.version) {
+                        setAppVersion(currentState.bundle.version);
+                    }
+
                     const status = await Network.getStatus();
                     if (!status.connected) return;
 
@@ -630,8 +637,7 @@ export default function App() {
 
                     if (response.status === 200) {
                         const latestUpdate = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
-                        const currentState = await CapacitorUpdater.current();
-                        const currentVersion = currentState.bundle?.version || "builtin";
+                        const currentVersion = currentState.bundle?.version || import.meta.env.VITE_APP_VERSION || "builtin";
 
                         if (currentVersion !== latestUpdate.version) {
                             console.log(`Downloading Capgo bundle ${latestUpdate.version}...`);
@@ -673,13 +679,89 @@ export default function App() {
             setTimeout(() => {
                 checkNativeUpdates();
                 checkWebUpdates();
-            }, 3000); // Delayed slightly more to ensure App UI is fully rendered
+            }, 3000); 
         }
 
         return () => {
             if (downloadListenerHandle) downloadListenerHandle.remove();
         };
     }, []);
+
+    // =========================================================================
+    // --- MANUAL UPDATE CHECKER ---
+    // =========================================================================
+    const handleManualUpdateCheck = async () => {
+        if (!Capacitor.isNativePlatform()) {
+            setToast({ show: true, message: 'Web version is always up to date on refresh.', type: 'info' });
+            return;
+        }
+
+        setToast({ show: true, message: 'Checking for updates...', type: 'info' });
+        
+        try {
+            const status = await Network.getStatus();
+            if (!status.connected) {
+                setToast({ show: true, message: 'You are offline. Cannot check for updates.', type: 'error' });
+                return;
+            }
+
+            let nativeUpdateFound = false;
+
+            // 1. Check Native APK First
+            const nativeRes = await CapacitorHttp.request({
+                method: 'GET',
+                url: 'https://imnci-courses-monitor.web.app/native-version.json?t=' + Date.now(),
+                connectTimeout: 5000,
+                readTimeout: 5000
+            });
+
+            if (nativeRes.status === 200) {
+                const serverConfig = typeof nativeRes.data === 'string' ? JSON.parse(nativeRes.data) : nativeRes.data;
+                const appInfo = await CapacitorApp.getInfo();
+                const currentBuild = parseInt(appInfo.build, 10) || 1;
+                const serverBuild = parseInt(serverConfig.latestNativeBuild, 10);
+                
+                if (serverBuild > currentBuild) {
+                    setNativeUpdatePrompt(serverConfig);
+                    nativeUpdateFound = true;
+                    return; // Stop here if native update is required
+                }
+            }
+
+            // 2. Check Capgo OTA
+            const response = await CapacitorHttp.request({
+                method: 'GET',
+                url: 'https://imnci-courses-monitor.web.app/latest/update.json?t=' + Date.now(),
+                connectTimeout: 5000,
+                readTimeout: 5000
+            });
+
+            if (response.status === 200) {
+                const latestUpdate = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+                const currentState = await CapacitorUpdater.current();
+                const currentVersion = currentState.bundle?.version || import.meta.env.VITE_APP_VERSION || "builtin";
+
+                if (currentVersion !== latestUpdate.version) {
+                    setToast({ show: true, message: 'Update found! Downloading...', type: 'info' });
+                    setIsDownloadingUpdate(true);
+                    setUpdateProgress(0);
+                    
+                    const downloadedBundle = await CapacitorUpdater.download({ url: latestUpdate.url, version: latestUpdate.version });
+                    setUpdateBundle(downloadedBundle); 
+                    setIsUpdateReady(true);
+                } else if (!nativeUpdateFound) {
+                    setToast({ show: true, message: 'App is already up to date!', type: 'success' });
+                }
+            }
+        } catch (error) {
+            console.error("Manual update check failed:", error);
+            setToast({ show: true, message: 'Failed to check for updates.', type: 'error' });
+        } finally {
+            setIsDownloadingUpdate(false);
+        }
+    };
+    // =========================================================================
+
     
     useEffect(() => { if (!authLoading && user) initializeUsageTracking(); }, [authLoading, user]);
 
@@ -1815,8 +1897,12 @@ export default function App() {
                                 <h1 className="text-xl sm:text-2xl font-bold text-white">{t('app.title', 'National Child Health Program')}</h1>
                                 <p className="text-xs sm:text-sm text-slate-300 flex items-center flex-wrap gap-2 mt-1 sm:mt-0">
                                     <span>{t('app.subtitle', 'Program & Course Monitoring System')}</span>
-                                    {/* App Version Pill */}
-                                    <span className="bg-slate-700 text-sky-300 text-[10px] px-1.5 py-0.5 rounded border border-slate-600 font-mono shadow-sm">
+                                    {/* App Version Pill (Clickable) */}
+                                    <span 
+                                        onClick={handleManualUpdateCheck}
+                                        className="bg-slate-700 text-sky-300 text-[10px] px-1.5 py-0.5 rounded border border-slate-600 font-mono shadow-sm cursor-pointer hover:bg-slate-600 hover:text-sky-200 transition-colors"
+                                        title="Tap to check for updates"
+                                    >
                                         v{appVersion}
                                     </span>
                                 </p>

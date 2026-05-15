@@ -22,7 +22,8 @@ registerSW({ immediate: true });
 // =========================================================================
 // --- AGGRESSIVE VERSION-CONTROLLED CACHE BUSTER ---
 // =========================================================================
-const APP_VERSION = '1.0.2';
+// 🛑 Read version dynamically from the Vite build environment
+const APP_VERSION = import.meta.env.VITE_APP_VERSION || '1.0.2';
 window.APP_VERSION = APP_VERSION; 
 
 const localVersion = localStorage.getItem('app_version');
@@ -30,8 +31,6 @@ const localVersion = localStorage.getItem('app_version');
 if (localVersion !== APP_VERSION) {
   console.log(`🔄 New version detected! Upgrading from ${localVersion || 'unknown'} to ${APP_VERSION}.`);
   
-  // CRITICAL FIX: Only wipe caches and force reload if the device is actually online.
-  // Doing this while offline will crash the PWA/Native Webview entirely.
   if (navigator.onLine) {
       console.log("Clearing cache to fetch fresh files...");
       if ('caches' in window) {
@@ -47,12 +46,18 @@ if (localVersion !== APP_VERSION) {
                 });
               }
               localStorage.setItem('app_version', APP_VERSION);
-              window.location.reload();
+              
+              // 🛑 Do NOT reload if Native. Let Capgo handle Native OTA updates.
+              if (!Capacitor.isNativePlatform()) {
+                  window.location.reload();
+              }
             });
         });
       } else {
         localStorage.setItem('app_version', APP_VERSION);
-        window.location.reload();
+        if (!Capacitor.isNativePlatform()) {
+            window.location.reload();
+        }
       }
   } else {
       console.log("📱 Offline mode. Skipping cache wipe until network is restored to prevent crash.");
