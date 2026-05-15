@@ -392,6 +392,9 @@ export default function App() {
     // Native APK Update State (Direct Download)
     const [nativeUpdatePrompt, setNativeUpdatePrompt] = useState(null);
 
+    // Manual Update Check State
+    const [manualUpdateModal, setManualUpdateModal] = useState({ isOpen: false, status: 'idle', message: '' });
+
     const [isOffline, setIsOffline] = useState(!navigator.onLine);
     const [isSyncing, setIsSyncing] = useState(false);
 
@@ -688,17 +691,17 @@ export default function App() {
     // --- MANUAL UPDATE CHECKER ---
     // =========================================================================
     const handleManualUpdateCheck = async () => {
+        setManualUpdateModal({ isOpen: true, status: 'checking', message: 'Checking for updates...' });
+
         if (!Capacitor.isNativePlatform()) {
-            setToast({ show: true, message: 'Web version is always up to date on refresh.', type: 'info' });
+            setManualUpdateModal({ isOpen: true, status: 'info', message: 'Web version is always up to date on refresh.' });
             return;
         }
 
-        setToast({ show: true, message: 'Checking for updates...', type: 'info' });
-        
         try {
             const status = await Network.getStatus();
             if (!status.connected) {
-                setToast({ show: true, message: 'You are offline. Cannot check for updates.', type: 'error' });
+                setManualUpdateModal({ isOpen: true, status: 'error', message: 'You are offline. Cannot check for updates.' });
                 return;
             }
 
@@ -715,9 +718,10 @@ export default function App() {
                 const serverBuild = parseInt(serverConfig.latestNativeBuild, 10);
                 
                 if (serverBuild > currentBuild) {
-                    setNativeUpdatePrompt(serverConfig);
+                    setManualUpdateModal({ isOpen: false, status: 'idle', message: '' }); // Close this modal
+                    setNativeUpdatePrompt(serverConfig); // Let the Native required update modal show
                     nativeUpdateFound = true;
-                    return; // Stop here if native update is required
+                    return; 
                 }
             }
 
@@ -735,20 +739,21 @@ export default function App() {
                 const currentVersion = currentState.bundle?.version || import.meta.env.VITE_APP_VERSION || "builtin";
 
                 if (currentVersion !== latestUpdate.version) {
-                    setToast({ show: true, message: 'Update found! Downloading...', type: 'info' });
+                    setManualUpdateModal({ isOpen: true, status: 'downloading', message: 'Update found! Downloading...' });
                     setIsDownloadingUpdate(true);
                     setUpdateProgress(0);
                     
                     const downloadedBundle = await CapacitorUpdater.download({ url: latestUpdate.url, version: latestUpdate.version });
                     setUpdateBundle(downloadedBundle); 
                     setIsUpdateReady(true);
+                    setManualUpdateModal({ isOpen: false, status: 'idle', message: '' }); // Close to show the OTA Ready modal
                 } else if (!nativeUpdateFound) {
-                    setToast({ show: true, message: 'App is already up to date!', type: 'success' });
+                    setManualUpdateModal({ isOpen: true, status: 'success', message: 'App is already up to date!' });
                 }
             }
         } catch (error) {
             console.error("Manual update check failed:", error);
-            setToast({ show: true, message: 'Failed to check for updates.', type: 'error' });
+            setManualUpdateModal({ isOpen: true, status: 'error', message: 'Failed to check for updates.' });
         } finally {
             setIsDownloadingUpdate(false);
         }
@@ -2198,6 +2203,42 @@ export default function App() {
                         >
                             Restart & Update Now
                         </button>
+                    </div>
+                </div>
+            )}
+
+           {/* --- MANUAL UPDATE CHECK MODAL --- */}
+           {manualUpdateModal.isOpen && (
+                <div className="fixed inset-0 bg-slate-900 bg-opacity-80 flex flex-col items-center justify-center z-[100000] p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full text-center space-y-4">
+                        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-slate-100">
+                            {manualUpdateModal.status === 'checking' || manualUpdateModal.status === 'downloading' ? (
+                                <RefreshCw className="h-6 w-6 text-sky-600 animate-spin"/>
+                            ) : manualUpdateModal.status === 'success' ? (
+                                <ClipboardCheck className="h-6 w-6 text-green-600" />
+                            ) : manualUpdateModal.status === 'error' ? (
+                                <X className="h-6 w-6 text-red-600" />
+                            ) : (
+                                <Info className="h-6 w-6 text-sky-600" />
+                            )}
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-800">
+                            {manualUpdateModal.status === 'checking' ? 'Checking for Updates' :
+                             manualUpdateModal.status === 'downloading' ? 'Downloading Update' :
+                             manualUpdateModal.status === 'success' ? 'Up to Date' :
+                             manualUpdateModal.status === 'error' ? 'Update Error' : 'Information'}
+                        </h3>
+                        <p className="text-sm text-slate-500">
+                            {manualUpdateModal.message}
+                        </p>
+                        {(manualUpdateModal.status === 'success' || manualUpdateModal.status === 'error' || manualUpdateModal.status === 'info') && (
+                            <button 
+                                onClick={() => setManualUpdateModal({ isOpen: false, status: 'idle', message: '' })}
+                                className="w-full mt-2 inline-flex justify-center rounded-md border border-transparent bg-slate-800 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 sm:text-sm"
+                            >
+                                Close
+                            </button>
+                        )}
                     </div>
                 </div>
             )}
