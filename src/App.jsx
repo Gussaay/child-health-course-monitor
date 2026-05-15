@@ -2278,7 +2278,10 @@ export default function App() {
                         )}
                         <button 
                             onClick={() => {
-                                handleFileDownloadAndOpen(nativeUpdatePrompt.downloadUrl, `update_v${nativeUpdatePrompt.latestNativeBuild}.apk`);
+                                handleFileDownloadAndOpen(
+                                    nativeUpdatePrompt.downloadUrl, 
+                                    `National Child Health Program APP v${nativeUpdatePrompt.versionString}.apk`
+                                );
                             }}
                             className="w-full justify-center rounded-xl bg-red-600 px-4 py-3 text-base font-bold text-white shadow-sm hover:bg-red-700 transition-colors"
                         >
