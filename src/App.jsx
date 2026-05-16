@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, LineElement, PointElement } from 'chart.js';
 
 import {
-    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, WifiOff, RefreshCw, Activity, Layers, LogOut, Info, HardDrive
+    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, WifiOff, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2
 } from 'lucide-react';
 
 import { Capacitor } from '@capacitor/core';
@@ -107,6 +107,7 @@ import { signOut, updateProfile } from 'firebase/auth';
 import { useDataCache } from './DataContext';
 import { useAuth } from './hooks/useAuth';
 import { SignInBox } from './auth-ui.jsx';
+import NotificationBell from './components/NotificationBell.jsx';
 
 const ShareIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.368a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" /></svg>;
 const LinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>;
@@ -287,7 +288,7 @@ function Landing({ navigate, permissions }) {
         { label: t('landing.modules.projects', 'Project Tracker'), view: 'projects', icon: FolderKanban, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.planning', 'Master Plan'), view: 'planning', icon: TrendingUp, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.locality_plan', 'Bottom-up Planning'), view: 'localityPlan', icon: Layers, permission: permissions.canViewLocalityPlan },
-        { label: t('landing.modules.downloads', 'App Files & Downloads'), view: 'downloads', icon: HardDrive, permission: Capacitor.isNativePlatform() },
+        { label: t('landing.modules.downloads', 'App Files & Downloads'), view: 'downloads', icon: HardDrive, Bell, Trash2, permission: Capacitor.isNativePlatform() },
         { label: t('landing.modules.admin', 'Admin'), view: 'admin', icon: User, permission: permissions.canViewAdmin },
         { label: t('landing.modules.about', 'About Team'), view: 'about', icon: Info, permission: true },
     ];
@@ -329,7 +330,7 @@ function Landing({ navigate, permissions }) {
 const BottomNav = React.memo(function BottomNav({ navItems, navigate, currentView }) {
     const icons = { 
         'landing': Home, 'dashboard': Home, 'courses': Book, 'humanResources': Users, 'childHealthServices': Hospital, 
-        'skillsMentorship': ClipboardCheck, 'downloads': HardDrive
+        'skillsMentorship': ClipboardCheck, 'downloads': HardDrive, Bell, Trash2
     };
     
     return (
@@ -1756,6 +1757,7 @@ export default function App() {
 
                     {/* Right Action Buttons */}
                     <div className="flex items-center justify-end gap-2 shrink-0 z-10 pointer-events-auto">
+<NotificationBell user={user} />
                         <button
                             onClick={() => {
                                 const newLang = i18n.language?.startsWith('en') ? 'ar' : 'en';
@@ -1935,6 +1937,8 @@ export default function App() {
             {permissions.canUseSuperUserAdvancedFeatures && isMonitorVisible && (
                 <ResourceMonitor counts={operationCounts} onReset={handleResetMonitor} onDismiss={handleDismissMonitor} />
             )}
+
+            
 
             <AppUpdateModals />
 

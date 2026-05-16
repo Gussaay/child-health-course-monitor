@@ -7,8 +7,11 @@ import { onAuthStateChanged, sendPasswordResetEmail } from 'firebase/auth';
 import { STATE_LOCALITIES } from './constants'; 
 
 // --- Icons & Data Imports ---
-import { CheckCircle, XCircle, RefreshCw, Lock, Users, Shield, Activity, Filter, Database, Edit3, Clock, Settings, Smartphone, CloudDownload, History } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, Lock, Users, Shield, Activity, Filter, Database, Edit3, Clock, Settings, Smartphone, CloudDownload, History, Bell } from 'lucide-react';
 import { listFederalCoordinators } from '../data';
+
+// --- NEW COMPONENT IMPORT ---
+import AdminNotificationSender from './AdminNotificationSender';
 
 // --- PERMISSIONS IMPORT ---
 import {
@@ -41,6 +44,7 @@ const AdminTabs = ({ activeTab, setActiveTab, currentUserRoles = [] }) => {
     const tabs = [
         { key: 'roles', label: 'Manage User Roles', icon: Users },
         { key: 'permissions', label: 'Manage Role Permissions', icon: Shield },
+        { key: 'notifications', label: 'Push Notifications', icon: Bell }, 
     ];
 
     if (currentUserRoles.includes('super_user')) {
@@ -199,6 +203,7 @@ export function AdminDashboard() {
     const [currentUserPermissions, setCurrentUserPermissions] = useState({}); 
     
     const [activeTab, setActiveTab] = useState('roles');
+    const [notificationTargetId, setNotificationTargetId] = useState('all');
 
     const [filterRole, setFilterRole] = useState('');
     const [filterState, setFilterState] = useState('');
@@ -955,6 +960,17 @@ export function AdminDashboard() {
                                                 >
                                                     <Shield className="w-3 h-3 mr-2" /> Custom Perms
                                                 </Button>
+                                                <Button 
+                                                    size="sm" 
+                                                    variant="secondary" 
+                                                    onClick={() => { 
+                                                        setNotificationTargetId(user.id);
+                                                        setActiveTab('notifications');
+                                                    }}
+                                                    className="text-xs py-1 px-3 bg-white border-gray-300 shadow-sm hover:bg-gray-50 hover:text-emerald-600 w-full justify-start"
+                                                >
+                                                    <Bell className="w-3 h-3 mr-2" /> Message
+                                                </Button>
                                             </div>
                                         </td>
                                         <td className="py-3">
@@ -1121,6 +1137,7 @@ export function AdminDashboard() {
                 {activeTab === 'permissions' && renderRolePermissionsTab()}
                 {activeTab === 'usage' && currentUserRoles.includes('super_user') && renderUsageTab()}
                 {activeTab === 'updates' && currentUserRoles.includes('super_user') && renderUpdatesTab()}
+                {activeTab === 'notifications' && <AdminNotificationSender preselectedUserId={notificationTargetId} />}
             </div>
 
             {/* EDIT ROLES MODAL */}
