@@ -4,6 +4,11 @@ import html2canvas from 'html2canvas';
 import jsPDF from "jspdf";
 import { QRCodeCanvas } from 'qrcode.react';
 
+// 🟢 NEW: Capacitor Native Imports
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { FileOpener } from '@capacitor-community/file-opener';
+
 // Common Components & Icons
 import { 
     Button, Card, EmptyState, PageHeader, 
@@ -14,7 +19,7 @@ import { Award, FileSignature, Stamp, CheckCircle } from 'lucide-react';
 // Data & Firebase
 import { STATE_LOCALITIES } from './constants'; 
 import { db } from '../firebase'; 
-import { collection, query, where, getDocs, doc, updateDoc, getDoc, serverTimestamp } from 'firebase/firestore'; // <--- IMPORTED serverTimestamp
+import { collection, query, where, getDocs, doc, updateDoc, getDoc, serverTimestamp } from 'firebase/firestore'; 
 import { useDataCache } from '../DataContext';
 import { 
     getParticipantById, 
@@ -369,6 +374,45 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
 // GENERATION FUNCTIONS
 // -----------------------------------------------------------------------------
 
+// 🟢 NEW: Native Mobile Save Function Helper
+export const saveAndOpenPdf = async (doc, fileName) => {
+    if (Capacitor.isNativePlatform()) {
+        try {
+            const base64Data = doc.output('datauristring').split('base64,')[1];
+            const folderPath = 'downloads';
+            const filePath = `${folderPath}/${fileName}`;
+
+            try {
+                await Filesystem.mkdir({ 
+                    path: folderPath, 
+                    directory: Directory.Data, 
+                    recursive: true 
+                });
+            } catch (e) {
+                // Ignore error if directory exists
+            }
+
+            const writeResult = await Filesystem.writeFile({ 
+                path: filePath, 
+                data: base64Data, 
+                directory: Directory.Data,
+                recursive: true
+            });
+
+            await FileOpener.open({ 
+                filePath: writeResult.uri, 
+                contentType: 'application/pdf',
+                openWithDefault: true 
+            });
+        } catch (err) {
+            console.error("Native export error:", err);
+            throw new Error(`Failed to process PDF natively: ${err.message}`);
+        }
+    } else {
+        doc.save(fileName);
+    }
+};
+
 export const generateCertificatePdf = async (course, participant, federalProgramManagerName, participantSubCourse, language = 'en', cachedFacilitators = null, cachedCoordinators = null) => {
     const finalManagerName = (course.approvedByManagerName || federalProgramManagerName || '').trim();
     const rawManagerSignature = course.approvedByManagerSignatureUrl || null;
@@ -520,7 +564,7 @@ export const generateAllCertificatesPdf = async (course, participants, federalPr
     if (!firstPage) {
         const langSuffix = language === 'ar' ? 'AR' : 'EN';
         const fileName = `All_Certificates_${langSuffix}_${course.course_type}_${course.start_date}.pdf`;
-        doc.save(fileName);
+        await saveAndOpenPdf(doc, fileName);
     } else { alert("Failed to generate any certificates."); }
 };
 
@@ -579,7 +623,7 @@ export function PublicCertificateDownloadView({ participantId }) {
             if (canvas) {
                 const doc = new jsPDF('landscape', 'mm', 'a4');
                 doc.addImage(canvas.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, 297, 210);
-                doc.save(`Certificate_${data.participant.name.replace(/\s+/g, '_')}_${lang}.pdf`);
+                await saveAndOpenPdf(doc, `Certificate_${data.participant.name.replace(/\s+/g, '_')}_${lang}.pdf`);
             }
         } catch(e) { alert("Download failed: " + e.message); }
         finally { setDownloading(false); }
@@ -640,7 +684,7 @@ export function PublicCourseCertificatesView({ courseId }) {
             if (canvas) {
                 const doc = new jsPDF('landscape', 'mm', 'a4');
                 doc.addImage(canvas.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, 297, 210);
-                doc.save(`Certificate_${p.name.replace(/\s+/g, '_')}_${lang}.pdf`);
+                await saveAndOpenPdf(doc, `Certificate_${p.name.replace(/\s+/g, '_')}_${lang}.pdf`);
             }
         } catch(e) { alert("Download failed: " + e.message); }
         finally { setDownloadingId(null); }
@@ -929,3 +973,4 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
         </>
     );
 };
+}
