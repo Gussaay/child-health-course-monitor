@@ -179,10 +179,11 @@ export function useAppUpdate() {
                         )}
                         <button 
                             onClick={() => {
-                                downloadAndOpenFile(nativeUpdatePrompt.downloadUrl, `National Child Health Program APP v${nativeUpdatePrompt.versionString}.apk`, {
-                                    onStart: () => { setIsDownloadingAppUpdate(true); setAppUpdateProgress(0); },
-                                    onFinally: () => { setIsDownloadingAppUpdate(false); setAppUpdateProgress(0); }
-                                });
+                               downloadAndOpenFile(nativeUpdatePrompt.downloadUrl, `Update_v${nativeUpdatePrompt.versionString}.apk`, {
+    isSystemFile: true, // Uses Cache, skips permission issues
+    onStart: () => setIsDownloading(true),
+    onFinally: () => setIsDownloading(false)
+});
                             }}
                             className="w-full justify-center rounded-xl bg-red-600 px-4 py-3 text-base font-bold text-white shadow-sm hover:bg-red-700 transition-colors"
                         >
@@ -263,4 +264,4 @@ export function useAppUpdate() {
         handleManualUpdateCheck,
         AppUpdateModals
     };
-}
+}downloadAndOpenFile

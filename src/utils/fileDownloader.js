@@ -4,15 +4,16 @@ import { FileOpener } from '@capacitor-community/file-opener';
 
 /**
  * Generic In-App Download & Open Manager
- * Bypasses webview memory limits completely, fixing Base64/Fetch crashes.
  * @param {string} url - The URL of the file to download
  * @param {string} customFileName - Optional custom name for the downloaded file
- * @param {object} callbacks - UI callbacks for loading states, success, and errors
+ * @param {object} options - Contains callbacks AND configuration (like isSystemFile)
  */
-export const downloadAndOpenFile = async (url, customFileName = null, callbacks = {}) => {
-    const { onStart, onSuccess, onError, onFinally, onOpenError } = callbacks;
+export const downloadAndOpenFile = async (url, customFileName = null, options = {}) => {
+    const { 
+        onStart, onSuccess, onError, onFinally, onOpenError,
+        isSystemFile = false // Default to false (User file)
+    } = options;
 
-    // If on web, just open the link in a new tab
     if (!Capacitor.isNativePlatform()) {
         window.open(url, '_blank');
         return;
@@ -21,61 +22,57 @@ export const downloadAndOpenFile = async (url, customFileName = null, callbacks 
     if (onStart) onStart();
 
     try {
-        const fileName = customFileName || url.substring(url.lastIndexOf('/') + 1) || 'downloaded_file.apk';
+        const fileName = customFileName || url.substring(url.lastIndexOf('/') + 1) || 'download.file';
         
-        // Determine mime type
-        let mimeType = 'application/vnd.android.package-archive';
+        // 1. Determine Mime Type
+        let mimeType = '*/*';
         const lowerName = fileName.toLowerCase();
-        if (lowerName.endsWith('.pdf')) mimeType = 'application/pdf';
+        if (lowerName.endsWith('.apk')) mimeType = 'application/vnd.android.package-archive';
+        else if (lowerName.endsWith('.pdf')) mimeType = 'application/pdf';
         else if (lowerName.endsWith('.xlsx')) mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-        else if (lowerName.endsWith('.png')) mimeType = 'image/png';
-        else if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) mimeType = 'image/jpeg';
 
-        try {
-            // 🟢 CHANGED: Ensure downloads directory exists in the accessible Documents folder
-            await Filesystem.mkdir({ path: 'downloads', directory: Directory.Documents, recursive: true });
-        } catch (e) {
-            // Ignore if it already exists
+        // 2. Determine Target Directory based on Intent
+        // If it's an APK, use Cache. If it's a PDF/Excel, use Documents.
+        const targetDirectory = isSystemFile ? Directory.Cache : Directory.Documents;
+
+        // Note: If using Directory.Documents, ensure your app requests storage permissions first!
+        if (!isSystemFile) {
+            try {
+                await Filesystem.mkdir({ path: 'NCHP_Downloads', directory: targetDirectory, recursive: true });
+            } catch (e) { /* Ignore if exists */ }
         }
 
-        const filePath = `downloads/${fileName}`;
+        const filePath = isSystemFile ? fileName : `NCHP_Downloads/${fileName}`;
 
-        // 🟢 CHANGED: Use Directory.Documents
+        // 3. Download the file
         await CapacitorHttp.downloadFile({
             url: url,
             filePath: filePath,
-            fileDirectory: Directory.Documents 
+            fileDirectory: targetDirectory 
         });
 
-        // 🟢 CHANGED: Use Directory.Documents
+        // 4. Get the native URI
         const { uri } = await Filesystem.getUri({
             path: filePath,
-            directory: Directory.Documents
+            directory: targetDirectory
         });
 
-        // Trigger success callback because the file is safely on the device now
         if (onSuccess) onSuccess();
 
-        // 🟢 ROBUST FILE OPENER LOGIC
+        // 5. Open the file
         try {
             await FileOpener.open({
                 filePath: uri,
                 contentType: mimeType
-                // Removed: openWithDefault: true (forces the OS app chooser instead of failing silently)
             });
         } catch (openError) {
             console.error("FileOpener Error:", openError);
-            if (onOpenError) {
-                // If you want to handle this specifically in the UI (e.g., a yellow toast warning)
-                onOpenError(openError);
-            } else if (onError) {
-                // Fallback error message if onOpenError isn't provided
-                onError(new Error("File downloaded successfully, but no app was found to open it. Check your device's Documents/downloads folder."));
-            }
+            if (onOpenError) onOpenError(openError);
+            else if (onError) onError(new Error("File downloaded, but no app found to open it."));
         }
 
     } catch (error) {
-        console.error("Full Download Error:", error);
+        console.error("Download Error:", error);
         if (onError) onError(error);
     } finally {
         if (onFinally) onFinally();

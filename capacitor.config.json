@@ -7,11 +7,14 @@
     "hostname": "com.nchp.monitoring.app"
   },
   "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    },
     "SplashScreen": {
       "launchShowDuration": 1000,
       "launchAutoHide": true
     },
-   "Assets": {
+    "Assets": {
       "icon": {
         "path": "public/child.png"
       },
