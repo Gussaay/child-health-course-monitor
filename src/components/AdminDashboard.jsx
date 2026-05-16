@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Card, PageHeader, Button, Table, Spinner, Select, Checkbox, Toast, Input, FormGroup, Modal, CardBody, CardFooter } from './CommonComponents';
 import { db, auth } from '../firebase';
-import { collection, query, getDocs, doc, updateDoc, getDoc, setDoc, writeBatch, deleteDoc } from 'firebase/firestore';
+import { collection, query, getDocs, doc, updateDoc, getDoc, setDoc, writeBatch, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions'; // <-- NEW IMPORTS FOR FCM CLOUD FUNCTION
 import { onAuthStateChanged, sendPasswordResetEmail } from 'firebase/auth';
 import { STATE_LOCALITIES } from './constants'; 
 
@@ -376,6 +377,39 @@ export function AdminDashboard() {
                 setIsUpdateActive(false);
             }
             setIsEditingUpdate(false); // Hide the form after saving
+
+            // ==========================================
+            // FIX: TRIGGER APP UPDATE NOTIFICATION 
+            // ==========================================
+            try {
+                const notifTitle = "App Update Available";
+                const notifMessage = updateConfig.mandatory 
+                    ? `A mandatory update to version ${updateConfig.versionString} is required. ${updateConfig.releaseNotes}`
+                    : `Version ${updateConfig.versionString} is now available. ${updateConfig.releaseNotes}`;
+
+                // 1. Save to in-app notification history
+                await addDoc(collection(db, 'notifications'), {
+                    title: notifTitle,
+                    message: notifMessage,
+                    targetUser: 'all',
+                    createdAt: serverTimestamp(),
+                    readBy: [],
+                    status: 'active'
+                });
+
+                // 2. Send FCM Push via Cloud Function
+                const functions = getFunctions(db.app);
+                const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
+                await sendFCMNotification({
+                    targetUserId: 'all',
+                    title: notifTitle,
+                    body: notifMessage
+                });
+            } catch (notifErr) {
+                console.error("Failed to send automatic update notification:", notifErr);
+            }
+            // ==========================================
+
             setToast({show: true, message: 'Update configuration saved and pushed to users!', type: 'success'});
         } catch(e) {
             console.error("Update config error", e);

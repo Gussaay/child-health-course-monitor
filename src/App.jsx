@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, LineElement, PointElement } from 'chart.js';
 
 import {
-    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, WifiOff, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2
+    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, WifiOff, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2, Cloud, CloudOff
 } from 'lucide-react';
 
 import { Capacitor } from '@capacitor/core';
@@ -1686,15 +1686,21 @@ export default function App() {
 
     return (
         <div className="min-h-screen bg-sky-50 flex flex-col pt-0 relative">
+            
+            {/* CSS override to force fixed toasts above the bottom navigation bar on mobile */}
+            <style>{`
+                @media (max-width: 768px) {
+                    .fixed.bottom-4, [role="alert"], .toast-container {
+                        bottom: 80px !important; 
+                        margin-bottom: 0 !important;
+                    }
+                }
+            `}</style>
+
             <div className="fixed top-0 start-0 w-full z-[100005] flex flex-col">
                 {isOffline && (
                     <div className="bg-amber-500 text-white text-center py-2 px-4 text-sm font-bold flex justify-center items-center gap-2 shadow-md">
                         <WifiOff className="w-5 h-5" /> {t('app.offline', 'You are offline. Changes are saved locally and will sync when reconnected.')}
-                    </div>
-                )}
-                {isSyncing && !isOffline && (
-                    <div className="bg-sky-500 text-white text-center py-2 px-4 text-sm font-bold flex justify-center items-center gap-2 shadow-md">
-                        <RefreshCw className="w-5 h-5 animate-spin" /> {t('app.syncing', 'Syncing offline data to the cloud...')}
                     </div>
                 )}
                 {(isFileDownloading || isDownloadingAppUpdate) && (
@@ -1709,7 +1715,7 @@ export default function App() {
                 )}
             </div>
 
-            <header className={`bg-slate-800 shadow-lg sticky z-40 transition-all ${isOffline || isSyncing || (isFileDownloading || isDownloadingAppUpdate) ? 'top-10' : 'top-0'}`}>
+            <header className={`bg-slate-800 shadow-lg sticky z-40 transition-all ${isOffline || (isFileDownloading || isDownloadingAppUpdate) ? 'top-10' : 'top-0'}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4 cursor-pointer" onClick={() => !isSharedView && navigate('landing')}>
@@ -1761,16 +1767,16 @@ export default function App() {
             </header>
 
             {user && !isMinimalUILayout && (
-                <div className="bg-slate-700 text-slate-200 px-3 py-2 flex items-center w-full shadow-inner relative min-h-[48px]">
+                <div className="bg-slate-700 text-slate-200 px-2 sm:px-3 py-2 flex items-center justify-between w-full shadow-inner min-h-[48px] gap-2">
 
-                    {/* Centered Profile Info Container */}
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+                    {/* Profile Info Container (Shifted left to prevent overlap with new icons) */}
+                    <div className="flex-1 flex items-center justify-start overflow-hidden min-w-0">
                         <div
-                            className="flex items-center justify-center gap-1.5 cursor-pointer hover:bg-slate-600 px-2 py-1 rounded-md transition-colors duration-200 pointer-events-auto max-w-[65%] sm:max-w-xl mx-auto"
+                            className="flex items-center gap-1.5 cursor-pointer hover:bg-slate-600 px-2 py-1 rounded-md transition-colors duration-200 min-w-0 max-w-full"
                             onClick={() => setIsUserProfileModalOpen(true)}
                             title="View Profile Information"
                         >
-                            <span className="font-semibold text-sm truncate shrink-0">
+                            <span className="font-semibold text-sm truncate shrink-0 max-w-[90px] sm:max-w-xs">
                                 {user.displayName || user.email}
                             </span>
 
@@ -1789,25 +1795,56 @@ export default function App() {
                         </div>
                     </div>
 
-                    {/* Left Spacer for symmetry */}
-                    <div className="flex-1 z-10 pointer-events-none"></div>
-
                     {/* Right Action Buttons */}
-                    <div className="flex items-center justify-end gap-2 shrink-0 z-10 pointer-events-auto">
-<NotificationBell user={user} />
+                    <div className="flex items-center justify-end gap-1.5 shrink-0">
+                        <NotificationBell user={user} />
+                        
+                        {/* Data Sync Status Button */}
+                        <button
+                            onClick={() => {
+                                if (isOffline) {
+                                    setToast({ show: true, message: 'You are currently offline. Data will sync when connection is restored.', type: 'info' });
+                                    return;
+                                }
+                                setIsSyncing(true);
+                                setToast({ show: true, message: 'Checking and syncing offline data...', type: 'info' });
+                                
+                                waitForPendingWrites(db).then(() => {
+                                    setToast({ show: true, message: 'All offline data synced successfully.', type: 'success' });
+                                }).catch((e) => {
+                                    setToast({ show: true, message: 'Sync failed or timed out.', type: 'error' });
+                                }).finally(() => {
+                                    setIsSyncing(false);
+                                });
+                            }}
+                            className={`p-1 sm:p-1.5 border rounded transition-colors flex items-center justify-center min-w-[32px] sm:min-w-[36px] ${
+                                isOffline 
+                                ? 'text-amber-400 bg-slate-600 border-slate-500 hover:bg-slate-500' 
+                                : 'text-sky-400 bg-slate-600 border-slate-500 hover:bg-slate-500 hover:text-sky-300'
+                            }`}
+                            title={isOffline ? 'Offline Mode' : 'Data Sync Status'}
+                        >
+                            {isOffline ? (
+                                <CloudOff size={18} />
+                            ) : (
+                                isSyncing ? <RefreshCw size={18} className="animate-spin text-sky-300" /> : <Cloud size={18} />
+                            )}
+                        </button>
+
                         <button
                             onClick={() => {
                                 const newLang = i18n.language?.startsWith('en') ? 'ar' : 'en';
                                 i18n.changeLanguage(newLang);
                             }}
-                            className="p-1.5 text-sky-400 bg-slate-600 border border-slate-500 rounded hover:bg-slate-500 hover:text-sky-300 transition-colors flex items-center justify-center min-w-[36px]"
+                            className="p-1 sm:p-1.5 text-sky-400 bg-slate-600 border border-slate-500 rounded hover:bg-slate-500 hover:text-sky-300 transition-colors flex items-center justify-center min-w-[32px] sm:min-w-[36px]"
                             title={i18n.language?.startsWith('en') ? 'التبديل إلى العربية' : 'Switch to English'}
                         >
                             <span className="font-bold text-sm">E/ع</span>
                         </button>
+                        
                         <button
                             onClick={handleLogout}
-                            className="p-1.5 sm:px-3 sm:py-1 text-sm font-semibold text-white bg-red-600 rounded-md hover:bg-red-700 flex items-center justify-center gap-1 transition-colors"
+                            className="p-1 sm:px-3 sm:py-1 text-sm font-semibold text-white bg-red-600 rounded-md hover:bg-red-700 flex items-center justify-center gap-1 transition-colors min-w-[32px]"
                             title={t('app.logout', 'Logout')}
                         >
                             <LogOut size={18} className="sm:hidden" />

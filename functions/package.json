@@ -1,32 +1,16 @@
 {
   "name": "functions",
   "private": true,
-  "type": "module",
-  "main": "lib/index.js",
+  "main": "index.js",
   "engines": {
     "node": ">=20.0.0"
   },
   "scripts": {
-    "build": "tsc --project tsconfig.json",
-    "clean": "rimraf lib",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "serve": "npm run build && firebase emulators:start --only functions",
-    "test": "echo \"No tests yet\""
+    "serve": "firebase emulators:start --only functions",
+    "logs": "firebase functions:log"
   },
   "dependencies": {
     "firebase-admin": "^12.6.0",
     "firebase-functions": "^6.0.0"
-  },
-  "devDependencies": {
-    "@types/node": "^20.12.12",
-    "@typescript-eslint/eslint-plugin": "^7.18.0",
-    "@typescript-eslint/parser": "^7.18.0",
-    "eslint": "8.57.1",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-import": "^2.29.1",
-    "prettier": "^3.3.3",
-    "rimraf": "^6.0.1",
-    "typescript": "5.5.4"
   }
 }
