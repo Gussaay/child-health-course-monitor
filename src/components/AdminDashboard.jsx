@@ -991,8 +991,14 @@ export function AdminDashboard() {
                                                 {!isLocalityAssignable && isStateAssignable && <span className="text-[10px] text-gray-400">All Localities</span>}
                                             </div>
                                         </td>
+                                        {/* --- UPDATED FCM NOTIFICATION STATUS --- */}
                                         <td className="py-3">
                                             {renderVersionInfo(appVersion, lastAppAccess)}
+                                            {user.fcmToken && (
+                                                <div className="mt-1 flex items-center text-[9px] font-bold text-green-700 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded shadow-sm max-w-fit">
+                                                    <Bell className="w-2.5 h-2.5 mr-1" /> Push Ready
+                                                </div>
+                                            )}
                                         </td>
                                         <td className="py-3">
                                             {renderVersionInfo(webVersion, lastWebAccess)}

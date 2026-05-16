@@ -166,7 +166,7 @@ export function useAppUpdate() {
                 <div className="fixed inset-0 bg-slate-900 bg-opacity-90 flex flex-col items-center justify-center z-[100000] p-4 backdrop-blur-sm" dir="rtl">
                     <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center space-y-4">
                         <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100">
-                            <Download className="h-8 w-8 text-red-600 animate-bounce"/>
+                            <Download className={`h-8 w-8 text-red-600 ${isDownloadingAppUpdate ? 'animate-pulse' : 'animate-bounce'}`}/>
                         </div>
                         <h3 className="text-xl font-bold text-slate-800">تحديث هام مطلوب</h3>
                         <p className="text-sm text-slate-600 font-medium">
@@ -177,19 +177,47 @@ export function useAppUpdate() {
                                 <strong>ميزات التحديث:</strong><br/>{nativeUpdatePrompt.releaseNotes}
                             </div>
                         )}
-                        <button 
-                            onClick={() => {
-                               downloadAndOpenFile(nativeUpdatePrompt.downloadUrl, `Update_v${nativeUpdatePrompt.versionString}.apk`, {
-    isSystemFile: true, // Uses Cache, skips permission issues
-    onStart: () => setIsDownloading(true),
-    onFinally: () => setIsDownloading(false)
-});
-                            }}
-                            className="w-full justify-center rounded-xl bg-red-600 px-4 py-3 text-base font-bold text-white shadow-sm hover:bg-red-700 transition-colors"
-                        >
-                            تحميل التحديث الآن
-                        </button>
-                        {!nativeUpdatePrompt.mandatory && (
+                        
+                        <div className="w-full pt-2">
+                            <button 
+                                onClick={() => {
+                                    downloadAndOpenFile(nativeUpdatePrompt.downloadUrl, `Update_v${nativeUpdatePrompt.versionString}.apk`, {
+                                        isSystemFile: true, // Uses Cache, skips permission issues
+                                        onStart: () => {
+                                            setIsDownloadingAppUpdate(true);
+                                            setAppUpdateProgress(0);
+                                        },
+                                        onProgress: (pct) => {
+                                            setAppUpdateProgress(pct);
+                                        },
+                                        onFinally: () => {
+                                            setIsDownloadingAppUpdate(false);
+                                        }
+                                    });
+                                }}
+                                disabled={isDownloadingAppUpdate}
+                                className="w-full justify-center rounded-xl bg-red-600 px-4 py-3 text-base font-bold text-white shadow-sm hover:bg-red-700 transition-colors disabled:opacity-75 disabled:cursor-wait"
+                            >
+                                {isDownloadingAppUpdate ? 'جاري التحميل...' : 'تحميل التحديث الآن'}
+                            </button>
+
+                            {/* Show Progress Bar if Active */}
+                            {isDownloadingAppUpdate && (
+                                <div className="mt-4">
+                                    <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                                        <div 
+                                            className="bg-red-600 h-2.5 rounded-full transition-all duration-300" 
+                                            style={{ width: `${Math.max(appUpdateProgress, 3)}%` }}
+                                        ></div>
+                                    </div>
+                                    <p className="text-xs text-slate-500 mt-2 text-center font-mono">
+                                        {Math.round(appUpdateProgress)}%
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        {!nativeUpdatePrompt.mandatory && !isDownloadingAppUpdate && (
                             <button onClick={() => setNativeUpdatePrompt(null)} className="text-sm text-gray-500 hover:text-gray-700 mt-2">
                                 تخطي في الوقت الحالي
                             </button>
@@ -264,4 +292,4 @@ export function useAppUpdate() {
         handleManualUpdateCheck,
         AppUpdateModals
     };
-}downloadAndOpenFile
+}

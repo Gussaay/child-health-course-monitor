@@ -15,7 +15,7 @@ import { Network } from '@capacitor/network';
 // --- CUSTOM HOOKS & UTILS ---
 import { downloadAndOpenFile } from './utils/fileDownloader';
 import { useAppUpdate } from './hooks/useAppUpdate';
-import { usePushNotifications } from './hooks/usePushNotifications'; // <-- NEW IMPORT
+import { usePushNotifications } from './hooks/usePushNotifications'; // <-- EXISTING IMPORT
 
 // --- PRE-FLIGHT LANGUAGE CHECK ---
 if (typeof window !== 'undefined') {
@@ -104,6 +104,7 @@ import { Card, PageHeader, Button, EmptyState, Spinner, Toast, Modal, Input } fr
 import { auth, db } from './firebase';
 import { doc, getDoc, setDoc, waitForPendingWrites } from 'firebase/firestore';
 import { signOut, updateProfile } from 'firebase/auth'; 
+import { getMessaging, onMessage, isSupported } from 'firebase/messaging'; // <-- NEW FIREBASE MESSAGING IMPORTS
 import { useDataCache } from './DataContext';
 import { useAuth } from './hooks/useAuth';
 import { SignInBox } from './auth-ui.jsx';
@@ -572,6 +573,42 @@ export default function App() {
       };
       window.addEventListener('firestoreOperation', handleOperation);
       return () => { window.removeEventListener('firestoreOperation', handleOperation); };
+    }, []);
+
+    // --- FOREGROUND FCM LISTENER ---
+    useEffect(() => {
+        let unsubscribe = null;
+        
+        const setupForegroundListener = async () => {
+             // Basic check to prevent crashes if messaging is not supported in this browser context
+             const supported = await isSupported().catch(() => false);
+             if (!supported) return;
+
+             try {
+                const messaging = getMessaging();
+                unsubscribe = onMessage(messaging, (payload) => {
+                    console.log("Foreground FCM received:", payload);
+                    const title = payload.notification?.title || "New Notification";
+                    const body = payload.notification?.body || "";
+                    
+                    // Display toast for foreground notifications
+                    setToast({
+                        show: true,
+                        message: `${title}: ${body}`,
+                        type: 'info'
+                    });
+                });
+             } catch (error) {
+                 console.warn("Could not set up foreground FCM listener:", error);
+             }
+        };
+
+        setupForegroundListener();
+
+        // Cleanup listener on unmount
+        return () => {
+             if (unsubscribe) unsubscribe();
+        };
     }, []);
 
     useEffect(() => {

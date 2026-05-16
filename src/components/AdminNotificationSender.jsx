@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions'; // <-- NEW IMPORTS FOR FCM
 import { Card, CardHeader, CardBody, Button, Input, FormGroup, Select, Toast, Table } from './CommonComponents';
 import { Trash2, CheckCircle, Clock } from 'lucide-react';
 
@@ -74,6 +75,7 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
 
         setLoading(true);
         try {
+            // 1. Save to Firestore (Preserves your in-app History & Read Receipts UI)
             await addDoc(collection(db, 'notifications'), {
                 title,
                 message,
@@ -83,7 +85,28 @@ export default function AdminNotificationSender({ preselectedUserId = 'all' }) {
                 status: 'active'
             });
 
-            setToast({ message: 'Notification sent successfully!', type: 'success' });
+            // 2. Trigger FCM Push Notification via Cloud Function
+            try {
+                // Initialize functions using your existing db app instance
+                const functions = getFunctions(db.app); 
+                const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
+                
+                const fcmResult = await sendFCMNotification({
+                    targetUserId: targetUser,
+                    title: title,
+                    body: message
+                });
+                
+                if (fcmResult.data.success) {
+                    console.log(`FCM Sent to ${fcmResult.data.successCount} devices.`);
+                }
+            } catch (fcmError) {
+                console.error("FCM Send Error:", fcmError);
+                // Note: We don't fail the whole function here so the in-app notification still works
+                // even if the user hasn't set up their FCM token yet.
+            }
+
+            setToast({ message: 'Notification sent and pushed successfully!', type: 'success' });
             setTitle('');
             setMessage('');
         } catch (error) {
