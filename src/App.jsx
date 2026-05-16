@@ -615,37 +615,48 @@ export default function App() {
         let downloadListenerHandle;
 
         if (Capacitor.isNativePlatform()) {
-            const setupAndCheckUpdates = async () => {
-                
-                // 1. CONFIRM OTA SUCCESS TO CAPGO (PREVENTS ROLLBACK LOOP!)
-                try {
-                    await CapacitorUpdater.notifyAppReady();
-                } catch (e) {
-                    console.warn("notifyAppReady failed", e);
-                }
-
-                // 2. SETUP ANDROID NOTIFICATION CHANNELS (FIXES SILENT NOTIFICATIONS)
+            // HELPER FUNCTION: Safely handle permissions and show the notification
+            const showUpdateNotification = async (title, body, notifId) => {
                 try {
                     let permStatus = await LocalNotifications.checkPermissions();
                     if (permStatus.display !== 'granted') {
                         permStatus = await LocalNotifications.requestPermissions();
                     }
                     
-                    // Create channel explicitly for Android 13+ before scheduling anything
-                    if (permStatus.display === 'granted' && Capacitor.getPlatform() === 'android') {
-                        await LocalNotifications.createChannel({
-                            id: 'updates',
-                            name: 'App Updates',
-                            description: 'Notifications for app updates',
-                            importance: 5,
-                            visibility: 1
+                    if (permStatus.display === 'granted') {
+                        if (Capacitor.getPlatform() === 'android') {
+                            await LocalNotifications.createChannel({
+                                id: 'updates',
+                                name: 'App Updates',
+                                description: 'Notifications for app updates',
+                                importance: 5,
+                                visibility: 1
+                            });
+                        }
+                        
+                        await LocalNotifications.schedule({
+                            notifications: [{
+                                title: title,
+                                body: body,
+                                id: notifId,
+                                channelId: 'updates'
+                            }]
                         });
                     }
                 } catch (err) {
-                    console.warn("Notifications missing or denied. Skipping.", err);
+                    console.warn("Failed to show update notification:", err);
+                }
+            };
+
+            const setupAndCheckUpdates = async () => {
+                // 1. CONFIRM OTA SUCCESS TO CAPGO
+                try {
+                    await CapacitorUpdater.notifyAppReady();
+                } catch (e) {
+                    console.warn("notifyAppReady failed", e);
                 }
 
-                // 3. START BACKGROUND CHECKS
+                // 2. START BACKGROUND CHECKS (Permission check moved down)
                 const status = await Network.getStatus();
                 if (!status.connected) return;
 
@@ -665,17 +676,9 @@ export default function App() {
                             console.log(`Native update required! App: ${currentBuild}, Server: ${serverBuild}`);
                             setNativeUpdatePrompt(serverConfig);
 
-                            try {
-                                await LocalNotifications.schedule({
-                                    notifications: [{
-                                        title: "تحديث جديد للتطبيق",
-                                        body: `يتوفر إصدار جديد (${serverConfig.versionString}). يرجى التحميل الآن.`,
-                                        id: 101,
-                                        channelId: 'updates',
-                                        schedule: { at: new Date(Date.now() + 1000) }
-                                    }]
-                                });
-                            } catch (e) {}
+                            // Safely trigger notification asynchronously
+                            showUpdateNotification("تحديث جديد للتطبيق", `يتوفر إصدار جديد (${serverConfig.versionString}). يرجى التحميل الآن.`, 101);
+                            
                             return; // Stop here if native update is required
                         }
                     }
@@ -704,17 +707,8 @@ export default function App() {
                             setUpdateBundle(downloadedBundle); 
                             setIsUpdateReady(true); // Pops up the "Restart to Apply" modal
 
-                            try {
-                                await LocalNotifications.schedule({
-                                    notifications: [{
-                                        title: "تحديث جاهز!",
-                                        body: "تم تحميل التحديث بنجاح. انقر لإعادة تشغيل التطبيق.",
-                                        id: 102,
-                                        channelId: 'updates',
-                                        schedule: { at: new Date(Date.now() + 1000) }
-                                    }]
-                                });
-                            } catch (e) {}
+                            // Safely trigger notification asynchronously
+                            showUpdateNotification("تحديث جاهز!", "تم تحميل التحديث بنجاح. انقر لإعادة تشغيل التطبيق.", 102);
                         }
                     }
                 } catch (error) { 
