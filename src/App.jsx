@@ -2,25 +2,20 @@
 import './i18n'; 
 import React, { useEffect, useMemo, useState, useRef, lazy, Suspense, useCallback } from "react";
 import { useTranslation } from 'react-i18next'; 
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-import { Bar, Pie, Line } from 'react-chartjs-2';
+
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, LineElement, PointElement } from 'chart.js';
 
 import {
-    Home, Book, Users, User, Hospital, Database, ClipboardCheck, ClipboardList, FolderKanban, TrendingUp, X, WifiOff, RefreshCw, Activity, Layers, Globe, LogOut, Info, Download, HardDrive
+    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, WifiOff, RefreshCw, Activity, Layers, LogOut, Info, HardDrive
 } from 'lucide-react';
 
-import { CapacitorUpdater } from '@capgo/capacitor-updater';
-import { Capacitor, CapacitorHttp } from '@capacitor/core';
+import { Capacitor } from '@capacitor/core';
 import { Network } from '@capacitor/network';
-import { App as CapacitorApp } from '@capacitor/app';
-import { Browser } from '@capacitor/browser';
-import { LocalNotifications } from '@capacitor/local-notifications';
 
-// --- IMPORTS FOR GENERIC DOWNLOAD MANAGER ---
-import { Filesystem, Directory } from '@capacitor/filesystem';
-import { FileOpener } from '@capacitor-community/file-opener';
+// --- CUSTOM HOOKS & UTILS ---
+import { downloadAndOpenFile } from './utils/fileDownloader';
+import { useAppUpdate } from './hooks/useAppUpdate';
+import { usePushNotifications } from './hooks/usePushNotifications'; // <-- NEW IMPORT
 
 // --- PRE-FLIGHT LANGUAGE CHECK ---
 if (typeof window !== 'undefined') {
@@ -83,7 +78,6 @@ const DownloadedFilesView = lazy(() => import('./components/DownloadedFilesView.
 
 // --- PERMISSIONS IMPORT ---
 import { 
-    ALL_PERMISSIONS, 
     ALL_PERMISSION_KEYS, 
     DEFAULT_ROLE_PERMISSIONS, 
     applyDerivedPermissions 
@@ -106,7 +100,7 @@ import {
     upsertUnitMeeting
 } from './data.js';
 import { STATE_LOCALITIES } from './components/constants.js';
-import { Card, PageHeader, Button, Table, EmptyState, Spinner, PdfIcon, CourseIcon, Footer, Toast, Modal, Input } from './components/CommonComponents';
+import { Card, PageHeader, Button, EmptyState, Spinner, Toast, Modal, Input } from './components/CommonComponents';
 import { auth, db } from './firebase';
 import { doc, getDoc, setDoc, waitForPendingWrites } from 'firebase/firestore';
 import { signOut, updateProfile } from 'firebase/auth'; 
@@ -386,15 +380,20 @@ function SplashScreen() {
 export default function App() {
     const { t, i18n } = useTranslation();
     
-    const [appVersion, setAppVersion] = useState(import.meta.env.VITE_APP_VERSION || window.APP_VERSION || '1.0.2');
-    
-    const [isUpdateReady, setIsUpdateReady] = useState(false);
-    const [updateBundle, setUpdateBundle] = useState(null);
-    const [isDownloadingUpdate, setIsDownloadingUpdate] = useState(false);
-    const [updateProgress, setUpdateProgress] = useState(0);
+    // --- CUSTOM HOOKS ---
+    const { 
+        appVersion, 
+        isDownloadingAppUpdate, 
+        appUpdateProgress, 
+        handleManualUpdateCheck, 
+        AppUpdateModals 
+    } = useAppUpdate();
 
-    const [nativeUpdatePrompt, setNativeUpdatePrompt] = useState(null);
-    const [manualUpdateModal, setManualUpdateModal] = useState({ isOpen: false, status: 'idle', message: '' });
+    usePushNotifications(); // <-- INITIALIZE PUSH NOTIFICATIONS
+
+    // Generic Download State (for PDFs, Excel, etc.)
+    const [isFileDownloading, setIsFileDownloading] = useState(false);
+    const [fileDownloadProgress, setFileDownloadProgress] = useState(0);
 
     const [isOffline, setIsOffline] = useState(!navigator.onLine);
     const [isSyncing, setIsSyncing] = useState(false);
@@ -548,271 +547,21 @@ export default function App() {
     const initialViewIsSet = useRef(false);
 
     // =========================================================================
-    // --- GENERIC IN-APP DOWNLOAD & OPEN MANAGER (FIXED MEMORY CRASH) ---
+    // --- WRAPPER FOR GENERIC IN-APP DOWNLOAD & OPEN MANAGER ---
     // =========================================================================
-    const handleFileDownloadAndOpen = async (url, customFileName = null) => {
-        if (!Capacitor.isNativePlatform()) {
-            window.open(url, '_blank');
-            return;
-        }
-
-        setIsDownloadingUpdate(true); 
-        setUpdateProgress(0);
-
-        try {
-            const fileName = customFileName || url.substring(url.lastIndexOf('/') + 1) || 'downloaded_file.apk';
-            
-            let mimeType = 'application/vnd.android.package-archive';
-            const lowerName = fileName.toLowerCase();
-            if (lowerName.endsWith('.pdf')) mimeType = 'application/pdf';
-            else if (lowerName.endsWith('.xlsx')) mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-            else if (lowerName.endsWith('.png')) mimeType = 'image/png';
-            else if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) mimeType = 'image/jpeg';
-
-            try {
-                await Filesystem.mkdir({ path: 'downloads', directory: Directory.Data, recursive: true });
-            } catch (e) {
-                // Ignore if it already exists
-            }
-
-            const filePath = `downloads/${fileName}`;
-
-            // --- USE NATIVE BACKGROUND DOWNLOADER ---
-            // Bypasses the webview memory limits completely, fixing the Base64/Fetch Crash!
-            await CapacitorHttp.downloadFile({
-                url: url,
-                filePath: filePath,
-                fileDirectory: Directory.Data 
-            });
-
-            // Get the absolute device URI for the newly downloaded file
-            const { uri } = await Filesystem.getUri({
-                path: filePath,
-                directory: Directory.Data
-            });
-
-            setToast({ show: true, message: 'Download complete. Opening...', type: 'success' });
-
-            // Trigger the native OS "Open With" / Installer intent
-            await FileOpener.open({
-                filePath: uri,
-                contentType: mimeType,
-                openWithDefault: true
-            });
-
-        } catch (error) {
-            console.error("Full Download Error:", error);
-            alert(`NATIVE ERROR: ${error.message || JSON.stringify(error)}`);
-            setToast({ show: true, message: `Failed to open automatically. Check App Files & Downloads.`, type: 'error' });
-        } finally {
-            setIsDownloadingUpdate(false);
-            setUpdateProgress(0);
-        }
-    };
-
-    // --- DECOUPLED & ARMOR-PLATED UPDATE SCRIPT ---
-    useEffect(() => {
-        let downloadListenerHandle;
-
-        if (Capacitor.isNativePlatform()) {
-            // HELPER FUNCTION: Safely handle permissions and show the notification
-            const showUpdateNotification = async (title, body, notifId) => {
-                try {
-                    let permStatus = await LocalNotifications.checkPermissions();
-                    if (permStatus.display !== 'granted') {
-                        permStatus = await LocalNotifications.requestPermissions();
-                    }
-                    
-                    if (permStatus.display === 'granted') {
-                        if (Capacitor.getPlatform() === 'android') {
-                            await LocalNotifications.createChannel({
-                                id: 'updates',
-                                name: 'App Updates',
-                                description: 'Notifications for app updates',
-                                importance: 5,
-                                visibility: 1
-                            });
-                        }
-                        
-                        await LocalNotifications.schedule({
-                            notifications: [{
-                                title: title,
-                                body: body,
-                                id: notifId,
-                                channelId: 'updates'
-                            }]
-                        });
-                    }
-                } catch (err) {
-                    console.warn("Failed to show update notification:", err);
-                }
-            };
-
-            const setupAndCheckUpdates = async () => {
-                // 1. CONFIRM OTA SUCCESS TO CAPGO
-                try {
-                    await CapacitorUpdater.notifyAppReady();
-                } catch (e) {
-                    console.warn("notifyAppReady failed", e);
-                }
-
-                // 2. START BACKGROUND CHECKS (Permission check moved down)
-                const status = await Network.getStatus();
-                if (!status.connected) return;
-
-                // --- NATIVE CHECK (FIRESTORE) ---
-                try {
-                    const updateDocRef = doc(db, "meta", "update_config");
-                    const updateSnap = await getDoc(updateDocRef);
-
-                    if (updateSnap.exists()) {
-                        const serverConfig = updateSnap.data();
-                        const appInfo = await CapacitorApp.getInfo();
-                        
-                        const currentBuild = parseInt(appInfo.build, 10) || 1;
-                        const serverBuild = parseInt(serverConfig.latestNativeBuild, 10);
-
-                        if (serverBuild > currentBuild) {
-                            console.log(`Native update required! App: ${currentBuild}, Server: ${serverBuild}`);
-                            setNativeUpdatePrompt(serverConfig);
-
-                            // Safely trigger notification asynchronously
-                            showUpdateNotification("تحديث جديد للتطبيق", `يتوفر إصدار جديد (${serverConfig.versionString}). يرجى التحميل الآن.`, 101);
-                            
-                            return; // Stop here if native update is required
-                        }
-                    }
-                } catch (e) {
-                    console.warn("Native update check failed safely:", e);
-                }
-
-                // --- CAPGO OTA WEB CHECK (SILENT BACKGROUND) ---
-                try {
-                    const currentState = await CapacitorUpdater.current();
-                    const currentVersion = currentState.bundle?.version || import.meta.env.VITE_APP_VERSION || "builtin";
-                    
-                    setAppVersion(currentVersion); // Update UI version immediately
-
-                    // Standard fetch with cache busting to prevent old versions from sticking
-                    const response = await fetch('https://imnci-courses-monitor.web.app/latest/update.json?t=' + Date.now(), { cache: "no-store" });
-
-                    if (response.ok) {
-                        const latestUpdate = await response.json();
-
-                        if (currentVersion !== latestUpdate.version) {
-                            console.log(`Downloading Capgo bundle ${latestUpdate.version}...`);
-                            
-                            // Download SILENTLY in the background without blocking the UI
-                            const downloadedBundle = await CapacitorUpdater.download({ url: latestUpdate.url, version: latestUpdate.version });
-                            setUpdateBundle(downloadedBundle); 
-                            setIsUpdateReady(true); // Pops up the "Restart to Apply" modal
-
-                            // Safely trigger notification asynchronously
-                            showUpdateNotification("تحديث جاهز!", "تم تحميل التحديث بنجاح. انقر لإعادة تشغيل التطبيق.", 102);
-                        }
-                    }
-                } catch (error) { 
-                    console.warn("Capgo check failed safely:", error); 
-                }
-            };
-            
-            // Wait a few seconds for app to fully boot before checking
-            setTimeout(setupAndCheckUpdates, 5000); 
-
-            // REGISTER PROGRESS LISTENER
-            CapacitorUpdater.addListener('download', (info) => {
-                setUpdateProgress(info.percent); 
-            }).then(handle => {
-                downloadListenerHandle = handle;
-            }).catch(e => console.warn("Failed to bind Capgo listener", e));
-        }
-
-        return () => {
-            if (downloadListenerHandle) downloadListenerHandle.remove();
-        };
-    }, []);
-
-    // =========================================================================
-    // --- MANUAL UPDATE CHECKER ---
-    // =========================================================================
-    const handleManualUpdateCheck = async () => {
-        setManualUpdateModal({ isOpen: true, status: 'checking', message: 'Checking for updates...' });
-
-        if (!Capacitor.isNativePlatform()) {
-            setManualUpdateModal({ isOpen: true, status: 'info', message: 'Web version is always up to date on refresh.' });
-            return;
-        }
-
-        try {
-            const status = await Network.getStatus();
-            if (!status.connected) {
-                setManualUpdateModal({ isOpen: true, status: 'error', message: 'You are offline. Cannot check for updates.' });
-                return;
-            }
-
-            let nativeUpdateFound = false;
-
-            try {
-                const updateDocRef = doc(db, "meta", "update_config");
-                const updateSnap = await getDoc(updateDocRef);
-
-                if (updateSnap.exists()) {
-                    const serverConfig = updateSnap.data();
-                    const appInfo = await CapacitorApp.getInfo();
-                    const currentBuild = parseInt(appInfo.build, 10) || 1;
-                    const serverBuild = parseInt(serverConfig.latestNativeBuild, 10);
-                    
-                    if (serverBuild > currentBuild) {
-                        setManualUpdateModal({ isOpen: false, status: 'idle', message: '' }); 
-                        setNativeUpdatePrompt(serverConfig); 
-                        nativeUpdateFound = true;
-                        return; 
-                    }
-                }
-            } catch (fsError) {
-                console.warn("Firestore native check skipped due to error:", fsError);
-            }
-
-            try {
-                const response = await fetch('https://imnci-courses-monitor.web.app/latest/update.json?t=' + Date.now(), { cache: "no-store" });
-
-                if (!response.ok) {
-                    throw new Error(`Server returned ${response.status}`);
-                }
-
-                const latestUpdate = await response.json();
-                const currentState = await CapacitorUpdater.current();
-                const currentVersion = currentState.bundle?.version || "builtin";
-
-                if (currentVersion !== latestUpdate.version) {
-                    setManualUpdateModal({ isOpen: false, status: 'idle', message: '' });
-                    setIsDownloadingUpdate(true);
-                    setUpdateProgress(0);
-                    
-                    const downloadedBundle = await CapacitorUpdater.download({ url: latestUpdate.url, version: latestUpdate.version });
-                    setUpdateBundle(downloadedBundle); 
-                    setIsUpdateReady(true);
-                } else if (!nativeUpdateFound) {
-                    setManualUpdateModal({ 
-                        isOpen: true, 
-                        status: 'success', 
-                        message: `App is already up to date! (Version: ${currentVersion})` 
-                    });
-                }
-            } catch (fetchError) {
-                 throw new Error(`Network request failed: ${fetchError.message}`);
-            }
-
-        } catch (error) {
-            console.error("Manual update check failed:", error);
-            setManualUpdateModal({ isOpen: true, status: 'error', message: `${error.message || 'Unknown error occurred.'}` });
-        } finally {
-            setIsDownloadingUpdate(false);
-        }
+    const handleFileDownloadAndOpen = (url, customFileName = null) => {
+        downloadAndOpenFile(url, customFileName, {
+            onStart: () => { setIsFileDownloading(true); setFileDownloadProgress(0); },
+            onSuccess: () => setToast({ show: true, message: 'Download complete. Opening...', type: 'success' }),
+            onError: (error) => {
+                alert(`NATIVE ERROR: ${error.message || JSON.stringify(error)}`);
+                setToast({ show: true, message: `Failed to open automatically.`, type: 'error' });
+            },
+            onFinally: () => { setIsFileDownloading(false); setFileDownloadProgress(0); }
+        });
     };
     // =========================================================================
 
-    
     useEffect(() => { if (!authLoading && user) initializeUsageTracking(); }, [authLoading, user]);
 
     useEffect(() => {
@@ -1229,30 +978,20 @@ export default function App() {
         if (!allCourses) return [];
         const locPerm = permissions.manageLocation;
 
-        // Strict Location Permission Enforcement
         if (locPerm === 'user_state' || locPerm === 'user_locality') {
             let filtered = allCourses;
-
-            // Restrict by State
             if (userStates && userStates.length > 0) {
                 const userStateSet = new Set(userStates);
                 filtered = filtered.filter(c => userStateSet.has(c.state));
-            } else {
-                return []; // Block access if they should be restricted but have no state assigned
-            }
+            } else { return []; }
 
-            // Further restrict by Locality
             if (locPerm === 'user_locality') {
                 if (userLocalities && userLocalities.length > 0) {
                     filtered = filtered.filter(c => userLocalities.includes(c.locality));
-                } else {
-                    return []; // Block access if they should be restricted but have no locality assigned
-                }
+                } else { return []; }
             }
             return filtered;
         }
-
-        // Default: federal, empty, none -> sees everything
         return allCourses;
     }, [allCourses, userStates, userLocalities, permissions.manageLocation]);
 
@@ -1262,24 +1001,18 @@ export default function App() {
 
         if (locPerm === 'user_state' || locPerm === 'user_locality') {
             let filtered = allFacilitators;
-
             if (userStates && userStates.length > 0) {
                 const userStateSet = new Set(userStates);
                 filtered = filtered.filter(f => userStateSet.has(f.currentState));
-            } else {
-                return [];
-            }
+            } else { return []; }
 
             if (locPerm === 'user_locality') {
                 if (userLocalities && userLocalities.length > 0) {
                     filtered = filtered.filter(f => userLocalities.includes(f.currentLocality));
-                } else {
-                    return [];
-                }
+                } else { return []; }
             }
             return filtered;
         }
-
         return allFacilitators;
     }, [allFacilitators, userStates, userLocalities, permissions.manageLocation]);
 
@@ -1926,20 +1659,19 @@ export default function App() {
                         <RefreshCw className="w-5 h-5 animate-spin" /> {t('app.syncing', 'Syncing offline data to the cloud...')}
                     </div>
                 )}
-                {isDownloadingUpdate && (
+                {(isFileDownloading || isDownloadingAppUpdate) && (
                     <div className="bg-sky-700 text-white text-center py-2 px-4 text-sm font-bold flex justify-center items-center gap-2 shadow-md relative overflow-hidden">
-                        {/* Dynamic Progress Bar Background */}
                         <div 
                             className="absolute top-0 left-0 h-full bg-sky-500 z-0 transition-all duration-300" 
-                            style={{ width: `${updateProgress}%` }}
+                            style={{ width: `${isFileDownloading ? fileDownloadProgress : appUpdateProgress}%` }}
                         ></div>
                         <RefreshCw className="w-4 h-4 animate-spin z-10" /> 
-                        <span className="z-10">{t('app.downloading_update', 'Downloading update...')} {Math.round(updateProgress)}%</span>
+                        <span className="z-10">{t('app.downloading', 'Downloading...')} {Math.round(isFileDownloading ? fileDownloadProgress : appUpdateProgress)}%</span>
                     </div>
                 )}
             </div>
 
-            <header className={`bg-slate-800 shadow-lg sticky z-40 transition-all ${isOffline || isSyncing || isDownloadingUpdate ? 'top-10' : 'top-0'}`}>
+            <header className={`bg-slate-800 shadow-lg sticky z-40 transition-all ${isOffline || isSyncing || (isFileDownloading || isDownloadingAppUpdate) ? 'top-10' : 'top-0'}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4 cursor-pointer" onClick={() => !isSharedView && navigate('landing')}>
@@ -2129,7 +1861,6 @@ export default function App() {
                                     <span className="block text-xs text-gray-500 uppercase font-bold mb-3">Roles & Designations</span>
                                     <div className="flex flex-col gap-2">
                                         
-                                        {/* Updated to show multiple roles here too */}
                                         <div className="flex flex-col gap-2 bg-sky-50 p-2.5 rounded border border-sky-100">
                                             <span className="text-sm font-medium text-sky-800">System Access Levels</span>
                                             <div className="flex flex-wrap gap-1.5">
@@ -2205,101 +1936,8 @@ export default function App() {
                 <ResourceMonitor counts={operationCounts} onReset={handleResetMonitor} onDismiss={handleDismissMonitor} />
             )}
 
-            {/* --- NATIVE DIRECT DOWNLOAD MODAL --- */}
-            {nativeUpdatePrompt && (
-                <div className="fixed inset-0 bg-slate-900 bg-opacity-90 flex flex-col items-center justify-center z-[100000] p-4 backdrop-blur-sm" dir="rtl">
-                    <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center space-y-4">
-                        <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100">
-                            <Download className="h-8 w-8 text-red-600 animate-bounce"/>
-                        </div>
-                        <h3 className="text-xl font-bold text-slate-800">تحديث هام مطلوب</h3>
-                        <p className="text-sm text-slate-600 font-medium">
-                            يتوفر إصدار جديد من التطبيق ({nativeUpdatePrompt.versionString}). يجب عليك تحميل هذا التحديث للاستمرار في استخدام التطبيق.
-                        </p>
-                        {nativeUpdatePrompt.releaseNotes && (
-                            <div className="bg-gray-50 p-3 rounded-lg text-xs text-gray-700 text-right border border-gray-200">
-                                <strong>ميزات التحديث:</strong><br/>
-                                {nativeUpdatePrompt.releaseNotes}
-                            </div>
-                        )}
-                        <button 
-                            onClick={() => {
-                                handleFileDownloadAndOpen(
-                                    nativeUpdatePrompt.downloadUrl, 
-                                    `National Child Health Program APP v${nativeUpdatePrompt.versionString}.apk`
-                                );
-                            }}
-                            className="w-full justify-center rounded-xl bg-red-600 px-4 py-3 text-base font-bold text-white shadow-sm hover:bg-red-700 transition-colors"
-                        >
-                            تحميل التحديث الآن
-                        </button>
-                        {!nativeUpdatePrompt.mandatory && (
-                            <button onClick={() => setNativeUpdatePrompt(null)} className="text-sm text-gray-500 hover:text-gray-700 mt-2">
-                                تخطي في الوقت الحالي
-                            </button>
-                        )}
-                    </div>
-                </div>
-            )}
+            <AppUpdateModals />
 
-           {/* --- CAPGO OTA UPDATE READY MODAL --- */}
-           {isUpdateReady && updateBundle && !nativeUpdatePrompt && (
-                <div className="fixed inset-0 bg-slate-900 bg-opacity-80 flex flex-col items-center justify-center z-[100000] p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full text-center space-y-4">
-                        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-sky-100">
-                            <RefreshCw className="h-6 w-6 text-sky-600 animate-spin"/>
-                        </div>
-                        <h3 className="text-xl font-bold text-slate-800">Update Ready!</h3>
-                        <p className="text-sm text-slate-500">
-                            A new version of the app has been downloaded in the background. You must restart the app to apply the update and continue.
-                        </p>
-                        <button 
-                            onClick={async () => {
-                                try { await CapacitorUpdater.set({ id: updateBundle.id }); } catch (e) { console.error("Failed to apply update", e); }
-                            }}
-                            className="w-full inline-flex justify-center rounded-md border border-transparent bg-sky-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 sm:text-sm"
-                        >
-                            Restart & Update Now
-                        </button>
-                    </div>
-                </div>
-            )}
-
-           {/* --- MANUAL UPDATE CHECK MODAL --- */}
-           {manualUpdateModal.isOpen && (
-                <div className="fixed inset-0 bg-slate-900 bg-opacity-80 flex flex-col items-center justify-center z-[100000] p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full text-center space-y-4">
-                        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-slate-100">
-                            {manualUpdateModal.status === 'checking' || manualUpdateModal.status === 'downloading' ? (
-                                <RefreshCw className="h-6 w-6 text-sky-600 animate-spin"/>
-                            ) : manualUpdateModal.status === 'success' ? (
-                                <ClipboardCheck className="h-6 w-6 text-green-600" />
-                            ) : manualUpdateModal.status === 'error' ? (
-                                <X className="h-6 w-6 text-red-600" />
-                            ) : (
-                                <Info className="h-6 w-6 text-sky-600" />
-                            )}
-                        </div>
-                        <h3 className="text-xl font-bold text-slate-800">
-                            {manualUpdateModal.status === 'checking' ? 'Checking for Updates' :
-                             manualUpdateModal.status === 'downloading' ? 'Downloading Update' :
-                             manualUpdateModal.status === 'success' ? 'Up to Date' :
-                             manualUpdateModal.status === 'error' ? 'Update Error' : 'Information'}
-                        </h3>
-                        <p className="text-sm text-slate-500">
-                            {manualUpdateModal.message}
-                        </p>
-                        {(manualUpdateModal.status === 'success' || manualUpdateModal.status === 'error' || manualUpdateModal.status === 'info') && (
-                            <button 
-                                onClick={() => setManualUpdateModal({ isOpen: false, status: 'idle', message: '' })}
-                                className="w-full mt-2 inline-flex justify-center rounded-md border border-transparent bg-slate-800 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 sm:text-sm"
-                            >
-                                Close
-                            </button>
-                        )}
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

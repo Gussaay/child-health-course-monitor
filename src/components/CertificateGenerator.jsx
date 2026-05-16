@@ -374,36 +374,46 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
 // GENERATION FUNCTIONS
 // -----------------------------------------------------------------------------
 
-// 🟢 NEW: Native Mobile Save Function Helper
+// 🟢 NEW: Native Mobile Save Function Helper (Fixed specific for local base64 PDFs)
 export const saveAndOpenPdf = async (doc, fileName) => {
     if (Capacitor.isNativePlatform()) {
         try {
+            // Because certificates are generated locally on-the-fly via jsPDF (not downloaded via URL),
+            // we write the Base64 data directly to the device's Documents folder.
             const base64Data = doc.output('datauristring').split('base64,')[1];
             const folderPath = 'downloads';
             const filePath = `${folderPath}/${fileName}`;
 
             try {
+                // Ensure Directory exists in Documents (Visible to OS File Manager)
                 await Filesystem.mkdir({ 
                     path: folderPath, 
-                    directory: Directory.Data, 
+                    directory: Directory.Documents, 
                     recursive: true 
                 });
             } catch (e) {
                 // Ignore error if directory exists
             }
 
+            // Write File to OS Documents folder
             const writeResult = await Filesystem.writeFile({ 
                 path: filePath, 
                 data: base64Data, 
-                directory: Directory.Data,
+                directory: Directory.Documents,
                 recursive: true
             });
 
-            await FileOpener.open({ 
-                filePath: writeResult.uri, 
-                contentType: 'application/pdf',
-                openWithDefault: true 
-            });
+            // Robust File Opener Logic (No openWithDefault flag)
+            try {
+                await FileOpener.open({ 
+                    filePath: writeResult.uri, 
+                    contentType: 'application/pdf'
+                });
+            } catch (openError) {
+                console.error("FileOpener Error:", openError);
+                alert("Certificate saved to your Documents/downloads folder, but no PDF viewer was found on your device to open it automatically.");
+            }
+
         } catch (err) {
             console.error("Native export error:", err);
             throw new Error(`Failed to process PDF natively: ${err.message}`);

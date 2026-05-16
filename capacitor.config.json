@@ -8,10 +8,10 @@
   },
   "plugins": {
     "SplashScreen": {
-      "launchShowDuration": 2000,
+      "launchShowDuration": 1000,
       "launchAutoHide": true
     },
-    "Assets": {
+   "Assets": {
       "icon": {
         "path": "public/child.png"
       },
@@ -21,6 +21,9 @@
     },
     "CapacitorUpdater": {
       "autoUpdate": false
+    },
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
     }
   }
 }
