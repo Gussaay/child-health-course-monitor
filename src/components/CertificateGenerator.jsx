@@ -973,4 +973,3 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
         </>
     );
 };
-}
