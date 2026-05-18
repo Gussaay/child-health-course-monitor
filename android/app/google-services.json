@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "928082473485-12vvvk6gvs35bjsdr7ttivl78a3cbo1q.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.nchp.monitoring.app",
+            "certificate_hash": "dd6dfa24f6e4ad569a77e25f158406f2c873deb2"
+          }
+        },
+        {
           "client_id": "928082473485-a7uqhcn91rltu2iraiof5pkga5mg2vfu.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
