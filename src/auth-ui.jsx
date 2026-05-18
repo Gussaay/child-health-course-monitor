@@ -282,10 +282,16 @@ export function SignInBox() {
       // --- BRANCH 1: NATIVE APK / iOS ---
       if (isNative) {
         await ensureSocialLoginInit();
-        const result = await SocialLogin.login({ provider: "google" });
+        const response = await SocialLogin.login({ 
+            provider: "google",
+            options: {
+                scopes: ['email', 'profile']
+            }
+        });
         
-        const idToken = result?.result?.idToken || result?.authentication?.idToken;
-        if (!idToken) throw new Error("Native Google login failed.");
+        // Safely extract the token based on the plugin's response structure
+        const idToken = response?.result?.idToken || response?.idToken || response?.authentication?.idToken;
+        if (!idToken) throw new Error("Native Google login failed. No Token Returned.");
         
         const cred = GoogleAuthProvider.credential(idToken);
         const userCredential = await signInWithCredential(auth, cred);
@@ -340,7 +346,9 @@ export function SignInBox() {
       setError(err.message);
       console.error("Google Auth Error:", err);
       setIsMissingName(false); 
-      setIsLoading(false); 
+    } finally {
+      // Ensure we clear loading status if we get stuck or throw an error
+      setIsLoading(false);
     }
   };
 

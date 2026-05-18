@@ -50,9 +50,18 @@ export function usePushNotifications() {
                         return;
                     }
 
-                    console.log('[FCM Native] Registering for push notifications...');
-                    await PushNotifications.register();
+                    // For Android 8+ Heads Up Notifications
+                    if (platform === 'android') {
+                        await PushNotifications.createChannel({
+                            id: 'default',
+                            name: 'Default Notifications',
+                            description: 'General app notifications',
+                            importance: 5, 
+                            visibility: 1
+                        });
+                    }
 
+                    // ⚠️ CRITICAL FIX: Listeners MUST be attached BEFORE calling register() ⚠️
                     PushNotifications.addListener('registration', (token) => {
                         console.log('[FCM Native] ✅ Push registration success, token: ' + token.value);
                         saveTokenToFirestore(token.value);
@@ -71,6 +80,10 @@ export function usePushNotifications() {
                         console.log('[FCM Native] Push action performed: ', action);
                     });
 
+                    // Call register LAST so the listener above catches the event
+                    console.log('[FCM Native] Registering for push notifications...');
+                    await PushNotifications.register();
+
                 } catch (error) {
                     console.error("[FCM Native] ❌ Failed to setup Native Push Notifications:", error);
                 }
@@ -87,11 +100,10 @@ export function usePushNotifications() {
                         const messaging = getMessaging();
                         console.log('[FCM Web] Getting token...');
                         
-                        // IMPORTANT: Replace with your actual VAPID key
                         const vapidKey = 'BEmmrhr6OeXSRrTHtIjApXDF9MTeca5juJ5pblMFyGu7N4vCQk_qQ0SFVA2OA4arm7TvobGETRuu173tYsJb0BY';
                         
                         if (vapidKey === 'YOUR_PUBLIC_VAPID_KEY_HERE') {
-                             console.error('[FCM Web] ❌ VAPID KEY IS MISSING. You must replace YOUR_PUBLIC_VAPID_KEY_HERE with your key from the Firebase Console.');
+                             console.error('[FCM Web] ❌ VAPID KEY IS MISSING.');
                              return;
                         }
 

@@ -1,5 +1,5 @@
 // src/components/NotificationBell.jsx
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { db } from '../firebase';
 import { collection, query, where, onSnapshot, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { Bell, Trash2 } from 'lucide-react';
@@ -9,6 +9,9 @@ export default function NotificationBell({ user }) {
     const [notifications, setNotifications] = useState([]);
     const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
     const [toast, setToast] = useState(null);
+    
+    // ⚠️ CRITICAL FIX: Track initial load to prevent toast flooding, ignoring device clocks
+    const initialLoadRef = useRef(true);
 
     useEffect(() => {
         if (!user) return;
@@ -24,16 +27,22 @@ export default function NotificationBell({ user }) {
             snapshot.forEach(doc => {
                 notifs.push({ id: doc.id, ...doc.data() });
             });
-            // Sort newest first
+            // Sort newest first safely
             notifs.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
             setNotifications(notifs);
 
+            // If this is the very first time we fetch data on app open, don't show toasts
+            if (initialLoadRef.current) {
+                initialLoadRef.current = false;
+                return; 
+            }
+
+            // Only show toasts for NEW incoming messages while the app is active
             snapshot.docChanges().forEach((change) => {
                 if (change.type === "added") {
                     const data = change.doc.data();
-                    const isNew = data.createdAt && (Date.now() - data.createdAt.toMillis() < 60000); 
                     
-                    if (isNew && !(data.readBy || []).includes(user.uid)) {
+                    if (!(data.readBy || []).includes(user.uid)) {
                         setToast({ 
                             show: true, 
                             message: `🔔 ${data.title}`, 
