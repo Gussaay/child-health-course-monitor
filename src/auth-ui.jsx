@@ -282,11 +282,9 @@ export function SignInBox() {
       // --- BRANCH 1: NATIVE APK / iOS ---
       if (isNative) {
         await ensureSocialLoginInit();
+        // REMOVED: options: { scopes: ['email', 'profile'] }
         const response = await SocialLogin.login({ 
-            provider: "google",
-            options: {
-                scopes: ['email', 'profile']
-            }
+            provider: "google"
         });
         
         // Safely extract the token based on the plugin's response structure
