@@ -838,10 +838,12 @@ export default function App() {
         }
     }, [user, permissionsLoading]);
 
-    // THE NATIVE-SAFE ROLE SYNC (MIRRORS THE OLD useAuth.js BEHAVIOR)
+    // =========================================================================
+    // THE NATIVE-SAFE ROLE SYNC (WITH BRIDGE DELAY SIMULATION)
+    // =========================================================================
     useEffect(() => {
         let isMounted = true;
-
+        
         const checkUserRoleAndPermissions = async () => {
             if (!user) {
                 setUserRole(null); setUserRoles([]); setUserPermissions({});
@@ -852,23 +854,40 @@ export default function App() {
 
             setPermissionsLoading(true);
 
+            // 1. Instantly load from local backups so the UI doesn't flicker
+            const backupRole = localStorage.getItem(`backup_role_${user.uid}`);
+            if (backupRole) {
+                setUserRole(backupRole);
+                setUserRoles(JSON.parse(localStorage.getItem(`backup_roles_${user.uid}`) || `["${backupRole}"]`));
+                setUserPermissions(JSON.parse(localStorage.getItem(`backup_perms_${user.uid}`) || "{}"));
+                setUserStates(JSON.parse(localStorage.getItem(`backup_states_${user.uid}`) || "[]"));
+                setUserLocalities(JSON.parse(localStorage.getItem(`backup_localities_${user.uid}`) || "[]"));
+            }
+
+            // 2. CRITICAL FIX: The Native Auth Delay Simulation.
+            // Give the Capacitor native bridge 1.5 seconds to sync the Google Auth token 
+            // with the Firestore SDK before we attempt to read the user doc. This is the exact 
+            // natural delay that made your "old working app" successfully bypass the offline bug!
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            if (!isMounted) return;
+
             try {
                 const userRef = doc(db, "users", user.uid);
-                
-                // CRITICAL NATIVE FIX: 
-                // Do NOT use Capacitor Network.getStatus() here, as it can falsely report offline 
-                // on Android startup, forcing a stale cache read and locking the user into the 'User' role.
-                // We use standard getDoc() to force a server fetch if online, waiting for the native auth bridge.
                 let userSnap;
+                
+                // Mirroring the exact network logic from your old working code.
                 try {
-                    userSnap = await getDoc(userRef); 
+                    const status = await Network.getStatus();
+                    const sourceOptions = status.connected ? {} : { source: 'cache' };
+                    userSnap = await getDoc(userRef, sourceOptions);
                 } catch (e) {
                     userSnap = await getDoc(userRef, { source: 'cache' });
                 }
 
                 if (!isMounted) return;
 
-                if (userSnap.exists()) {
+                if (userSnap && userSnap.exists()) {
                     const data = userSnap.data();
                     
                     const rawRole = data.role || data.Role || (data.roles && data.roles[0]) || 'user';
@@ -881,29 +900,31 @@ export default function App() {
                     const newStates = data.assignedState ? [data.assignedState] : [];
                     const newLocalities = data.assignedLocality ? [data.assignedLocality] : [];
 
-                    // Overwrite local backups with truth from database
-                    localStorage.setItem(`backup_role_${user.uid}`, newRole);
-                    localStorage.setItem(`backup_roles_${user.uid}`, JSON.stringify(newRoles));
-                    localStorage.setItem(`backup_perms_${user.uid}`, JSON.stringify(newPermissionsData));
-                    localStorage.setItem(`backup_states_${user.uid}`, JSON.stringify(newStates));
-                    localStorage.setItem(`backup_localities_${user.uid}`, JSON.stringify(newLocalities));
+                    // CRITICAL FIX: Only overwrite local backups if we pulled fresh data from the SERVER.
+                    // This prevents the offline cache from permanently breaking your 'Super User' status.
+                    if (!userSnap.metadata?.fromCache) {
+                        localStorage.setItem(`backup_role_${user.uid}`, newRole);
+                        localStorage.setItem(`backup_roles_${user.uid}`, JSON.stringify(newRoles));
+                        localStorage.setItem(`backup_perms_${user.uid}`, JSON.stringify(newPermissionsData));
+                        localStorage.setItem(`backup_states_${user.uid}`, JSON.stringify(newStates));
+                        localStorage.setItem(`backup_localities_${user.uid}`, JSON.stringify(newLocalities));
+                    }
 
                     setUserRole(newRole);
                     setUserRoles(newRoles);
                     setUserPermissions(newPermissionsData);
                     setUserStates(newStates);
                     setUserLocalities(newLocalities);
-                } else {
-                    // Document doesn't exist - Brand new user
-                    const defaultRole = 'user';
-                    const defaultRoles = ['user'];
-                    const defaultPerms = applyDerivedPermissions(DEFAULT_ROLE_PERMISSIONS.user);
+                } else if (userSnap && !userSnap.exists()) {
+                    const status = await Network.getStatus();
+                    if (status.connected) {
+                        const defaultRole = 'user';
+                        const defaultRoles = ['user'];
+                        const defaultPerms = applyDerivedPermissions(DEFAULT_ROLE_PERMISSIONS.user);
 
-                    setUserRole(defaultRole); setUserRoles(defaultRoles); setUserPermissions(defaultPerms);
-                    setUserStates([]); setUserLocalities([]);
+                        setUserRole(defaultRole); setUserRoles(defaultRoles); setUserPermissions(defaultPerms);
+                        setUserStates([]); setUserLocalities([]);
 
-                    // Safe write: Only if we aren't pulling from a completely offline state
-                    if (!userSnap.metadata?.fromCache) {
                         await setDoc(userRef, { 
                             email: user.email, 
                             role: defaultRole, 
@@ -915,17 +936,8 @@ export default function App() {
                     }
                 }
             } catch (error) {
-                console.warn("Complete fetch failure. Falling back to local storage:", error);
-                if (!isMounted) return;
-
-                const backupRole = localStorage.getItem(`backup_role_${user.uid}`);
-                if (backupRole) {
-                    setUserRole(backupRole);
-                    setUserRoles(JSON.parse(localStorage.getItem(`backup_roles_${user.uid}`) || `["${backupRole}"]`));
-                    setUserPermissions(JSON.parse(localStorage.getItem(`backup_perms_${user.uid}`) || "{}"));
-                    setUserStates(JSON.parse(localStorage.getItem(`backup_states_${user.uid}`) || "[]"));
-                    setUserLocalities(JSON.parse(localStorage.getItem(`backup_localities_${user.uid}`) || "[]"));
-                } else {
+                console.warn("Role fetch completely failed:", error);
+                if (!backupRole) {
                     setUserRole('user'); setUserRoles(['user']); setUserPermissions(applyDerivedPermissions(DEFAULT_ROLE_PERMISSIONS.user));
                     setUserStates([]); setUserLocalities([]);
                 }

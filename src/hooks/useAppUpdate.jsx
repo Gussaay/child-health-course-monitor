@@ -18,7 +18,7 @@ export function useAppUpdate() {
     const [appUpdateProgress, setAppUpdateProgress] = useState(0);
 
     const [nativeUpdatePrompt, setNativeUpdatePrompt] = useState(null);
-    const [manualUpdateModal, setManualUpdateModal] = useState({ isOpen: false, status: 'idle', message: '' });
+    const [manualUpdateModal, setManualUpdateModal] = useState({ isOpen: false, status: 'idle', message: '', bundleId: null });
     
     const pendingOtaBundleId = useRef(null);
 
@@ -139,17 +139,17 @@ export function useAppUpdate() {
     }, []);
 
     const handleManualUpdateCheck = async () => {
-        setManualUpdateModal({ isOpen: true, status: 'checking', message: 'Checking for updates...' });
+        setManualUpdateModal({ isOpen: true, status: 'checking', message: 'Checking for updates...', bundleId: null });
 
         if (!Capacitor.isNativePlatform()) {
-            setManualUpdateModal({ isOpen: true, status: 'info', message: 'Web version is always up to date on refresh.' });
+            setManualUpdateModal({ isOpen: true, status: 'info', message: 'Web version is always up to date on refresh.', bundleId: null });
             return;
         }
 
         try {
             const status = await Network.getStatus();
             if (!status.connected) {
-                setManualUpdateModal({ isOpen: true, status: 'error', message: 'You are offline. Cannot check for updates.' });
+                setManualUpdateModal({ isOpen: true, status: 'error', message: 'You are offline. Cannot check for updates.', bundleId: null });
                 return;
             }
 
@@ -166,7 +166,7 @@ export function useAppUpdate() {
                     const serverBuild = parseInt(serverConfig.latestNativeBuild, 10);
                     
                     if (serverBuild > currentBuild) {
-                        setManualUpdateModal({ isOpen: false, status: 'idle', message: '' }); 
+                        setManualUpdateModal({ isOpen: false, status: 'idle', message: '', bundleId: null }); 
                         setNativeUpdatePrompt(serverConfig); 
                         nativeUpdateFound = true;
                         return; 
@@ -183,21 +183,29 @@ export function useAppUpdate() {
                 const currentVersion = currentState.bundle?.version || "builtin";
 
                 if (currentVersion !== latestUpdate.version) {
-                    setManualUpdateModal({ isOpen: false, status: 'idle', message: '' });
+                    setManualUpdateModal({ isOpen: false, status: 'idle', message: '', bundleId: null });
                     setIsDownloadingAppUpdate(true);
                     setAppUpdateProgress(0);
                     
                     const downloadedBundle = await CapacitorUpdater.download({ url: latestUpdate.url, version: latestUpdate.version });
-                    await CapacitorUpdater.set({ id: downloadedBundle.id }); 
+                    setIsDownloadingAppUpdate(false);
+                    
+                    // Show Restart Prompt instead of forcing the freeze
+                    setManualUpdateModal({ 
+                        isOpen: true, 
+                        status: 'ready', 
+                        message: 'Update downloaded successfully! The app needs to restart to apply the changes.', 
+                        bundleId: downloadedBundle.id 
+                    });
                 } else if (!nativeUpdateFound) {
-                    setManualUpdateModal({ isOpen: true, status: 'success', message: `App is already up to date! (Version: ${currentVersion})` });
+                    setManualUpdateModal({ isOpen: true, status: 'success', message: `App is already up to date! (Version: ${currentVersion})`, bundleId: null });
                 }
             } catch (fetchError) {
                  throw new Error(`Network request failed: ${fetchError.message}`);
             }
 
         } catch (error) {
-            setManualUpdateModal({ isOpen: true, status: 'error', message: `${error.message || 'Unknown error occurred.'}` });
+            setManualUpdateModal({ isOpen: true, status: 'error', message: `${error.message || 'Unknown error occurred.'}`, bundleId: null });
         } finally {
             setIsDownloadingAppUpdate(false);
         }
@@ -268,9 +276,9 @@ export function useAppUpdate() {
                 <div className="fixed inset-0 bg-slate-900 bg-opacity-80 flex flex-col items-center justify-center z-[100000] p-4 backdrop-blur-sm">
                     <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full text-center space-y-4">
                         <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-slate-100">
-                            {manualUpdateModal.status === 'checking' || manualUpdateModal.status === 'downloading' ? (
+                            {manualUpdateModal.status === 'checking' || manualUpdateModal.status === 'downloading' || manualUpdateModal.status === 'restarting' ? (
                                 <RefreshCw className="h-6 w-6 text-sky-600 animate-spin"/>
-                            ) : manualUpdateModal.status === 'success' ? (
+                            ) : manualUpdateModal.status === 'success' || manualUpdateModal.status === 'ready' ? (
                                 <ClipboardCheck className="h-6 w-6 text-green-600" />
                             ) : manualUpdateModal.status === 'error' ? (
                                 <X className="h-6 w-6 text-red-600" />
@@ -282,15 +290,37 @@ export function useAppUpdate() {
                             {manualUpdateModal.status === 'checking' ? 'Checking for Updates' :
                              manualUpdateModal.status === 'downloading' ? 'Downloading Update' :
                              manualUpdateModal.status === 'success' ? 'Up to Date' :
+                             manualUpdateModal.status === 'ready' ? 'Update Ready!' :
+                             manualUpdateModal.status === 'restarting' ? 'Applying Update...' :
                              manualUpdateModal.status === 'error' ? 'Update Error' : 'Information'}
                         </h3>
                         <p className="text-sm text-slate-500">{manualUpdateModal.message}</p>
+                        
                         {(manualUpdateModal.status === 'success' || manualUpdateModal.status === 'error' || manualUpdateModal.status === 'info') && (
                             <button 
-                                onClick={() => setManualUpdateModal({ isOpen: false, status: 'idle', message: '' })}
+                                onClick={() => setManualUpdateModal({ isOpen: false, status: 'idle', message: '', bundleId: null })}
                                 className="w-full mt-2 inline-flex justify-center rounded-md bg-slate-800 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-slate-700 sm:text-sm"
                             >
                                 Close
+                            </button>
+                        )}
+
+                        {/* OTA Restart Button with Loading State */}
+                        {(manualUpdateModal.status === 'ready' || manualUpdateModal.status === 'restarting') && (
+                            <button 
+                                onClick={async () => {
+                                    setManualUpdateModal(prev => ({ ...prev, status: 'restarting', message: 'Restarting app to apply the update. Please wait...' }));
+                                    try { 
+                                        await CapacitorUpdater.set({ id: manualUpdateModal.bundleId }); 
+                                    } catch (e) { 
+                                        console.error("Failed to apply update", e); 
+                                        setManualUpdateModal({ isOpen: true, status: 'error', message: 'Failed to apply update: ' + e.message, bundleId: null });
+                                    }
+                                }}
+                                disabled={manualUpdateModal.status === 'restarting'}
+                                className={`w-full mt-4 inline-flex justify-center rounded-md border border-transparent px-4 py-2 text-base font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 sm:text-sm ${manualUpdateModal.status === 'restarting' ? 'bg-slate-400 cursor-not-allowed' : 'bg-sky-600 hover:bg-sky-700'}`}
+                            >
+                                {manualUpdateModal.status === 'restarting' ? 'Restarting, please wait...' : 'Restart & Update Now'}
                             </button>
                         )}
                     </div>
