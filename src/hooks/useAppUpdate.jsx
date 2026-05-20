@@ -25,13 +25,6 @@ export function useAppUpdate() {
         let downloadListenerHandle;
 
         if (Capacitor.isNativePlatform()) {
-            
-            // ⚠️ CRITICAL OTA FIX 1: Notify Capgo immediately that the app booted.
-            // Do NOT put this inside a timeout. Capgo needs to know the app didn't crash.
-            CapacitorUpdater.notifyAppReady()
-                .then(() => console.log("[Capgo] App notified as ready successfully. Rollback prevented."))
-                .catch(e => console.warn("[Capgo] notifyAppReady failed:", e));
-
             const showUpdateNotification = async (title, body, notifId) => {
                 try {
                     let permStatus = await LocalNotifications.checkPermissions();
@@ -79,7 +72,7 @@ export function useAppUpdate() {
                     if (response.ok) {
                         const latestUpdate = await response.json();
                         
-                        // ⚠️ CRITICAL OTA FIX 2: Strict version comparison to prevent re-downloading
+                        // Strict version comparison to prevent re-downloading
                         if (currentVersion !== latestUpdate.version) {
                             console.log(`[Capgo] Update found! Current: ${currentVersion}, Latest: ${latestUpdate.version}`);
                             const downloadedBundle = await CapacitorUpdater.download({ url: latestUpdate.url, version: latestUpdate.version });

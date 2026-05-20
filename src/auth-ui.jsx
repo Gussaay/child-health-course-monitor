@@ -39,17 +39,11 @@ export function SignInBox() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
-  // --- State: Loading indicator ---
   const [isLoading, setIsLoading] = useState(false);
-  
-  // --- State: To toggle between sign-in and sign-up ---
   const [isSignUpMode, setIsSignUpMode] = useState(false);
   const [fullName, setFullName] = useState(''); 
-
-  // --- NEW STATE for missing full name prompt ---
   const [isMissingName, setIsMissingName] = useState(false);
 
-  // --- Check auth state on initial component load ---
   useEffect(() => {
     const timer = setTimeout(() => {
         const user = auth.currentUser;
@@ -61,7 +55,6 @@ export function SignInBox() {
     return () => clearTimeout(timer);
   }, []);
 
-  // --- Helper to check and prompt for name ---
   const checkAndPromptForName = (user, skipSuccessMessage = false) => {
     const isNameMissing = !user || !user.displayName || user.displayName.trim().length === 0;
 
@@ -74,14 +67,12 @@ export function SignInBox() {
     if (!skipSuccessMessage) {
         setMessage("Sign in successful. Loading your dashboard..."); 
         setIsLoading(true); 
-        // FIX: Removed window.location.reload() to allow Firebase to persist the session
     }
     
     setIsMissingName(false);
     return false; 
   };
 
-  // --- Profile Update Handler ---
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     const user = auth.currentUser;
@@ -98,11 +89,9 @@ export function SignInBox() {
     try {
         await updateProfile(user, { displayName: fullName });
         setMessage("Profile updated! Redirecting...");
-        // FIX: Add a small delay to ensure Firebase writes the profile update before reloading
         setTimeout(() => {
             window.location.reload();
         }, 1500);
-        
     } catch (err) {
         setError(err.message);
         console.error("Profile Update Error:", err);
@@ -110,7 +99,6 @@ export function SignInBox() {
     } 
   };
 
-  // --- Sign-Up Handler ---
   const handleSignUp = async (e) => {
     e.preventDefault();
     setError('');
@@ -142,12 +130,10 @@ export function SignInBox() {
       } else {
         setError(err.message);
       }
-      console.error("Sign-up Error:", err);
       setIsLoading(false); 
     } 
   };
 
-  // --- Email/Password Sign-In Handler ---
   const handleSignIn = async (e) => {
     e.preventDefault();
     setError('');
@@ -160,7 +146,6 @@ export function SignInBox() {
     }
     
     if (!password) {
-        console.log(`[DEBUG] No password entered. Attempting immediate Google sign-in...`);
         setMessage("Checking account type and signing you in...");
         signInWithGoogle(); 
         return;
@@ -173,7 +158,6 @@ export function SignInBox() {
         methods = await fetchSignInMethodsForEmail(auth, email);
     } catch (err) {
         setError(err.message);
-        console.error("Fetch Methods Error:", err);
         setIsLoading(false); 
         return;
     }
@@ -192,14 +176,11 @@ export function SignInBox() {
             setPassword(''); 
 
             const needsName = checkAndPromptForName(userCredential.user);
-            if (needsName) {
-                setIsLoading(false);
-            }
+            if (needsName) setIsLoading(false);
             return; 
-
         } catch (err) {
             if (err.code === 'auth/wrong-password' && methods.includes('google.com')) {
-                setMessage("Sign-in failed with password. Retrying with Google to complete sign-in and link your password...");
+                setMessage("Sign-in failed with password. Retrying with Google to link your password...");
                 const passwordToAttemptLink = password; 
                 setPassword(''); 
                 signInWithGoogle(passwordToAttemptLink); 
@@ -219,7 +200,6 @@ export function SignInBox() {
             } else {
                 setError(err.message);
             }
-            console.error("Password Sign In Error:", err);
             setIsLoading(false); 
             return;
         }
@@ -232,7 +212,6 @@ export function SignInBox() {
             setPassword(''); 
             signInWithGoogle(passwordToAttemptLink); 
             return;
-
         } else {
             setPassword('');
             setMessage("This email is registered with Google. Signing you in with Google...");
@@ -256,19 +235,16 @@ export function SignInBox() {
     }
     
     setIsLoading(true); 
-
     try {
       await sendPasswordResetEmail(auth, email);
       setMessage("Password reset email sent! Check your inbox.");
     } catch (err) {
       setError(err.message);
-      console.error("Password Reset Error:", err);
     } finally {
         setIsLoading(false); 
     }
   };
 
-  // --- REWRITTEN GOOGLE SIGN IN (SUPPORTS PWA AND NATIVE APK) ---
   const signInWithGoogle = async (passwordToAttemptLink = null) => {
     if (!passwordToAttemptLink) {
       setError('');
@@ -282,40 +258,27 @@ export function SignInBox() {
       let user;
       const isNative = Capacitor.isNativePlatform();
 
-      // --- BRANCH 1: NATIVE APK / iOS ---
       if (isNative) {
         await ensureSocialLoginInit();
-        const response = await SocialLogin.login({ 
-            provider: "google"
-        });
-        
-        // Safely extract the token based on the plugin's response structure
+        const response = await SocialLogin.login({ provider: "google" });
         const idToken = response?.result?.idToken || response?.idToken || response?.authentication?.idToken;
         if (!idToken) throw new Error("Native Google login failed. No Token Returned.");
         
         const cred = GoogleAuthProvider.credential(idToken);
         const userCredential = await signInWithCredential(auth, cred);
         user = userCredential.user;
-      } 
-      // --- BRANCH 2: PWA / BROWSER ---
-      else {
+      } else {
         const provider = new GoogleAuthProvider();
-        
         try {
-            console.log("[DEBUG] Attempting signInWithPopup...");
             const result = await signInWithPopup(auth, provider); 
             user = result.user;
-            console.log("[DEBUG] Popup successful!", user);
         } catch (popupError) {
-            console.error("[DEBUG] Popup failed:", popupError);
             throw popupError; 
         }
       }
 
-      // --- Common Linking Logic (Native + Desktop Web ONLY) ---
       if (passwordToAttemptLink && user?.email === email) {
         try {
-          console.log("[DEBUG] Google sign-in successful. Attempting to link password...");
           const credential = EmailAuthProvider.credential(user.email, passwordToAttemptLink);
           await linkWithCredential(user, credential);
           setMessage("Password successfully linked! Redirecting..."); 
@@ -327,7 +290,6 @@ export function SignInBox() {
           } else {
             setError(linkError.message);
           }
-          console.error("Linking Error:", linkError);
           setIsLoading(false); 
           setPassword('');
           return; 
@@ -335,18 +297,14 @@ export function SignInBox() {
         setPassword(''); 
       }
       
-      // --- Profile Check ---
       if (user) {
           const needsName = checkAndPromptForName(user);
-          if (needsName) {
-              setIsLoading(false);
-          }
+          if (needsName) setIsLoading(false);
           return;
       }
 
     } catch (err) {
       setError(err.message);
-      console.error("Google Auth Error:", err);
       setIsMissingName(false); 
       setIsLoading(false);
     } 
@@ -361,7 +319,6 @@ export function SignInBox() {
     setFullName(''); 
   };
 
-  // --- RENDER LOGIC: Profile Update Prompt (Priority 1) ---
   if (isMissingName) {
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
@@ -395,7 +352,6 @@ export function SignInBox() {
     );
   }
 
-  // --- RENDER LOGIC: Original Sign-In/Sign-Up Form (Priority 2) ---
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
       <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-xl text-center">

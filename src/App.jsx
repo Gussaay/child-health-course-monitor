@@ -15,7 +15,7 @@ import { Network } from '@capacitor/network';
 // --- CUSTOM HOOKS & UTILS ---
 import { downloadAndOpenFile } from './utils/fileDownloader';
 import { useAppUpdate } from './hooks/useAppUpdate';
-import { usePushNotifications } from './hooks/usePushNotifications'; // <-- EXISTING IMPORT
+import { usePushNotifications } from './hooks/usePushNotifications'; 
 
 // --- PRE-FLIGHT LANGUAGE CHECK ---
 if (typeof window !== 'undefined') {
@@ -51,7 +51,6 @@ const TeamMemberApplicationForm = lazy(() => import('./components/ProgramTeamVie
 
 const IMNCIRecordingForm = lazy(() => import('./components/IMNCIRecordingForm'));
 
-// --- FIXED LAZY IMPORTS HERE ---
 const CertificateVerificationView = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.CertificateVerificationView })));
 const PublicCertificateDownloadView = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.PublicCertificateDownloadView })));
 const PublicCourseCertificatesView = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.PublicCourseCertificatesView }))); 
@@ -104,7 +103,7 @@ import { Card, PageHeader, Button, EmptyState, Spinner, Toast, Modal, Input } fr
 import { auth, db } from './firebase';
 import { doc, getDoc, setDoc, waitForPendingWrites } from 'firebase/firestore';
 import { signOut, updateProfile } from 'firebase/auth'; 
-import { getMessaging, onMessage, isSupported } from 'firebase/messaging'; // <-- NEW FIREBASE MESSAGING IMPORTS
+import { getMessaging, onMessage, isSupported } from 'firebase/messaging'; 
 import { useDataCache } from './DataContext';
 import { useAuth } from './hooks/useAuth';
 import { SignInBox } from './auth-ui.jsx';
@@ -580,7 +579,6 @@ export default function App() {
         let unsubscribe = null;
         
         const setupForegroundListener = async () => {
-             // Basic check to prevent crashes if messaging is not supported in this browser context
              const supported = await isSupported().catch(() => false);
              if (!supported) return;
 
@@ -591,7 +589,6 @@ export default function App() {
                     const title = payload.notification?.title || "New Notification";
                     const body = payload.notification?.body || "";
                     
-                    // Display toast for foreground notifications
                     setToast({
                         show: true,
                         message: `${title}: ${body}`,
@@ -605,7 +602,6 @@ export default function App() {
 
         setupForegroundListener();
 
-        // Cleanup listener on unmount
         return () => {
              if (unsubscribe) unsubscribe();
         };
@@ -640,7 +636,6 @@ export default function App() {
             if (publicMeetingMatch && publicMeetingMatch[1]) {
                 setIsPublicMeetingView(true); setPublicMeetingId(publicMeetingMatch[1]); setPublicViewLoading(true);
                 
-                // Extract target date from URL
                 const searchParams = new URLSearchParams(window.location.search);
                 setPublicMeetingTargetDate(searchParams.get('date'));
                 
@@ -651,7 +646,6 @@ export default function App() {
                 return;
             }
 
-            // Mentorship Record Deep Link explicitly formatted so it doesn't default to dashboard
             const publicMentorshipRecordMatch = path.match(/^\/public\/mentorship\/record\/([a-zA-Z0-9_]+)\/(cases|mothers|reports)\/([a-zA-Z0-9_-]+)\/?$/);
             if (publicMentorshipRecordMatch) {
                 setIsPublicMentorshipDashboardView(true);
@@ -669,7 +663,6 @@ export default function App() {
                 return;
             }
 
-            // Mentorship Dashboard Deep Link
             const publicMentorshipDashboardMatch = path.match(/^\/public\/mentorship\/dashboard\/([a-zA-Z0-9_]+)\/?$/);
             if (publicMentorshipDashboardMatch && publicMentorshipDashboardMatch[1]) {
                 setIsPublicMentorshipDashboardView(true);
@@ -851,101 +844,116 @@ export default function App() {
         }
     }, [user, permissionsLoading]);
 
-    // UPDATED AND SECURED checkUserRoleAndPermissions logic
+    // UPDATED, SECURED, AND FAST-LOAD checkUserRoleAndPermissions logic
     useEffect(() => {
-        const checkUserRoleAndPermissions = async () => {
-            setPermissionsLoading(true);
-            try {
-                if (user) {
-                    const status = await Network.getStatus();
-                    const isOffline = !status.connected;
-                    
-                    const userRef = doc(db, "users", user.uid);
-                    let userSnap;
-                    
-                    // Safe offline check with a 7-second timeout protection
-                    try {
-                        const sourceOptions = isOffline ? { source: 'cache' } : {};
-                        
-                        // Create a promise that rejects after 7 seconds
-                        const timeoutPromise = new Promise((_, reject) => 
-                            setTimeout(() => reject(new Error("Firestore timeout")), 4000)
-                        );
-                        
-                        // Race the fetch against the timeout
-                        userSnap = await Promise.race([
-                            getDoc(userRef, sourceOptions),
-                            timeoutPromise
-                        ]);
-                    } catch (e) {
-                        console.warn("Network slow or offline, falling back to cache.");
-                        userSnap = await getDoc(userRef, { source: 'cache' });
-                    }
-                    
-                    let role; let roles = []; let permissionsData = {};
+        let isMounted = true; 
 
-                    // IF THE DOCUMENT IS MISSING (Either a brand new user, OR offline with a cleared cache)
-                    if (!userSnap.exists() || !userSnap.data().role) {
-                        
-                        // 1. Check Local Storage backup first
-                        const backupRole = localStorage.getItem(`backup_role_${user.uid}`);
-                        
-                        if (isOffline && backupRole) {
-                            // Restore from our secondary backup
-                            role = backupRole;
-                            roles = JSON.parse(localStorage.getItem(`backup_roles_${user.uid}`) || `["${role}"]`);
-                            permissionsData = JSON.parse(localStorage.getItem(`backup_perms_${user.uid}`) || "{}");
-                            console.log("Restored user role from localStorage fallback.");
-                        } else {
-                            // Truly no role found
-                            role = 'user';
-                            roles = ['user'];
-                            const rawPerms = DEFAULT_ROLE_PERMISSIONS.user;
-                            permissionsData = applyDerivedPermissions(rawPerms);
-                            
-                            // CRITICAL: ONLY SAVE TO FIREBASE IF ONLINE
-                            // If offline, we give them basic access locally but DO NOT queue a write that overwrites their cloud role later.
-                            if (!isOffline) {
-                                setDoc(userRef, { 
-                                    email: user.email, 
-                                    role: role, 
-                                    roles: roles, 
-                                    permissions: permissionsData, 
-                                    lastLogin: new Date(), 
-                                    assignedState: '' 
-                                }, { merge: true }).catch(err => console.warn("Failed to set default role:", err));
-                            }
-                        }
-                    } else {
-                        // USER EXISTS IN FIRESTORE/CACHE - Load Normally
-                        role = userSnap.data().role;
-                        roles = userSnap.data().roles || [role]; 
-                        const ALL_PERMISSIONS_MINIMAL = ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
-                        const rawPerms = { ...ALL_PERMISSIONS_MINIMAL, ...(userSnap.data().permissions || {}) };
-                        permissionsData = applyDerivedPermissions(rawPerms);
-                        
-                        // 2. Update Local Storage Backup (Secondary Fail-safe)
-                        localStorage.setItem(`backup_role_${user.uid}`, role);
-                        localStorage.setItem(`backup_roles_${user.uid}`, JSON.stringify(roles));
-                        localStorage.setItem(`backup_perms_${user.uid}`, JSON.stringify(permissionsData));
-                    }
-                    
-                    setUserRole(role); 
-                    setUserRoles(roles); 
-                    setUserPermissions(permissionsData); 
-                } else { 
-                    setUserRole(null); setUserRoles([]); setUserPermissions({}); 
+        const checkUserRoleAndPermissions = async () => {
+            if (!user) {
+                if (isMounted) {
+                    setUserRole(null); setUserRoles([]); setUserPermissions({});
+                    setPermissionsLoading(false);
                 }
-            } catch (error) {
-                console.error("Error checking user role:", error);
-                // Emergency fallback
-                setUserRole('user'); setUserRoles(['user']); setUserPermissions(applyDerivedPermissions(DEFAULT_ROLE_PERMISSIONS.user));
-            } finally { 
+                return;
+            }
+
+            setPermissionsLoading(true);
+            const userRef = doc(db, "users", user.uid);
+            
+            let currentRole = 'user'; 
+            let currentRoles = ['user']; 
+            let currentPermissionsData = {};
+            let hasLoadedFromCache = false;
+
+            // ==========================================
+            // PHASE 1: INSTANT CACHE LOAD (Unlock UI)
+            // ==========================================
+            try {
+                const backupRole = localStorage.getItem(`backup_role_${user.uid}`);
+                
+                if (backupRole) {
+                    currentRole = backupRole;
+                    currentRoles = JSON.parse(localStorage.getItem(`backup_roles_${user.uid}`) || `["${currentRole}"]`);
+                    currentPermissionsData = JSON.parse(localStorage.getItem(`backup_perms_${user.uid}`) || "{}");
+                    hasLoadedFromCache = true;
+                } else {
+                    const cachedSnap = await getDoc(userRef, { source: 'cache' });
+                    if (cachedSnap.exists()) {
+                        const data = cachedSnap.data();
+                        const rawRole = data.role || data.Role || (data.roles && data.roles[0]) || 'user';
+                        currentRole = typeof rawRole === 'string' ? rawRole.toLowerCase() : 'user';
+                        currentRoles = data.roles && Array.isArray(data.roles) && data.roles.length > 0 ? data.roles : [currentRole]; 
+                        
+                        const ALL_PERMISSIONS_MINIMAL = ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
+                        currentPermissionsData = applyDerivedPermissions({ ...ALL_PERMISSIONS_MINIMAL, ...(data.permissions || {}) });
+                        hasLoadedFromCache = true;
+                    }
+                }
+            } catch (cacheErr) {
+                console.warn("Cache read failed, waiting for server:", cacheErr);
+            }
+
+            if (hasLoadedFromCache && isMounted) {
+                setUserRole(currentRole); 
+                setUserRoles(currentRoles); 
+                setUserPermissions(currentPermissionsData); 
                 setPermissionsLoading(false); 
+            }
+
+            // ==========================================
+            // PHASE 2: SILENT BACKGROUND SERVER SYNC (WITH 3.5s TIMEOUT)
+            // ==========================================
+            try {
+                const serverFetchPromise = getDoc(userRef, { source: 'server' });
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('POOR_NETWORK_TIMEOUT')), 3500)
+                );
+                
+                const serverSnap = await Promise.race([serverFetchPromise, timeoutPromise]);
+                
+                if (serverSnap.exists()) {
+                    const data = serverSnap.data();
+                    const rawRole = data.role || data.Role || (data.roles && data.roles[0]) || 'user';
+                    const serverRole = typeof rawRole === 'string' ? rawRole.toLowerCase() : 'user';
+                    const serverRoles = data.roles && Array.isArray(data.roles) && data.roles.length > 0 ? data.roles : [serverRole]; 
+                    
+                    const ALL_PERMISSIONS_MINIMAL = ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
+                    const serverPermissionsData = applyDerivedPermissions({ ...ALL_PERMISSIONS_MINIMAL, ...(data.permissions || {}) });
+                    
+                    localStorage.setItem(`backup_role_${user.uid}`, serverRole);
+                    localStorage.setItem(`backup_roles_${user.uid}`, JSON.stringify(serverRoles));
+                    localStorage.setItem(`backup_perms_${user.uid}`, JSON.stringify(serverPermissionsData));
+
+                    if (isMounted && (!hasLoadedFromCache || serverRole !== currentRole || JSON.stringify(serverRoles) !== JSON.stringify(currentRoles))) {
+                        setUserRole(serverRole); 
+                        setUserRoles(serverRoles); 
+                        setUserPermissions(serverPermissionsData); 
+                        if (!hasLoadedFromCache) setPermissionsLoading(false);
+                    }
+                } else if (!hasLoadedFromCache) {
+                    currentRole = 'user'; currentRoles = ['user'];
+                    currentPermissionsData = applyDerivedPermissions(DEFAULT_ROLE_PERMISSIONS.user);
+                    
+                    await setDoc(userRef, { email: user.email, role: currentRole, roles: currentRoles, permissions: currentPermissionsData, lastLogin: new Date(), assignedState: '' });
+                    
+                    if (isMounted) {
+                        setUserRole(currentRole); setUserRoles(currentRoles); setUserPermissions(currentPermissionsData);
+                        setPermissionsLoading(false);
+                    }
+                }
+            } catch (serverErr) {
+                console.warn(`[App Boot] Network sync skipped (${serverErr.message}). Using cache.`);
+                
+                if (!hasLoadedFromCache && isMounted) {
+                    setUserRole('user'); setUserRoles(['user']); setUserPermissions(applyDerivedPermissions(DEFAULT_ROLE_PERMISSIONS.user));
+                    setPermissionsLoading(false);
+                }
             }
         };
         
         checkUserRoleAndPermissions();
+
+        return () => { isMounted = false; };
     }, [user]);
 
     useEffect(() => { if (!user) initialViewIsSet.current = false; }, [user]);
@@ -1329,7 +1337,6 @@ export default function App() {
 
     const handleDeletePdf = useCallback(async (courseId) => {  }, [permissions, courseDetails.finalReport]);
 
-    // Handle standard logout prompt
     const handleLogout = useCallback(async () => { 
         if (window.confirm('Are you sure you want to log out?')) {
             try { 
@@ -1378,13 +1385,13 @@ export default function App() {
                 onBatchUpdate={() => { setCourseDetailsCache(prev => { const newCache = { ...prev }; delete newCache[selectedCourse.id]; return newCache; }); setSelectedCourseId(null); setSelectedCourseId(selectedCourse.id); }}
                 loadingDetails={loading || (selectedCourseId && courseDetailsLoading)} 
                 canManageCourse={permissions.canManageCourse} 
-                canAddCourse={permissions.canAddCourse} /* PASSED PERMISSION DOWN HERE */
+                canAddCourse={permissions.canAddCourse}
                 canUseSuperUserAdvancedFeatures={permissions.canUseSuperUserAdvancedFeatures}
                 canUseFederalManagerAdvancedFeatures={permissions.canUseFederalManagerAdvancedFeatures} canEditDeleteActiveCourse={permissions.canManageCourse} 
                 canEditDeleteInactiveCourse={permissions.canUseFederalManagerAdvancedFeatures || (permissions.canManageCourse && permissions.manageTimePeriod === 'anytime')}
-                manageLocation={permissions.manageLocation} /* PASSED STRICT LOCATION ENFORCEMENT DOWN HERE */
+                manageLocation={permissions.manageLocation}
                 facilitatorsList={allFacilitators || []} 
-                currentUserRole={userRole} /* PASSED CURRENT ROLE FOR CREATOR RECORD */
+                currentUserRole={userRole}
             />;
 
             case 'childHealthServices':
@@ -1463,7 +1470,6 @@ export default function App() {
         { label: t('landing.modules.human_resources', 'Human Resources'), view: 'humanResources', active: ['humanResources', 'facilitatorForm', 'facilitatorReport'].includes(view), disabled: !permissions.canViewHumanResource },
         { label: t('landing.modules.facilities', 'Child Health Services'), view: 'childHealthServices', active: view === 'childHealthServices', disabled: !permissions.canViewFacilities },
         { label: t('landing.modules.mentorship', 'Skills Mentorship'), view: 'skillsMentorship', active: view === 'skillsMentorship', disabled: !permissions.canViewSkillsMentorship }
-        // Locality plan, planning, projects, and admin specifically omitted from top/bottom navigation as requested
     ], [view, permissions, t]);
 
     const visibleNavItems = useMemo(() => navItems.filter(item => !item.disabled), [navItems]);
@@ -1698,7 +1704,6 @@ export default function App() {
     return (
         <div className="min-h-screen bg-sky-50 flex flex-col pt-0 relative">
             
-            {/* CSS override to force fixed toasts above the bottom navigation bar on mobile */}
             <style>{`
                 @media (max-width: 768px) {
                     .fixed.bottom-4, [role="alert"], .toast-container {
@@ -1737,7 +1742,6 @@ export default function App() {
                                 <h1 className="text-xl sm:text-2xl font-bold text-white">{t('app.title', 'National Child Health Program')}</h1>
                                 <p className="text-xs sm:text-sm text-slate-300 flex items-center flex-wrap gap-2 mt-1 sm:mt-0">
                                     <span>{t('app.subtitle', 'Program & Course Monitoring System')}</span>
-                                    {/* App Version Pill (Clickable) */}
                                     <span 
                                         onClick={handleManualUpdateCheck}
                                         className="bg-slate-700 text-sky-300 text-[10px] px-1.5 py-0.5 rounded border border-slate-600 font-mono shadow-sm cursor-pointer hover:bg-slate-600 hover:text-sky-200 transition-colors"
@@ -1759,7 +1763,6 @@ export default function App() {
                                     ))} 
                                 </nav>
                             )}
-                            {/* We keep a fallback language toggle here ONLY for public/logged-out views where the secondary banner isn't visible */}
                             {(!user || isMinimalUILayout) && (
                                 <button
                                     onClick={() => {
@@ -1780,7 +1783,6 @@ export default function App() {
             {user && !isMinimalUILayout && (
                 <div className="bg-slate-700 text-slate-200 px-2 sm:px-3 py-2 flex items-center justify-between w-full shadow-inner min-h-[48px] gap-2">
 
-                    {/* Profile Info Container (Shifted left to prevent overlap with new icons) */}
                     <div className="flex-1 flex items-center justify-start overflow-hidden min-w-0">
                         <div
                             className="flex items-center gap-1.5 cursor-pointer hover:bg-slate-600 px-2 py-1 rounded-md transition-colors duration-200 min-w-0 max-w-full"
@@ -1806,11 +1808,9 @@ export default function App() {
                         </div>
                     </div>
 
-                    {/* Right Action Buttons */}
                     <div className="flex items-center justify-end gap-1.5 shrink-0">
                         <NotificationBell user={user} />
                         
-                        {/* Data Sync Status Button */}
                         <button
                             onClick={() => {
                                 if (isOffline) {
@@ -1867,7 +1867,6 @@ export default function App() {
             
             {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ show: false, message: '', type: '' })} />}
 
-            {/* Adjusted padding to ensure BottomNav doesn't cover anything */}
             <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 w-full flex-grow pb-24 md:pb-8 overflow-x-hidden">
                 <Suspense fallback={<Card><Spinner /></Card>}>
                     {mainContent}
@@ -2022,8 +2021,6 @@ export default function App() {
             {permissions.canUseSuperUserAdvancedFeatures && isMonitorVisible && (
                 <ResourceMonitor counts={operationCounts} onReset={handleResetMonitor} onDismiss={handleDismissMonitor} />
             )}
-
-            
 
             <AppUpdateModals />
 

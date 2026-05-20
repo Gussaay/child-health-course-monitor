@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { Network } from '@capacitor/network';
 import { auth, db } from '../firebase';
 
 export const useAuth = () => {
@@ -13,50 +12,43 @@ export const useAuth = () => {
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-            if (firebaseUser) {
-                try {
-                    // Check network status to prevent the app from hanging if offline
-                    const status = await Network.getStatus();
-                    const isOffline = !status.connected;
-                    
-                    const userRef = doc(db, "users", firebaseUser.uid);
-                    let userSnap;
-
-                    try {
-                        // If offline, force cache. If online, try server.
-                        const sourceOptions = isOffline ? { source: 'cache' } : {};
-                        userSnap = await getDoc(userRef, sourceOptions);
-                    } catch (e) {
-                        // If the server request fails (e.g., spotty connection), aggressively fallback to cache
-                        console.warn("[Auth] Network fetch failed, falling back to local cache.");
-                        userSnap = await getDoc(userRef, { source: 'cache' });
-                    }
-
-                    setUser(firebaseUser); // Set the base user immediately
-
-                    if (userSnap && userSnap.exists()) {
-                        const data = userSnap.data(); 
-                        setUserStates(data.assignedState ? [data.assignedState] : []);
-                        setUserLocalities(data.assignedLocality ? [data.assignedLocality] : []); 
-                    } else {
-                        setUserStates([]);
-                        setUserLocalities([]); 
-                    }
-                } catch (error) {
-                    console.error("[Auth] Critical error fetching user profile:", error);
-                    // Ensure we still unlock the app even if the profile metadata fails entirely
-                    setUser(firebaseUser); 
-                    setUserStates([]);
-                    setUserLocalities([]);
-                }
-            } else {
+            if (!firebaseUser) {
                 setUser(null);
                 setUserStates([]);
                 setUserLocalities([]); 
+                setAuthLoading(false);
+                return;
             }
+
+            setUser(firebaseUser); 
+            // ⚡ CRITICAL FIX: Drop the Splash Screen IMMEDIATELY.
+            // Do NOT wait for the network to fetch localities before letting the app boot.
+            setAuthLoading(false); 
+
+            // --- SILENT BACKGROUND FETCH ---
+            const userRef = doc(db, "users", firebaseUser.uid);
             
-            // Unconditionally clear the loading state so the app actually boots
-            setAuthLoading(false);
+            try {
+                // 1. Try cache first for instant data population
+                try {
+                    const cachedSnap = await getDoc(userRef, { source: 'cache' });
+                    if (cachedSnap.exists()) {
+                        const data = cachedSnap.data(); 
+                        setUserStates(data.assignedState ? [data.assignedState] : []);
+                        setUserLocalities(data.assignedLocality ? [data.assignedLocality] : []); 
+                    }
+                } catch(e) {}
+                
+                // 2. Try server for fresh data (happens invisibly in the background)
+                const serverSnap = await getDoc(userRef, { source: 'server' });
+                if (serverSnap.exists()) {
+                    const data = serverSnap.data(); 
+                    setUserStates(data.assignedState ? [data.assignedState] : []);
+                    setUserLocalities(data.assignedLocality ? [data.assignedLocality] : []); 
+                }
+            } catch (error) {
+                console.warn("[Auth] Background fetch failed (poor network). Keeping cached data.");
+            }
         });
         
         return unsubscribe;
