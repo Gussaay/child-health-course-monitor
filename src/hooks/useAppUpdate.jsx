@@ -1,5 +1,5 @@
 // src/hooks/useAppUpdate.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Network } from '@capacitor/network';
@@ -13,18 +13,25 @@ import { RefreshCw, Download, X, Info, ClipboardCheck } from 'lucide-react';
 export function useAppUpdate() {
     const [appVersion, setAppVersion] = useState(import.meta.env.VITE_APP_VERSION || window.APP_VERSION || '1.0.2');
     
-    const [isUpdateReady, setIsUpdateReady] = useState(false);
-    const [updateBundle, setUpdateBundle] = useState(null);
+    // States for manual update checks
     const [isDownloadingAppUpdate, setIsDownloadingAppUpdate] = useState(false);
     const [appUpdateProgress, setAppUpdateProgress] = useState(0);
 
     const [nativeUpdatePrompt, setNativeUpdatePrompt] = useState(null);
     const [manualUpdateModal, setManualUpdateModal] = useState({ isOpen: false, status: 'idle', message: '' });
+    
+    const pendingOtaBundleId = useRef(null);
 
     useEffect(() => {
         let downloadListenerHandle;
+        let appStateListenerHandle;
 
         if (Capacitor.isNativePlatform()) {
+            
+            // 1. Instantly notify Capgo to prevent rollback (Takes 1 millisecond, non-blocking)
+            CapacitorUpdater.notifyAppReady()
+                .catch(e => console.warn("[Capgo] notifyAppReady failed:", e));
+
             const showUpdateNotification = async (title, body, notifId) => {
                 try {
                     let permStatus = await LocalNotifications.checkPermissions();
@@ -39,12 +46,12 @@ export function useAppUpdate() {
                 } catch (err) { console.warn("Failed to show update notification:", err); }
             };
 
-            const setupAndCheckUpdates = async () => {
-                const status = await Network.getStatus();
-                if (!status.connected) return;
-
-                // --- Native Firestore Check (For forced major APK updates) ---
+            // --- REUSABLE NATIVE APK CHECKER ---
+            const checkNativeApkRequirement = async () => {
                 try {
+                    const status = await Network.getStatus();
+                    if (!status.connected) return false;
+
                     const updateDocRef = doc(db, "meta", "update_config");
                     const updateSnap = await getDoc(updateDocRef);
 
@@ -56,13 +63,26 @@ export function useAppUpdate() {
 
                         if (serverBuild > currentBuild) {
                             setNativeUpdatePrompt(serverConfig);
-                            showUpdateNotification("تحديث جديد للتطبيق", `يتوفر إصدار جديد (${serverConfig.versionString}). يرجى التحميل الآن.`, 101);
-                            return; 
+                            return true; 
                         }
                     }
-                } catch (e) { console.warn("Native update check failed safely:", e); }
+                } catch (e) { }
+                return false;
+            };
 
-                // --- Capgo OTA Check (For minor Javascript updates) ---
+            // --- THE BACKGROUND WORKER ---
+            const runBackgroundUpdateCheck = async () => {
+                const status = await Network.getStatus();
+                if (!status.connected) return;
+
+                // 1. APK Check
+                const requiresNativeUpdate = await checkNativeApkRequirement();
+                if (requiresNativeUpdate) {
+                    showUpdateNotification("تحديث جديد للتطبيق", "يتوفر إصدار جديد. يرجى التحميل الآن.", 101);
+                    return; 
+                }
+
+                // 2. Capgo OTA Check (Silent Background)
                 try {
                     const currentState = await CapacitorUpdater.current();
                     const currentVersion = currentState.bundle?.version || import.meta.env.VITE_APP_VERSION || "builtin";
@@ -72,29 +92,50 @@ export function useAppUpdate() {
                     if (response.ok) {
                         const latestUpdate = await response.json();
                         
-                        // Strict version comparison to prevent re-downloading
                         if (currentVersion !== latestUpdate.version) {
-                            console.log(`[Capgo] Update found! Current: ${currentVersion}, Latest: ${latestUpdate.version}`);
+                            // Download silently
                             const downloadedBundle = await CapacitorUpdater.download({ url: latestUpdate.url, version: latestUpdate.version });
-                            setUpdateBundle(downloadedBundle); 
-                            setIsUpdateReady(true);
-                            showUpdateNotification("تحديث جاهز!", "تم تحميل التحديث بنجاح. انقر لإعادة تشغيل التطبيق.", 102);
-                        } else {
-                            console.log(`[Capgo] App is up to date (Version: ${currentVersion}).`);
+                            pendingOtaBundleId.current = downloadedBundle.id;
                         }
                     }
-                } catch (error) { console.warn("Capgo check failed safely:", error); }
+                } catch (error) { }
             };
             
-            // Delay the heavy network check by 5 seconds so it doesn't lag the app launch
-            setTimeout(setupAndCheckUpdates, 5000); 
+            // ⚡ CRITICAL PERFORMANCE FIX: 
+            // We wait 5 seconds, AND we ask the browser to wait until the CPU is completely idle.
+            // This guarantees the update check will NEVER steal resources from the app launch sequence.
+            setTimeout(() => {
+                if ('requestIdleCallback' in window) {
+                    requestIdleCallback(() => runBackgroundUpdateCheck());
+                } else {
+                    runBackgroundUpdateCheck(); // Fallback for Safari/iOS if needed
+                }
+            }, 5000); 
 
+            // --- APP STATE LISTENER ---
+            CapacitorApp.addListener('appStateChange', async ({ isActive }) => {
+                if (isActive) {
+                    checkNativeApkRequirement();
+                } else {
+                    if (pendingOtaBundleId.current) {
+                        try {
+                            await CapacitorUpdater.set({ id: pendingOtaBundleId.current });
+                            pendingOtaBundleId.current = null; 
+                        } catch (e) { }
+                    }
+                }
+            }).then(handle => { appStateListenerHandle = handle; });
+
+            // Only update progress UI if the user manually clicked the update button
             CapacitorUpdater.addListener('download', (info) => {
                 setAppUpdateProgress(info.percent); 
-            }).then(handle => { downloadListenerHandle = handle; }).catch(e => console.warn("Failed to bind Capgo listener", e));
+            }).then(handle => { downloadListenerHandle = handle; });
         }
 
-        return () => { if (downloadListenerHandle) downloadListenerHandle.remove(); };
+        return () => { 
+            if (downloadListenerHandle) downloadListenerHandle.remove(); 
+            if (appStateListenerHandle) appStateListenerHandle.remove();
+        };
     }, []);
 
     const handleManualUpdateCheck = async () => {
@@ -147,8 +188,7 @@ export function useAppUpdate() {
                     setAppUpdateProgress(0);
                     
                     const downloadedBundle = await CapacitorUpdater.download({ url: latestUpdate.url, version: latestUpdate.version });
-                    setUpdateBundle(downloadedBundle); 
-                    setIsUpdateReady(true);
+                    await CapacitorUpdater.set({ id: downloadedBundle.id }); 
                 } else if (!nativeUpdateFound) {
                     setManualUpdateModal({ isOpen: true, status: 'success', message: `App is already up to date! (Version: ${currentVersion})` });
                 }
@@ -165,7 +205,6 @@ export function useAppUpdate() {
 
     const AppUpdateModals = () => (
         <>
-            {/* NATIVE DIRECT DOWNLOAD MODAL */}
             {nativeUpdatePrompt && (
                 <div className="fixed inset-0 bg-slate-900 bg-opacity-90 flex flex-col items-center justify-center z-[100000] p-4 backdrop-blur-sm" dir="rtl">
                     <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center space-y-4">
@@ -225,30 +264,6 @@ export function useAppUpdate() {
                 </div>
             )}
 
-            {/* CAPGO OTA UPDATE READY MODAL */}
-            {isUpdateReady && updateBundle && !nativeUpdatePrompt && (
-                <div className="fixed inset-0 bg-slate-900 bg-opacity-80 flex flex-col items-center justify-center z-[100000] p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full text-center space-y-4">
-                        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-sky-100">
-                            <RefreshCw className="h-6 w-6 text-sky-600 animate-spin"/>
-                        </div>
-                        <h3 className="text-xl font-bold text-slate-800">Update Ready!</h3>
-                        <p className="text-sm text-slate-500">
-                            A new version of the app has been downloaded. You must restart the app to apply the update and continue.
-                        </p>
-                        <button 
-                            onClick={async () => {
-                                try { await CapacitorUpdater.set({ id: updateBundle.id }); } catch (e) { console.error("Failed to apply update", e); }
-                            }}
-                            className="w-full inline-flex justify-center rounded-md border border-transparent bg-sky-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-sky-700 sm:text-sm"
-                        >
-                            Restart & Update Now
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* MANUAL UPDATE CHECK MODAL */}
             {manualUpdateModal.isOpen && (
                 <div className="fixed inset-0 bg-slate-900 bg-opacity-80 flex flex-col items-center justify-center z-[100000] p-4 backdrop-blur-sm">
                     <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full text-center space-y-4">

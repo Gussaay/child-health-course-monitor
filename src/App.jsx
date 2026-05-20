@@ -101,7 +101,9 @@ import {
 import { STATE_LOCALITIES } from './components/constants.js';
 import { Card, PageHeader, Button, EmptyState, Spinner, Toast, Modal, Input } from './components/CommonComponents';
 import { auth, db } from './firebase';
-import { doc, getDoc, setDoc, waitForPendingWrites } from 'firebase/firestore';
+
+import { doc, getDoc, setDoc, waitForPendingWrites, onSnapshot } from 'firebase/firestore';
+
 import { signOut, updateProfile } from 'firebase/auth'; 
 import { getMessaging, onMessage, isSupported } from 'firebase/messaging'; 
 import { useDataCache } from './DataContext';
@@ -288,7 +290,7 @@ function Landing({ navigate, permissions }) {
         { label: t('landing.modules.projects', 'Project Tracker'), view: 'projects', icon: FolderKanban, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.planning', 'Master Plan'), view: 'planning', icon: TrendingUp, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.locality_plan', 'Bottom-up Planning'), view: 'localityPlan', icon: Layers, permission: permissions.canViewLocalityPlan },
-        { label: t('landing.modules.downloads', 'App Files & Downloads'), view: 'downloads', icon: HardDrive, Bell, Trash2, permission: Capacitor.isNativePlatform() },
+        { label: t('landing.modules.downloads', 'App Files & Downloads'), view: 'downloads', icon: HardDrive, permission: Capacitor.isNativePlatform() },
         { label: t('landing.modules.admin', 'Admin'), view: 'admin', icon: User, permission: permissions.canViewAdmin },
         { label: t('landing.modules.about', 'About Team'), view: 'about', icon: Info, permission: true },
     ];
@@ -318,7 +320,6 @@ function Landing({ navigate, permissions }) {
                 </div>
             </Card>
             
-            {/* Desktop footer */}
             <div className="hidden md:block mt-8 mb-4 text-center text-slate-600 text-xs font-medium w-full">
                 <p>App developed by Dr Qusay Mohamed - <a href="mailto:Gussaay@gmail.com" className="text-sky-600 hover:text-sky-500 transition-colors font-bold">Gussaay@gmail.com</a></p>
             </div>
@@ -326,11 +327,10 @@ function Landing({ navigate, permissions }) {
     );
 }
 
-// --- UPDATED BOTTOM NAV COMPONENT ---
 const BottomNav = React.memo(function BottomNav({ navItems, navigate, currentView }) {
     const icons = { 
         'landing': Home, 'dashboard': Home, 'courses': Book, 'humanResources': Users, 'childHealthServices': Hospital, 
-        'skillsMentorship': ClipboardCheck, 'downloads': HardDrive, Bell, Trash2
+        'skillsMentorship': ClipboardCheck, 'downloads': HardDrive
     };
     
     return (
@@ -381,7 +381,6 @@ function SplashScreen() {
 export default function App() {
     const { t, i18n } = useTranslation();
     
-    // --- CUSTOM HOOKS ---
     const { 
         appVersion, 
         isDownloadingAppUpdate, 
@@ -390,9 +389,8 @@ export default function App() {
         AppUpdateModals 
     } = useAppUpdate();
 
-    usePushNotifications(); // <-- INITIALIZE PUSH NOTIFICATIONS
+    usePushNotifications(); 
 
-    // Generic Download State (for PDFs, Excel, etc.)
     const [isFileDownloading, setIsFileDownloading] = useState(false);
     const [fileDownloadProgress, setFileDownloadProgress] = useState(0);
 
@@ -433,7 +431,9 @@ export default function App() {
     const allCourses = useMemo(() => (rawCourses || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true"), [rawCourses]);
     const allFacilitators = useMemo(() => (rawFacilitators || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [rawFacilitators]);
 
-    const { user, userStates, authLoading, userLocalities } = useAuth();
+    const { user, authLoading } = useAuth();
+    const [userStates, setUserStates] = useState([]);
+    const [userLocalities, setUserLocalities] = useState([]);
 
     const isProfileIncomplete = useMemo(() => {
         if (!authLoading && user && (!user.displayName || user.displayName.trim().length === 0)) return true;
@@ -547,9 +547,6 @@ export default function App() {
     const isPopStateNavigation = useRef(false);
     const initialViewIsSet = useRef(false);
 
-    // =========================================================================
-    // --- WRAPPER FOR GENERIC IN-APP DOWNLOAD & OPEN MANAGER ---
-    // =========================================================================
     const handleFileDownloadAndOpen = (url, customFileName = null) => {
         downloadAndOpenFile(url, customFileName, {
             onStart: () => { setIsFileDownloading(true); setFileDownloadProgress(0); },
@@ -561,7 +558,6 @@ export default function App() {
             onFinally: () => { setIsFileDownloading(false); setFileDownloadProgress(0); }
         });
     };
-    // =========================================================================
 
     useEffect(() => { if (!authLoading && user) initializeUsageTracking(); }, [authLoading, user]);
 
@@ -630,8 +626,6 @@ export default function App() {
 
             setIsPublicMeetingView(false); setPublicMeetingId(null); setPublicMeetingData(null); setPublicMeetingTargetDate(null);
 
-            // --- PUBLIC ROUTES EVALUATION ---
-            
             const publicMeetingMatch = path.match(/^\/public\/meeting\/([a-zA-Z0-9_-]+)\/?$/);
             if (publicMeetingMatch && publicMeetingMatch[1]) {
                 setIsPublicMeetingView(true); setPublicMeetingId(publicMeetingMatch[1]); setPublicViewLoading(true);
@@ -844,116 +838,99 @@ export default function App() {
         }
     }, [user, permissionsLoading]);
 
-    // UPDATED, SECURED, AND FAST-LOAD checkUserRoleAndPermissions logic
+    // THE UNIFIED REAL-TIME ROLE & STATE SYNC
     useEffect(() => {
-        let isMounted = true; 
+        let unsubscribe = null;
+        let isMounted = true;
 
-        const checkUserRoleAndPermissions = async () => {
-            if (!user) {
-                if (isMounted) {
-                    setUserRole(null); setUserRoles([]); setUserPermissions({});
-                    setPermissionsLoading(false);
-                }
-                return;
-            }
+        if (!user) {
+            setUserRole(null); setUserRoles([]); setUserPermissions({});
+            setUserStates([]); setUserLocalities([]);
+            setPermissionsLoading(false);
+            return;
+        }
 
-            setPermissionsLoading(true);
-            const userRef = doc(db, "users", user.uid);
-            
-            let currentRole = 'user'; 
-            let currentRoles = ['user']; 
-            let currentPermissionsData = {};
-            let hasLoadedFromCache = false;
+        setPermissionsLoading(true);
+        const userRef = doc(db, "users", user.uid);
 
-            // ==========================================
-            // PHASE 1: INSTANT CACHE LOAD (Unlock UI)
-            // ==========================================
-            try {
-                const backupRole = localStorage.getItem(`backup_role_${user.uid}`);
+        // 1. Instant UI Unlock via LocalStorage Backup
+        const backupRole = localStorage.getItem(`backup_role_${user.uid}`);
+        if (backupRole) {
+            setUserRole(backupRole);
+            setUserRoles(JSON.parse(localStorage.getItem(`backup_roles_${user.uid}`) || `["${backupRole}"]`));
+            setUserPermissions(JSON.parse(localStorage.getItem(`backup_perms_${user.uid}`) || "{}"));
+            setUserStates(JSON.parse(localStorage.getItem(`backup_states_${user.uid}`) || "[]"));
+            setUserLocalities(JSON.parse(localStorage.getItem(`backup_localities_${user.uid}`) || "[]"));
+            setPermissionsLoading(false); 
+        }
+
+        // 2. Single Real-time Firebase Listener (No database locks!)
+        unsubscribe = onSnapshot(userRef, { includeMetadataChanges: true }, (docSnap) => {
+            if (!isMounted) return;
+
+            if (docSnap.exists()) {
+                const data = docSnap.data();
                 
-                if (backupRole) {
-                    currentRole = backupRole;
-                    currentRoles = JSON.parse(localStorage.getItem(`backup_roles_${user.uid}`) || `["${currentRole}"]`);
-                    currentPermissionsData = JSON.parse(localStorage.getItem(`backup_perms_${user.uid}`) || "{}");
-                    hasLoadedFromCache = true;
-                } else {
-                    const cachedSnap = await getDoc(userRef, { source: 'cache' });
-                    if (cachedSnap.exists()) {
-                        const data = cachedSnap.data();
-                        const rawRole = data.role || data.Role || (data.roles && data.roles[0]) || 'user';
-                        currentRole = typeof rawRole === 'string' ? rawRole.toLowerCase() : 'user';
-                        currentRoles = data.roles && Array.isArray(data.roles) && data.roles.length > 0 ? data.roles : [currentRole]; 
-                        
-                        const ALL_PERMISSIONS_MINIMAL = ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
-                        currentPermissionsData = applyDerivedPermissions({ ...ALL_PERMISSIONS_MINIMAL, ...(data.permissions || {}) });
-                        hasLoadedFromCache = true;
-                    }
-                }
-            } catch (cacheErr) {
-                console.warn("Cache read failed, waiting for server:", cacheErr);
-            }
+                // Extract Roles
+                const rawRole = data.role || data.Role || (data.roles && data.roles[0]) || 'user';
+                const newRole = typeof rawRole === 'string' ? rawRole.toLowerCase() : 'user';
+                const newRoles = data.roles && Array.isArray(data.roles) && data.roles.length > 0 ? data.roles : [newRole];
 
-            if (hasLoadedFromCache && isMounted) {
-                setUserRole(currentRole); 
-                setUserRoles(currentRoles); 
-                setUserPermissions(currentPermissionsData); 
-                setPermissionsLoading(false); 
-            }
+                const ALL_PERMISSIONS_MINIMAL = ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
+                const newPermissionsData = applyDerivedPermissions({ ...ALL_PERMISSIONS_MINIMAL, ...(data.permissions || {}) });
 
-            // ==========================================
-            // PHASE 2: SILENT BACKGROUND SERVER SYNC (WITH 3.5s TIMEOUT)
-            // ==========================================
-            try {
-                const serverFetchPromise = getDoc(userRef, { source: 'server' });
-                const timeoutPromise = new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('POOR_NETWORK_TIMEOUT')), 3500)
-                );
-                
-                const serverSnap = await Promise.race([serverFetchPromise, timeoutPromise]);
-                
-                if (serverSnap.exists()) {
-                    const data = serverSnap.data();
-                    const rawRole = data.role || data.Role || (data.roles && data.roles[0]) || 'user';
-                    const serverRole = typeof rawRole === 'string' ? rawRole.toLowerCase() : 'user';
-                    const serverRoles = data.roles && Array.isArray(data.roles) && data.roles.length > 0 ? data.roles : [serverRole]; 
-                    
-                    const ALL_PERMISSIONS_MINIMAL = ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
-                    const serverPermissionsData = applyDerivedPermissions({ ...ALL_PERMISSIONS_MINIMAL, ...(data.permissions || {}) });
-                    
-                    localStorage.setItem(`backup_role_${user.uid}`, serverRole);
-                    localStorage.setItem(`backup_roles_${user.uid}`, JSON.stringify(serverRoles));
-                    localStorage.setItem(`backup_perms_${user.uid}`, JSON.stringify(serverPermissionsData));
+                // Extract States/Localities
+                const newStates = data.assignedState ? [data.assignedState] : [];
+                const newLocalities = data.assignedLocality ? [data.assignedLocality] : [];
 
-                    if (isMounted && (!hasLoadedFromCache || serverRole !== currentRole || JSON.stringify(serverRoles) !== JSON.stringify(currentRoles))) {
-                        setUserRole(serverRole); 
-                        setUserRoles(serverRoles); 
-                        setUserPermissions(serverPermissionsData); 
-                        if (!hasLoadedFromCache) setPermissionsLoading(false);
-                    }
-                } else if (!hasLoadedFromCache) {
-                    currentRole = 'user'; currentRoles = ['user'];
-                    currentPermissionsData = applyDerivedPermissions(DEFAULT_ROLE_PERMISSIONS.user);
-                    
-                    await setDoc(userRef, { email: user.email, role: currentRole, roles: currentRoles, permissions: currentPermissionsData, lastLogin: new Date(), assignedState: '' });
-                    
-                    if (isMounted) {
-                        setUserRole(currentRole); setUserRoles(currentRoles); setUserPermissions(currentPermissionsData);
-                        setPermissionsLoading(false);
-                    }
-                }
-            } catch (serverErr) {
-                console.warn(`[App Boot] Network sync skipped (${serverErr.message}). Using cache.`);
-                
-                if (!hasLoadedFromCache && isMounted) {
-                    setUserRole('user'); setUserRoles(['user']); setUserPermissions(applyDerivedPermissions(DEFAULT_ROLE_PERMISSIONS.user));
-                    setPermissionsLoading(false);
+                // Sync to LocalStorage
+                localStorage.setItem(`backup_role_${user.uid}`, newRole);
+                localStorage.setItem(`backup_roles_${user.uid}`, JSON.stringify(newRoles));
+                localStorage.setItem(`backup_perms_${user.uid}`, JSON.stringify(newPermissionsData));
+                localStorage.setItem(`backup_states_${user.uid}`, JSON.stringify(newStates));
+                localStorage.setItem(`backup_localities_${user.uid}`, JSON.stringify(newLocalities));
+
+                // Update UI State
+                setUserRole(newRole);
+                setUserRoles(newRoles);
+                setUserPermissions(newPermissionsData);
+                setUserStates(newStates);
+                setUserLocalities(newLocalities);
+                setPermissionsLoading(false);
+            } else {
+                // Document does not exist (e.g. brand new user)
+                const defaultRole = 'user';
+                const defaultRoles = ['user'];
+                const defaultPerms = applyDerivedPermissions(DEFAULT_ROLE_PERMISSIONS.user);
+
+                setUserRole(defaultRole); setUserRoles(defaultRoles); setUserPermissions(defaultPerms);
+                setUserStates([]); setUserLocalities([]);
+                setPermissionsLoading(false);
+
+                if (!docSnap.metadata.fromCache) {
+                    setDoc(userRef, { 
+                        email: user.email, 
+                        role: defaultRole, 
+                        roles: defaultRoles, 
+                        permissions: defaultPerms, 
+                        lastLogin: new Date(), 
+                        assignedState: '' 
+                    }, { merge: true }).catch(err => console.warn("Failed to set default doc:", err));
                 }
             }
+        }, (error) => {
+            console.warn("Realtime fetch error (Firebase block or DB Lock):", error);
+            if (!backupRole && isMounted) {
+                setUserRole('user'); setUserRoles(['user']); setUserPermissions(applyDerivedPermissions(DEFAULT_ROLE_PERMISSIONS.user));
+                setUserStates([]); setUserLocalities([]);
+                setPermissionsLoading(false);
+            }
+        });
+
+        return () => {
+            isMounted = false;
+            if (unsubscribe) unsubscribe();
         };
-        
-        checkUserRoleAndPermissions();
-
-        return () => { isMounted = false; };
     }, [user]);
 
     useEffect(() => { if (!user) initialViewIsSet.current = false; }, [user]);
@@ -1340,12 +1317,19 @@ export default function App() {
     const handleLogout = useCallback(async () => { 
         if (window.confirm('Are you sure you want to log out?')) {
             try { 
+                if (user) {
+                    localStorage.removeItem(`backup_role_${user.uid}`);
+                    localStorage.removeItem(`backup_roles_${user.uid}`);
+                    localStorage.removeItem(`backup_perms_${user.uid}`);
+                    localStorage.removeItem(`backup_states_${user.uid}`);
+                    localStorage.removeItem(`backup_localities_${user.uid}`);
+                }
                 await signOut(auth); 
             } catch (error) { 
                 console.error("Error signing out:", error); 
             } 
         }
-    }, []);
+    }, [user]);
 
     const handleLoginForSharedView = useCallback(async () => {  }, []);
 
