@@ -3,12 +3,12 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Card, PageHeader, Button, Table, Spinner, Select, Checkbox, Toast, Input, FormGroup, Modal, CardBody, CardFooter } from './CommonComponents';
 import { db, auth } from '../firebase';
 import { collection, query, getDocs, doc, updateDoc, getDoc, setDoc, writeBatch, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
-import { getFunctions, httpsCallable } from 'firebase/functions'; // <-- NEW IMPORTS FOR FCM CLOUD FUNCTION
+import { getFunctions, httpsCallable } from 'firebase/functions'; 
 import { onAuthStateChanged, sendPasswordResetEmail } from 'firebase/auth';
 import { STATE_LOCALITIES } from './constants'; 
 
 // --- Icons & Data Imports ---
-import { CheckCircle, XCircle, RefreshCw, Lock, Users, Shield, Activity, Filter, Database, Edit3, Clock, Settings, Smartphone, CloudDownload, History, Bell } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, Lock, Users, Shield, Activity, Filter, Database, Edit3, Clock, Settings, Smartphone, CloudDownload, History, Bell, Trash2, Download } from 'lucide-react';
 import { listFederalCoordinators } from '../data';
 
 // --- NEW COMPONENT IMPORT ---
@@ -195,6 +195,7 @@ export function AdminDashboard() {
     const [users, setUsers] = useState([]);
     const [rolesAndPermissions, setRolesAndPermissions] = useState({});
     const [usageStats, setUsageStats] = useState([]);
+    const [updateHistory, setUpdateHistory] = useState([]); // <-- NEW STATE FOR HISTORY
     const [loading, setLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState(null);
     const [toast, setToast] = useState({ show: false, message: '', type: '' });
@@ -227,8 +228,8 @@ export function AdminDashboard() {
     // --- APP UPDATE STATES ---
     const [otaVersion, setOtaVersion] = useState("Checking Server...");
     const [serverNativeConfig, setServerNativeConfig] = useState(null); 
-    const [isUpdateActive, setIsUpdateActive] = useState(false); // Tracks if currently enforced
-    const [isEditingUpdate, setIsEditingUpdate] = useState(false); // Tracks if the edit form is visible
+    const [isUpdateActive, setIsUpdateActive] = useState(false); 
+    const [isEditingUpdate, setIsEditingUpdate] = useState(false); 
 
     const [updateConfig, setUpdateConfig] = useState({
         latestNativeBuild: 1,
@@ -260,7 +261,6 @@ export function AdminDashboard() {
                     setCurrentUserRoles(roles);
                     setCurrentUserPermissions(perms);
                     
-                    // Allow Super User or Federal Manager data levels 
                     const effectiveRole = roles.includes('super_user') ? 'super_user' : role;
                     loadData(effectiveRole);
                 }).catch(error => {
@@ -275,6 +275,7 @@ export function AdminDashboard() {
                 setUsers([]);
                 setRolesAndPermissions({});
                 setUsageStats([]);
+                setUpdateHistory([]);
                 setLoading(false);
             }
         });
@@ -309,7 +310,6 @@ export function AdminDashboard() {
             setUsers(userList);
             setRolesAndPermissions(updatedPermissions);
 
-            // Always fetch usage stats (telemetry) to populate versions in the User Directory
             try {
                 const usageQuery = query(collection(db, "userUsageStats"));
                 const usageSnapshot = await getDocs(usageQuery);
@@ -324,19 +324,27 @@ export function AdminDashboard() {
             }
 
             if (role === 'super_user') {
-                // Load Native App Update Config from Database
+                // Load Active Config
                 const updateRef = doc(db, "meta", "update_config");
                 const updateSnap = await getDoc(updateRef);
                 if (updateSnap.exists()) {
                     const data = updateSnap.data();
                     setUpdateConfig(data);
-                    // Determine if active mandatory config
-                    if (data.mandatory) {
-                        setIsUpdateActive(true);
-                    }
+                    if (data.mandatory) setIsUpdateActive(true);
                 }
 
-                // 1. Fetch current Live OTA Version from Firebase Hosting
+                // Load Update History Log
+                try {
+                    const historyQuery = query(collection(db, "update_history"));
+                    const historySnap = await getDocs(historyQuery);
+                    const historyList = historySnap.docs.map(d => ({id: d.id, ...d.data()}))
+                        .sort((a,b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+                    setUpdateHistory(historyList);
+                } catch(e) {
+                    console.warn("Could not load update history:", e);
+                }
+
+                // Fetch current Live OTA Version from Firebase Hosting
                 try {
                     const res = await fetch("https://imnci-courses-monitor.web.app/latest/update.json?t=" + Date.now());
                     if (res.ok) {
@@ -349,7 +357,7 @@ export function AdminDashboard() {
                     setOtaVersion("Offline");
                 }
 
-                // 2. Fetch the absolute latest compiled APK config from Firebase Hosting
+                // Fetch the absolute latest compiled APK config from Firebase Hosting
                 try {
                     const nativeRes = await fetch("https://imnci-courses-monitor.web.app/native-version.json?t=" + Date.now());
                     if (nativeRes.ok) {
@@ -376,18 +384,28 @@ export function AdminDashboard() {
             } else {
                 setIsUpdateActive(false);
             }
-            setIsEditingUpdate(false); // Hide the form after saving
+            setIsEditingUpdate(false); 
 
-            // ==========================================
-            // FIX: TRIGGER APP UPDATE NOTIFICATION 
-            // ==========================================
+            // --- SAVE TO UPDATE HISTORY LOG ---
+            const newHistoryRecord = {
+                versionString: updateConfig.versionString,
+                latestNativeBuild: updateConfig.latestNativeBuild,
+                downloadUrl: updateConfig.downloadUrl,
+                releaseNotes: updateConfig.releaseNotes,
+                timestamp: serverTimestamp()
+            };
+            const addedDocRef = await addDoc(collection(db, "update_history"), newHistoryRecord);
+            
+            // Optimistically update UI History
+            setUpdateHistory([{ id: addedDocRef.id, ...newHistoryRecord, timestamp: { seconds: Date.now()/1000 } }, ...updateHistory]);
+
+            // --- TRIGGER NOTIFICATIONS ---
             try {
                 const notifTitle = "App Update Available";
                 const notifMessage = updateConfig.mandatory 
                     ? `A mandatory update to version ${updateConfig.versionString} is required. ${updateConfig.releaseNotes}`
                     : `Version ${updateConfig.versionString} is now available. ${updateConfig.releaseNotes}`;
 
-                // 1. Save to in-app notification history
                 await addDoc(collection(db, 'notifications'), {
                     title: notifTitle,
                     message: notifMessage,
@@ -397,7 +415,6 @@ export function AdminDashboard() {
                     status: 'active'
                 });
 
-                // 2. Send FCM Push via Cloud Function
                 const functions = getFunctions(db.app);
                 const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
                 await sendFCMNotification({
@@ -408,7 +425,6 @@ export function AdminDashboard() {
             } catch (notifErr) {
                 console.error("Failed to send automatic update notification:", notifErr);
             }
-            // ==========================================
 
             setToast({show: true, message: 'Update configuration saved and pushed to users!', type: 'success'});
         } catch(e) {
@@ -416,6 +432,19 @@ export function AdminDashboard() {
             setToast({show: true, message: 'Failed to save update configuration.', type: 'error'});
         }
         setLoading(false);
+    };
+
+    const handleDeleteHistoryRecord = async (id) => {
+        if (!window.confirm("Remove this update from the history log?\n\nNote: This removes the visual record here. The physical .apk file remains on Firebase Hosting until overwritten by future deployments.")) return;
+        
+        try {
+            await deleteDoc(doc(db, "update_history", id));
+            setUpdateHistory(updateHistory.filter(item => item.id !== id));
+            setToast({show: true, message: 'History record removed.', type: 'success'});
+        } catch (e) {
+            console.error("Failed to delete history:", e);
+            setToast({show: true, message: 'Failed to delete record.', type: 'error'});
+        }
     };
 
     const handleReverseUpdate = async () => {
@@ -755,7 +784,7 @@ export function AdminDashboard() {
                 )}
 
                 {/* Native APK Trigger Control Block */}
-                <Card className="shadow-sm border border-gray-100 overflow-hidden">
+                <Card className="shadow-sm border border-gray-100 overflow-hidden mb-6">
                     <div className="p-5 border-b border-gray-100 bg-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="flex items-center">
                             <Smartphone className="w-5 h-5 text-sky-600 mr-3 shrink-0" />
@@ -861,6 +890,66 @@ export function AdminDashboard() {
                                     </Button>
                                 )}
                             </div>
+                        </div>
+                    )}
+                </Card>
+
+                {/* --- DEPLOYMENT HISTORY TABLE --- */}
+                <Card className="shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="p-5 border-b border-gray-100 bg-gray-50 flex items-center">
+                        <History className="w-5 h-5 text-gray-500 mr-3 shrink-0" />
+                        <div>
+                            <h3 className="text-md font-bold text-gray-800">Deployment History Log</h3>
+                            <p className="text-xs text-gray-500">Record of previously configured Native APK versions pushed from this dashboard.</p>
+                        </div>
+                    </div>
+                    {updateHistory.length > 0 ? (
+                        <div className="overflow-x-auto">
+                            <Table headers={["Version", "Build ID", "Deployment Date", "Release Notes", "Actions"]}>
+                                {updateHistory.map((stat) => (
+                                    <tr key={stat.id} className="hover:bg-gray-50 transition-colors">
+                                        <td className="py-3">
+                                            <div className="font-bold text-sky-700 bg-sky-50 px-2 py-1 rounded inline-block border border-sky-100 shadow-sm">
+                                                v{stat.versionString}
+                                            </div>
+                                        </td>
+                                        <td className="py-3 text-gray-600 font-mono font-medium">{stat.latestNativeBuild}</td>
+                                        <td className="py-3 text-sm text-gray-500 font-medium">
+                                            {stat.timestamp?.seconds 
+                                                ? new Date(stat.timestamp.seconds * 1000).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+                                                : 'Unknown'}
+                                        </td>
+                                        <td className="py-3 text-xs text-gray-500 max-w-xs truncate">
+                                            {stat.releaseNotes || '-'}
+                                        </td>
+                                        <td className="py-3">
+                                            <div className="flex gap-2">
+                                                <a 
+                                                    href={stat.downloadUrl} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center justify-center p-1.5 text-sky-600 bg-sky-50 border border-sky-200 rounded hover:bg-sky-100 transition-colors"
+                                                    title="Download APK"
+                                                >
+                                                    <Download className="w-4 h-4" />
+                                                </a>
+                                                <button 
+                                                    onClick={() => handleDeleteHistoryRecord(stat.id)}
+                                                    className="inline-flex items-center justify-center p-1.5 text-red-500 bg-red-50 border border-red-200 rounded hover:bg-red-100 transition-colors"
+                                                    title="Remove from history"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </Table>
+                        </div>
+                    ) : (
+                        <div className="text-center py-10 bg-white">
+                            <History className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                            <p className="text-sm text-gray-500">No deployment history recorded yet.</p>
                         </div>
                     )}
                 </Card>
@@ -1025,7 +1114,6 @@ export function AdminDashboard() {
                                                 {!isLocalityAssignable && isStateAssignable && <span className="text-[10px] text-gray-400">All Localities</span>}
                                             </div>
                                         </td>
-                                        {/* --- UPDATED FCM NOTIFICATION STATUS --- */}
                                         <td className="py-3">
                                             {renderVersionInfo(appVersion, lastAppAccess)}
                                             {user.fcmToken && (

@@ -838,99 +838,106 @@ export default function App() {
         }
     }, [user, permissionsLoading]);
 
-    // THE UNIFIED REAL-TIME ROLE & STATE SYNC
+    // THE UNIFIED REAL-TIME ROLE & STATE SYNC (NATIVE-SAFE VERSION)
     useEffect(() => {
-        let unsubscribe = null;
-        let isMounted = true;
+        const checkUserRoleAndPermissions = async () => {
+            if (!user) {
+                setUserRole(null); setUserRoles([]); setUserPermissions({});
+                setUserStates([]); setUserLocalities([]);
+                setPermissionsLoading(false);
+                return;
+            }
 
-        if (!user) {
-            setUserRole(null); setUserRoles([]); setUserPermissions({});
-            setUserStates([]); setUserLocalities([]);
-            setPermissionsLoading(false);
-            return;
-        }
+            setPermissionsLoading(true);
 
-        setPermissionsLoading(true);
-        const userRef = doc(db, "users", user.uid);
+            // 1. Instant UI Unlock via LocalStorage Backup
+            const backupRole = localStorage.getItem(`backup_role_${user.uid}`);
+            if (backupRole) {
+                setUserRole(backupRole);
+                setUserRoles(JSON.parse(localStorage.getItem(`backup_roles_${user.uid}`) || `["${backupRole}"]`));
+                setUserPermissions(JSON.parse(localStorage.getItem(`backup_perms_${user.uid}`) || "{}"));
+                setUserStates(JSON.parse(localStorage.getItem(`backup_states_${user.uid}`) || "[]"));
+                setUserLocalities(JSON.parse(localStorage.getItem(`backup_localities_${user.uid}`) || "[]"));
+                setPermissionsLoading(false); 
+            }
 
-        // 1. Instant UI Unlock via LocalStorage Backup
-        const backupRole = localStorage.getItem(`backup_role_${user.uid}`);
-        if (backupRole) {
-            setUserRole(backupRole);
-            setUserRoles(JSON.parse(localStorage.getItem(`backup_roles_${user.uid}`) || `["${backupRole}"]`));
-            setUserPermissions(JSON.parse(localStorage.getItem(`backup_perms_${user.uid}`) || "{}"));
-            setUserStates(JSON.parse(localStorage.getItem(`backup_states_${user.uid}`) || "[]"));
-            setUserLocalities(JSON.parse(localStorage.getItem(`backup_localities_${user.uid}`) || "[]"));
-            setPermissionsLoading(false); 
-        }
-
-        // 2. Single Real-time Firebase Listener (No database locks!)
-        unsubscribe = onSnapshot(userRef, { includeMetadataChanges: true }, (docSnap) => {
-            if (!isMounted) return;
-
-            if (docSnap.exists()) {
-                const data = docSnap.data();
+            // 2. Robust Network-Aware Fetch (Replaces flaky onSnapshot)
+            try {
+                const userRef = doc(db, "users", user.uid);
+                let userSnap;
                 
-                // Extract Roles
-                const rawRole = data.role || data.Role || (data.roles && data.roles[0]) || 'user';
-                const newRole = typeof rawRole === 'string' ? rawRole.toLowerCase() : 'user';
-                const newRoles = data.roles && Array.isArray(data.roles) && data.roles.length > 0 ? data.roles : [newRole];
-
-                const ALL_PERMISSIONS_MINIMAL = ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
-                const newPermissionsData = applyDerivedPermissions({ ...ALL_PERMISSIONS_MINIMAL, ...(data.permissions || {}) });
-
-                // Extract States/Localities
-                const newStates = data.assignedState ? [data.assignedState] : [];
-                const newLocalities = data.assignedLocality ? [data.assignedLocality] : [];
-
-                // Sync to LocalStorage
-                localStorage.setItem(`backup_role_${user.uid}`, newRole);
-                localStorage.setItem(`backup_roles_${user.uid}`, JSON.stringify(newRoles));
-                localStorage.setItem(`backup_perms_${user.uid}`, JSON.stringify(newPermissionsData));
-                localStorage.setItem(`backup_states_${user.uid}`, JSON.stringify(newStates));
-                localStorage.setItem(`backup_localities_${user.uid}`, JSON.stringify(newLocalities));
-
-                // Update UI State
-                setUserRole(newRole);
-                setUserRoles(newRoles);
-                setUserPermissions(newPermissionsData);
-                setUserStates(newStates);
-                setUserLocalities(newLocalities);
-                setPermissionsLoading(false);
-            } else {
-                // Document does not exist (e.g. brand new user)
-                const defaultRole = 'user';
-                const defaultRoles = ['user'];
-                const defaultPerms = applyDerivedPermissions(DEFAULT_ROLE_PERMISSIONS.user);
-
-                setUserRole(defaultRole); setUserRoles(defaultRoles); setUserPermissions(defaultPerms);
-                setUserStates([]); setUserLocalities([]);
-                setPermissionsLoading(false);
-
-                if (!docSnap.metadata.fromCache) {
-                    setDoc(userRef, { 
-                        email: user.email, 
-                        role: defaultRole, 
-                        roles: defaultRoles, 
-                        permissions: defaultPerms, 
-                        lastLogin: new Date(), 
-                        assignedState: '' 
-                    }, { merge: true }).catch(err => console.warn("Failed to set default doc:", err));
+                // Safe offline check to prevent app hanging on startup
+                try {
+                    const status = await Network.getStatus();
+                    const sourceOptions = status.connected ? {} : { source: 'cache' };
+                    userSnap = await getDoc(userRef, sourceOptions);
+                } catch (e) {
+                    userSnap = await getDoc(userRef, { source: 'cache' });
                 }
-            }
-        }, (error) => {
-            console.warn("Realtime fetch error (Firebase block or DB Lock):", error);
-            if (!backupRole && isMounted) {
-                setUserRole('user'); setUserRoles(['user']); setUserPermissions(applyDerivedPermissions(DEFAULT_ROLE_PERMISSIONS.user));
-                setUserStates([]); setUserLocalities([]);
+                
+                if (userSnap.exists()) {
+                    const data = userSnap.data();
+                    
+                    // Extract Roles
+                    const rawRole = data.role || data.Role || (data.roles && data.roles[0]) || 'user';
+                    const newRole = typeof rawRole === 'string' ? rawRole.toLowerCase() : 'user';
+                    const newRoles = data.roles && Array.isArray(data.roles) && data.roles.length > 0 ? data.roles : [newRole];
+
+                    const ALL_PERMISSIONS_MINIMAL = ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
+                    const newPermissionsData = applyDerivedPermissions({ ...ALL_PERMISSIONS_MINIMAL, ...(data.permissions || {}) });
+
+                    // Extract States/Localities
+                    const newStates = data.assignedState ? [data.assignedState] : [];
+                    const newLocalities = data.assignedLocality ? [data.assignedLocality] : [];
+
+                    // Sync to LocalStorage
+                    localStorage.setItem(`backup_role_${user.uid}`, newRole);
+                    localStorage.setItem(`backup_roles_${user.uid}`, JSON.stringify(newRoles));
+                    localStorage.setItem(`backup_perms_${user.uid}`, JSON.stringify(newPermissionsData));
+                    localStorage.setItem(`backup_states_${user.uid}`, JSON.stringify(newStates));
+                    localStorage.setItem(`backup_localities_${user.uid}`, JSON.stringify(newLocalities));
+
+                    // Update UI State
+                    setUserRole(newRole);
+                    setUserRoles(newRoles);
+                    setUserPermissions(newPermissionsData);
+                    setUserStates(newStates);
+                    setUserLocalities(newLocalities);
+                } else {
+                    // Only create the default doc if we successfully reached the server 
+                    // This prevents accidental overwrites to 'user' when the device is just offline
+                    const status = await Network.getStatus();
+                    if (status.connected) {
+                        const defaultRole = 'user';
+                        const defaultRoles = ['user'];
+                        const defaultPerms = applyDerivedPermissions(DEFAULT_ROLE_PERMISSIONS.user);
+
+                        setUserRole(defaultRole); setUserRoles(defaultRoles); setUserPermissions(defaultPerms);
+                        setUserStates([]); setUserLocalities([]);
+
+                        await setDoc(userRef, { 
+                            email: user.email, 
+                            role: defaultRole, 
+                            roles: defaultRoles, 
+                            permissions: defaultPerms, 
+                            lastLogin: new Date(), 
+                            assignedState: '' 
+                        }, { merge: true }).catch(err => console.warn("Failed to set default doc:", err));
+                    }
+                }
+            } catch (error) {
+                console.warn("Role fetch error (Native bridge delay or offline):", error);
+                // Only fallback to baseline 'user' if we don't have a backup to rely on
+                if (!backupRole) {
+                    setUserRole('user'); setUserRoles(['user']); setUserPermissions(applyDerivedPermissions(DEFAULT_ROLE_PERMISSIONS.user));
+                    setUserStates([]); setUserLocalities([]);
+                }
+            } finally {
                 setPermissionsLoading(false);
             }
-        });
-
-        return () => {
-            isMounted = false;
-            if (unsubscribe) unsubscribe();
         };
+
+        checkUserRoleAndPermissions();
     }, [user]);
 
     useEffect(() => { if (!user) initialViewIsSet.current = false; }, [user]);
