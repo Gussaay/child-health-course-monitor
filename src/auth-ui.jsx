@@ -74,6 +74,11 @@ export function SignInBox() {
     if (!skipSuccessMessage) {
         setMessage("Sign in successful. Redirecting..."); 
         setIsLoading(true); 
+        
+        // FIX: Force the app to reload to guarantee App.jsx syncs the new auth state
+        setTimeout(() => {
+            window.location.reload();
+        }, 500);
     }
     
     setIsMissingName(false);
@@ -187,11 +192,10 @@ export function SignInBox() {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             setPassword(''); 
 
-            if (checkAndPromptForName(userCredential.user)) {
+            const needsName = checkAndPromptForName(userCredential.user);
+            if (needsName) {
                 setIsLoading(false);
-                return; 
             }
-            
             return; 
 
         } catch (err) {
@@ -282,7 +286,6 @@ export function SignInBox() {
       // --- BRANCH 1: NATIVE APK / iOS ---
       if (isNative) {
         await ensureSocialLoginInit();
-        // REMOVED: options: { scopes: ['email', 'profile'] }
         const response = await SocialLogin.login({ 
             provider: "google"
         });
@@ -299,7 +302,6 @@ export function SignInBox() {
       else {
         const provider = new GoogleAuthProvider();
         
-        // FORCING POPUP EVERYWHERE TO BYPASS REDIRECT/ITP ISSUES
         try {
             console.log("[DEBUG] Attempting signInWithPopup...");
             const result = await signInWithPopup(auth, provider); 
@@ -335,19 +337,20 @@ export function SignInBox() {
       }
       
       // --- Profile Check ---
-      if (user && checkAndPromptForName(user)) {
-          setIsLoading(false);
-          return; 
+      if (user) {
+          const needsName = checkAndPromptForName(user);
+          if (needsName) {
+              setIsLoading(false);
+          }
+          return;
       }
 
     } catch (err) {
       setError(err.message);
       console.error("Google Auth Error:", err);
       setIsMissingName(false); 
-    } finally {
-      // Ensure we clear loading status if we get stuck or throw an error
       setIsLoading(false);
-    }
+    } 
   };
 
   const toggleMode = () => {
