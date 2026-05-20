@@ -25,6 +25,13 @@ export function useAppUpdate() {
         let downloadListenerHandle;
 
         if (Capacitor.isNativePlatform()) {
+            
+            // ⚠️ CRITICAL OTA FIX 1: Notify Capgo immediately that the app booted.
+            // Do NOT put this inside a timeout. Capgo needs to know the app didn't crash.
+            CapacitorUpdater.notifyAppReady()
+                .then(() => console.log("[Capgo] App notified as ready successfully. Rollback prevented."))
+                .catch(e => console.warn("[Capgo] notifyAppReady failed:", e));
+
             const showUpdateNotification = async (title, body, notifId) => {
                 try {
                     let permStatus = await LocalNotifications.checkPermissions();
@@ -40,12 +47,10 @@ export function useAppUpdate() {
             };
 
             const setupAndCheckUpdates = async () => {
-                try { await CapacitorUpdater.notifyAppReady(); } catch (e) { console.warn("notifyAppReady failed", e); }
-
                 const status = await Network.getStatus();
                 if (!status.connected) return;
 
-                // Native Firestore Check
+                // --- Native Firestore Check (For forced major APK updates) ---
                 try {
                     const updateDocRef = doc(db, "meta", "update_config");
                     const updateSnap = await getDoc(updateDocRef);
@@ -64,7 +69,7 @@ export function useAppUpdate() {
                     }
                 } catch (e) { console.warn("Native update check failed safely:", e); }
 
-                // Capgo OTA Check
+                // --- Capgo OTA Check (For minor Javascript updates) ---
                 try {
                     const currentState = await CapacitorUpdater.current();
                     const currentVersion = currentState.bundle?.version || import.meta.env.VITE_APP_VERSION || "builtin";
@@ -73,16 +78,22 @@ export function useAppUpdate() {
                     const response = await fetch('https://imnci-courses-monitor.web.app/latest/update.json?t=' + Date.now(), { cache: "no-store" });
                     if (response.ok) {
                         const latestUpdate = await response.json();
+                        
+                        // ⚠️ CRITICAL OTA FIX 2: Strict version comparison to prevent re-downloading
                         if (currentVersion !== latestUpdate.version) {
+                            console.log(`[Capgo] Update found! Current: ${currentVersion}, Latest: ${latestUpdate.version}`);
                             const downloadedBundle = await CapacitorUpdater.download({ url: latestUpdate.url, version: latestUpdate.version });
                             setUpdateBundle(downloadedBundle); 
                             setIsUpdateReady(true);
                             showUpdateNotification("تحديث جاهز!", "تم تحميل التحديث بنجاح. انقر لإعادة تشغيل التطبيق.", 102);
+                        } else {
+                            console.log(`[Capgo] App is up to date (Version: ${currentVersion}).`);
                         }
                     }
                 } catch (error) { console.warn("Capgo check failed safely:", error); }
             };
             
+            // Delay the heavy network check by 5 seconds so it doesn't lag the app launch
             setTimeout(setupAndCheckUpdates, 5000); 
 
             CapacitorUpdater.addListener('download', (info) => {
@@ -182,17 +193,13 @@ export function useAppUpdate() {
                             <button 
                                 onClick={() => {
                                     downloadAndOpenFile(nativeUpdatePrompt.downloadUrl, `Update_v${nativeUpdatePrompt.versionString}.apk`, {
-                                        isSystemFile: true, // Uses Cache, skips permission issues
+                                        isSystemFile: true,
                                         onStart: () => {
                                             setIsDownloadingAppUpdate(true);
                                             setAppUpdateProgress(0);
                                         },
-                                        onProgress: (pct) => {
-                                            setAppUpdateProgress(pct);
-                                        },
-                                        onFinally: () => {
-                                            setIsDownloadingAppUpdate(false);
-                                        }
+                                        onProgress: (pct) => setAppUpdateProgress(pct),
+                                        onFinally: () => setIsDownloadingAppUpdate(false)
                                     });
                                 }}
                                 disabled={isDownloadingAppUpdate}
@@ -201,7 +208,6 @@ export function useAppUpdate() {
                                 {isDownloadingAppUpdate ? 'جاري التحميل...' : 'تحميل التحديث الآن'}
                             </button>
 
-                            {/* Show Progress Bar if Active */}
                             {isDownloadingAppUpdate && (
                                 <div className="mt-4">
                                     <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
@@ -235,7 +241,7 @@ export function useAppUpdate() {
                         </div>
                         <h3 className="text-xl font-bold text-slate-800">Update Ready!</h3>
                         <p className="text-sm text-slate-500">
-                            A new version of the app has been downloaded in the background. You must restart the app to apply the update and continue.
+                            A new version of the app has been downloaded. You must restart the app to apply the update and continue.
                         </p>
                         <button 
                             onClick={async () => {

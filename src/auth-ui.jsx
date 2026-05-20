@@ -44,7 +44,7 @@ export function SignInBox() {
   
   // --- State: To toggle between sign-in and sign-up ---
   const [isSignUpMode, setIsSignUpMode] = useState(false);
-  const [fullName, setFullName] = useState(''); // Also used for profile update
+  const [fullName, setFullName] = useState(''); 
 
   // --- NEW STATE for missing full name prompt ---
   const [isMissingName, setIsMissingName] = useState(false);
@@ -72,13 +72,9 @@ export function SignInBox() {
     }
     
     if (!skipSuccessMessage) {
-        setMessage("Sign in successful. Redirecting..."); 
+        setMessage("Sign in successful. Loading your dashboard..."); 
         setIsLoading(true); 
-        
-        // FIX: Force the app to reload to guarantee App.jsx syncs the new auth state
-        setTimeout(() => {
-            window.location.reload();
-        }, 500);
+        // FIX: Removed window.location.reload() to allow Firebase to persist the session
     }
     
     setIsMissingName(false);
@@ -102,7 +98,10 @@ export function SignInBox() {
     try {
         await updateProfile(user, { displayName: fullName });
         setMessage("Profile updated! Redirecting...");
-        window.location.reload();
+        // FIX: Add a small delay to ensure Firebase writes the profile update before reloading
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
         
     } catch (err) {
         setError(err.message);

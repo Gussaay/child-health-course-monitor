@@ -863,11 +863,22 @@ export default function App() {
                     const userRef = doc(db, "users", user.uid);
                     let userSnap;
                     
-                    // Safe offline check
+                    // Safe offline check with a 7-second timeout protection
                     try {
                         const sourceOptions = isOffline ? { source: 'cache' } : {};
-                        userSnap = await getDoc(userRef, sourceOptions);
+                        
+                        // Create a promise that rejects after 7 seconds
+                        const timeoutPromise = new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error("Firestore timeout")), 4000)
+                        );
+                        
+                        // Race the fetch against the timeout
+                        userSnap = await Promise.race([
+                            getDoc(userRef, sourceOptions),
+                            timeoutPromise
+                        ]);
                     } catch (e) {
+                        console.warn("Network slow or offline, falling back to cache.");
                         userSnap = await getDoc(userRef, { source: 'cache' });
                     }
                     
