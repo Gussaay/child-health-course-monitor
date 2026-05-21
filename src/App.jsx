@@ -839,7 +839,7 @@ export default function App() {
     }, [user, permissionsLoading]);
 
     // =========================================================================
-    // THE NATIVE-SAFE ROLE SYNC (WITH BRIDGE DELAY SIMULATION)
+    // THE NATIVE-SAFE ROLE SYNC
     // =========================================================================
     useEffect(() => {
         let isMounted = true;
@@ -864,30 +864,18 @@ export default function App() {
                 setUserLocalities(JSON.parse(localStorage.getItem(`backup_localities_${user.uid}`) || "[]"));
             }
 
-            // 2. CRITICAL FIX: The Native Auth Delay Simulation.
-            // Give the Capacitor native bridge 1.5 seconds to sync the Google Auth token 
-            // with the Firestore SDK before we attempt to read the user doc. This is the exact 
-            // natural delay that made your "old working app" successfully bypass the offline bug!
-            await new Promise(resolve => setTimeout(resolve, 1500));
-
             if (!isMounted) return;
 
             try {
                 const userRef = doc(db, "users", user.uid);
-                let userSnap;
                 
-                // Mirroring the exact network logic from your old working code.
-                try {
-                    const status = await Network.getStatus();
-                    const sourceOptions = status.connected ? {} : { source: 'cache' };
-                    userSnap = await getDoc(userRef, sourceOptions);
-                } catch (e) {
-                    userSnap = await getDoc(userRef, { source: 'cache' });
-                }
+                // CRITICAL FIX: Do NOT use Capacitor Network to force '{ source: "cache" }'.
+                // Let the Firebase SDK naturally handle network routing and offline caching.
+                const userSnap = await getDoc(userRef);
 
                 if (!isMounted) return;
 
-                if (userSnap && userSnap.exists()) {
+                if (userSnap.exists()) {
                     const data = userSnap.data();
                     
                     const rawRole = data.role || data.Role || (data.roles && data.roles[0]) || 'user';
@@ -901,7 +889,6 @@ export default function App() {
                     const newLocalities = data.assignedLocality ? [data.assignedLocality] : [];
 
                     // CRITICAL FIX: Only overwrite local backups if we pulled fresh data from the SERVER.
-                    // This prevents the offline cache from permanently breaking your 'Super User' status.
                     if (!userSnap.metadata?.fromCache) {
                         localStorage.setItem(`backup_role_${user.uid}`, newRole);
                         localStorage.setItem(`backup_roles_${user.uid}`, JSON.stringify(newRoles));
@@ -915,7 +902,8 @@ export default function App() {
                     setUserPermissions(newPermissionsData);
                     setUserStates(newStates);
                     setUserLocalities(newLocalities);
-                } else if (userSnap && !userSnap.exists()) {
+                } else {
+                    // Only create a new user profile if Firebase confirms they don't exist
                     const status = await Network.getStatus();
                     if (status.connected) {
                         const defaultRole = 'user';

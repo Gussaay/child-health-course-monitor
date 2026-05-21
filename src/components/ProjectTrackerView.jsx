@@ -352,6 +352,9 @@ export default function ProjectTrackerView({ permissions }) {
     const [activeMeetingDate, setActiveMeetingDate] = useState(''); 
     const [isPdfGenerating, setIsPdfGenerating] = useState(false);
     
+    // NEW: State for filtering attendance by date
+    const [attendanceDateFilter, setAttendanceDateFilter] = useState('All');
+    
     // --- Modal State ---
     const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
     const [isSubtaskModalOpen, setIsSubtaskModalOpen] = useState(false);
@@ -397,6 +400,20 @@ export default function ProjectTrackerView({ permissions }) {
     const activeProject = useMemo(() => projects.find(p => p.id === activeProjectId) || null, [projects, activeProjectId]);
     const activeMeeting = useMemo(() => meetings.find(m => m.id === activeMeetingId) || null, [meetings, activeMeetingId]);
 
+    // NEW: Real-time polling for live attendance updates
+    useEffect(() => {
+        let intervalId;
+        // Only poll if we are viewing the attendance tracker to save bandwidth
+        if (viewMode === 'meeting' && meetingSubTab === 'attendance' && activeMeetingId) {
+            intervalId = setInterval(() => {
+                fetchUnitMeetings(true); // Force bypass cache to get live data
+            }, 3000); // Poll every 3 seconds
+        }
+        return () => {
+            if (intervalId) clearInterval(intervalId);
+        };
+    }, [viewMode, meetingSubTab, activeMeetingId, fetchUnitMeetings]);
+
     useEffect(() => {
         if (activeMeeting && activeMeeting.sessionDates?.length > 0) {
             if (!activeMeetingDate || !activeMeeting.sessionDates.includes(activeMeetingDate)) {
@@ -422,16 +439,23 @@ export default function ProjectTrackerView({ permissions }) {
     // Dashboard KPIs & Chart for active meeting attendance
     const attendanceDashboard = useMemo(() => {
         if (!activeMeeting) return null;
+
+        // Filter dates based on selection
+        const filteredDates = attendanceDateFilter === 'All' 
+            ? (activeMeeting.sessionDates || []) 
+            : (activeMeeting.sessionDates || []).filter(d => d === attendanceDateFilter);
         
-        const totalSessions = activeMeeting.sessionDates?.length || 0;
+        const totalSessions = filteredDates.length;
         const regularDetails = (activeMeeting.invitees || []).map(name => getInviteeDetails(name, allTeamMembers));
         const guestDetails = (activeMeeting.guests || []).map(g => ({
             name: g.name, displayName: g.name, state: 'External / Guests', position: g.position, level: 'guest', isGuest: true
         }));
         
         const allInvitees = [...regularDetails, ...guestDetails].sort((a, b) => {
-            const countA = (activeMeeting.attendance?.[a.name] || []).length;
-            const countB = (activeMeeting.attendance?.[b.name] || []).length;
+            // Sort by attendance count on the filtered dates
+            const getFilteredAttCount = (invName) => (activeMeeting.attendance?.[invName] || []).filter(d => filteredDates.includes(d)).length;
+            const countA = getFilteredAttCount(a.name);
+            const countB = getFilteredAttCount(b.name);
             if (countB !== countA) return countB - countA;
             return a.displayName.localeCompare(b.displayName);
         });
@@ -440,7 +464,8 @@ export default function ProjectTrackerView({ permissions }) {
         const stateStats = {};
         
         allInvitees.forEach(inv => {
-            const attCount = (activeMeeting.attendance?.[inv.name] || []).length;
+            // Only count attendance for the filtered dates
+            const attCount = (activeMeeting.attendance?.[inv.name] || []).filter(d => filteredDates.includes(d)).length;
             totalActual += attCount;
             if (!stateStats[inv.state]) stateStats[inv.state] = { expected: 0, actual: 0 };
             stateStats[inv.state].expected += totalSessions;
@@ -472,8 +497,8 @@ export default function ProjectTrackerView({ permissions }) {
             scales: { y: { beginAtZero: true, max: 100 } }
         };
 
-        return { allInvitees, totalSessions, globalRate, stateChartData, chartOptions };
-    }, [activeMeeting, allTeamMembers]);
+        return { allInvitees, totalSessions, globalRate, stateChartData, chartOptions, filteredDates };
+    }, [activeMeeting, allTeamMembers, attendanceDateFilter]);
 
     // --- KPI Calculations ---
     const { kpiStats, overdueTasksList, unitPerformance, personPerformance } = useMemo(() => {
@@ -1416,7 +1441,20 @@ export default function ProjectTrackerView({ permissions }) {
                                 <div className="space-y-6">
                                     {/* Dashboard KPI Header */}
                                     <div className="p-4 border flex justify-between items-center bg-gray-50 flex-wrap gap-4 rounded-lg shadow-sm">
-                                        <h4 className="font-bold text-gray-800 flex items-center gap-2"><Users className="w-5 h-5"/> Multi-Session Attendance</h4>
+                                        <div className="flex items-center gap-4">
+                                            <h4 className="font-bold text-gray-800 flex items-center gap-2">
+                                                <Users className="w-5 h-5"/> Attendance Tracker
+                                            </h4>
+                                            {activeMeeting.sessionDates?.length > 0 && (
+                                                <div className="flex items-center gap-2 border-l pl-4 ml-2 border-gray-300">
+                                                    <span className="text-sm font-medium text-gray-600">Filter Date:</span>
+                                                    <Select bsSize="sm" value={attendanceDateFilter} onChange={(e) => setAttendanceDateFilter(e.target.value)} className="bg-white min-w-[120px]">
+                                                        <option value="All">All Dates</option>
+                                                        {activeMeeting.sessionDates.map(d => <option key={d} value={d}>{d}</option>)}
+                                                    </Select>
+                                                </div>
+                                            )}
+                                        </div>
                                         <div className="flex gap-2">
                                             <Button size="sm" variant="secondary" onClick={(e) => { e.preventDefault(); setIsAddGuestModalOpen(true); }}>
                                                 <UserPlus className="w-4 h-4 mr-1" /> Add Guest
@@ -1440,7 +1478,11 @@ export default function ProjectTrackerView({ permissions }) {
                                         <>
                                             {/* KPI Row */}
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-center">
+                                                <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-center relative">
+                                                    <div className="absolute top-2 right-2 flex h-3 w-3">
+                                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                                                      <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                                                    </div>
                                                     <div className="text-2xl font-bold text-blue-700">{attendanceDashboard.allInvitees.length}</div>
                                                     <div className="text-xs text-blue-600 uppercase font-semibold leading-tight mt-1">Total Invitees</div>
                                                 </div>
@@ -1450,7 +1492,7 @@ export default function ProjectTrackerView({ permissions }) {
                                                 </div>
                                                 <div className="bg-purple-50 p-4 rounded-lg border border-purple-100 text-center">
                                                     <div className="text-2xl font-bold text-purple-700">{attendanceDashboard.totalSessions}</div>
-                                                    <div className="text-xs text-purple-600 uppercase font-semibold leading-tight mt-1">Total Sessions</div>
+                                                    <div className="text-xs text-purple-600 uppercase font-semibold leading-tight mt-1">Filtered Sessions</div>
                                                 </div>
                                             </div>
 
@@ -1473,7 +1515,7 @@ export default function ProjectTrackerView({ permissions }) {
                                                                     <th className="p-3 border font-semibold">Invitee Name</th>
                                                                     <th className="p-3 border font-semibold">State / Level</th>
                                                                     <th className="p-3 border font-semibold">Position</th>
-                                                                    {activeMeeting.sessionDates.map(date => (
+                                                                    {attendanceDashboard.filteredDates.map(date => (
                                                                         <th key={date} className="p-3 border font-semibold text-center whitespace-nowrap text-xs">{date}</th>
                                                                     ))}
                                                                     <th className="p-3 border font-semibold text-center">Total</th>
@@ -1483,8 +1525,9 @@ export default function ProjectTrackerView({ permissions }) {
                                                             <tbody>
                                                                 {attendanceDashboard.allInvitees.map(inv => {
                                                                     const inviteeAtt = activeMeeting.attendance?.[inv.name] || [];
-                                                                    const daysCount = inviteeAtt.length;
-                                                                    const totalSessions = activeMeeting.sessionDates.length;
+                                                                    // Only count days present within the currently filtered view
+                                                                    const daysCount = inviteeAtt.filter(d => attendanceDashboard.filteredDates.includes(d)).length;
+                                                                    const totalSessions = attendanceDashboard.filteredDates.length;
                                                                     const percentage = totalSessions > 0 ? Math.round((daysCount / totalSessions) * 100) : 0;
                                                                     const status = getStatusDetails(daysCount, totalSessions);
 
@@ -1497,7 +1540,7 @@ export default function ProjectTrackerView({ permissions }) {
                                                                                 {inv.state}
                                                                             </td>
                                                                             <td className="p-3 border text-gray-600 text-xs">{inv.position}</td>
-                                                                            {activeMeeting.sessionDates.map(date => (
+                                                                            {attendanceDashboard.filteredDates.map(date => (
                                                                                 <td key={date} className="p-3 border text-center">
                                                                                     <input 
                                                                                         type="checkbox" 
