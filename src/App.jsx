@@ -96,7 +96,9 @@ import {
     listParticipantTestsForCourse, 
     upsertParticipantTest,
     getUnitMeetingById,
-    upsertUnitMeeting
+    upsertUnitMeeting,
+    getPendingSyncQueue,
+    clearPendingSyncQueue
 } from './data.js';
 import { STATE_LOCALITIES } from './components/constants.js';
 import { Card, PageHeader, Button, EmptyState, Spinner, Toast, Modal, Input } from './components/CommonComponents';
@@ -401,6 +403,9 @@ export default function App() {
     const [isEditingProfile, setIsEditingProfile] = useState(false);
     const [editDisplayName, setEditDisplayName] = useState('');
 
+    const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+    const [pendingSyncItems, setPendingSyncItems] = useState([]);
+
     useEffect(() => {
         let networkListener;
         const setupNetworkListener = async () => {
@@ -413,12 +418,20 @@ export default function App() {
                     setIsSyncing(true);
                     try {
                         await Promise.race([ waitForPendingWrites(db), new Promise(resolve => setTimeout(resolve, 5000)) ]);
+                        clearPendingSyncQueue();
                     } catch (e) { console.error("Error waiting for pending writes during sync:", e); } finally { setIsSyncing(false); }
                 }
             });
         };
         setupNetworkListener();
         return () => { if (networkListener) networkListener.remove(); };
+    }, []);
+
+    useEffect(() => {
+        setPendingSyncItems(getPendingSyncQueue());
+        const handleQueueUpdate = () => setPendingSyncItems(getPendingSyncQueue());
+        window.addEventListener('syncQueueUpdated', handleQueueUpdate);
+        return () => window.removeEventListener('syncQueueUpdated', handleQueueUpdate);
     }, []);
 
     const {
@@ -866,9 +879,6 @@ export default function App() {
 
             try {
                 // --- CRITICAL NATIVE FIX: Force Token Sync ---
-                // On Native apps, Firestore can fire its getDoc request before the Auth token 
-                // is fully registered internally by the Firebase SDK. Forcing a token refresh 
-                // ensures the request carries the proper authorization headers to bypass security rules.
                 if (Capacitor.isNativePlatform()) {
                     try {
                         await user.getIdToken(true);
@@ -1827,22 +1837,7 @@ export default function App() {
                         <NotificationBell user={user} />
                         
                         <button
-                            onClick={() => {
-                                if (isOffline) {
-                                    setToast({ show: true, message: 'You are currently offline. Data will sync when connection is restored.', type: 'info' });
-                                    return;
-                                }
-                                setIsSyncing(true);
-                                setToast({ show: true, message: 'Checking and syncing offline data...', type: 'info' });
-                                
-                                waitForPendingWrites(db).then(() => {
-                                    setToast({ show: true, message: 'All offline data synced successfully.', type: 'success' });
-                                }).catch((e) => {
-                                    setToast({ show: true, message: 'Sync failed or timed out.', type: 'error' });
-                                }).finally(() => {
-                                    setIsSyncing(false);
-                                });
-                            }}
+                            onClick={() => setIsSyncModalOpen(true)}
                             className={`p-1 sm:p-1.5 border rounded transition-colors flex items-center justify-center min-w-[32px] sm:min-w-[36px] ${
                                 isOffline 
                                 ? 'text-amber-400 bg-slate-600 border-slate-500 hover:bg-slate-500' 
@@ -2028,6 +2023,81 @@ export default function App() {
                             <Button onClick={() => setIsUserProfileModalOpen(false)} variant="secondary">
                                 Close
                             </Button>
+                        </div>
+                    </Modal>
+                )}
+            </Suspense>
+
+            <Suspense fallback={null}>
+                {isSyncModalOpen && (
+                    <Modal 
+                        isOpen={isSyncModalOpen} 
+                        onClose={() => setIsSyncModalOpen(false)} 
+                        title="Data Sync Status"
+                    >
+                        <div className="p-6 space-y-5">
+                            <div className={`p-4 rounded-lg flex items-center gap-4 ${isOffline ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-green-50 text-green-800 border border-green-200'}`}>
+                                {isOffline ? <CloudOff size={28} /> : <Cloud size={28} />}
+                                <div>
+                                    <h4 className="font-bold text-lg">{isOffline ? 'Currently Offline' : 'Connected to Server'}</h4>
+                                    <p className="text-sm mt-1">{isOffline ? 'Changes are being saved locally. They will sync automatically when your connection is restored.' : 'Your connection is stable and the database is reachable.'}</p>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div className="flex justify-between items-center mb-3 border-b pb-2">
+                                    <h4 className="font-semibold text-gray-700">Data Waiting for Sync</h4>
+                                    <span className="bg-slate-200 text-slate-700 text-xs font-bold px-2 py-1 rounded-full">
+                                        {pendingSyncItems.length} items
+                                    </span>
+                                </div>
+                                
+                                {pendingSyncItems.length > 0 ? (
+                                    <ul className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                                        {pendingSyncItems.map((item, idx) => (
+                                            <li key={idx} className="bg-white p-3 rounded-md border border-gray-200 shadow-sm flex justify-between items-center">
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold text-sky-700 text-sm">{item.type}</span>
+                                                    <span className="text-gray-500 text-xs mt-0.5">{item.name}</span>
+                                                </div>
+                                                <span className="text-xs text-amber-500 bg-amber-50 px-2 py-1 rounded border border-amber-100">
+                                                    Pending
+                                                </span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <div className="text-center py-6 bg-gray-50 rounded border border-dashed border-gray-300">
+                                        <p className="text-sm text-gray-500">No tracked items waiting to sync.</p>
+                                        <p className="text-xs text-gray-400 mt-1">Firebase handles background data synchronization automatically.</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="pt-4 flex justify-end gap-2 border-t">
+                                <Button variant="secondary" onClick={() => setIsSyncModalOpen(false)}>
+                                    Close
+                                </Button>
+                                <Button
+                                    disabled={isOffline || isSyncing}
+                                    onClick={() => {
+                                        setIsSyncing(true);
+                                        setToast({ show: true, message: 'Checking and syncing offline data...', type: 'info' });
+                                        
+                                        waitForPendingWrites(db).then(() => {
+                                            setToast({ show: true, message: 'All offline data synced successfully.', type: 'success' });
+                                            clearPendingSyncQueue();
+                                            setIsSyncModalOpen(false);
+                                        }).catch(() => {
+                                            setToast({ show: true, message: 'Sync failed or timed out.', type: 'error' });
+                                        }).finally(() => {
+                                            setIsSyncing(false);
+                                        });
+                                    }}
+                                >
+                                    {isSyncing ? <Spinner /> : 'Force Sync Now'}
+                                </Button>
+                            </div>
                         </div>
                     </Modal>
                 )}

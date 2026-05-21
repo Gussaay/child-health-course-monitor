@@ -59,7 +59,6 @@ const syncDurationToDb = (durationMs, userId) => {
         lastUpdated: serverTimestamp() 
     };
 
-    // 🛑 Append version and access time based on platform
     if (isNative) {
         payload.appVersion = currentVersion;
         payload.lastAppAccess = serverTimestamp();
@@ -118,7 +117,6 @@ const updateUsageStatsInDb = () => {
         lastUpdated: serverTimestamp()
     };
 
-    // 🛑 Append version and access time based on platform
     if (isNative) {
         updatePayload.appVersion = currentVersion;
         updatePayload.lastAppAccess = serverTimestamp();
@@ -178,7 +176,6 @@ export const initializeUsageTracking = () => {
     if (user && !currentUser) { 
         currentUser = { uid: user.uid, email: user.email };
         
-        // 🛑 STAMP LOGIN VERSION IMMEDIATELY ON BOOT
         const { isNative, currentVersion } = getPlatformAndVersion();
         const stampPayload = { lastUpdated: serverTimestamp(), email: user.email };
         if (isNative) {
@@ -203,6 +200,23 @@ export const initializeUsageTracking = () => {
         window.addEventListener('beforeunload', saveDurationToLocalStorage);
     }
   });
+};
+
+// --- COSMETIC OFFLINE QUEUE (For UI Modal) ---
+export const getPendingSyncQueue = () => {
+    return JSON.parse(localStorage.getItem('cosmetic_sync_queue') || '[]');
+};
+
+export const clearPendingSyncQueue = () => {
+    localStorage.removeItem('cosmetic_sync_queue');
+    window.dispatchEvent(new Event('syncQueueUpdated'));
+};
+
+const addToPendingQueue = (actionName) => {
+    const queue = getPendingSyncQueue();
+    queue.push({ name: actionName, type: 'Local Save', time: Date.now() });
+    localStorage.setItem('cosmetic_sync_queue', JSON.stringify(queue));
+    window.dispatchEvent(new Event('syncQueueUpdated')); 
 };
 
 // --- FIRESTORE WRAPPERS ---
@@ -279,9 +293,10 @@ async function getData(query, sourceOptions = {}) {
     }
 }
 
-// --- NEW: OFFLINE-SAFE WRITE HELPER ---
-export const executeOfflineSafeWrite = async (writePromise) => {
+// --- UPDATED: OFFLINE-SAFE WRITE HELPER ---
+export const executeOfflineSafeWrite = async (writePromise, actionName = 'Data Update') => {
     if (!navigator.onLine) {
+        addToPendingQueue(actionName);
         writePromise.catch(e => console.error("Offline write later failed:", e));
         return { status: 'queued' };
     }
@@ -290,7 +305,10 @@ export const executeOfflineSafeWrite = async (writePromise) => {
     
     try {
         await Promise.race([writePromise, timeoutPromise]);
-        if (isTimeout) return { status: 'queued' }; 
+        if (isTimeout) {
+            addToPendingQueue(actionName);
+            return { status: 'queued' }; 
+        }
         return { status: 'success' };
     } catch (error) {
         throw error; 
@@ -386,7 +404,7 @@ export async function saveFacilitySnapshot(payload, externalBatch = null) {
     batch.set(facilityRef, mainFacilityData, { merge: true });
 
     if (!externalBatch) {
-        await executeOfflineSafeWrite(batch.commit());
+        await executeOfflineSafeWrite(batch.commit(), `Facility Snapshot: ${payload.اسم_المؤسسة || facilityId}`);
     }
     return facilityId;
 }
@@ -526,7 +544,7 @@ export async function submitLocalityBatchUpdate(updates, localityName) {
         batch.set(submissionRef, submissionData);
     }
     
-    await executeOfflineSafeWrite(batch.commit());
+    await executeOfflineSafeWrite(batch.commit(), `Batch Update: ${localityName}`);
     return true;
 }
 
@@ -604,7 +622,7 @@ export async function submitFacilityDataForApproval(payload, submitterIdentifier
      if (submissionData.id === undefined) delete submissionData.id;
     const newSubmissionRef = doc(collection(db, "facilitySubmissions"));
     const writePromise = setDoc(newSubmissionRef, submissionData);
-    await executeOfflineSafeWrite(writePromise);
+    await executeOfflineSafeWrite(writePromise, `Facility Update: ${payload.اسم_المؤسسة || 'New'}`);
     return newSubmissionRef.id;
 }
 
@@ -752,13 +770,13 @@ export async function upsertFacilitator(payload) {
     if (payload.id) {
         const facRef = doc(db, "facilitators", payload.id);
         const writePromise = setDoc(facRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
-        await executeOfflineSafeWrite(writePromise);
+        await executeOfflineSafeWrite(writePromise, `Facilitator: ${payload.name || payload.id}`);
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
         const newFacRef = doc(collection(db, "facilitators"));
         const writePromise = setDoc(newFacRef, { ...dataToSave, lastUpdatedAt: serverTimestamp() });
-        await executeOfflineSafeWrite(writePromise);
+        await executeOfflineSafeWrite(writePromise, `Facilitator: ${payload.name || 'New'}`);
         return newFacRef.id;
     }
 }
@@ -813,7 +831,7 @@ export async function getFacilitatorSubmissionByEmail(email) {
 export async function submitFacilitatorApplication(payload) {
     const dataToSave = { ...payload, submittedAt: serverTimestamp(), status: 'pending' };
     const newSubmissionRef = doc(collection(db, "facilitatorSubmissions"));
-    await executeOfflineSafeWrite(setDoc(newSubmissionRef, dataToSave));
+    await executeOfflineSafeWrite(setDoc(newSubmissionRef, dataToSave), `Facilitator App: ${payload.name}`);
     return newSubmissionRef.id;
 }
 export async function listPendingFacilitatorSubmissions(sourceOptions = {}) {
@@ -1077,7 +1095,6 @@ export async function upsertCourse(payload, userIdentifier = 'Unknown') {
     if (payload.id) {
         const courseRef = doc(db, "courses", payload.id);
         
-        // Ensure we don't accidentally wipe out an existing coverageSnapshot with a null/undefined payload if we aren't explicitly updating it
         const payloadToUpdate = { 
             ...payload, 
             lastUpdatedAt: timestamp,
@@ -1085,7 +1102,7 @@ export async function upsertCourse(payload, userIdentifier = 'Unknown') {
         };
         
         const writePromise = setDoc(courseRef, payloadToUpdate, { merge: true });
-        await executeOfflineSafeWrite(writePromise);
+        await executeOfflineSafeWrite(writePromise, `Course: ${payload.course_type}`);
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
@@ -1097,7 +1114,7 @@ export async function upsertCourse(payload, userIdentifier = 'Unknown') {
             lastUpdatedAt: timestamp,
             updatedBy: userIdentifier
         });
-        await executeOfflineSafeWrite(writePromise);
+        await executeOfflineSafeWrite(writePromise, `Course: ${payload.course_type}`);
         return newCourseRef.id;
     }
 }
@@ -1231,7 +1248,7 @@ export async function upsertParticipant(payload) {
             }
         }
         const writePromise = setDoc(participantRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true }); 
-        await executeOfflineSafeWrite(writePromise);
+        await executeOfflineSafeWrite(writePromise, `Participant: ${payload.name}`);
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
@@ -1248,7 +1265,7 @@ export async function upsertParticipant(payload) {
         
         const newParticipantRef = doc(collection(db, "participants"));
         const writePromise = setDoc(newParticipantRef, { ...dataToSave, lastUpdatedAt: serverTimestamp() }); 
-        await executeOfflineSafeWrite(writePromise);
+        await executeOfflineSafeWrite(writePromise, `Participant: ${dataToSave.name}`);
         return newParticipantRef.id;
     }
 }
@@ -1469,7 +1486,7 @@ export async function bulkMigrateFromMappings(mappings, options = { dryRun: fals
 export async function listObservationsForParticipant(courseId, participantId, sourceOptions = {}) {
     const q = query(collection(db, "observations"), where("courseId", "==", courseId), where("participant_id", "==", participantId));
     const snapshot = await getDocs(q, sourceOptions);
-    return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    return snapshot.docs.map(d => ({ id: d.id, ...doc.data() }));
 }
 export async function listCasesForParticipant(courseId, participantId, sourceOptions = {}) {
     const q = query(collection(db, "cases"), where("courseId", "==", courseId), where("participant_id", "==", participantId));
@@ -1499,7 +1516,7 @@ export async function upsertCaseAndObservations(caseData, observations, editingC
         savedObservations.push(finalObs); 
     });
 
-    await executeOfflineSafeWrite(batch.commit()); 
+    await executeOfflineSafeWrite(batch.commit(), `Case & Obs`); 
     return { savedCase, savedObservations };
 }
 
@@ -1512,7 +1529,7 @@ export async function deleteCaseAndObservations(caseId) {
     const snapshot = await getDocs(q); 
     snapshot.forEach(d => batch.update(d.ref, { isDeleted: true, lastUpdatedAt: serverTimestamp() }));
     
-    await executeOfflineSafeWrite(batch.commit()); 
+    await executeOfflineSafeWrite(batch.commit(), `Delete Case`); 
 }
 
 export async function listAllDataForCourse(courseId, sourceOptions = {}) {
@@ -1542,29 +1559,26 @@ export async function upsertFinalReport(payload, userIdentifier = 'Unknown User'
     const currentDateISO = new Date().toISOString();
 
     if (payload.id) {
-        // --- THIS IS AN EDIT ---
         const finalReportRef = doc(db, "finalReports", payload.id);
         const { id, ...dataToUpdate } = payload;
         
-        // Create the log entry for this specific edit
         const editLog = {
-            editor: userIdentifier, // Explicitly tracking the editor
+            editor: userIdentifier,
             editedAt: currentDateISO
         };
 
         const writePromise = setDoc(finalReportRef, { 
             ...dataToUpdate, 
             lastUpdatedAt: timestamp,
-            editor: userIdentifier, // Root level storage for quick querying
+            editor: userIdentifier,
             lastEditedBy: userIdentifier,
             lastEditedAt: currentDateISO,
-            editHistory: arrayUnion(editLog) // Safely appends the edit log
+            editHistory: arrayUnion(editLog)
         }, { merge: true });
         
-        await executeOfflineSafeWrite(writePromise);
+        await executeOfflineSafeWrite(writePromise, `Final Report`);
         return payload.id;
     } else {
-        // --- THIS IS A BRAND NEW REPORT ---
         const { id, ...dataToSave } = payload;
         const newRef = doc(collection(db, "finalReports"));
         
@@ -1576,10 +1590,10 @@ export async function upsertFinalReport(payload, userIdentifier = 'Unknown User'
             editor: userIdentifier,
             lastEditedBy: userIdentifier,
             lastEditedAt: currentDateISO,
-            editHistory: [] // Initialize empty history array
+            editHistory: [] 
         });
         
-        await executeOfflineSafeWrite(writePromise);
+        await executeOfflineSafeWrite(writePromise, `Final Report`);
         return newRef.id;
     }
 }
@@ -1629,7 +1643,7 @@ export async function saveMentorshipSession(payload, sessionId = null, externalB
             return docRef.id; 
         } else {
             const writePromise = setDoc(docRef, sessionData, { merge: !!sessionId });
-            await executeOfflineSafeWrite(writePromise);
+            await executeOfflineSafeWrite(writePromise, `Mentorship: ${payload.healthWorkerName}`);
             return docRef.id;
         }
     } catch (error) {
@@ -1718,7 +1732,7 @@ export async function saveIMNCIVisitReport(payload, reportId = null) {
         };
         const docRef = reportId ? doc(db, "imnciVisitReports", reportId) : doc(collection(db, "imnciVisitReports")); 
         const writePromise = setDoc(docRef, sessionData, { merge: !!reportId });
-        await executeOfflineSafeWrite(writePromise);
+        await executeOfflineSafeWrite(writePromise, `IMNCI Visit`);
         return docRef.id;
     } catch (error) {
         console.error("Error saving IMNCI visit report:", error);
@@ -1756,7 +1770,7 @@ export async function saveEENCVisitReport(payload, reportId = null) {
         };
         const docRef = reportId ? doc(db, "eencVisitReports", reportId) : doc(collection(db, "eencVisitReports")); 
         const writePromise = setDoc(docRef, sessionData, { merge: !!reportId });
-        await executeOfflineSafeWrite(writePromise);
+        await executeOfflineSafeWrite(writePromise, `EENC Visit`);
         return docRef.id;
     } catch (error) {
         console.error("Error saving EENC visit report:", error);
@@ -1852,7 +1866,7 @@ export async function upsertParticipantTest(payload) {
     const batch = writeBatch(db); 
     batch.update(participantRef, { [scoreFieldToUpdate]: percentage });
     batch.set(testRecordRef, { ...payload, lastUpdatedAt: serverTimestamp() });
-    await executeOfflineSafeWrite(batch.commit());
+    await executeOfflineSafeWrite(batch.commit(), `Participant Test`);
 }
 
 export async function listParticipantTestsForCourse(courseId, sourceOptions = {}) {
@@ -1876,7 +1890,7 @@ export async function deleteParticipantTest(courseId, participantId, testType) {
     const batch = writeBatch(db);
     batch.update(testRecordRef, { isDeleted: true, lastUpdatedAt: serverTimestamp() });
     batch.update(participantRef, { [scoreFieldToReset]: deleteField() });
-    await executeOfflineSafeWrite(batch.commit());
+    await executeOfflineSafeWrite(batch.commit(), `Delete Participant Test`);
 }
 
 export const queueCertificateEmail = async (participant, link, language) => {
@@ -1909,7 +1923,7 @@ export const queueCertificateEmail = async (participant, link, language) => {
                 html: body
             }
         });
-        await executeOfflineSafeWrite(writePromise);
+        await executeOfflineSafeWrite(writePromise, `Email Queue`);
         return { success: true };
     } catch (error) {
         console.error("Error queuing email:", error);
@@ -1922,7 +1936,7 @@ export async function upsertProject(payload) {
     if (payload.id) {
         const docRef = doc(db, "projects", payload.id);
         const writePromise = fbSetDoc(docRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
-        await executeOfflineSafeWrite(writePromise);
+        await executeOfflineSafeWrite(writePromise, `Project: ${payload.name}`);
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
@@ -1932,7 +1946,7 @@ export async function upsertProject(payload) {
             createdAt: serverTimestamp(), 
             lastUpdatedAt: serverTimestamp() 
         });
-        await executeOfflineSafeWrite(writePromise);
+        await executeOfflineSafeWrite(writePromise, `Project: ${payload.name}`);
         return newRef.id;
     }
 }
@@ -1961,7 +1975,7 @@ export async function upsertMasterPlan(payload) {
     if (payload.id) {
         const docRef = doc(db, "masterPlans", payload.id);
         const writePromise = fbSetDoc(docRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
-        await executeOfflineSafeWrite(writePromise);
+        await executeOfflineSafeWrite(writePromise, `Master Plan`);
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
@@ -1971,7 +1985,7 @@ export async function upsertMasterPlan(payload) {
             createdAt: serverTimestamp(), 
             lastUpdatedAt: serverTimestamp() 
         });
-        await executeOfflineSafeWrite(writePromise);
+        await executeOfflineSafeWrite(writePromise, `Master Plan`);
         return newRef.id;
     }
 }
@@ -2000,7 +2014,7 @@ export async function upsertOperationalPlan(payload) {
     if (payload.id) {
         const docRef = doc(db, "operationalPlans", payload.id);
         const writePromise = fbUpdateDoc(docRef, { ...payload, lastUpdatedAt: serverTimestamp() });
-        await executeOfflineSafeWrite(writePromise);
+        await executeOfflineSafeWrite(writePromise, `Operational Plan`);
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
@@ -2010,7 +2024,7 @@ export async function upsertOperationalPlan(payload) {
             createdAt: serverTimestamp(), 
             lastUpdatedAt: serverTimestamp() 
         });
-        await executeOfflineSafeWrite(writePromise);
+        await executeOfflineSafeWrite(writePromise, `Operational Plan`);
         return newRef.id;
     }
 }
@@ -2039,7 +2053,7 @@ export async function upsertUnitMeeting(payload) {
     if (payload.id) {
         const docRef = doc(db, "unitMeetings", payload.id);
         const writePromise = fbSetDoc(docRef, { ...payload, lastUpdatedAt: serverTimestamp() }, { merge: true });
-        await executeOfflineSafeWrite(writePromise);
+        await executeOfflineSafeWrite(writePromise, `Unit Meeting`);
         return payload.id;
     } else {
         const { id, ...dataToSave } = payload;
@@ -2049,7 +2063,7 @@ export async function upsertUnitMeeting(payload) {
             createdAt: serverTimestamp(), 
             lastUpdatedAt: serverTimestamp() 
         });
-        await executeOfflineSafeWrite(writePromise);
+        await executeOfflineSafeWrite(writePromise, `Unit Meeting`);
         return newRef.id;
     }
 }
@@ -2098,7 +2112,7 @@ export async function saveIMNCIPatientRecord(payload, recordId = null) {
             
         const writePromise = setDoc(docRef, recordData, { merge: !!recordId });
         
-        await executeOfflineSafeWrite(writePromise);
+        await executeOfflineSafeWrite(writePromise, `IMNCI Patient: ${payload.childName || 'New'}`);
         return docRef.id;
     } catch (error) {
         console.error("Error saving IMNCI patient record:", error);
@@ -2112,7 +2126,6 @@ export async function listIMNCIPatientRecords(sourceOptions = {}, lastSync = 0) 
         if (lastSync > 0) {
             q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
         }
-        // Exclude softly deleted records
         q = query(q, where("isDeleted", "!=", true)); 
         
         const snapshot = await getData(q, sourceOptions);
@@ -2131,8 +2144,6 @@ export async function deleteIMNCIPatientRecord(recordId) {
 }
 
 // --- HISTORICAL BASELINE COVERAGE HELPER (INCREMENTALLY CACHED) ---
-
-// Create memory caches to avoid pulling thousands of docs every time the tab switches
 let globalSnapshotCache = [];
 let lastGlobalSnapshotFetch = 0;
 
@@ -2140,30 +2151,23 @@ export async function fetchFacilitiesHistoryMultiDate(states, targetDatesStrArra
     if (!states || states.length === 0 || !targetDatesStrArray || targetDatesStrArray.length === 0) return [];
 
     const targetDates = targetDatesStrArray.map(d => new Date(d));
-    // Find the latest date to set an upper bound on our database query (saves massive data reads)
     const maxDate = new Date(Math.max(...targetDates.map(d => d.getTime())));
 
     try {
         const snapshotsRef = collection(db, "facilitySnapshots");
 
-        // INCREMENTAL UPDATE LOGIC:
         let q;
         if (lastGlobalSnapshotFetch > 0) {
-            // Only pull snapshots created AFTER the last time we checked
             q = query(snapshotsRef, where("snapshotCreatedAt", ">", Timestamp.fromMillis(lastGlobalSnapshotFetch)));
         } else {
-            // First load: pull everything bounded by the maximum date.
-            // Using query boundaries helps limit the initial fetch
             q = query(snapshotsRef, where("effectiveDate", "<=", Timestamp.fromDate(maxDate)));
         }
 
         const querySnapshot = await getDocs(q, { source: navigator.onLine ? 'default' : 'cache' });
 
-        // If we found new snapshots, merge them into our global memory cache
         if (!querySnapshot.empty) {
             const newSnaps = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            // Map by ID to override/merge safely
             const snapMap = new Map(globalSnapshotCache.map(s => [s.id, s]));
             newSnaps.forEach(s => snapMap.set(s.id, s));
 
@@ -2171,7 +2175,6 @@ export async function fetchFacilitiesHistoryMultiDate(states, targetDatesStrArra
             lastGlobalSnapshotFetch = Date.now();
         }
 
-        // Get the current baseline facilities
         const currentFacilitiesQ = query(collection(db, "healthFacilities"), where("الولاية", "in", states));
         const currentFacilitiesSnap = await getDocs(currentFacilitiesQ, { source: 'cache' });
         const currentFacilitiesMap = new Map();
@@ -2179,16 +2182,13 @@ export async function fetchFacilitiesHistoryMultiDate(states, targetDatesStrArra
             currentFacilitiesMap.set(doc.id, doc.data());
         });
 
-        // Resolve states for all 6 target dates in memory (No extra DB calls)
         const results = targetDates.map(targetDate => {
-            // 1. Filter snapshots that happened ON or BEFORE the target date AND belong to requested states
             const validSnapshots = globalSnapshotCache.filter(snap => {
                 if (!states.includes(snap['الولاية'])) return false;
                 const snapDate = snap.effectiveDate?.toDate ? snap.effectiveDate.toDate() : new Date(0);
                 return snapDate <= targetDate;
             });
 
-            // 2. Group by facilityId to find the LATEST snapshot right before the date
             const latestSnapshotsMap = new Map();
             validSnapshots.forEach(snap => {
                 const facilityId = snap.facilityId;
@@ -2203,13 +2203,11 @@ export async function fetchFacilitiesHistoryMultiDate(states, targetDatesStrArra
                 }
             });
 
-            // 3. Rebuild the historical state
             const historicalState = [];
             currentFacilitiesMap.forEach((currentData, facilityId) => {
                 if (latestSnapshotsMap.has(facilityId)) {
                     historicalState.push(latestSnapshotsMap.get(facilityId));
                 } else {
-                    // Fallback baseline: assume services weren't active if no snapshot exists yet
                     historicalState.push({
                         ...currentData,
                         facilityId: facilityId,
@@ -2253,11 +2251,9 @@ export async function listSnapshotsForFacility(facilityId, sourceOptions = {}) {
             snapshot = await getDocs(q, sourceOptions);
         } else {
             try {
-                // Try cache first for instant load
                 snapshot = await getDocs(q, { source: 'cache' });
             } catch(e) {}
             
-            // If cache is empty or fails, fallback to server
             if (!snapshot || snapshot.empty) {
                 snapshot = await getDocs(q, { source: 'server' });
             }
@@ -2290,6 +2286,6 @@ export async function getAboutTeamImages(sourceOptions = {}) {
 export async function updateAboutTeamImage(memberId, imageUrl) {
     const docRef = doc(db, "settings", "aboutTeamImages");
     const writePromise = setDoc(docRef, { [memberId]: imageUrl }, { merge: true });
-    await executeOfflineSafeWrite(writePromise);
+    await executeOfflineSafeWrite(writePromise, `Team Image`);
     return true;
 }

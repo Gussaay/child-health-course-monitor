@@ -54,7 +54,27 @@ exports.sendFCMNotification = onCall(async (request) => {
 
     // 4. Construct payload and send
     const message = {
-      notification: { title, body },
+      notification: { 
+          title: title, 
+          body: body 
+      },
+      // --- START OF FIX ---
+      android: {
+          notification: {
+              channelId: 'default', // MUST match the channel ID from Capacitor
+              sound: 'default',
+              priority: 'high'
+          }
+      },
+      apns: {
+          payload: {
+              aps: {
+                  sound: 'default',
+                  contentAvailable: true
+              }
+          }
+      },
+      // --- END OF FIX ---
       tokens: tokens,
     };
 
