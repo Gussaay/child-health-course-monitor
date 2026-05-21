@@ -15,7 +15,7 @@ import { Network } from '@capacitor/network';
 // --- CUSTOM HOOKS & UTILS ---
 import { downloadAndOpenFile } from './utils/fileDownloader';
 import { useAppUpdate } from './hooks/useAppUpdate';
-import { usePushNotifications } from './hooks/usePushNotifications'; // <-- EXISTING IMPORT
+import { usePushNotifications } from './hooks/usePushNotifications'; 
 
 // --- PRE-FLIGHT LANGUAGE CHECK ---
 if (typeof window !== 'undefined') {
@@ -51,7 +51,6 @@ const TeamMemberApplicationForm = lazy(() => import('./components/ProgramTeamVie
 
 const IMNCIRecordingForm = lazy(() => import('./components/IMNCIRecordingForm'));
 
-// --- FIXED LAZY IMPORTS HERE ---
 const CertificateVerificationView = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.CertificateVerificationView })));
 const PublicCertificateDownloadView = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.PublicCertificateDownloadView })));
 const PublicCourseCertificatesView = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.PublicCourseCertificatesView }))); 
@@ -102,9 +101,11 @@ import {
 import { STATE_LOCALITIES } from './components/constants.js';
 import { Card, PageHeader, Button, EmptyState, Spinner, Toast, Modal, Input } from './components/CommonComponents';
 import { auth, db } from './firebase';
+
 import { doc, getDoc, setDoc, waitForPendingWrites } from 'firebase/firestore';
+
 import { signOut, updateProfile } from 'firebase/auth'; 
-import { getMessaging, onMessage, isSupported } from 'firebase/messaging'; // <-- NEW FIREBASE MESSAGING IMPORTS
+import { getMessaging, onMessage, isSupported } from 'firebase/messaging'; 
 import { useDataCache } from './DataContext';
 import { useAuth } from './hooks/useAuth';
 import { SignInBox } from './auth-ui.jsx';
@@ -289,7 +290,7 @@ function Landing({ navigate, permissions }) {
         { label: t('landing.modules.projects', 'Project Tracker'), view: 'projects', icon: FolderKanban, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.planning', 'Master Plan'), view: 'planning', icon: TrendingUp, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.locality_plan', 'Bottom-up Planning'), view: 'localityPlan', icon: Layers, permission: permissions.canViewLocalityPlan },
-        { label: t('landing.modules.downloads', 'App Files & Downloads'), view: 'downloads', icon: HardDrive, Bell, Trash2, permission: Capacitor.isNativePlatform() },
+        { label: t('landing.modules.downloads', 'App Files & Downloads'), view: 'downloads', icon: HardDrive, permission: Capacitor.isNativePlatform() },
         { label: t('landing.modules.admin', 'Admin'), view: 'admin', icon: User, permission: permissions.canViewAdmin },
         { label: t('landing.modules.about', 'About Team'), view: 'about', icon: Info, permission: true },
     ];
@@ -319,7 +320,6 @@ function Landing({ navigate, permissions }) {
                 </div>
             </Card>
             
-            {/* Desktop footer */}
             <div className="hidden md:block mt-8 mb-4 text-center text-slate-600 text-xs font-medium w-full">
                 <p>App developed by Dr Qusay Mohamed - <a href="mailto:Gussaay@gmail.com" className="text-sky-600 hover:text-sky-500 transition-colors font-bold">Gussaay@gmail.com</a></p>
             </div>
@@ -327,11 +327,10 @@ function Landing({ navigate, permissions }) {
     );
 }
 
-// --- UPDATED BOTTOM NAV COMPONENT ---
 const BottomNav = React.memo(function BottomNav({ navItems, navigate, currentView }) {
     const icons = { 
         'landing': Home, 'dashboard': Home, 'courses': Book, 'humanResources': Users, 'childHealthServices': Hospital, 
-        'skillsMentorship': ClipboardCheck, 'downloads': HardDrive, Bell, Trash2
+        'skillsMentorship': ClipboardCheck, 'downloads': HardDrive
     };
     
     return (
@@ -382,7 +381,6 @@ function SplashScreen() {
 export default function App() {
     const { t, i18n } = useTranslation();
     
-    // --- CUSTOM HOOKS ---
     const { 
         appVersion, 
         isDownloadingAppUpdate, 
@@ -391,9 +389,8 @@ export default function App() {
         AppUpdateModals 
     } = useAppUpdate();
 
-    usePushNotifications(); // <-- INITIALIZE PUSH NOTIFICATIONS
+    usePushNotifications(); 
 
-    // Generic Download State (for PDFs, Excel, etc.)
     const [isFileDownloading, setIsFileDownloading] = useState(false);
     const [fileDownloadProgress, setFileDownloadProgress] = useState(0);
 
@@ -434,7 +431,9 @@ export default function App() {
     const allCourses = useMemo(() => (rawCourses || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true"), [rawCourses]);
     const allFacilitators = useMemo(() => (rawFacilitators || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [rawFacilitators]);
 
-    const { user, userStates, authLoading, userLocalities } = useAuth();
+    const { user, authLoading } = useAuth();
+    const [userStates, setUserStates] = useState([]);
+    const [userLocalities, setUserLocalities] = useState([]);
 
     const isProfileIncomplete = useMemo(() => {
         if (!authLoading && user && (!user.displayName || user.displayName.trim().length === 0)) return true;
@@ -548,9 +547,6 @@ export default function App() {
     const isPopStateNavigation = useRef(false);
     const initialViewIsSet = useRef(false);
 
-    // =========================================================================
-    // --- WRAPPER FOR GENERIC IN-APP DOWNLOAD & OPEN MANAGER ---
-    // =========================================================================
     const handleFileDownloadAndOpen = (url, customFileName = null) => {
         downloadAndOpenFile(url, customFileName, {
             onStart: () => { setIsFileDownloading(true); setFileDownloadProgress(0); },
@@ -562,7 +558,6 @@ export default function App() {
             onFinally: () => { setIsFileDownloading(false); setFileDownloadProgress(0); }
         });
     };
-    // =========================================================================
 
     useEffect(() => { if (!authLoading && user) initializeUsageTracking(); }, [authLoading, user]);
 
@@ -580,7 +575,6 @@ export default function App() {
         let unsubscribe = null;
         
         const setupForegroundListener = async () => {
-             // Basic check to prevent crashes if messaging is not supported in this browser context
              const supported = await isSupported().catch(() => false);
              if (!supported) return;
 
@@ -591,7 +585,6 @@ export default function App() {
                     const title = payload.notification?.title || "New Notification";
                     const body = payload.notification?.body || "";
                     
-                    // Display toast for foreground notifications
                     setToast({
                         show: true,
                         message: `${title}: ${body}`,
@@ -605,7 +598,6 @@ export default function App() {
 
         setupForegroundListener();
 
-        // Cleanup listener on unmount
         return () => {
              if (unsubscribe) unsubscribe();
         };
@@ -634,13 +626,10 @@ export default function App() {
 
             setIsPublicMeetingView(false); setPublicMeetingId(null); setPublicMeetingData(null); setPublicMeetingTargetDate(null);
 
-            // --- PUBLIC ROUTES EVALUATION ---
-            
             const publicMeetingMatch = path.match(/^\/public\/meeting\/([a-zA-Z0-9_-]+)\/?$/);
             if (publicMeetingMatch && publicMeetingMatch[1]) {
                 setIsPublicMeetingView(true); setPublicMeetingId(publicMeetingMatch[1]); setPublicViewLoading(true);
                 
-                // Extract target date from URL
                 const searchParams = new URLSearchParams(window.location.search);
                 setPublicMeetingTargetDate(searchParams.get('date'));
                 
@@ -651,7 +640,6 @@ export default function App() {
                 return;
             }
 
-            // Mentorship Record Deep Link explicitly formatted so it doesn't default to dashboard
             const publicMentorshipRecordMatch = path.match(/^\/public\/mentorship\/record\/([a-zA-Z0-9_]+)\/(cases|mothers|reports)\/([a-zA-Z0-9_-]+)\/?$/);
             if (publicMentorshipRecordMatch) {
                 setIsPublicMentorshipDashboardView(true);
@@ -669,7 +657,6 @@ export default function App() {
                 return;
             }
 
-            // Mentorship Dashboard Deep Link
             const publicMentorshipDashboardMatch = path.match(/^\/public\/mentorship\/dashboard\/([a-zA-Z0-9_]+)\/?$/);
             if (publicMentorshipDashboardMatch && publicMentorshipDashboardMatch[1]) {
                 setIsPublicMentorshipDashboardView(true);
@@ -851,90 +838,130 @@ export default function App() {
         }
     }, [user, permissionsLoading]);
 
-    // UPDATED AND SECURED checkUserRoleAndPermissions logic
+    // =========================================================================
+    // THE NATIVE-SAFE ROLE SYNC (WITH RETRY LOOP)
+    // =========================================================================
     useEffect(() => {
-        const checkUserRoleAndPermissions = async () => {
-            setPermissionsLoading(true);
-            try {
-                if (user) {
-                    const status = await Network.getStatus();
-                    const isOffline = !status.connected;
-                    
-                    const userRef = doc(db, "users", user.uid);
-                    let userSnap;
-                    
-                    // Safe offline check
-                    try {
-                        const sourceOptions = isOffline ? { source: 'cache' } : {};
-                        userSnap = await getDoc(userRef, sourceOptions);
-                    } catch (e) {
-                        userSnap = await getDoc(userRef, { source: 'cache' });
-                    }
-                    
-                    let role; let roles = []; let permissionsData = {};
+        let isMounted = true;
 
-                    // IF THE DOCUMENT IS MISSING (Either a brand new user, OR offline with a cleared cache)
-                    if (!userSnap.exists() || !userSnap.data().role) {
-                        
-                        // 1. Check Local Storage backup first
-                        const backupRole = localStorage.getItem(`backup_role_${user.uid}`);
-                        
-                        if (isOffline && backupRole) {
-                            // Restore from our secondary backup
-                            role = backupRole;
-                            roles = JSON.parse(localStorage.getItem(`backup_roles_${user.uid}`) || `["${role}"]`);
-                            permissionsData = JSON.parse(localStorage.getItem(`backup_perms_${user.uid}`) || "{}");
-                            console.log("Restored user role from localStorage fallback.");
-                        } else {
-                            // Truly no role found
-                            role = 'user';
-                            roles = ['user'];
-                            const rawPerms = DEFAULT_ROLE_PERMISSIONS.user;
-                            permissionsData = applyDerivedPermissions(rawPerms);
-                            
-                            // CRITICAL: ONLY SAVE TO FIREBASE IF ONLINE
-                            // If offline, we give them basic access locally but DO NOT queue a write that overwrites their cloud role later.
-                            if (!isOffline) {
-                                setDoc(userRef, { 
-                                    email: user.email, 
-                                    role: role, 
-                                    roles: roles, 
-                                    permissions: permissionsData, 
-                                    lastLogin: new Date(), 
-                                    assignedState: '' 
-                                }, { merge: true }).catch(err => console.warn("Failed to set default role:", err));
-                            }
-                        }
-                    } else {
-                        // USER EXISTS IN FIRESTORE/CACHE - Load Normally
-                        role = userSnap.data().role;
-                        roles = userSnap.data().roles || [role]; 
-                        const ALL_PERMISSIONS_MINIMAL = ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
-                        const rawPerms = { ...ALL_PERMISSIONS_MINIMAL, ...(userSnap.data().permissions || {}) };
-                        permissionsData = applyDerivedPermissions(rawPerms);
-                        
-                        // 2. Update Local Storage Backup (Secondary Fail-safe)
-                        localStorage.setItem(`backup_role_${user.uid}`, role);
-                        localStorage.setItem(`backup_roles_${user.uid}`, JSON.stringify(roles));
-                        localStorage.setItem(`backup_perms_${user.uid}`, JSON.stringify(permissionsData));
+        const checkUserRoleAndPermissions = async () => {
+            if (!user) {
+                setUserRole(null); setUserRoles([]); setUserPermissions({});
+                setUserStates([]); setUserLocalities([]);
+                setPermissionsLoading(false);
+                return;
+            }
+
+            setPermissionsLoading(true);
+
+            // 1. Instantly load from local backups to prevent UI flicker
+            const backupRole = localStorage.getItem(`backup_role_${user.uid}`);
+            if (backupRole) {
+                setUserRole(backupRole);
+                setUserRoles(JSON.parse(localStorage.getItem(`backup_roles_${user.uid}`) || `["${backupRole}"]`));
+                setUserPermissions(JSON.parse(localStorage.getItem(`backup_perms_${user.uid}`) || "{}"));
+                setUserStates(JSON.parse(localStorage.getItem(`backup_states_${user.uid}`) || "[]"));
+                setUserLocalities(JSON.parse(localStorage.getItem(`backup_localities_${user.uid}`) || "[]"));
+            }
+
+            try {
+                // --- CRITICAL NATIVE FIX: Force Token Sync ---
+                // On Native apps, Firestore can fire its getDoc request before the Auth token 
+                // is fully registered internally by the Firebase SDK. Forcing a token refresh 
+                // ensures the request carries the proper authorization headers to bypass security rules.
+                if (Capacitor.isNativePlatform()) {
+                    try {
+                        await user.getIdToken(true);
+                    } catch (tokenErr) {
+                        console.warn("Manual token refresh skipped or failed:", tokenErr);
                     }
+                }
+
+                const userRef = doc(db, "users", user.uid);
+                let userSnap;
+                
+                // Retry loop to handle any lingering network/bridge delays
+                let retries = 3;
+                while (retries > 0) {
+                    try {
+                        userSnap = await getDoc(userRef);
+                        break; 
+                    } catch (e) {
+                        retries -= 1;
+                        if (retries === 0) throw e; 
+                        await new Promise(resolve => setTimeout(resolve, 600)); 
+                    }
+                }
+
+                if (!isMounted) return;
+
+                if (userSnap && userSnap.exists()) {
+                    const data = userSnap.data();
                     
-                    setUserRole(role); 
-                    setUserRoles(roles); 
-                    setUserPermissions(permissionsData); 
-                } else { 
-                    setUserRole(null); setUserRoles([]); setUserPermissions({}); 
+                    const rawRole = data.role || data.Role || (data.roles && data.roles[0]) || 'user';
+                    const newRole = typeof rawRole === 'string' ? rawRole.toLowerCase() : 'user';
+                    const newRoles = data.roles && Array.isArray(data.roles) && data.roles.length > 0 ? data.roles : [newRole];
+
+                    const ALL_PERMISSIONS_MINIMAL = ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
+                    const newPermissionsData = applyDerivedPermissions({ ...ALL_PERMISSIONS_MINIMAL, ...(data.permissions || {}) });
+
+                    const newStates = data.assignedState ? [data.assignedState] : [];
+                    const newLocalities = data.assignedLocality ? [data.assignedLocality] : [];
+
+                    // Update local backups
+                    if (!userSnap.metadata?.fromCache) {
+                        localStorage.setItem(`backup_role_${user.uid}`, newRole);
+                        localStorage.setItem(`backup_roles_${user.uid}`, JSON.stringify(newRoles));
+                        localStorage.setItem(`backup_perms_${user.uid}`, JSON.stringify(newPermissionsData));
+                        localStorage.setItem(`backup_states_${user.uid}`, JSON.stringify(newStates));
+                        localStorage.setItem(`backup_localities_${user.uid}`, JSON.stringify(newLocalities));
+                    }
+
+                    setUserRole(newRole);
+                    setUserRoles(newRoles);
+                    setUserPermissions(newPermissionsData);
+                    setUserStates(newStates);
+                    setUserLocalities(newLocalities);
+                } else if (userSnap && !userSnap.exists()) {
+                    // Create default profile for brand new Google Sign-Ins
+                    const status = await Network.getStatus();
+                    if (status.connected) {
+                        const defaultRole = 'user';
+                        const defaultRoles = ['user'];
+                        const defaultPerms = applyDerivedPermissions(DEFAULT_ROLE_PERMISSIONS.user);
+
+                        setUserRole(defaultRole); setUserRoles(defaultRoles); setUserPermissions(defaultPerms);
+                        setUserStates([]); setUserLocalities([]);
+
+                        await setDoc(userRef, { 
+                            email: user.email, 
+                            role: defaultRole, 
+                            roles: defaultRoles, 
+                            permissions: defaultPerms, 
+                            lastLogin: new Date(), 
+                            assignedState: '' 
+                        }, { merge: true }).catch(err => console.warn("Failed to set default doc:", err));
+                    }
                 }
             } catch (error) {
-                console.error("Error checking user role:", error);
-                // Emergency fallback
-                setUserRole('user'); setUserRoles(['user']); setUserPermissions(applyDerivedPermissions(DEFAULT_ROLE_PERMISSIONS.user));
-            } finally { 
-                setPermissionsLoading(false); 
+                console.warn("Role fetch completely failed after retries:", error);
+                if (isMounted) {
+                    if (!backupRole) {
+                        setUserRole('user'); 
+                        setUserRoles(['user']); 
+                        setUserPermissions(applyDerivedPermissions(DEFAULT_ROLE_PERMISSIONS.user));
+                        setUserStates([]); 
+                        setUserLocalities([]);
+                    }
+                }
+            } finally {
+                if (isMounted) setPermissionsLoading(false);
             }
         };
-        
+
         checkUserRoleAndPermissions();
+
+        return () => { isMounted = false; };
     }, [user]);
 
     useEffect(() => { if (!user) initialViewIsSet.current = false; }, [user]);
@@ -1318,16 +1345,22 @@ export default function App() {
 
     const handleDeletePdf = useCallback(async (courseId) => {  }, [permissions, courseDetails.finalReport]);
 
-    // Handle standard logout prompt
     const handleLogout = useCallback(async () => { 
         if (window.confirm('Are you sure you want to log out?')) {
             try { 
+                if (user) {
+                    localStorage.removeItem(`backup_role_${user.uid}`);
+                    localStorage.removeItem(`backup_roles_${user.uid}`);
+                    localStorage.removeItem(`backup_perms_${user.uid}`);
+                    localStorage.removeItem(`backup_states_${user.uid}`);
+                    localStorage.removeItem(`backup_localities_${user.uid}`);
+                }
                 await signOut(auth); 
             } catch (error) { 
                 console.error("Error signing out:", error); 
             } 
         }
-    }, []);
+    }, [user]);
 
     const handleLoginForSharedView = useCallback(async () => {  }, []);
 
@@ -1367,13 +1400,13 @@ export default function App() {
                 onBatchUpdate={() => { setCourseDetailsCache(prev => { const newCache = { ...prev }; delete newCache[selectedCourse.id]; return newCache; }); setSelectedCourseId(null); setSelectedCourseId(selectedCourse.id); }}
                 loadingDetails={loading || (selectedCourseId && courseDetailsLoading)} 
                 canManageCourse={permissions.canManageCourse} 
-                canAddCourse={permissions.canAddCourse} /* PASSED PERMISSION DOWN HERE */
+                canAddCourse={permissions.canAddCourse}
                 canUseSuperUserAdvancedFeatures={permissions.canUseSuperUserAdvancedFeatures}
                 canUseFederalManagerAdvancedFeatures={permissions.canUseFederalManagerAdvancedFeatures} canEditDeleteActiveCourse={permissions.canManageCourse} 
                 canEditDeleteInactiveCourse={permissions.canUseFederalManagerAdvancedFeatures || (permissions.canManageCourse && permissions.manageTimePeriod === 'anytime')}
-                manageLocation={permissions.manageLocation} /* PASSED STRICT LOCATION ENFORCEMENT DOWN HERE */
+                manageLocation={permissions.manageLocation}
                 facilitatorsList={allFacilitators || []} 
-                currentUserRole={userRole} /* PASSED CURRENT ROLE FOR CREATOR RECORD */
+                currentUserRole={userRole}
             />;
 
             case 'childHealthServices':
@@ -1452,7 +1485,6 @@ export default function App() {
         { label: t('landing.modules.human_resources', 'Human Resources'), view: 'humanResources', active: ['humanResources', 'facilitatorForm', 'facilitatorReport'].includes(view), disabled: !permissions.canViewHumanResource },
         { label: t('landing.modules.facilities', 'Child Health Services'), view: 'childHealthServices', active: view === 'childHealthServices', disabled: !permissions.canViewFacilities },
         { label: t('landing.modules.mentorship', 'Skills Mentorship'), view: 'skillsMentorship', active: view === 'skillsMentorship', disabled: !permissions.canViewSkillsMentorship }
-        // Locality plan, planning, projects, and admin specifically omitted from top/bottom navigation as requested
     ], [view, permissions, t]);
 
     const visibleNavItems = useMemo(() => navItems.filter(item => !item.disabled), [navItems]);
@@ -1687,7 +1719,6 @@ export default function App() {
     return (
         <div className="min-h-screen bg-sky-50 flex flex-col pt-0 relative">
             
-            {/* CSS override to force fixed toasts above the bottom navigation bar on mobile */}
             <style>{`
                 @media (max-width: 768px) {
                     .fixed.bottom-4, [role="alert"], .toast-container {
@@ -1726,7 +1757,6 @@ export default function App() {
                                 <h1 className="text-xl sm:text-2xl font-bold text-white">{t('app.title', 'National Child Health Program')}</h1>
                                 <p className="text-xs sm:text-sm text-slate-300 flex items-center flex-wrap gap-2 mt-1 sm:mt-0">
                                     <span>{t('app.subtitle', 'Program & Course Monitoring System')}</span>
-                                    {/* App Version Pill (Clickable) */}
                                     <span 
                                         onClick={handleManualUpdateCheck}
                                         className="bg-slate-700 text-sky-300 text-[10px] px-1.5 py-0.5 rounded border border-slate-600 font-mono shadow-sm cursor-pointer hover:bg-slate-600 hover:text-sky-200 transition-colors"
@@ -1748,7 +1778,6 @@ export default function App() {
                                     ))} 
                                 </nav>
                             )}
-                            {/* We keep a fallback language toggle here ONLY for public/logged-out views where the secondary banner isn't visible */}
                             {(!user || isMinimalUILayout) && (
                                 <button
                                     onClick={() => {
@@ -1769,7 +1798,6 @@ export default function App() {
             {user && !isMinimalUILayout && (
                 <div className="bg-slate-700 text-slate-200 px-2 sm:px-3 py-2 flex items-center justify-between w-full shadow-inner min-h-[48px] gap-2">
 
-                    {/* Profile Info Container (Shifted left to prevent overlap with new icons) */}
                     <div className="flex-1 flex items-center justify-start overflow-hidden min-w-0">
                         <div
                             className="flex items-center gap-1.5 cursor-pointer hover:bg-slate-600 px-2 py-1 rounded-md transition-colors duration-200 min-w-0 max-w-full"
@@ -1795,11 +1823,9 @@ export default function App() {
                         </div>
                     </div>
 
-                    {/* Right Action Buttons */}
                     <div className="flex items-center justify-end gap-1.5 shrink-0">
                         <NotificationBell user={user} />
                         
-                        {/* Data Sync Status Button */}
                         <button
                             onClick={() => {
                                 if (isOffline) {
@@ -1856,7 +1882,6 @@ export default function App() {
             
             {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ show: false, message: '', type: '' })} />}
 
-            {/* Adjusted padding to ensure BottomNav doesn't cover anything */}
             <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 w-full flex-grow pb-24 md:pb-8 overflow-x-hidden">
                 <Suspense fallback={<Card><Spinner /></Card>}>
                     {mainContent}
@@ -2011,8 +2036,6 @@ export default function App() {
             {permissions.canUseSuperUserAdvancedFeatures && isMonitorVisible && (
                 <ResourceMonitor counts={operationCounts} onReset={handleResetMonitor} onDismiss={handleDismissMonitor} />
             )}
-
-            
 
             <AppUpdateModals />
 
