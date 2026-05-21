@@ -839,11 +839,11 @@ export default function App() {
     }, [user, permissionsLoading]);
 
     // =========================================================================
-    // THE NATIVE-SAFE ROLE SYNC
+    // THE NATIVE-SAFE ROLE SYNC (WITH RETRY LOOP)
     // =========================================================================
     useEffect(() => {
         let isMounted = true;
-        
+
         const checkUserRoleAndPermissions = async () => {
             if (!user) {
                 setUserRole(null); setUserRoles([]); setUserPermissions({});
@@ -854,7 +854,7 @@ export default function App() {
 
             setPermissionsLoading(true);
 
-            // 1. Instantly load from local backups so the UI doesn't flicker
+            // 1. Instantly load from local backups to prevent UI flicker
             const backupRole = localStorage.getItem(`backup_role_${user.uid}`);
             if (backupRole) {
                 setUserRole(backupRole);
@@ -864,18 +864,29 @@ export default function App() {
                 setUserLocalities(JSON.parse(localStorage.getItem(`backup_localities_${user.uid}`) || "[]"));
             }
 
-            if (!isMounted) return;
-
             try {
                 const userRef = doc(db, "users", user.uid);
+                let userSnap;
                 
-                // CRITICAL FIX: Do NOT use Capacitor Network to force '{ source: "cache" }'.
-                // Let the Firebase SDK naturally handle network routing and offline caching.
-                const userSnap = await getDoc(userRef);
+                // --- THE FIX: NATIVE AUTH RACE CONDITION RETRY LOOP ---
+                // On Native apps, Firestore takes a fraction of a second to sync with Firebase Auth.
+                // If we fetch instantly, it throws a "Permission Denied" error and falls to the catch block.
+                // We will retry up to 3 times to allow the native bridge to initialize.
+                let retries = 3;
+                while (retries > 0) {
+                    try {
+                        userSnap = await getDoc(userRef);
+                        break; // Success! Break out of the retry loop.
+                    } catch (e) {
+                        retries -= 1;
+                        if (retries === 0) throw e; 
+                        await new Promise(resolve => setTimeout(resolve, 500)); 
+                    }
+                }
 
                 if (!isMounted) return;
 
-                if (userSnap.exists()) {
+                if (userSnap && userSnap.exists()) {
                     const data = userSnap.data();
                     
                     const rawRole = data.role || data.Role || (data.roles && data.roles[0]) || 'user';
@@ -888,7 +899,7 @@ export default function App() {
                     const newStates = data.assignedState ? [data.assignedState] : [];
                     const newLocalities = data.assignedLocality ? [data.assignedLocality] : [];
 
-                    // CRITICAL FIX: Only overwrite local backups if we pulled fresh data from the SERVER.
+                    // Update local backups
                     if (!userSnap.metadata?.fromCache) {
                         localStorage.setItem(`backup_role_${user.uid}`, newRole);
                         localStorage.setItem(`backup_roles_${user.uid}`, JSON.stringify(newRoles));
@@ -902,7 +913,7 @@ export default function App() {
                     setUserPermissions(newPermissionsData);
                     setUserStates(newStates);
                     setUserLocalities(newLocalities);
-                } else {
+                } else if (userSnap && !userSnap.exists()) {
                     // Only create a new user profile if Firebase confirms they don't exist
                     const status = await Network.getStatus();
                     if (status.connected) {
@@ -924,10 +935,15 @@ export default function App() {
                     }
                 }
             } catch (error) {
-                console.warn("Role fetch completely failed:", error);
-                if (!backupRole) {
-                    setUserRole('user'); setUserRoles(['user']); setUserPermissions(applyDerivedPermissions(DEFAULT_ROLE_PERMISSIONS.user));
-                    setUserStates([]); setUserLocalities([]);
+                console.warn("Role fetch completely failed after retries:", error);
+                if (isMounted) {
+                    if (!backupRole) {
+                        setUserRole('user'); 
+                        setUserRoles(['user']); 
+                        setUserPermissions(applyDerivedPermissions(DEFAULT_ROLE_PERMISSIONS.user));
+                        setUserStates([]); 
+                        setUserLocalities([]);
+                    }
                 }
             } finally {
                 if (isMounted) setPermissionsLoading(false);
