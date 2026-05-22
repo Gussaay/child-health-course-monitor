@@ -1740,18 +1740,23 @@ export default function App() {
 
             <div className="fixed top-0 start-0 w-full z-[100005] flex flex-col">
                 {isOffline && (
-                    <div className="bg-amber-500 text-white text-center py-2 px-4 text-sm font-bold flex justify-center items-center gap-2 shadow-md">
-                        <WifiOff className="w-5 h-5" /> {t('app.offline', 'You are offline. Changes are saved locally and will sync when reconnected.')}
+                    <div className="bg-amber-500 text-white py-2 px-4 text-sm font-bold flex justify-center items-center gap-2 shadow-md overflow-hidden">
+                        <WifiOff className="w-5 h-5 shrink-0" /> 
+                        <span className="truncate">
+                            {t('app.offline', 'App offline. Saved data will sync when online.')}
+                        </span>
                     </div>
                 )}
                 {(isFileDownloading || isDownloadingAppUpdate) && (
-                    <div className="bg-sky-700 text-white text-center py-2 px-4 text-sm font-bold flex justify-center items-center gap-2 shadow-md relative overflow-hidden">
+                    <div className="bg-sky-700 text-white py-2 px-4 text-sm font-bold flex justify-center items-center gap-2 shadow-md relative overflow-hidden">
                         <div 
                             className="absolute top-0 left-0 h-full bg-sky-500 z-0 transition-all duration-300" 
                             style={{ width: `${isFileDownloading ? fileDownloadProgress : appUpdateProgress}%` }}
                         ></div>
-                        <RefreshCw className="w-4 h-4 animate-spin z-10" /> 
-                        <span className="z-10">{t('app.downloading', 'Downloading...')} {Math.round(isFileDownloading ? fileDownloadProgress : appUpdateProgress)}%</span>
+                        <RefreshCw className="w-4 h-4 animate-spin z-10 shrink-0" /> 
+                        <span className="z-10 truncate">
+                            {t('app.downloading', 'Downloading...')} {Math.round(isFileDownloading ? fileDownloadProgress : appUpdateProgress)}%
+                        </span>
                     </div>
                 )}
             </div>

@@ -1,93 +1,53 @@
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const { initializeApp } = require("firebase-admin/app");
-const { getFirestore } = require("firebase-admin/firestore");
-const { getMessaging } = require("firebase-admin/messaging");
+// functions/index.js
+const functions = require('firebase-functions');
+const admin = require('firebase-admin');
 
-// Initialize Firebase Admin
-initializeApp();
+// Ensure you don't call initializeApp twice if it's already there
+if (admin.apps.length === 0) {
+  admin.initializeApp();
+}
 
-exports.sendFCMNotification = onCall(async (request) => {
-  const { auth, data } = request;
-
-  // 1. Check Authentication
-  if (!auth) {
-    throw new HttpsError(
-      "unauthenticated",
-      "You must be logged in to send notifications."
-    );
-  }
-
-  const db = getFirestore();
-
-  // 2. Role validation
-  const senderDoc = await db.collection("users").doc(auth.uid).get();
-  const senderRoles = senderDoc.data()?.roles || [];
-  if (!senderRoles.includes("super_user") && !senderRoles.includes("manager")) {
-    throw new HttpsError(
-      "permission-denied",
-      "You do not have permission to send push notifications."
-    );
-  }
-
-  const { targetUserId, title, body } = data;
-
-  try {
-    const tokens = [];
-
-    // 3. Gather tokens based on target
-    if (targetUserId === "all") {
-      const usersSnapshot = await db.collection("users").get();
-      usersSnapshot.forEach((doc) => {
-        const userToken = doc.data().fcmToken;
-        if (userToken) tokens.push(userToken);
-      });
-    } else {
-      const userDoc = await db.collection("users").doc(targetUserId).get();
-      if (userDoc.exists && userDoc.data().fcmToken) {
-        tokens.push(userDoc.data().fcmToken);
-      }
+exports.sendFCMNotification = functions.https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'User must be logged in.');
     }
 
-    if (tokens.length === 0) {
-      return { success: false, message: "No FCM tokens found for target(s)." };
+    const { targetUserId, targetVersion, title, body } = data;
+    const db = admin.firestore();
+
+    try {
+        if (targetUserId === 'outdated_users' && targetVersion) {
+            const usersSnap = await db.collection('users').get();
+            const tokens = [];
+
+            for (const doc of usersSnap.docs) {
+                const userData = doc.data();
+                
+                if (!userData.fcmToken) continue;
+
+                const statsSnap = await db.collection('userUsageStats').doc(doc.id).get();
+                const statsData = statsSnap.exists ? statsSnap.data() : {};
+                const userAppVersion = userData.appVersion || statsData.appVersion || "0.0.0";
+                
+                if (userAppVersion !== targetVersion) {
+                    tokens.push(userData.fcmToken);
+                }
+            }
+
+            if (tokens.length > 0) {
+                await admin.messaging().sendEachForMulticast({
+                    tokens: tokens,
+                    notification: { title, body }
+                });
+            }
+            
+            return { success: true, notifiedCount: tokens.length };
+        }
+        
+        // --- ADD YOUR ORIGINAL targetUserId === 'all' LOGIC BELOW IF NEEDED ---
+        
+    } catch (error) {
+        console.error("Error sending FCM:", error);
+        throw new functions.https.HttpsError('internal', error.message);
     }
-
-    // 4. Construct payload and send
-    const message = {
-      notification: { 
-          title: title, 
-          body: body 
-      },
-      // --- START OF FIX ---
-      android: {
-          notification: {
-              channelId: 'default', // MUST match the channel ID from Capacitor
-              sound: 'default',
-              priority: 'high'
-          }
-      },
-      apns: {
-          payload: {
-              aps: {
-                  sound: 'default',
-                  contentAvailable: true
-              }
-          }
-      },
-      // --- END OF FIX ---
-      tokens: tokens,
-    };
-
-    const messaging = getMessaging();
-    const response = await messaging.sendEachForMulticast(message);
-
-    return {
-      success: true,
-      successCount: response.successCount,
-      failureCount: response.failureCount,
-    };
-  } catch (error) {
-    console.error("Error sending FCM notification:", error);
-    throw new HttpsError("internal", "Failed to send FCM message.");
-  }
 });

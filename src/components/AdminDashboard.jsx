@@ -5,7 +5,7 @@ import { db, auth } from '../firebase';
 import { collection, query, getDocs, doc, updateDoc, getDoc, setDoc, writeBatch, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions'; 
 import { onAuthStateChanged, sendPasswordResetEmail } from 'firebase/auth';
-import { STATE_LOCALITIES } from './constants'; 
+import { getStorage, ref, deleteObject } from 'firebase/storage'; 
 
 // --- Icons & Data Imports ---
 import { CheckCircle, XCircle, RefreshCw, Lock, Users, Shield, Activity, Filter, Database, Edit3, Clock, Settings, Smartphone, CloudDownload, History, Bell, Trash2, Download } from 'lucide-react';
@@ -195,7 +195,7 @@ export function AdminDashboard() {
     const [users, setUsers] = useState([]);
     const [rolesAndPermissions, setRolesAndPermissions] = useState({});
     const [usageStats, setUsageStats] = useState([]);
-    const [updateHistory, setUpdateHistory] = useState([]); // <-- NEW STATE FOR HISTORY
+    const [updateHistory, setUpdateHistory] = useState([]);
     const [loading, setLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState(null);
     const [toast, setToast] = useState({ show: false, message: '', type: '' });
@@ -230,6 +230,7 @@ export function AdminDashboard() {
     const [serverNativeConfig, setServerNativeConfig] = useState(null); 
     const [isUpdateActive, setIsUpdateActive] = useState(false); 
     const [isEditingUpdate, setIsEditingUpdate] = useState(false); 
+    const [notifyOutdatedUsers, setNotifyOutdatedUsers] = useState(true);
 
     const [updateConfig, setUpdateConfig] = useState({
         latestNativeBuild: 1,
@@ -379,54 +380,41 @@ export function AdminDashboard() {
         setLoading(true);
         try {
             await setDoc(doc(db, "meta", "update_config"), updateConfig);
-            if (updateConfig.mandatory) {
-                setIsUpdateActive(true);
-            } else {
-                setIsUpdateActive(false);
-            }
+            setIsUpdateActive(updateConfig.mandatory);
             setIsEditingUpdate(false); 
 
-            // --- SAVE TO UPDATE HISTORY LOG ---
-            const newHistoryRecord = {
-                versionString: updateConfig.versionString,
-                latestNativeBuild: updateConfig.latestNativeBuild,
-                downloadUrl: updateConfig.downloadUrl,
-                releaseNotes: updateConfig.releaseNotes,
-                timestamp: serverTimestamp()
-            };
-            const addedDocRef = await addDoc(collection(db, "update_history"), newHistoryRecord);
-            
-            // Optimistically update UI History
-            setUpdateHistory([{ id: addedDocRef.id, ...newHistoryRecord, timestamp: { seconds: Date.now()/1000 } }, ...updateHistory]);
+            // --- TRIGGER SMART NOTIFICATIONS ---
+            if (notifyOutdatedUsers) {
+                try {
+                    const notifTitle = "App Update Available";
+                    const notifMessage = updateConfig.mandatory 
+                        ? `A mandatory update to version ${updateConfig.versionString} is required. ${updateConfig.releaseNotes}`
+                        : `Version ${updateConfig.versionString} is now available. ${updateConfig.releaseNotes}`;
 
-            // --- TRIGGER NOTIFICATIONS ---
-            try {
-                const notifTitle = "App Update Available";
-                const notifMessage = updateConfig.mandatory 
-                    ? `A mandatory update to version ${updateConfig.versionString} is required. ${updateConfig.releaseNotes}`
-                    : `Version ${updateConfig.versionString} is now available. ${updateConfig.releaseNotes}`;
+                    await addDoc(collection(db, 'notifications'), {
+                        title: notifTitle,
+                        message: notifMessage,
+                        targetUser: 'outdated_users', 
+                        targetVersion: updateConfig.versionString,
+                        createdAt: serverTimestamp(),
+                        readBy: [],
+                        status: 'active'
+                    });
 
-                await addDoc(collection(db, 'notifications'), {
-                    title: notifTitle,
-                    message: notifMessage,
-                    targetUser: 'all',
-                    createdAt: serverTimestamp(),
-                    readBy: [],
-                    status: 'active'
-                });
-
-                const functions = getFunctions(db.app);
-                const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
-                await sendFCMNotification({
-                    targetUserId: 'all',
-                    title: notifTitle,
-                    body: notifMessage
-                });
-            } catch (notifErr) {
-                console.error("Failed to send automatic update notification:", notifErr);
+                    const functions = getFunctions(db.app);
+                    const sendFCMNotification = httpsCallable(functions, 'sendFCMNotification');
+                    await sendFCMNotification({
+                        targetUserId: 'outdated_users',
+                        targetVersion: updateConfig.versionString,
+                        title: notifTitle,
+                        body: notifMessage
+                    });
+                } catch (notifErr) {
+                    console.error("Failed to send automatic update notification:", notifErr);
+                }
             }
 
-            setToast({show: true, message: 'Update configuration saved and pushed to users!', type: 'success'});
+            setToast({show: true, message: 'Update configuration saved!', type: 'success'});
         } catch(e) {
             console.error("Update config error", e);
             setToast({show: true, message: 'Failed to save update configuration.', type: 'error'});
@@ -434,16 +422,40 @@ export function AdminDashboard() {
         setLoading(false);
     };
 
-    const handleDeleteHistoryRecord = async (id) => {
-        if (!window.confirm("Remove this update from the history log?\n\nNote: This removes the visual record here. The physical .apk file remains on Firebase Hosting until overwritten by future deployments.")) return;
+    // --- STORAGE DELETION LOGIC ---
+    const handleDeleteHistoryRecord = async (stat) => {
+        const confirmMessage = `WARNING:\n\nAre you sure you want to delete version v${stat.versionString}?\n\nThis will permanently delete the visual record from this table AND permanently delete the physical .apk file from Firebase Storage.`;
         
+        if (!window.confirm(confirmMessage)) return;
+        
+        setLoading(true);
         try {
-            await deleteDoc(doc(db, "update_history", id));
-            setUpdateHistory(updateHistory.filter(item => item.id !== id));
-            setToast({show: true, message: 'History record removed.', type: 'success'});
+            // 1. Check if the URL belongs to Firebase Storage and delete the physical file
+            if (stat.downloadUrl && stat.downloadUrl.includes("firebasestorage.googleapis.com")) {
+                const storage = getStorage(db.app);
+                const fileRef = ref(storage, stat.downloadUrl); 
+                await deleteObject(fileRef);
+                console.log("Physical APK file deleted from Storage.");
+            }
+    
+            // 2. Delete the record from the Firestore database
+            await deleteDoc(doc(db, "update_history", stat.id));
+    
+            // 3. Update the UI
+            setUpdateHistory(updateHistory.filter(item => item.id !== stat.id));
+            setToast({show: true, message: 'File and history record permanently deleted.', type: 'success'});
+            
         } catch (e) {
-            console.error("Failed to delete history:", e);
-            setToast({show: true, message: 'Failed to delete record.', type: 'error'});
+            console.error("Failed to delete file/history:", e);
+            if (e.code === 'storage/object-not-found') {
+                 await deleteDoc(doc(db, "update_history", stat.id));
+                 setUpdateHistory(updateHistory.filter(item => item.id !== stat.id));
+                 setToast({show: true, message: 'Storage file was missing, but history record removed.', type: 'success'});
+            } else {
+                 setToast({show: true, message: 'Failed to delete file. Check console for details.', type: 'error'});
+            }
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -768,13 +780,13 @@ export function AdminDashboard() {
                         </div>
                         <Button 
                             onClick={() => {
-                                // Direct load into form, switch to edit mode
                                 setUpdateConfig({
                                     ...serverNativeConfig,
                                     mandatory: true,
                                     releaseNotes: `Update to version ${serverNativeConfig.versionString}. Includes latest bug fixes and improvements.`
                                 });
                                 setIsEditingUpdate(true);
+                                setNotifyOutdatedUsers(true);
                             }}
                             className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md border border-emerald-700 whitespace-nowrap"
                         >
@@ -845,6 +857,14 @@ export function AdminDashboard() {
                                     </label>
                                     <p className={`text-xs mt-1 ml-8 ${isUpdateActive ? 'text-red-700' : 'text-sky-700'}`}>If checked, users cannot dismiss the popup and must download the APK.</p>
                                 </div>
+                                
+                                <div className="flex-1 flex justify-center w-full md:w-auto my-2 md:my-0 border-t md:border-t-0 md:border-l border-gray-200/60 pt-3 md:pt-0 md:pl-4">
+                                    <label className="flex items-center cursor-pointer">
+                                        <Checkbox checked={notifyOutdatedUsers} onChange={e => setNotifyOutdatedUsers(e.target.checked)} />
+                                        <span className="ml-2 font-bold text-sm text-gray-800">Send Push Notification to outdated users</span>
+                                    </label>
+                                </div>
+
                                 <div className="flex gap-2 w-full md:w-auto">
                                     <Button onClick={() => setIsEditingUpdate(false)} variant="secondary" className="shadow-sm w-full md:w-auto bg-white border-gray-300 hover:bg-gray-50 text-gray-700">
                                         Cancel
@@ -881,7 +901,14 @@ export function AdminDashboard() {
                             )}
                             
                             <div className="flex gap-3">
-                                <Button onClick={() => setIsEditingUpdate(true)} variant="primary" className="shadow-sm border border-sky-600">
+                                <Button 
+                                    onClick={() => {
+                                        setIsEditingUpdate(true);
+                                        setNotifyOutdatedUsers(false);
+                                    }} 
+                                    variant="primary" 
+                                    className="shadow-sm border border-sky-600"
+                                >
                                     <Edit3 className="w-4 h-4 mr-2" /> Edit Update Configuration
                                 </Button>
                                 {isUpdateActive && (
@@ -900,7 +927,7 @@ export function AdminDashboard() {
                         <History className="w-5 h-5 text-gray-500 mr-3 shrink-0" />
                         <div>
                             <h3 className="text-md font-bold text-gray-800">Deployment History Log</h3>
-                            <p className="text-xs text-gray-500">Record of previously configured Native APK versions pushed from this dashboard.</p>
+                            <p className="text-xs text-gray-500">Record of previously configured Native APK versions automatically tracked by GitHub Actions.</p>
                         </div>
                     </div>
                     {updateHistory.length > 0 ? (
@@ -934,9 +961,9 @@ export function AdminDashboard() {
                                                     <Download className="w-4 h-4" />
                                                 </a>
                                                 <button 
-                                                    onClick={() => handleDeleteHistoryRecord(stat.id)}
+                                                    onClick={() => handleDeleteHistoryRecord(stat)}
                                                     className="inline-flex items-center justify-center p-1.5 text-red-500 bg-red-50 border border-red-200 rounded hover:bg-red-100 transition-colors"
-                                                    title="Remove from history"
+                                                    title="Permanently remove file and history"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>

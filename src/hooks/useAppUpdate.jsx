@@ -5,7 +5,7 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { Network } from '@capacitor/network';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import { LocalNotifications } from '@capacitor/local-notifications';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { downloadAndOpenFile } from '../utils/fileDownloader';
 import { RefreshCw, Download, X, Info, ClipboardCheck } from 'lucide-react';
@@ -13,22 +13,25 @@ import { RefreshCw, Download, X, Info, ClipboardCheck } from 'lucide-react';
 export function useAppUpdate() {
     const [appVersion, setAppVersion] = useState(import.meta.env.VITE_APP_VERSION || window.APP_VERSION || '1.0.2');
     
-    // States for manual update checks
+    // States specifically for Hard Native APK updates (OTA is now 100% silent)
     const [isDownloadingAppUpdate, setIsDownloadingAppUpdate] = useState(false);
     const [appUpdateProgress, setAppUpdateProgress] = useState(0);
 
     const [nativeUpdatePrompt, setNativeUpdatePrompt] = useState(null);
     const [manualUpdateModal, setManualUpdateModal] = useState({ isOpen: false, status: 'idle', message: '', bundleId: null });
     
-    const pendingOtaBundleId = useRef(null);
+    // Refs to control silent OTA flow and prevent duplicate operations
+    const downloadedOtaBundleId = useRef(null);
+    const isDownloadingOta = useRef(false);
 
     useEffect(() => {
-        let downloadListenerHandle;
         let appStateListenerHandle;
+        let unsubscribeConfig = null;
 
         if (Capacitor.isNativePlatform()) {
             
-            // 1. Instantly notify Capgo to prevent rollback (Takes 1 millisecond, non-blocking)
+            // 1. CRITICAL: Prevent Rollbacks and Multiple Restarts!
+            // Instantly tell the native layer the app booted successfully.
             CapacitorUpdater.notifyAppReady()
                 .catch(e => console.warn("[Capgo] notifyAppReady failed:", e));
 
@@ -46,103 +49,102 @@ export function useAppUpdate() {
                 } catch (err) { console.warn("Failed to show update notification:", err); }
             };
 
-            // --- REUSABLE NATIVE APK CHECKER ---
-            const checkNativeApkRequirement = async () => {
-                try {
-                    const status = await Network.getStatus();
-                    if (!status.connected) return false;
+            // --- THE SILENT BACKGROUND WORKER FOR OTA ---
+            const checkOtaUpdate = async () => {
+                // Prevent concurrent downloads or downloading if a native update is pending
+                if (isDownloadingOta.current || downloadedOtaBundleId.current || nativeUpdatePrompt) return;
 
-                    const updateDocRef = doc(db, "meta", "update_config");
-                    const updateSnap = await getDoc(updateDocRef);
-
-                    if (updateSnap.exists()) {
-                        const serverConfig = updateSnap.data();
-                        const appInfo = await CapacitorApp.getInfo();
-                        const currentBuild = parseInt(appInfo.build, 10) || 1;
-                        const serverBuild = parseInt(serverConfig.latestNativeBuild, 10);
-
-                        if (serverBuild > currentBuild) {
-                            setNativeUpdatePrompt(serverConfig);
-                            return true; 
-                        }
-                    }
-                } catch (e) { }
-                return false;
-            };
-
-            // --- THE BACKGROUND WORKER ---
-            const runBackgroundUpdateCheck = async () => {
-                const status = await Network.getStatus();
-                if (!status.connected) return;
-
-                // 1. APK Check
-                const requiresNativeUpdate = await checkNativeApkRequirement();
-                if (requiresNativeUpdate) {
-                    showUpdateNotification("تحديث جديد للتطبيق", "يتوفر إصدار جديد. يرجى التحميل الآن.", 101);
-                    return; 
-                }
-
-                // 2. Capgo OTA Check (Silent Background)
                 try {
                     const currentState = await CapacitorUpdater.current();
                     const currentVersion = currentState.bundle?.version || import.meta.env.VITE_APP_VERSION || "builtin";
                     setAppVersion(currentVersion);
 
+                    // Fetch the latest version manifest silently
                     const response = await fetch('https://imnci-courses-monitor.web.app/latest/update.json?t=' + Date.now(), { cache: "no-store" });
                     if (response.ok) {
                         const latestUpdate = await response.json();
                         
                         if (currentVersion !== latestUpdate.version) {
-                            // Download silently
-                            const downloadedBundle = await CapacitorUpdater.download({ url: latestUpdate.url, version: latestUpdate.version });
-                            pendingOtaBundleId.current = downloadedBundle.id;
+                            isDownloadingOta.current = true;
+                            
+                            // Download completely silently in the background
+                            const downloadedBundle = await CapacitorUpdater.download({ 
+                                url: latestUpdate.url, 
+                                version: latestUpdate.version 
+                            });
+                            
+                            // Store the ID. We will NOT apply it until the user leaves the app.
+                            downloadedOtaBundleId.current = downloadedBundle.id;
+                            isDownloadingOta.current = false;
                         }
                     }
-                } catch (error) { }
-            };
-            
-            // ⚡ CRITICAL PERFORMANCE FIX: 
-            // We wait 5 seconds, AND we ask the browser to wait until the CPU is completely idle.
-            // This guarantees the update check will NEVER steal resources from the app launch sequence.
-            setTimeout(() => {
-                if ('requestIdleCallback' in window) {
-                    requestIdleCallback(() => runBackgroundUpdateCheck());
-                } else {
-                    runBackgroundUpdateCheck(); // Fallback for Safari/iOS if needed
+                } catch (error) { 
+                    isDownloadingOta.current = false;
                 }
-            }, 5000); 
+            };
 
-            // --- APP STATE LISTENER ---
+            // --- REAL-TIME LISTENER FOR IMMEDIATE UPDATES ---
+            const setupRealtimeConfigListener = async () => {
+                const status = await Network.getStatus();
+                if (!status.connected) return;
+
+                const updateDocRef = doc(db, "meta", "update_config");
+                
+                // This triggers the EXACT moment the admin pushes an update in the dashboard
+                unsubscribeConfig = onSnapshot(updateDocRef, async (updateSnap) => {
+                    if (updateSnap.exists()) {
+                        const serverConfig = updateSnap.data();
+                        const appInfo = await CapacitorApp.getInfo();
+                        
+                        const currentBuild = parseInt(appInfo.build, 10) || 1;
+                        const serverBuild = parseInt(serverConfig.latestNativeBuild, 10);
+
+                        // 1. Check Native (Hard APK update requirement overrides OTA)
+                        if (serverBuild > currentBuild) {
+                            setNativeUpdatePrompt(serverConfig);
+                            showUpdateNotification("تحديث جديد للتطبيق", "يتوفر إصدار جديد. يرجى التحميل الآن.", 101);
+                            return; 
+                        } else {
+                            setNativeUpdatePrompt(null);
+                        }
+
+                        // 2. Trigger OTA check instantly based on the snapshot push
+                        checkOtaUpdate();
+                    }
+                });
+            };
+
+            setupRealtimeConfigListener();
+
+            // --- APPLY UPDATE SILENTLY ON BACKGROUND ---
+            // This guarantees the user's active session is NEVER interrupted.
             CapacitorApp.addListener('appStateChange', async ({ isActive }) => {
-                if (isActive) {
-                    checkNativeApkRequirement();
-                } else {
-                    if (pendingOtaBundleId.current) {
-                        try {
-                            await CapacitorUpdater.set({ id: pendingOtaBundleId.current });
-                            pendingOtaBundleId.current = null; 
-                        } catch (e) { }
+                // If the app goes to the background AND an update is ready AND no hard APK is required
+                if (!isActive && downloadedOtaBundleId.current && !nativeUpdatePrompt) {
+                    try {
+                        // Swap the bundle while the app is hidden.
+                        // The next time the user clicks the app icon, it will be instantly ready on the new version.
+                        await CapacitorUpdater.set({ id: downloadedOtaBundleId.current });
+                        downloadedOtaBundleId.current = null; 
+                    } catch (e) { 
+                        console.error("[Capgo] Failed to set OTA bundle:", e);
                     }
                 }
             }).then(handle => { appStateListenerHandle = handle; });
-
-            // Only update progress UI if the user manually clicked the update button
-            CapacitorUpdater.addListener('download', (info) => {
-                setAppUpdateProgress(info.percent); 
-            }).then(handle => { downloadListenerHandle = handle; });
         }
 
         return () => { 
-            if (downloadListenerHandle) downloadListenerHandle.remove(); 
             if (appStateListenerHandle) appStateListenerHandle.remove();
+            if (unsubscribeConfig) unsubscribeConfig();
         };
-    }, []);
+    }, [nativeUpdatePrompt]);
 
     const handleManualUpdateCheck = async () => {
         setManualUpdateModal({ isOpen: true, status: 'checking', message: 'Checking for updates...', bundleId: null });
 
         if (!Capacitor.isNativePlatform()) {
             setManualUpdateModal({ isOpen: true, status: 'info', message: 'Web version is always up to date on refresh.', bundleId: null });
+            setTimeout(() => setManualUpdateModal({ isOpen: false, status: 'idle', message: '', bundleId: null }), 3000);
             return;
         }
 
@@ -183,20 +185,25 @@ export function useAppUpdate() {
                 const currentVersion = currentState.bundle?.version || "builtin";
 
                 if (currentVersion !== latestUpdate.version) {
-                    setManualUpdateModal({ isOpen: false, status: 'idle', message: '', bundleId: null });
-                    setIsDownloadingAppUpdate(true);
-                    setAppUpdateProgress(0);
+                    // Inform the user gracefully and handle the OTA download implicitly
+                    setManualUpdateModal({ isOpen: true, status: 'success', message: 'Update found. It will be downloaded and applied silently in the background.', bundleId: null });
                     
-                    const downloadedBundle = await CapacitorUpdater.download({ url: latestUpdate.url, version: latestUpdate.version });
-                    setIsDownloadingAppUpdate(false);
-                    
-                    // Show Restart Prompt instead of forcing the freeze
-                    setManualUpdateModal({ 
-                        isOpen: true, 
-                        status: 'ready', 
-                        message: 'Update downloaded successfully! The app needs to restart to apply the changes.', 
-                        bundleId: downloadedBundle.id 
-                    });
+                    // Trigger non-blocking silent download if not already doing so
+                    if (!isDownloadingOta.current && !downloadedOtaBundleId.current) {
+                        isDownloadingOta.current = true;
+                        CapacitorUpdater.download({ url: latestUpdate.url, version: latestUpdate.version })
+                            .then(downloadedBundle => {
+                                downloadedOtaBundleId.current = downloadedBundle.id;
+                                isDownloadingOta.current = false;
+                            })
+                            .catch(e => {
+                                console.error("OTA Background Download failed:", e);
+                                isDownloadingOta.current = false;
+                            });
+                    }
+                        
+                    // Auto-dismiss the modal to maintain workflow
+                    setTimeout(() => setManualUpdateModal({ isOpen: false, status: 'idle', message: '', bundleId: null }), 4000);
                 } else if (!nativeUpdateFound) {
                     setManualUpdateModal({ isOpen: true, status: 'success', message: `App is already up to date! (Version: ${currentVersion})`, bundleId: null });
                 }
@@ -206,13 +213,12 @@ export function useAppUpdate() {
 
         } catch (error) {
             setManualUpdateModal({ isOpen: true, status: 'error', message: `${error.message || 'Unknown error occurred.'}`, bundleId: null });
-        } finally {
-            setIsDownloadingAppUpdate(false);
         }
     };
 
     const AppUpdateModals = () => (
         <>
+            {/* Native APK UI is kept intact as hard-updates require explicit user downloads */}
             {nativeUpdatePrompt && (
                 <div className="fixed inset-0 bg-slate-900 bg-opacity-90 flex flex-col items-center justify-center z-[100000] p-4 backdrop-blur-sm" dir="rtl">
                     <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center space-y-4">
@@ -272,13 +278,14 @@ export function useAppUpdate() {
                 </div>
             )}
 
+            {/* Manual check modal (Auto-dismisses for OTA, stays open for info/errors) */}
             {manualUpdateModal.isOpen && (
                 <div className="fixed inset-0 bg-slate-900 bg-opacity-80 flex flex-col items-center justify-center z-[100000] p-4 backdrop-blur-sm">
                     <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full text-center space-y-4">
                         <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-slate-100">
-                            {manualUpdateModal.status === 'checking' || manualUpdateModal.status === 'downloading' || manualUpdateModal.status === 'restarting' ? (
+                            {manualUpdateModal.status === 'checking' ? (
                                 <RefreshCw className="h-6 w-6 text-sky-600 animate-spin"/>
-                            ) : manualUpdateModal.status === 'success' || manualUpdateModal.status === 'ready' ? (
+                            ) : manualUpdateModal.status === 'success' ? (
                                 <ClipboardCheck className="h-6 w-6 text-green-600" />
                             ) : manualUpdateModal.status === 'error' ? (
                                 <X className="h-6 w-6 text-red-600" />
@@ -288,39 +295,17 @@ export function useAppUpdate() {
                         </div>
                         <h3 className="text-xl font-bold text-slate-800">
                             {manualUpdateModal.status === 'checking' ? 'Checking for Updates' :
-                             manualUpdateModal.status === 'downloading' ? 'Downloading Update' :
-                             manualUpdateModal.status === 'success' ? 'Up to Date' :
-                             manualUpdateModal.status === 'ready' ? 'Update Ready!' :
-                             manualUpdateModal.status === 'restarting' ? 'Applying Update...' :
+                             manualUpdateModal.status === 'success' ? 'Update Status' :
                              manualUpdateModal.status === 'error' ? 'Update Error' : 'Information'}
                         </h3>
                         <p className="text-sm text-slate-500">{manualUpdateModal.message}</p>
                         
-                        {(manualUpdateModal.status === 'success' || manualUpdateModal.status === 'error' || manualUpdateModal.status === 'info') && (
+                        {manualUpdateModal.status !== 'success' && (
                             <button 
                                 onClick={() => setManualUpdateModal({ isOpen: false, status: 'idle', message: '', bundleId: null })}
                                 className="w-full mt-2 inline-flex justify-center rounded-md bg-slate-800 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-slate-700 sm:text-sm"
                             >
                                 Close
-                            </button>
-                        )}
-
-                        {/* OTA Restart Button with Loading State */}
-                        {(manualUpdateModal.status === 'ready' || manualUpdateModal.status === 'restarting') && (
-                            <button 
-                                onClick={async () => {
-                                    setManualUpdateModal(prev => ({ ...prev, status: 'restarting', message: 'Restarting app to apply the update. Please wait...' }));
-                                    try { 
-                                        await CapacitorUpdater.set({ id: manualUpdateModal.bundleId }); 
-                                    } catch (e) { 
-                                        console.error("Failed to apply update", e); 
-                                        setManualUpdateModal({ isOpen: true, status: 'error', message: 'Failed to apply update: ' + e.message, bundleId: null });
-                                    }
-                                }}
-                                disabled={manualUpdateModal.status === 'restarting'}
-                                className={`w-full mt-4 inline-flex justify-center rounded-md border border-transparent px-4 py-2 text-base font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 sm:text-sm ${manualUpdateModal.status === 'restarting' ? 'bg-slate-400 cursor-not-allowed' : 'bg-sky-600 hover:bg-sky-700'}`}
-                            >
-                                {manualUpdateModal.status === 'restarting' ? 'Restarting, please wait...' : 'Restart & Update Now'}
                             </button>
                         )}
                     </div>

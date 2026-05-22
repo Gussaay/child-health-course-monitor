@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
-import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
 import { Trash2, File, ExternalLink, ArrowLeft, RefreshCw, HardDrive } from 'lucide-react';
 import { Card, PageHeader, Button, Spinner, EmptyState } from './CommonComponents';
@@ -19,24 +18,24 @@ export default function DownloadedFilesView({ onBack, setToast }) {
 
         setLoading(true);
         try {
-            // Ensure the folder exists
+            // Ensure the folder matches fileDownloader.js
             try {
-                await Filesystem.mkdir({ path: 'downloads', directory: Directory.Data, recursive: true });
+                await Filesystem.mkdir({ path: 'NCHP_Downloads', directory: Directory.Documents, recursive: true });
             } catch (e) {
                 // Ignore if it already exists
             }
 
+            // Read from the correct directory
             const result = await Filesystem.readdir({
-                path: 'downloads',
-                directory: Directory.Data
+                path: 'NCHP_Downloads',
+                directory: Directory.Documents
             });
 
-            // Get stats for each file to show size and date
             const fileDetails = await Promise.all(result.files.map(async (fileInfo) => {
-                const name = fileInfo.name || fileInfo; // Handle different Capacitor versions
+                const name = fileInfo.name || fileInfo; 
                 const stat = await Filesystem.stat({
-                    path: `downloads/${name}`,
-                    directory: Directory.Data
+                    path: `NCHP_Downloads/${name}`, 
+                    directory: Directory.Documents 
                 });
                 return {
                     name: name,
@@ -46,12 +45,15 @@ export default function DownloadedFilesView({ onBack, setToast }) {
                 };
             }));
 
-            // Sort by newest first
             fileDetails.sort((a, b) => b.mtime - a.mtime);
             setFiles(fileDetails);
         } catch (error) {
             console.error("Error loading downloaded files:", error);
-            setToast({ show: true, message: "Failed to load files.", type: "error" });
+            if (error.message.includes('Folder does not exist')) {
+                setFiles([]); // No files downloaded yet
+            } else {
+                setToast({ show: true, message: "Failed to load files.", type: "error" });
+            }
         } finally {
             setLoading(false);
         }
@@ -94,12 +96,13 @@ export default function DownloadedFilesView({ onBack, setToast }) {
     const handleDeleteFile = async (fileName) => {
         if (window.confirm(`Are you sure you want to delete ${fileName}?`)) {
             try {
+                // Delete from the correct directory
                 await Filesystem.deleteFile({
-                    path: `downloads/${fileName}`,
-                    directory: Directory.Data
+                    path: `NCHP_Downloads/${fileName}`,
+                    directory: Directory.Documents
                 });
                 setToast({ show: true, message: "File deleted successfully.", type: "success" });
-                loadFiles(); // Refresh list
+                loadFiles(); 
             } catch (error) {
                 console.error("Error deleting file:", error);
                 setToast({ show: true, message: "Failed to delete file.", type: "error" });
