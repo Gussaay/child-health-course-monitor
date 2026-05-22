@@ -9,7 +9,6 @@ admin.initializeApp({
 });
 
 const db = admin.firestore();
-// FIXED: Updated to the correct Firebase Storage bucket
 const bucket = admin.storage().bucket('imnci-courses-monitor.firebasestorage.app'); 
 
 async function pushUpdate() {
@@ -23,20 +22,20 @@ async function pushUpdate() {
     const payload = {
         latestNativeBuild: config.latestNativeBuild || 0,
         versionString: versionString,
-        // FIXED: Updated bucket name in the downloadUrl
         downloadUrl: `https://firebasestorage.googleapis.com/v0/b/imnci-courses-monitor.firebasestorage.app/o/apks%2FNational_Child_Health_Program_APP_v${versionString}.apk?alt=media`,
-        mandatory: true, 
+        mandatory: false, // Default to false so history shows it wasn't forced by the pipeline
         releaseNotes: `Automated GitHub Actions Deployment for v${versionString}`,
         timestamp: admin.firestore.FieldValue.serverTimestamp()
     };
 
     console.log(`Checking deployment status for v${versionString}...`);
     
-    // 1. Overwrite the active meta config (this is always safe to overwrite)
-    await db.collection('meta').doc('update_config').set(payload);
+    // ❌ REMOVED: db.collection('meta').doc('update_config').set(payload);
+    // GitHub Actions will NO LONGER push the update live to users. 
+    // It will sit safely in the database until the Admin Dashboard triggers it.
 
     // ====================================================================
-    // 2. DEDUPLICATION LOGIC FOR HISTORY LOG
+    // 1. DEDUPLICATION LOGIC FOR HISTORY LOG
     // ====================================================================
     const historyDocRef = db.collection('update_history').doc(versionString);
     const historyDocSnap = await historyDocRef.get();
@@ -47,7 +46,6 @@ async function pushUpdate() {
         console.log(`✅ Success! v${versionString} recorded in history log.`);
     } else {
         // If it exists, we skip adding a new document to prevent duplicates.
-        // We use merge:true just to ensure the downloadUrl is up to date, but we DO NOT overwrite the original timestamp.
         const updatePayload = { ...payload };
         delete updatePayload.timestamp; 
         
@@ -56,7 +54,7 @@ async function pushUpdate() {
     }
 
     // ====================================================================
-    // 3. STORAGE & HISTORY CLEANUP: KEEP ONLY THE LATEST 10 VERSIONS
+    // 2. STORAGE & HISTORY CLEANUP: KEEP ONLY THE LATEST 10 VERSIONS
     // ====================================================================
     console.log("Running automated space cleanup...");
     

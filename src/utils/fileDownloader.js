@@ -2,15 +2,9 @@ import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 
-/**
- * Generic In-App Download & Open Manager
- * @param {string} url - The URL of the file to download
- * @param {string} customFileName - Optional custom name for the downloaded file
- * @param {object} options - Contains callbacks AND configuration (like isSystemFile)
- */
 export const downloadAndOpenFile = async (url, customFileName = null, options = {}) => {
     const { 
-        onStart, onSuccess, onError, onFinally, onOpenError, onProgress, // <-- Added onProgress support
+        onStart, onSuccess, onError, onFinally, onOpenError, onProgress, 
         isSystemFile = false 
     } = options;
 
@@ -26,14 +20,12 @@ export const downloadAndOpenFile = async (url, customFileName = null, options = 
     try {
         const fileName = customFileName || url.substring(url.lastIndexOf('/') + 1) || 'download.file';
         
-        // 1. Determine Mime Type
         let mimeType = '*/*';
         const lowerName = fileName.toLowerCase();
         if (lowerName.endsWith('.apk')) mimeType = 'application/vnd.android.package-archive';
         else if (lowerName.endsWith('.pdf')) mimeType = 'application/pdf';
         else if (lowerName.endsWith('.xlsx')) mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
-        // 2. Determine Target Directory based on Intent
         const targetDirectory = isSystemFile ? Directory.Cache : Directory.Documents;
 
         if (!isSystemFile) {
@@ -44,26 +36,27 @@ export const downloadAndOpenFile = async (url, customFileName = null, options = 
 
         const filePath = isSystemFile ? fileName : `NCHP_Downloads/${fileName}`;
 
-        // 3. Attach Progress Listener
+        // SAFETY FIX: Wrap listener in try/catch so it doesn't crash the whole download
         if (onProgress) {
-            progressListener = await CapacitorHttp.addListener('progress', (progressData) => {
-                // Ensure we have a valid contentLength to avoid dividing by 0
-                if (progressData && progressData.contentLength > 0) {
-                    const percent = (progressData.bytes / progressData.contentLength) * 100;
-                    onProgress(percent);
-                }
-            });
+            try {
+                progressListener = await CapacitorHttp.addListener('progress', (progressData) => {
+                    if (progressData && progressData.contentLength > 0) {
+                        const percent = (progressData.bytes / progressData.contentLength) * 100;
+                        onProgress(percent);
+                    }
+                });
+            } catch (listenerError) {
+                console.warn("Native progress listener not supported or failed:", listenerError);
+            }
         }
 
-        // 4. Download the file
         await CapacitorHttp.downloadFile({
             url: url,
             filePath: filePath,
             fileDirectory: targetDirectory,
-            progress: !!onProgress // <-- Enable native progress tracking if a callback is provided
+            progress: !!onProgress 
         });
 
-        // 5. Get the native URI
         const { uri } = await Filesystem.getUri({
             path: filePath,
             directory: targetDirectory
@@ -71,24 +64,20 @@ export const downloadAndOpenFile = async (url, customFileName = null, options = 
 
         if (onSuccess) onSuccess();
 
-        // 6. Open the file
         try {
             await FileOpener.open({
                 filePath: uri,
                 contentType: mimeType
             });
         } catch (openError) {
-            console.error("FileOpener Error:", openError);
             if (onOpenError) onOpenError(openError);
-            else if (onError) onError(new Error("File downloaded, but no app found to open it."));
+            else if (onError) onError(new Error("تم تحميل الملف ولكن لم يتم العثور على تطبيق لفتحه."));
         }
 
     } catch (error) {
-        console.error("Download Error:", error);
         if (onError) onError(error);
     } finally {
-        // Clean up the event listener to prevent memory leaks
-        if (progressListener) {
+        if (progressListener && typeof progressListener.remove === 'function') {
             progressListener.remove();
         }
         if (onFinally) onFinally();

@@ -238,13 +238,25 @@ export function useAppUpdate() {
                         <div className="w-full pt-2">
                             <button 
                                 onClick={() => {
-                                    downloadAndOpenFile(nativeUpdatePrompt.downloadUrl, `Update_v${nativeUpdatePrompt.versionString}.apk`, {
-                                        isSystemFile: false, // FIXED: Now it goes to NCHP_Downloads so users can see and delete it later!
+                                    // FALLBACK FIX: Check multiple possible property names from Firebase
+                                    const downloadUrl = nativeUpdatePrompt.downloadUrl || nativeUpdatePrompt.url || nativeUpdatePrompt.apkUrl;
+                                    
+                                    if (!downloadUrl) {
+                                        alert("خطأ: رابط التحميل غير موجود في قاعدة البيانات.");
+                                        return;
+                                    }
+
+                                    downloadAndOpenFile(downloadUrl, `Update_v${nativeUpdatePrompt.versionString}.apk`, {
+                                        isSystemFile: false, // Goes to NCHP_Downloads
                                         onStart: () => {
                                             setIsDownloadingAppUpdate(true);
                                             setAppUpdateProgress(0);
                                         },
                                         onProgress: (pct) => setAppUpdateProgress(pct),
+                                        onError: (err) => {
+                                            alert("حدث خطأ أثناء التحميل: " + err.message);
+                                            setIsDownloadingAppUpdate(false);
+                                        },
                                         onFinally: () => setIsDownloadingAppUpdate(false)
                                     });
                                 }}
@@ -254,17 +266,42 @@ export function useAppUpdate() {
                                 {isDownloadingAppUpdate ? 'جاري التحميل...' : 'تحميل التحديث الآن'}
                             </button>
 
+                            {/* UPDATED PROGRESS UI WITH DISMISS/CANCEL CONTROLS */}
                             {isDownloadingAppUpdate && (
-                                <div className="mt-4">
+                                <div className="mt-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
                                     <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
                                         <div 
                                             className="bg-red-600 h-2.5 rounded-full transition-all duration-300" 
                                             style={{ width: `${Math.max(appUpdateProgress, 3)}%` }}
                                         ></div>
                                     </div>
-                                    <p className="text-xs text-slate-500 mt-2 text-center font-mono">
-                                        {Math.round(appUpdateProgress)}%
-                                    </p>
+                                    
+                                    <div className="flex items-center justify-between mt-3 px-1">
+                                        <span className="text-sm font-bold text-slate-700 font-mono">
+                                            {Math.round(appUpdateProgress)}%
+                                        </span>
+                                        
+                                        <div className="flex gap-3 text-xs font-medium">
+                                            {/* Dismisses the visual state while it downloads in the background */}
+                                            <button 
+                                                onClick={() => setIsDownloadingAppUpdate(false)}
+                                                className="text-slate-500 hover:text-slate-700"
+                                            >
+                                                إخفاء للخلفية
+                                            </button>
+                                            
+                                            {/* Visual cancel (Note: CapacitorHttp doesn't natively abort network requests, but this resets the UI) */}
+                                            <button 
+                                                onClick={() => {
+                                                    setIsDownloadingAppUpdate(false);
+                                                    setAppUpdateProgress(0);
+                                                }}
+                                                className="text-red-500 hover:text-red-700"
+                                            >
+                                                إلغاء
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>
