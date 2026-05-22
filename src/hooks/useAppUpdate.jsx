@@ -239,7 +239,7 @@ export function useAppUpdate() {
                             <button 
                                 onClick={() => {
                                     downloadAndOpenFile(nativeUpdatePrompt.downloadUrl, `Update_v${nativeUpdatePrompt.versionString}.apk`, {
-                                        isSystemFile: true,
+                                        isSystemFile: false, // FIXED: Now it goes to NCHP_Downloads so users can see and delete it later!
                                         onStart: () => {
                                             setIsDownloadingAppUpdate(true);
                                             setAppUpdateProgress(0);

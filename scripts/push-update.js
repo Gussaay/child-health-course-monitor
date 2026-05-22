@@ -9,7 +9,8 @@ admin.initializeApp({
 });
 
 const db = admin.firestore();
-const bucket = admin.storage().bucket('imnci-courses-monitor.appspot.com'); 
+// FIXED: Updated to the correct Firebase Storage bucket
+const bucket = admin.storage().bucket('imnci-courses-monitor.firebasestorage.app'); 
 
 async function pushUpdate() {
   try {
@@ -22,7 +23,8 @@ async function pushUpdate() {
     const payload = {
         latestNativeBuild: config.latestNativeBuild || 0,
         versionString: versionString,
-        downloadUrl: `https://firebasestorage.googleapis.com/v0/b/imnci-courses-monitor.appspot.com/o/apks%2FNational_Child_Health_Program_APP_v${versionString}.apk?alt=media`,
+        // FIXED: Updated bucket name in the downloadUrl
+        downloadUrl: `https://firebasestorage.googleapis.com/v0/b/imnci-courses-monitor.firebasestorage.app/o/apks%2FNational_Child_Health_Program_APP_v${versionString}.apk?alt=media`,
         mandatory: true, 
         releaseNotes: `Automated GitHub Actions Deployment for v${versionString}`,
         timestamp: admin.firestore.FieldValue.serverTimestamp()
@@ -77,7 +79,7 @@ async function pushUpdate() {
             await bucket.file(filePath).delete();
             console.log(`✅ Deleted physical file from Storage: ${filePath}`);
           } catch (storageErr) {
-            if (storageErr.code === 404) {
+            if (storageErr.code === 404 || storageErr.code === 'ENOENT') {
               console.log(`⚠️ File already missing from Storage: ${filePath}`);
             } else {
               console.error(`❌ Failed to delete file ${filePath}:`, storageErr);
