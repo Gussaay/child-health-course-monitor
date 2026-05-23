@@ -60,8 +60,22 @@ const MentorshipDashboard = ({
     const [activeImnciTab, setActiveImnciTab] = useState('skills'); 
     
     // --- NEW: State for Admin custom date range ---
-    const [adminStartDate, setAdminStartDate] = useState('');
-    const [adminEndDate, setAdminEndDate] = useState('');
+    const [customStartDate, setCustomStartDate] = useState('');
+    const [customEndDate, setCustomEndDate] = useState('');
+
+    const formatDateForInput = (dateValue) => {
+        if (!dateValue) return '';
+        if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+            return dateValue;
+        }
+        try {
+            const d = new Date(dateValue);
+            if (isNaN(d.getTime())) return '';
+            return d.toISOString().split('T')[0];
+        } catch (error) {
+            return '';
+        }
+    };
     
     const recalcCacheRef = useRef({});
 
@@ -160,7 +174,7 @@ const MentorshipDashboard = ({
         if (activeProject) filtered = filtered.filter(r => r.project === activeProject);
         
         // UPDATED: Pass admin dates
-        filtered = filtered.filter(r => checkDateFilter(r.visitDate || r.date || r.visit_date, dateFilter, adminStartDate, adminEndDate));
+        filtered = filtered.filter(r => checkDateFilter(r.visitDate || r.date || r.visit_date, dateFilter, customStartDate, customEndDate));
 
         const totalVisits = filtered.length;
         const isStateLevel = !activeState;
@@ -244,7 +258,7 @@ const MentorshipDashboard = ({
         });
         
         return { totalVisits, geographicChartData, facilityTableData: Object.values(facilityMap), distinctSkillKeys: Array.from(skillKeys), groupedProblems, totalProblems, trainedSkillsGroups, totalSkillsTrained, rawReports: filtered };
-    }, [visitReports, activeService, activeState, activeLocality, activeFacilityId, activeProject, STATE_LOCALITIES, dynamicLocationLevel, dateFilter, checkDateFilter, language, adminStartDate, adminEndDate]);
+    }, [visitReports, activeService, activeState, activeLocality, activeFacilityId, activeProject, STATE_LOCALITIES, dynamicLocationLevel, dateFilter, checkDateFilter, language, customStartDate, customEndDate]);
 
     const reCalculatedSubmissions = useMemo(() => {
         if (!allSubmissions) return [];
@@ -383,7 +397,7 @@ const MentorshipDashboard = ({
                 const pushScore = (key, arrayName) => { if (skills[key] === 'yes') scores[arrayName].push(1); else if (skills[key] === 'no' || skills[key] === 'partial') scores[arrayName].push(0); };
                 pushScore('prep_wash_1', 'inf_wash1'); pushScore('prep_wash_2', 'inf_wash2'); pushScore('prep_gloves', 'inf_gloves');
                 pushScore('prep_cloths', 'prep_towel'); pushScore('prep_resuscitation_area', 'prep_equip'); pushScore('prep_ambu_check', 'prep_ambu');
-                pushScore('dry_start_5sec', 'care_dry'); pushScore('dry_skin_to_skin', 'care_skin'); pushScore('care_cover', 'care_cover'); 
+                pushScore('dry_start_5sec', 'care_dry'); pushScore('care_skin'); pushScore('care_cover', 'care_cover'); 
                 if (status === 'yes') { pushScore('normal_remove_outer_glove', 'cord_hygiene'); pushScore('normal_cord_pulse_check', 'cord_delay'); pushScore('normal_cord_clamping', 'cord_clamp'); pushScore('normal_breastfeeding_guidance', 'bf_advice'); }
                 if (status === 'no') { pushScore('resus_position_head', 'resus_head'); pushScore('resus_mask_position', 'resus_mask'); pushScore('resus_check_chest_rise', 'resus_chest'); pushScore('resus_ventilation_rate', 'resus_rate'); }
             }
@@ -518,10 +532,10 @@ const MentorshipDashboard = ({
         const typeMatch = !activeWorkerType || sub.workerType === activeWorkerType;
         
         // UPDATED: Pass admin dates
-        const dateMatch = checkDateFilter(sub.date || sub.sessionDate || sub.visitDate, dateFilter, adminStartDate, adminEndDate);
+        const dateMatch = checkDateFilter(sub.date || sub.sessionDate || sub.visitDate, dateFilter, customStartDate, customEndDate);
         
         return stateMatch && localityMatch && facilityMatch && workerMatch && projectMatch && typeMatch && dateMatch;
-    }), [serviceCompletedSubmissions, activeState, activeLocality, activeFacilityId, activeWorkerName, activeProject, activeWorkerType, dateFilter, checkDateFilter, adminStartDate, adminEndDate]);
+    }), [serviceCompletedSubmissions, activeState, activeLocality, activeFacilityId, activeWorkerName, activeProject, activeWorkerType, dateFilter, checkDateFilter, customStartDate, customEndDate]);
 
     const overallKpis = useMemo(() => {
         if (activeService === 'IMNCI') return imnciKpiHelper(filteredSubmissions.filter(s => s.service === 'IMNCI'));
@@ -805,6 +819,25 @@ const MentorshipDashboard = ({
             
             <div className="flex flex-row flex-nowrap overflow-x-auto gap-3 mb-8 p-4 bg-white rounded-2xl shadow-md border border-black scrollbar-thin scrollbar-thumb-sky-200 scrollbar-track-transparent">
                 <div className="min-w-[140px] flex-1 flex-shrink-0">
+                    <label className="block text-[10px] font-bold text-slate-600 mb-1 uppercase tracking-wider">{t('Start Date') || 'Start Date'}</label>
+                    <input 
+                        type="date" 
+                        value={formatDateForInput(customStartDate)} 
+                        onChange={(e) => setCustomStartDate(e.target.value)} 
+                        className={`block w-full px-3 py-2 text-xs font-bold border focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-lg shadow-sm transition-colors cursor-pointer ${customStartDate ? 'border-sky-500 bg-sky-50 text-sky-900 ring-1 ring-sky-200' : 'border-black bg-white hover:bg-slate-50 text-slate-800'}`}
+                    />
+                </div>
+                <div className="min-w-[140px] flex-1 flex-shrink-0">
+                    <label className="block text-[10px] font-bold text-slate-600 mb-1 uppercase tracking-wider">{t('End Date') || 'End Date'}</label>
+                    <input 
+                        type="date" 
+                        value={formatDateForInput(customEndDate)} 
+                        onChange={(e) => setCustomEndDate(e.target.value)} 
+                        className={`block w-full px-3 py-2 text-xs font-bold border focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-lg shadow-sm transition-colors cursor-pointer ${customEndDate ? 'border-sky-500 bg-sky-50 text-sky-900 ring-1 ring-sky-200' : 'border-black bg-white hover:bg-slate-50 text-slate-800'}`}
+                    />
+                </div>
+
+                <div className="min-w-[140px] flex-1 flex-shrink-0">
                     <label className="block text-[10px] font-bold text-slate-600 mb-1 uppercase tracking-wider">{t('filter.date')}</label>
                     <select value={dateFilter} onChange={(e) => onDateFilterChange(e.target.value)} className={`block w-full px-3 py-2 text-xs font-bold border focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-lg shadow-sm transition-colors cursor-pointer ${dateFilter ? 'border-sky-500 bg-sky-50 text-sky-900 ring-1 ring-sky-200' : 'border-black bg-white hover:bg-slate-50 text-slate-800'}`}>
                         <option value="">{t('filter.all.time')}</option>
@@ -850,11 +883,6 @@ const MentorshipDashboard = ({
                         scopeTitle={scopeTitle} 
                         dateFilter={dateFilter} 
                         onDateFilterChange={onDateFilterChange}
-                        // --- PASSED NEW START AND END DATE PROPS ---
-                        startDate={adminStartDate}
-                        endDate={adminEndDate}
-                        handleStartDateChange={setAdminStartDate}
-                        handleEndDateChange={setAdminEndDate}
                     />
                 )}
 

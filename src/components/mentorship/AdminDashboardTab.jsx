@@ -11,11 +11,7 @@ const AdminDashboardTab = ({
     geographicKpis,
     filteredSubmissions,
     geographicLevelName,
-    scopeTitle,
-    startDate,
-    endDate,
-    handleStartDateChange,
-    handleEndDateChange
+    scopeTitle
 }) => {
     const tableRef = useRef(null);
 
@@ -25,24 +21,6 @@ const AdminDashboardTab = ({
     ];
 
     const isEENC = activeService === 'EENC';
-
-    // HELPER: Ensures dates are strictly in YYYY-MM-DD format for the HTML date input
-    const formatDateForInput = (dateValue) => {
-        if (!dateValue) return '';
-        // If it's already a valid YYYY-MM-DD string, return it immediately
-        if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
-            return dateValue;
-        }
-        try {
-            const d = new Date(dateValue);
-            // Check if it's a valid date
-            if (isNaN(d.getTime())) return '';
-            // Convert to YYYY-MM-DD
-            return d.toISOString().split('T')[0];
-        } catch (error) {
-            return '';
-        }
-    };
 
     // Function to copy the table HTML to clipboard for MS Word
     const handleCopyTable = async () => {
@@ -66,35 +44,7 @@ const AdminDashboardTab = ({
 
     return (
         <div className="animate-fade-in">
-            {/* DATE FILTERS (Start & End Date) */}
-            <div className="flex flex-col md:flex-row gap-4 mb-6 p-5 bg-slate-100 rounded-2xl shadow-sm border border-slate-300">
-                <div className="flex-1 flex flex-col">
-                    <label className="text-sm font-semibold text-slate-700 mb-2">Start Date</label>
-                    <input 
-                        type="date" 
-                        value={formatDateForInput(startDate)} 
-                        onChange={(e) => {
-                            if (handleStartDateChange) {
-                                handleStartDateChange(e.target.value);
-                            }
-                        }} 
-                        className="p-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                    />
-                </div>
-                <div className="flex-1 flex flex-col">
-                    <label className="text-sm font-semibold text-slate-700 mb-2">End Date</label>
-                    <input 
-                        type="date" 
-                        value={formatDateForInput(endDate)} 
-                        onChange={(e) => {
-                            if (handleEndDateChange) {
-                                handleEndDateChange(e.target.value);
-                            }
-                        }} 
-                        className="p-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                    />
-                </div>
-            </div>
+            
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <KpiCard 
