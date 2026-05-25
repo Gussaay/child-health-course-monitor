@@ -55,6 +55,9 @@ import {
     GenericFacilityForm,
     SharedFacilityFields,
     IMNCIFormFields,
+    EENCFormFields,          
+    NeonatalFormFields,      
+    CriticalCareFormFields,
     SaveStatusModal 
 } from '../FacilityForms.jsx';
 
@@ -83,14 +86,31 @@ const normalizeLocality = (stateEnKey, localityVal) => {
     return cleanVal;
 };
 
-const isDateInRange = (dateString, filterType) => {
-    if (!filterType) return true;
+const isDateInRange = (dateString, filterType, customStart, customEnd) => {
     if (!dateString || dateString === 'N/A') return false;
     
     const dParts = dateString.split('-');
     if (dParts.length !== 3) return false;
     const dateToCompare = new Date(parseInt(dParts[0]), parseInt(dParts[1]) - 1, parseInt(dParts[2]));
     
+    // Check Custom Start/End first (Overrides dropdown)
+    if (customStart || customEnd) {
+        let isValid = true;
+        if (customStart) {
+            const sDate = new Date(customStart);
+            sDate.setHours(0,0,0,0);
+            if (dateToCompare < sDate) isValid = false;
+        }
+        if (customEnd) {
+            const eDate = new Date(customEnd);
+            eDate.setHours(23,59,59,999);
+            if (dateToCompare > eDate) isValid = false;
+        }
+        return isValid;
+    }
+
+    if (!filterType) return true;
+
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
@@ -372,20 +392,25 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
     }
 
     const renderGrid = (items) => (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {items.map(item => {
                 const Icon = item.icon;
                 return (
                     <button
                         key={item.id}
                         onClick={() => onAction(item.id)}
-                        className={`flex flex-col items-center justify-center p-8 border border-gray-100 rounded-2xl bg-white shadow-sm hover:shadow-lg transition-all duration-300 group ${item.border} ${item.shadow} transform hover:-translate-y-1`}
+                        className={`flex flex-row items-center p-3 border border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md transition-all duration-200 group w-full text-left focus:outline-none focus:ring-2 focus:ring-sky-500 ${item.border} ${item.shadow}`}
                     >
-                        <div className={`p-5 rounded-2xl mb-5 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 ${item.bg}`}>
-                            <Icon className={`w-8 h-8 ${item.color}`} strokeWidth={1.5} />
+                        <div className={`p-2.5 rounded-md transition-transform duration-200 group-hover:scale-110 flex-shrink-0 ${item.bg}`}>
+                            <Icon className={`w-5 h-5 ${item.color}`} strokeWidth={2} />
                         </div>
-                        <div className="font-semibold text-gray-700 text-lg group-hover:text-gray-900 transition-colors text-center">
+                        <div className="font-semibold text-gray-700 text-sm group-hover:text-gray-900 transition-colors mx-3 flex-1">
                             {item.label}
+                        </div>
+                        <div className="text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200 transform group-hover:translate-x-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 rtl:rotate-180" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                            </svg>
                         </div>
                     </button>
                 );
@@ -394,15 +419,27 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
     );
 
     return (
-        <div className="max-w-6xl mx-auto mt-8 p-4 space-y-12" dir="ltr">
+        <div className="max-w-4xl mx-auto mt-4 p-4 space-y-5" dir="ltr">
+            {/* Top Bar with Back Button */}
+            <div className="flex items-center justify-between pb-3 border-b border-gray-200">
+                <Button variant="secondary" onClick={onBack} size="sm" className="py-1.5 px-3 text-sm">
+                    <ArrowLeft className="w-4 h-4 mr-2" /> Back
+                </Button>
+                {activeService && (
+                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-100 px-3 py-1 rounded-full">
+                        {activeService} Mentorship
+                    </span>
+                )}
+            </div>
+
             {canManage && (
                 <section>
-                    <h3 className="text-xl font-bold text-gray-800 mb-6 border-b border-gray-200 pb-2">Add New Data</h3>
+                    <h3 className="text-base font-bold text-gray-800 mb-3">Add New Data</h3>
                     {renderGrid(addItems)}
                 </section>
             )}
             <section>
-                <h3 className="text-xl font-bold text-gray-800 mb-6 border-b border-gray-200 pb-2">View Records & Dashboards</h3>
+                <h3 className="text-base font-bold text-gray-800 mb-3">View Records & Dashboards</h3>
                 {renderGrid(viewItems)}
             </section>
         </div>
@@ -699,15 +736,31 @@ const TrainingPrioritiesView = ({ activeService, submissions, currentUserEmail, 
 
 
 // --- AddHealthWorkerModal Component ---
-const IMNCI_JOB_TITLES = [
-    "مساعد طبي", "طبيب عمومي", "ممرض", "قابلة", "مسؤول تغذية", "فني مختبر", "صيدلي", "أخرى"
-];
-const AddHealthWorkerModal = ({ isOpen, onClose, onSave, facilityName }) => {
+const IMNCI_JOB_TITLES = ["مساعد طبي", "طبيب عمومي", "ممرض", "قابلة", "مسؤول تغذية", "فني مختبر", "صيدلي", "أخرى"];
+const EENC_JOB_TITLES = ["طبيب أطفال", "طبيب نساء وتوليد", "طبيب عمومي", "قابلة", "ممرض", "مساعد طبي", "أخرى"];
+const ETAT_JOB_TITLES = ["اختصاصي أطفال", "نائب اختصاصي أطفال", "طبيب عمومي", "طبيب إمتياز", "ممرض (بكلاريوس)", "ممرض (دبلوم)", "أخرى"];
+const NEONATAL_JOB_TITLES = ["اختصاصي أطفال", "طبيب أطفال", "طبيب عمومي", "ممرض عناية مكثفة", "ممرض", "قابلة", "أخرى"];
+
+// Helper to route data dynamically based on active service
+const getServiceConfig = (service) => {
+    switch(service) {
+        case 'EENC': return { titles: EENC_JOB_TITLES, label: "اخر تاريخ تدريب (EENC)", field: 'eenc_staff' };
+        case 'ETAT': return { titles: ETAT_JOB_TITLES, label: "اخر تاريخ تدريب (ETAT)", field: 'critical_staff' };
+        case 'SSNC': 
+        case 'IPC': return { titles: NEONATAL_JOB_TITLES, label: "اخر تاريخ تدريب (Neonatal/IPC)", field: 'neonatal_staff' };
+        default: return { titles: IMNCI_JOB_TITLES, label: "اخر تاريخ تدريب على العلاج المتكامل", field: 'imnci_staff' };
+    }
+};
+
+const AddHealthWorkerModal = ({ isOpen, onClose, onSave, facilityName, activeService }) => {
     const [name, setName] = useState('');
     const [job_title, setJobTitle] = useState('');
     const [training_date, setTrainingDate] = useState('');
     const [phone, setPhone] = useState('');
     const [error, setError] = useState('');
+
+    const { titles: jobTitles, label: trainingLabel } = getServiceConfig(activeService);
+
     const handleSave = () => {
         if (!name.trim()) {
             setError('الاسم الكامل مطلوب.');
@@ -733,12 +786,12 @@ const AddHealthWorkerModal = ({ isOpen, onClose, onSave, facilityName }) => {
                     <FormGroup label="الوصف الوظيفي" className="text-right">
                         <Select value={job_title} onChange={(e) => setJobTitle(e.target.value)}>
                             <option value="">-- اختر الوصف الوظيفي --</option>
-                            {IMNCI_JOB_TITLES.map(title => (
+                            {jobTitles.map(title => (
                                 <option key={title} value={title}>{title}</option>
                             ))}
                         </Select>
                     </FormGroup>
-                    <FormGroup label="اخر تاريخ تدريب على العلاج المتكامل" className="text-right">
+                    <FormGroup label={trainingLabel} className="text-right">
                         <Input type="date" value={training_date} onChange={(e) => setTrainingDate(e.target.value)} />
                     </FormGroup>
                     <FormGroup label="رقم الهاتف" className="text-right">
@@ -937,9 +990,41 @@ const TrainingPrioritiesModal = ({ isOpen, onClose, onSelect, currentSessionData
     );
 };
 
+// --- Mentor Info Modal ---
+const MentorInfoModal = ({ mentor, onClose }) => {
+    if (!mentor) return null;
+    return (
+        <Modal isOpen={true} onClose={onClose} title="Mentor Information" size="md">
+            <div className="p-6 text-right" dir="rtl">
+                <div className="space-y-4 text-gray-800">
+                    <p className="flex justify-between border-b pb-2">
+                        <span className="font-semibold text-gray-500">الاسم / العرض (Name):</span>
+                        <span className="font-bold text-gray-900">{mentor.display}</span>
+                    </p>
+                    <p className="flex justify-between border-b pb-2">
+                        <span className="font-semibold text-gray-500">البريد الإلكتروني (Email):</span>
+                        <span className="font-bold text-gray-900">{mentor.email || 'N/A'}</span>
+                    </p>
+                    <p className="flex justify-between border-b pb-2">
+                        <span className="font-semibold text-gray-500">عدد الجلسات (Sessions Supervised):</span>
+                        <span className="font-bold text-sky-600">{mentor.sessionsCount}</span>
+                    </p>
+                    <p className="flex justify-between border-b pb-2">
+                        <span className="font-semibold text-gray-500">عدد التقارير (Reports Submitted):</span>
+                        <span className="font-bold text-emerald-600">{mentor.reportsCount}</span>
+                    </p>
+                </div>
+                <div className="flex justify-end mt-6 pt-4 border-t">
+                    <Button variant="secondary" onClick={onClose}>إغلاق (Close)</Button>
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
 // --- Visit Reports Table Component ---
 const VisitReportsTable = ({ 
-    reports, onEdit, onDelete, onView, selectedIds, onSelectionChange, isReportsLoading, canManage, currentUserEmail
+    reports, onEdit, onDelete, onView, onMentorClick, selectedIds, onSelectionChange, isReportsLoading, canManage, currentUserEmail
 }) => {
 
     const isAllSelected = reports.length > 0 && reports.every(r => selectedIds.includes(r.id));
@@ -1014,7 +1099,14 @@ const VisitReportsTable = ({
                                     <td className="px-4 py-4 whitespace-normal break-words text-sm text-gray-500 text-left border border-gray-300">{STATE_LOCALITIES[rep.state]?.localities.find(l => l.en === rep.locality)?.ar || rep.locality}</td>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 text-left border border-gray-300">{rep.visitDate}</td>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-center font-bold border border-gray-300">{rep.visitNumber || '-'}</td>
-                                    <td className="px-4 py-4 whitespace-normal break-words text-sm text-gray-500 text-left border border-gray-300">{rep.mentorDisplay}</td>
+                                    <td className="px-4 py-4 whitespace-normal break-words text-sm text-gray-500 text-left border border-gray-300">
+                                        <button 
+                                            className="text-sky-600 hover:text-sky-800 font-semibold underline decoration-sky-300 underline-offset-2 transition-colors cursor-pointer text-left"
+                                            onClick={() => onMentorClick && onMentorClick(rep.mentorEmail, rep.mentorDisplay)}
+                                        >
+                                            {rep.mentorDisplay}
+                                        </button>
+                                    </td>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-left border border-gray-300">
                                         <div className="flex gap-2">
                                             <Button size="sm" variant="info" onClick={() => onView(rep.id)}>View</Button>
@@ -1426,7 +1518,7 @@ const DraftsModal = ({ isOpen, onClose, drafts, reports = [], onViewSession, onE
 
 // --- Mentorship Submissions Table Component ---
 const MentorshipSubmissionsTable = ({
-    submissions, activeService, onView, onEdit, onDelete,
+    submissions, activeService, onView, onEdit, onDelete, onMentorClick,
     isSubmissionsLoading,
     filterServiceType,
     selectedIds, onSelectionChange, canManage, currentUserEmail
@@ -1540,7 +1632,14 @@ const MentorshipSubmissionsTable = ({
                                             
                                             <td className="px-2 py-2 text-xs text-gray-500 text-left border border-gray-300 break-words whitespace-normal">{sub.workerType || '-'}</td>
                                             
-                                            <td className="px-2 py-2 text-xs text-gray-500 text-left border border-gray-300 break-words whitespace-normal">{sub.supervisorDisplay}</td> 
+                                            <td className="px-2 py-2 text-xs text-gray-500 text-left border border-gray-300 break-words whitespace-normal">
+                                                <button 
+                                                    className="text-sky-600 hover:text-sky-800 font-semibold underline decoration-sky-300 underline-offset-2 transition-colors cursor-pointer text-left"
+                                                    onClick={() => onMentorClick && onMentorClick(sub.supervisorEmail, sub.supervisorDisplay)}
+                                                >
+                                                    {sub.supervisorDisplay}
+                                                </button>
+                                            </td> 
                                             
                                             <td className="px-2 py-2 whitespace-nowrap text-xs text-gray-500 text-left border border-gray-300">{sub.date}</td>
                                             
@@ -1933,6 +2032,10 @@ const SkillsMentorshipView = ({
     const [projectFilter, setProjectFilter] = useState('');
     const [workerTypeFilter, setWorkerTypeFilter] = useState('');
     const [dateFilter, setDateFilter] = useState('');
+    const [customStartDate, setCustomStartDate] = useState(''); // NEW
+    const [customEndDate, setCustomEndDate] = useState('');     // NEW
+    
+    const [viewingMentor, setViewingMentor] = useState(null);   // NEW
 
     const canEditVisitNumber = useMemo(() => {
         if (publicSubmissionMode || publicDashboardMode) return false;
@@ -2047,14 +2150,16 @@ const SkillsMentorshipView = ({
         if (workerFilter) filtered = filtered.filter(sub => sub.staff === workerFilter);
         if (projectFilter) filtered = filtered.filter(sub => sub.project === projectFilter);
         if (workerTypeFilter) filtered = filtered.filter(sub => sub.workerType === workerTypeFilter);
-        if (dateFilter) filtered = filtered.filter(sub => isDateInRange(sub.date, dateFilter));
+        if (dateFilter || customStartDate || customEndDate) {
+            filtered = filtered.filter(sub => isDateInRange(sub.date, dateFilter, customStartDate, customEndDate));
+        }
         
         return filtered.sort((a, b) => {
             const timeA = a.effectiveDateTimestamp ? (a.effectiveDateTimestamp.seconds || a.effectiveDateTimestamp._seconds) : new Date(a.date).getTime() / 1000;
             const timeB = b.effectiveDateTimestamp ? (b.effectiveDateTimestamp.seconds || b.effectiveDateTimestamp._seconds) : new Date(b.date).getTime() / 1000;
             return timeB - timeA;
         });
-    }, [processedSubmissions, activeService, activeTab, stateFilter, localityFilter, supervisorFilter, statusFilter, visitNumberFilter, facilityFilter, workerFilter, projectFilter, workerTypeFilter, dateFilter]);
+    }, [processedSubmissions, activeService, activeTab, stateFilter, localityFilter, supervisorFilter, statusFilter, visitNumberFilter, facilityFilter, workerFilter, projectFilter, workerTypeFilter, dateFilter, customStartDate, customEndDate]);
 
     const uniqueVisitNumbers = useMemo(() => {
         const numbers = new Set();
@@ -2197,14 +2302,22 @@ const SkillsMentorshipView = ({
         if (facilityFilter) filtered = filtered.filter(rep => rep.facilityName === facilityFilter);
         if (supervisorFilter) filtered = filtered.filter(rep => rep.mentorEmail === supervisorFilter);
         if (visitNumberFilter) filtered = filtered.filter(rep => String(rep.visitNumber) === String(visitNumberFilter));
-        if (dateFilter) filtered = filtered.filter(rep => isDateInRange(rep.visitDate, dateFilter));
+        if (dateFilter || customStartDate || customEndDate) {
+            filtered = filtered.filter(rep => isDateInRange(rep.visitDate, dateFilter, customStartDate, customEndDate));
+        }
 
         return filtered.sort((a, b) => {
             const timeA = a.fullData?.createdAt ? (a.fullData.createdAt.seconds || a.fullData.createdAt._seconds) : new Date(a.visitDate || 0).getTime() / 1000;
             const timeB = b.fullData?.createdAt ? (b.fullData.createdAt.seconds || b.fullData.createdAt._seconds) : new Date(b.visitDate || 0).getTime() / 1000;
             return timeB - timeA; 
         });
-    }, [processedVisitReports, stateFilter, localityFilter, facilityFilter, supervisorFilter, visitNumberFilter, dateFilter]);
+    }, [processedVisitReports, stateFilter, localityFilter, facilityFilter, supervisorFilter, visitNumberFilter, dateFilter, customStartDate, customEndDate]);
+
+    const handleMentorClick = (email, display) => {
+        const sessionsCount = processedSubmissions.filter(s => s.supervisorEmail === email).length;
+        const reportsCount = processedVisitReports.filter(r => r.mentorEmail === email).length;
+        setViewingMentor({ email, display, sessionsCount, reportsCount });
+    };
 
     const currentUserVisitReports = useMemo(() => {
         if (!user || !processedVisitReports || !activeService) return [];
@@ -2471,6 +2584,8 @@ const SkillsMentorshipView = ({
             setProjectFilter('');
             setWorkerTypeFilter('');
             setDateFilter('');
+            setCustomStartDate(''); // NEW
+            setCustomEndDate('');   // NEW
         }
     }, [activeTab, publicDashboardMode]);
 
@@ -2600,11 +2715,12 @@ const SkillsMentorshipView = ({
     }, [filteredFacilities, selectedFacilityId]);
 
     const healthWorkers = useMemo(() => {
-        if (!selectedFacility || !selectedFacility.imnci_staff) return [];
+        const staffField = getServiceConfig(activeService).field;
+        if (!selectedFacility || !selectedFacility[staffField]) return [];
         try {
-            const staffList = typeof selectedFacility.imnci_staff === 'string'
-                ? JSON.parse(selectedFacility.imnci_staff)
-                : selectedFacility.imnci_staff;
+            const staffList = typeof selectedFacility[staffField] === 'string'
+                ? JSON.parse(selectedFacility[staffField])
+                : selectedFacility[staffField];
             if (!Array.isArray(staffList)) return [];
             return staffList
                 .map(s => ({
@@ -2614,10 +2730,10 @@ const SkillsMentorshipView = ({
                 .filter(w => w.name !== 'N/A')
                 .sort((a, b) => a.name.localeCompare(b.name));
         } catch (e) {
-            console.error("Error processing imnci_staff for dropdown:", e);
+            console.error("Error processing staff for dropdown:", e);
             return [];
         }
-    }, [selectedFacility]);
+    }, [selectedFacility, activeService]);
 
     const visitNumber = useMemo(() => {
         if (!Array.isArray(processedSubmissions) || !selectedFacilityId || !selectedHealthWorkerName || !activeService) {
@@ -2746,11 +2862,12 @@ const SkillsMentorshipView = ({
     }, [processedSubmissions, selectedFacilityId, selectedHealthWorkerName, activeService, editingSubmission]);
 
     useEffect(() => {
-        if (selectedHealthWorkerName && selectedFacility?.imnci_staff) {
+        const staffField = getServiceConfig(activeService).field;
+        if (selectedHealthWorkerName && selectedFacility?.[staffField]) {
             try {
-                const staffList = typeof selectedFacility.imnci_staff === 'string'
-                    ? JSON.parse(selectedFacility.imnci_staff)
-                    : selectedFacility.imnci_staff;
+                const staffList = typeof selectedFacility[staffField] === 'string'
+                    ? JSON.parse(selectedFacility[staffField])
+                    : selectedFacility[staffField];
                 const workerData = Array.isArray(staffList)
                     ? staffList.find(w => w.name === selectedHealthWorkerName)
                     : null;
@@ -2782,7 +2899,7 @@ const SkillsMentorshipView = ({
             setWorkerPhone('');
             setIsWorkerInfoChanged(false);
         }
-    }, [selectedHealthWorkerName, selectedFacility]);
+    }, [selectedHealthWorkerName, selectedFacility, activeService]);
 
     useEffect(() => {
         if (!selectedWorkerOriginalData || !selectedHealthWorkerName) {
@@ -3070,15 +3187,16 @@ const SkillsMentorshipView = ({
         }
 
         try {
-            const currentStaff = (typeof selectedFacility.imnci_staff === 'string'
-                ? JSON.parse(selectedFacility.imnci_staff)
-                : selectedFacility.imnci_staff) || [];
+            const staffField = getServiceConfig(activeService).field;
+            const currentStaff = (typeof selectedFacility[staffField] === 'string'
+                ? JSON.parse(selectedFacility[staffField])
+                : selectedFacility[staffField]) || [];
             
             const newStaffList = [...currentStaff, workerData];
 
             const payload = {
                 ...selectedFacility,
-                imnci_staff: newStaffList,
+                [staffField]: newStaffList,
                 updated_by: user ? (user.displayName || user.email) : (publicSubmissionMode ? 'PublicMentorshipForm' : 'SkillsMentorshipForm'),
                 'اخر تحديث': new Date().toISOString() 
             };
@@ -3107,9 +3225,10 @@ const SkillsMentorshipView = ({
         setIsUpdatingWorker(true);
         const user = auth.currentUser;
         try {
-            const currentStaff = (typeof selectedFacility.imnci_staff === 'string'
-                ? JSON.parse(selectedFacility.imnci_staff)
-                : selectedFacility.imnci_staff) || [];
+            const staffField = getServiceConfig(activeService).field;
+            const currentStaff = (typeof selectedFacility[staffField] === 'string'
+                ? JSON.parse(selectedFacility[staffField])
+                : selectedFacility[staffField]) || [];
 
             const newStaffList = currentStaff.map(worker => {
                 if (worker.name === selectedHealthWorkerName) {
@@ -3125,7 +3244,7 @@ const SkillsMentorshipView = ({
 
             const payload = {
                 ...selectedFacility,
-                imnci_staff: newStaffList,
+                [staffField]: newStaffList,
                 updated_by: user ? (user.displayName || user.email) : (publicSubmissionMode ? 'PublicMentorshipForm' : 'SkillsMentorshipForm'),
                 'اخر تحديث': new Date().toISOString()
             };
@@ -3494,6 +3613,14 @@ const SkillsMentorshipView = ({
                             <>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-6 border p-4 rounded-lg bg-gray-50">
                                     
+                                    <FormGroup label="Start Date" className="text-left" dir="ltr">
+                                        <Input type="date" value={customStartDate} onChange={(e) => setCustomStartDate(e.target.value)} className="w-full" />
+                                    </FormGroup>
+                                    
+                                    <FormGroup label="End Date" className="text-left" dir="ltr">
+                                        <Input type="date" value={customEndDate} onChange={(e) => setCustomEndDate(e.target.value)} className="w-full" />
+                                    </FormGroup>
+
                                     <FormGroup label="Date Range" className="text-left" dir="ltr">
                                         <Select value={dateFilter} onChange={(e) => setDateFilter(e.target.value)}>
                                             <option value="">All Time</option>
@@ -3649,6 +3776,7 @@ const SkillsMentorshipView = ({
                                     onSelectionChange={setSelectedSubmissionIds}
                                     canManage={canManageMentorship}
                                     currentUserEmail={user?.email}
+                                    onMentorClick={handleMentorClick}
                                 />
                             )}
                             {activeTab === 'mothers_list' && !publicDashboardMode && (
@@ -3674,6 +3802,7 @@ const SkillsMentorshipView = ({
                                     onSelectionChange={setSelectedSubmissionIds}
                                     canManage={canManageMentorship}
                                     currentUserEmail={user?.email}
+                                    onMentorClick={handleMentorClick}
                                 />
                             )}
                             {activeTab === 'visit_reports' && !publicDashboardMode && (
@@ -3687,6 +3816,7 @@ const SkillsMentorshipView = ({
                                     isReportsLoading={activeService === 'IMNCI' ? (isDataCacheLoading.imnciVisitReports && imnciVisitReports === null) : (isDataCacheLoading.eencVisitReports && eencVisitReports === null)}
                                     canManage={canManageMentorship}
                                     currentUserEmail={user?.email}
+                                    onMentorClick={handleMentorClick}
                                 />
                             )}
 
@@ -3797,6 +3927,11 @@ const SkillsMentorshipView = ({
                     />
                 )}
 
+                <MentorInfoModal 
+                    mentor={viewingMentor} 
+                    onClose={() => setViewingMentor(null)} 
+                />
+
                 <PreviewSyncModal
                     isOpen={isPreviewSyncModalOpen}
                     onClose={() => {
@@ -3883,7 +4018,7 @@ const SkillsMentorshipView = ({
                             title="استبيان الأم: رضاء ومعرفة الأمهات"
                             size="full"
                         >
-                            <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
+                            <div className="p-0 sm:p-4 bg-gray-100">
                                 <MothersForm
                                     facility={facilityData}
                                     visitNumber={motherVisitNumber}
@@ -3905,7 +4040,7 @@ const SkillsMentorshipView = ({
                             title={activeService === 'IMNCI' ? "تقرير زيارة العلاج المتكامل" : "تقرير زيارة EENC"}
                             size="full"
                         >
-                            <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
+                            <div className="p-0 sm:p-4 bg-gray-100">
                                 <Suspense fallback={<div className="p-8"><Spinner /></div>}>
                                     {activeService === 'IMNCI' ? (
                                         <IMNCIVisitReport
@@ -3954,7 +4089,7 @@ const SkillsMentorshipView = ({
                             title="لوحة متابعة: العلاج المتكامل"
                             size="full"
                         >
-                            <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
+                            <div className="p-0 sm:p-4 bg-gray-100">
                                 <MentorshipDashboard
                                     allSubmissions={processedSubmissions}
                                     visitReports={processedVisitReports}
@@ -4128,7 +4263,7 @@ const SkillsMentorshipView = ({
                         <div className="p-4">Visit Report is already open.</div>
                     </Modal>
                 )}
-                {isMothersFormModalOpen && facilityData && <Modal isOpen={isMothersFormModalOpen} onClose={() => setIsMothersFormModalOpen(false)} title="استبيان الأم" size="full"><div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto"><MothersForm facility={facilityData} visitNumber={motherVisitNumber} existingSessionData={null} onCancel={() => { setIsMothersFormModalOpen(false); }} setToast={setToast} canEditVisitNumber={canEditVisitNumber} /></div></Modal>}
+                {isMothersFormModalOpen && facilityData && <Modal isOpen={isMothersFormModalOpen} onClose={() => setIsMothersFormModalOpen(false)} title="استبيان الأم" size="full"><div className="p-0 sm:p-4 bg-gray-100"><MothersForm facility={facilityData} visitNumber={motherVisitNumber} existingSessionData={null} onCancel={() => { setIsMothersFormModalOpen(false); }} setToast={setToast} canEditVisitNumber={canEditVisitNumber} /></div></Modal>}
                 <MobileFormNavBar
                     activeFormType={activeFormType}
                     draftCount={currentUserDrafts.length}
@@ -4307,6 +4442,7 @@ const SkillsMentorshipView = ({
                         onClose={() => setIsAddWorkerModalOpen(false)}
                         onSave={handleSaveNewHealthWorker}
                         facilityName={selectedFacility?.['اسم_المؤسسة'] || 'المؤسسة المحددة'}
+                        activeService={activeService}
                     />
                 )}
                 
@@ -4350,14 +4486,14 @@ const SkillsMentorshipView = ({
                     />
                 )}
 
-                {isStandaloneFacilityModalOpen && selectedFacility && (
+               {isStandaloneFacilityModalOpen && selectedFacility && (
                     <Modal 
                         isOpen={isStandaloneFacilityModalOpen} 
                         onClose={() => setIsStandaloneFacilityModalOpen(false)} 
                         title={`بيانات منشأة: ${selectedFacility['اسم_المؤسسة'] || ''}`}
                         size="full"
                     >
-                        <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
+                        <div className="p-0 sm:p-4 bg-gray-100">
                             <GenericFacilityForm
                                 initialData={selectedFacility}
                                 onSave={async (formData) => {
@@ -4377,7 +4513,13 @@ const SkillsMentorshipView = ({
                                 saveButtonText="إرسال التحديث للموافقة"
                                 cancelButtonText="إغلاق"
                             >
-                                {(props) => <IMNCIFormFields {...props} />}
+                                {/* --- UPDATED: Render the correct form based on activeService --- */}
+                                {(props) => {
+                                    if (activeService === 'EENC') return <EENCFormFields {...props} />;
+                                    if (activeService === 'ETAT') return <CriticalCareFormFields {...props} />;
+                                    if (activeService === 'IPC') return <NeonatalFormFields {...props} />;
+                                    return <IMNCIFormFields {...props} />;
+                                }}
                             </GenericFacilityForm>
                         </div>
                     </Modal>
@@ -4390,7 +4532,7 @@ const SkillsMentorshipView = ({
                         title="استبيان الأم: رضاء ومعرفة الأمهات"
                         size="full"
                     >
-                        <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
+                        <div className="p-0 sm:p-4 bg-gray-100">
                             <MothersForm
                                 facility={selectedFacility} 
                                 visitNumber={motherVisitNumber}
@@ -4412,7 +4554,7 @@ const SkillsMentorshipView = ({
                         title={activeService === 'IMNCI' ? "تقرير زيارة العلاج المتكامل" : "تقرير زيارة EENC"}
                         size="full"
                     >
-                        <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
+                        <div className="p-0 sm:p-4 bg-gray-100">
                             <Suspense fallback={<div className="p-8"><Spinner /></div>}>
                                 {activeService === 'IMNCI' ? (
                                     <IMNCIVisitReport
@@ -4461,7 +4603,7 @@ const SkillsMentorshipView = ({
                         title="لوحة متابعة: العلاج المتكامل"
                         size="full"
                     >
-                        <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
+                        <div className="p-0 sm:p-4 bg-gray-100">
                             <MentorshipDashboard
                                 allSubmissions={processedSubmissions}
                                 visitReports={processedVisitReports}

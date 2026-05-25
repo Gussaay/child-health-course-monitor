@@ -4,7 +4,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from "jspdf"; 
 
 // --- Icons ---
-import { Mail, Lock, RefreshCw, Search, Printer, ArrowLeft, Save, X } from 'lucide-react'; 
+import { Mail, Lock, RefreshCw, Search, Printer, ArrowLeft, Save, X, Building2, Users, CheckCircle, AlertTriangle } from 'lucide-react'; 
 
 // --- Firebase Imports ---
 import { db } from '../firebase';
@@ -22,7 +22,8 @@ import {
     getHealthFacilityById,
     queueCertificateEmail,
     saveParticipantAndSubmitFacilityUpdate,
-    deleteParticipant
+    deleteParticipant,
+    saveFacilitySnapshot
 } from '../data.js';
 import { useDataCache } from '../DataContext';
 import { useAuth } from '../hooks/useAuth'; 
@@ -647,8 +648,17 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, co
             }));
 
         const facilitiesToUpsert = [];
-        if (courseType === 'IMNCI') {
+        
+        // --- DYNAMIC ROUTING FOR FACILITY STAFF ARRAYS ---
+        if (['IMNCI', 'EENC', 'ETAT', 'SSNC', 'Small & Sick Newborn', 'IPC'].includes(courseType)) {
             const facilityUpdatesMap = new Map();
+            
+            // Determine the correct staff array field based on course type
+            const staffField = courseType === 'ETAT' ? 'critical_staff' : 
+                               (courseType === 'SSNC' || courseType === 'Small & Sick Newborn' || courseType === 'IPC') ? 'neonatal_staff' : 
+                               courseType === 'EENC' ? 'eenc_staff' : 
+                               'imnci_staff';
+
             participantsToUpdate.forEach(p => {
                 const facilityKey = p.facilityId || `${p.state}-${p.locality}-${p.center_name}`;
                 const existingPayload = facilityUpdatesMap.get(facilityKey) || {
@@ -656,19 +666,19 @@ const ParticipantDataCleanupModal = ({ isOpen, onClose, participants, onSave, co
                     'اسم_المؤسسة': p.center_name,
                     'الولاية': p.state,
                     'المحلية': p.locality,
-                    imnci_staff: []
+                    [staffField]: []
                 };
 
                 if (selectedFieldKey === 'facility_type') {
                     existingPayload['نوع_المؤسسةالصحية'] = p.facility_type;
                 }
 
-                if (!existingPayload.imnci_staff.some(s => s.name === p.name)) {
-                    existingPayload.imnci_staff.push({
+                if (!existingPayload[staffField].some(s => s.name === p.name)) {
+                    existingPayload[staffField].push({
                         name: p.name,
                         job_title: p.job_title,
                         is_trained: p.trained_before ? 'Yes' : 'No',
-                        training_date: p.last_imci_training || '',
+                        training_date: p.last_imci_training || p.last_eenc_training || p.last_etat_training || '',
                         phone: p.phone || ''
                     });
                 }
@@ -802,8 +812,16 @@ const BulkChangeModal = ({ isOpen, onClose, participants, onSave, courseType, se
         }));
 
         const facilitiesToUpsert = [];
-        if (courseType === 'IMNCI') {
+        
+        // --- DYNAMIC ROUTING FOR FACILITY STAFF ARRAYS ---
+        if (['IMNCI', 'EENC', 'ETAT', 'SSNC', 'Small & Sick Newborn', 'IPC'].includes(courseType)) {
             const facilityUpdatesMap = new Map();
+            
+            const staffField = courseType === 'ETAT' ? 'critical_staff' : 
+                               (courseType === 'SSNC' || courseType === 'Small & Sick Newborn' || courseType === 'IPC') ? 'neonatal_staff' : 
+                               courseType === 'EENC' ? 'eenc_staff' : 
+                               'imnci_staff';
+
             participantsToUpdate.forEach(p => {
                 const facilityKey = p.facilityId || `${p.state}-${p.locality}-${p.center_name}`;
                 const existingPayload = facilityUpdatesMap.get(facilityKey) || {
@@ -811,15 +829,15 @@ const BulkChangeModal = ({ isOpen, onClose, participants, onSave, courseType, se
                     'اسم_المؤسسة': p.center_name,
                     'الولاية': p.state,
                     'المحلية': p.locality,
-                    imnci_staff: []
+                    [staffField]: []
                 };
 
-                if (!existingPayload.imnci_staff.some(s => s.name === p.name)) {
-                    existingPayload.imnci_staff.push({
+                if (!existingPayload[staffField].some(s => s.name === p.name)) {
+                    existingPayload[staffField].push({
                         name: p.name,
                         job_title: p.job_title, 
                         is_trained: p.trained_before ? 'Yes' : 'No',
-                        training_date: p.last_imci_training || '',
+                        training_date: p.last_imci_training || p.last_eenc_training || p.last_etat_training || '',
                         phone: p.phone || ''
                     });
                 }
@@ -1143,7 +1161,13 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, set
                 phone: participant.phone || '',
             };
 
-            const staffList = existingPayload.imnci_staff || [];
+            // --- DYNAMIC ROUTING FOR FACILITY STAFF ARRAYS ---
+            const staffField = course.course_type === 'ETAT' ? 'critical_staff' : 
+                               (course.course_type === 'SSNC' || course.course_type === 'Small & Sick Newborn' || course.course_type === 'IPC') ? 'neonatal_staff' : 
+                               course.course_type === 'EENC' ? 'eenc_staff' : 
+                               'imnci_staff';
+
+            const staffList = existingPayload[staffField] || [];
             if (!staffList.some(s => s.name === newStaffMember.name)) {
                 staffList.push(newStaffMember);
             }
@@ -1155,20 +1179,30 @@ const ExcelImportModal = ({ isOpen, onClose, onImport, course, participants, set
                 'المحلية': participant.locality,
                 'هل_المؤسسة_تعمل': 'Yes',
                 date_of_visit: new Date().toISOString().split('T')[0],
-                imnci_staff: staffList,
-                'وجود_العلاج_المتكامل_لامراض_الطفولة': 'Yes', 
-                'وجود_كتيب_لوحات': 'Yes',
-                'وجود_سجل_علاج_متكامل': 'Yes',
-                'نوع_المؤسسةالصحية': participant.facility_type,
-                'nutrition_center_exists': participant.has_nutrition_service ? 'Yes' : 'No',
-                'nearest_nutrition_center': participant.nearest_nutrition_center || '',
-                'immunization_office_exists': participant.has_immunization_service ? 'Yes' : 'No',
-                'nearest_immunization_center': participant.nearest_immunization_center || '',
-                'غرفة_إرواء': participant.has_ors_room ? 'Yes' : 'No',
-                'growth_monitoring_service_exists': participant.has_growth_monitoring ? 'Yes' : 'No',
-                'العدد_الكلي_لكوادر_طبية_العاملة_أطباء_ومساعدين': participant.num_other_providers ?? staffList.length, 
-                'العدد_Kلي_للكودار_ المدربة_على_العلاج_المتكامل': participant.num_other_providers_imci ?? staffList.filter(s => s.is_trained === 'Yes').length, 
+                [staffField]: staffList,
             };
+
+            // Keep the corresponding course metrics and dynamically toggle active facility indicators to Yes
+            if (course.course_type === 'IMNCI') {
+                payload['وجود_العلاج_المتكامل_لامراض_الطفولة'] = 'Yes';
+                payload['وجود_كتيب_لوحات'] = 'Yes';
+                payload['وجود_سجل_علاج_متكامل'] = 'Yes';
+                payload['نوع_المؤسسةالصحية'] = participant.facility_type;
+                payload['nutrition_center_exists'] = participant.has_nutrition_service ? 'Yes' : 'No';
+                payload['nearest_nutrition_center'] = participant.nearest_nutrition_center || '';
+                payload['immunization_office_exists'] = participant.has_immunization_service ? 'Yes' : 'No';
+                payload['nearest_immunization_center'] = participant.nearest_immunization_center || '';
+                payload['غرفة_إرواء'] = participant.has_ors_room ? 'Yes' : 'No';
+                payload['growth_monitoring_service_exists'] = participant.has_growth_monitoring ? 'Yes' : 'No';
+                payload['العدد_الكلي_لكوادر_طبية_العاملة_أطباء_ومساعدين'] = participant.num_other_providers ?? staffList.length;
+                payload['العدد_Kلي_للكودار_ المدربة_على_العلاج_المتكامل'] = participant.num_other_providers_imci ?? staffList.filter(s => s.is_trained === 'Yes').length;
+            } else if (course.course_type === 'EENC') {
+                payload['eenc_provides_essential_care'] = 'Yes';
+            } else if (course.course_type === 'ETAT') {
+                payload['etat_has_service'] = 'Yes';
+            } else if (course.course_type === 'SSNC' || course.course_type === 'Small & Sick Newborn' || course.course_type === 'IPC') {
+                payload['neonatal_level_secondary'] = 'Yes';
+            }
 
             facilityUpdatesMap.set(facilityKey, payload);
         });
@@ -1628,7 +1662,7 @@ export function BulkEditParticipantsView({ participants, course, onCancel, onSav
                 </div>
 
                 <div className="overflow-x-auto border border-gray-200 rounded max-h-[60vh]">
-                    <table className="w-full text-sm text-left whitespace-nowrap">
+                    <table className="w-full text-left border-collapse border border-slate-300 text-sm">
                         <thead className="bg-gray-100 sticky top-0 z-10 shadow-sm">
                             <tr>
                                 {editableFields.map(f => (
@@ -1696,21 +1730,24 @@ export function ParticipantsView({
     const currentUserIdentifier = user?.displayName || user?.email || 'Unknown';
     
     // --- PERMISSION STATES ---
-    const [finalAdvancedPerm, setFinalAdvancedPerm] = useState(false);
-    const [finalCertPerm, setFinalCertPerm] = useState(false);
+    const [finalAdvancedPerm, setFinalAdvancedPerm] = useState(!!canUseSuperUserAdvancedFeatures);
+    const [finalCertPerm, setFinalCertPerm] = useState(!!canManageCertificates);
     
     useEffect(() => {
+        setFinalAdvancedPerm(!!canUseSuperUserAdvancedFeatures);
+        setFinalCertPerm(!!canManageCertificates);
+
         if (user && user.uid) {
             getDoc(doc(db, 'users', user.uid)).then(snap => {
                 if (snap.exists()) {
                     const data = snap.data();
                     const userPerms = data.permissions || {};
-                    setFinalAdvancedPerm(!!userPerms.canUseSuperUserAdvancedFeatures);
-                    setFinalCertPerm(!!userPerms.canManageCertificates);
+                    setFinalAdvancedPerm(prev => prev || !!userPerms.canUseSuperUserAdvancedFeatures);
+                    setFinalCertPerm(prev => prev || !!userPerms.canManageCertificates);
                 }
             }).catch(err => console.error(err));
         }
-    }, [user]);
+    }, [user, canUseSuperUserAdvancedFeatures, canManageCertificates]);
 
     const { fetchParticipants, federalCoordinators, fetchFederalCoordinators, facilitators, fetchFacilitators, isLoading, healthFacilities, fetchHealthFacilities } = useDataCache();
     const isCacheLoading = isLoading?.federalCoordinators === true || isLoading?.courses === true || isLoading?.facilitators === true;
@@ -1739,6 +1776,9 @@ export function ParticipantsView({
     
     const [certLangModal, setCertLangModal] = useState({ isOpen: false, actionType: null, data: null });
     const [certActionModal, setCertActionModal] = useState({ isOpen: false, data: null });
+
+    // State setup for manual action validation popup modal
+    const [syncPreviewModal, setSyncPreviewModal] = useState({ isOpen: false, facilitiesToUpsert: [], serviceType: '', staffField: '' });
     
     // --- UPDATED: LOCAL COURSE STATE FIX ---
     const [localApprovalStatus, setLocalApprovalStatus] = useState(course?.isCertificateApproved);
@@ -1810,7 +1850,7 @@ export function ParticipantsView({
         updatedParticipantsList.forEach(p => {
             if (p.introduced_imci_to_facility) {
                 let isHospital = false;
-                const matchedFacility = healthFacilities?.find(f => f['اسم_المؤسسة'] === p.center_name && f['المحلية'] === p.locality && f['الولاية'] === p.state);
+                const matchedFacility = healthFacilities?.find(f => f['مستشفى'] === p.center_name && f['المحلية'] === p.locality && f['الولاية'] === p.state);
                 
                 if (matchedFacility && matchedFacility['نوع_المؤسسةالصحية']) {
                     isHospital = ['مستشفى', 'مستشفى ريفي'].includes(matchedFacility['نوع_المؤسسةالصحية']);
@@ -1857,6 +1897,108 @@ export function ParticipantsView({
             } catch (error) {
                 console.error("Failed to sync coverage snapshot:", error);
             }
+        }
+    };
+
+    // Action validation preparation stage
+    const handlePrepareSyncPreview = () => {
+        if (!participants || participants.length === 0) {
+            setToast({ show: true, message: 'No participants to sync.', type: 'info' });
+            return;
+        }
+
+        const facilityUpdatesMap = new Map();
+        const courseType = course.course_type;
+
+        const staffField = courseType === 'ETAT' ? 'critical_staff' : 
+                           (courseType === 'SSNC' || courseType === 'Small & Sick Newborn' || courseType === 'IPC') ? 'neonatal_staff' : 
+                           courseType === 'EENC' ? 'eenc_staff' : 
+                           'imnci_staff';
+
+        const validParticipants = participants.filter(p => p.facilityId || p.center_name);
+
+        validParticipants.forEach(p => {
+            const facilityKey = p.facilityId || `${p.state}-${p.locality}-${p.center_name}`;
+            let existingPayload = facilityUpdatesMap.get(facilityKey);
+            
+            if (!existingPayload) {
+                const existingFacility = healthFacilities?.find(f => 
+                    (p.facilityId && f.id === p.facilityId) || 
+                    (!p.facilityId && f['اسم_المؤسسة'] === p.center_name && f['المحلية'] === p.locality && f['الولاية'] === p.state)
+                );
+
+                existingPayload = existingFacility ? { ...existingFacility } : {
+                    id: p.facilityId || undefined,
+                    'اسم_المؤسسة': p.center_name,
+                    'الولاية': p.state,
+                    'المحلية': p.locality,
+                    'هل_المؤسسة_تعمل': 'Yes'
+                };
+            }
+
+            let staffList = [];
+            try {
+                staffList = existingPayload[staffField] ? (typeof existingPayload[staffField] === 'string' ? JSON.parse(existingPayload[staffField]) : JSON.parse(JSON.stringify(existingPayload[staffField]))) : [];
+                if (!Array.isArray(staffList)) staffList = [];
+            } catch (e) { staffList = []; }
+
+            const staffMemberData = {
+                name: p.name,
+                job_title: p.job_title || '',
+                is_trained: 'Yes', 
+                training_date: p.last_imci_training || p.last_eenc_training || p.last_etat_training || course.start_date || '',
+                phone: p.phone || ''
+            };
+
+            const existingIndex = staffList.findIndex(s => s.name === staffMemberData.name || (s.phone && s.phone === staffMemberData.phone));
+            if (existingIndex > -1) {
+                staffList[existingIndex] = { ...staffList[existingIndex], ...staffMemberData };
+            } else {
+                staffList.push(staffMemberData);
+            }
+
+            existingPayload[staffField] = staffList;
+
+            if (courseType === 'IMNCI') existingPayload['وجود_العلاج_المتكامل_لامراض_الطفولة'] = 'Yes';
+            if (courseType === 'EENC') existingPayload['eenc_provides_essential_care'] = 'Yes';
+            if (courseType === 'ETAT') existingPayload['etat_has_service'] = 'Yes';
+            if (courseType === 'SSNC' || courseType === 'Small & Sick Newborn' || courseType === 'IPC') existingPayload['neonatal_level_secondary'] = 'Yes';
+
+            facilityUpdatesMap.set(facilityKey, existingPayload);
+        });
+
+        const facilitiesToUpsert = Array.from(facilityUpdatesMap.values());
+        if (facilitiesToUpsert.length === 0) {
+            setToast({ show: true, message: 'No valid facilities found to sync.', type: 'info' });
+            return;
+        }
+
+        setSyncPreviewModal({
+            isOpen: true,
+            facilitiesToUpsert,
+            serviceType: courseType,
+            staffField
+        });
+        setIsAdvancedActionsModalOpen(false);
+    };
+
+    const handleConfirmSyncToFirebase = async () => {
+        setIsProcessing(true);
+        try {
+            // Write each mapped facility directly to Firebase registry
+            const promises = syncPreviewModal.facilitiesToUpsert.map(fac => saveFacilitySnapshot(fac));
+            await Promise.all(promises);
+
+            await fetchParticipants(navigator.onLine);
+            if (typeof fetchHealthFacilities === 'function') await fetchHealthFacilities(true);
+            if (onBatchUpdate) onBatchUpdate();
+
+            setToast({ show: true, message: `Successfully synchronized and updated ${syncPreviewModal.facilitiesToUpsert.length} registry records!`, type: 'success' });
+            setSyncPreviewModal({ isOpen: false, facilitiesToUpsert: [], serviceType: '', staffField: '' });
+        } catch (error) {
+            setToast({ show: true, message: `Sync failed: ${error.message}`, type: 'error' });
+        } finally {
+            setIsProcessing(false);
         }
     };
 
@@ -1941,24 +2083,31 @@ export function ParticipantsView({
         }
     };
 
+    // Corrected handleAdvancedSave execution logic to allow discrete updates
     const handleAdvancedSave = async (participantsData, facilitiesData) => {
-        if (!participantsData || participantsData.length === 0) return;
+        if ((!participantsData || participantsData.length === 0) && (!facilitiesData || facilitiesData.length === 0)) return;
         setIsProcessing(true);
         try {
-            const annotatedData = participantsData.map(p => ({
-                ...p,
-                updatedBy: currentUserIdentifier,
-                ...(!p.id && !p.createdBy ? { createdBy: currentUserIdentifier } : {})
-            }));
+            if (participantsData && participantsData.length > 0) {
+                const annotatedData = participantsData.map(p => ({
+                    ...p,
+                    updatedBy: currentUserIdentifier,
+                    ...(!p.id && !p.createdBy ? { createdBy: currentUserIdentifier } : {})
+                }));
 
-            if (facilitiesData && facilitiesData.length > 0) {
-                await handleImportParticipants({ participantsToImport: annotatedData, facilitiesToUpsert: facilitiesData }, false);
-            } else {
-                await importParticipants(annotatedData);
-                await fetchParticipants(navigator.onLine);
-                if (onBatchUpdate) onBatchUpdate();
-                setToast({ show: true, message: 'Data updated successfully.', type: 'success' });
+                if (facilitiesData && facilitiesData.length > 0) {
+                    await importParticipants(annotatedData);
+                    await Promise.all(facilitiesData.map(f => saveFacilitySnapshot(f)));
+                } else {
+                    await importParticipants(annotatedData);
+                }
+            } else if (facilitiesData && facilitiesData.length > 0) {
+                await Promise.all(facilitiesData.map(f => saveFacilitySnapshot(f)));
             }
+
+            await fetchParticipants(navigator.onLine);
+            if (onBatchUpdate) onBatchUpdate();
+            setToast({ show: true, message: 'Data updated successfully.', type: 'success' });
         } catch (err) {
             console.error("Advanced save failed", err);
             setToast({ show: true, message: `Operation failed: ${err.message}`, type: 'error' });
@@ -1978,6 +2127,10 @@ export function ParticipantsView({
             }));
             await importParticipants(participantsWithCourseId);
             
+            if (facilitiesToUpsert && facilitiesToUpsert.length > 0) {
+                await Promise.all(facilitiesToUpsert.map(f => saveFacilitySnapshot(f)));
+            }
+
             // Re-sync coverage snapshot after an import
             const newParticipantsList = [...(participants || []), ...participantsWithCourseId];
             await syncCourseCoverageSnapshot(newParticipantsList);
@@ -2126,6 +2279,10 @@ export function ParticipantsView({
         setShareModalOpen(true);
     };
 
+    const handleShareCoursePublicPage = () => {
+        setSharePageModalOpen(true);
+    };
+
     const handleOpenSingleEmail = (p) => {
         setEmailTargets([p]);
         setIsBulkEmail(false);
@@ -2257,6 +2414,74 @@ export function ParticipantsView({
             <ShareCoursePageModal isOpen={sharePageModalOpen} onClose={() => setSharePageModalOpen(false)} courseId={course.id} courseName={course.course_type} />
             <EmailCertificateModal isOpen={emailModalOpen} onClose={() => setEmailModalOpen(false)} participants={emailTargets} isBulk={isBulkEmail} setToast={setToast} />
 
+            {/* Action Validation Confirmation Popup Modal */}
+            <Modal 
+                isOpen={syncPreviewModal.isOpen} 
+                onClose={() => !isProcessing && setSyncPreviewModal(prev => ({ ...prev, isOpen: false }))} 
+                title="Confirm Synchronization to Central Registry"
+                size="lg"
+            >
+                <div className="p-4 space-y-4">
+                    <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl flex items-start gap-3 text-sm text-blue-900 shadow-sm">
+                        <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5 text-blue-600" />
+                        <div>
+                            <strong className="block mb-1 text-base">You are updating {syncPreviewModal.facilitiesToUpsert.length} facility records.</strong>
+                            This action enlists registered participants directly into their designated rosters and turns on the service activation keys for each facility.
+                        </div>
+                    </div>
+                    
+                    <div className="border border-gray-200 rounded-xl bg-gray-50 p-4 text-sm text-gray-700 shadow-inner flex flex-col sm:flex-row gap-4 justify-between items-center">
+                        <div className="flex items-center gap-2">
+                            <span className="font-semibold">Service Type:</span> 
+                            <span className="bg-sky-100 text-sky-800 px-3 py-1 rounded-full font-bold shadow-sm">{syncPreviewModal.serviceType}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="font-semibold">Database Array:</span> 
+                            <code className="bg-white border border-gray-200 text-gray-800 px-2 py-1 rounded-md shadow-sm">{syncPreviewModal.staffField}</code>
+                        </div>
+                    </div>
+
+                    <h4 className="font-bold text-gray-800 border-b border-gray-200 pb-2 mt-2">Targeted Deliveries Breakdown</h4>
+                    <div className="max-h-60 overflow-y-auto space-y-3 p-2">
+                        {syncPreviewModal.facilitiesToUpsert.map((fac, idx) => (
+                            <div key={idx} className="border border-gray-100 bg-white rounded-xl p-3 shadow-sm hover:shadow transition-shadow">
+                                <div className="font-bold text-gray-900 flex items-center gap-2 mb-2">
+                                    <Building2 className="w-4 h-4 text-gray-400" />
+                                    {fac['اسم_المؤسسة']} 
+                                    <span className="text-xs text-gray-500 font-medium ml-auto bg-gray-100 px-2 py-0.5 rounded-full">
+                                        {fac['الولاية']} / {fac['المحلية']}
+                                    </span>
+                                </div>
+                                <div className="text-gray-700 text-xs pl-6">
+                                    <div className="flex items-center gap-1.5 mb-1.5 text-green-700 font-medium">
+                                        <CheckCircle className="w-3.5 h-3.5" /> Service status flagged to 'Active'
+                                    </div>
+                                    <div className="font-semibold flex items-center gap-1.5 mb-1.5 text-indigo-700">
+                                        <Users className="w-3.5 h-3.5" /> Personnel enlisting ({fac[syncPreviewModal.staffField]?.length || 0}):
+                                    </div>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {fac[syncPreviewModal.staffField]?.map((staff, sIdx) => (
+                                            <span key={sIdx} className="bg-gray-50 text-gray-800 px-2 py-1 rounded-md border border-gray-200">
+                                                {staff.name} <span className="text-gray-500">({staff.job_title || 'No Title'})</span>
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                        <Button variant="secondary" onClick={() => setSyncPreviewModal(prev => ({ ...prev, isOpen: false }))} disabled={isProcessing}>
+                            Cancel
+                        </Button>
+                        <Button variant="primary" onClick={handleConfirmSyncToFirebase} disabled={isProcessing} className="bg-indigo-600 hover:bg-indigo-700">
+                            {isProcessing ? <Spinner size="sm" /> : 'Confirm & Push to Firebase'}
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+
             <Modal isOpen={isAdvancedActionsModalOpen} onClose={() => setIsAdvancedActionsModalOpen(false)} title="Advanced User Actions">
                 <div className="p-4 flex flex-col gap-3">
                     <p className="text-sm text-gray-600 mb-2">Select an advanced action to perform on this course's data.</p>
@@ -2277,6 +2502,10 @@ export function ParticipantsView({
                             <Button variant="secondary" className="w-full justify-start" onClick={() => { setIsAdvancedActionsModalOpen(false); setActiveScreen('migration'); }} disabled={!participants || participants.length === 0 || isProcessing}>
                                 Bulk Migrate to Facilities
                             </Button>
+                            <Button variant="primary" className="w-full justify-start bg-indigo-600 hover:bg-indigo-700" onClick={handlePrepareSyncPreview} disabled={!participants || participants.length === 0 || isProcessing}>
+                                <RefreshCw className="w-4 h-4 mr-2" /> 
+                                Sync All Participants to Facilities
+                            </Button>
                         </>
                     )}
                 </div>
@@ -2293,7 +2522,7 @@ export function ParticipantsView({
                             <Button variant="primary" className="w-full justify-start" onClick={() => { setIsCertManagementModalOpen(false); setCertLangModal({ isOpen: true, actionType: 'bulk' }); }} disabled={isProcessing || isBulkCertLoading || filtered.length === 0 || isCacheLoading}>
                                 Download Filtered Certificates
                             </Button>
-                            <Button variant="secondary" className="w-full justify-start border-sky-600 text-sky-700 hover:bg-sky-50" onClick={() => { setIsCertManagementModalOpen(false); setSharePageModalOpen(true); }} disabled={isProcessing}>
+                            <Button variant="secondary" className="w-full justify-start border-sky-600 text-sky-700 hover:bg-sky-50" onClick={() => { setIsCertManagementModalOpen(false); handleShareCoursePublicPage(); }} disabled={isProcessing}>
                                 Share Public Page
                             </Button>
                             <Button variant="secondary" className="w-full justify-start border-green-600 text-green-700 hover:bg-green-50" onClick={() => { setIsCertManagementModalOpen(false); handleOpenBulkEmail(); }} disabled={!filtered || filtered.length === 0 || isProcessing}>
@@ -2895,12 +3124,14 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
             let facilityUpdatePayload = null;
             let oldFacilityUpdatePayload = null; 
 
-            if (isImnci) {
+            if (isImnci || isEenc || isEtat || isSsnc || course.course_type === 'IPC') {
+                const staffField = isEtat ? 'critical_staff' : (isSsnc || course.course_type === 'IPC') ? 'neonatal_staff' : isEenc ? 'eenc_staff' : 'imnci_staff';
+
                 if (selectedFacility && !selectedFacility.id.startsWith('pending_')) {
                     const staffMemberData = { name: name.trim(), job_title: finalJobTitle, phone: phone.trim(), is_trained: 'Yes', training_date: course.start_date || '' };
                     let existingStaff = [];
                      try {
-                         existingStaff = selectedFacility.imnci_staff ? (typeof selectedFacility.imnci_staff === 'string' ? JSON.parse(selectedFacility.imnci_staff) : JSON.parse(JSON.stringify(selectedFacility.imnci_staff))) : [];
+                         existingStaff = selectedFacility[staffField] ? (typeof selectedFacility[staffField] === 'string' ? JSON.parse(selectedFacility[staffField]) : JSON.parse(JSON.stringify(selectedFacility[staffField]))) : [];
                         if (!Array.isArray(existingStaff)) existingStaff = [];
                     } catch (e) { console.error("Error parsing staff list:", e); existingStaff = []; }
 
@@ -2908,31 +3139,40 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                     const existingIndex = updatedStaffList.findIndex(staff => staff.name === staffMemberData.name || (staff.phone && staff.phone === staffMemberData.phone));
                     if (existingIndex > -1) updatedStaffList[existingIndex] = staffMemberData; else updatedStaffList.push(staffMemberData);
 
-                    const baseFacilityPayload = {
-                        'هل_المؤسسة_تعمل': 'Yes', 
-                        'وجود_العلاج_المتكامل_لامراض_الطفولة': 'Yes', 
-                        'نوع_المؤسسةالصحية': currentFacilityType,
-                        
-                        'imnci_doctors_total': imnciDoctorsTotal !== '' ? Number(imnciDoctorsTotal) : (selectedFacility['imnci_doctors_total'] ?? null),
-                        'imnci_doctors_trained': imnciDoctorsTrained !== '' ? Number(imnciDoctorsTrained) : (selectedFacility['imnci_doctors_trained'] ?? null),
-                        'imnci_medical_assistants_total': imnciMedicalAssistantsTotal !== '' ? Number(imnciMedicalAssistantsTotal) : (selectedFacility['imnci_medical_assistants_total'] ?? null),
-                        'imnci_medical_assistants_trained': imnciMedicalAssistantsTrained !== '' ? Number(imnciMedicalAssistantsTrained) : (selectedFacility['imnci_medical_assistants_trained'] ?? null),
-                        
-                        'nutrition_center_exists': parseStr(hasNutri), 
-                        'nearest_nutrition_center': hasNutri === 'no' ? (nearestNutri || selectedFacility.nearest_nutrition_center || '') : '',
-                        'immunization_office_exists': parseStr(hasImm), 
-                        'nearest_immunization_center': hasImm === 'no' ? (nearestImm || selectedFacility.nearest_immunization_center || '') : '',
-                        'غرفة_إرواء': parseStr(hasORS), 
-                        'growth_monitoring_service_exists': parseStr(hasGrowthMonitoring),
-                        'ميزان_وزن': parseStr(hasWeightScale), 
-                        'ميزان_طول': parseStr(hasHeightScale), 
-                        'ميزان_حرارة': parseStr(hasThermometer), 
-                        'ساعة_ مؤقت': parseStr(hasTimer), 
-                        'وجود_سجل_علاج_متكامل': parseStr(hasImnciRegister), 
-                        'وجود_كتيب_لوحات': parseStr(hasChartBooklet), 
-                    };
+                    let baseFacilityPayload = { 'هل_المؤسسة_تعمل': 'Yes' };
+                    if (isImnci) {
+                        baseFacilityPayload = {
+                            ...baseFacilityPayload,
+                            'وجود_العلاج_المتكامل_لامراض_الطفولة': 'Yes', 
+                            'نوع_المؤسسةالصحية': currentFacilityType,
+                            
+                            'imnci_doctors_total': imnciDoctorsTotal !== '' ? Number(imnciDoctorsTotal) : (selectedFacility['imnci_doctors_total'] ?? null),
+                            'imnci_doctors_trained': imnciDoctorsTrained !== '' ? Number(imnciDoctorsTrained) : (selectedFacility['imnci_doctors_trained'] ?? null),
+                            'imnci_medical_assistants_total': imnciMedicalAssistantsTotal !== '' ? Number(imnciMedicalAssistantsTotal) : (selectedFacility['imnci_medical_assistants_total'] ?? null),
+                            'imnci_medical_assistants_trained': imnciMedicalAssistantsTrained !== '' ? Number(imnciMedicalAssistantsTrained) : (selectedFacility['imnci_medical_assistants_trained'] ?? null),
+                            
+                            'nutrition_center_exists': parseStr(hasNutri), 
+                            'nearest_nutrition_center': hasNutri === 'no' ? (nearestNutri || selectedFacility.nearest_nutrition_center || '') : '',
+                            'immunization_office_exists': parseStr(hasImm), 
+                            'nearest_immunization_center': hasImm === 'no' ? (nearestImm || selectedFacility.nearest_immunization_center || '') : '',
+                            'غرفة_إرواء': parseStr(hasORS), 
+                            'growth_monitoring_service_exists': parseStr(hasGrowthMonitoring),
+                            'ميزان_وزن': parseStr(hasWeightScale), 
+                            'ميزان_طول': parseStr(hasHeightScale), 
+                            'ميزان_حرارة': parseStr(hasThermometer), 
+                            'ساعة_ مؤقت': parseStr(hasTimer), 
+                            'وجود_سجل_علاج_متكامل': parseStr(hasImnciRegister), 
+                            'وجود_كتيب_لوحات': parseStr(hasChartBooklet), 
+                        };
+                    } else if (isEenc) {
+                        baseFacilityPayload['eenc_provides_essential_care'] = 'Yes';
+                    } else if (isEtat) {
+                        baseFacilityPayload['etat_has_service'] = 'Yes';
+                    } else if (isSsnc || course.course_type === 'IPC') {
+                        baseFacilityPayload['neonatal_level_secondary'] = 'Yes';
+                    }
 
-                    facilityUpdatePayload = { ...selectedFacility, ...baseFacilityPayload, id: selectedFacility.id, date_of_visit: new Date().toISOString().split('T')[0], imnci_staff: updatedStaffList };
+                    facilityUpdatePayload = { ...selectedFacility, ...baseFacilityPayload, id: selectedFacility.id, date_of_visit: new Date().toISOString().split('T')[0], [staffField]: updatedStaffList };
                 }
 
                 if (initialData?.facilityId && selectedFacility?.id && initialData.facilityId !== selectedFacility.id) {
@@ -2941,7 +3181,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                         if (oldFacility) {
                             let existingOldStaff = [];
                             try {
-                                existingOldStaff = oldFacility.imnci_staff ? (typeof oldFacility.imnci_staff === 'string' ? JSON.parse(oldFacility.imnci_staff) : JSON.parse(JSON.stringify(oldFacility.imnci_staff))) : [];
+                                existingOldStaff = oldFacility[staffField] ? (typeof oldFacility[staffField] === 'string' ? JSON.parse(oldFacility[staffField]) : JSON.parse(JSON.stringify(oldFacility[staffField]))) : [];
                                 if (!Array.isArray(existingOldStaff)) existingOldStaff = [];
                             } catch (e) { existingOldStaff = []; }
 
@@ -2951,7 +3191,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
 
                             oldFacilityUpdatePayload = {
                                 ...oldFacility,
-                                imnci_staff: updatedOldStaff
+                                [staffField]: updatedOldStaff
                             };
                         }
                     } catch (err) {
@@ -3091,14 +3331,15 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                         onChange={setName}
                                         onSelect={handleHealthWorkerSelect}
                                         options={useMemo(() => {
-                                             if (!selectedFacility?.imnci_staff) return [];
+                                             const staffField = isEtat ? 'critical_staff' : (isSsnc || course?.course_type === 'IPC') ? 'neonatal_staff' : isEenc ? 'eenc_staff' : 'imnci_staff';
+                                             if (!selectedFacility?.[staffField]) return [];
                                              try {
-                                                 let staff = typeof selectedFacility.imnci_staff === 'string'
-                                                     ? JSON.parse(selectedFacility.imnci_staff)
-                                                     : selectedFacility.imnci_staff;
+                                                 let staff = typeof selectedFacility[staffField] === 'string'
+                                                     ? JSON.parse(selectedFacility[staffField])
+                                                     : selectedFacility[staffField];
                                                 return Array.isArray(staff) ? staff : [];
                                              } catch (e) { return []; }
-                                         }, [selectedFacility?.imnci_staff])}
+                                         }, [selectedFacility, isEenc, isEtat, isSsnc, course?.course_type])}
                                         disabled={!selectedFacility || selectedFacility.id.startsWith('pending_') || isSaving} 
                                     />
                                      {isEditingExistingWorker && <p className="text-sm text-blue-600 mt-1">تعديل بيانات الموظف الحالي.</p>}
@@ -3229,7 +3470,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                                 <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
                                             </Select>
                                         </FormGroup>
-                                        <FormGroup label="هل توجد وحدة العناية المتوسطة (HDU)؟">
+                                        <FormGroup label="هل توجد غرفة العناية المتوسطة (HDU)؟">
                                             <Select disabled={isSaving} value={hasHdu} onChange={e => setHasHdu(e.target.value)}>
                                                 <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
                                             </Select>

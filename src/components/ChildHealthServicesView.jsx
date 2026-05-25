@@ -10,11 +10,11 @@ import { Capacitor } from '@capacitor/core';
 
 // --- ICONS ---
 import { PdfIcon } from './CommonComponents';
-import { List, FileText, Users, Building, PlusCircle, ArrowLeft, Search, LineChart } from 'lucide-react';
+import { List, FileText, Users, Building, PlusCircle, ArrowLeft, Search, LineChart, Activity } from 'lucide-react';
 
 import LocationMapModal from './ChildHealthServicesMap.jsx';
-// Import BOTH the individual history modal and the aggregate dashboard
 import FacilityHistoryView, { AggregateHistoryDashboard } from './FacilityHistoryView.jsx'; 
+import { UpdateDashboard } from './UpdateDashboard.jsx'; 
 
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { point } from '@turf/helpers';
@@ -95,15 +95,64 @@ const FIELD_LABELS_FOR_COMPARISON = {
     'imnci_staff': 'IMNCI Staff List'
 };
 
+const STAFF_ARRAY_KEYS = ['imnci_staff', 'eenc_staff', 'neonatal_staff', 'critical_staff'];
+
 const compareFacilities = (oldData, newData) => {
     const changes = [];
+    
+    // 1. Add requested fields to the ignore list
+    const ignoreFields = [
+        'id', 'submissionId', 'submittedAt', 'updated_by', 'اخر تحديث', 'date_of_visit',
+        'createdAt', 'lastSnapshotAt', 'originalFacilityId', 'status'
+    ];
+
     const allKeys = new Set([...Object.keys(oldData || {}), ...Object.keys(newData || {})]);
+    
     allKeys.forEach(key => {
-        if (key.startsWith('_') || key === 'id' || key === 'submissionId' || key === 'submittedAt' || key === 'updated_by' || key === 'اخر تحديث' || key === 'date_of_visit') { return; }
+        if (key.startsWith('_') || ignoreFields.includes(key)) { return; }
+
         const oldValue = oldData?.[key];
         const newValue = newData?.[key];
-        if (!deepEqual(oldValue, newValue)) { changes.push({ key: key, label: FIELD_LABELS_FOR_COMPARISON[key] || key.replace(/_/g, ' '), from: getDisplayableValue(oldValue), to: getDisplayableValue(newValue) }); }
+
+        // 2. Special deep-diff logic for ALL Staff Lists
+        if (STAFF_ARRAY_KEYS.includes(key)) {
+            const oldStaff = Array.isArray(oldValue) ? oldValue : [];
+            const newStaff = Array.isArray(newValue) ? newValue : [];
+            const maxLen = Math.max(oldStaff.length, newStaff.length);
+            
+            const serviceName = key.split('_')[0].toUpperCase();
+
+            for (let i = 0; i < maxLen; i++) {
+                const os = oldStaff[i] || {};
+                const ns = newStaff[i] || {};
+                const staffFields = new Set([...Object.keys(os), ...Object.keys(ns)]);
+
+                staffFields.forEach(field => {
+                    if (!deepEqual(os[field], ns[field])) {
+                        const niceLabel = `${serviceName} Staff ${i + 1}: ${field.replace(/_/g, ' ')}`;
+                        changes.push({
+                            key: `${key}_${i}_${field}`,
+                            label: niceLabel,
+                            from: getDisplayableValue(os[field]),
+                            to: getDisplayableValue(ns[field])
+                        });
+                    }
+                });
+            }
+            return; 
+        }
+
+        // 3. Default comparison for all other fields
+        if (!deepEqual(oldValue, newValue)) { 
+            changes.push({ 
+                key: key, 
+                label: FIELD_LABELS_FOR_COMPARISON[key] || key.replace(/_/g, ' '), 
+                from: getDisplayableValue(oldValue), 
+                to: getDisplayableValue(newValue) 
+            }); 
+        }
     });
+    
     return changes;
 };
 
@@ -151,6 +200,7 @@ const ActionMenu = ({ onAction, isSuperUserOrFed }) => {
         { id: 'share_eenc', label: 'تحديث معلومات الرعاية الضرورية (غرفة الولادة)', icon: Users, color: 'text-teal-600', bg: 'bg-teal-100', border: 'hover:border-teal-400', shadow: 'hover:shadow-teal-100' },
         { id: 'share_neonatal', label: 'تحديث معلومات الرعاية الخاصة (الحضانة)', icon: Building, color: 'text-indigo-600', bg: 'bg-indigo-100', border: 'hover:border-indigo-400', shadow: 'hover:shadow-indigo-100' },
         { id: 'share_etat', label: 'تحديث معلومات الرعاية الحرجة (الحوادث والعناية المكثفة)', icon: PlusCircle, color: 'text-red-600', bg: 'bg-red-100', border: 'hover:border-red-400', shadow: 'hover:shadow-red-100' },
+        { id: 'show_update_dashboard', label: 'لوحة متابعة تحديثات المنشآت (Update Dashboard)', icon: Activity, color: 'text-orange-600', bg: 'bg-orange-100', border: 'hover:border-orange-400', shadow: 'hover:shadow-orange-100' },
     ];
 
     if (isSuperUserOrFed) {
@@ -198,7 +248,7 @@ const AllFacilitiesTab = ({ facilities, onEdit, onDelete, onGenerateLink, onOpen
         const services = [];
         if (f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes') services.push({ name: 'IMNCI', color: 'bg-sky-100 text-sky-800' });
         if (f.eenc_provides_essential_care === 'Yes') services.push({ name: 'EENC', color: 'bg-teal-100 text-teal-800' });
-        if (f.neonatal_level_of_care && (f.neonatal_level_of_care.primary || f.neonatal_level_of_care.secondary || f.neonatal_level_of_care.tertiary)) services.push({ name: 'Neonatal', color: 'bg-indigo-100 text-indigo-800' });
+        if (f.neonatal_level_primary === 'Yes' || f.neonatal_level_secondary === 'Yes' || f.neonatal_level_tertiary === 'Yes' || (f.neonatal_level_of_care && (f.neonatal_level_of_care.primary || f.neonatal_level_of_care.secondary || f.neonatal_level_of_care.tertiary))) services.push({ name: 'Neonatal', color: 'bg-indigo-100 text-indigo-800' });
         if (f.etat_has_service === 'Yes' || f.hdu_has_service === 'Yes' || f.picu_has_service === 'Yes') services.push({ name: 'Critical', color: 'bg-red-100 text-red-800' });
         if (services.length === 0) return <span className="text-xs text-gray-500">None</span>;
         return <div className="flex flex-wrap gap-1">{services.map(s => <span key={s.name} className={`px-2 py-1 text-xs font-medium rounded-full ${s.color}`}>{s.name}</span>)}</div>;
@@ -903,15 +953,12 @@ const ChildHealthServicesView = ({
     
     const [view, setView] = useState('action_menu');
     
-    // States for Update Facility Flow via Pop-up
     const [updateSelectionService, setUpdateSelectionService] = useState(null);
     const [updateSelectionData, setUpdateSelectionData] = useState({ state: '', locality: '', facilityId: '' });
     const [updateSelectionSearch, setUpdateSelectionSearch] = useState(''); 
-    const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     
     const [statusData, setStatusData] = useState(null);
 
-    // Explicit check to ensure super users / federal managers see the button
     const isSuperUserOrFed = permissions?.canUseSuperUserAdvancedFeatures || permissions?.role === 'super_user' || permissions?.manageScope === 'federal' || permissions?.isAdmin;
 
     // --- Helper Functions ---
@@ -934,6 +981,8 @@ const ChildHealthServicesView = ({
             setView('list');
         } else if (action === 'show_history') {
             setView('kpi_history');
+        } else if (action === 'show_update_dashboard') {
+            setView('update_dashboard');
         } else {
             if (action === 'share_imnci') setUpdateSelectionService('IMNCI');
             else if (action === 'share_eenc') setUpdateSelectionService('EENC');
@@ -1006,6 +1055,30 @@ const ChildHealthServicesView = ({
         if (!healthFacilities) return null;
         return healthFacilities.filter(f => f.isDeleted !== true && f.isDeleted !== "true");
     }, [healthFacilities]);
+
+    // --- STRICT ROLE-BASED SCOPING ---
+    // Extract scoped facilities based on permissions so the dashboard gets strict, precise data
+    const scopedFacilities = useMemo(() => {
+        if (!activeHealthFacilities) return [];
+        const userScope = permissions?.manageScope;
+        
+        if (userScope === 'locality') {
+            if (userLocalities && userLocalities.length > 0) {
+                const allowedLocalities = new Set(userLocalities);
+                return activeHealthFacilities.filter(f => allowedLocalities.has(f['المحلية']));
+            }
+            return []; // Locality manager without a locality sees nothing
+        } else if (userScope === 'state') {
+            if (userStates && userStates.length > 0) {
+                const allowedStates = new Set(userStates);
+                return activeHealthFacilities.filter(f => allowedStates.has(f['الولاية']));
+            }
+            return []; // State manager without a state sees nothing
+        }
+        
+        // Federal / Super User sees all
+        return activeHealthFacilities;
+    }, [activeHealthFacilities, permissions?.manageScope, userLocalities, userStates]);
 
     const [editingFacility, setEditingFacility] = useState(null);
     const [activeTab, setActiveTab] = useState(TABS.ALL);
@@ -1095,7 +1168,6 @@ const ChildHealthServicesView = ({
 
     const handleOpenMapModal = (facility) => { setFacilityForMap(facility); setIsMapModalOpen(true); };
 
-    // --- MODIFIED: Handle Location Saving ---
     const handleSaveLocation = async (newLocation) => {
         if (!facilityForMap) return;
         const payload = { ...facilityForMap, _الإحداثيات_latitude: newLocation._الإحداثيات_latitude, _الإحداثيات_longitude: newLocation._الإحداثيات_longitude, date_of_visit: facilityForMap.date_of_visit || new Date().toISOString().split('T')[0], };
@@ -1116,11 +1188,11 @@ const ChildHealthServicesView = ({
     const handleFixMismatch = (facility) => { setIsMismatchModalOpen(false); handleOpenMapModal(facility); };
 
     const projectNames = useMemo(() => {
-        if (!activeHealthFacilities) return [];
+        if (!scopedFacilities) return [];
         const names = new Set();
-        activeHealthFacilities.forEach(f => { if (f.project_name) { names.add(f.project_name); } });
+        scopedFacilities.forEach(f => { if (f.project_name) { names.add(f.project_name); } });
         return Array.from(names).sort();
-    }, [activeHealthFacilities]);
+    }, [scopedFacilities]);
 
     const CLEANABLE_FIELDS_CONFIG = useMemo(() => ({
         'الولاية': { label: 'State', standardValues: Object.keys(STATE_LOCALITIES).sort((a, b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar)), isStaffField: false },
@@ -1248,19 +1320,19 @@ const ChildHealthServicesView = ({
     }, [pendingSubmissions, pendingStartDate, pendingEndDate]);
 
     const filteredFacilities = useMemo(() => {
-        if (!activeHealthFacilities || !hasManuallySelected) return [];
-        let facilitiesInScope = [];
-        const userScope = permissions.manageScope;
-        if (userScope === 'locality') {
-            if (userLocalities && userLocalities.length > 0) { const allowedLocalities = new Set(userLocalities); facilitiesInScope = activeHealthFacilities.filter(f => allowedLocalities.has(f['المحلية']) && (!stateFilter || f['الولاية'] === stateFilter) ); } else { return []; }
-        } else if (userScope === 'state') {
-             if (userStates && userStates.length > 0) { const allowedStates = new Set(userStates); facilitiesInScope = activeHealthFacilities.filter(f => allowedStates.has(f['الولاية'])); } else { return []; }
-        } else {
-             facilitiesInScope = activeHealthFacilities;
-        }
-        let filtered = facilitiesInScope.filter(f => {
-            if (userScope !== 'state' && userScope !== 'locality') { if (stateFilter && stateFilter !== 'ALL_STATES' && stateFilter !== 'NOT_ASSIGNED' && f['الولاية'] !== stateFilter) { return false; } if (stateFilter === 'NOT_ASSIGNED' && f['الولاية']) { return false; } }
-            if (userScope !== 'locality') { if (localityFilter && f['المحلية'] !== localityFilter) { return false; } }
+        if (!scopedFacilities || !hasManuallySelected) return [];
+
+        let filtered = scopedFacilities.filter(f => {
+            const userScope = permissions.manageScope;
+            
+            if (userScope !== 'state' && userScope !== 'locality') {
+                if (stateFilter && stateFilter !== 'ALL_STATES' && stateFilter !== 'NOT_ASSIGNED' && f['الولاية'] !== stateFilter) return false; 
+                if (stateFilter === 'NOT_ASSIGNED' && f['الولاية']) return false;
+            }
+            if (userScope !== 'locality') { 
+                if (localityFilter && f['المحلية'] !== localityFilter) return false; 
+            }
+            
             if (facilityTypeFilter && f['نوع_المؤسسةالصحية'] !== facilityTypeFilter) return false;
             if (projectFilter && f.project_name !== projectFilter) return false;
             if (functioningFilter && functioningFilter !== 'NOT_SET' && f['هل_المؤسسة_تعمل'] !== functioningFilter) return false;
@@ -1288,7 +1360,7 @@ const ChildHealthServicesView = ({
         });
 
         return filtered;
-    }, [ activeHealthFacilities, stateFilter, localityFilter, facilityTypeFilter, functioningFilter, projectFilter, searchQuery, serviceTypeFilter, userStates, userLocalities, permissions.manageScope, hasManuallySelected ]);
+    }, [ scopedFacilities, stateFilter, localityFilter, facilityTypeFilter, functioningFilter, projectFilter, searchQuery, serviceTypeFilter, permissions.manageScope, hasManuallySelected ]);
 
     useEffect(() => { setCurrentPage(1); }, [filteredFacilities]);
     
@@ -1313,7 +1385,6 @@ const ChildHealthServicesView = ({
         }
     };
 
-    // --- MODIFIED: Handle saving of facilities with modal status ---
     const handleSaveFacility = async (payload) => {
         const user = auth.currentUser;
         if (!user) { setToast({ show: true, message: 'You must be logged in.', type: 'error' }); return; }
@@ -1333,14 +1404,13 @@ const ChildHealthServicesView = ({
         }
     };
 
-    // --- ADDED: Close the status modal and close the form if successful ---
     const handleCloseStatusModal = () => {
         const wasSuccessOrQueued = statusData?.status !== 'error';
         setStatusData(null);
         if (wasSuccessOrQueued) {
             setEditingFacility(null);
             setUpdateSelectionService(null);
-            setIsFormModalOpen(false);
+            setView('list'); // Return to list view
         }
     };
 
@@ -1355,7 +1425,7 @@ const ChildHealthServicesView = ({
         }
         if (facility) { 
             setEditingFacility(facility); 
-            setIsFormModalOpen(true); 
+            setView('form'); // Open form page instead of modal
         } else { 
             setToast({ show: true, message: 'Facility not found or you do not have permission to edit it.', type: 'error' }); 
         }
@@ -1490,7 +1560,7 @@ const ChildHealthServicesView = ({
             
             textToCopy = `الرجاء تحديث بيانات المنشأة "${facilityName}" لخدمة "${updateSelectionService}" عبر الرابط التالي:\n\n${url}`;
         } else {
-            const params = newSearchParams();
+            const params = new URLSearchParams();
             if (updateSelectionService) params.append('service', updateSelectionService);
             if (updateSelectionData.state) params.append('state', updateSelectionData.state);
             if (updateSelectionData.locality) params.append('locality', updateSelectionData.locality);
@@ -1653,7 +1723,7 @@ const ChildHealthServicesView = ({
 
                     <div className="flex justify-between items-center my-4">
                         <div className="flex flex-wrap gap-2">
-                            {permissions.canManageFacilities && ( <Button onClick={() => { setEditingFacility(null); setUpdateSelectionService(null); setIsFormModalOpen(true); }}>Add New</Button> )}
+                            {permissions.canManageFacilities && ( <Button onClick={() => { setEditingFacility(null); setUpdateSelectionService(null); setView('form'); }}>Add New</Button> )}
                             {canBulkUploadFacilities && ( <Button onClick={() => setIsBulkUploadModalOpen(true)}>Bulk Upload</Button> )}
                             
                             <Button variant="info" onClick={handleShareBulkUpdateLink}>Share Bulk Update Link</Button>
@@ -1730,7 +1800,7 @@ const ChildHealthServicesView = ({
         </Card>);
     };
 
-    const renderFormView = () => {
+    const renderFormPage = () => {
         const saveButtonText = permissions.canApproveSubmissions ? "Save Directly" : "Submit for Approval";
         
         let formTypeKey = 'imnci';
@@ -1748,40 +1818,57 @@ const ChildHealthServicesView = ({
 
         const FormComponent = FORM_KEY_TO_COMPONENT[formTypeKey] || IMNCIFormFields;
 
+        const handleBackClick = () => {
+            setEditingFacility(null);
+            if (updateSelectionService) {
+                setUpdateSelectionService(null);
+                setView('action_menu');
+            } else {
+                setView('list');
+            }
+        };
+
         return (
-            <GenericFacilityForm
-                initialData={formInitialData}
-                onSave={handleSaveFacility}
-                onCancel={() => { setEditingFacility(null); setUpdateSelectionService(null); setIsFormModalOpen(false); }}
-                setToast={setToast}
-                title={editingFacility ? `تحديث بيانات: ${updateSelectionService || 'المنشأة'}` : `إضافة منشأة جديدة`}
-                subtitle={editingFacility ? `المنشأة: ${editingFacility['اسم_المؤسسة']}` : `أدخل تفاصيل المنشأة`}
-                saveButtonText={saveButtonText}
-                userAssignedState={userStates && userStates.length === 1 ? userStates[0] : null}
-                userAssignedLocality={userLocalities && userLocalities.length === 1 ? userLocalities[0] : null}
-            >
-                {(props) => (
-                    <div className="space-y-8">
-                        {updateSelectionService ? <FormComponent {...props} /> : (
-                            <>
-                                <IMNCIFormFields {...props} />
-                                <EENCFormFields {...props} />
-                                <NeonatalFormFields {...props} />
-                                <CriticalCareFormFields {...props} />
-                            </>
-                        )}
-                    </div>
-                )}
-            </GenericFacilityForm>
+            <div className="w-full max-w-7xl mx-auto animate-fade-in">
+                <div className="mb-4 flex justify-end" dir="rtl">
+                    <Button variant="secondary" onClick={handleBackClick} className="flex items-center gap-2 font-bold px-6 py-2 rounded-lg border-2 border-gray-200 hover:bg-white shadow-sm">
+                        <ArrowLeft className="w-5 h-5 ml-2" /> الرجوع للخلف
+                    </Button>
+                </div>
+                <GenericFacilityForm
+                    initialData={formInitialData}
+                    onSave={handleSaveFacility}
+                    onCancel={handleBackClick}
+                    setToast={setToast}
+                    title={editingFacility ? `تحديث بيانات: ${updateSelectionService || 'المنشأة'}` : `إضافة منشأة جديدة`}
+                    subtitle={editingFacility ? `المنشأة: ${editingFacility['اسم_المؤسسة']}` : `أدخل تفاصيل المنشأة`}
+                    saveButtonText={saveButtonText}
+                    userAssignedState={userStates && userStates.length === 1 ? userStates[0] : null}
+                    userAssignedLocality={userLocalities && userLocalities.length === 1 ? userLocalities[0] : null}
+                >
+                    {(props) => (
+                        <div className="space-y-8">
+                            {updateSelectionService ? <FormComponent {...props} /> : (
+                                <>
+                                    <IMNCIFormFields {...props} />
+                                    <EENCFormFields {...props} />
+                                    <NeonatalFormFields {...props} />
+                                    <CriticalCareFormFields {...props} />
+                                </>
+                            )}
+                        </div>
+                    )}
+                </GenericFacilityForm>
+            </div>
         );
     };
 
     // Derived states for Update Selection Modal
     const facilitiesInLocality = useMemo(() => {
-         if (!activeHealthFacilities || !updateSelectionData.state || !updateSelectionData.locality) return [];
-         return activeHealthFacilities.filter(f => f['الولاية'] === updateSelectionData.state && f['المحلية'] === updateSelectionData.locality)
+         if (!scopedFacilities || !updateSelectionData.state || !updateSelectionData.locality) return [];
+         return scopedFacilities.filter(f => f['الولاية'] === updateSelectionData.state && f['المحلية'] === updateSelectionData.locality)
                                       .sort((a, b) => (a['اسم_المؤسسة'] || '').localeCompare(b['اسم_المؤسسة'] || ''));
-    }, [activeHealthFacilities, updateSelectionData.state, updateSelectionData.locality]);
+    }, [scopedFacilities, updateSelectionData.state, updateSelectionData.locality]);
 
     const facilitiesWithService = useMemo(() => {
          if (!updateSelectionService) return [];
@@ -1815,12 +1902,16 @@ const ChildHealthServicesView = ({
                 <ActionMenu onAction={handleActionMenuClick} isSuperUserOrFed={isSuperUserOrFed} />
             ) : view === 'list' ? (
                 renderListView()
+            ) : view === 'form' ? (
+                renderFormPage()
             ) : view === 'kpi_history' ? (
                 <AggregateHistoryDashboard userStates={userStates} onBack={() => setView('action_menu')} />
+            ) : view === 'update_dashboard' ? (
+                <UpdateDashboard facilities={scopedFacilities || []} onBack={() => setView('action_menu')} />
             ) : null}
 
             {/* Modal for selecting the facility to update */}
-            <Modal isOpen={!!updateSelectionService} onClose={() => setUpdateSelectionService(null)} title={`تحديث بيانات - ${updateSelectionService}`} size="lg">
+            <Modal isOpen={!!updateSelectionService && view === 'action_menu'} onClose={() => setUpdateSelectionService(null)} title={`تحديث بيانات - ${updateSelectionService}`} size="lg">
                 <div className="p-6 space-y-4" dir="rtl">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormGroup label="الولاية">
@@ -1911,7 +2002,6 @@ const ChildHealthServicesView = ({
                     <div className="flex justify-end gap-2 mt-6 border-t pt-4">
                         <Button variant="secondary" onClick={() => setUpdateSelectionService(null)}>إلغاء</Button>
                         
-                        {/* Modified Link Copy Button - Enabled immediately */}
                         <Button 
                             variant="info" 
                             onClick={handleCopySingleUpdateLink} 
@@ -1925,7 +2015,7 @@ const ChildHealthServicesView = ({
                                 const f = facilitiesToDisplay.find(fac => fac.id === updateSelectionData.facilityId);
                                 if (f) {
                                     setEditingFacility(f);
-                                    setIsFormModalOpen(true);
+                                    setView('form');
                                 }
                             }} 
                             disabled={!updateSelectionData.facilityId || isFacilitiesLoading}
@@ -1935,15 +2025,6 @@ const ChildHealthServicesView = ({
                     </div>
                 </div>
             </Modal>
-
-            {/* Modal for editing/adding a facility */}
-            {isFormModalOpen && (
-                <Modal isOpen={true} onClose={() => { setIsFormModalOpen(false); setUpdateSelectionService(null); setEditingFacility(null); }} title={editingFacility ? "تحديث بيانات المنشأة" : "إضافة منشأة جديدة"} size="full">
-                     <div className="p-2 sm:p-6 bg-gray-50 h-[90vh] overflow-y-auto">
-                         {renderFormView()}
-                     </div>
-                </Modal>
-            )}
 
             {/* --- INJECTED STATUS MODAL --- */}
             <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />

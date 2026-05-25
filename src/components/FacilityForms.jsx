@@ -1,11 +1,11 @@
 // FacilityForms.jsx
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { ArrowLeft, Search, Building2, MapPin, X, CheckCircle, WifiOff, XCircle } from 'lucide-react';
+import { ArrowLeft, Search, Building2, MapPin, X, CheckCircle, WifiOff, XCircle, ArrowRightLeft } from 'lucide-react';
 
 import {
     Card, PageHeader, Button, FormGroup, Input, Select,
-    Spinner, Checkbox
+    Spinner, Checkbox, Modal
 } from './CommonComponents';
 import {
     getHealthFacilityById,
@@ -15,6 +15,13 @@ import {
 import {
     STATE_LOCALITIES
 } from "./constants.js";
+
+const SERVICE_LABELS = {
+    'imnci_staff': 'العلاج المتكامل (IMNCI)',
+    'eenc_staff': 'الرعاية الطارئة (EENC)',
+    'neonatal_staff': 'وحدة حديثي الولادة (Neonatal)',
+    'critical_staff': 'طوارئ الأطفال (ETAT)'
+};
 
 // --- NEW STATUS MODAL ---
 export const SaveStatusModal = ({ statusData, onClose }) => {
@@ -52,7 +59,7 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
     const [initialData, setInitialData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [statusData, setStatusData] = useState(null); // For Status Popup
+    const [statusData, setStatusData] = useState(null); 
 
     useEffect(() => {
         const path = window.location.pathname;
@@ -112,7 +119,8 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
 
     return (
         <div className="min-h-screen bg-sky-50 p-4 sm:p-6 lg:p-8 flex justify-center">
-            <div className="w-full max-w-4xl">
+            {/* INCREASED WIDTH TO max-w-7xl */}
+            <div className="w-full max-w-7xl">
                 <GenericFacilityForm
                     initialData={initialData}
                     onSave={handleSave}
@@ -125,7 +133,6 @@ export function PublicFacilityUpdateForm({ setToast, serviceType }) {
                     {(props) => <FormComponent {...props} />}
                 </GenericFacilityForm>
             </div>
-            {/* Inject Status Popup */}
             <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
         </div>
     );
@@ -180,12 +187,9 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "اختر م
                 </span>
             </button>
 
-            {/* FULL OVERLAY POP-UP FOR FACILITY SELECTION */}
             {isOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in" dir="rtl">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[85vh] overflow-hidden transform transition-all">
-                        
-                        {/* Pop-up Header */}
                         <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-sky-50">
                             <h3 className="font-bold text-sky-900 text-lg">البحث عن منشأة</h3>
                             <button type="button" onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-red-500 transition-colors p-1 bg-white rounded-full shadow-sm border border-gray-200">
@@ -193,7 +197,6 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "اختر م
                             </button>
                         </div>
                         
-                        {/* Pop-up Search Bar */}
                         <div className="p-4 border-b border-gray-100 bg-white">
                             <div className="relative">
                                 <Input
@@ -208,7 +211,6 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "اختر م
                             </div>
                         </div>
                         
-                        {/* Pop-up List */}
                         <ul role="listbox" className="overflow-y-auto flex-1 p-3 space-y-1 bg-gray-50/30">
                             {Object.entries(groupedOptions).map(([groupName, opts]) => (
                                 <React.Fragment key={groupName}>
@@ -246,7 +248,6 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "اختر م
 export function NewFacilityEntryForm({ setToast, serviceType }) {
     const [searchParams] = useState(new URLSearchParams(window.location.search));
     
-    // Ensure Critical Care maps to 'critical'
     let formTypeKey = searchParams.get('service')?.toLowerCase() || serviceType?.toLowerCase() || 'imnci';
     if (formTypeKey === 'critical care') formTypeKey = 'critical';
 
@@ -264,18 +265,13 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
     const serviceTitle = ARABIC_TITLES[FORM_KEY_TO_TAB_CONSTANT[formTypeKey]] || "بيانات المنشأة الصحية";
 
     const [step, setStep] = useState('selection');
-    const [isModalOpen, setIsModalOpen] = useState(true);
     const [formInitialData, setFormInitialData] = useState(null);
-    const [selectionData, setSelectionData] = useState({
-        state: searchParams.get('state') || '',
-        locality: searchParams.get('locality') || '',
-        facilityId: '',
-    });
+    const [selectionData, setSelectionData] = useState({ state: searchParams.get('state') || '', locality: searchParams.get('locality') || '', facilityId: '' });
     const [facilitiesWithService, setFacilitiesWithService] = useState([]);
     const [facilitiesWithoutService, setFacilitiesWithoutService] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [showOtherFacilities, setShowOtherFacilities] = useState(false);
-    const [statusData, setStatusData] = useState(null); // For Status Popup
+    const [statusData, setStatusData] = useState(null);
 
     useEffect(() => {
         const fetchAndPartitionFacilities = async () => {
@@ -291,18 +287,10 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
                         const isHospital = facilityType === 'مستشفى' || facilityType === 'مستشفى ريفي';
 
                         switch (formTypeKey) {
-                            case 'imnci': 
-                                hasService = f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes' || isPHC; 
-                                break;
-                            case 'eenc': 
-                                hasService = f.eenc_provides_essential_care === 'Yes' || isHospital; 
-                                break;
-                            case 'neonatal': 
-                                hasService = f.neonatal_level_primary === 'Yes' || f.neonatal_level_secondary === 'Yes' || f.neonatal_level_tertiary === 'Yes' || isHospital; 
-                                break;
-                            case 'critical': 
-                                hasService = f.etat_has_service === 'Yes' || f.hdu_has_service === 'Yes' || f.picu_has_service === 'Yes' || isHospital; 
-                                break;
+                            case 'imnci': hasService = f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes' || isPHC; break;
+                            case 'eenc': hasService = f.eenc_provides_essential_care === 'Yes' || isHospital; break;
+                            case 'neonatal': hasService = f.neonatal_level_primary === 'Yes' || f.neonatal_level_secondary === 'Yes' || f.neonatal_level_tertiary === 'Yes' || isHospital; break;
+                            case 'critical': hasService = f.etat_has_service === 'Yes' || f.hdu_has_service === 'Yes' || f.picu_has_service === 'Yes' || isHospital; break;
                         }
                         if (hasService) withService.push(f);
                         else withoutService.push(f);
@@ -313,16 +301,8 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
                     if (withService.length === 0) setShowOtherFacilities(true);
                 };
 
-                // Try fetching from Cache first for immediate display
                 let cachedData = [];
-                try {
-                    cachedData = await listHealthFacilities(
-                        { state: selectionData.state, locality: selectionData.locality },
-                        { source: 'cache' }
-                    );
-                } catch (e) {
-                    // Ignore cache errors
-                }
+                try { cachedData = await listHealthFacilities({ state: selectionData.state, locality: selectionData.locality }, { source: 'cache' }); } catch (e) {}
 
                 if (cachedData && cachedData.length > 0) {
                     partitionFacilities(cachedData);
@@ -331,17 +311,11 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
                     setIsLoading(true);
                 }
 
-                // Fetch fresh data in the background
                 try {
-                    const freshData = await listHealthFacilities({
-                        state: selectionData.state,
-                        locality: selectionData.locality,
-                    });
+                    const freshData = await listHealthFacilities({ state: selectionData.state, locality: selectionData.locality });
                     partitionFacilities(freshData);
                 } catch (error) {
-                    if (!cachedData || cachedData.length === 0) {
-                        setToast({ show: true, message: 'Could not fetch list.', type: 'error' });
-                    }
+                    if (!cachedData || cachedData.length === 0) setToast({ show: true, message: 'Could not fetch list.', type: 'error' });
                 } finally {
                     setIsLoading(false);
                 }
@@ -484,7 +458,8 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
 
     return (
         <div className="min-h-screen bg-gray-50/50 p-4 sm:p-8 flex flex-col items-center">
-            <div className="w-full max-w-4xl space-y-4">
+            {/* INCREASED WIDTH TO max-w-7xl */}
+            <div className="w-full max-w-7xl space-y-4">
                 <div className="flex justify-start" dir="rtl">
                     <Button variant="secondary" onClick={() => setStep('selection')} className="flex items-center gap-2 font-bold px-6 py-2 rounded-lg border-2 border-gray-200 hover:bg-white shadow-sm">
                         <ArrowLeft className="w-5 h-5 ml-2" /> العودة لاختيار المنشأة
@@ -501,16 +476,13 @@ export function NewFacilityEntryForm({ setToast, serviceType }) {
                     {(props) => <FormComponent {...props} />}
                 </GenericFacilityForm>
             </div>
-            {/* Inject Status Popup */}
             <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
         </div>
     );
 }
 
-// ... SharedFacilityFields ...
+// --- SharedFacilityFields ---
 export const SharedFacilityFields = ({ formData, handleChange, handleStateChange, isPublicForm = false, isReadOnly = false }) => {
-    
-    // --- LOCATION FETCHING STATE & HANDLER ---
     const [isFetchingLocation, setIsFetchingLocation] = useState(false);
     const [locationError, setLocationError] = useState('');
 
@@ -689,6 +661,214 @@ export const SharedFacilityFields = ({ formData, handleChange, handleStateChange
     );
 };
 
+// --- MODALS FOR STAFF TRANSFER & COPY ---
+
+const MoveDepartmentModal = ({ isOpen, onClose, formData, currentServiceKey, onMove }) => {
+    const [selectedStaffIndices, setSelectedStaffIndices] = useState([]);
+    const [targetServiceKey, setTargetServiceKey] = useState('');
+    
+    useEffect(() => {
+        if (!isOpen) {
+            setSelectedStaffIndices([]);
+            setTargetServiceKey('');
+        }
+    }, [isOpen]);
+
+    if (!isOpen) return null;
+
+    const currentStaff = formData[currentServiceKey] || [];
+    const availableServices = Object.keys(SERVICE_LABELS).filter(k => k !== currentServiceKey);
+
+    const toggleSelection = (idx) => {
+        setSelectedStaffIndices(prev =>
+            prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
+        );
+    };
+
+    const selectAll = () => {
+        if (selectedStaffIndices.length === currentStaff.length) {
+            setSelectedStaffIndices([]);
+        } else {
+            setSelectedStaffIndices(currentStaff.map((_, i) => i));
+        }
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="نقل كوادر إلى قسم آخر" size="md">
+            <div className="p-6 text-right" dir="rtl">
+                <p className="text-gray-600 mb-4 text-sm">سيتم نقل الكوادر المحددة من القسم الحالي ({SERVICE_LABELS[currentServiceKey]}) إلى القسم المحدد نهائياً داخل هذه المنشأة.</p>
+                
+                {currentStaff.length === 0 ? (
+                    <div className="p-4 bg-yellow-50 text-yellow-800 rounded-lg text-sm border border-yellow-200">
+                        لا توجد كوادر مسجلة في هذا القسم حالياً لنقلها.
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        <FormGroup label="اختر الكوادر المراد نقلها">
+                            <div className="border border-gray-200 rounded-lg p-2 max-h-48 overflow-y-auto bg-gray-50">
+                                <div className="flex justify-between items-center mb-2 pb-2 border-b border-gray-200">
+                                    <span className="font-bold text-sm text-sky-800">الكوادر المسجلة</span>
+                                    <button type="button" onClick={selectAll} className="text-xs font-bold text-sky-600 hover:text-sky-800 transition-colors">
+                                        {selectedStaffIndices.length === currentStaff.length ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
+                                    </button>
+                                </div>
+                                <div className="space-y-1">
+                                    {currentStaff.map((s, idx) => (
+                                        <label key={idx} className="flex items-center gap-3 p-2 bg-white border border-gray-100 rounded hover:bg-sky-50 cursor-pointer transition-colors">
+                                            <input type="checkbox" checked={selectedStaffIndices.includes(idx)} onChange={() => toggleSelection(idx)} className="w-4 h-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500" />
+                                            <span className="text-sm font-medium text-gray-800">{s.name} <span className="text-gray-500 font-normal">({s.job_title})</span></span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                        </FormGroup>
+                        <FormGroup label="القسم الهدف (ينقل إليه)">
+                            <Select value={targetServiceKey} onChange={e => setTargetServiceKey(e.target.value)}>
+                                <option value="">-- اختر القسم --</option>
+                                {availableServices.map(k => (
+                                    <option key={k} value={k}>{SERVICE_LABELS[k]}</option>
+                                ))}
+                            </Select>
+                        </FormGroup>
+                    </div>
+                )}
+
+                <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
+                    <Button variant="secondary" onClick={onClose}>إلغاء</Button>
+                    <Button variant="primary" onClick={() => onMove(selectedStaffIndices, targetServiceKey)} disabled={selectedStaffIndices.length === 0 || !targetServiceKey}>
+                        تأكيد النقل ({selectedStaffIndices.length})
+                    </Button>
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
+const TransferFacilityModal = ({ isOpen, onClose, currentServiceKey, currentStaffList, onTransfer, setToast }) => {
+    const [selectedStaffIndices, setSelectedStaffIndices] = useState([]);
+    const [state, setState] = useState('');
+    const [locality, setLocality] = useState('');
+    const [facilities, setFacilities] = useState([]);
+    const [selectedFacilityId, setSelectedFacilityId] = useState('');
+    const [loadingFacs, setLoadingFacs] = useState(false);
+    const [isTransferring, setIsTransferring] = useState(false);
+
+    useEffect(() => {
+        if (!isOpen) {
+            setSelectedStaffIndices([]); setState(''); setLocality(''); setFacilities([]); setSelectedFacilityId('');
+        }
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (state && locality) {
+            setLoadingFacs(true);
+            listHealthFacilities({ state, locality }, 'server')
+                .then(res => setFacilities(res))
+                .catch(() => setToast({show: true, message: 'فشل جلب المنشآت', type: 'error'}))
+                .finally(() => setLoadingFacs(false));
+        } else {
+            setFacilities([]);
+            setSelectedFacilityId('');
+        }
+    }, [state, locality]);
+
+    const handleConfirmTransfer = async () => {
+        if (selectedStaffIndices.length === 0 || !selectedFacilityId) return;
+        setIsTransferring(true);
+        const targetFacility = facilities.find(f => f.id === selectedFacilityId);
+        await onTransfer(selectedStaffIndices, targetFacility);
+        setIsTransferring(false);
+    };
+
+    const toggleSelection = (idx) => {
+        setSelectedStaffIndices(prev =>
+            prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
+        );
+    };
+
+    const selectAll = () => {
+        if (selectedStaffIndices.length === currentStaffList.length) {
+            setSelectedStaffIndices([]);
+        } else {
+            setSelectedStaffIndices(currentStaffList.map((_, i) => i));
+        }
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <Modal isOpen={isOpen} onClose={isTransferring ? null : onClose} title="نقل كوادر إلى منشأة أخرى" size="lg">
+            <div className="p-6 text-right space-y-4" dir="rtl">
+                <div className="bg-amber-50 text-amber-800 p-3 rounded-lg border border-amber-200 text-sm mb-4">
+                    <strong>تنبيه:</strong> سيتم نقل الكوادر المحددة من هذه المنشأة وحفظهم في المنشأة الجديدة المحددة أدناه (في نفس القسم: {SERVICE_LABELS[currentServiceKey]}).
+                </div>
+
+                {(!currentStaffList || currentStaffList.length === 0) ? (
+                     <div className="p-4 bg-yellow-50 text-yellow-800 rounded-lg text-sm border border-yellow-200">
+                        لا توجد كوادر مسجلة في هذا القسم حالياً لنقلها.
+                    </div>
+                ) : (
+                    <>
+                        <FormGroup label="اختر الكوادر المراد نقلها">
+                            <div className="border border-gray-200 rounded-lg p-2 max-h-48 overflow-y-auto bg-gray-50">
+                                <div className="flex justify-between items-center mb-2 pb-2 border-b border-gray-200">
+                                    <span className="font-bold text-sm text-sky-800">الكوادر المسجلة</span>
+                                    <button type="button" onClick={selectAll} className="text-xs font-bold text-sky-600 hover:text-sky-800 transition-colors" disabled={isTransferring}>
+                                        {selectedStaffIndices.length === currentStaffList.length ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
+                                    </button>
+                                </div>
+                                <div className="space-y-1">
+                                    {currentStaffList.map((s, idx) => (
+                                        <label key={idx} className={`flex items-center gap-3 p-2 bg-white border border-gray-100 rounded hover:bg-sky-50 cursor-pointer transition-colors ${isTransferring ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                            <input type="checkbox" checked={selectedStaffIndices.includes(idx)} onChange={() => toggleSelection(idx)} disabled={isTransferring} className="w-4 h-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500" />
+                                            <span className="text-sm font-medium text-gray-800">{s.name} <span className="text-gray-500 font-normal">({s.job_title})</span></span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                        </FormGroup>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100">
+                            <FormGroup label="الولاية (المنشأة الهدف)">
+                                <Select value={state} onChange={e => { setState(e.target.value); setLocality(''); setSelectedFacilityId(''); }} disabled={isTransferring}>
+                                    <option value="">-- اختر الولاية --</option>
+                                    {Object.keys(STATE_LOCALITIES).map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar}</option>)}
+                                </Select>
+                            </FormGroup>
+                            <FormGroup label="المحلية (المنشأة الهدف)">
+                                <Select value={locality} onChange={e => { setLocality(e.target.value); setSelectedFacilityId(''); }} disabled={!state || isTransferring}>
+                                    <option value="">-- اختر المحلية --</option>
+                                    {state && STATE_LOCALITIES[state]?.localities.map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
+                                </Select>
+                            </FormGroup>
+                        </div>
+
+                        {loadingFacs ? (
+                            <div className="flex justify-center py-4"><Spinner /></div>
+                        ) : (
+                            locality && (
+                                <FormGroup label="المنشأة الهدف (ينقل إليها)">
+                                    <Select value={selectedFacilityId} onChange={e => setSelectedFacilityId(e.target.value)} disabled={isTransferring}>
+                                        <option value="">-- اختر المنشأة الجديدة للكوادر --</option>
+                                        {facilities.map(f => <option key={f.id} value={f.id}>{f['اسم_المؤسسة']}</option>)}
+                                    </Select>
+                                </FormGroup>
+                            )
+                        )}
+                    </>
+                )}
+
+                <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
+                    <Button variant="secondary" onClick={onClose} disabled={isTransferring}>إلغاء</Button>
+                    <Button variant="primary" onClick={handleConfirmTransfer} disabled={selectedStaffIndices.length === 0 || !selectedFacilityId || isTransferring} className="bg-amber-600 hover:bg-amber-700">
+                        {isTransferring ? <Spinner size="sm"/> : `تأكيد ونقل الكوادر (${selectedStaffIndices.length})`}
+                    </Button>
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
 // --- GENERIC FACILITY FORM WRAPPER ---
 export const GenericFacilityForm = React.forwardRef(({
     initialData,
@@ -703,9 +883,9 @@ export const GenericFacilityForm = React.forwardRef(({
     saveButtonText = "حفظ المنشأة",
     cancelButtonText = "إلغاء",
     saveButtonVariant = "primary",
-    isSubmitting = false // Retained to support external disabling (e.g. from modals)
+    isSubmitting = false 
 }, ref) => {
-    const [isLocalSubmitting, setIsLocalSubmitting] = useState(false); // Manages button loading state
+    const [isLocalSubmitting, setIsLocalSubmitting] = useState(false); 
 
     const [formData, setFormData] = useState(() => {
         let processedData = initialData ? { ...initialData } : {};
@@ -716,19 +896,16 @@ export const GenericFacilityForm = React.forwardRef(({
             fieldsToDefaultNo.forEach(field => processedData[field] = processedData[field] || 'No');
         }
 
-        // Migrate old imnci_staff to new structured arrays
         if (processedData && (processedData.اسم_الكادر_المعالج || processedData.الوصف_الوظيفي) && !processedData.imnci_staff) {
             processedData.imnci_staff = [{ name: processedData.اسم_الكادر_المعالج || '', job_title: processedData.الوصف_الوظيفي || '', is_trained: processedData.هل_تم_التدريب_على_العلاج_المتكامل || 'No', training_date: processedData.تاريخ_التدريب || '', phone: processedData.رقم_الهاتف || '' }];
             delete processedData.اسم_الكادر_المعالج; delete processedData.الوصف_الوظيفي; delete processedData.هل_تم_التدريب_على_العلاج_المتكامل; delete processedData.تاريخ_التدريب; delete processedData.رقم_الهاتف;
         }
         
-        // Ensure all staff arrays are initialized
         if (!processedData.imnci_staff) processedData.imnci_staff = [];
         if (!processedData.eenc_staff) processedData.eenc_staff = [];
         if (!processedData.neonatal_staff) processedData.neonatal_staff = [];
         if (!processedData.critical_staff) processedData.critical_staff = [];
 
-        // Legacy cleanup for neonatal_level_of_care if it exists as a string or object from previous versions
         if (processedData.neonatal_level_of_care) {
              delete processedData.neonatal_level_of_care;
         }
@@ -740,6 +917,10 @@ export const GenericFacilityForm = React.forwardRef(({
     const [submitterEmail, setSubmitterEmail] = useState('');
     const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
     const isEditing = !!initialData?.id;
+
+    // --- MODALS STATE ---
+    const [moveModalInfo, setMoveModalInfo] = useState({ isOpen: false, currentServiceKey: '' });
+    const [transferModalInfo, setTransferModalInfo] = useState({ isOpen: false, currentServiceKey: '' });
 
     useEffect(() => {
         const auth = getAuth();
@@ -800,7 +981,7 @@ export const GenericFacilityForm = React.forwardRef(({
         }
     };
 
-    // Generic Handlers for Dynamic Staff Tables
+    // --- STAFF ARRAY HANDLERS ---
     const handleStaffChange = (serviceKey, index, event) => {
         const { name, value } = event.target;
         const updatedStaff = formData[serviceKey].map((staff, i) => i === index ? { ...staff, [name]: value } : staff);
@@ -817,10 +998,94 @@ export const GenericFacilityForm = React.forwardRef(({
         setFormData(prev => ({ ...prev, [serviceKey]: formData[serviceKey].filter((_, i) => i !== index) }));
     };
 
+    // "Move to another department" (Same Facility)
+    const handleMoveDepartment = (staffIndices, targetKey) => {
+        const currentKey = moveModalInfo.currentServiceKey;
+        setFormData(prev => {
+            const currentStaff = prev[currentKey] || [];
+            const targetStaff = prev[targetKey] || [];
+
+            const staffToMove = staffIndices.map(idx => currentStaff[idx]);
+            const newCurrentStaff = currentStaff.filter((_, i) => !staffIndices.includes(i));
+            
+            const mergedTargetStaff = [...targetStaff];
+            staffToMove.forEach(staff => {
+                if (!mergedTargetStaff.some(t => t.name === staff.name && t.phone === staff.phone)) {
+                    mergedTargetStaff.push(staff);
+                }
+            });
+
+            return {
+                ...prev,
+                [currentKey]: newCurrentStaff,
+                [targetKey]: mergedTargetStaff
+            };
+        });
+        setToast({ show: true, message: `تم نقل ${staffIndices.length} كادر بنجاح.`, type: 'success' });
+        setMoveModalInfo({ isOpen: false, currentServiceKey: '' });
+    };
+
+    // "Transfer to another facility" (Same Department)
+    const handleTransferFacility = async (staffIndices, targetFacility) => {
+        const currentKey = transferModalInfo.currentServiceKey;
+        try {
+            // 1. Extract staff
+            const currentStaff = formData[currentKey] || [];
+            const staffToTransfer = staffIndices.map(idx => currentStaff[idx]);
+            
+            // 2. Add to target facility's same department array
+            let targetStaffList = [];
+            try {
+                targetStaffList = targetFacility[currentKey] ? (typeof targetFacility[currentKey] === 'string' ? JSON.parse(targetFacility[currentKey]) : JSON.parse(JSON.stringify(targetFacility[currentKey]))) : [];
+            } catch(e) { targetStaffList = []; }
+
+            if (!Array.isArray(targetStaffList)) targetStaffList = [];
+            
+            staffToTransfer.forEach(staff => {
+                if (!targetStaffList.some(t => t.name === staff.name && t.phone === staff.phone)) {
+                    targetStaffList.push(staff);
+                }
+            });
+
+            const updatedTargetFacility = { ...targetFacility, [currentKey]: targetStaffList };
+            
+            // 3. Save target facility to DB
+            await submitFacilityDataForApproval(updatedTargetFacility);
+
+            // 4. Remove from current local form data
+            setFormData(prev => ({
+                ...prev,
+                [currentKey]: prev[currentKey].filter((_, i) => !staffIndices.includes(i))
+            }));
+            
+            setToast({ show: true, message: `تم نقل ${staffIndices.length} كادر بنجاح للمنشأة الجديدة وحذفهم من هنا.`, type: 'success' });
+            setTransferModalInfo({ isOpen: false, currentServiceKey: '' });
+        } catch (err) {
+            setToast({ show: true, message: `فشل النقل: ${err.message}`, type: 'error' });
+        }
+    };
+
     const currentlySubmitting = isSubmitting || isLocalSubmitting;
 
     return (
         <div dir="rtl">
+            <MoveDepartmentModal 
+                isOpen={moveModalInfo.isOpen} 
+                onClose={() => setMoveModalInfo({isOpen: false, currentServiceKey: ''})}
+                formData={formData}
+                currentServiceKey={moveModalInfo.currentServiceKey}
+                onMove={handleMoveDepartment}
+            />
+
+            <TransferFacilityModal 
+                isOpen={transferModalInfo.isOpen}
+                onClose={() => setTransferModalInfo({isOpen: false, currentServiceKey: ''})}
+                currentServiceKey={transferModalInfo.currentServiceKey}
+                currentStaffList={formData[transferModalInfo.currentServiceKey]}
+                onTransfer={handleTransferFacility}
+                setToast={setToast}
+            />
+
             <Card className="shadow-xl border-t-4 border-t-sky-500 overflow-hidden">
                 <div className="bg-gradient-to-r from-sky-50 to-white px-6 py-5 border-b border-gray-100">
                     <h2 className="text-2xl font-extrabold text-sky-900">{isEditing ? `تعديل: ${title}` : `إضافة: ${title}`}</h2>
@@ -846,7 +1111,9 @@ export const GenericFacilityForm = React.forwardRef(({
                                 handleAddStaffRow, 
                                 handleRemoveStaffRow, 
                                 handleCheckboxGroupChange,
-                                isReadOnly 
+                                isReadOnly,
+                                onOpenMoveDeptModal: (key) => setMoveModalInfo({isOpen: true, currentServiceKey: key}),
+                                onOpenTransferFacModal: (key) => setTransferModalInfo({isOpen: true, currentServiceKey: key})
                             })}
                         </div>
                         
@@ -873,7 +1140,7 @@ export const GenericFacilityForm = React.forwardRef(({
                         )}
 
                         <div className="flex gap-3 mt-8 pt-6 border-t justify-end">
-                            <Button type="button" variant="secondary" onClick={onCancel} disabled={currentlySubmitting} className="px-6">
+                            <Button type="button" variant="secondary" onClick={(e) => { e.preventDefault(); onCancel(); }} disabled={currentlySubmitting} className="px-6">
                                 {cancelButtonText}
                             </Button>
                             <Button type="submit" variant={saveButtonVariant} disabled={currentlySubmitting} className="px-8 font-bold">
@@ -887,48 +1154,142 @@ export const GenericFacilityForm = React.forwardRef(({
     );
 });
 
-export const StaffTable = ({ serviceKey, formData, isReadOnly, handleStaffChange, handleAddStaffRow, handleRemoveStaffRow, jobTitles }) => {
+// MODIFIED StaffTable WITH FIXES FOR SCROLLING AND VISIBILITY
+export const StaffTable = ({ serviceKey, formData, isReadOnly, handleStaffChange, handleAddStaffRow, handleRemoveStaffRow, jobTitles, onOpenMoveDeptModal, onOpenTransferFacModal }) => {
     const staffList = formData[serviceKey] || [];
     return (
         <div>
-            <h4 className="text-lg font-semibold mb-4 text-sky-800 bg-sky-50 px-4 py-2 border border-sky-100 rounded-md">معلومات الكادر بالاسم ({staffList.length})</h4>
-            <div className="overflow-x-auto bg-white border rounded shadow-sm">
-                <table className="min-w-full border-collapse text-sm">
+            <h4 className="text-lg font-semibold mb-4 text-sky-800 bg-sky-50 px-4 py-2 border border-sky-100 rounded-md flex items-center justify-between">
+                <span>معلومات الكادر بالاسم ({staffList.length})</span>
+            </h4>
+            
+            {/* Removed overflow-x-auto to prevent scrollbars. The table will now fluidly fit the container. */}
+            <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+                {/* Removed table-fixed and min-w to allow natural fluid squeezing */}
+                <table className="w-full border-collapse text-sm">
                     <thead className="bg-sky-100/50">
                         <tr>
-                            <th className="border p-2 text-right text-sky-800">الاسم</th>
-                            <th className="border p-2 text-right text-sky-800">الوصف الوظيفي</th>
-                            <th className="border p-2 text-right text-sky-800">هل مدرب</th>
-                            <th className="border p-2 text-right text-sky-800">تاريخ اخر تدريب</th>
-                            <th className="border p-2 text-right text-sky-800">رقم الهاتف</th>
-                            <th className="border p-2 text-center text-sky-800 w-16">إجراء</th>
+                            <th className="border p-2 text-right text-sky-800 w-[25%]">الاسم</th>
+                            <th className="border p-2 text-right text-sky-800 w-[20%]">الوصف الوظيفي</th>
+                            <th className="border p-2 text-right text-sky-800 w-[12%]">هل مدرب</th>
+                            <th className="border p-2 text-right text-sky-800 w-[18%]">تاريخ اخر تدريب</th>
+                            <th className="border p-2 text-right text-sky-800 w-[15%]">رقم الهاتف</th>
+                            <th className="border p-2 text-center text-sky-800 w-[10%]">إجراء</th>
                         </tr>
                     </thead>
                     <tbody>
                         {staffList.map((staff, index) => (
                             <tr key={index} className="hover:bg-gray-50">
-                                <td className="border p-1"><Input name="name" value={staff.name} onChange={(e) => handleStaffChange(serviceKey, index, e)} disabled={isReadOnly} /></td>
                                 <td className="border p-1">
-                                    <Select name="job_title" value={staff.job_title} onChange={(e) => handleStaffChange(serviceKey, index, e)} disabled={isReadOnly}>
+                                    <Input 
+                                        className="w-full text-sm" 
+                                        name="name" 
+                                        value={staff.name} 
+                                        onChange={(e) => handleStaffChange(serviceKey, index, e)} 
+                                        disabled={isReadOnly} 
+                                    />
+                                </td>
+                                <td className="border p-1">
+                                    <Select 
+                                        className="w-full text-sm px-1" 
+                                        name="job_title" 
+                                        value={staff.job_title || ''} 
+                                        onChange={(e) => handleStaffChange(serviceKey, index, e)} 
+                                        disabled={isReadOnly}
+                                    >
                                         <option value="">اختر الوصف</option>
                                         {jobTitles.map(t => <option key={t} value={t}>{t}</option>)}
+                                        {/* Fallback to display custom/legacy job titles if not in standard list */}
+                                        {staff.job_title && !jobTitles.includes(staff.job_title) && (
+                                            <option value={staff.job_title}>{staff.job_title}</option>
+                                        )}
                                     </Select>
                                 </td>
-                                <td className="border p-1"><Select name="is_trained" value={staff.is_trained} onChange={(e) => handleStaffChange(serviceKey, index, e)} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option><option value="Planned">مخططة</option></Select></td>
-                                <td className="border p-1"><Input type="date" name="training_date" value={staff.training_date} onChange={(e) => handleStaffChange(serviceKey, index, e)} disabled={staff.is_trained !== 'Yes' || isReadOnly} /></td>
-                                <td className="border p-1"><Input type="tel" name="phone" value={staff.phone} onChange={(e) => handleStaffChange(serviceKey, index, e)} disabled={isReadOnly} /></td>
-                                <td className="border p-1 text-center"><Button size="sm" variant="danger" type="button" onClick={(e) => handleRemoveStaffRow(serviceKey, e, index)} disabled={isReadOnly} className="w-full">حذف</Button></td>
+                                <td className="border p-1">
+                                    <Select 
+                                        className="w-full text-sm px-1" 
+                                        name="is_trained" 
+                                        value={staff.is_trained} 
+                                        onChange={(e) => handleStaffChange(serviceKey, index, e)} 
+                                        disabled={isReadOnly}
+                                    >
+                                        <option value="Yes">نعم</option>
+                                        <option value="No">لا</option>
+                                        <option value="Planned">مخططة</option>
+                                    </Select>
+                                </td>
+                                <td className="border p-1">
+                                    <Input 
+                                        className="w-full text-sm px-1" 
+                                        type="date" 
+                                        name="training_date" 
+                                        value={staff.training_date} 
+                                        onChange={(e) => handleStaffChange(serviceKey, index, e)} 
+                                        disabled={staff.is_trained !== 'Yes' || isReadOnly} 
+                                    />
+                                </td>
+                                <td className="border p-1">
+                                    <Input 
+                                        className="w-full text-sm px-1" 
+                                        type="tel" 
+                                        name="phone" 
+                                        value={staff.phone} 
+                                        onChange={(e) => handleStaffChange(serviceKey, index, e)} 
+                                        disabled={isReadOnly} 
+                                    />
+                                </td>
+                                <td className="border p-1 text-center">
+                                    <Button 
+                                        size="sm" 
+                                        variant="danger" 
+                                        type="button" 
+                                        onClick={(e) => { e.preventDefault(); handleRemoveStaffRow(serviceKey, e, index); }} 
+                                        disabled={isReadOnly} 
+                                        className="w-full px-1 py-1.5 text-xs"
+                                    >
+                                        حذف
+                                    </Button>
+                                </td>
                             </tr>
                         ))}
+                        {staffList.length === 0 && (
+                            <tr><td colSpan="6" className="text-center p-4 text-gray-500 bg-gray-50">لا توجد كوادر مسجلة.</td></tr>
+                        )}
                     </tbody>
                 </table>
             </div>
-            <Button type="button" onClick={(e) => handleAddStaffRow(serviceKey, e)} variant="secondary" className="mt-3 font-bold shadow-sm" disabled={isReadOnly}>+ إضافة كادر</Button>
+
+            <div className="flex gap-2 mt-4 flex-wrap">
+                <Button type="button" onClick={(e) => { e.preventDefault(); handleAddStaffRow(serviceKey, e); }} variant="secondary" className="font-bold shadow-sm" disabled={isReadOnly}>
+                    + إضافة كادر يدوياً
+                </Button>
+                {onOpenMoveDeptModal && (
+                    <Button 
+                        type="button" 
+                        onClick={(e) => { e.preventDefault(); onOpenMoveDeptModal(serviceKey); }} 
+                        variant="secondary" 
+                        className="font-bold shadow-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200" 
+                        disabled={isReadOnly}
+                    >
+                        <ArrowRightLeft className="w-4 h-4 mr-2 inline" /> نقل لقسم آخر
+                    </Button>
+                )}
+                {onOpenTransferFacModal && (
+                    <Button 
+                        type="button" 
+                        onClick={(e) => { e.preventDefault(); onOpenTransferFacModal(serviceKey); }} 
+                        variant="secondary" 
+                        className="font-bold shadow-sm bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200" 
+                        disabled={isReadOnly}
+                    >
+                        <Building2 className="w-4 h-4 mr-2 inline" /> نقل لمنشأة أخرى
+                    </Button>
+                )}
+            </div>
         </div>
     );
 };
-
-export const IMNCIFormFields = ({ formData, handleChange, handleStaffChange, handleAddStaffRow, handleRemoveStaffRow, isReadOnly = false }) => {
+export const IMNCIFormFields = ({ formData, handleChange, handleStaffChange, handleAddStaffRow, handleRemoveStaffRow, isReadOnly = false, onOpenMoveDeptModal, onOpenTransferFacModal }) => {
     const jobTitles = ['طبيب', 'مساعد طبي', 'ممرض معالج', 'مسؤول تغذية', 'زائرة صحية'];
 
     return (
@@ -947,7 +1308,6 @@ export const IMNCIFormFields = ({ formData, handleChange, handleStaffChange, han
                     </Select>
                 </FormGroup>
 
-                {/* Always show the nested fields */}
                 <div className="space-y-6 animate-fade-in pt-4 border-t border-gray-200">
                     <div>
                         <h4 className="text-lg font-semibold mb-4 text-sky-800 bg-sky-50 px-4 py-2 border border-sky-100 rounded-md">إحصائية الكوادر الطبية</h4>
@@ -984,6 +1344,8 @@ export const IMNCIFormFields = ({ formData, handleChange, handleStaffChange, han
                         handleAddStaffRow={handleAddStaffRow} 
                         handleRemoveStaffRow={handleRemoveStaffRow} 
                         jobTitles={jobTitles} 
+                        onOpenMoveDeptModal={onOpenMoveDeptModal}
+                        onOpenTransferFacModal={onOpenTransferFacModal}
                     />
 
                     <hr className="border-gray-200" />
@@ -1025,7 +1387,7 @@ export const IMNCIFormFields = ({ formData, handleChange, handleStaffChange, han
     );
 };
 
-export const EENCFormFields = ({ formData, handleChange, handleStaffChange, handleAddStaffRow, handleRemoveStaffRow, isReadOnly = false }) => {
+export const EENCFormFields = ({ formData, handleChange, handleStaffChange, handleAddStaffRow, handleRemoveStaffRow, isReadOnly = false, onOpenMoveDeptModal, onOpenTransferFacModal }) => {
     const jobTitles = ['طبيب أطفال', 'طبيب نساء وتوليد', 'طبيب عمومي', 'قابلة', 'ممرض', 'مساعد طبي'];
 
     return (
@@ -1055,6 +1417,8 @@ export const EENCFormFields = ({ formData, handleChange, handleStaffChange, hand
                         handleAddStaffRow={handleAddStaffRow} 
                         handleRemoveStaffRow={handleRemoveStaffRow} 
                         jobTitles={jobTitles} 
+                        onOpenMoveDeptModal={onOpenMoveDeptModal}
+                        onOpenTransferFacModal={onOpenTransferFacModal}
                     />
 
                     <hr className="border-gray-200" />
@@ -1076,7 +1440,7 @@ export const EENCFormFields = ({ formData, handleChange, handleStaffChange, hand
     );
 };
 
-export const NeonatalFormFields = ({ formData, handleChange, handleStaffChange, handleAddStaffRow, handleRemoveStaffRow, isReadOnly = false }) => {
+export const NeonatalFormFields = ({ formData, handleChange, handleStaffChange, handleAddStaffRow, handleRemoveStaffRow, isReadOnly = false, onOpenMoveDeptModal, onOpenTransferFacModal }) => {
     const jobTitles = ['اختصاصي أطفال', 'طبيب أطفال', 'طبيب عمومي', 'ممرض عناية مكثفة', 'ممرض', 'قابلة'];
 
     return (
@@ -1088,7 +1452,6 @@ export const NeonatalFormFields = ({ formData, handleChange, handleStaffChange, 
 
                 <div className="space-y-8 animate-fade-in">
                     
-                    {/* --- DEDICATED LEVEL OF CARE QUESTIONS --- */}
                     <div className="bg-gray-50 p-5 rounded-xl border border-gray-200 space-y-6">
                         <h4 className="text-md font-extrabold text-sky-800 mb-2 border-b border-gray-200 pb-3">مستويات الرعاية لحديثي الولادة</h4>
                         
@@ -1131,6 +1494,8 @@ export const NeonatalFormFields = ({ formData, handleChange, handleStaffChange, 
                         handleAddStaffRow={handleAddStaffRow} 
                         handleRemoveStaffRow={handleRemoveStaffRow} 
                         jobTitles={jobTitles} 
+                        onOpenMoveDeptModal={onOpenMoveDeptModal}
+                        onOpenTransferFacModal={onOpenTransferFacModal}
                     />
 
                     <hr className="border-gray-200" />
@@ -1206,7 +1571,7 @@ const CRITICAL_CARE_STAFF_CATEGORIES = [
     { key: 'nurse_diploma', label: 'ممرض (دبلوم)' },
 ];
 
-export const CriticalCareFormFields = ({ formData, handleChange, handleStaffChange, handleAddStaffRow, handleRemoveStaffRow, isReadOnly = false }) => {
+export const CriticalCareFormFields = ({ formData, handleChange, handleStaffChange, handleAddStaffRow, handleRemoveStaffRow, isReadOnly = false, onOpenMoveDeptModal, onOpenTransferFacModal }) => {
     const jobTitles = ['اختصاصي أطفال', 'نائب اختصاصي أطفال', 'طبيب عمومي', 'طبيب إمتياز', 'ممرض (بكلاريوس)', 'ممرض (دبلوم)'];
     
     return (
@@ -1265,6 +1630,8 @@ export const CriticalCareFormFields = ({ formData, handleChange, handleStaffChan
                             handleAddStaffRow={handleAddStaffRow} 
                             handleRemoveStaffRow={handleRemoveStaffRow} 
                             jobTitles={jobTitles} 
+                            onOpenMoveDeptModal={onOpenMoveDeptModal}
+                            onOpenTransferFacModal={onOpenTransferFacModal}
                         />
 
                         <hr className="border-sky-200 my-4" />

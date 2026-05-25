@@ -34,8 +34,15 @@ const IMNCI_SKILL_GROUPS = {
     group3: { title: "Number of training sessions on Malnutrition signs Assessment", keys: ['skill_weight', 'skill_height', 'skill_muac', 'skill_wfh', 'skill_edema'], labels: ['Weight measurement training sessions', 'Height measurement training sessions', 'MUAC measurement training sessions', 'Z-Score measurement training sessions', 'Lower Limb Edema check training sessions'], color: '#f59e0b' }
 };
 
+// NEW: Added specific group definitions for EENC Visit Reports matrix
+const EENC_SKILL_GROUPS = {
+    group1: { title: "Number of training sessions on Preparation & General Skills", keys: ['skill_record_form', 'skill_pre_handwash', 'skill_pre_equip'], labels: ['Recording form use', 'Hand washing', 'Equipment preparation'], color: '#3b82f6' },
+    group2: { title: "Number of training sessions on Early Care & Cord Management", keys: ['skill_drying', 'skill_skin_to_skin', 'skill_cord_pulse_check', 'skill_clamp_placement'], labels: ['Drying', 'Skin-to-skin contact', 'Cord pulse check', 'Clamp placement'], color: '#10b981' },
+    group3: { title: "Number of training sessions on Resuscitation", keys: ['skill_suction', 'skill_transfer', 'skill_airway', 'skill_ambubag_placement', 'skill_ambubag_use', 'skill_ventilation_rate'], labels: ['Suctioning', 'Baby transfer', 'Opening airway', 'Ambu bag placement', 'Ambu bag use', 'Ventilation rate'], color: '#f59e0b' }
+};
+
 const EENC_SKILLS_LABELS = {
-    skill_pre_handwash: "Hand Washing", skill_pre_equip: "Equipment Preparation", skill_drying: "Drying", skill_skin_to_skin: "Skin-to-Skin Contact", skill_suction: "Suctioning", skill_cord_pulse_check: "Cord Pulse Check", skill_clamp_placement: "Clamp Placement", skill_transfer: "Baby Transfer", skill_airway: "Opening Airway", skill_ambubag_placement: "Ambu Bag Placement", skill_ambubag_use: "Ambu Bag Use", skill_ventilation_rate: "Ventilation Rate", skill_correction_steps: "Corrective Steps",
+    skill_pre_handwash: "Hand Washing", skill_pre_equip: "Equipment Preparation", skill_drying: "Drying", skill_skin_to_skin: "Skin-to-Skin Contact", skill_suction: "Suctioning", skill_cord_pulse_check: "Cord Pulse Check", skill_clamp_placement: "Clamp Placement", skill_transfer: "Baby Transfer", skill_airway: "Opening Airway", skill_ambubag_placement: "Ambu Bag Placement", skill_ambubag_use: "Ambu Bag Use", skill_ventilation_rate: "Ventilation Rate", skill_correction_steps: "Corrective Steps", skill_record_form: "Recording Form Use"
 };
 
 // --- Helpers ---
@@ -59,7 +66,7 @@ const MentorshipDashboard = ({
     const [activeEencTab, setActiveEencTab] = useState('skills'); 
     const [activeImnciTab, setActiveImnciTab] = useState('skills'); 
     
-    // --- NEW: State for Admin custom date range ---
+    // --- State for Admin custom date range ---
     const [customStartDate, setCustomStartDate] = useState('');
     const [customEndDate, setCustomEndDate] = useState('');
 
@@ -79,13 +86,11 @@ const MentorshipDashboard = ({
     
     const recalcCacheRef = useRef({});
 
-    // --- UPDATED: Accepts customStart and customEnd ---
     const checkDateFilter = useCallback((dateString, dateFilt, customStart, customEnd) => {
         if (!dateString) return false;
         const d = new Date(dateString);
         if (isNaN(d.getTime())) return false;
         
-        // NEW: Apply custom Start/End Date override from Admin Tab
         if (customStart || customEnd) {
             let isValid = true;
             if (customStart) {
@@ -173,7 +178,7 @@ const MentorshipDashboard = ({
         if (activeFacilityId) filtered = filtered.filter(r => r.facilityId === activeFacilityId);
         if (activeProject) filtered = filtered.filter(r => r.project === activeProject);
         
-        // UPDATED: Pass admin dates
+        // Apply admin dates
         filtered = filtered.filter(r => checkDateFilter(r.visitDate || r.date || r.visit_date, dateFilter, customStartDate, customEndDate));
 
         const totalVisits = filtered.length;
@@ -202,9 +207,11 @@ const MentorshipDashboard = ({
         
         filtered.forEach(r => {
             const data = r.fullData || r; 
-            if (r.service === 'IMNCI' && data.trained_skills) {
+            // Count trained skills globally for both IMNCI and EENC
+            if (data.trained_skills) {
                 Object.values(data.trained_skills).forEach(val => { if (val === true || val === 'yes') totalSkillsTrained++; });
             }
+            
             if (data.challenges_table) {
                 let locName = 'Unknown';
                 if (dynamicLocationLevel === 'State') locName = STATE_LOCALITIES?.[r.state]?.[language === 'ar' ? 'ar' : 'en'] || r.state || 'Unknown';
@@ -233,17 +240,19 @@ const MentorshipDashboard = ({
                 let count = 0;
                 visits.forEach(r => { 
                     const data = r.fullData || r;
-                    if (r.service === 'IMNCI' && data.trained_skills?.[key]) count++; 
+                    if (data.trained_skills?.[key]) count++; 
                 });
                 return { label: groupDef.labels[idx], count, pct: totalCountOverall > 0 ? Math.round((count / totalCountOverall) * 100) : 0 };
             });
             return { details }; 
         };
 
+        const activeSkillGroups = activeService === 'IMNCI' ? IMNCI_SKILL_GROUPS : EENC_SKILL_GROUPS;
+
         const trainedSkillsGroups = {
-            group1: processSkillGroup(IMNCI_SKILL_GROUPS.group1, filtered, totalSkillsTrained),
-            group2: processSkillGroup(IMNCI_SKILL_GROUPS.group2, filtered, totalSkillsTrained),
-            group3: processSkillGroup(IMNCI_SKILL_GROUPS.group3, filtered, totalSkillsTrained)
+            group1: processSkillGroup(activeSkillGroups.group1, filtered, totalSkillsTrained),
+            group2: processSkillGroup(activeSkillGroups.group2, filtered, totalSkillsTrained),
+            group3: processSkillGroup(activeSkillGroups.group3, filtered, totalSkillsTrained)
         };
 
         const facilityMap = {}; const skillKeys = new Set();
@@ -290,7 +299,6 @@ const MentorshipDashboard = ({
 
     const imnciKpiHelper = useCallback((submissions) => {
         const scores = { overall: [], assessment: [], decision: [], treatment: [], handsOnWeight: [], handsOnTemp: [], handsOnHeight: [], respiratoryRateCalculation: [], dehydrationAssessment: [], handsOnMUAC: [], handsOnWFH: [], handsOnPallor: [], pneuAmox: [], diarOrs: [], diarZinc: [], anemiaIron: [], immunization: [], vitaminAssessment: [], malariaCoartem: [], returnImm: [], returnFu: [], recordSigns: [], recordClassifications: [], recordTreatments: [], vitalSigns: [], dangerSigns: [], mainSymptoms: [], malnutrition: [], otherProblems: [], measurementSkills: [], malnutritionAnemiaSkills: [] };
-        // UPDATED: Use date and facilityId to group visits uniquely
         const uniqueVisits = new Set(submissions.map(s => `${s.facilityId || 'unk'}_${s.date || 'unk'}`));
         const uniqueWorkers = new Set(submissions.map(s => `${s.facilityId || 'unk'}_${s.staff || 'unk'}`));
         const skillStats = {};
@@ -371,7 +379,6 @@ const MentorshipDashboard = ({
 
     const eencKpiHelper = useCallback((submissions) => {
         const scores = { overall: [], preparation: [], drying: [], normal_breathing: [], resuscitation: [], inf_wash1: [], inf_wash2: [], inf_gloves: [], prep_towel: [], prep_equip: [], prep_ambu: [], care_dry: [], care_skin: [], care_cover: [], cord_hygiene: [], cord_delay: [], cord_clamp: [], bf_advice: [], resus_head: [], resus_mask: [], resus_chest: [], resus_rate: [] };
-        // UPDATED: Use date and facilityId to group visits uniquely
         const uniqueVisits = new Set(submissions.map(s => `${s.facilityId || 'unk'}_${s.date || 'unk'}`));
         const uniqueWorkers = new Set(submissions.map(s => `${s.facilityId || 'unk'}_${s.staff || 'unk'}`));
 
@@ -472,7 +479,6 @@ const MentorshipDashboard = ({
         };
     }, []);
 
-    // Filtered lists
     const serviceCompletedSubmissions = useMemo(() => (reCalculatedSubmissions || []).filter(sub => 
         (activeService === 'EENC' ? (sub.service === 'EENC' || sub.service === 'EENC_MOTHERS') : 
          activeService === 'IMNCI' ? (sub.service === 'IMNCI' || sub.service === 'IMNCI_MOTHERS') : 
@@ -480,7 +486,6 @@ const MentorshipDashboard = ({
         && sub.status === 'complete'
     ), [reCalculatedSubmissions, activeService]);
 
-    // Select Dropdown Options
     const stateOptions = useMemo(() => !STATE_LOCALITIES ? [] : Object.keys(STATE_LOCALITIES).map(k => ({ key: k, name: STATE_LOCALITIES?.[k]?.[language === 'ar' ? 'ar' : 'en'] || k })).sort((a, b) => a.name.localeCompare(b.name, language)), [STATE_LOCALITIES, language]);
     
     const localityOptions = useMemo(() => (!activeState || !STATE_LOCALITIES?.[activeState]?.localities) ? [] : STATE_LOCALITIES?.[activeState]?.localities.map(l => ({ key: l.en, name: l[language === 'ar' ? 'ar' : 'en'] || l.en })).sort((a, b) => a.name.localeCompare(b.name, language)), [activeState, STATE_LOCALITIES, language]);
@@ -513,12 +518,9 @@ const MentorshipDashboard = ({
         return Array.from(types).map(t => ({ key: t, name: t })).sort((a, b) => a.name.localeCompare(b.name));
     }, [serviceCompletedSubmissions, activeState, activeLocality, activeFacilityId, activeProject]);
 
-    // Active Data
     const filteredSubmissions = useMemo(() => serviceCompletedSubmissions.filter(sub => {
-        // Robust state match preventing Arabic mismatch drop
         const stateMatch = !activeState || sub.state === activeState || sub.state === STATE_LOCALITIES[activeState]?.ar;
         
-        // Robust locality match preventing Arabic mismatch drop
         let localityMatch = !activeLocality;
         if (activeLocality) {
             const stateObj = STATE_LOCALITIES[activeState] || STATE_LOCALITIES[sub.state] || Object.values(STATE_LOCALITIES || {}).find(s => s.ar === sub.state);
@@ -531,7 +533,6 @@ const MentorshipDashboard = ({
         const projectMatch = !activeProject || sub.project === activeProject;
         const typeMatch = !activeWorkerType || sub.workerType === activeWorkerType;
         
-        // UPDATED: Pass admin dates
         const dateMatch = checkDateFilter(sub.date || sub.sessionDate || sub.visitDate, dateFilter, customStartDate, customEndDate);
         
         return stateMatch && localityMatch && facilityMatch && workerMatch && projectMatch && typeMatch && dateMatch;
@@ -557,7 +558,6 @@ const MentorshipDashboard = ({
             if (visitNum === 'N/A') return acc;
             if (!acc[visitNum]) acc[visitNum] = { cases: 0, visits: new Set() };
             acc[visitNum].cases += 1;
-            // UPDATED: Use date and facilityId to count unique visits in the volume chart
             acc[visitNum].visits.add(`${sub.facilityId || 'unk'}_${sub.date || 'unk'}`);
             return acc;
         }, {});
@@ -719,7 +719,6 @@ const MentorshipDashboard = ({
         }).sort((a, b) => a.stateName.localeCompare(b.stateName, language));
     }, [filteredSubmissions, eencMotherKpiHelper, imnciMotherKpiHelper, activeService, STATE_LOCALITIES, activeState, language]);
 
-    // --- NORMALIZED KPI BY WORKER TYPE LOGIC ---
     const kpisByWorkerType = useMemo(() => {
         const kpisHelper = activeService === 'IMNCI' ? imnciKpiHelper : (activeService === 'EENC' ? eencKpiHelper : null);
         if (!kpisHelper) return [];
@@ -727,7 +726,6 @@ const MentorshipDashboard = ({
         const normalizeWt = (wt) => {
             if (!wt || wt === 'N/A') return 'Unknown Title';
             const lower = wt.toLowerCase();
-            // Combine General Practitioner, Medical Officer, and Arabic equivalents
             if (lower.includes('general practitioner') || lower.includes('general practioner') || lower.includes('medical officer') || wt === 'طبيب' || wt === 'طبيب عمومي') return 'Medical Officer';
             if (lower.includes('medical assist') || wt === 'مساعد طبي') return 'Medical Assistant';
             if (lower.includes('nurse') || wt === 'ممرض') return 'Nurse';
@@ -762,15 +760,11 @@ const MentorshipDashboard = ({
         { label: 'Infection Control', getValue: (k) => calculateAverage([k.avgInfWash1, k.avgInfWash2, k.avgInfGloves]) }, { label: 'Cord Management (Breathing Babies)', getValue: (k) => calculateAverage([k.avgCordHygiene, k.avgCordDelay, k.avgCordClamp]) }, { label: 'Early Breastfeeding Advice', getValue: (k) => k.avgBfAdvice }
     ];
 
-    // --- Loading State Check ---
     const safeSubmissions = allSubmissions || [];
     const safeVisitReports = visitReports || [];
 
     const isEmptyData = safeSubmissions.length === 0 && safeVisitReports.length === 0;
 
-    // Only show the full-screen spinner if the app explicitly says it's loading AND we have zero cached data to show.
-    // We removed the strict 'hasCoreData' check because optional arrays like visitReports might be null in public views,
-    // which previously caused an infinite loading loop.
     if (isLoading && isEmptyData) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] bg-slate-50/50 p-6">
@@ -902,7 +896,7 @@ const MentorshipDashboard = ({
 
                 {activeTab === 'visit_reports' && (
                     <VisitReportDashboardTab 
-                        activeService={activeService} visitReportStats={visitReportStats} geographicLevelName={geographicLevelName} dynamicLocationLabel={dynamicLocationLabel} dynamicLocationLevel={dynamicLocationLevel} renderStatusCell={renderStatusCell} IMNCI_SKILL_GROUPS={IMNCI_SKILL_GROUPS} EENC_SKILLS_LABELS={EENC_SKILLS_LABELS} KpiCard={KpiCard} KpiBarChart={KpiBarChart} ScoreText={ScoreText} CopyImageButton={CopyImageButton} scopeTitle={scopeTitle}
+                        activeService={activeService} visitReportStats={visitReportStats} geographicLevelName={geographicLevelName} dynamicLocationLabel={dynamicLocationLabel} dynamicLocationLevel={dynamicLocationLevel} renderStatusCell={renderStatusCell} IMNCI_SKILL_GROUPS={IMNCI_SKILL_GROUPS} EENC_SKILL_GROUPS={EENC_SKILL_GROUPS} EENC_SKILLS_LABELS={EENC_SKILLS_LABELS} KpiCard={KpiCard} KpiBarChart={KpiBarChart} ScoreText={ScoreText} CopyImageButton={CopyImageButton} scopeTitle={scopeTitle}
                     />
                 )}
             </div>

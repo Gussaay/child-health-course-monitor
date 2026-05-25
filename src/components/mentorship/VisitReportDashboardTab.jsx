@@ -3,30 +3,14 @@ import React, { useRef } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
 import { useTranslation } from './LanguageContext'; 
 import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    BarElement,
-    Title,
-    Tooltip,
-    Legend,
+    Chart as ChartJS, CategoryScale, LinearScale, PointElement,
+    LineElement, BarElement, Title, Tooltip, Legend,
 } from 'chart.js';
 
-// Register ChartJS elements
 ChartJS.register(
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    BarElement,
-    Title,
-    Tooltip,
-    Legend
+    CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend
 );
 
-// --- Local Component: Row containing Detailed Card (Left) and Horizontal Bar Chart (Right) ---
 const TrainedGroupRow = ({ title, details, color, ScoreText, CopyImageButton }) => {
     const { t, language } = useTranslation();
     const isAr = language === 'ar';
@@ -45,32 +29,17 @@ const TrainedGroupRow = ({ title, details, color, ScoreText, CopyImageButton }) 
     };
 
     const options = {
-        indexAxis: 'y', // Horizontal Bar Chart
+        indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
         animation: { duration: 1000, easing: 'easeOutQuart' },
         plugins: { 
             legend: { display: false },
-            tooltip: {
-                backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                titleFont: { size: 13, family: "'Inter', sans-serif" },
-                bodyFont: { size: 12, family: "'Inter', sans-serif", weight: 'bold' },
-                padding: 10,
-                cornerRadius: 8,
-            }
+            tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.95)', titleFont: { size: 13, family: "'Inter', sans-serif" }, bodyFont: { size: 12, family: "'Inter', sans-serif", weight: 'bold' }, padding: 10, cornerRadius: 8 }
         },
         scales: {
-            x: { 
-                reverse: isAr,
-                beginAtZero: true, 
-                grid: { color: '#e2e8f0', drawBorder: false },
-                ticks: { precision: 0, color: '#475569', font: { family: "'Inter', sans-serif", weight: '500' } } 
-            },
-            y: { 
-                position: isAr ? 'right' : 'left',
-                grid: { display: false, drawBorder: false },
-                ticks: { color: '#334155', font: { size: 11, family: "'Inter', sans-serif", weight: 'bold' } } 
-            }
+            x: { reverse: isAr, beginAtZero: true, grid: { color: '#e2e8f0', drawBorder: false }, ticks: { precision: 0, color: '#475569', font: { family: "'Inter', sans-serif", weight: '500' } } },
+            y: { position: isAr ? 'right' : 'left', grid: { display: false, drawBorder: false }, ticks: { color: '#334155', font: { size: 11, family: "'Inter', sans-serif", weight: 'bold' } } }
         }
     };
 
@@ -114,6 +83,7 @@ const VisitReportDashboardTab = ({
     dynamicLocationLevel,
     renderStatusCell,
     IMNCI_SKILL_GROUPS,
+    EENC_SKILL_GROUPS,
     EENC_SKILLS_LABELS,
     KpiCard,
     KpiBarChart,
@@ -125,302 +95,279 @@ const VisitReportDashboardTab = ({
 
     if (!visitReportStats) return null;
 
-    // --- AGGREGATE NEW KPIs DATA (Info System & Drug Availability) ---
-    const infoSystemAgg = { total_examined: 0, examined_by_trained: 0, completed_forms: 0, completed_followup_forms: 0 };
-    const drugAvailabilityOverall = { total: 0, amoxicillin: 0, zinc: 0, ors: 0, coartem: 0 };
+    const rawReports = visitReportStats.rawReports;
+    const isIMNCI = activeService === 'IMNCI';
+
+    const infoTotalKey = isIMNCI ? 'total_examined' : 'total_deliveries';
+    const infoTrainedKey = isIMNCI ? 'examined_by_trained' : 'deliveries_by_trained';
+    const infoTotalLabel = isIMNCI ? 'total examined' : 'total deliveries';
+    const infoTrainedLabel = isIMNCI ? 'Children seen by IMNCI trained cadre' : 'Deliveries attended by EENC trained cadre';
+    
+    const drugList = isIMNCI 
+        ? [ { key: 'amoxicillin', label: 'Amoxicillin', color: '#10b981' }, { key: 'zinc', label: 'Zinc', color: '#3b82f6' }, { key: 'ors', label: 'ORS', color: '#8b5cf6' }, { key: 'coartem', label: 'Coartem', color: '#f59e0b' } ]
+        : [ { key: 'surgical_gloves', label: 'Surgical Gloves', color: '#10b981' }, { key: 'vitamin_k', label: 'Vitamin K', color: '#3b82f6' }, { key: 'tetracycline', label: 'Tetracycline', color: '#8b5cf6' }, { key: 'ambu_bag', label: 'Ambu Bag', color: '#f59e0b' }, { key: 'cord_clamp', label: 'Cord Clamp', color: '#ec4899' }, { key: 'manual_suction', label: 'Manual Suction', color: '#0ea5e9'} ];
+
+    const infoSystemAgg = { total: 0, trained: 0, completed_forms: 0, completed_followup_forms: 0, skin_to_skin_90min_count: 0, resuscitated_with_ambu_count: 0 };
+    const drugAvailabilityOverall = { total: 0, [drugList[0].key]: 0, [drugList[1].key]: 0, [drugList[2].key]: 0, [drugList[3].key]: 0 };
+    if (!isIMNCI) {
+        drugAvailabilityOverall[drugList[4].key] = 0;
+        drugAvailabilityOverall[drugList[5].key] = 0;
+    }
     
     const infoSystemByVisit = { 
-        1: { total_examined: 0, examined_by_trained: 0, completed_forms: 0, completed_followup_forms: 0 }, 
-        2: { total_examined: 0, examined_by_trained: 0, completed_forms: 0, completed_followup_forms: 0 }, 
-        3: { total_examined: 0, examined_by_trained: 0, completed_forms: 0, completed_followup_forms: 0 }, 
-        4: { total_examined: 0, examined_by_trained: 0, completed_forms: 0, completed_followup_forms: 0 } 
+        1: { total: 0, trained: 0, completed_forms: 0, completed_followup_forms: 0, skin_to_skin_90min_count: 0, resuscitated_with_ambu_count: 0 }, 
+        2: { total: 0, trained: 0, completed_forms: 0, completed_followup_forms: 0, skin_to_skin_90min_count: 0, resuscitated_with_ambu_count: 0 }, 
+        3: { total: 0, trained: 0, completed_forms: 0, completed_followup_forms: 0, skin_to_skin_90min_count: 0, resuscitated_with_ambu_count: 0 }, 
+        4: { total: 0, trained: 0, completed_forms: 0, completed_followup_forms: 0, skin_to_skin_90min_count: 0, resuscitated_with_ambu_count: 0 } 
     };
 
     const drugAvailabilityByVisit = { 
-        1: { total: 0, amoxicillin: 0, zinc: 0, ors: 0, coartem: 0 }, 
-        2: { total: 0, amoxicillin: 0, zinc: 0, ors: 0, coartem: 0 }, 
-        3: { total: 0, amoxicillin: 0, zinc: 0, ors: 0, coartem: 0 }, 
-        4: { total: 0, amoxicillin: 0, zinc: 0, ors: 0, coartem: 0 } 
+        1: { total: 0, [drugList[0].key]: 0, [drugList[1].key]: 0, [drugList[2].key]: 0, [drugList[3].key]: 0 }, 
+        2: { total: 0, [drugList[0].key]: 0, [drugList[1].key]: 0, [drugList[2].key]: 0, [drugList[3].key]: 0 }, 
+        3: { total: 0, [drugList[0].key]: 0, [drugList[1].key]: 0, [drugList[2].key]: 0, [drugList[3].key]: 0 }, 
+        4: { total: 0, [drugList[0].key]: 0, [drugList[1].key]: 0, [drugList[2].key]: 0, [drugList[3].key]: 0 } 
     };
 
-    const rawReports = visitReportStats.rawReports;
+    if (!isIMNCI) {
+        [1,2,3,4].forEach(v => {
+            drugAvailabilityByVisit[v][drugList[4].key] = 0;
+            drugAvailabilityByVisit[v][drugList[5].key] = 0;
+        });
+    }
 
-    if (activeService === 'IMNCI' && rawReports) {
+    if (rawReports) {
         rawReports.forEach(rep => {
             const data = rep.fullData || rep;
             const vNum = parseInt(data.visitNumber) || parseInt(rep.visitNumber) || 1;
             
-            // Aggregate Info System
             if (data.info_system) {
-                const total = Number(data.info_system.total_examined) || 0;
-                const trained = Number(data.info_system.examined_by_trained) || 0;
+                const total = Number(data.info_system[infoTotalKey]) || 0;
+                const trained = Number(data.info_system[infoTrainedKey]) || 0;
                 const forms = Number(data.info_system.completed_forms) || 0;
                 const followup = Number(data.info_system.completed_followup_forms) || 0;
+                const s2s = Number(data.info_system.skin_to_skin_90min_count) || 0;
+                const ambu = Number(data.info_system.resuscitated_with_ambu_count) || 0;
 
-                // Overall Totals
-                infoSystemAgg.total_examined += total;
-                infoSystemAgg.examined_by_trained += trained;
+                infoSystemAgg.total += total;
+                infoSystemAgg.trained += trained;
                 infoSystemAgg.completed_forms += forms;
                 infoSystemAgg.completed_followup_forms += followup;
+                infoSystemAgg.skin_to_skin_90min_count += s2s;
+                infoSystemAgg.resuscitated_with_ambu_count += ambu;
 
-                // By Visit Totals
                 if (infoSystemByVisit[vNum]) {
-                    infoSystemByVisit[vNum].total_examined += total;
-                    infoSystemByVisit[vNum].examined_by_trained += trained;
+                    infoSystemByVisit[vNum].total += total;
+                    infoSystemByVisit[vNum].trained += trained;
                     infoSystemByVisit[vNum].completed_forms += forms;
                     infoSystemByVisit[vNum].completed_followup_forms += followup;
+                    infoSystemByVisit[vNum].skin_to_skin_90min_count += s2s;
+                    infoSystemByVisit[vNum].resuscitated_with_ambu_count += ambu;
                 }
             }
 
-            // Aggregate Drug Availability 
             if (data.medication_shortage) {
                 drugAvailabilityOverall.total += 1;
                 if (drugAvailabilityByVisit[vNum]) drugAvailabilityByVisit[vNum].total += 1;
                 
-                ['amoxicillin', 'zinc', 'ors', 'coartem'].forEach(drug => {
-                    // 'no' means NO SHORTAGE (i.e. the drug WAS available)
-                    if (data.medication_shortage[drug] === 'no') {
-                        drugAvailabilityOverall[drug] += 1;
-                        if (drugAvailabilityByVisit[vNum]) drugAvailabilityByVisit[vNum][drug] += 1;
+                drugList.forEach(drug => {
+                    if (data.medication_shortage[drug.key] === 'no') {
+                        drugAvailabilityOverall[drug.key] += 1;
+                        if (drugAvailabilityByVisit[vNum]) drugAvailabilityByVisit[vNum][drug.key] += 1;
                     }
                 });
             }
         });
     }
 
-    // Calculations for OVERALL Info System Percentages
-    const pctExaminedByTrained = infoSystemAgg.total_examined ? ((infoSystemAgg.examined_by_trained / infoSystemAgg.total_examined) * 100).toFixed(1) : 0;
-    const pctCompletedForms = infoSystemAgg.examined_by_trained ? ((infoSystemAgg.completed_forms / infoSystemAgg.examined_by_trained) * 100).toFixed(1) : 0;
-    const pctFollowupForms = infoSystemAgg.examined_by_trained ? ((infoSystemAgg.completed_followup_forms / infoSystemAgg.examined_by_trained) * 100).toFixed(1) : 0;
+    const pctExaminedByTrained = infoSystemAgg.total ? ((infoSystemAgg.trained / infoSystemAgg.total) * 100).toFixed(1) : 0;
+    const pctCompletedForms = infoSystemAgg.trained ? ((infoSystemAgg.completed_forms / infoSystemAgg.trained) * 100).toFixed(1) : 0;
+    const pctFollowupForms = infoSystemAgg.trained ? ((infoSystemAgg.completed_followup_forms / infoSystemAgg.trained) * 100).toFixed(1) : 0;
+    const pctS2s = infoSystemAgg.total ? ((infoSystemAgg.skin_to_skin_90min_count / infoSystemAgg.total) * 100).toFixed(1) : 0;
+    const pctAmbu = infoSystemAgg.total ? ((infoSystemAgg.resuscitated_with_ambu_count / infoSystemAgg.total) * 100).toFixed(1) : 0;
 
-    // --- SETUP: Information System Line Chart ---
     const getInfoPct = (vNum, numeratorKey, denominatorKey) => {
         const d = infoSystemByVisit[vNum];
         return d && d[denominatorKey] > 0 ? ((d[numeratorKey] / d[denominatorKey]) * 100).toFixed(1) : null;
     };
 
     const infoLineLabels = [];
-    const infoLineDataSets = { seenByTrained: [], recordingForm: [], followup: [] };
+    const infoLineDataSets = isIMNCI 
+        ? { seenByTrained: [], recordingForm: [], followup: [] }
+        : { seenByTrained: [], followup: [], s2s: [], ambu: [] };
 
     [1, 2, 3, 4].forEach(vNum => {
         const d = infoSystemByVisit[vNum];
-        if (d.total_examined > 0 || d.examined_by_trained > 0) {
+        if (d.total > 0 || d.trained > 0) {
             infoLineLabels.push(`${t('Visit')} ${vNum}`);
-            infoLineDataSets.seenByTrained.push(getInfoPct(vNum, 'examined_by_trained', 'total_examined'));
-            infoLineDataSets.recordingForm.push(getInfoPct(vNum, 'completed_forms', 'examined_by_trained'));
-            infoLineDataSets.followup.push(getInfoPct(vNum, 'completed_followup_forms', 'examined_by_trained'));
+            infoLineDataSets.seenByTrained.push(getInfoPct(vNum, 'trained', 'total'));
+            infoLineDataSets.followup.push(getInfoPct(vNum, 'completed_followup_forms', 'trained'));
+            if (isIMNCI) {
+                infoLineDataSets.recordingForm.push(getInfoPct(vNum, 'completed_forms', 'trained'));
+            } else {
+                infoLineDataSets.s2s.push(getInfoPct(vNum, 'skin_to_skin_90min_count', 'total'));
+                infoLineDataSets.ambu.push(getInfoPct(vNum, 'resuscitated_with_ambu_count', 'total'));
+            }
         }
     });
 
     const infoSystemLineData = {
         labels: infoLineLabels,
-        datasets: [
+        datasets: isIMNCI ? [
             { label: t('Seen by Trained Cadre (%)'), data: infoLineDataSets.seenByTrained, borderColor: '#0ea5e9', backgroundColor: '#0ea5e9', tension: 0.3, pointRadius: 5 },
             { label: t('With Recording Form (%)'), data: infoLineDataSets.recordingForm, borderColor: '#8b5cf6', backgroundColor: '#8b5cf6', tension: 0.3, pointRadius: 5 },
             { label: t('Return for Follow-up (%)'), data: infoLineDataSets.followup, borderColor: '#f59e0b', backgroundColor: '#f59e0b', tension: 0.3, pointRadius: 5 }
+        ] : [
+            { label: t('Deliveries by Trained Cadre (%)'), data: infoLineDataSets.seenByTrained, borderColor: '#0ea5e9', backgroundColor: '#0ea5e9', tension: 0.3, pointRadius: 5 },
+            { label: t('90min Skin-to-Skin (%)'), data: infoLineDataSets.s2s, borderColor: '#8b5cf6', backgroundColor: '#8b5cf6', tension: 0.3, pointRadius: 5 },
+            { label: t('Resuscitated with Ambu (%)'), data: infoLineDataSets.ambu, borderColor: '#ec4899', backgroundColor: '#ec4899', tension: 0.3, pointRadius: 5 },
+            { label: t('Registered/Followed-up (%)'), data: infoLineDataSets.followup, borderColor: '#f59e0b', backgroundColor: '#f59e0b', tension: 0.3, pointRadius: 5 }
         ]
     };
 
-    // --- SETUP: Drug Availability Line Chart ---
-    const getAvailabilityPct = (vNum, drug) => {
+    const getAvailabilityPct = (vNum, drugKey) => {
         const d = drugAvailabilityByVisit[vNum];
-        return d && d.total > 0 ? ((d[drug] / d.total) * 100).toFixed(1) : null;
+        return d && d.total > 0 ? ((d[drugKey] / d.total) * 100).toFixed(1) : null;
     };
 
     const drugLineLabels = [];
-    const drugLineDataSets = { amoxicillin: [], zinc: [], ors: [], coartem: [] };
+    const drugLineDataSets = { d1: [], d2: [], d3: [], d4: [], d5: [], d6: [] };
 
     [1, 2, 3, 4].forEach(vNum => {
         if (drugAvailabilityByVisit[vNum].total > 0) {
             drugLineLabels.push(`${t('Visit')} ${vNum}`);
-            drugLineDataSets.amoxicillin.push(getAvailabilityPct(vNum, 'amoxicillin'));
-            drugLineDataSets.zinc.push(getAvailabilityPct(vNum, 'zinc'));
-            drugLineDataSets.ors.push(getAvailabilityPct(vNum, 'ors'));
-            drugLineDataSets.coartem.push(getAvailabilityPct(vNum, 'coartem'));
+            drugLineDataSets.d1.push(getAvailabilityPct(vNum, drugList[0].key));
+            drugLineDataSets.d2.push(getAvailabilityPct(vNum, drugList[1].key));
+            drugLineDataSets.d3.push(getAvailabilityPct(vNum, drugList[2].key));
+            drugLineDataSets.d4.push(getAvailabilityPct(vNum, drugList[3].key));
+            if (!isIMNCI) {
+                drugLineDataSets.d5.push(getAvailabilityPct(vNum, drugList[4].key));
+                drugLineDataSets.d6.push(getAvailabilityPct(vNum, drugList[5].key));
+            }
         }
     });
 
-    const drugLineData = {
-        labels: drugLineLabels,
-        datasets: [
-            { label: t('Amoxicillin Availability'), data: drugLineDataSets.amoxicillin, borderColor: '#10b981', backgroundColor: '#10b981', tension: 0.3, pointRadius: 5 },
-            { label: t('Zinc Availability'), data: drugLineDataSets.zinc, borderColor: '#3b82f6', backgroundColor: '#3b82f6', tension: 0.3, pointRadius: 5 },
-            { label: t('ORS Availability'), data: drugLineDataSets.ors, borderColor: '#8b5cf6', backgroundColor: '#8b5cf6', tension: 0.3, pointRadius: 5 },
-            { label: t('Coartem Availability'), data: drugLineDataSets.coartem, borderColor: '#f59e0b', backgroundColor: '#f59e0b', tension: 0.3, pointRadius: 5 }
-        ]
-    };
+    const datasetsDrug = [
+        { label: t(`${drugList[0].label} Availability`), data: drugLineDataSets.d1, borderColor: drugList[0].color, backgroundColor: drugList[0].color, tension: 0.3, pointRadius: 5 },
+        { label: t(`${drugList[1].label} Availability`), data: drugLineDataSets.d2, borderColor: drugList[1].color, backgroundColor: drugList[1].color, tension: 0.3, pointRadius: 5 },
+        { label: t(`${drugList[2].label} Availability`), data: drugLineDataSets.d3, borderColor: drugList[2].color, backgroundColor: drugList[2].color, tension: 0.3, pointRadius: 5 },
+        { label: t(`${drugList[3].label} Availability`), data: drugLineDataSets.d4, borderColor: drugList[3].color, backgroundColor: drugList[3].color, tension: 0.3, pointRadius: 5 }
+    ];
+    if (!isIMNCI) {
+        datasetsDrug.push({ label: t(`${drugList[4].label} Availability`), data: drugLineDataSets.d5, borderColor: drugList[4].color, backgroundColor: drugList[4].color, tension: 0.3, pointRadius: 5 });
+        datasetsDrug.push({ label: t(`${drugList[5].label} Availability`), data: drugLineDataSets.d6, borderColor: drugList[5].color, backgroundColor: drugList[5].color, tension: 0.3, pointRadius: 5 });
+    }
 
-    // --- Shared Line Chart Options ---
+    const drugLineData = { labels: drugLineLabels, datasets: datasetsDrug };
+
     const getLineOptions = (yAxisTitle) => ({
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: { position: 'top', labels: { font: { family: "'Inter', sans-serif", weight: 'bold' } } },
-            tooltip: { callbacks: { label: (context) => `${context.dataset.label}: ${context.raw}%` } }
-        },
-        scales: {
-            y: { beginAtZero: true, max: 100, title: { display: true, text: yAxisTitle, font: { weight: 'bold' } } },
-            x: { reverse: isAr, grid: { display: false } }
-        }
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'top', labels: { font: { family: "'Inter', sans-serif", weight: 'bold' } } }, tooltip: { callbacks: { label: (context) => `${context.dataset.label}: ${context.raw}%` } } },
+        scales: { y: { beginAtZero: true, max: 100, title: { display: true, text: yAxisTitle, font: { weight: 'bold' } } }, x: { reverse: isAr, grid: { display: false } } }
     });
+
+    const SKILL_GROUPS = isIMNCI ? IMNCI_SKILL_GROUPS : EENC_SKILL_GROUPS;
 
     return (
         <div className="animate-fade-in">
-            {activeService === 'IMNCI' ? (
+            {/* Common Top Level KPI row for both services */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <KpiCard title={t("Total Visit Reports")} value={visitReportStats.totalVisits} />
+                <KpiCard title={t("Total Number of Training Sessions")} value={visitReportStats.totalSkillsTrained} unit={`(${visitReportStats.totalVisits > 0 ? (visitReportStats.totalSkillsTrained / visitReportStats.totalVisits).toFixed(1) : 0} ${t('mean sessions per visit')})`} />
+            </div>
+
+            {!rawReports && (
+                <div className="bg-amber-50 text-amber-800 p-4 rounded-xl border border-amber-300 mb-8 font-bold text-sm" dir="rtl">
+                    ⚠️ {t('Note: To view Information System and Drug/Supply Shortage data, ensure rawReports is included.')}
+                </div>
+            )}
+
+            {/* Shared UI: Info System & Drugs logic */}
+            {rawReports && (
                 <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                        <KpiCard title={t("Total Visit Reports")} value={visitReportStats.totalVisits} />
-                        <KpiCard 
-                            title={t("Total Number of Training Sessions")} 
-                            value={visitReportStats.totalSkillsTrained} 
-                            unit={`(${visitReportStats.totalVisits > 0 ? (visitReportStats.totalSkillsTrained / visitReportStats.totalVisits).toFixed(1) : 0} ${t('mean sessions per visit')})`}
-                        />
+                    {/* Information System KPIs */}
+                    <div className="bg-white p-6 rounded-2xl shadow-md border border-black mb-8">
+                        <h4 className={`text-lg font-extrabold text-slate-800 mb-6 border-b border-black pb-2 ${isAr ? 'text-right' : 'text-left'}`}>{t('Information System KPIs (Overall)')}</h4>
+                        <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 mb-8`}>
+                            <KpiCard 
+                                title={t(infoTrainedLabel)} 
+                                value={`${pctExaminedByTrained}%`} 
+                                unit={`(${infoSystemAgg.trained} / ${infoSystemAgg.total} ${t(infoTotalLabel)})`}
+                            />
+                            {isIMNCI ? (
+                                <KpiCard 
+                                    title={t("Children with IMNCI recording form")} 
+                                    value={`${pctCompletedForms}%`} 
+                                    unit={`(${infoSystemAgg.completed_forms} / ${infoSystemAgg.trained} ${t('trained')})`}
+                                />
+                            ) : (
+                                <KpiCard 
+                                    title={t("Babies skin-to-skin for 90min")} 
+                                    value={`${pctS2s}%`} 
+                                    unit={`(${infoSystemAgg.skin_to_skin_90min_count} / ${infoSystemAgg.total} ${t('total')})`}
+                                />
+                            )}
+                            {isIMNCI ? (
+                                <KpiCard 
+                                    title={t("Children returning for follow up")} 
+                                    value={`${pctFollowupForms}%`} 
+                                    unit={`(${infoSystemAgg.completed_followup_forms} / ${infoSystemAgg.trained} ${t('trained')})`}
+                                />
+                            ) : (
+                                <KpiCard 
+                                    title={t("Babies resuscitated with Ambu bag")} 
+                                    value={`${pctAmbu}%`} 
+                                    unit={`(${infoSystemAgg.resuscitated_with_ambu_count} / ${infoSystemAgg.total} ${t('total')})`}
+                                />
+                            )}
+                        </div>
+
+                        {infoLineLabels.length > 0 && (
+                            <div className="relative h-[350px] w-full border-t border-slate-200 pt-6">
+                                <h5 className="text-sm font-bold text-slate-600 mb-4 text-center">{t('Information System Performance Over Time')}</h5>
+                                <div dir="ltr" className="h-full w-full">
+                                    <Line options={getLineOptions(t('KPI Performance (%)'))} data={infoSystemLineData} />
+                                </div>
+                            </div>
+                        )}
                     </div>
 
-                    {!rawReports && (
-                        <div className="bg-amber-50 text-amber-800 p-4 rounded-xl border border-amber-300 mb-8 font-bold text-sm" dir="rtl">
-                            ⚠️ {t('Note: To view Information System and Drug Shortage data, ensure rawReports is included.')}
-                        </div>
-                    )}
-
-                    {rawReports && (
-                        <>
-                            {/* --- Information System KPIs --- */}
-                            <div className="bg-white p-6 rounded-2xl shadow-md border border-black mb-8">
-                                <h4 className={`text-lg font-extrabold text-slate-800 mb-6 border-b border-black pb-2 ${isAr ? 'text-right' : 'text-left'}`}>{t('Information System KPIs (Overall)')}</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                                    <KpiCard 
-                                        title={t("Children seen by IMNCI trained cadre")} 
-                                        value={`${pctExaminedByTrained}%`} 
-                                        unit={`(${infoSystemAgg.examined_by_trained} / ${infoSystemAgg.total_examined} ${t('total')})`}
-                                    />
-                                    <KpiCard 
-                                        title={t("Children with IMNCI recording form")} 
-                                        value={`${pctCompletedForms}%`} 
-                                        unit={`(${infoSystemAgg.completed_forms} / ${infoSystemAgg.examined_by_trained} ${t('trained')})`}
-                                    />
-                                    <KpiCard 
-                                        title={t("Children returning for follow up")} 
-                                        value={`${pctFollowupForms}%`} 
-                                        unit={`(${infoSystemAgg.completed_followup_forms} / ${infoSystemAgg.examined_by_trained} ${t('trained')})`}
-                                    />
-                                </div>
-
-                                {/* Information System Trend Line Chart */}
-                                {infoLineLabels.length > 0 && (
-                                    <div className="relative h-[350px] w-full border-t border-slate-200 pt-6">
-                                        <h5 className="text-sm font-bold text-slate-600 mb-4 text-center">{t('Information System Performance Over Time')}</h5>
-                                        <div dir="ltr" className="h-full w-full">
-                                            <Line options={getLineOptions(t('KPI Performance (%)'))} data={infoSystemLineData} />
-                                        </div>
+                    {/* Drug/Supplies Availability KPIs */}
+                    <div className="bg-white p-6 rounded-2xl shadow-md border border-black mb-8">
+                        <h4 className={`text-lg font-extrabold text-slate-800 mb-6 border-b border-black pb-2 ${isAr ? 'text-right' : 'text-left'}`}>{t('Facility Drug & Supplies Availability (Percentage of facilities reporting always available)')}</h4>
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-8">
+                            {drugList.map(drug => {
+                                const count = drugAvailabilityOverall[drug.key] || 0;
+                                const total = drugAvailabilityOverall.total || 1;
+                                const pct = ((count / total) * 100).toFixed(1);
+                                return (
+                                    <div key={drug.key} className="bg-emerald-50 p-4 rounded-xl border border-emerald-300 shadow-sm text-center">
+                                        <h5 className="text-xs font-extrabold text-emerald-800 mb-2 h-8 flex items-center justify-center leading-tight">{t(drug.label)}</h5>
+                                        <div className="text-xl font-extrabold text-emerald-600 mb-1" dir="ltr">{pct}%</div>
+                                        <div className="text-[10px] text-emerald-600 font-bold" dir="ltr">{count} {t('of')} {total} {t('facilities')}</div>
                                     </div>
-                                )}
-                            </div>
-
-                            {/* --- Drug Availability KPIs & Chart --- */}
-                            <div className="bg-white p-6 rounded-2xl shadow-md border border-black mb-8">
-                                <h4 className={`text-lg font-extrabold text-slate-800 mb-6 border-b border-black pb-2 ${isAr ? 'text-right' : 'text-left'}`}>{t('Facility Drug Availability (Percentage of facilities reporting drugs always available)')}</h4>
-                                
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                                    {[
-                                        { key: 'amoxicillin', label: 'Amoxicillin' },
-                                        { key: 'zinc', label: 'Zinc' },
-                                        { key: 'ors', label: 'ORS' },
-                                        { key: 'coartem', label: 'Coartem' }
-                                    ].map(drug => {
-                                        const count = drugAvailabilityOverall[drug.key] || 0;
-                                        const total = drugAvailabilityOverall.total || 1;
-                                        const pct = ((count / total) * 100).toFixed(1);
-                                        return (
-                                            <div key={drug.key} className="bg-emerald-50 p-4 rounded-xl border border-emerald-300 shadow-sm text-center">
-                                                <h5 className="text-sm font-extrabold text-emerald-800 mb-2">{t(drug.label)} {t('Availability')}</h5>
-                                                <div className="text-2xl font-extrabold text-emerald-600 mb-1" dir="ltr">{pct}%</div>
-                                                <div className="text-xs text-emerald-600 font-bold" dir="ltr">{count} {t('of')} {total} {t('facilities')}</div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-
-                                {/* Drug Availability Trend Line Chart */}
-                                {drugLineLabels.length > 0 && (
-                                    <div className="relative h-[350px] w-full border-t border-slate-200 pt-6">
-                                        <h5 className="text-sm font-bold text-slate-600 mb-4 text-center">{t('Drug Availability Over Time')}</h5>
-                                        <div dir="ltr" className="h-full w-full">
-                                            <Line options={getLineOptions(t('Facilities with Drug Available (%)'))} data={drugLineData} />
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </>
-                    )}
-
-                    {/* Grouped Trained Skills KPIs & Charts */}
-                    <TrainedGroupRow 
-                        title={IMNCI_SKILL_GROUPS.group1.title} 
-                        details={visitReportStats.trainedSkillsGroups.group1.details} 
-                        color={IMNCI_SKILL_GROUPS.group1.color} 
-                        ScoreText={ScoreText}
-                        CopyImageButton={CopyImageButton}
-                    />
-                    
-                    <TrainedGroupRow 
-                        title={IMNCI_SKILL_GROUPS.group2.title} 
-                        details={visitReportStats.trainedSkillsGroups.group2.details} 
-                        color={IMNCI_SKILL_GROUPS.group2.color} 
-                        ScoreText={ScoreText}
-                        CopyImageButton={CopyImageButton}
-                    />
-                    
-                    <TrainedGroupRow 
-                        title={IMNCI_SKILL_GROUPS.group3.title} 
-                        details={visitReportStats.trainedSkillsGroups.group3.details} 
-                        color={IMNCI_SKILL_GROUPS.group3.color} 
-                        ScoreText={ScoreText}
-                        CopyImageButton={CopyImageButton}
-                    />
-                </>
-            ) : (
-                <>
-                    <div className="grid grid-cols-1 gap-6 mb-8">
-                        <KpiCard title={t("Total Visit Reports")} value={visitReportStats.totalVisits} />
-                    </div>
-                    <div className="mb-8 bg-white rounded-2xl shadow-md border border-black overflow-hidden">
-                        <h4 className={`text-lg font-extrabold text-slate-800 p-5 border-b border-black bg-slate-100 ${isAr ? 'text-right' : 'text-left'}`}>{t('Visit Breakdown & Skills Trained by Facility')}</h4>
-                        <div className="overflow-x-auto">
-                        <table className="w-full text-sm border-collapse" dir={isAr ? 'rtl' : 'ltr'}>
-                            <thead className="bg-slate-200 text-xs uppercase text-slate-700 tracking-wider">
-                                <tr>
-                                    <th className={`px-5 py-4 border-b border-black ${isAr ? 'text-right border-l' : 'text-left border-r'}`}>{t('Facility')}</th>
-                                    <th className={`px-5 py-4 border-b border-black text-center bg-sky-100 ${isAr ? 'border-l' : 'border-r'}`}>{t('Total Visits')}</th>
-                                    {visitReportStats.distinctSkillKeys.map(skillKey => (
-                                        <th key={skillKey} className={`px-3 py-4 border-b border-black text-center break-words whitespace-normal text-[11px] max-w-[120px] ${isAr ? 'border-l' : 'border-r'}`}>
-                                            {t(EENC_SKILLS_LABELS[skillKey] || skillKey)}
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {visitReportStats.facilityTableData.map(row => (
-                                    <tr key={row.id} className="hover:bg-sky-50 transition-colors border-b border-black">
-                                        <td className={`px-5 py-3 font-semibold text-slate-800 ${isAr ? 'text-right border-l' : 'text-left border-r'} border-black`}>{row.facilityName}</td>
-                                        <td className={`px-5 py-3 text-center font-bold bg-sky-50 text-sky-800 ${isAr ? 'border-l' : 'border-r'} border-black`} dir="ltr">{row.visitCount}</td>
-                                        {visitReportStats.distinctSkillKeys.map(skillKey => (
-                                            <td key={skillKey} className={`px-3 py-3 text-center text-slate-700 font-medium ${isAr ? 'border-l' : 'border-r'} border-black`} dir="ltr">
-                                                {row.skills[skillKey] || 0}
-                                            </td>
-                                        ))}
-                                    </tr>
-                                ))}
-                                {visitReportStats.facilityTableData.length === 0 && (
-                                    <tr><td colSpan={2 + visitReportStats.distinctSkillKeys.length} className="p-8 text-center text-slate-500 font-bold">{t('No visits found for current filter.')}</td></tr>
-                                )}
-                            </tbody>
-                        </table>
+                                );
+                            })}
                         </div>
+
+                        {drugLineLabels.length > 0 && (
+                            <div className="relative h-[350px] w-full border-t border-slate-200 pt-6">
+                                <h5 className="text-sm font-bold text-slate-600 mb-4 text-center">{t('Availability Over Time')}</h5>
+                                <div dir="ltr" className="h-full w-full">
+                                    <Line options={getLineOptions(t('Facilities with item available (%)'))} data={drugLineData} />
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </>
             )}
 
+            {/* Unified Trained Skills Groups for BOTH IMNCI and EENC */}
+            <TrainedGroupRow title={SKILL_GROUPS.group1.title} details={visitReportStats.trainedSkillsGroups.group1.details} color={SKILL_GROUPS.group1.color} ScoreText={ScoreText} CopyImageButton={CopyImageButton} />
+            <TrainedGroupRow title={SKILL_GROUPS.group2.title} details={visitReportStats.trainedSkillsGroups.group2.details} color={SKILL_GROUPS.group2.color} ScoreText={ScoreText} CopyImageButton={CopyImageButton} />
+            <TrainedGroupRow title={SKILL_GROUPS.group3.title} details={visitReportStats.trainedSkillsGroups.group3.details} color={SKILL_GROUPS.group3.color} ScoreText={ScoreText} CopyImageButton={CopyImageButton} />
+
+            {/* Geographical Stats & Challenges (Common to both) */}
             <div className="mb-8">
                 <KpiBarChart title={`${t('Total Visits by')} ${t(geographicLevelName)}`} chartData={visitReportStats.geographicChartData} dataKey="count" />
             </div>

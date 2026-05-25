@@ -364,92 +364,11 @@ const TestResultScreen = ({
     );
 };
 
-const SearchableSelect = ({ options, value, onChange, placeholder, disabled }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [inputValue, setInputValue] = useState('');
-    const ref = useRef(null);
-
-    useEffect(() => {
-        const selectedOption = options.find(opt => opt.id === value);
-        setInputValue(selectedOption ? selectedOption.name : '');
-    }, [value, options]);
-
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (ref.current && !ref.current.contains(event.target)) {
-                setIsOpen(false);
-                const selectedOption = options.find(opt => opt.id === value);
-                setInputValue(selectedOption ? selectedOption.name : '');
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [ref, value, options]);
-
-    const filteredOptions = useMemo(() => {
-        if (!inputValue) return options;
-        const selectedOption = options.find(opt => opt.id === value);
-        if (selectedOption && selectedOption.name === inputValue) return options;
-        if (value === 'addNewFacility' && options[0]?.id === 'addNewFacility') {
-             return options.filter(opt => opt.id === 'addNewFacility' || opt.name.toLowerCase().includes(inputValue.toLowerCase()));
-        }
-        return options.filter(opt => opt.name.toLowerCase().includes(inputValue.toLowerCase()));
-    }, [options, inputValue, value]);
-
-    const handleSelect = (option) => {
-        onChange(option.id);
-        setInputValue(option.name);
-        setIsOpen(false);
-    };
-
-    return (
-        <div className="relative" ref={ref}>
-            <Input
-                type="text"
-                value={inputValue}
-                onChange={(e) => {
-                    setInputValue(e.target.value);
-                    setIsOpen(true);
-                    if (e.target.value === '') onChange('');
-                }}
-                onFocus={() => setIsOpen(true)}
-                placeholder={placeholder}
-                disabled={disabled}
-            />
-            {isOpen && !disabled && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                    {filteredOptions.length > 0 ? (
-                        filteredOptions.map(opt => (
-                            <div
-                                key={opt.id}
-                                className={`p-2 cursor-pointer hover:bg-gray-100 ${opt.id === 'addNewFacility' ? 'font-bold text-sky-600 bg-sky-50' : ''}`}
-                                onClick={() => handleSelect(opt)}
-                            >
-                                {opt.name}
-                            </div>
-                        ))
-                    ) : (
-                         inputValue && options[0]?.id === 'addNewFacility' ? (
-                            <div
-                                key={options[0].id}
-                                className={`p-2 cursor-pointer hover:bg-gray-100 ${options[0].id === 'addNewFacility' ? 'font-bold text-sky-600 bg-sky-50' : ''}`}
-                                onClick={() => handleSelect(options[0])}
-                            >
-                                {options[0].name}
-                            </div>
-                         ) : ( <div className="p-2 text-gray-500">No results found.</div> )
-                    )}
-                </div>
-            )}
-        </div>
-    );
-};
-
 // --- NEW COMPONENT: Test Scores Dashboard ---
 const TestScoresDashboard = ({ 
     courseId,
     participants, 
-    participantTests = [], // Ensure it defaults to empty array
+    participantTests = [], 
     onOpenEntry,
     onEdit,
     onDelete,
@@ -807,12 +726,13 @@ export function CourseTestForm({
             titles = JOB_TITLES_EENC;
             return { testQuestions: EENC_TEST_QUESTIONS, testTitle: 'EENC Pre/Post Test Entry', isRtl: false, jobTitleOptions: titles, isIccm: isIccm };
         }
-        if (course?.course_type === 'Small & Sick Newborn') {
-            titles = JOB_TITLES_EENC; // Using EENC titles as default for SSNB
+        if (course?.course_type === 'Small & Sick Newborn' || course?.course_type === 'SSNC') {
+            // Using JOB_TITLES_EENC as fallback if SSNC titles aren't imported or same, but using your logic
+            titles = JOB_TITLES_EENC; 
             return { testQuestions: SSNB_WARMER_TEST_QUESTIONS, testTitle: 'SSNB Portable Warmer Test', isRtl: true, jobTitleOptions: titles, isIccm: false };
         }
         if (course?.course_type === 'IMNCI') {
-             titles = JOB_TITLES_EENC; // Use generic EENC titles (Doctor, Nurse, etc) for IMNCI
+             titles = JOB_TITLES_EENC; 
              return { testQuestions: IMNCI_TEST_QUESTIONS, testTitle: 'IMNCI Pre/Post Test Entry', isRtl: false, jobTitleOptions: titles, isIccm: false };
         }
         return { testQuestions: [], testTitle: 'Test Entry', isRtl: false, jobTitleOptions: [], isIccm: false }; 
@@ -1042,7 +962,6 @@ export function CourseTestForm({
     // MODIFIED: Updated handler to accept the facility object directly from the new modal
     const handleFacilitySelect = (facility) => {
         setError('');
-        // No need to check for 'addNewFacility' string here anymore, handled by specific button
         setSelectedFacilityId(facility.id);
         setNewParticipantCenter(facility.name); // or facility['اسم_المؤسسة'] depending on object passed
     };
@@ -1083,8 +1002,61 @@ export function CourseTestForm({
                 facilityId: (isIccm || isProgramManagement || (selectedFacilityId && selectedFacilityId.startsWith('pending_'))) ? null : selectedFacilityId,
                 ...(isIccm && { trained_before: false, last_imci_training: null, nearest_health_facility: null, hours_to_facility: null })
             };
-            
-            const savedData = await onSaveParticipant(participantPayload, null);
+
+            // --- NEW: Dynamic Facility Update Payload ---
+            const isImnci = course.course_type === 'IMNCI';
+            const isEenc = course.course_type === 'EENC';
+            const isEtat = course.course_type === 'ETAT';
+            const isSsnc = course.course_type === 'SSNC' || course.course_type === 'Small & Sick Newborn';
+            const isIpc = course.course_type === 'IPC';
+
+            let facilityUpdatePayload = null;
+
+            if ((isImnci || isEenc || isEtat || isSsnc || isIpc) && selectedFacilityId && !selectedFacilityId.startsWith('pending_')) {
+                const selectedFacilityObj = facilitiesInLocality.find(f => f.id === selectedFacilityId);
+                
+                if (selectedFacilityObj) {
+                    const staffField = isEtat ? 'critical_staff' 
+                                     : (isSsnc || isIpc) ? 'neonatal_staff' 
+                                     : isEenc ? 'eenc_staff' 
+                                     : 'imnci_staff';
+
+                    const staffMemberData = { 
+                        name: newParticipantName.trim(), 
+                        job_title: finalJobTitle, 
+                        phone: newParticipantPhone.trim(), 
+                        is_trained: 'Yes', 
+                        training_date: course.start_date || '' 
+                    };
+                    
+                    let existingStaff = [];
+                    try {
+                        existingStaff = selectedFacilityObj[staffField] ? (typeof selectedFacilityObj[staffField] === 'string' ? JSON.parse(selectedFacilityObj[staffField]) : JSON.parse(JSON.stringify(selectedFacilityObj[staffField]))) : [];
+                        if (!Array.isArray(existingStaff)) existingStaff = [];
+                    } catch (e) { existingStaff = []; }
+
+                    let updatedStaffList = [...existingStaff];
+                    const existingIndex = updatedStaffList.findIndex(staff => staff.name === staffMemberData.name || (staff.phone && staff.phone === staffMemberData.phone));
+                    
+                    if (existingIndex > -1) updatedStaffList[existingIndex] = staffMemberData; 
+                    else updatedStaffList.push(staffMemberData);
+
+                    const baseFacilityPayload = isImnci ? {
+                        'هل_المؤسسة_تعمل': 'Yes', 
+                        'وجود_العلاج_المتكامل_لامراض_الطفولة': 'Yes'
+                    } : {};
+
+                    facilityUpdatePayload = { 
+                        ...selectedFacilityObj, 
+                        ...baseFacilityPayload, 
+                        id: selectedFacilityObj.id, 
+                        date_of_visit: new Date().toISOString().split('T')[0], 
+                        [staffField]: updatedStaffList 
+                    };
+                }
+            }
+
+            const savedData = await onSaveParticipant(participantPayload, facilityUpdatePayload);
             
             const safeParticipantForState = {
                 ...participantPayload,

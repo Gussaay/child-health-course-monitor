@@ -109,8 +109,8 @@ const PreviousProblemsTable = ({ reports, currentFacilityId, currentReportId, on
     );
 };
 
-// --- Mentoring Matrix Skill Categories ---
-const GENERAL_SKILLS = {
+// --- IMNCI Mentoring Matrix Skill Categories ---
+const IMNCI_GENERAL_SKILLS = {
     skill_chartbook: "استخدام كتيب اللوحات للتقييم والتصنيف",
     skill_record_form: "استخدام استمارة تسجيل الحالة",
     skill_counseling_card: "استخدام كرت نصح وارشاد الأم",
@@ -118,7 +118,7 @@ const GENERAL_SKILLS = {
     skill_immunization_referral: "سواقط التطعيم"
 };
 
-const ASSESSMENT_SKILLS = {
+const IMNCI_ASSESSMENT_SKILLS = {
     skill_temp: "قياس درجة حرارة الطفل بصورة صحيحة",
     skill_danger_signs: "علامات الخطورة العامة",
     skill_ds_drink: "علامة خطورة: لا يستطيع ان يرضع أو يشرب",
@@ -129,7 +129,7 @@ const ASSESSMENT_SKILLS = {
     skill_check_dehydration: "تقييم فقدان السوائل بصورة صحيحة"
 };
 
-const MALNUTRITION_SKILLS = {
+const IMNCI_MALNUTRITION_SKILLS = {
     skill_weight: "وزن الطفل بصورة صحيحة",
     skill_height: "قياس طول/ارتفاع الطفل بصورة صحيحة",
     skill_mal_muac: "قياس المواك (MUAC) بصورة صحيحة",
@@ -137,7 +137,39 @@ const MALNUTRITION_SKILLS = {
     skill_edema: "تقييم الورم (Edema)"
 };
 
-const ALL_MATRIX_SKILLS = { ...GENERAL_SKILLS, ...ASSESSMENT_SKILLS, ...MALNUTRITION_SKILLS };
+const ALL_IMNCI_MATRIX_SKILLS = { ...IMNCI_GENERAL_SKILLS, ...IMNCI_ASSESSMENT_SKILLS, ...IMNCI_MALNUTRITION_SKILLS };
+
+// --- EENC Mentoring Matrix Skill Categories (From Uploaded Checklist + 1 General) ---
+const EENC_GENERAL_SKILLS = {
+    'skill_record_form': "استخدام سجلات غرفة الولادة وملء معلومات الرعاية الضرورية المبكرة"
+};
+
+const EENC_PREPARATION_SKILLS = {
+    'skill_pre_handwash': "غسل الايدي قبل الولادة باستخدام الخطوات ",
+    'skill_pre_equip': "تجهيز معدات الغنعاش قبل الولادة"
+};
+
+const EENC_EARLY_CARE_SKILLS = {
+    'skill_drying': "التجفيف الجيد للطفل مباشرة بعد الولادة",
+    'skill_skin_to_skin': "وضع الطفل جلد بجلد مباشرة بعد الولادة وفي العنبر مدة 90 دقيقة",
+    'skill_suction': "الشفط فقط عند الحوجة بطريقة صحيحة"
+};
+
+const EENC_BREATHING_BABY_SKILLS = {
+    'skill_cord_pulse_check': "الكشف عن توقف نبض الحبل السري",
+    'skill_clamp_placement': "وضع مشبك السرة",
+    'skill_transfer': "نقل الطفل الى منطقة الإنعاش"
+};
+
+const EENC_RESUSCITATION_SKILLS = {
+    'skill_airway': "فتح مجرى الهواء",
+    'skill_ambubag_placement': "وضع الامبوباق بصورة صحيحة على القم والانف",
+    'skill_ambubag_use': "استخدام الامبوباق بصورة صحيحة",
+    'skill_ventilation_rate': "معدل التهوية 40-60 في الدقيقة"
+};
+
+const ALL_EENC_MATRIX_SKILLS = { ...EENC_GENERAL_SKILLS, ...EENC_PREPARATION_SKILLS, ...EENC_EARLY_CARE_SKILLS, ...EENC_BREATHING_BABY_SKILLS, ...EENC_RESUSCITATION_SKILLS };
+
 
 // --- 1: IMNCI Visit Report Component ---
 export const IMNCIVisitReport = ({ 
@@ -163,7 +195,7 @@ export const IMNCIVisitReport = ({
             responsible_person: '' 
         };
 
-        const defaultMentoringMatrix = Object.keys(ALL_MATRIX_SKILLS).reduce((acc, key) => {
+        const defaultMentoringMatrix = Object.keys(ALL_IMNCI_MATRIX_SKILLS).reduce((acc, key) => {
             acc[key] = { isTrained: false, timesTrained: 0, isMastered: false };
             return acc;
         }, {});
@@ -312,7 +344,17 @@ export const IMNCIVisitReport = ({
     }, [sessionsForThisVisit]);
 
     const handleFormChange = (e) => { const { name, value } = e.target; setFormData(prev => ({ ...prev, [name]: value })); };
-    const handleCheckboxChange = (group, key) => { setFormData(prev => ({ ...prev, [group]: { ...prev[group], [key]: !prev[group][key] } })); };
+    const handleCheckboxChange = (group, key) => { 
+        setFormData(prev => {
+            const isChecked = !prev[group][key];
+            const updatedGroup = { ...prev[group], [key]: isChecked };
+            const updatedCounts = { ...prev.orientations_counts };
+            if (!isChecked) {
+                updatedCounts[key] = 0; 
+            }
+            return { ...prev, [group]: updatedGroup, orientations_counts: updatedCounts };
+        });
+    };
     
     const handleOrientationCountChange = (key, value) => {
         setFormData(prev => ({
@@ -322,16 +364,35 @@ export const IMNCIVisitReport = ({
     };
 
     const handleMentoringMatrixChange = (skillKey, field, value) => {
-        setFormData(prev => ({
-            ...prev,
-            mentoring_matrix: {
-                ...prev.mentoring_matrix,
-                [skillKey]: {
-                    ...(prev.mentoring_matrix[skillKey] || { isTrained: false, timesTrained: 0, isMastered: false }),
-                    [field]: value
+        setFormData(prev => {
+            const currentSkillData = prev.mentoring_matrix[skillKey] || { isTrained: false, timesTrained: 0, isMastered: false };
+            let newTimesTrained = currentSkillData.timesTrained;
+            let newIsTrained = currentSkillData.isTrained;
+
+            if (field === 'isTrained') {
+                newIsTrained = value;
+                if (value === true && newTimesTrained === 0) {
+                    newTimesTrained = 1;
+                } else if (value === false) {
+                    newTimesTrained = 0;
                 }
+            } else if (field === 'timesTrained') {
+                newTimesTrained = parseInt(value) || 0;
             }
-        }));
+
+            return {
+                ...prev,
+                mentoring_matrix: {
+                    ...prev.mentoring_matrix,
+                    [skillKey]: {
+                        ...currentSkillData,
+                        [field]: value,
+                        isTrained: newIsTrained,
+                        timesTrained: newTimesTrained
+                    }
+                }
+            };
+        });
     };
 
     const handleMedicationShortageChange = (key, value) => {
@@ -526,7 +587,7 @@ export const IMNCIVisitReport = ({
                             type="number" 
                             min="0"
                             value={matrixData.timesTrained}
-                            onChange={(e) => handleMentoringMatrixChange(key, 'timesTrained', parseInt(e.target.value) || 0)}
+                            onChange={(e) => handleMentoringMatrixChange(key, 'timesTrained', e.target.value)}
                             className="w-20 text-center font-bold mx-auto h-8 text-sm"
                             disabled={!matrixData.isTrained}
                         />
@@ -585,7 +646,7 @@ export const IMNCIVisitReport = ({
                              <div className="w-full sm:w-auto"><FormGroup label="تاريخ الزيارة" className="text-right"><Input type="date" name="visit_date" value={formData.visit_date} onChange={handleFormChange} required className="text-right" /></FormGroup></div>
                         </div>
 
-                        <div className="mb-6"><h3 className="text-lg font-bold text-sky-800 mb-2 border-b pb-1">الكوادر التي تم الإشراف عليها</h3>{sessionsForThisVisit.length === 0 ? <p className="text-gray-600">لا توجد جلسات.</p> : <ul className="list-disc pr-6 space-y-1">{sessionsForThisVisit.map(s => <li key={s.id}>{s.staff} ({(s.scores?.overallScore_maxScore > 0) ? Math.round((s.scores?.overallScore_score/s.scores?.overallScore_maxScore)*100) : 0}%)</li>)}</ul>}</div>
+                        <div className="mb-6"><h3 className="text-lg font-bold text-sky-800 mb-2 border-b pb-1">الكوادر التي تم الإشراف عليها</h3>{sessionsForThisVisit.length === 0 ? <p className="text-gray-600">لا توجد جلسات مكتملة تم رصدها في هذا التاريخ.</p> : <ul className="list-disc pr-6 space-y-1">{sessionsForThisVisit.map(s => <li key={s.id}>{s.staff} ({(s.scores?.overallScore_maxScore > 0) ? Math.round((s.scores?.overallScore_score/s.scores?.overallScore_maxScore)*100) : 0}%)</li>)}</ul>}</div>
                         
                         {/* --- Detected Weaknesses Summary (Pre-Matrix) --- */}
                         {detectedWeaknesses.length > 0 && (
@@ -594,7 +655,7 @@ export const IMNCIVisitReport = ({
                                 <ul className="list-disc pr-6 space-y-1">
                                     {detectedWeaknesses.map(key => (
                                         <li key={key} className="text-sm font-semibold text-gray-800">
-                                            {ALL_MATRIX_SKILLS[key] || key}
+                                            {ALL_IMNCI_MATRIX_SKILLS[key] || key}
                                         </li>
                                     ))}
                                 </ul>
@@ -618,9 +679,9 @@ export const IMNCIVisitReport = ({
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {renderSkillGroup("المهارات العامة واستخدام الأدوات", GENERAL_SKILLS, true)}
-                                        {renderSkillGroup("مهارات التقييم وعلامات الخطورة", ASSESSMENT_SKILLS, false)}
-                                        {renderSkillGroup("القياسات وعلامات سوء التغذية", MALNUTRITION_SKILLS, false)}
+                                        {renderSkillGroup("المهارات العامة واستخدام الأدوات", IMNCI_GENERAL_SKILLS, true)}
+                                        {renderSkillGroup("مهارات التقييم وعلامات الخطورة", IMNCI_ASSESSMENT_SKILLS, false)}
+                                        {renderSkillGroup("القياسات وعلامات سوء التغذية", IMNCI_MALNUTRITION_SKILLS, false)}
                                     </tbody>
                                 </table>
                             </div>
@@ -629,33 +690,42 @@ export const IMNCIVisitReport = ({
                         {/* --- ORIENTATION SESSION WITH COUNTS --- */}
                         <div className="mb-6">
                             <h3 className="text-lg font-bold text-sky-800 mb-2 border-b pb-1">تنوير الأقسام</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {Object.entries(orientationsList).map(([k, l]) => (
-                                    <div key={k} className="flex items-center gap-3">
-                                        <label className="flex items-center gap-2 cursor-pointer flex-grow">
-                                            <input 
-                                                type="checkbox" 
-                                                checked={!!formData.other_orientations[k]} 
-                                                onChange={() => handleCheckboxChange('other_orientations', k)} 
-                                                className="w-4 h-4 text-sky-600 focus:ring-sky-500 rounded" 
-                                            />
-                                            <span className="text-sm font-semibold text-gray-800">{l}</span>
-                                        </label>
-                                        {!!formData.other_orientations[k] && (
-                                            <div className="flex items-center gap-2 flex-shrink-0">
-                                                <span className="text-xs font-bold text-sky-700 bg-sky-50 px-2 py-1 rounded">عدد الكوادر المدربة:</span>
-                                                <Input 
-                                                    type="number" 
-                                                    min="1"
-                                                    value={formData.orientations_counts?.[k] || ''}
-                                                    onChange={(e) => handleOrientationCountChange(k, e.target.value)}
-                                                    className="w-16 text-center h-8 text-sm border-sky-200"
-                                                    placeholder="0"
-                                                />
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full border-collapse border border-gray-300 bg-white" dir="rtl">
+                                    <thead className="bg-gray-100 text-xs">
+                                        <tr>
+                                            <th className="px-4 py-2 border border-gray-300 text-right w-1/2">القسم</th>
+                                            <th className="px-4 py-2 border border-gray-300 text-center w-1/4">تم التنوير؟</th>
+                                            <th className="px-4 py-2 border border-gray-300 text-center w-1/4">عدد الكوادر المدربة</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {Object.entries(orientationsList).map(([k, l]) => (
+                                            <tr key={k} className="hover:bg-gray-50">
+                                                <td className="px-4 py-2 border border-gray-300 font-semibold text-sm">{l}</td>
+                                                <td className="px-4 py-2 border border-gray-300 text-center">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={!!formData.other_orientations[k]} 
+                                                        onChange={() => handleCheckboxChange('other_orientations', k)} 
+                                                        className="w-4 h-4 text-sky-600 focus:ring-sky-500 rounded cursor-pointer" 
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-2 border border-gray-300 text-center">
+                                                    <Input 
+                                                        type="number" 
+                                                        min="0"
+                                                        value={formData.orientations_counts?.[k] || ''}
+                                                        onChange={(e) => handleOrientationCountChange(k, e.target.value)}
+                                                        className="w-20 text-center mx-auto h-8 text-sm border-sky-200"
+                                                        placeholder="0"
+                                                        disabled={!formData.other_orientations[k]}
+                                                    />
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
 
@@ -858,7 +928,32 @@ export const EENCVisitReport = ({
 
     const getInitialState = () => {
         const defaultRow = { id: 1, problem: '', solution: '', status: 'Pending', responsible_person: '' };
+        
+        const defaultMentoringMatrix = Object.keys(ALL_EENC_MATRIX_SKILLS).reduce((acc, key) => {
+            acc[key] = { isTrained: false, timesTrained: 0, isMastered: false };
+            return acc;
+        }, {});
+
         if (existingReportData) {
+            let initialMatrix = existingReportData.mentoring_matrix 
+                ? JSON.parse(JSON.stringify(existingReportData.mentoring_matrix)) 
+                : JSON.parse(JSON.stringify(defaultMentoringMatrix));
+
+            if (existingReportData.trained_skills) {
+                Object.keys(existingReportData.trained_skills).forEach(k => {
+                    if (existingReportData.trained_skills[k]) {
+                        if (!initialMatrix[k]) {
+                            initialMatrix[k] = { isTrained: true, timesTrained: 1, isMastered: false };
+                        } else {
+                            initialMatrix[k].isTrained = true;
+                            if (initialMatrix[k].timesTrained === 0) {
+                                initialMatrix[k].timesTrained = 1;
+                            }
+                        }
+                    }
+                });
+            }
+
             const mappedChallenges = (existingReportData.challenges_table || [defaultRow]).map(row => {
                 let combinedSolution = row.solution || '';
                 if (!combinedSolution && (row.immediate_solution || row.long_term_solution)) {
@@ -877,15 +972,28 @@ export const EENCVisitReport = ({
             return {
                 visit_date: existingReportData.visit_date || new Date().toISOString().split('T')[0],
                 visitNumber: existingReportData.visitNumber || visitNumber,
-                trained_skills: existingReportData.trained_skills || {},
+                mentoring_matrix: initialMatrix,
                 other_orientations: existingReportData.other_orientations || {},
                 orientations_counts: existingReportData.orientations_counts || {},
+                medication_shortage: existingReportData.medication_shortage || { surgical_gloves: '', vitamin_k: '', tetracycline: '', ambu_bag: '', cord_clamp: '', manual_suction: '' },
+                info_system: existingReportData.info_system || { total_deliveries: '', deliveries_by_trained: '', skin_to_skin_90min_count: '', resuscitated_with_ambu_count: '', completed_followup_forms: '' },
                 challenges_table: mappedChallenges,
                 imageUrls: existingReportData.imageUrls || [], 
                 notes: existingReportData.notes || '',
             };
         }
-        return { visit_date: new Date().toISOString().split('T')[0], visitNumber: visitNumber, trained_skills: {}, other_orientations: {}, orientations_counts: {}, challenges_table: [defaultRow], imageUrls: [], notes: '' };
+        return { 
+            visit_date: new Date().toISOString().split('T')[0], 
+            visitNumber: visitNumber, 
+            mentoring_matrix: defaultMentoringMatrix,
+            other_orientations: {}, 
+            orientations_counts: {}, 
+            medication_shortage: { surgical_gloves: '', vitamin_k: '', tetracycline: '', ambu_bag: '', cord_clamp: '', manual_suction: '' },
+            info_system: { total_deliveries: '', deliveries_by_trained: '', skin_to_skin_90min_count: '', resuscitated_with_ambu_count: '', completed_followup_forms: '' },
+            challenges_table: [defaultRow], 
+            imageUrls: [], 
+            notes: '' 
+        };
     };
 
     const [formData, setFormData] = useState(getInitialState());
@@ -918,9 +1026,47 @@ export const EENCVisitReport = ({
         return allSubmissions.filter(sub => sub.facilityId === facility.id && sub.sessionDate === formData.visit_date && sub.service === 'EENC' && sub.status === 'complete');
     }, [allSubmissions, facility, formData.visit_date]);
 
+    // Calculate EENC weaknesses based on scores < 75% 
+    // Max score for an item is 2 (yes), partial is 1. Average < 1.5 => Weakness
+    const detectedWeaknesses = useMemo(() => {
+        if (!sessionsForThisVisit || sessionsForThisVisit.length === 0) return [];
+
+        const stats = {};
+        Object.keys(ALL_EENC_MATRIX_SKILLS).forEach(k => stats[k] = { score: 0, max: 0 });
+
+        sessionsForThisVisit.forEach(sub => {
+            const skills = sub.fullData?.skills || {};
+            Object.keys(ALL_EENC_MATRIX_SKILLS).forEach(key => {
+                const val = skills[key];
+                if (val === 'yes') { stats[key].score += 2; stats[key].max += 2; }
+                else if (val === 'partial') { stats[key].score += 1; stats[key].max += 2; }
+                else if (val === 'no') { stats[key].max += 2; }
+            });
+        });
+
+        const weakKeys = [];
+        Object.keys(stats).forEach(key => {
+            if (stats[key].max > 0) {
+                const pct = stats[key].score / stats[key].max;
+                if (pct < 0.75) weakKeys.push(key);
+            }
+        });
+        return weakKeys;
+    }, [sessionsForThisVisit]);
+
     const handleFormChange = (e) => { const { name, value } = e.target; setFormData(prev => ({ ...prev, [name]: value })); };
-    const handleCheckboxChange = (group, key) => { setFormData(prev => ({ ...prev, [group]: { ...prev[group], [key]: !prev[group][key] } })); };
-    const handleChallengeChange = (id, field, value) => { setFormData(prev => ({ ...prev, challenges_table: prev.challenges_table.map(row => row.id === id ? { ...row, [field]: value } : row) })); };
+    
+    const handleCheckboxChange = (group, key) => { 
+        setFormData(prev => {
+            const isChecked = !prev[group][key];
+            const updatedGroup = { ...prev[group], [key]: isChecked };
+            const updatedCounts = { ...prev.orientations_counts };
+            if (!isChecked) {
+                updatedCounts[key] = 0; 
+            }
+            return { ...prev, [group]: updatedGroup, orientations_counts: updatedCounts };
+        });
+    };
     
     const handleOrientationCountChange = (key, value) => {
         setFormData(prev => ({
@@ -929,8 +1075,50 @@ export const EENCVisitReport = ({
         }));
     };
 
+    const handleMentoringMatrixChange = (skillKey, field, value) => {
+        setFormData(prev => {
+            const currentSkillData = prev.mentoring_matrix[skillKey] || { isTrained: false, timesTrained: 0, isMastered: false };
+            let newTimesTrained = currentSkillData.timesTrained;
+            let newIsTrained = currentSkillData.isTrained;
+
+            if (field === 'isTrained') {
+                newIsTrained = value;
+                if (value === true && newTimesTrained === 0) {
+                    newTimesTrained = 1;
+                } else if (value === false) {
+                    newTimesTrained = 0;
+                }
+            } else if (field === 'timesTrained') {
+                newTimesTrained = parseInt(value) || 0;
+            }
+
+            return {
+                ...prev,
+                mentoring_matrix: {
+                    ...prev.mentoring_matrix,
+                    [skillKey]: {
+                        ...currentSkillData,
+                        [field]: value,
+                        isTrained: newIsTrained,
+                        timesTrained: newTimesTrained
+                    }
+                }
+            };
+        });
+    };
+
+    const handleMedicationShortageChange = (key, value) => {
+        setFormData(prev => ({ ...prev, medication_shortage: { ...prev.medication_shortage, [key]: value } }));
+    };
+
+    const handleInfoSystemChange = (key, value) => {
+        setFormData(prev => ({ ...prev, info_system: { ...prev.info_system, [key]: value } }));
+    };
+
+    const handleChallengeChange = (id, field, value) => { setFormData(prev => ({ ...prev, challenges_table: prev.challenges_table.map(row => row.id === id ? { ...row, [field]: value } : row) })); };
+    
     const addChallengeRow = (e) => { 
-        if (e && e.preventDefault) e.preventDefault(); // FIX: Prevent form submission
+        if (e && e.preventDefault) e.preventDefault(); 
         setFormData(prev => ({ 
             ...prev, 
             challenges_table: [...prev.challenges_table, { id: Date.now(), problem: '', solution: '', status: 'Pending', responsible_person: '' }] 
@@ -972,8 +1160,22 @@ export const EENCVisitReport = ({
             const newUploadedUrls = [];
             for (const file of newImageFiles.filter(f => f)) { newUploadedUrls.push(await uploadFile(file)); }
             
+            const updatedTrainedSkills = {};
+            Object.keys(formData.mentoring_matrix).forEach(k => {
+                if (formData.mentoring_matrix[k].isTrained) {
+                    updatedTrainedSkills[k] = true;
+                }
+            });
+
             const payload = {
-                ...formData, visitNumber: parseInt(formData.visitNumber) || 1, imageUrls: [...currentUrls, ...newUploadedUrls], facilityId: facility.id, facilityName: facility['اسم_المؤسسة'], state: facility['الولاية'], locality: facility['المحلية'],
+                ...formData, 
+                trained_skills: updatedTrainedSkills,
+                visitNumber: parseInt(formData.visitNumber) || 1, 
+                imageUrls: [...currentUrls, ...newUploadedUrls], 
+                facilityId: facility.id, 
+                facilityName: facility['اسم_المؤسسة'], 
+                state: facility['الولاية'], 
+                locality: facility['المحلية'],
             };
             delete payload.imageUrl;
             if (existingReportData) { payload.mentorEmail = existingReportData.mentorEmail; payload.mentorName = existingReportData.mentorName; payload.edited_by_email = user.email; payload.edited_by_name = user.displayName || user.email; payload.lastUpdatedAt = Timestamp.now(); } else { payload.mentorEmail = user.email; payload.mentorName = user.displayName || user.email; payload.createdAt = Timestamp.now(); }
@@ -1002,7 +1204,87 @@ export const EENCVisitReport = ({
         else onCancel(); 
     };
 
-    const skillsList = { skill_pre_handwash: "غسل الايدي", skill_pre_equip: "تجهيز المعدات", skill_drying: "التجفيف", skill_skin_to_skin: "جلد بجلد", skill_suction: "الشفط", skill_cord_pulse_check: "نبض الحبل السري", skill_clamp_placement: "وضع المشبك", skill_transfer: "نقل الطفل", skill_airway: "فتح مجرى الهواء", skill_ambubag_placement: "وضع الامبوباق", skill_ambubag_use: "استخدام الامبوباق", skill_ventilation_rate: "معدل التهوية", skill_correction_steps: "التدخلات التصحيحية" };
+    const renderSkillGroup = (title, skillsObj, isGeneral = false) => {
+        const allKeys = Object.keys(skillsObj);
+        
+        let topKeys = [];
+        let bottomKeys = [];
+
+        if (isGeneral) {
+            topKeys = allKeys;
+        } else {
+            allKeys.forEach(key => {
+                if (detectedWeaknesses.includes(key) || formData.mentoring_matrix[key]?.isTrained) {
+                    topKeys.push(key);
+                } else {
+                    bottomKeys.push(key);
+                }
+            });
+        }
+
+        if (topKeys.length === 0 && bottomKeys.length === 0) return null;
+
+        const renderRow = (key, isWeakness, isStrong) => {
+            const matrixData = formData.mentoring_matrix[key] || { isTrained: false, timesTrained: 0, isMastered: false };
+            return (
+                <tr key={key} className={`hover:bg-gray-50 transition-colors ${isWeakness ? 'bg-red-50/30' : (isStrong ? 'bg-gray-50/50 opacity-80' : '')}`}>
+                    <td className={`px-4 py-2 border border-gray-300 font-semibold text-sm ${isStrong ? 'text-gray-600' : 'text-gray-900'}`}>
+                        {skillsObj[key]}
+                        {isWeakness && (
+                            <span className="mr-3 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 border border-red-200">
+                                نقطة ضعف مسجلة (أقل من 75%)
+                            </span>
+                        )}
+                        {isStrong && (
+                            <span className="mr-3 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-800 border border-green-200">
+                                مهارة جيدة لا تحتاج تدريب
+                            </span>
+                        )}
+                    </td>
+                    <td className="px-4 py-2 border border-gray-300 text-center">
+                        <input 
+                            type="checkbox" 
+                            checked={matrixData.isTrained}
+                            onChange={(e) => handleMentoringMatrixChange(key, 'isTrained', e.target.checked)}
+                            className="w-4 h-4 text-sky-600 focus:ring-sky-500 cursor-pointer rounded"
+                        />
+                    </td>
+                    <td className="px-4 py-2 border border-gray-300 text-center">
+                        <Input 
+                            type="number" 
+                            min="0"
+                            value={matrixData.timesTrained}
+                            onChange={(e) => handleMentoringMatrixChange(key, 'timesTrained', e.target.value)}
+                            className="w-20 text-center font-bold mx-auto h-8 text-sm"
+                            disabled={!matrixData.isTrained}
+                        />
+                    </td>
+                    <td className="px-4 py-2 border border-gray-300 text-center">
+                        <input 
+                            type="checkbox" 
+                            checked={matrixData.isMastered}
+                            onChange={(e) => handleMentoringMatrixChange(key, 'isMastered', e.target.checked)}
+                            className="w-4 h-4 text-green-600 focus:ring-green-500 cursor-pointer rounded"
+                            disabled={!matrixData.isTrained}
+                        />
+                    </td>
+                </tr>
+            );
+        };
+
+        return (
+            <React.Fragment key={title}>
+                <tr className="bg-sky-50">
+                    <td colSpan="4" className="px-4 py-2 border border-gray-300 font-bold text-sky-800 text-sm bg-sky-100">
+                        {title}
+                    </td>
+                </tr>
+                {topKeys.map(key => renderRow(key, detectedWeaknesses.includes(key), false))}
+                {bottomKeys.map(key => renderRow(key, false, true))}
+            </React.Fragment>
+        );
+    };
+
     const orientationsList = { orient_infection_control: "مكافحة العدوى", orient_nicu: "الحضانة", orient_stats: "الاحصاء", orient_nutrition: "التغذية" };
 
     return (
@@ -1028,45 +1310,185 @@ export const EENCVisitReport = ({
                              <div className="w-full sm:w-auto"><FormGroup label="تاريخ الزيارة" className="text-right"><Input type="date" name="visit_date" value={formData.visit_date} onChange={handleFormChange} required className="text-right" /></FormGroup></div>
                         </div>
 
-                        <div className="mb-6"><h3 className="text-lg font-bold text-sky-800 mb-2 border-b pb-1">الكوادر المشرف عليها</h3>{sessionsForThisVisit.length === 0 ? <p>لا توجد.</p> : <ul className="list-disc pr-6">{sessionsForThisVisit.map(s => <li key={s.id}>{s.staff}</li>)}</ul>}</div>
-                        <div className="mb-6"><h3 className="text-lg font-bold text-sky-800 mb-2 border-b pb-1">المهارات</h3><div className="grid grid-cols-2 gap-2">{Object.entries(skillsList).map(([k, l]) => <label key={k} className="cursor-pointer"><span>{l}</span><input type="checkbox" checked={!!formData.trained_skills[k]} onChange={() => handleCheckboxChange('trained_skills', k)} className="ms-3" /></label>)}</div></div>
+                        <div className="mb-6"><h3 className="text-lg font-bold text-sky-800 mb-2 border-b pb-1">الكوادر المشرف عليها</h3>{sessionsForThisVisit.length === 0 ? <p className="text-gray-600">لا توجد جلسات مكتملة تم رصدها في هذا التاريخ.</p> : <ul className="list-disc pr-6 space-y-1">{sessionsForThisVisit.map(s => <li key={s.id}>{s.staff} ({(s.scores?.overallScore_maxScore > 0) ? Math.round((s.scores?.overallScore_score/s.scores?.overallScore_maxScore)*100) : 0}%)</li>)}</ul>}</div>
                         
-                        {/* --- ORIENTATION SESSION WITH COUNTS --- */}
+                        {/* --- Detected Weaknesses Summary (Pre-Matrix) --- */}
+                        {detectedWeaknesses.length > 0 && (
+                            <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 shadow-sm">
+                                <h4 className="text-lg font-bold text-red-800 mb-2">مهارات تحتاج إلى تركيز (نقاط ضعف مرصودة في زيارات اليوم):</h4>
+                                <ul className="list-disc pr-6 space-y-1">
+                                    {detectedWeaknesses.map(key => (
+                                        <li key={key} className="text-sm font-semibold text-gray-800">
+                                            {ALL_EENC_MATRIX_SKILLS[key] || key}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+
+                        {/* --- EENC SKILLS MENTORING MATRIX --- */}
+                        <div className="mb-6">
+                            <h3 className="text-lg font-bold text-sky-800 mb-2 border-b pb-1">
+                                مصفوفة التدريب والمهارات (EENC)
+                                <span className="text-xs text-gray-500 font-normal mr-2">(نقاط الضعف تظهر في الأعلى لكل مجموعة، والمهارات الجيدة تظهر في الأسفل)</span>
+                            </h3>
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full border-collapse border border-gray-300 bg-white" dir="rtl">
+                                    <thead className="bg-gray-100 text-xs">
+                                        <tr>
+                                            <th className="px-4 py-2 border border-gray-300 text-right w-1/2">المهارة</th>
+                                            <th className="px-4 py-2 border border-gray-300 text-center">تم التدريب عليها؟</th>
+                                            <th className="px-4 py-2 border border-gray-300 text-center">عدد مرات التدريب</th>
+                                            <th className="px-4 py-2 border border-gray-300 text-center">تم الإتقان (75% فأكثر)؟</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {renderSkillGroup("المهارات العامة واستخدام الأدوات", EENC_GENERAL_SKILLS, true)}
+                                        {renderSkillGroup("تحضيرات ما قبل الولادة", EENC_PREPARATION_SKILLS, false)}
+                                        {renderSkillGroup("التجفيف، التحفيز، التدفئة والشفط", EENC_EARLY_CARE_SKILLS, false)}
+                                        {renderSkillGroup("متابعة طفل يتنفس طبيعياً", EENC_BREATHING_BABY_SKILLS, false)}
+                                        {renderSkillGroup("إنعاش الوليد (الدقيقة الذهبية)", EENC_RESUSCITATION_SKILLS, false)}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
                         <div className="mb-6">
                             <h3 className="text-lg font-bold text-sky-800 mb-2 border-b pb-1">تنوير الأقسام</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {Object.entries(orientationsList).map(([k, l]) => (
-                                    <div key={k} className="flex items-center gap-3">
-                                        <label className="flex items-center gap-2 cursor-pointer flex-grow">
-                                            <input 
-                                                type="checkbox" 
-                                                checked={!!formData.other_orientations[k]} 
-                                                onChange={() => handleCheckboxChange('other_orientations', k)} 
-                                                className="w-4 h-4 text-sky-600 focus:ring-sky-500 rounded" 
-                                            />
-                                            <span className="text-sm font-semibold text-gray-800">{l}</span>
-                                        </label>
-                                        {!!formData.other_orientations[k] && (
-                                            <div className="flex items-center gap-2 flex-shrink-0">
-                                                <span className="text-xs font-bold text-sky-700 bg-sky-50 px-2 py-1 rounded">عدد الكوادر المدربة:</span>
-                                                <Input 
-                                                    type="number" 
-                                                    min="1"
-                                                    value={formData.orientations_counts?.[k] || ''}
-                                                    onChange={(e) => handleOrientationCountChange(k, e.target.value)}
-                                                    className="w-16 text-center h-8 text-sm border-sky-200"
-                                                    placeholder="0"
-                                                />
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full border-collapse border border-gray-300 bg-white" dir="rtl">
+                                    <thead className="bg-gray-100 text-xs">
+                                        <tr>
+                                            <th className="px-4 py-2 border border-gray-300 text-right w-1/2">القسم</th>
+                                            <th className="px-4 py-2 border border-gray-300 text-center w-1/4">تم التنوير؟</th>
+                                            <th className="px-4 py-2 border border-gray-300 text-center w-1/4">عدد الكوادر المدربة</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {Object.entries(orientationsList).map(([k, l]) => (
+                                            <tr key={k} className="hover:bg-gray-50">
+                                                <td className="px-4 py-2 border border-gray-300 font-semibold text-sm">{l}</td>
+                                                <td className="px-4 py-2 border border-gray-300 text-center">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={!!formData.other_orientations[k]} 
+                                                        onChange={() => handleCheckboxChange('other_orientations', k)} 
+                                                        className="w-4 h-4 text-sky-600 focus:ring-sky-500 rounded cursor-pointer" 
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-2 border border-gray-300 text-center">
+                                                    <Input 
+                                                        type="number" 
+                                                        min="0"
+                                                        value={formData.orientations_counts?.[k] || ''}
+                                                        onChange={(e) => handleOrientationCountChange(k, e.target.value)}
+                                                        className="w-20 text-center mx-auto h-8 text-sm border-sky-200"
+                                                        placeholder="0"
+                                                        disabled={!formData.other_orientations[k]}
+                                                    />
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
 
-                        {/* --- EENC CHALLENGES TABLE --- */}
+                        {/* --- EENC MEDICATION/SUPPLY SHORTAGE TABLE --- */}
                         <div className="mb-6">
-                            <h3 className="text-lg font-bold text-sky-800 mb-2 border-b pb-1">المشاكل والحلول</h3>
+                            <h3 className="text-lg font-bold text-sky-800 mb-2 border-b pb-1">
+                                وفرة الادوية والمعدات / هل حدث إنقطاع للادوية/المعدات التالية خلال الاسبوع السابق؟
+                            </h3>
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full border-collapse border border-gray-300 bg-white" dir="rtl">
+                                    <thead className="bg-gray-100 text-xs">
+                                        <tr>
+                                            <th className="px-4 py-2 border border-gray-300 text-right w-1/2">البيان</th>
+                                            <th className="px-4 py-2 border border-gray-300 text-center w-1/4">نعم (حدث انقطاع)</th>
+                                            <th className="px-4 py-2 border border-gray-300 text-center w-1/4">لا (متوفر دائمًا)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {[
+                                            { key: 'surgical_gloves', label: 'قفازات جراحية معقمة (Surgical Gloves)' },
+                                            { key: 'vitamin_k', label: 'فيتامين ك (Vitamin K)' },
+                                            { key: 'tetracycline', label: 'مرهم تتراسيكلين للعين (Tetracycline)' },
+                                            { key: 'ambu_bag', label: 'حقيبة الإنعاش اليدوية (Ambu Bag)' },
+                                            { key: 'cord_clamp', label: 'مشابك الحبل السري (Cord Clamp)' },
+                                            { key: 'manual_suction', label: 'عصفورة شفط (Manual Suction)' }
+                                        ].map(med => (
+                                            <tr key={med.key} className="hover:bg-gray-50">
+                                                <td className="px-4 py-2 border border-gray-300 font-semibold text-sm">{med.label}</td>
+                                                <td className="px-4 py-2 border border-gray-300 text-center">
+                                                    <input 
+                                                        type="radio" 
+                                                        name={`medication_shortage_${med.key}`} 
+                                                        value="yes" 
+                                                        checked={formData.medication_shortage[med.key] === 'yes'}
+                                                        onChange={(e) => handleMedicationShortageChange(med.key, e.target.value)}
+                                                        className="w-4 h-4 text-sky-600 focus:ring-sky-500 cursor-pointer"
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-2 border border-gray-300 text-center">
+                                                    <input 
+                                                        type="radio" 
+                                                        name={`medication_shortage_${med.key}`} 
+                                                        value="no" 
+                                                        checked={formData.medication_shortage[med.key] === 'no'}
+                                                        onChange={(e) => handleMedicationShortageChange(med.key, e.target.value)}
+                                                        className="w-4 h-4 text-sky-600 focus:ring-sky-500 cursor-pointer"
+                                                    />
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* --- EENC INFORMATION SYSTEM TABLE --- */}
+                        <div className="mb-6">
+                            <h3 className="text-lg font-bold text-sky-800 mb-2 border-b pb-1">
+                                نظام معلومات الرعاية الضرورية المبكرة (فقط خلال الاسبوع السابق)
+                            </h3>
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full border-collapse border border-gray-300 bg-white" dir="rtl">
+                                    <thead className="bg-gray-100 text-xs">
+                                        <tr>
+                                            <th className="px-4 py-2 border border-gray-300 text-right w-2/3">البيان</th>
+                                            <th className="px-4 py-2 border border-gray-300 text-center w-1/3">العدد</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {[
+                                            { key: 'total_deliveries', label: 'عدد الولادات الكلي في المركز خلال الاسبوع السابق' },
+                                            { key: 'deliveries_by_trained', label: 'عدد الولادات التي أشرف عليها كادر مدرب (EENC) خلال الاسبوع السابق' },
+                                            { key: 'skin_to_skin_90min_count', label: 'عدد الاطفال الذين تم وضعهم ملتصقين جلدا بجلد مدة 90 دقيقة على الأقل خلال الاسبوع السابق' },
+                                            { key: 'resuscitated_with_ambu_count', label: 'عدد الاطفال الذين تم إنعاشهم باستخدام أمبوباق خلال الاسبوع السابق' },
+                                            { key: 'completed_followup_forms', label: 'عدد الأطفال المتابعين او المسجلين بسجل الولادات بشكل كامل' }
+                                        ].map(item => (
+                                            <tr key={item.key} className="hover:bg-gray-50">
+                                                <td className="px-4 py-2 border border-gray-300 font-semibold text-sm">{item.label}</td>
+                                                <td className="px-4 py-2 border border-gray-300 text-center">
+                                                    <Input 
+                                                        type="number" 
+                                                        min="0"
+                                                        value={formData.info_system[item.key]} 
+                                                        onChange={(e) => handleInfoSystemChange(item.key, e.target.value)}
+                                                        className="w-full text-center font-bold"
+                                                        placeholder="0"
+                                                    />
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* --- CHALLENGES TABLE --- */}
+                        <div className="mb-6">
+                            <h3 className="text-lg font-bold text-sky-800 mb-2 border-b pb-1">المشاكل والحلول (الحالية)</h3>
                             <div className="overflow-x-auto">
                                 <table className="min-w-full border-collapse border border-gray-300" dir="rtl">
                                     <thead className="bg-gray-100 text-xs">

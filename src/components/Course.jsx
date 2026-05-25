@@ -27,7 +27,7 @@ import {
 import { ParticipantsView } from './Participants';
 import { CourseTestForm } from './CourseTestForm'; 
 import {
-    STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_SSNC
+    STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_SSNC, JOB_TITLES_ETAT, JOB_TITLES_EENC
 } from './constants.js';
 import { 
     Users, Share2, UserPlus, CheckCircle, 
@@ -71,16 +71,20 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
     const [facilityName, setFacilityName] = useState(''); 
     
     const [facilities, setFacilities] = useState([]);
+    const [selectedFacility, setSelectedFacility] = useState(null); // <-- Added to track full facility object
     const [loadingFacilities, setLoadingFacilities] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState('');
     const [isFacilitySelectorOpen, setIsFacilitySelectorOpen] = useState(false);
 
+    // --- Dynamic Job Titles based on course type ---
     const jobOptions = useMemo(() => {
+        if (course.course_type === 'ETAT') return JOB_TITLES_ETAT;
+        if (course.course_type === 'EENC') return JOB_TITLES_EENC;
+        if (course.course_type === 'Small & Sick Newborn' || course.course_type === 'SSNC') return JOB_TITLES_SSNC;
         if (course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives') 
             return ["قابلة مجتمع", "زائرة صحية", "طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون"];
-        if (course.course_type === 'Small & Sick Newborn' || course.course_type === 'SSNC') return JOB_TITLES_SSNC;
-        return ['Medical Doctor', 'Nurse', 'Midwife', 'Medical Assistant', 'Health Visitor', 'Nutritionist', 'Vaccinator'];
+        return ["طبيب", "مساعد طبي", "ممرض معالج", "معاون صحي", "كادر معاون", "أخرى"]; // Default
     }, [course.course_type]);
 
     useEffect(() => {
@@ -88,8 +92,8 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
             setLoadingFacilities(true);
             listHealthFacilities({ state: course.state, locality: course.locality }, 'server')
                 .then(data => {
-                    const formatted = data.map(f => ({ id: f.id, name: f['اسم_المؤسسة'] }));
-                    setFacilities(formatted);
+                    // Keep the full facility objects so we can update them later
+                    setFacilities(data);
                 })
                 .catch(err => console.error("Failed to load facilities", err))
                 .finally(() => setLoadingFacilities(false));
@@ -117,7 +121,59 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
                 facilityId: facilityId 
             };
 
-            await saveParticipantAndSubmitFacilityUpdate(participantData, null, 'Public Form');
+            // --- NEW: Dynamic Facility Update Payload for Public Registration ---
+            const isImnci = course.course_type === 'IMNCI';
+            const isEenc = course.course_type === 'EENC';
+            const isEtat = course.course_type === 'ETAT';
+            const isSsnc = course.course_type === 'SSNC' || course.course_type === 'Small & Sick Newborn';
+            const isIpc = course.course_type === 'IPC';
+
+            let facilityUpdatePayload = null;
+
+            if ((isImnci || isEenc || isEtat || isSsnc || isIpc) && selectedFacility && !selectedFacility.id.startsWith('pending_')) {
+                // Determine the correct staff array
+                const staffField = isEtat ? 'critical_staff' 
+                                 : (isSsnc || isIpc) ? 'neonatal_staff' 
+                                 : isEenc ? 'eenc_staff' 
+                                 : 'imnci_staff';
+
+                const staffMemberData = { 
+                    name: name.trim(), 
+                    job_title: jobTitle, 
+                    phone: phone.trim(), 
+                    is_trained: 'Yes', 
+                    training_date: course.start_date || '' 
+                };
+                
+                let existingStaff = [];
+                try {
+                    existingStaff = selectedFacility[staffField] ? (typeof selectedFacility[staffField] === 'string' ? JSON.parse(selectedFacility[staffField]) : JSON.parse(JSON.stringify(selectedFacility[staffField]))) : [];
+                    if (!Array.isArray(existingStaff)) existingStaff = [];
+                } catch (e) { existingStaff = []; }
+
+                let updatedStaffList = [...existingStaff];
+                const existingIndex = updatedStaffList.findIndex(staff => staff.name === staffMemberData.name || (staff.phone && staff.phone === staffMemberData.phone));
+                
+                if (existingIndex > -1) updatedStaffList[existingIndex] = staffMemberData; 
+                else updatedStaffList.push(staffMemberData);
+
+                // IMNCI specific base payload
+                const baseFacilityPayload = isImnci ? {
+                    'هل_المؤسسة_تعمل': 'Yes', 
+                    'وجود_العلاج_المتكامل_لامراض_الطفولة': 'Yes'
+                } : {};
+
+                facilityUpdatePayload = { 
+                    ...selectedFacility, 
+                    ...baseFacilityPayload, 
+                    id: selectedFacility.id, 
+                    date_of_visit: new Date().toISOString().split('T')[0], 
+                    [staffField]: updatedStaffList 
+                };
+            }
+
+            // Submit both participant and the dynamic facility payload
+            await saveParticipantAndSubmitFacilityUpdate(participantData, facilityUpdatePayload, 'Public Form');
             
             if (onSuccess) onSuccess(participantData);
             onClose();
@@ -130,7 +186,8 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
 
     const handleFacilitySelect = (fac) => {
         setFacilityId(fac.id);
-        setFacilityName(fac.name);
+        setFacilityName(fac['اسم_المؤسسة'] || '');
+        setSelectedFacility(fac); // Save full object for the payload
         setIsFacilitySelectorOpen(false);
     };
 
@@ -174,6 +231,7 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
                                 onChange={(e) => {
                                     setFacilityName(e.target.value);
                                     setFacilityId(''); 
+                                    setSelectedFacility(null);
                                     setIsFacilitySelectorOpen(true);
                                 }}
                                 onFocus={() => setIsFacilitySelectorOpen(true)}
@@ -186,14 +244,14 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
                                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
                                     {facilities.length > 0 ? (
                                         facilities
-                                            .filter(f => f.name.toLowerCase().includes(facilityName.toLowerCase()))
+                                            .filter(f => (f['اسم_المؤسسة'] || '').toLowerCase().includes(facilityName.toLowerCase()))
                                             .map(f => (
                                                 <div 
                                                     key={f.id} 
                                                     className="p-2 cursor-pointer hover:bg-gray-100"
                                                     onClick={() => handleFacilitySelect(f)}
                                                 >
-                                                    {f.name}
+                                                    {f['اسم_المؤسسة']}
                                                 </div>
                                             ))
                                     ) : (
@@ -1546,6 +1604,7 @@ export function CourseManagementView({
                                 canEditDeleteParticipantActiveCourse={canManageCourse} 
                                 canEditDeleteParticipantInactiveCourse={canEditDeleteInactiveCourse}
                                 canManageCertificates={canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures}
+                                canUseSuperUserAdvancedFeatures={canUseSuperUserAdvancedFeatures}
                             />
                         )}
                         

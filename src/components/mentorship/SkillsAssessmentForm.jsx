@@ -881,7 +881,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                     title={`بيانات منشأة: ${facility['اسم_المؤسسة'] || ''}`}
                     size="full"
                 >
-                    <div className="p-0 sm:p-4 bg-gray-100 h-[90vh] overflow-y-auto">
+                    <div className="p-0 sm:p-4 bg-gray-100">
                         <GenericFacilityForm
                             initialData={facility}
                             onSave={async (formData) => {
